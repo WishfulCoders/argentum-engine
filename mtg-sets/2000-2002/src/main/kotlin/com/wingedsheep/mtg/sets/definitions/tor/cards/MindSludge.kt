@@ -7,7 +7,7 @@ package com.wingedsheep.mtg.sets.definitions.tor.cards
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -22,7 +22,7 @@ val MindSludge = card("Mind Sludge") {
     typeLine = "Sorcery"
     oracleText = "Target player discards a card for each Swamp you control."
     spell {
-        val t = target("target", TargetPlayer())
+        val t = target(Targets.Player)
         effect = Patterns.Hand.discardCards(1, t)
     }
     metadata {

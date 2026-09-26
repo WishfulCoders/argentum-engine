@@ -1,15 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Dryad's Caress — Ravnica: City of Guilds #160
@@ -35,15 +34,13 @@ val DryadsCaress = card("Dryad's Caress") {
 
     spell {
         effect = Effects.GainLife(
-            DynamicAmount.AggregateBattlefield(Player.Each, GameObjectFilter.Creature)
-        ).then(
-            ConditionalEffect(
-                condition = Conditions.ManaSpentToCastIncludes(requiredWhite = 1),
-                effect = Effects.ForEachInGroup(
-                    GroupFilter(GameObjectFilter.Creature.youControl()),
-                    Effects.Untap(EffectTarget.Self),
-                ),
-            )
+            DynamicAmounts.allCreatures()
+        ) then Effects.If(
+            condition = Conditions.ManaSpentToCastIncludes(requiredWhite = 1),
+            then = Effects.ForEachInGroup(
+                GroupFilter(GameObjectFilter.Creature.youControl()),
+                Effects.Untap(EffectTarget.IterationEntity),
+            ),
         )
     }
 

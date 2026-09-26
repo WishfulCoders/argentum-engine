@@ -20,8 +20,7 @@ val AncientTomb = card("Ancient Tomb") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.AddColorlessMana(2)
-            .then(Effects.DealDamage(2, EffectTarget.PlayerRef(Player.You)))
+        effect = Effects.AddColorlessMana(2) then Effects.DealDamage(2, EffectTarget.PlayerRef(Player.You))
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

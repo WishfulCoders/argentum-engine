@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.bfz.cards
 
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Smoldering Marsh
@@ -24,10 +24,10 @@ val SmolderingMarsh = card("Smoldering Marsh") {
     // Mana abilities are intrinsic from the basic land types in the type line.
 
     replacementEffect(EntersTapped(
-        unlessCondition = Compare(
-            DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.BasicLand),
+        unlessCondition = Conditions.CompareAmounts(
+            DynamicAmounts.battlefield(Player.You, GameObjectFilter.BasicLand).count(),
             ComparisonOperator.GTE,
-            DynamicAmount.Fixed(2)
+            2
         )
     ))
 

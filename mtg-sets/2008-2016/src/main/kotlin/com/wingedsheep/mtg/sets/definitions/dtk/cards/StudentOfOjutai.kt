@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Student of Ojutai
@@ -13,7 +14,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * Whenever you cast a noncreature spell, you gain 2 life.
  *
- * The Monk shell without prowess: the printed line is a bare [Triggers.YouCastNoncreature] trigger
+ * The Monk shell without prowess: the printed line is a bare `Triggers.you.casts(GameObjectFilter.Noncreature)` trigger
  * whose effect is life gain, so `prowess()` would be wrong — it would add a +1/+1 trigger the card
  * doesn't have. `Effects.GainLife` defaults to the controller, which is the printed "you".
  */
@@ -26,7 +27,7 @@ val StudentOfOjutai = card("Student of Ojutai") {
     oracleText = "Whenever you cast a noncreature spell, you gain 2 life."
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
         effect = Effects.GainLife(2)
     }
 

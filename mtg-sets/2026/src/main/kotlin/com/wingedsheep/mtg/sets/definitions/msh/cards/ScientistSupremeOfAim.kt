@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Scientist Supreme of A.I.M. — Marvel Super Heroes #225 (rare)
@@ -45,8 +46,7 @@ val ScientistSupremeOfAim = card("Scientist Supreme of A.I.M.") {
     activatedAbility {
         cost = Costs.PayLife(2)
         val ability = target(
-            "activated or triggered ability you control from an artifact source",
-            Targets.ActivatedOrTriggeredAbilityYouControlFrom(GameObjectFilter.Artifact)
+            TargetFilter.ActivatedOrTriggeredAbilityOnStack.youControl().abilitySourceMatches(GameObjectFilter.Artifact),
         )
         effect = Effects.CopyTargetSpellOrAbility(ability)
         restrictions = listOf(

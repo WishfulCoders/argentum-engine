@@ -1,6 +1,7 @@
 package com.wingedsheep.sdk.scripting
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.scripting.costs.CostAtom
@@ -9,11 +10,13 @@ import com.wingedsheep.sdk.scripting.effects.AttachEquipmentEffect
 import com.wingedsheep.sdk.scripting.effects.Effect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.scripting.targets.TargetRequirement
 import com.wingedsheep.sdk.scripting.text.TextReplaceable
 import com.wingedsheep.sdk.scripting.text.TextReplacer
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -23,7 +26,14 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class ActivatedAbility(
-    val id: AbilityId = AbilityId.generate(),
+    /**
+     * Always written: with `encodeDefaults = false` kotlinx decides whether to skip a field by
+     * re-evaluating its default, which here would mint an id (and fail outside a card scope) on
+     * every encode.
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
+    val id: AbilityId = AbilityId.next(),
     val cost: AbilityCost,
     val effect: Effect,
     val targetRequirements: List<TargetRequirement> = emptyList(),
@@ -298,14 +308,14 @@ data class ActivatedAbility(
             quality: String? = null,
             targetFilter: TargetFilter = TargetFilter.CreatureYouControl,
             genericCostReduction: DynamicAmount? = null,
-            id: AbilityId = AbilityId.generate(),
+            id: AbilityId = AbilityId.next(),
         ): ActivatedAbility {
             val label = equipTargetLabel(quality)
             return ActivatedAbility(
                 id = id,
                 cost = AbilityCost.Atom(CostAtom.Mana(cost)),
                 effect = AttachEquipmentEffect(EffectTarget.BoundVariable(label)),
-                targetRequirements = listOf(TargetCreature(filter = targetFilter, id = label)),
+                targetRequirements = listOf(TargetObject(filter = targetFilter, id = label)),
                 isManaAbility = false,
                 isEquipAbility = true,
                 equipQuality = quality,
@@ -526,6 +536,29 @@ sealed interface AbilityCost : TextReplaceable<AbilityCost> {
     @Serializable
     data object TapGrantingPermanent : AbilityCost {
         override val description: String = "Tap the granting permanent"
+    }
+
+    /**
+     * Remove every [counterType] counter from a permanent as part of the activation cost — "Remove
+     * all +1/+1 counters from Molten Hydra" on the ability's own source, or, with
+     * [fromGrantingPermanent], "Remove all aim counters from Hankyu" on the Equipment whose static
+     * ability granted the equipped creature this ability (CR 201.5a: the name refers only to that
+     * specific granter, as with [TapGrantingPermanent]).
+     *
+     * Always payable while the permanent is on the battlefield — removing all of zero counters
+     * removes none, and the ability still resolves. How many came off is read at resolution with
+     * `DynamicAmount.CountersRemovedAsCost` ("the number of aim counters removed this way"); the
+     * counters are gone by then, so reading the permanent's counters would see zero.
+     */
+    @SerialName("CostRemoveAllCounters")
+    @Serializable
+    data class RemoveAllCounters(
+        val counterType: CounterType,
+        val fromGrantingPermanent: Boolean = false,
+    ) : AbilityCost {
+        override val description: String =
+            "Remove all ${counterType.printed} counters from " +
+                if (fromGrantingPermanent) "the granting permanent" else "this permanent"
     }
 
     /**

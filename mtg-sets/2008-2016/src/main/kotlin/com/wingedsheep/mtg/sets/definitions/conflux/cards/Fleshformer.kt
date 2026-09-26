@@ -3,11 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.conflux.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Fleshformer
@@ -37,12 +37,10 @@ val Fleshformer = card("Fleshformer") {
 
     activatedAbility {
         cost = Costs.Mana("{W}{U}{B}{R}{G}")
-        val t = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 2, EffectTarget.Self)
-                .then(Effects.GrantKeyword(Keyword.FEAR, EffectTarget.Self)),
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 2, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.FEAR, EffectTarget.Self) then
             Effects.ModifyStats(-2, -2, t)
-        )
         restrictions = listOf(ActivationRestriction.OnlyDuringYourTurn)
     }
 

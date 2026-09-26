@@ -9,7 +9,6 @@ import com.wingedsheep.mtg.sets.definitions.blb.cards.CarrotCake
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
@@ -18,13 +17,14 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Carrot Cake (BLB): "When this artifact enters AND WHEN YOU SACRIFICE IT, create a
  * 1/1 white Rabbit creature token and scry 1."
  *
- * Regression guard: the second trigger is sacrifice-only (Triggers.Sacrificed). It used
- * to be modeled as Triggers.Dies, which wrongly fired on any battlefield→graveyard
+ * Regression guard: the second trigger is sacrifice-only (Triggers.self.isSacrificed()). It used
+ * to be modeled as Triggers.self.dies(), which wrongly fired on any battlefield→graveyard
  * transition — an opponent destroying the Food handed its controller a free Rabbit + scry.
  */
 class CarrotCakeSacrificeTriggerTest : FunSpec({
@@ -33,7 +33,7 @@ class CarrotCakeSacrificeTriggerTest : FunSpec({
         manaCost = "{R}"
         typeLine = "Instant"
         spell {
-            val artifact = target("target artifact", Targets.Artifact)
+            val artifact = target(TargetFilter.Artifact)
             effect = Effects.Destroy(artifact)
         }
     }

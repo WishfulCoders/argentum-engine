@@ -13,7 +13,7 @@ import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
@@ -21,6 +21,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.effects.Gate
 import com.wingedsheep.sdk.scripting.effects.GatedEffect
@@ -57,9 +58,8 @@ class SiegePendingObjectIdentityTest : FunSpec({
             val removal = card("Identity Remove Defense") {
                 manaCost = "{0}"; typeLine = "Sorcery"
                 spell {
-                    effect = Effects.Composite(
-                        Effects.RemoveCounters(Counters.DEFENSE, 3, EffectTarget.SpecificEntity(siege)),
-                        if (pause == "resolution") GatedEffect(Gate.MayDecide("Continue?"), Effects.GainLife(1))
+                    effect = Effects.RemoveCounters(CounterType.DEFENSE, 3, EffectTarget.SpecificEntity(siege)) then
+                        (if (pause == "resolution") GatedEffect(Gate.MayDecide("Continue?"), Effects.GainLife(1))
                         else Effects.GainLife(1))
                 }
             }
@@ -95,7 +95,7 @@ class SiegePendingObjectIdentityTest : FunSpec({
                 val original = d.state.objectRef(siege)!!
                 val refs = ObjectReferenceEnvironment(captured = true, origin = original, source = original)
                 var state = d.state.updateEntity(siege) { it.with(CountersComponent()) }
-                val trigger = PendingTrigger(TriggeredAbility(id = com.wingedsheep.sdk.scripting.AbilityId.generate(), trigger = Triggers.EntersBattlefield.event,
+                val trigger = PendingTrigger(TriggeredAbility(id = com.wingedsheep.sdk.scripting.AbilityId("SiegePendingObjectIdentityTest_1"), trigger = Triggers.self.enters().event,
                     effect = Effects.GainLife(1)), siege, siegeCard.name,
                     objectReferences = refs, controllerId = d.player1, triggerContext = TriggerContext())
                 val stackId = EntityId.generate()
@@ -107,7 +107,7 @@ class SiegePendingObjectIdentityTest : FunSpec({
                 if (stale) state = state.moveToZone(siege, ZoneKey(d.player1, Zone.BATTLEFIELD), ZoneKey(d.player1, Zone.EXILE))
                     .moveToZone(siege, ZoneKey(d.player1, Zone.EXILE), ZoneKey(d.player1, Zone.BATTLEFIELD))
                 state = json.decodeFromString(GameState.serializer(), json.encodeToString(GameState.serializer(), state))
-                val check = BattleDefenseCheck()
+                val check = BattleDefenseCheck(d.zones)
                 val result = check.check(state, state, if (storage == "staged") setOf(original) else emptySet())
                 (siege in result.state.getZone(ZoneKey(d.player1, Zone.BATTLEFIELD))) shouldBe !stale
                 // Once the trigger has left the stack (or a pending trigger is declined), its

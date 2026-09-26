@@ -1,9 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.usg.cards
 
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ControlEnchantedPermanent
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Confiscate
@@ -21,7 +22,7 @@ val Confiscate = card("Confiscate") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant permanent\nYou control enchanted permanent."
 
-    auraTarget = Targets.Permanent
+    auraTarget = TargetObject(filter = TargetFilter.Permanent)
 
     staticAbility {
         ability = ControlEnchantedPermanent

@@ -27,10 +27,7 @@ val Ether = card("Ether") {
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.ExileSelf)
         manaAbility = true
-        effect = Effects.Composite(
-            Effects.AddMana(Color.BLUE),
-            Effects.CopyNextSpellCast()
-        )
+        effect = Effects.AddMana(Color.BLUE) then Effects.CopyNextSpellCast()
         description = "{T}, Exile this artifact: Add {U}. When you next cast an instant or sorcery spell this turn, copy that spell. You may choose new targets for the copy."
     }
 

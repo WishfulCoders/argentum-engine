@@ -40,7 +40,7 @@ val CloudspireCoordinator = card("Cloudspire Coordinator") {
         "have \"This token saddles Mounts and crews Vehicles as though its power were 2 greater.\""
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.scry(2)
     }
 

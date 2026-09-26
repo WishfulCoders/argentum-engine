@@ -1,26 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.withSubtypeFromVariable
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.CollectionContainsMatch
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.ChooseOptionEffect
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.OptionType
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -35,7 +24,7 @@ import com.wingedsheep.sdk.dsl.Effects
  * the chosen type, put that card onto the battlefield instead of putting it into your hand.
  *
  * Implementation note: Oracle text frames the type-choice + behold as a cast-time additional
- * cost. We model the entire spell at resolution time as an optional MayEffect that chooses
+ * cost. We model the entire spell at resolution time as an optional Effects.May that chooses
  * a creature type and reveals two matching creatures from your battlefield + hand. Because
  * Behold has no cost component (it does not exile or pay anything), evaluating it at
  * resolution time produces equivalent gameplay: the chosen type is stored in
@@ -55,73 +44,47 @@ val CelestialReunion = card("Celestial Reunion") {
         "your hand."
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                // Optional: choose a creature type and behold two creatures of that type.
-                MayEffect(
+        effect = Effects.Pipeline {
+            // Optional: choose a creature type and behold two creatures of that type. The chosen
+            // type is written inside the optional branch but read after it (unset if declined).
+            val chosenType = runStoringChoice { chosenTypeKey ->
+                Effects.May(
                     descriptionOverride = "Choose a creature type and behold two creatures of that type?",
-                    effect = Effects.Composite(
-                        listOf(
-                            ChooseOptionEffect(
-                                optionType = OptionType.CREATURE_TYPE,
-                                storeAs = "chosenCreatureType"
-                            ),
-                            GatherCardsEffect(
-                                source = CardSource.FromMultipleZones(
-                                    zones = listOf(Zone.BATTLEFIELD, Zone.HAND),
-                                    player = Player.You,
-                                    filter = GameObjectFilter.Creature
-                                        .withSubtypeFromVariable("chosenCreatureType")
-                                ),
-                                storeAs = "beholdable"
-                            ),
-                            SelectFromCollectionEffect(
-                                from = "beholdable",
-                                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(2)),
-                                storeSelected = "beheld",
-                                prompt = "Behold two creatures of the chosen type"
-                            ),
-                            RevealCollectionEffect(from = "beheld")
+                    effect = Effects.Pipeline {
+                        run(Effects.ChooseOption(OptionType.CREATURE_TYPE, storeAs = chosenTypeKey))
+                        val beholdable = gather(
+                            CardSource.FromMultipleZones(
+                                zones = listOf(Zone.BATTLEFIELD, Zone.HAND),
+                                player = Player.You,
+                                filter = GameObjectFilter.Creature.withSubtypeFromVariable(chosenTypeKey)
+                            )
                         )
-                    )
-                ),
-                // Search library for a creature card with mana value X or less.
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.Creature),
-                    storeAs = "searchable"
-                ),
-                FilterCollectionEffect(
-                    from = "searchable",
-                    filter = CollectionFilter.ManaValueAtMost(DynamicAmount.XValue),
-                    storeMatching = "mvOk"
-                ),
-                SelectFromCollectionEffect(
-                    from = "mvOk",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    storeSelected = "found",
-                    prompt = "Search your library for a creature card with mana value X or less"
-                ),
-                // Searcher just picked the card — reveal it to opponents only.
-                RevealCollectionEffect(from = "found", revealToSelf = false),
-                // If beheld and revealed card matches the chosen type → battlefield, else → hand.
-                ConditionalEffect(
-                    condition = CollectionContainsMatch(
-                        collection = "found",
-                        filter = GameObjectFilter.Creature
-                            .withSubtypeFromVariable("chosenCreatureType")
-                    ),
-                    effect = MoveCollectionEffect(
-                        from = "found",
-                        destination = CardDestination.ToZone(Zone.BATTLEFIELD)
-                    ),
-                    elseEffect = MoveCollectionEffect(
-                        from = "found",
-                        destination = CardDestination.ToZone(Zone.HAND)
-                    )
-                ),
-                ShuffleLibraryEffect()
+                        val beheld = chooseExactly(2, from = beholdable, prompt = "Behold two creatures of the chosen type")
+                        reveal(beheld)
+                    }
+                )
+            }
+            // Search library for a creature card with mana value X or less.
+            val searchable = gather(
+                CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.Creature),
+                search = true
             )
-        )
+            val mvOk = filter(searchable, GameObjectFilter.Any.manaValueAtMostDynamic(DynamicAmounts.xValue()))
+            val found = chooseUpTo(
+                1,
+                from = mvOk,
+                prompt = "Search your library for a creature card with mana value X or less"
+            )
+            // Searcher just picked the card — reveal it to opponents only.
+            reveal(found, revealToSelf = false)
+            // If beheld and revealed card matches the chosen type → battlefield, else → hand.
+            run(Effects.If(
+                condition = whenMatches(found, GameObjectFilter.Creature.withSubtypeFromVariable(chosenType)),
+                then = Effects.Pipeline { move(found, CardDestination.ToZone(Zone.BATTLEFIELD)) },
+                otherwise = Effects.Pipeline { toHand(found) }
+            ))
+            run(Effects.ShuffleLibrary())
+        }
     }
 
     metadata {

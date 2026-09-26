@@ -3,12 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.zen.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Teetering Peaks
@@ -31,8 +31,8 @@ val TeeteringPeaks = card("Teetering Peaks") {
     replacementEffect(EntersTapped())
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("creature", Targets.Creature)
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(2, 0, creature)
     }
 

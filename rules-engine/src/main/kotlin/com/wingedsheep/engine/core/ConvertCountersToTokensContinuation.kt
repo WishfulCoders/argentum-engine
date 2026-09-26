@@ -2,7 +2,7 @@ package com.wingedsheep.engine.core
 
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
+import com.wingedsheep.sdk.core.CounterType
 import kotlinx.serialization.Serializable
 
 /**
@@ -20,7 +20,7 @@ import kotlinx.serialization.Serializable
 data class ConvertCountersToTokensContinuation(
     val sourceId: EntityId,
     val controllerId: EntityId,
-    val counterType: CounterTypeFilter,
+    val counterType: CounterType,
     val tokenFactory: CreateTokenEffect,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
 ) : AnswerContinuation

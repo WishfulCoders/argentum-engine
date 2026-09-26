@@ -5,10 +5,10 @@
 package com.wingedsheep.mtg.sets.definitions.por.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 
@@ -29,8 +29,8 @@ val DreadReaper = card("Dread Reaper") {
     toughness = 5
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = LoseLifeEffect(5, EffectTarget.Controller)
+        trigger = Triggers.self.enters()
+        effect = Effects.LoseLife(5, EffectTarget.Controller)
     }
     metadata {
         rarity = Rarity.RARE

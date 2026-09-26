@@ -5,8 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.OnEnterRunEffect
-import com.wingedsheep.sdk.scripting.effects.FlipCoinEffect
+import com.wingedsheep.sdk.scripting.OnEnterRun
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -20,17 +19,17 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * There is no "enters as an X/Y with keyword" entry replacement, and there shouldn't be: a coin
  * flip is not a *choice*, so [com.wingedsheep.sdk.scripting.EntersWithChoice] is the wrong shape,
  * and the two outcomes are just a base-P/T set plus a keyword grant that already exist. So the
- * card is [OnEnterRunEffect] wrapping a [FlipCoinEffect] whose two branches each compose
+ * card is [OnEnterRun] wrapping a [FlipCoinEffect] whose two branches each compose
  * `SetBasePowerAndToughness` + `GrantKeyword` at [Duration.Permanent] — nothing here expires, and
  * neither branch is undone if the Sentry later stops being the thing it entered as.
  *
  * The printed P/T is `*`/`*`: without the entry replacement the Sentry has no defined size, which
- * is 0/0. It never reaches state-based actions at that size, because `OnEnterRunEffect` runs
+ * is 0/0. It never reaches state-based actions at that size, because `OnEnterRun` runs
  * inline with the entry — after placement, before SBAs — exactly as Frankenstein's Monster relies
  * on to survive as an 0/1 until its counters land.
  *
  * **Known divergence, shared with Frankenstein's Monster and Nameless Race.** "As this creature
- * enters" is a true entry replacement, but `OnEnterRunEffect` runs just *after* the permanent is
+ * enters" is a true entry replacement, but `OnEnterRun` runs just *after* the permanent is
  * on the battlefield. The permanent is momentarily a 0/0 Elemental with no keywords, so an ETB
  * trigger elsewhere that reads its power sees 0 rather than 5 or 2. Closing that needs a
  * pre-entry replacement hook, which is engine work rather than card work.
@@ -46,16 +45,12 @@ val MoltenSentry = card("Molten Sentry") {
         "creature with defender."
 
     replacementEffect(
-        OnEnterRunEffect(
-            FlipCoinEffect(
-                wonEffect = Effects.Composite(
-                    Effects.SetBasePowerAndToughness(5, 2, EffectTarget.Self, Duration.Permanent),
+        OnEnterRun(
+            Effects.FlipCoin(
+                wonEffect = Effects.SetBasePowerAndToughness(5, 2, EffectTarget.Self, Duration.Permanent) then
                     Effects.GrantKeyword(Keyword.HASTE, EffectTarget.Self, Duration.Permanent),
-                ),
-                lostEffect = Effects.Composite(
-                    Effects.SetBasePowerAndToughness(2, 5, EffectTarget.Self, Duration.Permanent),
+                lostEffect = Effects.SetBasePowerAndToughness(2, 5, EffectTarget.Self, Duration.Permanent) then
                     Effects.GrantKeyword(Keyword.DEFENDER, EffectTarget.Self, Duration.Permanent),
-                ),
             )
         )
     )

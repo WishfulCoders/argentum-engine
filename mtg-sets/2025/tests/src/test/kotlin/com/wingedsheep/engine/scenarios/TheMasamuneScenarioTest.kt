@@ -10,6 +10,7 @@ import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.CardScript
+import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
@@ -17,6 +18,8 @@ import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import io.kotest.matchers.shouldNotBe
 
 /**
  * The Masamune (FIN #264) - {3} Legendary Artifact - Equipment.
@@ -42,6 +45,7 @@ class TheMasamuneScenarioTest : ScenarioTestBase() {
         oracleText = "Whenever a creature dies, you gain 2 life.",
         script = CardScript.creature(
             TriggeredAbility.create(
+                id = AbilityId("TheMasamuneScenarioTest_1"),
                 trigger = EventPattern.ZoneChangeEvent(
                     filter = GameObjectFilter.Creature,
                     from = Zone.BATTLEFIELD,
@@ -94,10 +98,10 @@ class TheMasamuneScenarioTest : ScenarioTestBase() {
                 game.advanceToPhase(Phase.COMBAT, Step.DECLARE_BLOCKERS)
 
                 withClue("Defender has an able blocker -> declining to block is illegal") {
-                    game.declareNoBlockers().isSuccess shouldBe false
+                    game.declareNoBlockers().outcome shouldNotBe Outcome.Done
                 }
                 withClue("Blocking the equipped attacker is legal") {
-                    game.declareBlockers(mapOf("Savannah Lions" to listOf("Grizzly Bears"))).isSuccess shouldBe true
+                    game.declareBlockers(mapOf("Savannah Lions" to listOf("Grizzly Bears"))).outcome shouldBe Outcome.Done
                 }
             }
 

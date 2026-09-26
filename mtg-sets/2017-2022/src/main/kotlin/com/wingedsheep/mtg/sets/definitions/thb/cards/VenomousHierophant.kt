@@ -31,7 +31,7 @@ val VenomousHierophant = card("Venomous Hierophant") {
     keywords(Keyword.DEATHTOUCH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.mill(3)
     }
 

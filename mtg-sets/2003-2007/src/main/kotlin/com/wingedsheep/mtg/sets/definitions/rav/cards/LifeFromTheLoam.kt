@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 val LifeFromTheLoam = card("Life from the Loam") {
     manaCost = "{1}{G}"
@@ -19,11 +18,11 @@ val LifeFromTheLoam = card("Life from the Loam") {
     keywordAbility(KeywordAbility.dredge(3))
 
     spell {
-        target("lands", TargetObject(
-            optional = true,
+        targets(
+            TargetFilter(GameObjectFilter.Land.ownedByYou(), zone = Zone.GRAVEYARD),
             count = 3,
-            filter = TargetFilter(GameObjectFilter.Land.ownedByYou(), zone = Zone.GRAVEYARD)
-        ))
+            optional = true,
+        )
         effect = Effects.Pipeline {
             val lands = gather(CardSource.ChosenTargets)
             toHand(lands)

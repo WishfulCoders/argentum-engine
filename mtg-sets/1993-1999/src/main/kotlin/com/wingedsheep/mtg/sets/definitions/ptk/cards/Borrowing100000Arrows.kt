@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.ptk.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Borrowing 100,000 Arrows
@@ -26,12 +27,12 @@ val Borrowing100000Arrows = card("Borrowing 100,000 Arrows") {
     oracleText = "Draw a card for each tapped creature target opponent controls."
 
     spell {
-        target("target", TargetOpponent())
+        target(Targets.Opponent)
         effect = Effects.DrawCards(
-            DynamicAmount.AggregateBattlefield(
+            DynamicAmounts.battlefield(
                 Player.TargetOpponent,
                 GameObjectFilter.Creature.tapped()
-            )
+            ).count()
         )
     }
 

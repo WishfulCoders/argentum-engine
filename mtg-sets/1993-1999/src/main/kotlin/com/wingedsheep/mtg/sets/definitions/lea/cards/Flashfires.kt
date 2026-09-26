@@ -22,7 +22,7 @@ val Flashfires = card("Flashfires") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Land.withSubtype(Subtype.PLAINS)),
-            Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true)
+            Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true)
         )
     }
 

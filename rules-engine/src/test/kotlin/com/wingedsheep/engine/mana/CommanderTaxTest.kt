@@ -66,7 +66,7 @@ class CommanderTaxTest : FunSpec({
     }
 
     val registry = CardRegistry().also { it.register(testCommander) }
-    val calculator = CostCalculator(registry, PredicateEvaluator())
+    val calculator = CostCalculator(registry, PredicateEvaluator(cardRegistry = null))
 
     test("first cast from command zone has no tax") {
         val state = stateWithCommander(castsAlreadyFromCommand = 0)

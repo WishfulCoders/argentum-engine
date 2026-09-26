@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Defend the Campus — Strixhaven: School of Mages #12 (canonical printing)
@@ -38,10 +37,7 @@ val DefendTheCampus = card("Defend the Campus") {
                 Patterns.Group.modifyStatsForAll(1, 1, GroupFilter.AllCreaturesYouControl)
             )
             mode("Destroy target creature with power 4 or greater") {
-                val victim = target(
-                    "target",
-                    TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.powerAtLeast(4)))
-                )
+                val victim = target(TargetFilter(GameObjectFilter.Creature.powerAtLeast(4)))
                 effect = Effects.Destroy(victim)
             }
         }

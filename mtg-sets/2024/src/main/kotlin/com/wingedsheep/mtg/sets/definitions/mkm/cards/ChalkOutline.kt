@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  * Whenever one or more creature cards leave your graveyard, create a 2/2 white and blue Detective
  * creature token, then investigate.
  *
- * "One or more … leave" is CR 603.2c batch wording, so [Triggers.CardsLeaveYourGraveyard] is the
+ * "One or more … leave" is CR 603.2c batch wording, so `Triggers.oneOrMore(filter).leaveYourGraveyard()` is the
  * right shape rather than a per-card trigger: a mass reanimation, a flashback cast, and a
  * graveyard-exiling sweep each fire this exactly once no matter how many creature cards moved or
  * where they went (the printed ruling says so in as many words). The filter is
@@ -34,16 +34,14 @@ val ChalkOutline = card("Chalk Outline") {
         "with \"{2}, Sacrifice this token: Draw a card.\")"
 
     triggeredAbility {
-        trigger = Triggers.CardsLeaveYourGraveyard(GameObjectFilter.Creature)
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                power = 2,
-                toughness = 2,
-                colors = setOf(Color.WHITE, Color.BLUE),
-                creatureTypes = setOf("Detective")
-            ),
+        trigger = Triggers.oneOrMore(GameObjectFilter.Creature).leaveYourGraveyard()
+        effect = Effects.CreateToken(
+            power = 2,
+            toughness = 2,
+            colors = setOf(Color.WHITE, Color.BLUE),
+            creatureTypes = setOf("Detective")
+        ) then
             Effects.Investigate()
-        )
         description = "Whenever one or more creature cards leave your graveyard, create a 2/2 " +
             "white and blue Detective creature token, then investigate."
     }

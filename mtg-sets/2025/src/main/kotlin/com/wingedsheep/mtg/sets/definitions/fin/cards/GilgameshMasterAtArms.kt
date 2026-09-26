@@ -13,8 +13,6 @@ import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Effect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Gilgamesh, Master-at-Arms
@@ -73,13 +71,13 @@ val GilgameshMasterAtArms = card("Gilgamesh, Master-at-Arms") {
 
     // "Whenever Gilgamesh enters …"
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = lookAtTopSixPutEquipment()
     }
 
     // "… or attacks"
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = lookAtTopSixPutEquipment()
     }
 
@@ -106,7 +104,7 @@ val GilgameshMasterAtArms = card("Gilgamesh, Master-at-Arms") {
 }
 
 private fun lookAtTopSixPutEquipment(): Effect = Effects.Pipeline {
-    val looked = gather(CardSource.TopOfLibrary(DynamicAmount.Fixed(6)), name = "looked")
+    val looked = gather(CardSource.TopOfLibrary(6))
     val (equipment, rest) = chooseAnyNumberSplit(
         from = looked,
         filter = GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT),
@@ -117,8 +115,7 @@ private fun lookAtTopSixPutEquipment(): Effect = Effects.Pipeline {
     )
     val onBattlefield = moveTracked(
         equipment,
-        CardDestination.ToZone(Zone.BATTLEFIELD),
-        name = "putOntoBattlefield"
+        CardDestination.ToZone(Zone.BATTLEFIELD)
     )
     move(
         rest,
@@ -136,8 +133,7 @@ private fun lookAtTopSixPutEquipment(): Effect = Effects.Pipeline {
         )
         val samurai = gather(
             GameObjectFilter.Creature.withSubtype(Subtype.SAMURAI),
-            player = Player.You,
-            name = "samurai"
+            player = Player.You
         )
         val chosenSamurai = chooseUpTo(
             1,
@@ -147,8 +143,8 @@ private fun lookAtTopSixPutEquipment(): Effect = Effects.Pipeline {
         )
         run(
             Effects.AttachTargetEquipmentToCreature(
-                equipmentTarget = EffectTarget.PipelineTarget(chosenEquipment.key, 0),
-                creatureTarget = EffectTarget.PipelineTarget(chosenSamurai.key, 0)
+                equipmentTarget = chosenEquipment.asTarget,
+                creatureTarget = chosenSamurai.asTarget
             )
         )
     }

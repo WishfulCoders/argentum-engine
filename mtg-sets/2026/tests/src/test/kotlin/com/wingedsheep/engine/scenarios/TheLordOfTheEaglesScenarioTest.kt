@@ -34,7 +34,7 @@ class TheLordOfTheEaglesScenarioTest : ScenarioTestBase() {
                     .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
                     .build()
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("The Lord of the Eagles"),
                     game.player1Id,
@@ -60,7 +60,7 @@ class TheLordOfTheEaglesScenarioTest : ScenarioTestBase() {
                     .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
                     .build()
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("The Lord of the Eagles"),
                     game.player1Id,
@@ -83,7 +83,7 @@ class TheLordOfTheEaglesScenarioTest : ScenarioTestBase() {
                     .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
                     .build()
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("The Lord of the Eagles"),
                     game.player1Id,
@@ -109,7 +109,7 @@ class TheLordOfTheEaglesScenarioTest : ScenarioTestBase() {
                     .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
                     .build()
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("The Lord of the Eagles"),
                     game.player1Id,
@@ -134,7 +134,7 @@ class TheLordOfTheEaglesScenarioTest : ScenarioTestBase() {
                     .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
                     .build()
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("The Lord of the Eagles"),
                     game.player1Id,

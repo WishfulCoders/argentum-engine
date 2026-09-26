@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
@@ -14,10 +14,9 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ReplaceLifePaymentWithLibraryExile
 import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Ashiok, Wicked Manipulator
@@ -49,7 +48,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *  - The −2 tokens carry a triggered ability whose intervening "if" (CR 603.4) reuses
  *    [Conditions.CardsPutIntoExileThisTurn], the game-wide `CARDS_PUT_INTO_EXILE` turn tracker
  *    built for Ennis, Debate Moderator. Ashiok's own static ability and +1 both feed it, and so
- *    does an opponent's exiling. `Triggers.BeginCombat` is already "at the beginning of combat on
+ *    does an opponent's exiling. `Triggers.you.beginningOf(Step.BEGIN_COMBAT)` is already "at the beginning of combat on
  *    your turn" (a `StepEvent(BEGIN_COMBAT, Player.You)`), so the tokens only check on your turn.
  *  - The −7's X is the total mana value of cards *you own* in exile — the engine keys the exile
  *    zone by owner, so `DynamicAmounts.zone(Player.You, Zone.EXILE).sumManaValue()` is exactly
@@ -88,18 +87,17 @@ val AshiokWickedManipulator = card("Ashiok, Wicked Manipulator") {
     // −2: Create two 1/1 black Nightmare creature tokens with "At the beginning of combat on your
     //     turn, if a card was put into exile this turn, put a +1/+1 counter on this token."
     loyaltyAbility(-2) {
-        effect = CreateTokenEffect(
-            count = DynamicAmount.Fixed(2),
+        effect = Effects.CreateToken(
+            count = 2,
             power = 1,
             toughness = 1,
             colors = setOf(Color.BLACK),
             creatureTypes = setOf("Nightmare"),
             triggeredAbilities = listOf(
                 TriggeredAbility.create(
-                    trigger = Triggers.BeginCombat.event,
-                    binding = Triggers.BeginCombat.binding,
+                    trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT),
                     interveningIf = Conditions.CardsPutIntoExileThisTurn(),
-                    effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
+                    effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
                     descriptionOverride = "At the beginning of combat on your turn, if a card was " +
                         "put into exile this turn, put a +1/+1 counter on this token.",
                 ),
@@ -111,10 +109,10 @@ val AshiokWickedManipulator = card("Ashiok, Wicked Manipulator") {
     // −7: Target player exiles the top X cards of their library, where X is the total mana value
     //     of cards you own in exile.
     loyaltyAbility(-7) {
-        target("target player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Patterns.Library.exileTop(
             count = DynamicAmounts.zone(Player.You, Zone.EXILE).sumManaValue(),
-            target = EffectTarget.ContextTarget(0),
+            target = player,
         )
     }
 

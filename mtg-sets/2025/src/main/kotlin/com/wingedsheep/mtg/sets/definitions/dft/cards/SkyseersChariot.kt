@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CardNamePool
@@ -10,7 +11,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.IncreaseActivatedAbilityCost
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Skyseer's Chariot — Aetherdrift #28.
@@ -57,7 +57,7 @@ val SkyseersChariot = card("Skyseer's Chariot") {
     staticAbility {
         ability = IncreaseActivatedAbilityCost(
             filter = GroupFilter(GameObjectFilter.Any.namedFromChosenComponent()),
-            amount = DynamicAmount.Fixed(2),
+            amount = DynamicAmounts.fixed(2),
         )
     }
 

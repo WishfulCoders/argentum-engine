@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.state.ComponentContainer
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
@@ -63,6 +64,7 @@ class CommanderZoneRedirectTest : FunSpec({
         val state = stateWithCommander(alwaysDivertCommander, Zone.BATTLEFIELD)
         val result = ZoneMovementUtils.checkZoneChangeRedirect(
             state, cmdrId, Zone.BATTLEFIELD, Zone.GRAVEYARD,
+            predicateEvaluator = PredicateEvaluator(cardRegistry = null)
         )
         result.destinationZone shouldBe Zone.COMMAND
     }
@@ -71,6 +73,7 @@ class CommanderZoneRedirectTest : FunSpec({
         val state = stateWithCommander(alwaysDivertCommander, Zone.LIBRARY)
         val result = ZoneMovementUtils.checkZoneChangeRedirect(
             state, cmdrId, Zone.LIBRARY, Zone.GRAVEYARD,
+            predicateEvaluator = PredicateEvaluator(cardRegistry = null)
         )
         result.destinationZone shouldBe Zone.COMMAND
     }
@@ -79,6 +82,7 @@ class CommanderZoneRedirectTest : FunSpec({
         val state = stateWithCommander(alwaysDivertCommander, Zone.BATTLEFIELD)
         val result = ZoneMovementUtils.checkZoneChangeRedirect(
             state, cmdrId, Zone.BATTLEFIELD, Zone.EXILE,
+            predicateEvaluator = PredicateEvaluator(cardRegistry = null)
         )
         result.destinationZone shouldBe Zone.COMMAND
     }
@@ -87,6 +91,7 @@ class CommanderZoneRedirectTest : FunSpec({
         val state = stateWithCommander(alwaysDivertCommander, Zone.BATTLEFIELD)
         val result = ZoneMovementUtils.checkZoneChangeRedirect(
             state, cmdrId, Zone.BATTLEFIELD, Zone.HAND,
+            predicateEvaluator = PredicateEvaluator(cardRegistry = null)
         )
         result.destinationZone shouldBe Zone.COMMAND
     }
@@ -96,6 +101,7 @@ class CommanderZoneRedirectTest : FunSpec({
         // The commander is on the stack heading toward the battlefield (cast resolution).
         val result = ZoneMovementUtils.checkZoneChangeRedirect(
             state, cmdrId, Zone.COMMAND, Zone.BATTLEFIELD,
+            predicateEvaluator = PredicateEvaluator(cardRegistry = null)
         )
         result.destinationZone shouldBe Zone.BATTLEFIELD
     }
@@ -107,6 +113,7 @@ class CommanderZoneRedirectTest : FunSpec({
         )
         val result = ZoneMovementUtils.checkZoneChangeRedirect(
             state, cmdrId, Zone.BATTLEFIELD, Zone.GRAVEYARD,
+            predicateEvaluator = PredicateEvaluator(cardRegistry = null)
         )
         result.destinationZone shouldBe Zone.GRAVEYARD
     }
@@ -117,6 +124,7 @@ class CommanderZoneRedirectTest : FunSpec({
         val state = stateWithCommander(Format.Commander(), Zone.BATTLEFIELD)
         val result = ZoneMovementUtils.checkZoneChangeRedirect(
             state, cmdrId, Zone.BATTLEFIELD, Zone.GRAVEYARD,
+            predicateEvaluator = PredicateEvaluator(cardRegistry = null)
         )
         result.destinationZone shouldBe Zone.GRAVEYARD
     }
@@ -125,6 +133,7 @@ class CommanderZoneRedirectTest : FunSpec({
         val state = stateWithCommander(Format.Standard, Zone.BATTLEFIELD)
         val result = ZoneMovementUtils.checkZoneChangeRedirect(
             state, cmdrId, Zone.BATTLEFIELD, Zone.GRAVEYARD,
+            predicateEvaluator = PredicateEvaluator(cardRegistry = null)
         )
         result.destinationZone shouldBe Zone.GRAVEYARD
     }

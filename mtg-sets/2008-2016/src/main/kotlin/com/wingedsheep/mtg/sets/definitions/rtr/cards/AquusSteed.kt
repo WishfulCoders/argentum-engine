@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.rtr.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Aquus Steed
@@ -29,7 +29,7 @@ val AquusSteed = card("Aquus Steed") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{U}"), Costs.Tap)
-        val t = target("target creature", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(-2, 0, t)
     }
 

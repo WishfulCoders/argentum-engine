@@ -4,11 +4,11 @@
 
 package com.wingedsheep.mtg.sets.definitions.isd.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -24,8 +24,8 @@ val BumpInTheNight = card("Bump in the Night") {
     typeLine = "Sorcery"
     oracleText = "Target opponent loses 3 life.\nFlashback {5}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
     spell {
-        val t = target("target", TargetOpponent())
-        effect = LoseLifeEffect(3, t)
+        val t = target(Targets.Opponent)
+        effect = Effects.LoseLife(3, t)
     }
     keywordAbility(KeywordAbility.flashback("{5}{R}"))
     metadata {

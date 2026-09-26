@@ -6,14 +6,13 @@ package com.wingedsheep.mtg.sets.definitions.chk.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -32,12 +31,12 @@ val BenBenAkkiHermit = card("Ben-Ben, Akki Hermit") {
     toughness = 1
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.attacking()))
-        effect = DealDamageEffect(
-            DynamicAmount.AggregateBattlefield(
+        val t = target(TargetFilter.Creature.attacking())
+        effect = Effects.DealDamage(
+            DynamicAmounts.battlefield(
                 Player.You,
                 GameObjectFilter.Land.withSubtype(Subtype.MOUNTAIN).untapped()
-            ),
+            ).count(),
             t
         )
     }

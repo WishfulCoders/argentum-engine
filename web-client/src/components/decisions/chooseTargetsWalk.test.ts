@@ -167,14 +167,24 @@ describe('ChooseTargetsUI walk — per-requirement walking', () => {
     expect(walk.submission).toEqual({ 0: [bears.id], 1: [courser.id] })
   })
 
-  it('drops a target already confirmed for another requirement from the pool', () => {
+  it('keeps an earlier requirement\'s pick in the pool — each "target" is its own instance', () => {
     const bothBoard = decision([req({ index: 0 }), req({ index: 1 })], {
       0: [bears.id, elves.id],
       1: [bears.id, elves.id],
     })
     const walk = run([confirm([bears.id], 2)])
 
-    expect(chooseTargetsView(bothBoard, walk, cards).legalTargets).toEqual([elves.id])
+    expect(chooseTargetsView(bothBoard, walk, cards).legalTargets).toEqual([bears.id, elves.id])
+  })
+
+  it('drops an earlier pick from an "another target" requirement\'s pool', () => {
+    const another = decision([req({ index: 0 }), req({ index: 1, mustDifferFromEarlier: true })], {
+      0: [bears.id, elves.id],
+      1: [bears.id, elves.id],
+    })
+    const walk = run([confirm([bears.id], 2)])
+
+    expect(chooseTargetsView(another, walk, cards).legalTargets).toEqual([elves.id])
   })
 
   it('steps Back with the previous requirement pre-selected and its pool restored', () => {

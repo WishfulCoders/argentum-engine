@@ -4,10 +4,8 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
+import com.wingedsheep.sdk.dsl.Triggers
 
 val GolgariBrownscale = card("Golgari Brownscale") {
     manaCost = "{1}{G}{G}"
@@ -20,10 +18,7 @@ val GolgariBrownscale = card("Golgari Brownscale") {
     keywordAbility(KeywordAbility.dredge(2))
     triggeredAbility {
         triggerZone = Zone.GRAVEYARD
-        trigger = TriggerSpec(
-            event = EventPattern.ZoneChangeEvent(from = Zone.GRAVEYARD, to = Zone.HAND),
-            binding = TriggerBinding.SELF
-        )
+        trigger = Triggers.self.changesZone(from = Zone.GRAVEYARD, to = Zone.HAND)
         effect = Effects.GainLife(2)
     }
     metadata {

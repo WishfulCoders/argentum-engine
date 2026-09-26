@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * repeatable colorless activation that trades toughness for power, and can kill the Oracle
  * outright, which is the point: doing so sets off the death trigger.
  *
- * The dies trigger is [Triggers.Dies], the same battlefield-to-graveyard zone change Mudbutton
+ * The dies trigger is `Triggers.self.dies()`, the same battlefield-to-graveyard zone change Mudbutton
  * Torchrunner uses. Its damage source is resolved from the zone-change event's last-known
  * information rather than the live entity — the Oracle is already in the graveyard when the
  * trigger resolves — so the effect is a plain [Effects.DealDamage] and the engine supplies the
@@ -35,8 +35,8 @@ val StormGodsOracle = card("Storm God's Oracle") {
         "When this creature dies, it deals 3 damage to any target."
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val damaged = target("any target", Targets.Any)
+        trigger = Triggers.self.dies()
+        val damaged = target(Targets.Any)
         effect = Effects.DealDamage(3, damaged)
     }
 

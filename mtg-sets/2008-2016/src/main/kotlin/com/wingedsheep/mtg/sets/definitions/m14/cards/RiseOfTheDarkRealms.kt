@@ -7,8 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -30,22 +28,16 @@ val RiseOfTheDarkRealms = card("Rise of the Dark Realms") {
     oracleText = "Put all creature cards from all graveyards onto the battlefield under your control."
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        zone = Zone.GRAVEYARD,
-                        player = Player.Each,
-                        filter = GameObjectFilter.Creature
-                    ),
-                    storeAs = "creatureCardsInAllGraveyards"
-                ),
-                MoveCollectionEffect(
-                    from = "creatureCardsInAllGraveyards",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD)
+        effect = Effects.Pipeline {
+            val creatureCardsInAllGraveyards = gather(
+                CardSource.FromZone(
+                    zone = Zone.GRAVEYARD,
+                    player = Player.Each,
+                    filter = GameObjectFilter.Creature
                 )
             )
-        )
+            move(creatureCardsInAllGraveyards, CardDestination.ToZone(Zone.BATTLEFIELD))
+        }
     }
 
     metadata {

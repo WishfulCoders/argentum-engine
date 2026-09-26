@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Sheriff of Safe Passage
@@ -32,10 +33,7 @@ val SheriffOfSafePassage = card("Sheriff of Safe Passage") {
 
     replacementEffect(
         EntersWithDynamicCounters(
-            count = DynamicAmount.Add(
-                DynamicAmount.Fixed(1),
-                DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Creature)
-            )
+            count = 1 + DynamicAmounts.creaturesYouControl()
         )
     )
 

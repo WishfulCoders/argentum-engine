@@ -5,11 +5,11 @@
 package com.wingedsheep.mtg.sets.definitions.dst.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
 
 
@@ -28,8 +28,8 @@ val VulshokWarBoar = card("Vulshok War Boar") {
     power = 5
     toughness = 5
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = PayOrSufferEffect(cost = Costs.pay.Sacrifice(GameObjectFilter.Artifact), suffer = SacrificeSelfEffect)
+        trigger = Triggers.self.enters()
+        effect = Effects.PayOrSuffer(cost = Costs.pay.Sacrifice(GameObjectFilter.Artifact), suffer = SacrificeSelfEffect)
     }
     metadata {
         rarity = Rarity.UNCOMMON

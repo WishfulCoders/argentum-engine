@@ -4,12 +4,12 @@
 
 package com.wingedsheep.mtg.sets.definitions.nem.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.core.Step
 
 
 /**
@@ -27,9 +27,9 @@ val SpitefulBully = card("Spiteful Bully") {
     power = 3
     toughness = 3
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.youControl()))
-        effect = DealDamageEffect(3, t)
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        val t = target(TargetFilter.Creature.youControl())
+        effect = Effects.DealDamage(3, t)
     }
     metadata {
         rarity = Rarity.COMMON

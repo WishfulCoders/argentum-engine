@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.znr.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -41,9 +40,8 @@ val CrawlingBarrens = card("Crawling Barrens") {
 
     activatedAbility {
         cost = Costs.Mana("{4}")
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self),
-            MayEffect(
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self) then
+            Effects.May(
                 effect = Effects.BecomeCreature(
                     target = EffectTarget.Self,
                     power = 0,
@@ -51,8 +49,7 @@ val CrawlingBarrens = card("Crawling Barrens") {
                     creatureTypes = setOf("Elemental"),
                     duration = Duration.EndOfTurn,
                 ),
-            ),
-        )
+            )
         description = "Put two +1/+1 counters on this land. Then you may have it become a " +
             "0/0 Elemental creature until end of turn. It's still a land."
     }

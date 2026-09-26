@@ -5,8 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
@@ -28,12 +26,10 @@ val PullFromTheGrave = card("Pull from the Grave") {
             optional = true,
             filter = TargetFilter(GameObjectFilter.Creature.ownedByYou(), zone = Zone.GRAVEYARD),
         )
-        effect = Effects.Composite(
-            ForEachTargetEffect(
-                effects = listOf(Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND)),
-            ),
-            GainLifeEffect(2),
-        )
+        effect = Effects.ForEachTarget(
+            Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND),
+        ) then
+            Effects.GainLife(2)
     }
     metadata {
         rarity = Rarity.COMMON

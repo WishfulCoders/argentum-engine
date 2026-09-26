@@ -32,9 +32,10 @@ doubt, leave it out — the planner will conservatively schedule a rule-plan.
 - Changeling
 
 ### Ward (parameterized)
-- Ward {N} (mana cost) — `KeywordAbility.ward("{N}")`
-- Ward — Pay N life — `KeywordAbility.wardLife(n)`
-- Ward — Discard a card — `KeywordAbility.wardDiscard()`
+- Ward {N} (mana cost) — `KeywordAbility.Ward(WardCost.Mana("{N}"))`
+- Ward — Pay N life — `KeywordAbility.Ward(WardCost.Life(n))`
+- Ward — Discard a card — `KeywordAbility.Ward(WardCost.Discard())`
+- Any other ward cost — `KeywordAbility.Ward(WardCost.X)`; see `WardCost` for the variants
 
 ### Protection (parameterized)
 - Protection from a color — `KeywordAbility.protectionFrom(Color)`

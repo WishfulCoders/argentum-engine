@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -46,13 +44,12 @@ val IsochronScepter = card("Isochron Scepter") {
     // Imprint — When this artifact enters, you may exile an instant card with mana value 2 or
     // less from your hand.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.May(
             Patterns.Hand.revealHandAndExileChosen(
                 target = EffectTarget.Controller,
                 filter = GameObjectFilter.Instant.manaValueAtMost(2),
                 prompt = "Choose an instant card with mana value 2 or less to exile",
-                storeChosenAs = "scepterImprint",
                 revealHand = false,
                 linkToSource = true
             ),
@@ -64,18 +61,12 @@ val IsochronScepter = card("Isochron Scepter") {
     // mana cost.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        effect = MayEffect(
-            Effects.Composite(
-                GatherCardsEffect(
-                    source = CardSource.FromLinkedExile(),
-                    storeAs = "scepterImprinted"
-                ),
-                Effects.CopyCollectionIntoCollection(
-                    from = "scepterImprinted",
-                    storeAs = "scepterCopy"
-                ),
-                Effects.CastFromCollectionWithoutPayingCost("scepterCopy")
-            ),
+        effect = Effects.May(
+            Effects.Pipeline {
+                val scepterImprinted = gather(CardSource.FromLinkedExile())
+                val scepterCopy = copyCards(scepterImprinted)
+                run(Effects.CastFromCollectionWithoutPayingCost(scepterCopy))
+            },
             descriptionOverride = "You may copy the exiled card and cast the copy without paying its mana cost."
         )
     }

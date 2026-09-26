@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -26,11 +25,8 @@ val TradeTheHelm = card("Trade the Helm") {
     typeLine = "Sorcery"
     oracleText = "Exchange control of target artifact or creature you control and target artifact or creature an opponent controls.\nCycling {2} ({2}, Discard this card: Draw a card.)"
     spell {
-        val t1 = target("t1", TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrArtifact.youControl())))
-        val t2 = target(
-            "t2",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrArtifact.opponentControls()))
-        )
+        val t1 = target(TargetFilter(GameObjectFilter.CreatureOrArtifact.youControl()))
+        val t2 = target(TargetFilter(GameObjectFilter.CreatureOrArtifact.opponentControls()))
         effect = Effects.ExchangeControl(t1, t2)
     }
     keywordAbility(KeywordAbility.cycling("{2}"))

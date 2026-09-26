@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -20,7 +19,7 @@ val Defeat = card("Defeat") {
     oracleText = "Destroy target creature with power 2 or less."
 
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.powerAtMost(2)))
+        val t = target(TargetFilter.Creature.powerAtMost(2))
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
 

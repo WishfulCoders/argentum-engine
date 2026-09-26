@@ -23,7 +23,7 @@ val DeepwoodWolverine = card("Deepwood Wolverine") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
+        trigger = Triggers.self.becomesBlocked()
         effect = Effects.ModifyStats(2, 0, EffectTarget.Self)
     }
 

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
@@ -47,7 +47,7 @@ val GastalThrillroller = card("Gastal Thrillroller") {
     keywords(Keyword.TRAMPLE, Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.BecomeCreature(
             target = EffectTarget.Self,
             power = 4,
@@ -61,10 +61,8 @@ val GastalThrillroller = card("Gastal Thrillroller") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{R}"), Costs.DiscardCard)
-        effect = Effects.Composite(
-            Effects.PutOntoBattlefield(EffectTarget.Self),
-            Effects.AddCounters(Counters.FINALITY, 1, EffectTarget.Self)
-        )
+        effect = Effects.PutOntoBattlefield(EffectTarget.Self) then
+            Effects.AddCounters(CounterType.FINALITY, 1, EffectTarget.Self)
         activateFromZone = Zone.GRAVEYARD
         timing = TimingRule.SorcerySpeed
         description = "{2}{R}, Discard a card: Return this card from your graveyard to the " +

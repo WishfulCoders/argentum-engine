@@ -36,8 +36,8 @@ import org.springframework.web.socket.WebSocketSession
 class AshlingsCommandPriorityScenarioTest : ScenarioTestBase() {
 
     private val autoPassManager = AutoPassManager()
-    private val manaSolver = ManaSolver(cardRegistry)
-    private val legalActionEnumerator = LegalActionEnumerator.create(cardRegistry, manaSolver)
+    private val manaSolver = ManaSolver(cardRegistry, predicateEvaluator = services.predicateEvaluator)
+    private val legalActionEnumerator = LegalActionEnumerator.create(cardRegistry)
     private val legalActionEnricher = LegalActionEnricher(manaSolver, cardRegistry)
 
     private fun TestGame.chooseMode(optionIndex: Int) {

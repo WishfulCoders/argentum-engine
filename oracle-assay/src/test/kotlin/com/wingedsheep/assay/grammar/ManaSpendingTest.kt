@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.core.CardType
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.model.CardScript
+import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.effects.AddColorlessManaEffect
 import com.wingedsheep.sdk.scripting.effects.AddDynamicManaEffect
@@ -53,6 +54,7 @@ class ManaSpendingTest : StringSpec({
             CardScript(
                 activatedAbilities = listOf(
                     ActivatedAbility(
+                        id = AbilityId("ManaSpendingTest_1"),
                         cost = com.wingedsheep.sdk.scripting.AbilityCost.Tap,
                         effect = effect,
                         timing = com.wingedsheep.sdk.scripting.TimingRule.ManaAbility,
@@ -337,7 +339,7 @@ class ManaSpendingTest : StringSpec({
             color = Color.GREEN,
             amount = DynamicAmount.Fixed(1),
             restriction = ManaRestriction.CreatureSpellsOnly,
-            riders = setOf(com.wingedsheep.sdk.scripting.effects.ManaSpellRider.MakesSpellUncounterable),
+            riders = setOf(com.wingedsheep.sdk.scripting.effects.ManaSpellRider.MakesSpellUncounterable()),
         )
         Grammar.abilityLine.printLine(manaAbility(withRider)) shouldBe null
     }

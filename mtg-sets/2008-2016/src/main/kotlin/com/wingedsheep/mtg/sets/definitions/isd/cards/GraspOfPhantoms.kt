@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -27,7 +26,7 @@ val GraspOfPhantoms = card("Grasp of Phantoms") {
     typeLine = "Sorcery"
     oracleText = "Put target creature on top of its owner's library.\nFlashback {7}{U} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+        val t = target(TargetFilter.Creature)
         effect = Effects.Move(t, Zone.LIBRARY, ZonePlacement.Top)
     }
     keywordAbility(KeywordAbility.flashback("{7}{U}"))

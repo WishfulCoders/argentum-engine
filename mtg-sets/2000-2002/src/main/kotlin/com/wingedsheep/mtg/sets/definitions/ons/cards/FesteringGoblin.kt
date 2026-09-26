@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Festering Goblin
@@ -23,11 +23,11 @@ val FesteringGoblin = card("Festering Goblin") {
     oracleText = "When Festering Goblin dies, target creature gets -1/-1 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val t = target("target", Targets.Creature)
-        effect = ModifyStatsEffect(
-            powerModifier = -1,
-            toughnessModifier = -1,
+        trigger = Triggers.self.dies()
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(
+            power = -1,
+            toughness = -1,
             target = t,
             duration = Duration.EndOfTurn
         )

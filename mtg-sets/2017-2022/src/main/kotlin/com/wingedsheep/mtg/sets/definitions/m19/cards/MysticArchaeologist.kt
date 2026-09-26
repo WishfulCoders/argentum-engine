@@ -5,9 +5,9 @@
 package com.wingedsheep.mtg.sets.definitions.m19.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -26,7 +26,7 @@ val MysticArchaeologist = card("Mystic Archaeologist") {
     toughness = 1
     activatedAbility {
         cost = Costs.Mana("{3}{U}{U}")
-        effect = DrawCardsEffect(2)
+        effect = Effects.DrawCards(2)
     }
     metadata {
         rarity = Rarity.RARE

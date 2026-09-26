@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Sunlance
@@ -21,10 +20,7 @@ val Sunlance = card("Sunlance") {
     oracleText = "Sunlance deals 3 damage to target nonwhite creature."
 
     spell {
-        val t = target(
-            "target",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Creature.notColor(Color.WHITE)))
-        )
+        val t = target(TargetFilter(GameObjectFilter.Creature.notColor(Color.WHITE)))
         effect = Effects.DealDamage(3, t)
     }
 

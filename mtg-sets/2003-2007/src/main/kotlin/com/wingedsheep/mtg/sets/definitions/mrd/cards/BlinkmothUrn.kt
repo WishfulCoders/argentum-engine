@@ -30,7 +30,7 @@ val BlinkmothUrn = card("Blinkmoth Urn") {
         "that player adds {C} for each artifact they control."
 
     triggeredAbility {
-        trigger = Triggers.phase(Step.PRECOMBAT_MAIN, Player.Each)
+        trigger = Triggers.anyPlayer.beginningOf(Step.PRECOMBAT_MAIN)
         interveningIf = Conditions.SourceIsUntapped
         effect = Effects.ForEachPlayer(
             Player.TriggeringPlayer,

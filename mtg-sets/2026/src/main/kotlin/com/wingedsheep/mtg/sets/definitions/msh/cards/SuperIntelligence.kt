@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.msh.cards
 
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.TriggerBinding
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Super Intelligence
@@ -28,10 +28,10 @@ val SuperIntelligence = card("Super Intelligence") {
     oracleText = "Enchant creature\n" +
         "At the beginning of the upkeep of enchanted creature's controller, that player draws a card."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.phase(Step.UPKEEP, binding = TriggerBinding.ATTACHED)
+        trigger = Triggers.attached.beginningOf(Step.UPKEEP)
         effect = Effects.DrawCards(1)
     }
 

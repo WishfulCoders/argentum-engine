@@ -3,11 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.dsk.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardLayout
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ticket Booth // Tunnel of Hate (DSK 158) — split-layout Room (CR 709.5).
@@ -31,7 +31,7 @@ val TicketBoothTunnelOfHate = card("Ticket Booth // Tunnel of Hate") {
         oracleText = "When you unlock this door, manifest dread."
 
         triggeredAbility {
-            trigger = Triggers.OnDoorUnlocked
+            trigger = Triggers.self.doorUnlocked()
             effect = Patterns.Library.manifestDread()
         }
     }
@@ -42,8 +42,8 @@ val TicketBoothTunnelOfHate = card("Ticket Booth // Tunnel of Hate") {
         oracleText = "Whenever you attack, target attacking creature gains double strike until end of turn."
 
         triggeredAbility {
-            trigger = Triggers.YouAttack
-            val creature = target("target attacking creature", Targets.AttackingCreature)
+            trigger = Triggers.you.attacks()
+            val creature = target(TargetFilter.AttackingCreature)
             effect = Effects.GrantKeyword(Keyword.DOUBLE_STRIKE, creature)
             description = "Whenever you attack, target attacking creature gains double strike until end of turn."
         }

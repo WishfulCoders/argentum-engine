@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
@@ -16,6 +15,7 @@ import io.kotest.assertions.withClue
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Scenario tests for Zidane, Tantalus Thief (FIN uncommon, {3}{R}{W}, 3/3 Legendary Creature —
@@ -26,7 +26,7 @@ import io.kotest.matchers.shouldBe
  *     (GainControl + Untap + GrantKeyword), same shape as Zealous Conscripts.
  *  2. "Whenever an opponent gains control of a permanent from you, you create a Treasure token." —
  *     the new resident control-change watcher
- *     ([com.wingedsheep.sdk.dsl.Triggers.OpponentGainsControlOfYourPermanent]). Per the official
+ *     (`Triggers.a().controlChanges(ControlChangeDirection.LOST, toOpponent = true)`). Per the official
  *     ruling it fires once for each permanent stolen — including Zidane itself, whose old controller
  *     still gets the Treasure (look-back-in-time, CR 603.10).
  */
@@ -39,7 +39,7 @@ class ZidaneTantalusThiefScenarioTest : ScenarioTestBase() {
         typeLine = "Sorcery"
         oracleText = "Gain control of target creature."
         spell {
-            val t = target("target creature", Targets.Creature)
+            val t = target(TargetFilter.Creature)
             effect = Effects.GainControl(t, Duration.Permanent)
         }
         metadata { rarity = Rarity.COMMON; collectorNumber = "1" }

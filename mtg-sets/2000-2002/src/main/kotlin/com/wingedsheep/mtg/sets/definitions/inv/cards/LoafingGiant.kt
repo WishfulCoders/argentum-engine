@@ -1,19 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
-import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.effects.PreventionScope
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Loafing Giant
@@ -35,33 +29,25 @@ val LoafingGiant = card("Loafing Giant") {
     toughness = 6
     oracleText = "Whenever this creature attacks or blocks, mill a card. If a land card was milled this way, prevent all combat damage this creature would deal this turn."
 
-    val millAndMaybePrevent = Effects.Composite(
-        listOf(
-            // Mill a card: gather top card, move it to the graveyard.
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1)),
-                storeAs = "milled"
-            ),
-            MoveCollectionEffect(
-                from = "milled",
-                destination = CardDestination.ToZone(Zone.GRAVEYARD)
-            ),
-            // If a land card was milled this way, prevent all combat damage this creature
-            // would deal this turn.
-            ConditionalEffect(
-                condition = Conditions.CollectionContainsMatch("milled", GameObjectFilter.Land),
-                effect = Effects.PreventCombatDamageFrom(GroupFilter.source())
-            )
-        )
-    )
+    val millAndMaybePrevent = Effects.Pipeline {
+        // Mill a card: gather top card, move it to the graveyard.
+        val milled = gather(CardSource.TopOfLibrary(1))
+        toGraveyard(milled)
+        // If a land card was milled this way, prevent all combat damage this creature
+        // would deal this turn.
+        run(Effects.If(
+            condition = whenMatches(milled, GameObjectFilter.Land),
+            then = Effects.PreventAllDamageDealtBy(EffectTarget.Self, scope = PreventionScope.CombatOnly)
+        ))
+    }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = millAndMaybePrevent
     }
 
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         effect = millAndMaybePrevent
     }
 

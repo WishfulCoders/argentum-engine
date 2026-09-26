@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Encouraging Aviator // Jump — Secrets of Strixhaven #46
@@ -37,7 +37,7 @@ val EncouragingAviator = card("Encouraging Aviator") {
 
     // Whenever this creature attacks, it becomes prepared.
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.BecomePrepared(EffectTarget.Self)
     }
 
@@ -47,8 +47,8 @@ val EncouragingAviator = card("Encouraging Aviator") {
         typeLine = "Instant"
         oracleText = "Target creature gains flying until end of turn."
         spell {
-            target = Targets.Creature
-            effect = Effects.GrantKeyword(Keyword.FLYING, EffectTarget.ContextTarget(0))
+            val creature = target(TargetFilter.Creature)
+            effect = Effects.GrantKeyword(Keyword.FLYING, creature)
         }
     }
 

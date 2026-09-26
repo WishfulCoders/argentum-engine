@@ -10,8 +10,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.effects.BecomeArtifactEffect
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -35,7 +33,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * The second ability's "if this creature is a Detective" is a **resolution-time** check on the
  * source (third ruling: the ability may be activated regardless of type and simply does nothing
- * if the check fails), so it is a `ConditionalEffect` inside the effect rather than an
+ * if the check fails), so it is a `Effects.If` inside the effect rather than an
  * `ActivationRestriction`. It reads projected state via `Conditions.SourceMatches`, so any route
  * to Detective-hood counts, not just the first ability (fourth ruling).
  *
@@ -81,13 +79,12 @@ val TenthDistrictHero = card("Tenth District Hero") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{W}"), Costs.CollectEvidence(4))
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.SourceMatches(
                 GameObjectFilter.Creature.withSubtype(Subtype.DETECTIVE)
             ),
-            effect = Effects.Composite(
-                Effects.AddCardType("LEGENDARY", EffectTarget.Self, Duration.Permanent),
-                BecomeArtifactEffect(
+            then = Effects.AddCardType("LEGENDARY", EffectTarget.Self, Duration.Permanent) then
+                Effects.BecomeArtifact(
                     target = EffectTarget.Self,
                     cardTypes = null,
                     subtypes = null,
@@ -101,14 +98,13 @@ val TenthDistrictHero = card("Tenth District Hero") {
                         ),
                     ),
                     duration = Duration.Permanent,
-                ),
+                ) then
                 Effects.SetBasePowerAndToughness(
                     power = 5,
                     toughness = 5,
                     target = EffectTarget.Self,
                     duration = Duration.Permanent,
                 ),
-            ),
         )
         description = "If this creature is a Detective, it becomes a legendary creature named " +
             "Mileva, the Stalwart, it has base power and toughness 5/5, and it gains \"Other " +

@@ -6,17 +6,10 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Lightstall Inquisitor
@@ -49,31 +42,20 @@ val LightstallInquisitor = card("Lightstall Inquisitor") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ForEachPlayerEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.ForEachPlayer(
             players = Player.EachOpponent,
-            effects = listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.HAND, Player.You),
-                    storeAs = "exileCandidates"
-                ),
-                SelectFromCollectionEffect(
-                    from = "exileCandidates",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                    storeSelected = "chosenCard",
-                    prompt = "Choose a card to exile"
-                ),
-                MoveCollectionEffect(
-                    from = "chosenCard",
-                    destination = CardDestination.ToZone(Zone.EXILE)
-                ),
-                Effects.GrantMayPlayFromExile(
-                    from = "chosenCard",
+            Effects.Pipeline {
+                val exileCandidates = gather(CardSource.FromZone(Zone.HAND, Player.You))
+                val chosenCard = chooseExactly(1, from = exileCandidates, prompt = "Choose a card to exile")
+                exile(chosenCard)
+                run(Effects.GrantMayPlayFromExile(
+                    from = chosenCard,
                     expiry = MayPlayExpiry.Permanent,
                     landEntersTapped = true
-                ),
-                Effects.GrantPlayWithCostIncrease(from = "chosenCard", amount = 1)
-            )
+                ))
+                run(Effects.GrantPlayWithCostIncrease(from = chosenCard, amount = 1))
+            }
         )
     }
 

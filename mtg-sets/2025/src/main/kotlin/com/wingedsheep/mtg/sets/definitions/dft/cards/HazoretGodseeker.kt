@@ -5,12 +5,12 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.startYourEngines
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantAttackUnless
 import com.wingedsheep.sdk.scripting.CantBlockUnless
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Hazoret, Godseeker — Aetherdrift #133
@@ -56,7 +56,7 @@ val HazoretGodseeker = card("Hazoret, Godseeker") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
-        val creature = target("creature", Targets.CreatureWithPowerAtMost(2))
+        val creature = target(TargetFilter.Creature.powerAtMost(2))
         effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, creature)
         description = "Target creature with power 2 or less can't be blocked this turn."
     }

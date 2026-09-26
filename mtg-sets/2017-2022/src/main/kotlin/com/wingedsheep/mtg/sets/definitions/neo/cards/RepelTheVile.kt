@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Repel the Vile — Kamigawa: Neon Dynasty #33 (canonical printing)
@@ -27,17 +26,11 @@ val RepelTheVile = card("Repel the Vile") {
     spell {
         modal {
             mode("Exile target creature with power 4 or greater.") {
-                val t = target(
-                    "big creature",
-                    TargetObject(filter = TargetFilter(GameObjectFilter.Creature.powerAtLeast(4))),
-                )
+                val t = target(TargetFilter(GameObjectFilter.Creature.powerAtLeast(4)))
                 effect = Effects.Exile(t)
             }
             mode("Exile target enchantment.") {
-                val t = target(
-                    "enchantment",
-                    TargetObject(filter = TargetFilter(GameObjectFilter.Enchantment)),
-                )
+                val t = target(TargetFilter(GameObjectFilter.Enchantment))
                 effect = Effects.Exile(t)
             }
         }

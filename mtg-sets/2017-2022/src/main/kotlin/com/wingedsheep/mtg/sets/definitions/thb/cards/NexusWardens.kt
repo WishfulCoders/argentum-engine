@@ -33,10 +33,7 @@ val NexusWardens = card("Nexus Wardens") {
     keywords(Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Enchantment.youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Enchantment.youControl()).enters()
         effect = Effects.GainLife(2)
         description = "Constellation — Whenever an enchantment you control enters, you gain 2 life."
     }

@@ -1,30 +1,20 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.OneOrMoreDealCombatDamageToPlayerEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.AddCountersToCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Kastral, the Windcrested
@@ -56,52 +46,40 @@ val KastralTheWindcrested = card("Kastral, the Windcrested") {
 
     // Whenever one or more Birds you control deal combat damage to a player, choose one —
     triggeredAbility {
-        trigger = TriggerSpec(
-            OneOrMoreDealCombatDamageToPlayerEvent(
-                sourceFilter = GameObjectFilter.Creature.withSubtype("Bird")
-            ),
-            TriggerBinding.ANY
-        )
+        trigger = Triggers.oneOrMore(GameObjectFilter.Creature.withSubtype("Bird")).dealCombatDamageToAPlayer()
         effect = ModalEffect.chooseOne(
             // Mode 1: Put a Bird creature card from your hand or graveyard onto the battlefield
             // with a finality counter on it (optional — "you may")
             Mode.noTarget(
-                Effects.Composite(
-                    listOf(
-                        GatherCardsEffect(
-                            source = CardSource.FromMultipleZones(
-                                zones = listOf(Zone.HAND, Zone.GRAVEYARD),
-                                player = Player.You,
-                                filter = GameObjectFilter.Creature.withSubtype("Bird")
-                            ),
-                            storeAs = "birds"
-                        ),
-                        SelectFromCollectionEffect(
-                            from = "birds",
-                            selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                            storeSelected = "chosen",
-                            prompt = "Choose a Bird creature card to put onto the battlefield"
-                        ),
-                        MoveCollectionEffect(
-                            from = "chosen",
-                            destination = CardDestination.ToZone(Zone.BATTLEFIELD)
-                        ),
-                        AddCountersToCollectionEffect("chosen", Counters.FINALITY, 1)
+                Effects.Pipeline {
+                    val birds = gather(
+                        CardSource.FromMultipleZones(
+                            zones = listOf(Zone.HAND, Zone.GRAVEYARD),
+                            player = Player.You,
+                            filter = GameObjectFilter.Creature.withSubtype("Bird")
+                        )
                     )
-                ),
+                    val chosen = chooseUpTo(
+                        1,
+                        from = birds,
+                        prompt = "Choose a Bird creature card to put onto the battlefield"
+                    )
+                    move(chosen, CardDestination.ToZone(Zone.BATTLEFIELD))
+                    run(Effects.AddCountersToCollection(chosen, CounterType.FINALITY, 1))
+                },
                 "Put a Bird creature card from your hand or graveyard onto the battlefield with a finality counter on it"
             ),
             // Mode 2: Put a +1/+1 counter on each Bird you control
             Mode.noTarget(
                 Effects.ForEachInGroup(
                     filter = GroupFilter(GameObjectFilter.Creature.withSubtype("Bird").youControl()),
-                    effect = AddCountersEffect(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+                    effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity)
                 ),
                 "Put a +1/+1 counter on each Bird you control"
             ),
             // Mode 3: Draw a card
             Mode.noTarget(
-                DrawCardsEffect(count = DynamicAmount.Fixed(1), target = EffectTarget.Controller),
+                Effects.DrawCards(count = 1, target = EffectTarget.Controller),
                 "Draw a card"
             )
         )

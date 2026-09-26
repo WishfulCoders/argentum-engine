@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -24,12 +23,10 @@ val LeapingAmbush = card("Leaping Ambush") {
     typeLine = "Instant"
     oracleText = "Target creature gets +1/+3 and gains reach until end of turn. Untap it."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 3, t),
-            Effects.GrantKeyword(Keyword.REACH, t),
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(1, 3, t) then
+            Effects.GrantKeyword(Keyword.REACH, t) then
             Effects.Untap(t)
-        )
     }
     metadata {
         rarity = Rarity.COMMON

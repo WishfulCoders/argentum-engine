@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fem.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Fungal Bloom
@@ -27,11 +26,8 @@ val FungalBloom = card("Fungal Bloom") {
 
     activatedAbility {
         cost = Costs.Mana("{G}{G}")
-        val t = target(
-            "target Fungus",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Permanent.withSubtype(Subtype.FUNGUS)))
-        )
-        effect = Effects.AddCounters(Counters.SPORE, 1, t)
+        val t = target(TargetFilter(GameObjectFilter.Permanent.withSubtype(Subtype.FUNGUS)))
+        effect = Effects.AddCounters(CounterType.SPORE, 1, t)
     }
 
     metadata {

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Targets
@@ -9,16 +9,12 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantAdditionalTypesToGroup
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.predicates.ControllerPredicate
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Laughing Jasper Flint
@@ -66,31 +62,25 @@ val LaughingJasperFlint = card("Laughing Jasper Flint") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        val opponent = target("target opponent", Targets.Opponent)
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(
-                        count = DynamicAmount.AggregateBattlefield(
-                            player = Player.You,
-                            filter = Filters.OutlawCreature,
-                        ),
-                        player = Player.ContextPlayer(0),
-                    ),
-                    storeAs = "stolenCards",
-                ),
-                MoveCollectionEffect(
-                    from = "stolenCards",
-                    destination = CardDestination.ToZone(Zone.EXILE, Player.ContextPlayer(0)),
-                ),
-                GrantMayPlayFromExileEffect(
-                    from = "stolenCards",
-                    expiry = MayPlayExpiry.EndOfTurn,
-                    withAnyManaType = true,
-                ),
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        val opponent = target(Targets.Opponent)
+        effect = Effects.Pipeline {
+            val stolenCards = gather(
+                CardSource.TopOfLibrary(
+                    count = DynamicAmounts.battlefield(
+                        Player.You,
+                        Filters.OutlawCreature,
+                    ).count(),
+                    player = opponent.asPlayer,
+                )
             )
-        )
+            exile(stolenCards, opponent.asPlayer)
+            run(Effects.GrantMayPlayFromExile(
+                from = stolenCards,
+                expiry = MayPlayExpiry.EndOfTurn,
+                withAnyManaType = true,
+            ))
+        }
         description = "At the beginning of your upkeep, exile the top X cards of target opponent's " +
             "library, where X is the number of outlaws you control. Until end of turn, you may cast " +
             "spells from among those cards, and mana of any type can be spent to cast those spells."

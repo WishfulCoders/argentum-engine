@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -23,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * resolution instead of putting it in the graveyard. From every zone other than the stack the card
  * is just the Dragon — see [com.wingedsheep.sdk.model.CardLayout.OMEN].)
  *
- * "If you do" is modeled with [IfYouDoEffect]: the mandatory discard runs first, and the draw only
+ * "If you do" is modeled with [Effects.IfYouDo]: the mandatory discard runs first, and the draw only
  * happens when a card was actually discarded (matters with an otherwise-empty hand).
  */
 val StormshriekFeral = card("Stormshriek Feral") {
@@ -49,9 +48,9 @@ val StormshriekFeral = card("Stormshriek Feral") {
         oracleText = "Discard a card. If you do, draw two cards. " +
             "(Then shuffle this card into its owner's library.)"
         spell {
-            effect = IfYouDoEffect(
+            effect = Effects.IfYouDo(
                 action = Patterns.Hand.discardCards(1),
-                ifYouDo = Effects.DrawCards(2),
+                then = Effects.DrawCards(2),
             )
         }
     }

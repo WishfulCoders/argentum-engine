@@ -27,7 +27,7 @@ val MalcatorsWatcher = card("Malcator's Watcher") {
     keywords(Keyword.FLYING, Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.DrawCards(1)
     }
 

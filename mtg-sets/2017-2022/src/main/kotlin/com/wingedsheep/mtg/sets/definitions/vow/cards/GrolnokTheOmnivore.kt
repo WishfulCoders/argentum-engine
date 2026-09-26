@@ -1,7 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.CounterType
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
@@ -12,8 +11,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.MayPlayCardsFromExile
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -28,7 +25,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * You may play lands and cast spells from among cards you own in exile with croak counters on them.
  *
  * Implementation notes:
- * - The attack trigger is [Triggers.attacks] with an `ANY` binding and a Frog-you-control filter, so
+ * - The attack trigger is `Triggers.<subject>.attacks(requires)` with an `ANY` binding and a Frog-you-control filter, so
  *   it fires once per attacking Frog — Grolnok included, since it is itself a Frog.
  * - The second ability is a plain per-card `LIBRARY -> GRAVEYARD` [EventPattern.ZoneChangeEvent]
  *   rather than one of the batching `CardsPutIntoGraveyardFromLibraryEvent` specs. The printed text
@@ -62,24 +59,14 @@ val GrolnokTheOmnivore = card("Grolnok, the Omnivore") {
 
     // Whenever a Frog you control attacks, mill three cards.
     triggeredAbility {
-        trigger = Triggers.attacks(
-            filter = GameObjectFilter.Creature.withSubtype(Subtype.FROG).youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.withSubtype(Subtype.FROG).youControl()).attacks()
         effect = Patterns.Library.mill(3)
     }
 
     // Whenever a permanent card is put into your graveyard from your library, exile it with a
     // croak counter on it.
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = EventPattern.ZoneChangeEvent(
-                filter = GameObjectFilter.Permanent.ownedByYou(),
-                from = Zone.LIBRARY,
-                to = Zone.GRAVEYARD,
-            ),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Permanent.ownedByYou()).changesZone(from = Zone.LIBRARY, to = Zone.GRAVEYARD)
         effect = Effects.Exile(
             target = EffectTarget.TriggeringEntity,
             fromZone = Zone.GRAVEYARD,
@@ -91,7 +78,7 @@ val GrolnokTheOmnivore = card("Grolnok, the Omnivore") {
     // on them.
     staticAbility {
         ability = MayPlayCardsFromExile(
-            filter = GameObjectFilter.Any.ownedByYou().withCounter(Counters.CROAK),
+            filter = GameObjectFilter.Any.ownedByYou().withCounter(CounterType.CROAK),
         )
     }
 

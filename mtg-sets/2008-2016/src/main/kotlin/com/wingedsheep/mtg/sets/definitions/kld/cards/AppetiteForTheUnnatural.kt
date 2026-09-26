@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Appetite for the Unnatural
@@ -22,9 +23,8 @@ val AppetiteForTheUnnatural = card("Appetite for the Unnatural") {
     oracleText = "Destroy target artifact or enchantment. You gain 2 life."
 
     spell {
-        val t = target("target artifact or enchantment", Targets.ArtifactOrEnchantment)
-        effect = Effects.Destroy(t)
-            .then(Effects.GainLife(2))
+        val t = target(TargetFilter.ArtifactOrEnchantment)
+        effect = Effects.Destroy(t) then Effects.GainLife(2)
     }
 
     metadata {

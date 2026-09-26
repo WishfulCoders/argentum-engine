@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Kor Line-Slinger
@@ -34,7 +35,7 @@ val KorLineSlinger = card("Kor Line-Slinger") {
 
     activatedAbility {
         cost = Costs.Tap
-        val creature = target("target creature with power 3 or less", Targets.CreatureWithPowerAtMost(3))
+        val creature = target(TargetFilter.Creature.powerAtMost(3))
         effect = Effects.Tap(creature)
     }
 

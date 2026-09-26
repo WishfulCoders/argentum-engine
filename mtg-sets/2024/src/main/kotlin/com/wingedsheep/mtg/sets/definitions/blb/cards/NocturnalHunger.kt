@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Nocturnal Hunger
@@ -28,24 +28,20 @@ val NocturnalHunger = card("Nocturnal Hunger") {
     typeLine = "Instant"
     oracleText = "Gift a Food (You may promise an opponent a gift as you cast this spell. If you do, they create a Food token before its other effects. It's an artifact with \"{2}, {T}, Sacrifice this artifact: You gain 3 life.\")\nDestroy target creature. If the gift wasn't promised, you lose 2 life."
 
-    val destroyEffect = Effects.Destroy(EffectTarget.ContextTarget(0))
-
     spell {
         effect = Patterns.Mechanic.giftSpell(
             // Mode 1: No gift — destroy target creature, you lose 2 life
-            Mode.withTarget(
-                destroyEffect.then(Effects.LoseLife(2, EffectTarget.Controller)),
-                Targets.Creature,
-                "Don't promise a gift — destroy target creature, you lose 2 life"
-            ),
+            mode("Don't promise a gift — destroy target creature, you lose 2 life") {
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.Destroy(creature) then Effects.LoseLife(2, EffectTarget.Controller)
+            },
             // Mode 2: Gift a Food — opponent creates Food token, then destroy target creature
-            Mode.withTarget(
-                Effects.CreateFood(1, EffectTarget.PlayerRef(Player.ChosenOpponent))
-                    .then(destroyEffect)
-                    .then(Effects.GiftGiven()),
-                Targets.Creature,
-                "Promise a gift — opponent creates a Food token, then destroy target creature"
-            )
+            mode("Promise a gift — opponent creates a Food token, then destroy target creature") {
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.CreateFood(1, EffectTarget.PlayerRef(Player.ChosenOpponent)) then
+                    Effects.Destroy(creature) then
+                    Effects.GiftGiven()
+            }
         )
     }
 

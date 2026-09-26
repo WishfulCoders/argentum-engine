@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.spm.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.webSlinging
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ChoiceSlot
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Scarlet Spider, Ben Reilly — Marvel's Spider-Man #142
@@ -40,7 +40,7 @@ val ScarletSpiderBenReilly = card("Scarlet Spider, Ben Reilly") {
     webSlinging("{R}{G}")
     keywords(Keyword.TRAMPLE)
     replacementEffect(
-        EntersWithDynamicCounters(count = DynamicAmount.CastChoice(ChoiceSlot.WEB_SLUNG_RETURNED_MV))
+        EntersWithDynamicCounters(count = DynamicAmounts.castChoice(ChoiceSlot.WEB_SLUNG_RETURNED_MV))
     )
 
     metadata {

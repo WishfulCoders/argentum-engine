@@ -1,10 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.FlipCoinEffect
-import com.wingedsheep.sdk.scripting.effects.RedirectCombatDamageToControllerEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -25,16 +24,16 @@ val GoblinPsychopath = card("Goblin Psychopath") {
     oracleText = "Whenever Goblin Psychopath attacks or blocks, flip a coin. If you lose the flip, the next time it would deal combat damage this turn, it deals that damage to you instead."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = FlipCoinEffect(
-            lostEffect = RedirectCombatDamageToControllerEffect(EffectTarget.Self)
+        trigger = Triggers.self.attacks()
+        effect = Effects.FlipCoin(
+            lostEffect = Effects.RedirectCombatDamageToController(EffectTarget.Self)
         )
     }
 
     triggeredAbility {
-        trigger = Triggers.Blocks
-        effect = FlipCoinEffect(
-            lostEffect = RedirectCombatDamageToControllerEffect(EffectTarget.Self)
+        trigger = Triggers.self.blocks()
+        effect = Effects.FlipCoin(
+            lostEffect = Effects.RedirectCombatDamageToController(EffectTarget.Self)
         )
     }
 

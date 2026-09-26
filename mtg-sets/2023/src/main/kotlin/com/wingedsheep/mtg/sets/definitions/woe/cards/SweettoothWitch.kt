@@ -6,7 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Sweettooth Witch
@@ -33,7 +33,7 @@ val SweettoothWitch = card("Sweettooth Witch") {
         "{2}, Sacrifice a Food: Target player loses 2 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateFood()
     }
 
@@ -42,7 +42,7 @@ val SweettoothWitch = card("Sweettooth Witch") {
             Costs.Mana("{2}"),
             Costs.Sacrifice(GameObjectFilter.Any.withSubtype("Food"))
         )
-        val t = target("target", TargetPlayer())
+        val t = target(Targets.Player)
         effect = Effects.LoseLife(2, t)
     }
 

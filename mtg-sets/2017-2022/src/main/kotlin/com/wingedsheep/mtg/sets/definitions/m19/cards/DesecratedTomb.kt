@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  * Whenever one or more creature cards leave your graveyard, create a 1/1 black Bat creature token with flying.
  *
  * "One or more … leave" is CR 603.2c batch wording, so the batching
- * [Triggers.CardsLeaveYourGraveyard] is the right shape: a mass reanimation or a graveyard-exiling
+ * `Triggers.oneOrMore(filter).leaveYourGraveyard()` is the right shape: a mass reanimation or a graveyard-exiling
  * sweep fires this exactly once, no matter how many creature cards moved or where they went.
  */
 val DesecratedTomb = card("Desecrated Tomb") {
@@ -25,7 +25,7 @@ val DesecratedTomb = card("Desecrated Tomb") {
     oracleText = "Whenever one or more creature cards leave your graveyard, create a 1/1 black Bat creature token with flying."
 
     triggeredAbility {
-        trigger = Triggers.CardsLeaveYourGraveyard(GameObjectFilter.Creature)
+        trigger = Triggers.oneOrMore(GameObjectFilter.Creature).leaveYourGraveyard()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

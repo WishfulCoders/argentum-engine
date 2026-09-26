@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
@@ -23,6 +22,7 @@ import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * The candidate domain of an "any player may [cost]" effect
@@ -48,7 +48,7 @@ class AnyPlayerMayPayCandidateDomainTest : FunSpec({
         power = 1
         toughness = 1
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             effect = AnyPlayerMayPayEffect(
                 cost = Costs.pay.Sacrifice(GameObjectFilter.Creature, count = 1),
                 consequence = Effects.GainLife(3)
@@ -63,7 +63,7 @@ class AnyPlayerMayPayCandidateDomainTest : FunSpec({
         power = 1
         toughness = 1
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             effect = AnyPlayerMayPayEffect(
                 cost = Costs.pay.SacrificeAnother(GameObjectFilter.Creature, count = 1),
                 consequence = Effects.GainLife(3)
@@ -83,7 +83,7 @@ class AnyPlayerMayPayCandidateDomainTest : FunSpec({
         toughness = 1
         keywords(Keyword.FLASH)
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             effect = AnyPlayerMayPayEffect(
                 cost = Costs.pay.SacrificeAnother(GameObjectFilter.Creature, count = 1),
                 consequence = Effects.GainLife(3)
@@ -103,7 +103,7 @@ class AnyPlayerMayPayCandidateDomainTest : FunSpec({
         manaCost = "{0}"
         typeLine = "Sorcery"
         spell {
-            val t = target("creature", Targets.Creature)
+            val t = target(TargetFilter.Creature)
             effect = Effects.GainControl(t, Duration.Permanent)
         }
     }

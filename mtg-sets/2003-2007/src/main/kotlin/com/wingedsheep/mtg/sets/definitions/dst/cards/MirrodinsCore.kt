@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.dst.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
@@ -28,12 +28,12 @@ val MirrodinsCore = card("Mirrodin's Core") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.AddCounters(Counters.CHARGE, 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.CHARGE, 1, EffectTarget.Self)
         description = "{T}: Put a charge counter on this land."
     }
 
     activatedAbility {
-        cost = Costs.Composite(Costs.Tap, Costs.RemoveCounterFromSelf(Counters.CHARGE))
+        cost = Costs.Composite(Costs.Tap, Costs.RemoveCounterFromSelf(CounterType.CHARGE))
         effect = Effects.AddAnyColorMana()
         manaAbility = true
     }

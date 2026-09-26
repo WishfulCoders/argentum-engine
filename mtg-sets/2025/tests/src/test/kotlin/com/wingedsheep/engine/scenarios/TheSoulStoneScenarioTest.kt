@@ -18,7 +18,7 @@ import io.kotest.matchers.shouldBe
  * card from your graveyard to the battlefield."
  *
  * Pins the Harness gating: the ∞ upkeep trigger reanimates only while the Stone has a harness
- * counter (the new `Counters.HARNESS` marker read by `Conditions.SourceHasCounter`).
+ * counter (the new `CounterType.HARNESS` marker read by `Conditions.SourceHasCounter`).
  */
 class TheSoulStoneScenarioTest : FunSpec({
 

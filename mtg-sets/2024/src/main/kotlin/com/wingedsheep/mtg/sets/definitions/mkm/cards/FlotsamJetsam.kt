@@ -10,12 +10,8 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.AfterResolveDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Flotsam // Jetsam — Murders at Karlov Manor #247
@@ -60,10 +56,7 @@ val FlotsamJetsam = card("Flotsam // Jetsam") {
             "\"{2}, Sacrifice this token: Draw a card.\")"
 
         spell {
-            effect = Effects.Composite(
-                Patterns.Library.mill(3),
-                Effects.Investigate()
-            )
+            effect = Patterns.Library.mill(3) then Effects.Investigate()
         }
     }
 
@@ -75,37 +68,33 @@ val FlotsamJetsam = card("Flotsam // Jetsam") {
             "be put into a graveyard, exile it instead."
 
         spell {
-            effect = Effects.Composite(
-                Patterns.Library.mill(3, EffectTarget.PlayerRef(Player.EachOpponent)),
+            effect = Patterns.Library.mill(3, EffectTarget.PlayerRef(Player.EachOpponent)) then
                 Effects.ForEachPlayer(
                     Player.EachOpponent,
-                    listOf(
-                        GatherCardsEffect(
-                            source = CardSource.FromZone(
+                    Effects.Pipeline {
+                        val theirGraveyard = gather(
+                            CardSource.FromZone(
                                 zone = Zone.GRAVEYARD,
                                 player = Player.You,
                                 filter = GameObjectFilter.Nonland
-                            ),
-                            storeAs = "theirGraveyard"
-                        ),
-                        SelectFromCollectionEffect(
-                            from = "theirGraveyard",
-                            selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
+                            )
+                        )
+                        // No `showAllCards`: an opponent's graveyard is public, and a
+                        // land-only graveyard would otherwise raise a picker with nothing
+                        // selectable in it.
+                        val toCast = chooseUpTo(
+                            1,
+                            from = theirGraveyard,
                             chooser = Chooser.SourceController,
-                            storeSelected = "toCast",
-                            // No `showAllCards`: an opponent's graveyard is public, and a
-                            // land-only graveyard would otherwise raise a picker with nothing
-                            // selectable in it.
                             prompt = "Cast a spell from that opponent's graveyard?"
-                        ),
-                        Effects.CastFromCollectionWithoutPayingCost(
-                            from = "toCast",
+                        )
+                        run(Effects.CastFromCollectionWithoutPayingCost(
+                            from = toCast,
                             insteadOfGraveyard = AfterResolveDestination.EXILE,
                             caster = Chooser.SourceController
-                        )
-                    )
+                        ))
+                    }
                 )
-            )
         }
     }
 

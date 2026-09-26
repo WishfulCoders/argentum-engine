@@ -5,14 +5,13 @@
 package com.wingedsheep.mtg.sets.definitions.rna.cards
 
 import com.wingedsheep.sdk.core.AbilityFlag
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 
 /**
@@ -31,15 +30,12 @@ val GatewaySneak = card("Gateway Sneak") {
     power = 1
     toughness = 3
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Land.withSubtype("Gate").youControl(),
-            binding = TriggerBinding.ANY
-        )
-        effect = GrantKeywordEffect(AbilityFlag.CANT_BE_BLOCKED.name, EffectTarget.Self)
+        trigger = Triggers.a(GameObjectFilter.Land.withSubtype("Gate").youControl()).enters()
+        effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, EffectTarget.Self)
     }
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = DrawCardsEffect(1)
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.UNCOMMON

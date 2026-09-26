@@ -4,6 +4,8 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -14,12 +16,9 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.Aggregation
 import com.wingedsheep.sdk.scripting.values.CardNumericProperty
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 private val AmbitiousFarmhandFront = card("Ambitious Farmhand") {
     manaCost = "{1}{W}"
@@ -33,7 +32,7 @@ private val AmbitiousFarmhandFront = card("Ambitious Farmhand") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.BasicLand.withSubtype(Subtype.PLAINS),
@@ -44,18 +43,16 @@ private val AmbitiousFarmhandFront = card("Ambitious Farmhand") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{W}{W}")
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
         restrictions = listOf(
             ActivationRestriction.OnlyIfCondition(
                 Conditions.CompareAmounts(
-                    left = DynamicAmount.AggregateBattlefield(
-                        player = Player.You,
-                        filter = GameObjectFilter.Creature,
-                        aggregation = Aggregation.DISTINCT_VALUES,
-                        property = CardNumericProperty.POWER,
-                    ),
+                    left = DynamicAmounts.battlefield(
+                        Player.You,
+                        GameObjectFilter.Creature,
+                    ).distinctValues(CardNumericProperty.POWER),
                     operator = ComparisonOperator.GTE,
-                    right = DynamicAmount.Fixed(3),
+                    right = 3,
                 ),
             ),
         )

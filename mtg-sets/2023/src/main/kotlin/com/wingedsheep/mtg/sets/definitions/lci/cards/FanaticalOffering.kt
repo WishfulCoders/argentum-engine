@@ -26,12 +26,7 @@ val FanaticalOffering = card("Fanatical Offering") {
     additionalCost(Costs.additional.SacrificePermanent(GameObjectFilter.CreatureOrArtifact))
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                Effects.DrawCards(2),
-                Effects.CreateMapToken()
-            )
-        )
+        effect = Effects.DrawCards(2) then Effects.CreateMapToken()
     }
 
     metadata {

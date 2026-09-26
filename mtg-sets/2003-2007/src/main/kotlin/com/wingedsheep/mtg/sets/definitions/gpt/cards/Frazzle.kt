@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
 
 /**
  * Frazzle
@@ -20,7 +19,7 @@ val Frazzle = card("Frazzle") {
     oracleText = "Counter target nonblue spell."
 
     spell {
-        target = TargetSpell(filter = TargetFilter.SpellOnStack.notColor(Color.BLUE))
+        val spell = target(TargetFilter.SpellOnStack.notColor(Color.BLUE))
         effect = Effects.CounterSpell()
     }
 

@@ -3,11 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.mrd.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.SpendAnyManaTypeForActivatedAbilities
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Quicksilver Elemental — Mirrodin #47
@@ -53,7 +53,7 @@ val QuicksilverElemental = card("Quicksilver Elemental") {
     // "{U}: This creature gains all activated abilities of target creature until end of turn."
     activatedAbility {
         cost = Costs.Mana("{U}")
-        val donor = target("target creature", Targets.Creature)
+        val donor = target(TargetFilter.Creature)
         effect = Effects.GainAllActivatedAbilitiesOf(donor)
         description = "{U}: This creature gains all activated abilities of target creature until end of turn."
     }

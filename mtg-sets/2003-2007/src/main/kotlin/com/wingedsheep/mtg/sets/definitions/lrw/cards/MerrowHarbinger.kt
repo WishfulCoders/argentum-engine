@@ -31,7 +31,7 @@ val MerrowHarbinger = card("Merrow Harbinger") {
     keywords(Keyword.ISLANDWALK)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Any.withSubtype(Subtype.MERFOLK),

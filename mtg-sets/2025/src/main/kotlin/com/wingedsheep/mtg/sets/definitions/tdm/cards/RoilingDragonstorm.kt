@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * When a Dragon you control enters, return this enchantment to its owner's hand.
  *
  * Plain draw-then-discard ETB ([Effects.DrawCards] then [Effects.Discard]) plus the shared
- * Dragonstorm-cycle Dragon-bounce trigger ([Triggers.entersBattlefield] over Dragons you
+ * Dragonstorm-cycle Dragon-bounce trigger (`Triggers.a(filter).enters()` over Dragons you
  * control, [TriggerBinding.OTHER], returning this enchantment to hand).
  */
 val RoilingDragonstorm = card("Roiling Dragonstorm") {
@@ -28,16 +28,13 @@ val RoilingDragonstorm = card("Roiling Dragonstorm") {
         "When a Dragon you control enters, return this enchantment to its owner's hand."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(2) then Effects.Discard(1)
         description = "When this enchantment enters, draw two cards, then discard a card."
     }
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.youControl().withSubtype(Subtype.DRAGON),
-            binding = TriggerBinding.OTHER
-        )
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl().withSubtype(Subtype.DRAGON)).enters()
         effect = Effects.ReturnToHand(EffectTarget.Self)
         description = "When a Dragon you control enters, return this enchantment to its owner's hand."
     }

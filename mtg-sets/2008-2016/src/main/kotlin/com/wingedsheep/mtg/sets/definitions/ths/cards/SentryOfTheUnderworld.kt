@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.ths.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -31,7 +31,7 @@ val SentryOfTheUnderworld = card("Sentry of the Underworld") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{W}{B}"), Costs.PayLife(3))
-        effect = RegenerateEffect(EffectTarget.Self)
+        effect = Effects.Regenerate(EffectTarget.Self)
         description = "{W}{B}, Pay 3 life: Regenerate this creature."
     }
 

@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -25,11 +24,9 @@ val CollectorsVault = card("Collector's Vault") {
     oracleText = "{2}, {T}: Draw a card, then discard a card. Create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")"
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        effect = Effects.Composite(
-            DrawCardsEffect(1),
-            Patterns.Hand.discardCards(1),
+        effect = Effects.DrawCards(1) then
+            Patterns.Hand.discardCards(1) then
             Effects.CreateTreasure()
-        )
     }
     metadata {
         rarity = Rarity.UNCOMMON

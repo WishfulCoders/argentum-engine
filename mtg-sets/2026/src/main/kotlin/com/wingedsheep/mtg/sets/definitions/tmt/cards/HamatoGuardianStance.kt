@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Hamato Guardian Stance
@@ -22,10 +22,10 @@ val HamatoGuardianStance = card("Hamato Guardian Stance") {
     oracleText = "Target creature gets +1/+3 and gains flying until end of turn. Scry 1. (Look at the top card of your library. You may put that card on the bottom.)"
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.ModifyStats(1, 3, creature)
-            .then(Effects.GrantKeyword(Keyword.FLYING, creature, Duration.EndOfTurn))
-            .then(Patterns.Library.scry(1))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(1, 3, creature) then
+            Effects.GrantKeyword(Keyword.FLYING, creature, Duration.EndOfTurn) then
+            Patterns.Library.scry(1)
     }
 
     metadata {

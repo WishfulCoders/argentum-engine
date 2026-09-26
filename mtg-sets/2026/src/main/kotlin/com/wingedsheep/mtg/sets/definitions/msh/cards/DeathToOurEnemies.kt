@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.targets.AnyTarget
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -23,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Modeling notes:
  *  - "When the **fourth** plan counter is put on this enchantment" composes from existing
- *    vocabulary: a SELF-bound [Triggers.countersPlacedOn] on [Counters.PLAN] gated by
+ *    vocabulary: a SELF-bound `Triggers.<subject>.getsCounters(type, by, firstTimeEachTurn, batch)` on [CounterType.PLAN] gated by
  *    `triggerRestriction = `[Conditions.SourceCounterCountAtLeast]`(PLAN, 4)`. The at-least gate is
  *    behaviourally exact here because the payoff **sacrifices its own source**, so the enchantment
  *    is gone before a fifth counter could ever land — the threshold can never fire twice. No
@@ -45,24 +43,17 @@ val DeathToOurEnemies = card("Death to Our Enemies") {
         "deals 7 damage divided as you choose among one or two targets."
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
-        effect = Effects.Composite(
-            Effects.CreateTreasure(1, tapped = true),
-            Effects.AddCounters(Counters.PLAN, 1, EffectTarget.Self),
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
+        effect = Effects.CreateTreasure(1, tapped = true) then
+            Effects.AddCounters(CounterType.PLAN, 1, EffectTarget.Self)
         description = "Whenever you cast a noncreature spell, create a tapped Treasure token and " +
             "put a plan counter on this enchantment."
     }
 
     triggeredAbility {
-        trigger = Triggers.countersPlacedOn(
-            filter = GameObjectFilter.Any,
-            counterType = Counters.PLAN,
-            firstTimeEachTurn = false,
-            binding = TriggerBinding.SELF,
-        )
-        triggerRestriction = Conditions.SourceCounterCountAtLeast(Counters.PLAN, 4)
-        effect = ReflexiveTriggerEffect(
+        trigger = Triggers.self.getsCounters(CounterType.PLAN)
+        triggerRestriction = Conditions.SourceCounterCountAtLeast(CounterType.PLAN, 4)
+        effect = Effects.ReflexiveTrigger(
             action = Effects.SacrificeTarget(EffectTarget.Self),
             optional = false,
             reflexiveEffect = Effects.DividedDamage(total = 7, minTargets = 1, maxTargets = 2),

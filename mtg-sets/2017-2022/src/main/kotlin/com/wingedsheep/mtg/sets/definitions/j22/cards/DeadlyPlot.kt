@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.predicates.ControllerPredicate
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Deadly Plot
@@ -35,23 +34,20 @@ val DeadlyPlot = card("Deadly Plot") {
     spell {
         modal(chooseCount = 1) {
             mode("Destroy target creature or planeswalker") {
-                val t = target("creature or planeswalker", Targets.CreatureOrPlaneswalker)
+                val t = target(Targets.CreatureOrPlaneswalker)
                 effect = Effects.Destroy(t)
             }
             mode("Return target Zombie creature card from your graveyard to the battlefield tapped") {
                 val t = target(
-                    "Zombie creature card in your graveyard",
-                    TargetObject(
-                        filter = TargetFilter(
-                            GameObjectFilter(
-                                cardPredicates = listOf(
-                                    CardPredicate.IsCreature,
-                                    CardPredicate.HasSubtype(Subtype.ZOMBIE),
-                                ),
-                                controllerPredicate = ControllerPredicate.OwnedByYou,
+                    TargetFilter(
+                        GameObjectFilter(
+                            cardPredicates = listOf(
+                                CardPredicate.IsCreature,
+                                CardPredicate.HasSubtype(Subtype.ZOMBIE),
                             ),
-                            zone = Zone.GRAVEYARD,
+                            controllerPredicate = ControllerPredicate.OwnedByYou,
                         ),
+                        zone = Zone.GRAVEYARD,
                     ),
                 )
                 effect = Effects.PutOntoBattlefield(t, tapped = true)

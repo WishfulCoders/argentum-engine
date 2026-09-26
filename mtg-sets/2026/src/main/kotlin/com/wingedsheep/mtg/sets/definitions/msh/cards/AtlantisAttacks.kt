@@ -7,11 +7,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.teamwork
 import com.wingedsheep.sdk.dsl.teamworkModal
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Atlantis Attacks — Marvel Super Heroes #46
@@ -52,7 +50,7 @@ val AtlantisAttacks = card("Atlantis Attacks") {
     spell {
         teamworkModal {
             mode("Target player creates a 6/5 blue Leviathan creature token with hexproof") {
-                val player = target("target player", TargetPlayer())
+                val player = target(Targets.Player)
                 effect = Effects.CreateToken(
                     power = 6,
                     toughness = 5,
@@ -64,12 +62,9 @@ val AtlantisAttacks = card("Atlantis Attacks") {
                 )
             }
             mode("Return one or two target nonland permanents to their owners' hands") {
-                target(
-                    "one or two target nonland permanents",
-                    TargetObject(count = 2, minCount = 1, filter = TargetFilter.NonlandPermanent),
-                )
-                effect = ForEachTargetEffect(
-                    listOf(Effects.ReturnToHand(EffectTarget.ContextTarget(0))),
+                targets(TargetFilter.NonlandPermanent, count = 2, minCount = 1)
+                effect = Effects.ForEachTarget(
+                    Effects.ReturnToHand(EffectTarget.ContextTarget(0)),
                 )
             }
         }

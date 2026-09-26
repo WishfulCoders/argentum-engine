@@ -1,16 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.mh2.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Ragavan, Nimble Pilferer — Modern Horizons 2 #138
@@ -44,28 +40,22 @@ val RagavanNimblePilferer = card("Ragavan, Nimble Pilferer") {
     dash = "{1}{R}"
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         description = "Whenever Ragavan deals combat damage to a player, create a Treasure " +
             "token and exile the top card of that player's library. Until end of turn, you " +
             "may cast that card."
 
-        effect = Effects.Composite(
-            listOf(
-                Effects.CreateTreasure(1),
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(
-                        DynamicAmount.Fixed(1),
-                        player = Player.TriggeringPlayer
-                    ),
-                    storeAs = "exiled"
-                ),
-                MoveCollectionEffect(
-                    from = "exiled",
-                    destination = CardDestination.ToZone(Zone.EXILE, player = Player.TriggeringPlayer)
-                ),
-                Effects.GrantMayPlayFromExile(from = "exiled", nonLandOnly = true)
+        effect = Effects.Pipeline {
+            run(Effects.CreateTreasure(1))
+            val exiled = gather(
+                CardSource.TopOfLibrary(
+                    1,
+                    player = Player.TriggeringPlayer
+                )
             )
-        )
+            exile(exiled, Player.TriggeringPlayer)
+            run(Effects.GrantMayPlayFromExile(from = exiled, nonLandOnly = true))
+        }
     }
 
     metadata {

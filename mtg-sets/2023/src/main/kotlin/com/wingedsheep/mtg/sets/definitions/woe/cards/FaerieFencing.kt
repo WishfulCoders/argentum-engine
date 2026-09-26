@@ -6,14 +6,13 @@ package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.unaryMinus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -29,20 +28,18 @@ val FaerieFencing = card("Faerie Fencing") {
     oracleText = "Target creature gets -X/-X until end of turn. That creature gets an additional -3/-3 until end of turn if you controlled a Faerie as you cast this spell."
     spell {
         captureAtCast("controlledFaerie", Conditions.YouControl(GameObjectFilter.Creature.withSubtype(Subtype.FAERIE)))
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = ConditionalEffect(
+        val t = target(TargetFilter.Creature)
+        effect = Effects.If(
             condition = Conditions.CapturedAtCast("controlledFaerie"),
-            effect = Effects.Composite(
-                Effects.ModifyStats(
-                    DynamicAmount.Multiply(DynamicAmount.XValue, -1),
-                    DynamicAmount.Multiply(DynamicAmount.XValue, -1),
-                    t
-                ),
-                Effects.ModifyStats(-3, -3, t)
-            ),
-            elseEffect = Effects.ModifyStats(
-                DynamicAmount.Multiply(DynamicAmount.XValue, -1),
-                DynamicAmount.Multiply(DynamicAmount.XValue, -1),
+            then = Effects.ModifyStats(
+                -DynamicAmounts.xValue(),
+                -DynamicAmounts.xValue(),
+                t
+            ) then
+                Effects.ModifyStats(-3, -3, t),
+            otherwise = Effects.ModifyStats(
+                -DynamicAmounts.xValue(),
+                -DynamicAmounts.xValue(),
                 t
             )
         )

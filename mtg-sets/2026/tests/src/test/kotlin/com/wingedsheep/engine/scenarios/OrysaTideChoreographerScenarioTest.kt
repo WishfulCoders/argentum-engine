@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.mana.CostCalculator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.support.GameTestDriver
@@ -26,7 +27,7 @@ class OrysaTideChoreographerScenarioTest : FunSpec({
 
     test("costs {3} less when creatures you control have total toughness >= 10") {
         val reg = registry()
-        val calculator = CostCalculator(reg)
+        val calculator = CostCalculator(reg, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val driver = GameTestDriver()
         driver.registerCards(TestCards.all + listOf(OrysaTideChoreographer))
         driver.initMirrorMatch(deck = Deck.of("Island" to 40))
@@ -45,7 +46,7 @@ class OrysaTideChoreographerScenarioTest : FunSpec({
 
     test("not reduced when total toughness is below 10") {
         val reg = registry()
-        val calculator = CostCalculator(reg)
+        val calculator = CostCalculator(reg, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val driver = GameTestDriver()
         driver.registerCards(TestCards.all + listOf(OrysaTideChoreographer))
         driver.initMirrorMatch(deck = Deck.of("Island" to 40))

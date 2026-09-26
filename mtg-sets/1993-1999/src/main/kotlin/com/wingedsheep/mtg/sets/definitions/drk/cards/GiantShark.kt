@@ -48,13 +48,9 @@ val GiantShark = card("Giant Shark") {
     }
 
     triggeredAbility {
-        trigger = Triggers.BlocksOrBecomesBlockedBy(
-            GameObjectFilter.Creature.wasDealtDamageThisTurn()
-        )
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 0, EffectTarget.Self),
-            Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self),
-        )
+        trigger = Triggers.self.blocksOrBecomesBlocked(GameObjectFilter.Creature.wasDealtDamageThisTurn())
+        effect = Effects.ModifyStats(2, 0, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
         description = "Whenever this creature blocks or becomes blocked by a creature that has " +
             "been dealt damage this turn, this creature gets +2/+0 and gains trample until end of turn."
     }

@@ -14,13 +14,14 @@ import com.wingedsheep.sdk.scripting.effects.CompositeEffect
 import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
- * Gap 12 substrate: `DynamicAmount.EntityProperty(EntityReference.AmassedArmy, …)` reads the
+ * Gap 12 substrate: `DynamicAmount.EntityProperty(EffectTarget.AmassedArmy, …)` reads the
  * Army that received the +1/+1 counters from the most recent Amass step in the current
  * resolution pipeline (CR 701.47). Composes with [CompositeEffect] of `[Amass, ...]` so a
  * follow-up sibling effect can scale by the just-amassed Army's power — Foray of Orcs ("…deals
@@ -33,7 +34,7 @@ class AmassedArmyReferenceScenarioTest : FunSpec({
     val projector = StateProjector()
 
     val amassedArmyPower = DynamicAmount.EntityProperty(
-        EntityReference.AmassedArmy,
+        EffectTarget.AmassedArmy,
         EntityNumericProperty.Power
     )
 
@@ -44,7 +45,7 @@ class AmassedArmyReferenceScenarioTest : FunSpec({
         typeLine = "Sorcery"
         oracleText = "Amass Orcs 2. Then this deals damage equal to the amassed Army's power to target player."
         spell {
-            val player = target("target player", Targets.Player)
+            val player = target(Targets.Player)
             effect = CompositeEffect(listOf(
                 Effects.Amass(2, "Orc"),
                 Effects.DealDamage(amassedArmyPower, player)
@@ -59,7 +60,7 @@ class AmassedArmyReferenceScenarioTest : FunSpec({
         typeLine = "Sorcery"
         oracleText = "Amass Orcs 1. Then this deals damage equal to the amassed Army's power to target player."
         spell {
-            val player = target("target player", Targets.Player)
+            val player = target(Targets.Player)
             effect = CompositeEffect(listOf(
                 Effects.Amass(1, "Orc"),
                 Effects.DealDamage(amassedArmyPower, player)
@@ -82,7 +83,7 @@ class AmassedArmyReferenceScenarioTest : FunSpec({
                 action = Effects.Amass(2, "Orc"),
                 optional = false,
                 reflexiveEffect = Effects.DealDamage(amassedArmyPower, EffectTarget.ContextTarget(0)),
-                reflexiveTargetRequirements = listOf(Targets.CreatureOpponentControls)
+                reflexiveTargetRequirements = listOf(TargetObject(filter = TargetFilter.CreatureOpponentControls))
             )
         }
     }

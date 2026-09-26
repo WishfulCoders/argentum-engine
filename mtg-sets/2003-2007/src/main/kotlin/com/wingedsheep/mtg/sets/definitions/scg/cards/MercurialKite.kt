@@ -7,8 +7,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Mercurial Kite
@@ -30,9 +30,9 @@ val MercurialKite = card("Mercurial Kite") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToCreature
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyCreature)
         effect = Effects.Tap(EffectTarget.TriggeringEntity) then
-            GrantKeywordEffect(AbilityFlag.DOESNT_UNTAP.name, EffectTarget.TriggeringEntity, Duration.UntilAfterAffectedControllersNextUntap)
+            Effects.GrantKeyword(AbilityFlag.DOESNT_UNTAP, EffectTarget.TriggeringEntity, Duration.UntilAfterAffectedControllersNextUntap)
     }
 
     metadata {

@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Goblin Digging Team
@@ -25,10 +24,7 @@ val GoblinDiggingTeam = card("Goblin Digging Team") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.SacrificeSelf)
-        val wall = target(
-            "target Wall",
-            TargetCreature(filter = TargetFilter.Creature.withSubtype(Subtype.WALL))
-        )
+        val wall = target(TargetFilter.Creature.withSubtype(Subtype.WALL))
         effect = Effects.Destroy(wall)
     }
 

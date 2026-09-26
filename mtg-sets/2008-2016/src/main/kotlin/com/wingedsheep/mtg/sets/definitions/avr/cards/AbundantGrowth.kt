@@ -2,7 +2,6 @@ package com.wingedsheep.mtg.sets.definitions.avr.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -10,6 +9,8 @@ import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.GrantActivatedAbility
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Abundant Growth
@@ -27,17 +28,17 @@ val AbundantGrowth = card("Abundant Growth") {
         "When this Aura enters, draw a card.\n" +
         "Enchanted land has \"{T}: Add one mana of any color.\""
 
-    auraTarget = Targets.Land
+    auraTarget = TargetObject(filter = TargetFilter.Land)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1)
     }
 
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Tap,
                 effect = Effects.AddAnyColorMana(1),
                 isManaAbility = true,

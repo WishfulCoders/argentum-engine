@@ -50,7 +50,7 @@ import kotlin.reflect.KClass
  *     `SetPower`/`SetToughness`/`SetPowerToughness` branches write unconditionally.
  */
 class SetBaseStatsExecutor(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<SetBaseStatsEffect> {
 
     override val effectType: KClass<SetBaseStatsEffect> = SetBaseStatsEffect::class

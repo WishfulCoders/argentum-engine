@@ -3,12 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Manaform Hellkite — Innistrad: Crimson Vow #170
@@ -44,16 +44,16 @@ val ManaformHellkite = card("Manaform Hellkite") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
-        effect = CreateTokenEffect(
-            count = DynamicAmount.Fixed(1),
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
+        effect = Effects.CreateToken(
+            count = 1,
             power = 0,
             toughness = 0,
             colors = setOf(Color.RED),
             creatureTypes = setOf("Dragon", "Illusion"),
             keywords = setOf(Keyword.FLYING, Keyword.HASTE),
-            dynamicPower = DynamicAmount.ContextProperty(ContextPropertyKey.MANA_SPENT_ON_TRIGGERING_SPELL),
-            dynamicToughness = DynamicAmount.ContextProperty(ContextPropertyKey.MANA_SPENT_ON_TRIGGERING_SPELL),
+            dynamicPower = DynamicAmounts.manaSpentOnTriggeringSpell(),
+            dynamicToughness = DynamicAmounts.manaSpentOnTriggeringSpell(),
             exileAtStep = Step.END,
             imageUri = "https://cards.scryfall.io/normal/front/e/0/e04ca01e-d2ff-45ce-bf6f-9f756808c8fb.jpg?1783924696"
         )

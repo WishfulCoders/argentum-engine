@@ -80,7 +80,7 @@ class WorldslayerScenarioTest : ScenarioTestBase() {
                 game.passPriority()
                 game.resolveStack()
 
-                withClue("RecipientFilter.AnyPlayer never matched, so no wipe") {
+                withClue("Recipient.AnyPlayer never matched, so no wipe") {
                     game.isOnBattlefield("Force of Nature") shouldBe true
                     game.isOnBattlefield("Forest") shouldBe true
                     game.isOnBattlefield("Worldslayer") shouldBe true

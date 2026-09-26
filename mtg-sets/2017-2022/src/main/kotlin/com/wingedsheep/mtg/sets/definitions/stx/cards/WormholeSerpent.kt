@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Wormhole Serpent — Strixhaven: School of Mages #62 (canonical printing)
@@ -29,7 +30,7 @@ val WormholeSerpent = card("Wormhole Serpent") {
 
     activatedAbility {
         cost = Costs.Mana("{3}{U}")
-        val creature = target("target", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, creature)
         description = "{3}{U}: Target creature can't be blocked this turn."
     }

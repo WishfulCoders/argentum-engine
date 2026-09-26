@@ -37,13 +37,10 @@ val ParasiticStrix = card("Parasitic Strix") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouControl(GameObjectFilter.Permanent.withColor(Color.BLACK))
-        val victim = target("target", Targets.Player)
-        effect = Effects.Composite(
-            Effects.LoseLife(2, victim),
-            Effects.GainLife(2)
-        )
+        val victim = target(Targets.Player)
+        effect = Effects.LoseLife(2, victim) then Effects.GainLife(2)
     }
 
     metadata {

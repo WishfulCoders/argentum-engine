@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 
 /**
  * Pack Guardian
@@ -33,11 +31,11 @@ val PackGuardian = card("Pack Guardian") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(
-            effect = IfYouDoEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.May(
+            effect = Effects.IfYouDo(
                 action = Patterns.Hand.discardCards(1, filter = GameObjectFilter.Land),
-                ifYouDo = Effects.CreateToken(
+                then = Effects.CreateToken(
                     power = 2,
                     toughness = 2,
                     colors = setOf(Color.GREEN),

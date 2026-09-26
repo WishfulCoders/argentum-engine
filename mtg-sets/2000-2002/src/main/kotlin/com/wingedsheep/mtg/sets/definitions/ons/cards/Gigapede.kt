@@ -6,9 +6,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Gigapede
@@ -30,9 +30,9 @@ val Gigapede = card("Gigapede") {
     keywords(Keyword.SHROUD)
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         triggerZone = Zone.GRAVEYARD
-        effect = ReflexiveTriggerEffect(
+        effect = Effects.ReflexiveTrigger(
             action = Patterns.Hand.discardCards(1),
             optional = true,
             reflexiveEffect = Effects.Move(EffectTarget.Self, Zone.HAND)

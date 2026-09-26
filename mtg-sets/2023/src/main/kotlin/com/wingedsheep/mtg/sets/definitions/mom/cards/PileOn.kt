@@ -27,7 +27,7 @@ val PileOn = card("Pile On") {
     keywords(Keyword.CONVOKE)
 
     spell {
-        val victim = target("target creature or planeswalker", Targets.CreatureOrPlaneswalker)
+        val victim = target(Targets.CreatureOrPlaneswalker)
         effect = Effects.Destroy(victim) then Patterns.Library.surveil(2)
     }
 

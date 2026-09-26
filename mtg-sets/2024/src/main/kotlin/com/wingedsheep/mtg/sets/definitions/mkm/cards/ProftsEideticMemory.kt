@@ -1,16 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.minus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.NoMaximumHandSize
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.TurnTracker
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Proft's Eidetic Memory — Murders at Karlov Manor #67
@@ -42,7 +43,7 @@ import com.wingedsheep.sdk.scripting.values.TurnTracker
  * The tracker is a turn-scoped count, not a "since this entered" one, so the second ruling falls
  * out for free — draws made before the enchantment hit the battlefield are already in the tally.
  *
- * [Triggers.BeginCombat] is already scoped to `Step.BEGIN_COMBAT, Player.You`, so "on your turn"
+ * `Triggers.you.beginningOf(Step.BEGIN_COMBAT)` is already scoped to `Step.BEGIN_COMBAT, Player.You`, so "on your turn"
  * needs no extra condition.
  */
 val ProftsEideticMemory = card("Proft's Eidetic Memory") {
@@ -56,7 +57,7 @@ val ProftsEideticMemory = card("Proft's Eidetic Memory") {
         "you've drawn this turn minus one."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1)
         description = "When Proft's Eidetic Memory enters, draw a card."
     }
@@ -66,15 +67,12 @@ val ProftsEideticMemory = card("Proft's Eidetic Memory") {
     }
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
         interveningIf = Conditions.YouDrewCardsThisTurn(2)
-        val creature = target("target creature you control", Targets.CreatureYouControl)
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.AddDynamicCounters(
-            Counters.PLUS_ONE_PLUS_ONE,
-            DynamicAmount.Subtract(
-                DynamicAmount.TurnTracking(Player.You, TurnTracker.CARDS_DRAWN),
-                DynamicAmount.Fixed(1),
-            ),
+            CounterType.PLUS_ONE_PLUS_ONE,
+            DynamicAmounts.cardsDrawnThisTurn(Player.You) - 1,
             creature,
         )
         description = "At the beginning of combat on your turn, if you've drawn more than one " +

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.rtr.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -8,9 +8,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.AnyPlayerMayPayEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Desecration Demon
@@ -22,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * At the beginning of each combat, any opponent may sacrifice a creature of their choice.
  * If a player does, tap this creature and put a +1/+1 counter on it.
  *
- * Modeled with [Triggers.EachCombat] (beginning of combat on every player's turn) and an
+ * Modeled with `Triggers.anyPlayer.beginningOf(Step.BEGIN_COMBAT)` (beginning of combat on every player's turn) and an
  * [AnyPlayerMayPayEffect] scoped to [Player.EachOpponent] — only the controller's opponents are
  * offered the sacrifice. The reflexive consequence (tap self, add one +1/+1 counter) fires once
  * if any opponent sacrifices, matching the ruling that Desecration Demon gets at most one counter
@@ -41,11 +41,11 @@ val DesecrationDemon = card("Desecration Demon") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EachCombat
-        effect = AnyPlayerMayPayEffect(
+        trigger = Triggers.anyPlayer.beginningOf(Step.BEGIN_COMBAT)
+        effect = Effects.AnyPlayerMayPay(
             cost = Costs.pay.Sacrifice(GameObjectFilter.Creature, count = 1),
-            consequence = Effects.Tap(EffectTarget.Self)
-                .then(Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)),
+            consequence = Effects.Tap(EffectTarget.Self) then
+                Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
             eligiblePlayers = Player.EachOpponent
         )
     }

@@ -3,7 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.mrd.cards
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
 /**
@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  *   Plate stays put. [DynamicAmounts.cardsInYourHand] resolves `Player.You` against the ability's
  *   source, which is the Plate, so the printed behaviour falls out for free.
  * - This is a Layer 7c *bonus* recomputed continuously, so the boost shrinks the instant you cast
- *   a spell in response — hence [GrantDynamicStatsEffect] rather than a snapshotted amount.
+ *   a spell in response — hence [GrantDynamicStats] rather than a snapshotted amount.
  * - The Plate itself is never in your hand while it's on the battlefield, so it never counts
  *   toward its own bonus.
  */
@@ -30,7 +30,7 @@ val EmpyrialPlate = card("Empyrial Plate") {
     oracleText = "Equipped creature gets +1/+1 for each card in your hand.\nEquip {2}"
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.attachedCreature(),
             powerBonus = DynamicAmounts.cardsInYourHand(),
             toughnessBonus = DynamicAmounts.cardsInYourHand()

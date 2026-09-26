@@ -29,7 +29,7 @@ val StingingBarrier = card("Stinging Barrier") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{U}"), Costs.Tap)
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
     }
 

@@ -59,7 +59,7 @@ class DawningPuristTest : FunSpec({
         driver.declareNoBlockers(defender)
         driver.bothPass()
 
-        // Combat damage is dealt - trigger fires with MayEffect
+        // Combat damage is dealt - trigger fires with Effects.May
         // (no first strike creatures, so first strike step is skipped per CR 510.4)
         driver.currentStep shouldBe Step.COMBAT_DAMAGE
 
@@ -110,7 +110,7 @@ class DawningPuristTest : FunSpec({
         driver.declareNoBlockers(defender)
         driver.bothPass()
 
-        // Combat damage - trigger fires with MayEffect, decline
+        // Combat damage - trigger fires with Effects.May, decline
         // (no first strike creatures, so first strike step is skipped per CR 510.4)
         val yesNoDecision = driver.pendingDecision as YesNoDecision
         driver.submitYesNo(yesNoDecision.playerId, false)

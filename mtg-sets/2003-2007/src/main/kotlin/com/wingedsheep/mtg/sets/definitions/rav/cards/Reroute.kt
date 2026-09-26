@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Reroute — Ravnica: City of Guilds #139
@@ -33,11 +32,8 @@ val Reroute = card("Reroute") {
         "abilities can't be targeted.)\nDraw a card."
 
     spell {
-        target(
-            "activated ability with a single target",
-            TargetObject(filter = TargetFilter.ActivatedAbilityOnStack)
-        )
-        effect = Effects.ChangeTarget().then(Effects.DrawCards(1))
+        target(TargetFilter.ActivatedAbilityOnStack)
+        effect = Effects.ChangeTarget() then Effects.DrawCards(1)
     }
 
     metadata {

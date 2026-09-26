@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.composite
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.state.GameState
@@ -15,10 +16,13 @@ class ForEachRelationalPlayerTest : FunSpec({
 
     test("an unresolved ControllerOf reference iterates nobody rather than every active player") {
         var executions = 0
-        val executor = ForEachExecutor { state, _, _ ->
-            executions += 1
-            EffectResult.success(state)
-        }
+        val executor = ForEachExecutor(
+            { state, _, _ ->
+                executions += 1
+                EffectResult.success(state)
+            },
+            PredicateEvaluator(cardRegistry = null)
+        )
         val player1 = EntityId("player-1")
         val player2 = EntityId("player-2")
         val state = GameState(turnOrder = listOf(player1, player2))

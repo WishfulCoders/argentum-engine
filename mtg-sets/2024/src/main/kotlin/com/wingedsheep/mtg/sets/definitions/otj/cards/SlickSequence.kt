@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 
 /**
  * Slick Sequence
@@ -24,11 +23,11 @@ val SlickSequence = card("Slick Sequence") {
     oracleText = "Slick Sequence deals 2 damage to any target. If you've cast another spell this turn, draw a card."
 
     spell {
-        val any = target("any target", Targets.Any)
+        val any = target(Targets.Any)
         effect = Effects.DealDamage(2, any) then
-            ConditionalEffect(
+            Effects.If(
                 condition = Conditions.YouCastSpellsThisTurn(atLeast = 2),
-                effect = Effects.DrawCards(1),
+                then = Effects.DrawCards(1),
             )
     }
 

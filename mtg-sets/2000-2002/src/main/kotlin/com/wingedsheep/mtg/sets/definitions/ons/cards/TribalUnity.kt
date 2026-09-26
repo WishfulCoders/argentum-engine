@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Tribal Unity
@@ -19,8 +19,8 @@ val TribalUnity = card("Tribal Unity") {
 
     spell {
         effect = Effects.ChooseCreatureTypeModifyStats(
-            powerModifier = DynamicAmount.XValue,
-            toughnessModifier = DynamicAmount.XValue
+            powerModifier = DynamicAmounts.xValue(),
+            toughnessModifier = DynamicAmounts.xValue()
         )
     }
 

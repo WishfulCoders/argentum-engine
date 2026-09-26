@@ -29,10 +29,7 @@ val StitchedAssistant = card("Stitched Assistant") {
         "the top card of your library, then you may put that card on the bottom.)"
 
     exploit(
-        onExploit = Effects.Composite(
-            Effects.Scry(1),
-            Effects.DrawCards(1)
-        )
+        onExploit = Effects.Scry(1) then Effects.DrawCards(1)
     )
 
     metadata {

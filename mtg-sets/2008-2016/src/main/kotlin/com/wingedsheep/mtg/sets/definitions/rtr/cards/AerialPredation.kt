@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Aerial Predation
@@ -27,11 +28,8 @@ val AerialPredation = card("Aerial Predation") {
     oracleText = "Destroy target creature with flying. You gain 2 life."
 
     spell {
-        val t = target("target creature with flying", Targets.CreatureWithKeyword(Keyword.FLYING))
-        effect = Effects.Composite(
-            Effects.Destroy(t),
-            Effects.GainLife(2),
-        )
+        val t = target(TargetFilter.Creature.withKeyword(Keyword.FLYING))
+        effect = Effects.Destroy(t) then Effects.GainLife(2)
     }
 
     metadata {

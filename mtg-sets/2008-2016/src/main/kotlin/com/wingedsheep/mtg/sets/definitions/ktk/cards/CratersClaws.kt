@@ -1,15 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Crater's Claws
@@ -25,11 +25,11 @@ val CratersClaws = card("Crater's Claws") {
     oracleText = "Crater's Claws deals X damage to any target.\nFerocious — Crater's Claws deals X plus 2 damage instead if you control a creature with power 4 or greater."
 
     spell {
-        val t = target("target", AnyTarget())
-        effect = ConditionalEffect(
+        val t = target(Targets.Any)
+        effect = Effects.If(
             condition = Exists(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature.powerAtLeast(4)),
-            effect = DealDamageEffect(DynamicAmount.Add(DynamicAmount.XValue, DynamicAmount.Fixed(2)), t),
-            elseEffect = DealDamageEffect(DynamicAmount.XValue, t)
+            then = Effects.DealDamage(DynamicAmounts.xValue() + 2, t),
+            otherwise = Effects.DealDamage(DynamicAmounts.xValue(), t)
         )
     }
 

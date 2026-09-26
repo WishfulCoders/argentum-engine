@@ -6,11 +6,11 @@ package com.wingedsheep.mtg.sets.definitions.lea.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -29,7 +29,7 @@ val Nightmare = card("Nightmare") {
     power = 0
     toughness = 0
     keywords(Keyword.FLYING)
-    dynamicStats(DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land.withSubtype(Subtype.SWAMP)))
+    dynamicStats(DynamicAmounts.battlefield(Player.You, GameObjectFilter.Land.withSubtype(Subtype.SWAMP)).count())
     metadata {
         rarity = Rarity.RARE
         collectorNumber = "118"

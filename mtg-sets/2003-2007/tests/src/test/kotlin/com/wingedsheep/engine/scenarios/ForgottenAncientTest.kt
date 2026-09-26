@@ -55,7 +55,7 @@ class ForgottenAncientTest : FunSpec({
         // Trigger goes on stack above the spell — resolve it
         driver.bothPass()
 
-        // MayEffect yes/no decision
+        // Effects.May yes/no decision
         driver.submitYesNo(activePlayer, true)
 
         getCounters(driver, ancient) shouldBe 1
@@ -87,7 +87,7 @@ class ForgottenAncientTest : FunSpec({
         // Trigger for Forgotten Ancient — resolve it first
         driver.bothPass()
 
-        // MayEffect — choose yes
+        // Effects.May — choose yes
         driver.submitYesNo(activePlayer, true)
 
         getCounters(driver, ancient) shouldBe 1

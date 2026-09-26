@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Icatian Lieutenant
@@ -25,10 +24,7 @@ val IcatianLieutenant = card("Icatian Lieutenant") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{W}")
-        val t = target(
-            "target Soldier creature",
-            TargetCreature(filter = TargetFilter.Creature.withSubtype(Subtype.SOLDIER))
-        )
+        val t = target(TargetFilter.Creature.withSubtype(Subtype.SOLDIER))
         effect = Effects.ModifyStats(1, 0, t)
     }
 

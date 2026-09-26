@@ -9,9 +9,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -29,16 +27,16 @@ val BaseballBat = card("Baseball Bat") {
     typeLine = "Artifact — Equipment"
     oracleText = "When this Equipment enters, attach it to target creature you control.\nEquipped creature gets +1/+1.\nWhenever equipped creature attacks, tap up to one target creature.\nEquip {3} ({3}: Attach to target creature you control. Equip only as a sorcery.)"
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.youControl()))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature.youControl())
         effect = Effects.AttachEquipment(t)
     }
     staticAbility {
         ability = ModifyStats(1, 1)
     }
     triggeredAbility {
-        trigger = Triggers.attacks(binding = TriggerBinding.ATTACHED)
-        val t = target("target", TargetCreature(optional = true, filter = TargetFilter.Creature))
+        trigger = Triggers.attached.attacks()
+        val t = target(TargetFilter.Creature, optional = true)
         effect = Effects.Tap(t)
     }
     equipAbility("{3}")

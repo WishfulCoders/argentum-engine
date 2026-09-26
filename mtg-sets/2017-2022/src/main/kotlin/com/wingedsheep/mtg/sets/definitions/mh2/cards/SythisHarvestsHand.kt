@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Sythis, Harvest's Hand — Modern Horizons 2 #214
@@ -11,7 +12,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * Whenever you cast an enchantment spell, you gain 1 life and draw a card.
  *
- * [Triggers.YouCastEnchantment] watches the *cast*, so the trigger goes on the stack above the
+ * `Triggers.you.casts(GameObjectFilter.Enchantment)` watches the *cast*, so the trigger goes on the stack above the
  * enchantment spell and resolves first — the life and the card arrive before the enchantment does
  * (CR 603.3). Sythis is herself an enchantment creature, but casting *her* does not trigger this:
  * the ability isn't on the battlefield yet when she is cast.
@@ -29,7 +30,7 @@ val SythisHarvestsHand = card("Sythis, Harvest's Hand") {
     oracleText = "Whenever you cast an enchantment spell, you gain 1 life and draw a card."
 
     triggeredAbility {
-        trigger = Triggers.YouCastEnchantment
+        trigger = Triggers.you.casts(GameObjectFilter.Enchantment)
         effect = Effects.GainLife(1) then Effects.DrawCards(1)
     }
 

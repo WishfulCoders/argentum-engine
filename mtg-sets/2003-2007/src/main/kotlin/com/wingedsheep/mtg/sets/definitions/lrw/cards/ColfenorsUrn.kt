@@ -1,18 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.effects.SuccessCriterion
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Colfenor's Urn
@@ -56,11 +55,7 @@ val ColfenorsUrn = card("Colfenor's Urn") {
         "owner's control."
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.toughnessAtLeast(4).ownedByYou(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.toughnessAtLeast(4).ownedByYou()).dies()
         optional = true
         effect = Effects.Move(
             EffectTarget.TriggeringEntity,
@@ -73,15 +68,15 @@ val ColfenorsUrn = card("Colfenor's Urn") {
     }
 
     triggeredAbility {
-        trigger = Triggers.EachEndStep
-        interveningIf = Compare(
-            DynamicAmount.ContextProperty(ContextPropertyKey.LINKED_EXILE_CARD_COUNT),
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
+        interveningIf = Conditions.CompareAmounts(
+            DynamicAmounts.linkedExileCardCount(),
             ComparisonOperator.GTE,
-            DynamicAmount.Fixed(3)
+            3
         )
         effect = Effects.IfYouDo(
             action = Effects.SacrificeTarget(EffectTarget.Self),
-            ifYouDo = Effects.ReturnLinkedExileUnderOwnersControl(),
+            then = Effects.ReturnLinkedExileUnderOwnersControl(),
             successCriterion = SuccessCriterion.PermanentsSacrificed
         )
         description = "At the beginning of the end step, if three or more cards have been " +

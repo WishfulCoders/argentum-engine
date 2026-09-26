@@ -34,7 +34,7 @@ val StoneDocent = card("Stone Docent") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{W}"), Costs.ExileSelf)
-        effect = Effects.GainLife(2).then(Patterns.Library.surveil(1))
+        effect = Effects.GainLife(2) then Patterns.Library.surveil(1)
         timing = TimingRule.SorcerySpeed
         activateFromZone = Zone.GRAVEYARD
         description = "{W}, Exile this card from your graveyard: You gain 2 life. Surveil 1. " +

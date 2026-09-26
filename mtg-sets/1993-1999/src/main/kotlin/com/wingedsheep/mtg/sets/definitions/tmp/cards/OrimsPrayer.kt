@@ -24,7 +24,7 @@ val OrimsPrayer = card("Orim's Prayer") {
     oracleText = "Whenever one or more creatures attack you, you gain 1 life for each attacking creature."
 
     triggeredAbility {
-        trigger = Triggers.CreaturesAttackYou
+        trigger = Triggers.you.isAttacked()
         effect = Effects.GainLife(
             DynamicAmounts.battlefield(Player.Each, GameObjectFilter.Creature.attacking()).count()
         )

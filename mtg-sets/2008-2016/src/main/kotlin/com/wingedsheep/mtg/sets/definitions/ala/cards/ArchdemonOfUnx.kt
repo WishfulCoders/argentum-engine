@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Archdemon of Unx
@@ -17,7 +18,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  * Flying, trample
  * At the beginning of your upkeep, sacrifice a non-Zombie creature, then create a 2/2 black Zombie creature token.
  *
- * [Triggers.YourUpkeep] over a two-step composite. The printed "sacrifice a non-Zombie creature" is
+ * `Triggers.you.beginningOf(Step.UPKEEP)` over a two-step composite. The printed "sacrifice a non-Zombie creature" is
  * the bare imperative — the ability's own controller sacrifices and no player is named — so it is
  * [Effects.SacrificeOwn], not the `Sacrifice` that names a player; the "non-Zombie" half is a
  * predicate on the filter (`Creature.notSubtype(ZOMBIE)`), which keeps the exclusion in the choice
@@ -36,7 +37,7 @@ val ArchdemonOfUnx = card("Archdemon of Unx") {
     keywords(Keyword.FLYING, Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.SacrificeOwn(GameObjectFilter.Creature.notSubtype(Subtype.ZOMBIE)) then
             Effects.CreateToken(
                 power = 2,

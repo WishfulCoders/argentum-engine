@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Turtle Lair
@@ -40,12 +39,9 @@ val TurtleLair = card("Turtle Lair") {
 
     activatedAbility {
         val creature = target(
-            "target Ninja or Turtle",
-            TargetCreature(
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.withAnyOfSubtypes(listOf(Subtype("Ninja"), Subtype("Turtle")))
-                )
-            )
+            TargetFilter(
+                GameObjectFilter.Creature.withAnyOfSubtypes(listOf(Subtype("Ninja"), Subtype("Turtle")))
+            ),
         )
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap)
         effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, creature)

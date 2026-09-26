@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Savior of the Small
@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  * target creature card with mana value 3 or less from your graveyard to your hand.
  *
  * "Survival" is an ability word (no rules meaning) — modeled as a postcombat-main-phase trigger
- * ([Triggers.YourPostcombatMain]) with an intervening-if ([Conditions.SourceIsTapped], CR 603.4 —
+ * (`Triggers.you.beginningOf(Step.POSTCOMBAT_MAIN)`) with an intervening-if ([Conditions.SourceIsTapped], CR 603.4 —
  * checked both when it would trigger and on resolution). The target is a creature card with mana
  * value 3 or less in your graveyard, returned to your hand via [Effects.ReturnToHand].
  */
@@ -34,17 +34,14 @@ val SaviorOfTheSmall = card("Savior of the Small") {
         "tapped, return target creature card with mana value 3 or less from your graveyard to your hand."
 
     triggeredAbility {
-        trigger = Triggers.YourPostcombatMain
+        trigger = Triggers.you.beginningOf(Step.POSTCOMBAT_MAIN)
         interveningIf = Conditions.SourceIsTapped
         val card = target(
-            "target creature card with mana value 3 or less from your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter.Creature
-                        .ownedByYou()
-                        .manaValueAtMost(3),
-                    zone = Zone.GRAVEYARD,
-                ),
+            TargetFilter(
+                baseFilter = GameObjectFilter.Creature
+                    .ownedByYou()
+                    .manaValueAtMost(3),
+                zone = Zone.GRAVEYARD,
             ),
         )
         effect = Effects.ReturnToHand(card)

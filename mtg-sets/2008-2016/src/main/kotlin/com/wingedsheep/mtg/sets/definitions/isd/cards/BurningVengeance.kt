@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.isd.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.events.SpellCastPredicate
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Burning Vengeance
@@ -24,11 +24,9 @@ val BurningVengeance = card("Burning Vengeance") {
     oracleText = "Whenever you cast a spell from your graveyard, this enchantment deals 2 damage to any target."
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            requires = setOf(SpellCastPredicate.CastFromZone(Zone.GRAVEYARD))
-        )
-        val t = target("target", AnyTarget())
-        effect = DealDamageEffect(2, t)
+        trigger = Triggers.you.casts(requires = setOf(SpellCastPredicate.CastFromZone(Zone.GRAVEYARD)))
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(2, t)
     }
 
     metadata {

@@ -28,12 +28,12 @@ val Thragtusk = card("Thragtusk") {
         "When this creature leaves the battlefield, create a 3/3 green Beast creature token."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(5)
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.CreateToken(
             power = 3,
             toughness = 3,

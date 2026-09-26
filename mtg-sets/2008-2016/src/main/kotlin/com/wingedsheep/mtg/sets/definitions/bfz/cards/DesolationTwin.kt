@@ -24,7 +24,7 @@ val DesolationTwin = card("Desolation Twin") {
     oracleText = "When you cast this spell, create a 10/10 colorless Eldrazi creature token."
 
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
+        trigger = Triggers.self.isCast()
         effect = Effects.CreateToken(
             power = 10,
             toughness = 10,

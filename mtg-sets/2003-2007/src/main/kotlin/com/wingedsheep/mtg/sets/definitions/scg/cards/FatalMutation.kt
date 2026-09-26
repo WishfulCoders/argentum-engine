@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
 import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.CantBeRegeneratedEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 val FatalMutation = card("Fatal Mutation") {
     manaCost = "{B}"
@@ -16,11 +15,11 @@ val FatalMutation = card("Fatal Mutation") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature\nWhen enchanted creature is turned face up, destroy it. It can't be regenerated."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.turnedFaceUp(binding = TriggerBinding.ATTACHED)
-        effect = CantBeRegeneratedEffect(EffectTarget.EnchantedCreature) then
+        trigger = Triggers.attached.turnedFaceUp()
+        effect = Effects.CantBeRegenerated(EffectTarget.EnchantedCreature) then
                 Effects.Move(EffectTarget.EnchantedCreature, Zone.GRAVEYARD, byDestruction = true)
     }
 

@@ -17,8 +17,8 @@ import io.kotest.matchers.shouldBe
  *  turn."
  *
  * The composition puts a `ForEachInGroup` inside a "you may", and its body reads two different
- * entities at once: `EntityReference.Source` for Sita Varma's power and `EffectTarget.Self` for the
- * creature being rewritten. If those collapsed onto one entity, every creature would set its base
+ * entities at once: `EffectTarget.Self` for Sita Varma's power and `EffectTarget.IterationEntity`
+ * for the creature being rewritten. If those collapsed onto one entity, every creature would set its base
  * P/T to its own power — a silent no-op the card snapshot cannot catch. Hence a 3/3 Hill Giant as
  * the other creature, so a wrong answer and a right one differ at every X. The tests pin:
  *

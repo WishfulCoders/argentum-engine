@@ -194,7 +194,7 @@ not modelled yet" bucket. Check which bucket a card moved into before deciding t
   convoke), check that keyword against `rules-engine` once and the rest of the sweep is metadata.
 - **First-in-corpus mechanics earn a scenario test even with no new SDK vocabulary.** Bushido existed as
   `KeywordAbility.bushido(n)` and no card had ever used it; Jade Avenger is the first lowering and got a
-  test. (Use `EffectTarget.Self` there — `Triggers.Blocks` fires off a `BlockEvent` that does not bind the
+  test. (Use `EffectTarget.Self` there — `Triggers.self.blocks()` fires off a `BlockEvent` that does not bind the
   source.)
 - **`ScenarioTestBase.passUntilPhase` hangs a multi-turn test.** A scenario board has no library, the game
   ends mid-loop, and `passUntilPhase` breaks *without erroring* — the outer loop spins until the watchdog

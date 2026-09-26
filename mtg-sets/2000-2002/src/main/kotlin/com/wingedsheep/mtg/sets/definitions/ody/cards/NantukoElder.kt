@@ -28,7 +28,7 @@ val NantukoElder = card("Nantuko Elder") {
     toughness = 2
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.Composite(Effects.AddColorlessMana(1), Effects.AddMana(Color.GREEN, 1))
+        effect = Effects.AddColorlessMana(1) then Effects.AddMana(Color.GREEN, 1)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

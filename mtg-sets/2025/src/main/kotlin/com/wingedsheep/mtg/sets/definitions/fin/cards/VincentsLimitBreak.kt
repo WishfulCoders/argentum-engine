@@ -2,16 +2,15 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.effects.Effect
-import com.wingedsheep.sdk.scripting.effects.GrantTriggeredAbilityEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Vincent's Limit Break
@@ -45,16 +44,16 @@ val VincentsLimitBreak = card("Vincent's Limit Break") {
     spell {
         tiered {
             tier("Galian Beast", "{0}", "3/2.") {
-                effect = transform(3, 2)
-                target = Targets.CreatureYouControl
+                val creatureYouControl = target(TargetFilter.CreatureYouControl)
+                effect = transform(creatureYouControl, 3, 2)
             }
             tier("Death Gigas", "{1}", "5/2.") {
-                effect = transform(5, 2)
-                target = Targets.CreatureYouControl
+                val creatureYouControl = target(TargetFilter.CreatureYouControl)
+                effect = transform(creatureYouControl, 5, 2)
             }
             tier("Hellmasker", "{3}", "7/2.") {
-                effect = transform(7, 2)
-                target = Targets.CreatureYouControl
+                val creatureYouControl = target(TargetFilter.CreatureYouControl)
+                effect = transform(creatureYouControl, 7, 2)
             }
         }
     }
@@ -74,10 +73,9 @@ val VincentsLimitBreak = card("Vincent's Limit Break") {
  * turn, but a creature that dies during that window leaves the ability to resolve from the
  * graveyard (mirrors the Earthbend "return tapped" composition).
  */
-private fun transform(power: Int, toughness: Int): Effect {
+private fun transform(creature: EffectTarget, power: Int, toughness: Int): Effect {
     val diesReturnTapped = TriggeredAbility.create(
-        trigger = Triggers.Dies.event,
-        binding = Triggers.Dies.binding,
+        trigger = Triggers.self.dies(),
         effect = Effects.Move(
             target = EffectTarget.Self,
             destination = Zone.BATTLEFIELD,
@@ -86,8 +84,6 @@ private fun transform(power: Int, toughness: Int): Effect {
         ),
         descriptionOverride = "When this creature dies, return it to the battlefield tapped under its owner's control."
     )
-    return Effects.Composite(
-        Effects.SetBasePowerAndToughness(power, toughness, EffectTarget.ContextTarget(0), Duration.EndOfTurn),
-        GrantTriggeredAbilityEffect(diesReturnTapped, EffectTarget.ContextTarget(0), Duration.EndOfTurn)
-    )
+    return Effects.SetBasePowerAndToughness(power, toughness, creature, Duration.EndOfTurn) then
+        Effects.GrantTriggeredAbility(diesReturnTapped, creature, Duration.EndOfTurn)
 }

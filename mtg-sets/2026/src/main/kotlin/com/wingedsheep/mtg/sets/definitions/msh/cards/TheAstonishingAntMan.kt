@@ -1,14 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * The Astonishing Ant-Man — Marvel Super Heroes #204
@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * many 1/1 green Insect creature tokens.
  *
  * Modeling notes:
- *  - The trigger is [Triggers.YouDraw], which fires once per card drawn (CR 121.2) — a
+ *  - The trigger is `Triggers.you.draws()`, which fires once per card drawn (CR 121.2) — a
  *    multi-card draw puts on that many counters, one trigger at a time. Cards put into hand
  *    without the word "draw" (CR 121.5) don't trigger it.
  *  - "Remove any number of +1/+1 counters from ~" is the Retribution of the Ancients cost shape:
@@ -42,8 +42,8 @@ val TheAstonishingAntMan = card("The Astonishing Ant-Man") {
         "Create that many 1/1 green Insect creature tokens."
 
     triggeredAbility {
-        trigger = Triggers.YouDraw
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.draws()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Whenever you draw a card, put a +1/+1 counter on The Astonishing Ant-Man."
     }
 
@@ -55,12 +55,12 @@ val TheAstonishingAntMan = card("The Astonishing Ant-Man") {
             // player to distribute the removal across matching permanents, which never resolves for
             // a self-scoped cost.
             Costs.RemoveXCounters(
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
                 self = true,
             ),
         )
         effect = Effects.CreateToken(
-            count = DynamicAmount.XValue,
+            count = DynamicAmounts.xValue(),
             power = 1,
             toughness = 1,
             colors = setOf(Color.GREEN),

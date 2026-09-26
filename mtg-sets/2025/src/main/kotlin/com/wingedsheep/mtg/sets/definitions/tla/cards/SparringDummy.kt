@@ -2,20 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
-import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Sparring Dummy
@@ -42,35 +33,26 @@ val SparringDummy = card("Sparring Dummy") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.Composite(
-            listOf(
-                // Mill a card (gather top card into "milled", move it to the graveyard).
-                Patterns.Library.mill(1),
-                // You may put a land card milled this way into your hand.
-                SelectFromCollectionEffect(
-                    from = "milled",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    filter = GameObjectFilter.Land,
-                    storeSelected = "toHand",
-                    showAllCards = true,
-                    prompt = "You may put a land card into your hand",
-                    selectedLabel = "Put in hand",
-                    remainderLabel = "Leave in graveyard"
-                ),
-                MoveCollectionEffect(
-                    from = "toHand",
-                    destination = CardDestination.ToZone(Zone.HAND)
-                ),
-                // You gain 2 life if a Lesson card is milled this way.
-                ConditionalEffect(
-                    condition = Conditions.CollectionContainsMatch(
-                        "milled",
-                        GameObjectFilter.Any.withSubtype(Subtype.LESSON)
-                    ),
-                    effect = Effects.GainLife(2)
-                )
+        effect = Effects.Pipeline {
+            // Mill a card.
+            val milled = mill(1)
+            // You may put a land card milled this way into your hand.
+            val land = chooseUpTo(
+                1,
+                from = milled,
+                filter = GameObjectFilter.Land,
+                showAllCards = true,
+                prompt = "You may put a land card into your hand",
+                selectedLabel = "Put in hand",
+                remainderLabel = "Leave in graveyard"
             )
-        )
+            toHand(land)
+            // You gain 2 life if a Lesson card is milled this way.
+            run(Effects.If(
+                condition = whenMatches(milled, GameObjectFilter.Any.withSubtype(Subtype.LESSON)),
+                then = Effects.GainLife(2)
+            ))
+        }
     }
 
     metadata {

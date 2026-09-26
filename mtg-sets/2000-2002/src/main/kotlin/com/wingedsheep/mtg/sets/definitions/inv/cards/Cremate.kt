@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 /**
  * Cremate
  * {B}
@@ -19,9 +19,8 @@ val Cremate = card("Cremate") {
     oracleText = "Exile target card from a graveyard.\nDraw a card."
 
     spell {
-        val t = target("target", Targets.CardInGraveyard)
-        effect = Effects.Move(t, Zone.EXILE)
-            .then(Effects.DrawCards(1))
+        val t = target(TargetFilter.CardInGraveyard)
+        effect = Effects.Move(t, Zone.EXILE) then Effects.DrawCards(1)
     }
 
     metadata {

@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Possession Engine — Aetherdrift #54
@@ -41,13 +41,11 @@ val PossessionEngine = card("Possession Engine") {
     toughness = 5
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val stolen = target("target creature an opponent controls", Targets.CreatureOpponentControls)
+        trigger = Triggers.self.enters()
+        val stolen = target(TargetFilter.CreatureOpponentControls)
         val whileControlled = Duration.WhileYouControlSource("this Vehicle")
-        effect = Effects.Composite(
-            Effects.GainControl(stolen, whileControlled),
-            Effects.CantAttackOrBlock(stolen, whileControlled),
-        )
+        effect = Effects.GainControl(stolen, whileControlled) then
+            Effects.CantAttackOrBlock(stolen, whileControlled)
         description = "When this Vehicle enters, gain control of target creature an opponent " +
             "controls for as long as you control this Vehicle. That creature can't attack or " +
             "block for as long as you control this Vehicle."

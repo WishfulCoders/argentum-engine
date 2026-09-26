@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.PaymentStrategy
 import com.wingedsheep.engine.mechanics.mana.CostCalculator
@@ -22,6 +23,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.ints.shouldBeLessThan
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Tests for the extended mana system including:
@@ -88,7 +90,7 @@ class ExtendedManaSystemTest : FunSpec({
                 )
             )
 
-            castResult.isSuccess shouldBe false
+            castResult.outcome shouldNotBe Outcome.Done
         }
 
         test("mana dork with haste can tap immediately for mana") {
@@ -124,7 +126,7 @@ class ExtendedManaSystemTest : FunSpec({
             val castResult = driver.castSpell(activePlayer, bolt, listOf(opponent))
 
             // Should succeed because Ragavan has haste and can tap for mana
-            castResult.isSuccess shouldBe true
+            castResult.outcome shouldBe Outcome.Done
         }
     }
 
@@ -138,7 +140,7 @@ class ExtendedManaSystemTest : FunSpec({
             val registry = CardRegistry()
             registry.register(TestCards.all)
 
-            val calculator = CostCalculator(registry)
+            val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             val ghalta = registry.requireCard("Ghalta, Primal Hunger")
 
             // Ghalta costs {10}{G}{G} = 12 total, 10 generic
@@ -177,7 +179,7 @@ class ExtendedManaSystemTest : FunSpec({
             val registry = CardRegistry()
             registry.register(TestCards.all)
 
-            val calculator = CostCalculator(registry)
+            val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             val frogmite = registry.requireCard("Frogmite")
 
             // Frogmite costs {4} with Affinity for artifacts
@@ -213,7 +215,7 @@ class ExtendedManaSystemTest : FunSpec({
             val registry = CardRegistry()
             registry.register(TestCards.all)
 
-            val calculator = CostCalculator(registry)
+            val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             val ghalta = registry.requireCard("Ghalta, Primal Hunger")
 
             val driver = createDriver()
@@ -372,7 +374,7 @@ class ExtendedManaSystemTest : FunSpec({
                 )
             )
 
-            result.isSuccess shouldBe true
+            result.outcome shouldBe Outcome.Done
 
             // Both goblins are tapped by convoke.
             goblins.all { driver.isTapped(it) } shouldBe true
@@ -437,7 +439,7 @@ class ExtendedManaSystemTest : FunSpec({
                 )
             )
 
-            result.isSuccess shouldBe true
+            result.outcome shouldBe Outcome.Done
             driver.stackSize shouldBe 1
             driver.getTopOfStackName() shouldBe "Merrow Skyswimmer"
             driver.isTapped(whiteCreature) shouldBe true
@@ -485,7 +487,7 @@ class ExtendedManaSystemTest : FunSpec({
                 )
             )
 
-            result.isSuccess shouldBe true
+            result.outcome shouldBe Outcome.Done
             driver.stackSize shouldBe 1
             driver.getTopOfStackName() shouldBe "Merrow Skyswimmer"
             forests.all { driver.isTapped(it) } shouldBe true
@@ -534,7 +536,7 @@ class ExtendedManaSystemTest : FunSpec({
                 )
             )
 
-            result.isSuccess shouldBe false
+            result.outcome shouldNotBe Outcome.Done
             driver.stackSize shouldBe 0
             // Creatures and lands were never tapped because payment failed.
             driver.isTapped(green1) shouldBe false
@@ -580,7 +582,7 @@ class ExtendedManaSystemTest : FunSpec({
                 )
             )
 
-            result.isSuccess shouldBe true
+            result.outcome shouldBe Outcome.Done
             driver.stackSize shouldBe 1
             driver.isTapped(lion1) shouldBe true
             driver.isTapped(lion2) shouldBe true
@@ -626,7 +628,7 @@ class ExtendedManaSystemTest : FunSpec({
             // Cast Ghalta
             val castResult = driver.castSpell(activePlayer, ghalta)
 
-            castResult.isSuccess shouldBe true
+            castResult.outcome shouldBe Outcome.Done
             driver.stackSize shouldBe 1
             driver.getTopOfStackName() shouldBe "Ghalta, Primal Hunger"
         }

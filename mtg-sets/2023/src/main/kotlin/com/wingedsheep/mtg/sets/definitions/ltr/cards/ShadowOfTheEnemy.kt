@@ -5,12 +5,8 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.dsl.Effects
 
@@ -30,22 +26,18 @@ val ShadowOfTheEnemy = card("Shadow of the Enemy") {
     oracleText = "Exile all creature cards from target player's graveyard. You may cast spells from among those cards for as long as they remain exiled, and mana of any type can be spent to cast them."
 
     spell {
-        val player = target("target player", Targets.Player)
-        effect = Effects.Composite(listOf(
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.GRAVEYARD, Player.ContextPlayer(0), GameObjectFilter.Creature),
-                storeAs = "exiledCreatures"
-            ),
-            MoveCollectionEffect(
-                from = "exiledCreatures",
-                destination = CardDestination.ToZone(Zone.EXILE, Player.ContextPlayer(0))
-            ),
-            GrantMayPlayFromExileEffect(
-                from = "exiledCreatures",
+        val player = target(Targets.Player)
+        effect = Effects.Pipeline {
+            val exiledCreatures = gather(
+                CardSource.FromZone(Zone.GRAVEYARD, player.asPlayer, GameObjectFilter.Creature)
+            )
+            exile(exiledCreatures, player.asPlayer)
+            run(Effects.GrantMayPlayFromExile(
+                from = exiledCreatures,
                 expiry = MayPlayExpiry.Permanent,
                 withAnyManaType = true
-            )
-        ))
+            ))
+        }
     }
 
     metadata {

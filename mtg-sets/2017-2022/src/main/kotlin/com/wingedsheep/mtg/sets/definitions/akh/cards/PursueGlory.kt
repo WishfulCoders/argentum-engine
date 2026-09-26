@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Cycling {2} ({2}, Discard this card: Draw a card.)
  *
  * "Attacking creatures" is every attacker on the battlefield, not just yours, so the [GroupFilter]
- * carries no controller predicate and the body points at [EffectTarget.Self] — the iterated
+ * carries no controller predicate and the body points at [EffectTarget.IterationEntity] — the iterated
  * creature, not the spell's source.
  */
 val PursueGlory = card("Pursue Glory") {
@@ -29,7 +29,7 @@ val PursueGlory = card("Pursue Glory") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.attacking()),
-            Effects.ModifyStats(2, 0, EffectTarget.Self)
+            Effects.ModifyStats(2, 0, EffectTarget.IterationEntity)
         )
     }
 

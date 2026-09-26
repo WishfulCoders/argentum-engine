@@ -32,8 +32,8 @@ val HuntedPhantasm = card("Hunted Phantasm") {
     flags(AbilityFlag.CANT_BE_BLOCKED)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val opponent = target("target opponent", Targets.Opponent)
+        trigger = Triggers.self.enters()
+        val opponent = target(Targets.Opponent)
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

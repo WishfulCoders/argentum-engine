@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.exploit
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Repository Skaab
@@ -31,10 +31,10 @@ val RepositorySkaab = card("Repository Skaab") {
         "When this creature exploits a creature, return target instant or sorcery card from your " +
         "graveyard to your hand."
 
-    exploit(
-        onExploit = Effects.ReturnToHand(EffectTarget.ContextTarget(0)),
-        onExploitTargets = listOf(Targets.InstantOrSorceryInYourGraveyard)
-    )
+    exploit {
+        val spellCard = target(TargetFilter.InstantOrSorceryInYourGraveyard)
+        effect = Effects.ReturnToHand(spellCard)
+    }
 
     metadata {
         rarity = Rarity.COMMON

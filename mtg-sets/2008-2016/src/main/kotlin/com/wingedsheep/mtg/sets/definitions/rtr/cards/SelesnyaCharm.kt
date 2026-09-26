@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Selesnya Charm
@@ -37,14 +36,11 @@ val SelesnyaCharm = card("Selesnya Charm") {
     spell {
         modal(chooseCount = 1) {
             mode("Target creature gets +2/+2 and gains trample until end of turn") {
-                val t = target("target", TargetCreature())
-                effect = Effects.Composite(
-                    Effects.ModifyStats(2, 2, t),
-                    Effects.GrantKeyword(Keyword.TRAMPLE, t)
-                )
+                val t = target(TargetFilter.Creature)
+                effect = Effects.ModifyStats(2, 2, t) then Effects.GrantKeyword(Keyword.TRAMPLE, t)
             }
             mode("Exile target creature with power 5 or greater") {
-                val t = target("target", TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.powerAtLeast(5))))
+                val t = target(TargetFilter(GameObjectFilter.Creature.powerAtLeast(5)))
                 effect = Effects.Exile(t)
             }
             mode("Create a 2/2 white Knight creature token with vigilance") {

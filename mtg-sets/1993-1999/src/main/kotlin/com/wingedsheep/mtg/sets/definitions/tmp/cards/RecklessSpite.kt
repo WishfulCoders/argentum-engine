@@ -2,13 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.tmp.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Reckless Spite
@@ -26,16 +25,12 @@ val RecklessSpite = card("Reckless Spite") {
     oracleText = "Destroy two target nonblack creatures. You lose 5 life."
 
     spell {
-        target = TargetCreature(count = 2, filter = TargetFilter.Creature.notColor(Color.BLACK))
+        target = TargetObject(filter = TargetFilter.Creature.notColor(Color.BLACK), count = 2)
         // "two target nonblack creatures" is one requirement with a count, and the destroy runs
         // once per chosen target — `ForEachTargetEffect` rebinds slot 0 per iteration, so listing
         // ContextTarget(0) and ContextTarget(1) by hand said the same thing only for exactly two.
-        effect = Effects.Composite(
-            listOf(
-                ForEachTargetEffect(listOf(Effects.Destroy(EffectTarget.ContextTarget(0)))),
-                Effects.LoseLife(5, EffectTarget.Controller)
-            )
-        )
+        effect = Effects.ForEachTarget(Effects.Destroy(EffectTarget.ContextTarget(0))) then
+            Effects.LoseLife(5, EffectTarget.Controller)
     }
 
     metadata {

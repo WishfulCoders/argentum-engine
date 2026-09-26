@@ -1,13 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Calamitous Cave-In — {3}{R}
@@ -21,7 +22,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *   - Battlefield: permanents with the Cave land subtype you control
  *     ([DynamicAmount.Count] over [Zone.BATTLEFIELD] filtered by [GameObjectFilter.Land.withSubtype("Cave")])
  *   - Graveyard:   any card with the Cave subtype in your graveyard
- *     ([DynamicAmount.Count] over [Zone.GRAVEYARD] filtered by [GameObjectFilter.Any.withSubtype("Cave")])
+ *     ([DynamicAmount.Count] over [Zone.GRAVEYARD] filtered by `GameObjectFilter.Any.withSubtype("Cave")`)
  *
  * The two counts are summed via [DynamicAmount.Add] and fed into
  * [Patterns.Group.dealDamageToAll] over [GroupFilter]([GameObjectFilter.CreatureOrPlaneswalker]).
@@ -34,18 +35,18 @@ val CalamitousCaveIn = card("Calamitous Cave-In") {
         "where X is the number of Caves you control plus the number of Cave cards in your graveyard."
 
     spell {
-        val cavesControlled = DynamicAmount.Count(
-            player = Player.You,
-            zone = Zone.BATTLEFIELD,
-            filter = GameObjectFilter.Land.withSubtype("Cave"),
+        val cavesControlled = DynamicAmounts.count(
+            Player.You,
+            Zone.BATTLEFIELD,
+            GameObjectFilter.Land.withSubtype("Cave"),
         )
-        val cavesInGraveyard = DynamicAmount.Count(
-            player = Player.You,
-            zone = Zone.GRAVEYARD,
-            filter = GameObjectFilter.Any.withSubtype("Cave"),
+        val cavesInGraveyard = DynamicAmounts.count(
+            Player.You,
+            Zone.GRAVEYARD,
+            GameObjectFilter.Any.withSubtype("Cave"),
         )
         effect = Patterns.Group.dealDamageToAll(
-            amount = DynamicAmount.Add(cavesControlled, cavesInGraveyard),
+            amount = cavesControlled + cavesInGraveyard,
             filter = GroupFilter(GameObjectFilter.CreatureOrPlaneswalker),
         )
     }

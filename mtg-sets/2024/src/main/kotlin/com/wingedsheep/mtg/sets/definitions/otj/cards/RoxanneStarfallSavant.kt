@@ -36,12 +36,12 @@ val RoxanneStarfallSavant = card("Roxanne, Starfall Savant") {
         "Whenever you tap an artifact token for mana, add one mana of any type that artifact token produced."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateMeteorite(tapped = true)
         description = "Whenever Roxanne enters, create a tapped Meteorite token."
     }
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.CreateMeteorite(tapped = true)
         description = "Whenever Roxanne attacks, create a tapped Meteorite token."
     }

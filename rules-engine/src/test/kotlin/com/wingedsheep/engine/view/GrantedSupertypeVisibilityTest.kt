@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.view
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.PaymentStrategy
 import com.wingedsheep.engine.mechanics.layers.StateProjector
@@ -10,7 +11,6 @@ import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Supertype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
@@ -19,6 +19,7 @@ import com.wingedsheep.sdk.scripting.effects.AddCardTypeEffect
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * A granted supertype (Origin of Spider-Man's "it becomes a legendary Spider Hero in addition to
@@ -41,14 +42,10 @@ class GrantedSupertypeVisibilityTest : FunSpec({
         typeLine = "Sorcery"
         oracleText = "Target creature becomes a legendary Spider Hero in addition to its other types."
         spell {
-            val creature = target("creature", Targets.Creature)
-            effect = Effects.Composite(
-                listOf(
-                    AddCardTypeEffect("LEGENDARY", creature, Duration.Permanent),
-                    Effects.AddCreatureType("Spider", creature, Duration.Permanent),
-                    Effects.AddCreatureType("Hero", creature, Duration.Permanent)
-                )
-            )
+            val creature = target(TargetFilter.Creature)
+            effect = AddCardTypeEffect("LEGENDARY", creature, Duration.Permanent) then
+                Effects.AddCreatureType("Spider", creature, Duration.Permanent) then
+                Effects.AddCreatureType("Hero", creature, Duration.Permanent)
         }
     }
 
@@ -58,7 +55,7 @@ class GrantedSupertypeVisibilityTest : FunSpec({
         typeLine = "Sorcery"
         oracleText = "Create a token that's a copy of target creature, except it isn't legendary."
         spell {
-            val creature = target("creature", Targets.Creature)
+            val creature = target(TargetFilter.Creature)
             effect = Effects.CreateTokenCopyOfTarget(
                 target = creature,
                 removedSupertypes = setOf(Supertype.LEGENDARY)
@@ -87,7 +84,7 @@ class GrantedSupertypeVisibilityTest : FunSpec({
     }
 
     fun view(driver: GameTestDriver, playerId: EntityId) =
-        ClientStateTransformer(cardRegistry = driver.cardRegistry)
+        ClientStateTransformer(cardRegistry = driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .transform(driver.state, viewingPlayerId = playerId)
 
     test("a creature granted LEGENDARY renders 'Legendary' in the client type line") {

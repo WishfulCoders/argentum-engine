@@ -1,22 +1,18 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedActivatedAbility
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
-import com.wingedsheep.sdk.scripting.AbilityId
-import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.GrantActivatedAbility
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
 import com.wingedsheep.sdk.core.ManaCost
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * The Dominion Bracelet
@@ -45,25 +41,21 @@ val TheDominionBracelet = card("The Dominion Bracelet") {
 
     staticAbility {
         ability = GrantActivatedAbility(
-            ability = ActivatedAbility(
-                id = AbilityId.generate(),
+            ability = grantedActivatedAbility {
                 cost = AbilityCost.Composite(
                     listOf(
                         Costs.Mana(ManaCost.parse("{15}")),
                         AbilityCost.ExileGrantingPermanent
                     )
-                ),
-                effect = Effects.HijackNextTurn(EffectTarget.ContextTarget(0)),
-                targetRequirements = listOf(TargetOpponent()),
-                timing = TimingRule.SorcerySpeed,
-                genericCostReduction = DynamicAmount.EntityProperty(
-                    EntityReference.Source,
-                    EntityNumericProperty.Power
-                ),
-                descriptionOverride = "{15}, Exile The Dominion Bracelet: You control target " +
+                )
+                val opponent = target(Targets.Opponent)
+                effect = Effects.HijackNextTurn(opponent)
+                timing = TimingRule.SorcerySpeed
+                genericCostReduction = DynamicAmounts.sourcePower()
+                description = "{15}, Exile The Dominion Bracelet: You control target " +
                     "opponent during their next turn. This ability costs {X} less to activate, " +
                     "where X is this creature's power."
-            )
+            }
         )
     }
 

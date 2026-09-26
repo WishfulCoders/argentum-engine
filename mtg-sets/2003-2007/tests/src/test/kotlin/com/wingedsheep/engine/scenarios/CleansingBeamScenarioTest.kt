@@ -14,13 +14,14 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Cleansing Beam (RAV #118) — "Radiance — Cleansing Beam deals 2 damage to target creature and
  * each other creature that shares a color with it."
  *
  * The radiance group is a resolution-time battlefield filter relative to the spell's own target
- * (`sharingColorWith(EntityReference.Target(0))`), which is what these tests pin down: a
+ * (`sharingColorWith(EffectTarget.ContextTarget(0))`), which is what these tests pin down: a
  * multicolor target radiates to every creature sharing *any* of its colors, on both sides of
  * the table; a colorless target radiates to nothing (ruling 2005-10-01); and the target itself
  * is damaged exactly once.
@@ -40,7 +41,7 @@ class CleansingBeamScenarioTest : FunSpec({
     fun GameTestDriver.beam(caster: EntityId, target: EntityId) {
         giveMana(caster, Color.RED, 5)
         val beam = putCardInHand(caster, "Cleansing Beam")
-        castSpellWithTargets(caster, beam, listOf(ChosenTarget.Permanent(target))).isSuccess shouldBe true
+        castSpellWithTargets(caster, beam, listOf(ChosenTarget.Permanent(target))).outcome shouldBe Outcome.Done
         var guard = 0
         while (stackSize > 0 && guard++ < 10) bothPass()
     }

@@ -33,24 +33,22 @@ val AgathaOfTheVileCauldron = card("Agatha of the Vile Cauldron") {
 
     activatedAbility {
         cost = Costs.Mana("{4}{R}{G}")
-        effect = Effects.Composite(
-            Patterns.Group.modifyStatsForAll(
-                power = 1,
-                toughness = 1,
-                filter = GroupFilter(GameObjectFilter.Creature.youControl()).other(),
-                duration = Duration.EndOfTurn
-            ),
+        effect = Patterns.Group.modifyStatsForAll(
+            power = 1,
+            toughness = 1,
+            filter = GroupFilter(GameObjectFilter.Creature.youControl()).other(),
+            duration = Duration.EndOfTurn
+        ) then
             Patterns.Group.grantKeywordToAll(
                 Keyword.TRAMPLE,
                 GroupFilter(GameObjectFilter.Creature.youControl()).other(),
                 Duration.EndOfTurn
-            ),
+            ) then
             Patterns.Group.grantKeywordToAll(
                 Keyword.HASTE,
                 GroupFilter(GameObjectFilter.Creature.youControl()).other(),
                 Duration.EndOfTurn
             )
-        )
         description = "Other creatures you control get +1/+1 and gain trample and haste until end of turn."
     }
 

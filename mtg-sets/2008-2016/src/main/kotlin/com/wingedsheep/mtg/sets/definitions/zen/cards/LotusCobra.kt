@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Lotus Cobra
@@ -15,7 +16,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Canonical printing: Zendikar (2009) is Lotus Cobra's earliest real printing. It previously sat
  * in Bloomburrow Commander, which now carries a `Printing` row instead.
  *
- * Landfall is [Triggers.LandYouControlEnters] — the `ZoneChangeEvent` over
+ * Landfall is `Triggers.a(GameObjectFilter.Land.youControl()).enters()` — the `ZoneChangeEvent` over
  * `GameObjectFilter.Land.youControl()` with `TriggerBinding.ANY`.
  */
 val LotusCobra = card("Lotus Cobra") {
@@ -27,7 +28,7 @@ val LotusCobra = card("Lotus Cobra") {
     oracleText = "Landfall — Whenever a land you control enters, add one mana of any color."
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.AddAnyColorMana(1)
     }
 

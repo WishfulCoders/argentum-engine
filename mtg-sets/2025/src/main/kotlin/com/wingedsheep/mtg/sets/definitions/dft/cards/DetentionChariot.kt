@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -31,17 +30,14 @@ val DetentionChariot = card("Detention Chariot") {
     power = 6
     toughness = 6
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "target",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrArtifact.opponentControls()))
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter(GameObjectFilter.CreatureOrArtifact.opponentControls()))
         effect = Effects.ExileUntilLeaves(t)
     }
     keywordAbility(KeywordAbility.crew(3))
     keywordAbility(KeywordAbility.cycling("{W}"))
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
     metadata {

@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Twist Reality
@@ -28,7 +28,7 @@ val TwistReality = card("Twist Reality") {
     spell {
         modal(chooseCount = 1) {
             mode("Counter target spell") {
-                target("target", TargetSpell())
+                target(TargetFilter.SpellOnStack)
                 effect = Effects.CounterSpell()
             }
             mode(

@@ -2,7 +2,6 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.disturb
 import com.wingedsheep.sdk.model.CardDefinition
@@ -11,6 +10,8 @@ import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.RedirectZoneChange
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Lantern Bearer // Lanterns' Lift (Innistrad: Crimson Vow #66 — the card's earliest printing;
@@ -83,7 +84,7 @@ private val LanternsLift = card("Lanterns' Lift") {
         "Enchanted creature gets +1/+1 and has flying.\n" +
         "If Lanterns' Lift would be put into a graveyard from anywhere, exile it instead."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = ModifyStats(1, 1)

@@ -1,16 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.big.cards
 
-import com.wingedsheep.sdk.scripting.TriggerBinding
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Simulacrum Synthesizer
@@ -29,34 +28,31 @@ val SimulacrumSynthesizer = card("Simulacrum Synthesizer") {
 
     // When this artifact enters, scry 2.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.scry(2)
     }
 
     // Whenever another artifact you control with mana value 3 or greater enters,
     // create a 0/0 Construct token with "+1/+1 for each artifact you control".
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.youControl().manaValueAtLeast(3),
-            binding = TriggerBinding.OTHER
-        )
-        effect = CreateTokenEffect(
+        trigger = Triggers.another(GameObjectFilter.Artifact.youControl().manaValueAtLeast(3)).enters()
+        effect = Effects.CreateToken(
             power = 0,
             toughness = 0,
             colors = emptySet(),
             creatureTypes = setOf("Construct"),
             artifactToken = true,
             staticAbilities = listOf(
-                GrantDynamicStatsEffect(
+                GrantDynamicStats(
                     filter = GroupFilter.source(),
-                    powerBonus = DynamicAmount.AggregateBattlefield(
+                    powerBonus = DynamicAmounts.battlefield(
                         Player.You,
                         GameObjectFilter.Artifact
-                    ),
-                    toughnessBonus = DynamicAmount.AggregateBattlefield(
+                    ).count(),
+                    toughnessBonus = DynamicAmounts.battlefield(
                         Player.You,
                         GameObjectFilter.Artifact
-                    )
+                    ).count()
                 )
             ),
             imageUri = "https://cards.scryfall.io/normal/front/3/8/3877d2d1-61f2-4295-b0fc-827965eaaefc.jpg?1712317494"

@@ -25,7 +25,7 @@ val CitywatchSphinx = card("Citywatch Sphinx") {
 
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Patterns.Library.surveil(2)
     }
 

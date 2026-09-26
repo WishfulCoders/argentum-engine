@@ -1,20 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.TriggeredAbilityBuilder
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Queen's Bay Paladin
@@ -32,7 +28,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * (`optional = true` → "up to one target"),
  * returns it to the battlefield, drops a finality counter on it (Rite of the Moth pattern:
  * Move then AddCounters), and the controller loses life equal to the returned card's mana
- * value (Phyrexian Delver pattern: `EntityProperty(Target(0), ManaValue)`). When no target
+ * value (Phyrexian Delver pattern: `EntityProperty(ContextTarget(0), ManaValue)`). When no target
  * is chosen the Move/AddCounters are no-ops and the life loss reads 0.
  */
 val QueensBayPaladin = card("Queen's Bay Paladin") {
@@ -46,12 +42,12 @@ val QueensBayPaladin = card("Queen's Bay Paladin") {
         "to its mana value. (If a creature with a finality counter on it would die, exile it instead.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         returnVampireRider()
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         returnVampireRider()
     }
 
@@ -70,22 +66,13 @@ val QueensBayPaladin = card("Queen's Bay Paladin") {
  */
 private fun TriggeredAbilityBuilder.returnVampireRider() {
     val returned = target(
-        "up to one target Vampire card from your graveyard",
-        TargetObject(
-            count = 1,
-            optional = true,
-            filter = TargetFilter(
-                GameObjectFilter.Any.withSubtype("Vampire").ownedByYou(),
-                zone = Zone.GRAVEYARD,
-            ),
-        ),
+        TargetFilter(GameObjectFilter.Any.withSubtype("Vampire").ownedByYou(), zone = Zone.GRAVEYARD),
+        optional = true,
     )
-    effect = Effects.Composite(
-        Effects.Move(returned, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD),
-        AddCountersEffect(counterType = Counters.FINALITY, count = 1, target = returned),
+    effect = Effects.Move(returned, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD) then
+        Effects.AddCounters(counterType = CounterType.FINALITY, count = 1, target = returned) then
         Effects.LoseLife(
-            DynamicAmount.EntityProperty(EntityReference.Target(0), EntityNumericProperty.ManaValue),
+            DynamicAmounts.manaValueOf(returned),
             EffectTarget.Controller,
-        ),
-    )
+        )
 }

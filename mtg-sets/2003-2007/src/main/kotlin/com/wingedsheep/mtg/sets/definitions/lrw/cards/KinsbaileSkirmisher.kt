@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Kinsbaile Skirmisher
@@ -22,8 +22,8 @@ val KinsbaileSkirmisher = card("Kinsbaile Skirmisher") {
     oracleText = "When this creature enters, target creature gets +1/+1 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("target creature", Targets.Creature)
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(1, 1, creature)
         description = "target creature gets +1/+1 until end of turn."
     }

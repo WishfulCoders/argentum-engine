@@ -1,18 +1,18 @@
 package com.wingedsheep.mtg.sets.definitions.spm.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * The Soul Stone (Marvel's Spider-Man, #66)
@@ -27,7 +27,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * battlefield.
  *
  * Implementation (composition-first — the only new vocabulary is the `harness` marker counter):
- *  - **Harness** is modeled as a binary marker counter ([Counters.HARNESS]). The Harness activated
+ *  - **Harness** is modeled as a binary marker counter ([CounterType.HARNESS]). The Harness activated
  *    ability places one; the `∞` triggered ability is gated on the Stone having a harness counter
  *    ([Conditions.SourceHasCounter]), so it does nothing until harnessed and reactivates every
  *    upkeep thereafter. A counter (not a durable component) matches the flavor: it resets if the
@@ -63,16 +63,16 @@ val TheSoulStone = card("The Soul Stone") {
             Costs.Tap,
             Costs.ExilePermanents(GameObjectFilter.Creature.youControl(), minCount = 1, excludeSelf = false)
         )
-        effect = Effects.AddCounters(Counters.HARNESS, 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.HARNESS, 1, EffectTarget.Self)
         description = "{6}{B}, {T}, Exile a creature you control: Harness The Soul Stone."
     }
 
     // ∞ — At the beginning of your upkeep (once harnessed), return target creature card from your
     // graveyard to the battlefield.
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        triggerRestriction = Conditions.SourceHasCounter(CounterTypeFilter.Named(Counters.HARNESS))
-        val graveyardCreature = target("target creature card in your graveyard", Targets.CreatureCardInYourGraveyard)
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        triggerRestriction = Conditions.SourceHasCounter(CounterType.HARNESS)
+        val graveyardCreature = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.PutOntoBattlefield(graveyardCreature)
         description = "∞ — At the beginning of your upkeep, return target creature card from your " +
             "graveyard to the battlefield."

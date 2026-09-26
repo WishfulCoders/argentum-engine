@@ -78,7 +78,7 @@ private val RoarOfTheFifthPeople = card("Roar of the Fifth People") {
         effect = Effects.GrantStaticAbility(
             ability = GrantActivatedAbility(
                 ability = ActivatedAbility(
-                    id = AbilityId.generate(),
+                    id = AbilityId.next(),
                     cost = Costs.Tap,
                     effect = Effects.AddManaOfChoice(
                         ManaColorSet.Specific(setOf(Color.RED, Color.GREEN, Color.WHITE)),
@@ -106,10 +106,8 @@ private val RoarOfTheFifthPeople = card("Roar of the Fifth People") {
     sagaChapter(4) {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withSubtype("Dinosaur").youControl()),
-            Effects.Composite(
-                Effects.GrantKeyword(Keyword.DOUBLE_STRIKE, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self),
-            ),
+            Effects.GrantKeyword(Keyword.DOUBLE_STRIKE, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.IterationEntity),
         )
     }
 
@@ -135,7 +133,7 @@ private val HuatliPoetOfUnityFront = card("Huatli, Poet of Unity") {
     // When Huatli enters, search your library for a basic land card, reveal it, put it into your
     // hand, then shuffle.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.BasicLand,
             count = 1,

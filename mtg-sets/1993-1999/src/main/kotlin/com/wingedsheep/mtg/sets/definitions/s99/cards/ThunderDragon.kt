@@ -32,7 +32,7 @@ val ThunderDragon = card("Thunder Dragon") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Group.dealDamageToAll(3, GroupFilter.AllCreatures.withoutKeyword(Keyword.FLYING))
         description = "When this creature enters, it deals 3 damage to each creature without flying."
     }

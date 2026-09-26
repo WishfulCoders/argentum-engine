@@ -1,16 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Entrails Feaster
@@ -30,18 +28,12 @@ val EntrailsFeaster = card("Entrails Feaster") {
     oracleText = "At the beginning of your upkeep, you may exile a creature card from a graveyard. If you do, put a +1/+1 counter on Entrails Feaster. If you don't, tap Entrails Feaster."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         optional = true
-        val t = target("target", TargetObject(
-            filter = TargetFilter.CreatureInGraveyard
-        ))
-        effect = Effects.Composite(
-            listOf(
-                Effects.Move(t, Zone.EXILE),
-                AddCountersEffect(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
-            )
-        )
-        elseEffect = TapUntapEffect(EffectTarget.Self, tap = true)
+        val t = target(TargetFilter.CreatureInGraveyard)
+        effect = Effects.Move(t, Zone.EXILE) then
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        elseEffect = Effects.Tap(EffectTarget.Self)
     }
 
     metadata {

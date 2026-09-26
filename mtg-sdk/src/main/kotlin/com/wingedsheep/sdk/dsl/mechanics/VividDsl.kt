@@ -34,8 +34,7 @@ fun CardBuilder.vividEtb(effectFactory: (DynamicAmount) -> Effect) {
     keywordSet.add(Keyword.VIVID)
     triggeredAbilities.add(
         TriggeredAbility.create(
-            trigger = Triggers.EntersBattlefield.event,
-            binding = Triggers.EntersBattlefield.binding,
+            trigger = Triggers.self.enters(),
             effect = effectFactory(DynamicAmounts.colorsAmongPermanents())
         )
     )

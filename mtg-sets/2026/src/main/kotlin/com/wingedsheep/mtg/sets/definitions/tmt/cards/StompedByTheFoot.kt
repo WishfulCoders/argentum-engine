@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.model.Rarity
@@ -8,9 +8,8 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Stomped by the Foot
@@ -45,11 +44,11 @@ val StompedByTheFoot = card("Stomped by the Foot") {
     )
 
     spell {
-        val t = target("target creature", Targets.Creature)
-        effect = ConditionalEffect(
+        val t = target(TargetFilter.Creature)
+        effect = Effects.If(
             condition = WasKicked,
-            effect = ModifyStatsEffect(-5, -5, t, Duration.EndOfTurn),
-            elseEffect = ModifyStatsEffect(-2, -2, t, Duration.EndOfTurn)
+            then = Effects.ModifyStats(-5, -5, t, Duration.EndOfTurn),
+            otherwise = Effects.ModifyStats(-2, -2, t, Duration.EndOfTurn)
         )
     }
 

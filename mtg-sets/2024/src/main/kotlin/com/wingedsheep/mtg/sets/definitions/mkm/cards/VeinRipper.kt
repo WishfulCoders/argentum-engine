@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.WardCost
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Vein Ripper — Murders at Karlov Manor #110
@@ -20,7 +19,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Ward—Sacrifice a creature.
  * Whenever a creature dies, target opponent loses 2 life and you gain 2 life.
  *
- * The drain trigger is [Triggers.AnyCreatureDies] — *any* creature, either side of the table,
+ * The drain trigger is `Triggers.a(GameObjectFilter.Creature).dies()` — *any* creature, either side of the table,
  * including the Ripper itself. That last case matters and falls out for free: the Ripper dying is a
  * creature dying, so it drains once on the way out (the trigger is detected from the zone-change
  * event, which is emitted whether or not the source survives to see it).
@@ -50,11 +49,11 @@ val VeinRipper = card("Vein Ripper") {
     keywordAbility(KeywordAbility.Ward(WardCost.Sacrifice(GameObjectFilter.Creature)))
 
     triggeredAbility {
-        trigger = Triggers.AnyCreatureDies
-        target = Targets.Opponent
+        val opponent = target(Targets.Opponent)
+        trigger = Triggers.a(GameObjectFilter.Creature).dies()
         effect = Effects.DrainLife(
-            amount = DynamicAmount.Fixed(2),
-            from = EffectTarget.ContextTarget(0),
+            amount = 2,
+            from = opponent,
             to = EffectTarget.Controller,
         )
         description = "Whenever a creature dies, target opponent loses 2 life and you gain 2 life."

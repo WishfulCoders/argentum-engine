@@ -5,14 +5,13 @@ import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Evil's Thrall — Marvel Super Heroes #128
@@ -26,7 +25,7 @@ import com.wingedsheep.sdk.scripting.references.Player
  * has a *bigger* Villain than the creature you are borrowing.
  *
  * **"Instead" is a single control change, not two.** The second sentence replaces the first's
- * duration rather than adding a second effect, so the script is one [ConditionalEffect] whose two
+ * duration rather than adding a second effect, so the script is one [Effects.If] whose two
  * branches differ only in [Duration] — never `GainControl(EndOfTurn)` followed by a second grab.
  * One control change means one `ControlChangedEvent` and one summoning-sickness stamp either way.
  *
@@ -62,23 +61,21 @@ val EvilsThrall = card("Evil's Thrall") {
         "of your next turn instead. Untap that creature. It gains haste until end of turn."
 
     spell {
-        val stolen = target("target creature", Targets.Creature)
-        effect = Effects.Composite(
-            ConditionalEffect(
-                condition = Conditions.CompareAmounts(
-                    DynamicAmounts.battlefield(
-                        Player.You,
-                        GameObjectFilter.Permanent.withSubtype(Subtype.VILLAIN)
-                    ).maxManaValue(),
-                    ComparisonOperator.GT,
-                    DynamicAmounts.targetManaValue()
-                ),
-                effect = Effects.GainControl(stolen, Duration.EndOfYourNextTurn),
-                elseEffect = Effects.GainControl(stolen, Duration.EndOfTurn)
+        val stolen = target(TargetFilter.Creature)
+        effect = Effects.If(
+            condition = Conditions.CompareAmounts(
+                DynamicAmounts.battlefield(
+                    Player.You,
+                    GameObjectFilter.Permanent.withSubtype(Subtype.VILLAIN)
+                ).maxManaValue(),
+                ComparisonOperator.GT,
+                DynamicAmounts.manaValueOf(stolen)
             ),
-            Effects.Untap(stolen),
+            then = Effects.GainControl(stolen, Duration.EndOfYourNextTurn),
+            otherwise = Effects.GainControl(stolen, Duration.EndOfTurn)
+        ) then
+            Effects.Untap(stolen) then
             Effects.GrantKeyword(Keyword.HASTE, stolen)
-        )
     }
 
     metadata {

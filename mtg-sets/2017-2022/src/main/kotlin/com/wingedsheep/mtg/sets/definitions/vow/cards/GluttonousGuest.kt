@@ -24,7 +24,7 @@ val GluttonousGuest = card("Gluttonous Guest") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateBlood()
     }
 
@@ -32,7 +32,7 @@ val GluttonousGuest = card("Gluttonous Guest") {
         // Per-permanent (CR 603.2c), not the batch sibling: sacrificing two Blood tokens to one
         // cost fires this twice and gains 2 life. Argentum Assay's differential named the batch
         // spec as a card bug — "whenever you sacrifice a Blood token" is the singular wording.
-        trigger = Triggers.YouSacrificeA(GameObjectFilter.Artifact.withSubtype("Blood"))
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Artifact.withSubtype("Blood"))
         effect = Effects.GainLife(1)
     }
 

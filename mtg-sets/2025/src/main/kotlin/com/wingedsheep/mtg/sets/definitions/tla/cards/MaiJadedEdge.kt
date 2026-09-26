@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
@@ -33,7 +33,7 @@ val MaiJadedEdge = card("Mai, Jaded Edge") {
     activatedAbility {
         isExhaust = true
         cost = Costs.Mana("{3}")
-        effect = Effects.AddCounters(Counters.DOUBLE_STRIKE, 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.DOUBLE_STRIKE, 1, EffectTarget.Self)
     }
 
     metadata {

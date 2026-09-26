@@ -7,8 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.costs.CostAtom
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Betrayal of Flesh
@@ -35,14 +33,11 @@ val BetrayalOfFlesh = card("Betrayal of Flesh") {
             additionalCostPerExtraMode = CostAtom.Sacrifice(GameObjectFilter.Land, count = 3),
         ) {
             mode("Destroy target creature") {
-                val creature = target("creature to destroy", TargetCreature())
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.Destroy(creature)
             }
             mode("Return target creature card from your graveyard to the battlefield") {
-                val card = target(
-                    "creature card to return",
-                    TargetObject(filter = TargetFilter.CreatureInYourGraveyard),
-                )
+                val card = target(TargetFilter.CreatureInYourGraveyard)
                 effect = Effects.Move(card, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)
             }
         }

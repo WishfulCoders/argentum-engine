@@ -24,7 +24,7 @@ val TomeScour = card("Tome Scour") {
     oracleText = "Target player mills five cards."
 
     spell {
-        val player = target("target player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Patterns.Library.mill(5, player)
     }
 

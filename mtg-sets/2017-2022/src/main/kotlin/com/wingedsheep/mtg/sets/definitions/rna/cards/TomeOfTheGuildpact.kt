@@ -12,7 +12,7 @@ import com.wingedsheep.sdk.scripting.TimingRule
  * Tome of the Guildpact — Ravnica Allegiance #242
  * {5} · Artifact — Book
  *
- * "Whenever you cast a multicolored spell" is [Triggers.youCastSpell] narrowed by
+ * "Whenever you cast a multicolored spell" is `Triggers.you.casts(spell, requires)` narrowed by
  * [GameObjectFilter.Multicolored] — the multicolour test reads the spell's *colors*, so a
  * hybrid card counts only when it actually has two or more. The mana ability is unrestricted
  * any-colour fixing.
@@ -25,7 +25,7 @@ val TomeOfTheGuildpact = card("Tome of the Guildpact") {
         "{T}: Add one mana of any color."
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(spellFilter = GameObjectFilter.Multicolored)
+        trigger = Triggers.you.casts(GameObjectFilter.Multicolored)
         effect = Effects.DrawCards(1)
     }
     activatedAbility {

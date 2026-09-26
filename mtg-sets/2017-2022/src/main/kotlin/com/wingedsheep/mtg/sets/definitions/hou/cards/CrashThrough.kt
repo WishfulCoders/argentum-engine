@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -27,13 +26,11 @@ val CrashThrough = card("Crash Through") {
     typeLine = "Sorcery"
     oracleText = "Creatures you control gain trample until end of turn. (Each of those creatures can deal excess combat damage to the player or planeswalker it's attacking.)\nDraw a card."
     spell {
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(
-                GroupFilter(GameObjectFilter.Creature.youControl()),
-                Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
-            ),
-            DrawCardsEffect(1)
-        )
+        effect = Effects.ForEachInGroup(
+            GroupFilter(GameObjectFilter.Creature.youControl()),
+            Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.IterationEntity)
+        ) then
+            Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.COMMON

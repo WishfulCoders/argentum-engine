@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.RedirectZoneChange
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -27,30 +26,26 @@ val MaliciousEclipse = card("Malicious Eclipse") {
         "die this turn, exile it instead."
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                // Install the death→exile replacement first so it's active when the -2/-2 kills are
-                // checked as state-based actions after this spell resolves. A floating grant
-                // (GrantedReplacementEffect keyed on the caster, not the sorcery) — persists after the
-                // sorcery leaves; the zone-change redirect path reads it (Forgotten Cellar idiom).
-                Effects.GrantReplacementEffect(
-                    replacement = RedirectZoneChange(
-                        newDestination = Zone.EXILE,
-                        appliesTo = EventPattern.ZoneChangeEvent(
-                            filter = GameObjectFilter.Creature.opponentControls(),
-                            from = Zone.BATTLEFIELD,
-                            to = Zone.GRAVEYARD
-                        )
-                    ),
-                    target = EffectTarget.Self,
-                    duration = Duration.EndOfTurn
-                ),
-                Effects.ForEachInGroup(
-                    filter = GroupFilter.AllCreatures,
-                    effect = ModifyStatsEffect(-2, -2, EffectTarget.Self)
+        // Install the death→exile replacement first so it's active when the -2/-2 kills are
+        // checked as state-based actions after this spell resolves. A floating grant
+        // (GrantedReplacementEffect keyed on the caster, not the sorcery) — persists after the
+        // sorcery leaves; the zone-change redirect path reads it (Forgotten Cellar idiom).
+        effect = Effects.GrantReplacementEffect(
+            replacement = RedirectZoneChange(
+                newDestination = Zone.EXILE,
+                appliesTo = EventPattern.ZoneChangeEvent(
+                    filter = GameObjectFilter.Creature.opponentControls(),
+                    from = Zone.BATTLEFIELD,
+                    to = Zone.GRAVEYARD
                 )
+            ),
+            target = EffectTarget.Self,
+            duration = Duration.EndOfTurn
+        ) then
+            Effects.ForEachInGroup(
+                filter = GroupFilter.AllCreatures,
+                effect = Effects.ModifyStats(-2, -2, EffectTarget.IterationEntity)
             )
-        )
     }
 
     metadata {

@@ -12,14 +12,8 @@ import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Gathering Stone
@@ -52,67 +46,42 @@ val GatheringStone = card("Gathering Stone") {
         )
     }
 
-    val lookAtTopEffect = Effects.Composite(
-        listOf(
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1)),
-                storeAs = "looked"
-            ),
-            FilterCollectionEffect(
-                from = "looked",
-                filter = CollectionFilter.MatchesFilter(GameObjectFilter.Any.withChosenSubtype()),
-                storeMatching = "matchingCard",
-                storeNonMatching = "nonMatchingCard"
-            ),
-            // Matching card: may reveal and put in hand
-            SelectFromCollectionEffect(
-                from = "matchingCard",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "toHand",
-                storeRemainder = "matchKept",
-                selectedLabel = "Reveal and put into your hand",
-                remainderLabel = "Don't put into your hand"
-            ),
-            MoveCollectionEffect(
-                from = "toHand",
-                destination = CardDestination.ToZone(Zone.HAND),
-                revealed = true,
-                revealToSelf = false
-            ),
-            // Matching card you didn't put in hand: may put in graveyard
-            SelectFromCollectionEffect(
-                from = "matchKept",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "matchToGraveyard",
-                selectedLabel = "Put into your graveyard",
-                remainderLabel = "Leave on top of your library"
-            ),
-            MoveCollectionEffect(
-                from = "matchToGraveyard",
-                destination = CardDestination.ToZone(Zone.GRAVEYARD)
-            ),
-            // Non-matching card: may put in graveyard
-            SelectFromCollectionEffect(
-                from = "nonMatchingCard",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "nonMatchToGraveyard",
-                selectedLabel = "Put into your graveyard",
-                remainderLabel = "Leave on top of your library"
-            ),
-            MoveCollectionEffect(
-                from = "nonMatchToGraveyard",
-                destination = CardDestination.ToZone(Zone.GRAVEYARD)
-            )
+    val lookAtTopEffect = Effects.Pipeline {
+        val looked = gather(CardSource.TopOfLibrary(1))
+        val (matchingCard, nonMatchingCard) = filterSplit(looked, GameObjectFilter.Any.withChosenSubtype())
+        // Matching card: may reveal and put in hand
+        val (toHandCards, matchKept) = chooseUpToSplit(
+            1,
+            from = matchingCard,
+            selectedLabel = "Reveal and put into your hand",
+            remainderLabel = "Don't put into your hand"
         )
-    )
+        move(toHandCards, CardDestination.ToZone(Zone.HAND), revealed = true, revealToSelf = false)
+        // Matching card you didn't put in hand: may put in graveyard
+        val matchToGraveyard = chooseUpTo(
+            1,
+            from = matchKept,
+            selectedLabel = "Put into your graveyard",
+            remainderLabel = "Leave on top of your library"
+        )
+        toGraveyard(matchToGraveyard)
+        // Non-matching card: may put in graveyard
+        val nonMatchToGraveyard = chooseUpTo(
+            1,
+            from = nonMatchingCard,
+            selectedLabel = "Put into your graveyard",
+            remainderLabel = "Leave on top of your library"
+        )
+        toGraveyard(nonMatchToGraveyard)
+    }
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = lookAtTopEffect
     }
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = lookAtTopEffect
     }
 

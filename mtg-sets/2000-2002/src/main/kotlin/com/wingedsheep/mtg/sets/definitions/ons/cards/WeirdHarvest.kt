@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Weird Harvest
@@ -22,7 +22,7 @@ val WeirdHarvest = card("Weird Harvest") {
     spell {
         effect = Patterns.Library.eachPlayerSearchesLibrary(
             filter = Filters.Creature,
-            count = DynamicAmount.XValue
+            count = DynamicAmounts.xValue()
         )
     }
 

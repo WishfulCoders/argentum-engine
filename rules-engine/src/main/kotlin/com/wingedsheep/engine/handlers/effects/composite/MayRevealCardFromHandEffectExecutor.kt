@@ -37,7 +37,7 @@ import kotlin.reflect.KClass
  */
 class MayRevealCardFromHandEffectExecutor(
     private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult,
-    private val predicateEvaluator: PredicateEvaluator = PredicateEvaluator(),
+    private val predicateEvaluator: PredicateEvaluator
 ) : EffectExecutor<MayRevealCardFromHandEffect> {
 
     override val effectType: KClass<MayRevealCardFromHandEffect> = MayRevealCardFromHandEffect::class

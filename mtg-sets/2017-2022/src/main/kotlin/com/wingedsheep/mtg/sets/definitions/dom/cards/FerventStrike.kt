@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.dom.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Fervent Strike
@@ -19,10 +19,10 @@ val FerventStrike = card("Fervent Strike") {
     oracleText = "Target creature gets +1/+0 and gains first strike and haste until end of turn."
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = Effects.ModifyStats(1, 0, t)
-            .then(Effects.GrantKeyword(Keyword.FIRST_STRIKE, t))
-            .then(Effects.GrantKeyword(Keyword.HASTE, t))
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(1, 0, t) then
+            Effects.GrantKeyword(Keyword.FIRST_STRIKE, t) then
+            Effects.GrantKeyword(Keyword.HASTE, t)
     }
 
     metadata {

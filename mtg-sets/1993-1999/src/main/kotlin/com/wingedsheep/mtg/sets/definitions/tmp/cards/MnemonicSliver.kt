@@ -31,7 +31,7 @@ val MnemonicSliver = card("Mnemonic Sliver") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Composite(Costs.Mana("{2}"), Costs.SacrificeSelf),
                 effect = Effects.DrawCards(1)
             ),

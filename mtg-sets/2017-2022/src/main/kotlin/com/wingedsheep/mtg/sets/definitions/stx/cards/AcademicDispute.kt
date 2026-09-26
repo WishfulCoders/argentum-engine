@@ -3,10 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.stx.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Academic Dispute — Strixhaven: School of Mages #91 (canonical printing)
@@ -17,7 +16,7 @@ import com.wingedsheep.sdk.scripting.effects.MayEffect
  * or discard a card to draw a card.)
  *
  * A combat trick that forces a block rather than preventing one — the reach rider exists so the
- * forced blocker can be a flier's blocker, which is why it is optional ([MayEffect]) and why it
+ * forced blocker can be a flier's blocker, which is why it is optional ([Effects.May]) and why it
  * lands on the same targeted creature.
  *
  * "Blocks this turn if able" is [Effects.MarkMustBlockThisTurn]: a *requirement*, not a guarantee
@@ -37,9 +36,9 @@ val AcademicDispute = card("Academic Dispute") {
         "hand, or discard a card to draw a card.)"
 
     spell {
-        val creature = target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.MarkMustBlockThisTurn(creature) then
-            MayEffect(
+            Effects.May(
                 effect = Effects.GrantKeyword(Keyword.REACH, creature),
                 descriptionOverride = "You may have it gain reach until end of turn."
             ) then

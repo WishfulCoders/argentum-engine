@@ -4,11 +4,11 @@
 
 package com.wingedsheep.mtg.sets.definitions.ody.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.CounterEffect
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 
 /**
@@ -24,8 +24,8 @@ val FerventDenial = card("Fervent Denial") {
     typeLine = "Instant"
     oracleText = "Counter target spell.\nFlashback {5}{U}{U} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
     spell {
-        val t = target("target", TargetSpell())
-        effect = CounterEffect()
+        val t = target(TargetFilter.SpellOnStack)
+        effect = Effects.CounterSpell()
     }
     keywordAbility(KeywordAbility.flashback("{5}{U}{U}"))
     metadata {

@@ -7,9 +7,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.model.Rarity
 
 /**
@@ -26,10 +23,10 @@ import com.wingedsheep.sdk.model.Rarity
  * pays — X = [DynamicAmounts.colorsOfManaSpent] (`DynamicAmount.DistinctColorsManaSpent`), read off
  * the entering creature's recorded payment (the dominant Converge shape, same as the Archaic cycle).
  *
- * Modelled as an [Triggers.EntersBattlefield] trigger whose body is an optional [MayEffect] draw of X
+ * Modelled as an `Triggers.self.enters()` trigger whose body is an optional [Effects.May] draw of X
  * cards, followed by a discard of two that is gated on "you drew one or more this way" — i.e. X >= 1.
  * The discard sits *inside* the `may`, so declining the draw never forces the discard; and a `yes`
- * with X = 0 (all-colourless payment) draws nothing and the `ConditionalEffect` gate suppresses the
+ * with X = 0 (all-colourless payment) draws nothing and the `Effects.If` gate suppresses the
  * discard. (Drawing zero is not "drawing one or more.") The intervening gate is a synchronous
  * `Compare(DistinctColorsManaSpent >= 1)` rather than an `IfYouDo` action-outcome, because the draw
  * count is a known function of the cast and a draw isn't a zone-move shape `SuccessCriterion.Auto`
@@ -49,18 +46,16 @@ val TranscendentArchaic = card("Transcendent Archaic") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(
-            Effects.DrawCards(DynamicAmounts.colorsOfManaSpent())
-                .then(
-                    ConditionalEffect(
-                        condition = Conditions.CompareAmounts(
-                            DynamicAmount.DistinctColorsManaSpent,
-                            ComparisonOperator.GTE,
-                            DynamicAmount.Fixed(1),
-                        ),
-                        effect = Effects.Discard(2),
+        trigger = Triggers.self.enters()
+        effect = Effects.May(
+            Effects.DrawCards(DynamicAmounts.colorsOfManaSpent()) then
+                Effects.If(
+                    condition = Conditions.CompareAmounts(
+                        DynamicAmounts.colorsOfManaSpent(),
+                        ComparisonOperator.GTE,
+                        1,
                     ),
+                    then = Effects.Discard(2),
                 ),
         )
         description = "Converge — When this creature enters, you may draw X cards, where X is the " +

@@ -21,7 +21,7 @@ val CathedralSanctifier = card("Cathedral Sanctifier") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(3)
     }
 

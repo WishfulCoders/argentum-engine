@@ -1,18 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Korvold and the Noble Thief
@@ -47,24 +41,20 @@ val KorvoldAndTheNobleThief = card("Korvold and the Noble Thief") {
     }
 
     sagaChapter(3) {
-        target("target opponent", Targets.Opponent)
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(
-                    count = DynamicAmount.Fixed(3),
+        target(Targets.Opponent)
+        effect = Effects.Pipeline {
+            val korvoldExiled = gather(
+                CardSource.TopOfLibrary(
+                    count = 3,
                     player = Player.TargetOpponent,
-                ),
-                storeAs = "korvoldExiled",
-            ),
-            MoveCollectionEffect(
-                from = "korvoldExiled",
-                destination = CardDestination.ToZone(Zone.EXILE, player = Player.TargetOpponent),
-            ),
-            GrantMayPlayFromExileEffect(
-                from = "korvoldExiled",
+                )
+            )
+            exile(korvoldExiled, Player.TargetOpponent)
+            run(Effects.GrantMayPlayFromExile(
+                from = korvoldExiled,
                 expiry = MayPlayExpiry.EndOfTurn,
-            ),
-        )
+            ))
+        }
     }
 
     metadata {

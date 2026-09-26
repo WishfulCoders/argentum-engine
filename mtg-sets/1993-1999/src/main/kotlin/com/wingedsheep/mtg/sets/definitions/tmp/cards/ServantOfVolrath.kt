@@ -22,7 +22,7 @@ val ServantOfVolrath = card("Servant of Volrath") {
     oracleText = "When this creature leaves the battlefield, sacrifice a creature."
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.SacrificeOwn(GameObjectFilter.Creature)
         description = "When this creature leaves the battlefield, sacrifice a creature."
     }

@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * {6}, Exile this card from your graveyard: Create two tapped 1/1 colorless Robot
  * artifact creature tokens with flying.
  *
- * The first ability uses `RecipientFilter.Matching` on a self deals-damage trigger — the same
+ * The first ability uses `Recipient.Object` on a self deals-damage trigger — the same
  * shape as East-Mark Cavalier / Mauhur (now wired in `TriggerMatcher.matchesDealsDamageTrigger`).
  */
 val SpiderSlayerHatredHoned = card("Spider-Slayer, Hatred Honed") {
@@ -34,11 +34,9 @@ val SpiderSlayerHatredHoned = card("Spider-Slayer, Hatred Honed") {
 
     // Whenever Spider-Slayer deals damage to a Spider, destroy that creature.
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            recipient = RecipientFilter.Matching(
+        trigger = Triggers.self.dealsDamage(Recipient.Object(
                 GameObjectFilter.Creature.withAnySubtype("Spider")
-            )
-        )
+            ))
         effect = Effects.Destroy(EffectTarget.TriggeringEntity)
     }
 

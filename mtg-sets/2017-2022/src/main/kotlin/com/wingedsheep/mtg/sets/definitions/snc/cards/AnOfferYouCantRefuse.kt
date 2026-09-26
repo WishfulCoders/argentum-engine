@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.snc.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * An Offer You Can't Refuse
@@ -21,12 +21,12 @@ val AnOfferYouCantRefuse = card("An Offer You Can't Refuse") {
         "(They're artifacts with \"{T}, Sacrifice this token: Add one mana of any color.\")"
 
     spell {
-        target("target noncreature spell", Targets.NoncreatureSpell)
+        target(TargetFilter.NoncreatureSpellOnStack)
         // Resolve the Treasures while the spell is still on the stack so `TargetController`
         // can read its controller (same pattern as Undermine). The tokens are created even
         // if the spell itself can't be countered.
-        effect = Effects.CreateTreasure(2, controller = EffectTarget.TargetController)
-            .then(Effects.CounterSpell())
+        effect = Effects.CreateTreasure(2, controller = EffectTarget.TargetController) then
+            Effects.CounterSpell()
     }
 
     metadata {

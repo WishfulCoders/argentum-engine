@@ -26,7 +26,7 @@ val GiantHarbinger = card("Giant Harbinger") {
         "it, then shuffle and put that card on top."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Any.withSubtype(Subtype.GIANT),

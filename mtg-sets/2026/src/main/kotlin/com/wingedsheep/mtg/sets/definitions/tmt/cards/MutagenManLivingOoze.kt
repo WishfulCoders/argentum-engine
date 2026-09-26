@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -9,7 +10,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ReduceActivatedAbilityCost
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Mutagen Man, Living Ooze
@@ -38,14 +38,14 @@ val MutagenManLivingOoze = card("Mutagen Man, Living Ooze") {
                     cardPredicates = listOf(CardPredicate.IsArtifact, CardPredicate.IsToken)
                 ).youControl()
             ),
-            amount = DynamicAmount.Fixed(1)
+            amount = DynamicAmounts.fixed(1)
         )
     }
 
     // "create X Mutagen tokens" — X is the cast value (CastX, durable onto the permanent).
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.CreateMutagenToken(DynamicAmount.CastX)
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateMutagenToken(DynamicAmounts.castX())
         description = "When Mutagen Man enters, create X Mutagen tokens."
     }
 

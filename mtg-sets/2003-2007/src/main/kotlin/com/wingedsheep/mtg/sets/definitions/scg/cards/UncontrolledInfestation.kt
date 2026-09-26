@@ -5,12 +5,11 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Uncontrolled Infestation
@@ -25,19 +24,17 @@ val UncontrolledInfestation = card("Uncontrolled Infestation") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant nonbasic land\nWhen enchanted land becomes tapped, destroy it."
 
-    auraTarget = TargetPermanent(
-        filter = TargetFilter(
+    auraTarget = TargetObject(filter = TargetFilter(
             GameObjectFilter(
                 cardPredicates = listOf(
                     CardPredicate.IsLand,
                     CardPredicate.Not(CardPredicate.IsBasicLand)
                 )
             )
-        )
-    )
+        ))
 
     triggeredAbility {
-        trigger = Triggers.becomesTapped(binding = TriggerBinding.ATTACHED)
+        trigger = Triggers.attached.becomesTapped()
         effect = Effects.Move(EffectTarget.EnchantedCreature, Zone.GRAVEYARD, byDestruction = true)
     }
 

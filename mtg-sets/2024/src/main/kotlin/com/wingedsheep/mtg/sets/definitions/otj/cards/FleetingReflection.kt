@@ -6,8 +6,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.scripting.targets.TargetOther
 
@@ -41,30 +39,20 @@ val FleetingReflection = card("Fleeting Reflection") {
         "creature. Until end of turn, it becomes a copy of up to one other target creature."
 
     spell {
-        target(
-            "creature you control",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.youControl()))
-        )
-        target(
-            "other creature",
-            TargetOther(
+        val creatureYouControl = target(TargetFilter(GameObjectFilter.Creature.youControl()))
+        val otherCreature = target(TargetOther(
                 baseRequirement = TargetObject(
                     optional = true,
                     filter = TargetFilter(GameObjectFilter.Creature)
                 )
+            ))
+        effect = Effects.GrantHexproof(creatureYouControl, Duration.EndOfTurn) then
+            Effects.Untap(creatureYouControl) then
+            Effects.EachPermanentBecomesCopyOfTarget(
+                target = otherCreature,
+                duration = Duration.EndOfTurn,
+                affected = creatureYouControl,
             )
-        )
-        effect = Effects.Composite(
-            listOf(
-                Effects.GrantHexproof(EffectTarget.ContextTarget(0), Duration.EndOfTurn),
-                Effects.Untap(EffectTarget.ContextTarget(0)),
-                Effects.EachPermanentBecomesCopyOfTarget(
-                    target = EffectTarget.ContextTarget(1),
-                    duration = Duration.EndOfTurn,
-                    affected = EffectTarget.ContextTarget(0),
-                )
-            )
-        )
     }
 
     metadata {

@@ -31,10 +31,8 @@ val Shimmercreep = card("Shimmercreep") {
     keywords(Keyword.MENACE)
 
     vividEtb { colorCount ->
-        Effects.Composite(listOf(
-            Effects.LoseLife(colorCount, EffectTarget.PlayerRef(Player.EachOpponent)),
+        Effects.LoseLife(colorCount, EffectTarget.PlayerRef(Player.EachOpponent)) then
             Effects.GainLife(colorCount, EffectTarget.Controller)
-        ))
     }
 
     metadata {

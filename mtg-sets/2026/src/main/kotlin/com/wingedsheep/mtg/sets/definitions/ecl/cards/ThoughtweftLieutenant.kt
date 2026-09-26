@@ -1,15 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
+import com.wingedsheep.sdk.dsl.Triggers
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Thoughtweft Lieutenant
@@ -30,16 +27,9 @@ val ThoughtweftLieutenant = card("Thoughtweft Lieutenant") {
         "you control gets +1/+1 and gains trample until end of turn."
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Permanent.youControl().withSubtype("Kithkin"),
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.ANY
-        )
-        val creature = target("creature you control", Targets.CreatureYouControl)
-        effect = Effects.ModifyStats(1, 1, creature)
-            .then(Effects.GrantKeyword(Keyword.TRAMPLE, creature))
+        trigger = Triggers.a(GameObjectFilter.Permanent.youControl().withSubtype("Kithkin")).enters()
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.ModifyStats(1, 1, creature) then Effects.GrantKeyword(Keyword.TRAMPLE, creature)
     }
 
     metadata {

@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 
 /**
  * Scroll of Avacyn
@@ -23,11 +22,9 @@ val ScrollOfAvacyn = card("Scroll of Avacyn") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeSelf)
-        effect = Effects.DrawCards(1).then(
-            ConditionalEffect(
-                condition = Conditions.ControlPermanentOfType(Subtype.ANGEL),
-                effect = Effects.GainLife(5),
-            )
+        effect = Effects.DrawCards(1) then Effects.If(
+            condition = Conditions.ControlPermanentOfType(Subtype.ANGEL),
+            then = Effects.GainLife(5),
         )
         description = "{1}, Sacrifice this artifact: Draw a card. If you control an Angel, you gain 5 life."
     }

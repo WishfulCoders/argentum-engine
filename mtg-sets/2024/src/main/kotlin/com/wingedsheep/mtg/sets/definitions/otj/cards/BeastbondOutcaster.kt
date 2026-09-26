@@ -34,7 +34,7 @@ val BeastbondOutcaster = card("Beastbond Outcaster") {
         "as a sorcery on a later turn without paying its mana cost. Plot only as a sorcery.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouControl(GameObjectFilter.Creature.powerAtLeast(4))
         effect = Effects.DrawCards(1)
         description = "When this creature enters, if you control a creature with power 4 or greater, draw a card."

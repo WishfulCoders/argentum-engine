@@ -3,27 +3,20 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.CreateTokenCopyOfTargetEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.scripting.targets.TargetOther
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Runo Stromkirk // Krothuss, Lord of the Deep — Innistrad: Crimson Vow #246
@@ -63,7 +56,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *    [CreateTokenCopyOfTargetEffect.count] takes a [DynamicAmount], so the "if that creature is a
  *    Kraken, Leviathan, Octopus, or Serpent" rider is `DynamicAmount.Conditional` over
  *    [Conditions.TargetMatchesFilter] at target index 0 rather than two branches of a
- *    [ConditionalEffect] — one effect, one token template, two possible counts. The subtype test
+ *    [Effects.If] — one effect, one token template, two possible counts. The subtype test
  *    is a single `withAnySubtype` (an OR), which is what the printed comma list means.
  *  - Per its own ruling the token is *put onto the battlefield* attacking rather than declared as
  *    an attacker, which is exactly what `attacking = true` models — it emits no "attacks" trigger.
@@ -87,11 +80,8 @@ private val RunoStromkirkFront = card("Runo Stromkirk") {
 
     // When Runo enters, put up to one target creature card from your graveyard on top of your library.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val fromGraveyard = target(
-            "creature card from your graveyard",
-            TargetObject(optional = true, filter = TargetFilter.CreatureInYourGraveyard)
-        )
+        trigger = Triggers.self.enters()
+        val fromGraveyard = target(TargetFilter.CreatureInYourGraveyard, optional = true)
         effect = Effects.Move(
             target = fromGraveyard,
             destination = Zone.LIBRARY,
@@ -104,29 +94,22 @@ private val RunoStromkirkFront = card("Runo Stromkirk") {
     // At the beginning of your upkeep, look at the top card of your library. You may reveal that
     // card. If a creature card with mana value 6 or greater is revealed this way, transform Runo.
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1)),
-                storeAs = "runoLooked",
-            ),
-            SelectFromCollectionEffect(
-                from = "runoLooked",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "runoRevealed",
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.Pipeline {
+            val runoLooked = gather(CardSource.TopOfLibrary(1))
+            val runoRevealed = chooseUpTo(
+                1,
+                from = runoLooked,
                 showAllCards = true,
                 prompt = "You may reveal the top card of your library",
-                selectedLabel = "Reveal",
-            ),
-            RevealCollectionEffect(from = "runoRevealed", revealToSelf = false),
-            ConditionalEffect(
-                condition = Conditions.CollectionContainsMatch(
-                    "runoRevealed",
-                    GameObjectFilter.Creature.manaValueAtLeast(6),
-                ),
-                effect = TransformEffect(EffectTarget.Self),
-            ),
-        )
+                selectedLabel = "Reveal"
+            )
+            reveal(runoRevealed, revealToSelf = false)
+            run(Effects.If(
+                condition = whenMatches(runoRevealed, GameObjectFilter.Creature.manaValueAtLeast(6)),
+                then = Effects.Transform(EffectTarget.Self),
+            ))
+        }
         description = "At the beginning of your upkeep, look at the top card of your library. You " +
             "may reveal that card. If a creature card with mana value 6 or greater is revealed " +
             "this way, transform Runo."
@@ -155,22 +138,16 @@ private val KrothussLordOfTheDeep = card("Krothuss, Lord of the Deep") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val copied = target(
-            "another attacking creature",
-            TargetOther(baseRequirement = Targets.AttackingCreature)
-        )
-        effect = CreateTokenCopyOfTargetEffect(
+        trigger = Triggers.self.attacks()
+        val copied = target(TargetOther(baseRequirement = TargetObject(filter = TargetFilter.AttackingCreature)))
+        effect = Effects.CreateTokenCopyOfTarget(
             target = copied,
-            count = DynamicAmount.Conditional(
-                condition = Conditions.TargetMatchesFilter(
-                    GameObjectFilter.Creature.withAnySubtype(
+            count = DynamicAmounts.conditional(
+                condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.withAnySubtype(
                         "Kraken", "Leviathan", "Octopus", "Serpent"
-                    ),
-                    targetIndex = 0,
-                ),
-                ifTrue = DynamicAmount.Fixed(2),
-                ifFalse = DynamicAmount.Fixed(1),
+                    ), copied),
+                ifTrue = 2,
+                ifFalse = 1,
             ),
             tapped = true,
             attacking = true,

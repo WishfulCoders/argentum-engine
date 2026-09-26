@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.storied
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.FreeFirstEquipEachTurn
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Kíli the Resourceful
@@ -48,12 +47,9 @@ val KiliTheResourceful = card("Kíli the Resourceful") {
     }
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Any
+        trigger = Triggers.another(GameObjectFilter.Any
                 .withAnyOfSubtypes(listOf(Subtype.DWARF, Subtype.EQUIPMENT))
-                .youControl(),
-            binding = TriggerBinding.OTHER,
-        )
+                .youControl()).enters()
         oncePerTurn = true
         effect = Effects.DrawCards(1)
     }

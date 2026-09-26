@@ -11,7 +11,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * When this creature enters, you gain 2 life.
  *
- * A plain ETB trigger ([Triggers.EntersBattlefield]) whose effect is [Effects.GainLife] for the
+ * A plain ETB trigger (`Triggers.self.enters()`) whose effect is [Effects.GainLife] for the
  * controller.
  */
 val SpringmaneCervin = card("Springmane Cervin") {
@@ -24,7 +24,7 @@ val SpringmaneCervin = card("Springmane Cervin") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(2)
     }
 

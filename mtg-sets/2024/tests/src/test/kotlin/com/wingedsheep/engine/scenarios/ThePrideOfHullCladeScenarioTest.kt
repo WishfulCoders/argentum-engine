@@ -44,7 +44,7 @@ class ThePrideOfHullCladeScenarioTest : ScenarioTestBase() {
                     .withPlayers("Player1", "Player2")
                     .build()
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("The Pride of Hull Clade"),
                     game.player1Id,
@@ -64,7 +64,7 @@ class ThePrideOfHullCladeScenarioTest : ScenarioTestBase() {
                     (wall.creatureStats!!.power == wall.creatureStats!!.toughness) shouldBe false
                 }
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("The Pride of Hull Clade"),
                     game.player1Id,
@@ -81,7 +81,7 @@ class ThePrideOfHullCladeScenarioTest : ScenarioTestBase() {
                     .withCardOnBattlefield(2, "Wall of Air")
                     .build()
 
-                val calc = CostCalculator(cardRegistry)
+                val calc = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator)
                 val pride = cardRegistry.requireCard("The Pride of Hull Clade")
 
                 withClue("an opponent's creature contributes nothing") {
@@ -102,7 +102,7 @@ class ThePrideOfHullCladeScenarioTest : ScenarioTestBase() {
                     .withCardOnBattlefield(1, "Force of Nature")
                     .build()
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("The Pride of Hull Clade"),
                     game.player1Id,

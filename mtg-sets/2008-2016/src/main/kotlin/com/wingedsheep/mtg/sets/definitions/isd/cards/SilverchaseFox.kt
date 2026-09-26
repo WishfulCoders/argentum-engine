@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -28,7 +27,7 @@ val SilverchaseFox = card("Silverchase Fox") {
     toughness = 2
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{W}"), Costs.SacrificeSelf)
-        val t = target("target", TargetPermanent(filter = TargetFilter.Enchantment))
+        val t = target(TargetFilter.Enchantment)
         effect = Effects.Exile(t)
     }
     metadata {

@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Epic Downfall
@@ -20,7 +19,7 @@ val EpicDownfall = card("Epic Downfall") {
     oracleText = "Exile target creature with mana value 3 or greater."
 
     spell {
-        val creature = target("creature", TargetCreature(filter = TargetFilter.Creature.manaValueAtLeast(3)))
+        val creature = target(TargetFilter.Creature.manaValueAtLeast(3))
         effect = Effects.Exile(creature)
     }
 

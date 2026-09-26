@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Entity Tracker
@@ -35,17 +34,14 @@ val EntityTracker = card("Entity Tracker") {
 
     // Eerie trigger — part 1: whenever an enchantment you control enters
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Enchantment.youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Enchantment.youControl()).enters()
         effect = Effects.DrawCards(1)
         description = "Eerie — Whenever an enchantment you control enters, draw a card."
     }
 
     // Eerie trigger — part 2: whenever you fully unlock a Room
     triggeredAbility {
-        trigger = Triggers.RoomFullyUnlocked
+        trigger = Triggers.you.fullyUnlocksARoom()
         effect = Effects.DrawCards(1)
         description = "Eerie — Whenever you fully unlock a Room, draw a card."
     }

@@ -25,7 +25,7 @@ val IncandescentAria = card("Incandescent Aria") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.nontoken()),
-            Effects.DealDamage(3, EffectTarget.Self)
+            Effects.DealDamage(3, EffectTarget.IterationEntity)
         )
     }
 

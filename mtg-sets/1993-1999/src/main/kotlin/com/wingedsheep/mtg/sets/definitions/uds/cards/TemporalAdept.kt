@@ -9,7 +9,7 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 
 /**
@@ -28,7 +28,7 @@ val TemporalAdept = card("Temporal Adept") {
     toughness = 1
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{U}{U}{U}"), Costs.Tap)
-        val t = target("target", TargetPermanent())
+        val t = target(TargetFilter.Permanent)
         effect = Effects.Move(t, Zone.HAND)
     }
     metadata {

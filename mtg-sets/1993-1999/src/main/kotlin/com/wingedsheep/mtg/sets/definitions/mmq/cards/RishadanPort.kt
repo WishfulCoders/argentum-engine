@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Rishadan Port
@@ -32,7 +33,7 @@ val RishadanPort = card("Rishadan Port") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
-        val land = target("target", Targets.Land)
+        val land = target(TargetFilter.Land)
         effect = Effects.Tap(land)
     }
 

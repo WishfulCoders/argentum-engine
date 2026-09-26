@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 val WoodlandGuidance = card("Woodland Guidance") {
     manaCost = "{3}{G}"
@@ -18,20 +17,10 @@ val WoodlandGuidance = card("Woodland Guidance") {
     oracleText = "Return target card from your graveyard to your hand. Clash with an opponent. If you win, untap all Forests you control. (Each clashing player reveals the top card of their library, then puts that card on their choice of the top or bottom. A player wins if their card had a greater mana value.)\nExile Woodland Guidance."
 
     spell {
-        val card = target(
-            "target card from your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter.Any.ownedByYou(),
-                    zone = Zone.GRAVEYARD
-                )
-            )
-        )
-        effect = Effects.ReturnToHand(card).then(
-            Patterns.Mechanic.clash(
-                Patterns.Group.untapGroup(
-                    GroupFilter(GameObjectFilter.Land.withSubtype(Subtype.FOREST).youControl())
-                )
+        val card = target(TargetFilter(baseFilter = GameObjectFilter.Any.ownedByYou(), zone = Zone.GRAVEYARD))
+        effect = Effects.ReturnToHand(card) then Patterns.Mechanic.clash(
+            Patterns.Group.untapGroup(
+                GroupFilter(GameObjectFilter.Land.withSubtype(Subtype.FOREST).youControl())
             )
         )
         selfExile()

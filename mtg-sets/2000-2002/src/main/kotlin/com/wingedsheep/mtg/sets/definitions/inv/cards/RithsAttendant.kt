@@ -27,11 +27,9 @@ val RithsAttendant = card("Rith's Attendant") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeSelf)
-        effect = Effects.Composite(
-            Effects.AddMana(Color.RED),
-            Effects.AddMana(Color.GREEN),
+        effect = Effects.AddMana(Color.RED) then
+            Effects.AddMana(Color.GREEN) then
             Effects.AddMana(Color.WHITE)
-        )
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

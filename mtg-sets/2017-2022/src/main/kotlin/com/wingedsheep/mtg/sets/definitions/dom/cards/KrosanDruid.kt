@@ -26,7 +26,7 @@ val KrosanDruid = card("Krosan Druid") {
     keywordAbility(KeywordAbility.kicker("{4}{G}"))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = WasKicked
         effect = Effects.GainLife(10)
     }

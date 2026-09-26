@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.grn.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Artful Takedown
@@ -24,11 +24,11 @@ val ArtfulTakedown = card("Artful Takedown") {
     spell {
         modal(chooseCount = 2, minChooseCount = 1) {
             mode("Tap target creature") {
-                val creature = target("target", Targets.Creature)
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.Tap(creature)
             }
             mode("Target creature gets -2/-4 until end of turn") {
-                val creature = target("target", Targets.Creature)
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.ModifyStats(-2, -4, creature)
             }
         }

@@ -3,12 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.snc.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Cleanup Crew
@@ -34,23 +33,20 @@ val CleanupCrew = card("Cleanup Crew") {
     toughness = 6
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseOne(
-            Mode.withTarget(
-                effect = Effects.Destroy(EffectTarget.ContextTarget(0)),
-                target = TargetObject(filter = TargetFilter.Artifact),
-                description = "Destroy target artifact"
-            ),
-            Mode.withTarget(
-                effect = Effects.Destroy(EffectTarget.ContextTarget(0)),
-                target = TargetObject(filter = TargetFilter.Enchantment),
-                description = "Destroy target enchantment"
-            ),
-            Mode.withTarget(
-                effect = Effects.Exile(EffectTarget.ContextTarget(0)),
-                target = TargetObject(filter = TargetFilter.CardInGraveyard),
-                description = "Exile target card from a graveyard"
-            ),
+            mode("Destroy target artifact") {
+                val artifact = target(TargetFilter.Artifact)
+                effect = Effects.Destroy(artifact)
+            },
+            mode("Destroy target enchantment") {
+                val enchantment = target(TargetFilter.Enchantment)
+                effect = Effects.Destroy(enchantment)
+            },
+            mode("Exile target card from a graveyard") {
+                val cardInGraveyard = target(TargetFilter.CardInGraveyard)
+                effect = Effects.Exile(cardInGraveyard)
+            },
             Mode.noTarget(
                 Effects.GainLife(4),
                 "You gain 4 life"

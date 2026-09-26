@@ -5,10 +5,11 @@
 package com.wingedsheep.mtg.sets.definitions.usg.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 
 /**
@@ -28,8 +29,8 @@ val ArgothianEnchantress = card("Argothian Enchantress") {
     toughness = 1
     keywords(Keyword.SHROUD)
     triggeredAbility {
-        trigger = Triggers.YouCastEnchantment
-        effect = DrawCardsEffect(1)
+        trigger = Triggers.you.casts(GameObjectFilter.Enchantment)
+        effect = Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.RARE

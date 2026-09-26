@@ -27,7 +27,7 @@ val LiegeOfTheAxe = card("Liege of the Axe") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
+        trigger = Triggers.self.turnedFaceUp()
         effect = Effects.Untap(EffectTarget.Self)
     }
 

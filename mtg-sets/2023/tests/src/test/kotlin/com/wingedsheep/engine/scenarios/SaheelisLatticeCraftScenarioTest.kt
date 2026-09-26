@@ -25,6 +25,8 @@ import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import com.wingedsheep.engine.core.Outcome
+import io.kotest.matchers.shouldNotBe
 
 /**
  * Scenario tests for the Craft mechanic (CR 702.167), exercised end-to-end via
@@ -101,7 +103,7 @@ class SaheelisLatticeCraftScenarioTest : FunSpec({
                 costPayment = AdditionalCostPayment(exiledCards = listOf(dino))
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         // Resolve the ability on the stack.
         driver.bothPass()
@@ -183,7 +185,7 @@ class SaheelisLatticeCraftScenarioTest : FunSpec({
                 // costPayment intentionally omitted
             )
         )
-        result.isSuccess shouldBe false
+        result.outcome shouldNotBe Outcome.Done
         result.error.shouldNotBeNull() shouldContain "Craft"
     }
 
@@ -203,7 +205,7 @@ class SaheelisLatticeCraftScenarioTest : FunSpec({
                 abilityId = craftAbilityId()
             )
         )
-        result.isSuccess shouldBe false
+        result.outcome shouldNotBe Outcome.Done
     }
 
     test("Mastercraft Raptor reverts to Saheeli's Lattice (front face) when it leaves the battlefield (CR 712.8a)") {
@@ -229,7 +231,7 @@ class SaheelisLatticeCraftScenarioTest : FunSpec({
         driver.state.getEntity(saheeli)!!.get<CardComponent>()!!.name shouldBe "Mastercraft Raptor"
 
         // Send Mastercraft Raptor to the graveyard (any leave-battlefield event will do).
-        val transition = com.wingedsheep.engine.handlers.effects.ZoneTransitionService.moveToZone(
+        val transition = driver.zones.moveToZone(
             state = driver.state,
             entityId = saheeli,
             destinationZone = Zone.GRAVEYARD
@@ -269,7 +271,7 @@ class SaheelisLatticeCraftScenarioTest : FunSpec({
                 abilityId = craftAbilityId()
             )
         )
-        result.isSuccess shouldBe false
+        result.outcome shouldNotBe Outcome.Done
         result.error.shouldNotBeNull() shouldContain "sorcery"
     }
 })

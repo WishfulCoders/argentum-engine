@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
@@ -9,7 +9,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Scolding Administrator — Secrets of Strixhaven #224
@@ -42,19 +42,17 @@ val ScoldingAdministrator = card("Scolding Administrator") {
 
     // Repartee — cast an instant or sorcery targeting a creature: +1/+1 counter on this creature.
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.InstantOrSorcery.targetsMatching(GameObjectFilter.Creature)
-        )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery.targetsMatching(GameObjectFilter.Creature))
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Repartee — Whenever you cast an instant or sorcery spell that targets a creature, put a +1/+1 counter on this creature."
     }
 
     // When this creature dies, if it had counters on it, move those counters to up to one target creature.
     triggeredAbility {
-        trigger = Triggers.Dies
+        val creature = target(TargetFilter.Creature, optional = true)
+        trigger = Triggers.self.dies()
         interveningIf = Conditions.TriggeringEntityHadCounters
-        target = TargetCreature(optional = true)
-        effect = Effects.MoveAllLastKnownCounters(EffectTarget.ContextTarget(0))
+        effect = Effects.MoveAllLastKnownCounters(creature)
         description = "When this creature dies, if it had counters on it, put those counters on up to one target creature."
     }
 

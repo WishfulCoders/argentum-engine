@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.bfz.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Murasa Ranger
@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * 3/3
  * Landfall — Whenever a land you control enters, you may pay {3}{G}. If you do, put two +1/+1 counters on this creature.
  *
- * "You may pay {3}{G}. If you do" is the flat [MayPayManaEffect] gate — a mana
+ * "You may pay {3}{G}. If you do" is the flat [Effects.MayPay] gate — a mana
  * [com.wingedsheep.sdk.scripting.effects.Gate.MayPay] with no `otherwise`, which is the
  * shape the engine recognises for manual mana-source selection at resolution.
  */
@@ -30,10 +30,10 @@ val MurasaRanger = card("Murasa Ranger") {
         "counters on this creature."
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
-        effect = MayPayManaEffect(
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{3}{G}"),
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self),
+            then = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self),
         )
     }
 

@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Bala Ged Scorpion
@@ -35,9 +36,9 @@ val BalaGedScorpion = card("Bala Ged Scorpion") {
     oracleText = "When this creature enters, you may destroy target creature with power 1 or less."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
-        val creature = target("target creature with power 1 or less", Targets.CreatureWithPowerAtMost(1))
+        val creature = target(TargetFilter.Creature.powerAtMost(1))
         effect = Effects.Destroy(creature)
         description = "When this creature enters, you may destroy target creature with power 1 or less."
     }

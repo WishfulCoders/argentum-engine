@@ -7,9 +7,9 @@ import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Mesmeric Orb (MRD) — "Whenever a permanent becomes untapped, that permanent's controller mills a
@@ -34,7 +34,7 @@ class MesmericOrbScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Untap target permanent."
         spell {
-            val t = target("target permanent", TargetPermanent())
+            val t = target(TargetFilter.Permanent)
             effect = Effects.Untap(t)
         }
     }

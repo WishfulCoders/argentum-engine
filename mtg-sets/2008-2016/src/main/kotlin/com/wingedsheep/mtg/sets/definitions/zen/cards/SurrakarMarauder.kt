@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Surrakar Marauder
@@ -14,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * 2/1
  * Landfall — Whenever a land you control enters, this creature gains intimidate until end of turn. (It can't be blocked except by artifact creatures and/or creatures that share a color with it.)
  *
- * Landfall is [Triggers.LandYouControlEnters] — the `ZoneChangeEvent` over
+ * Landfall is `Triggers.a(GameObjectFilter.Land.youControl()).enters()` — the `ZoneChangeEvent` over
  * `GameObjectFilter.Land.youControl()` with `TriggerBinding.ANY`.
  */
 val SurrakarMarauder = card("Surrakar Marauder") {
@@ -26,7 +27,7 @@ val SurrakarMarauder = card("Surrakar Marauder") {
     oracleText = "Landfall — Whenever a land you control enters, this creature gains intimidate until end of turn. (It can't be blocked except by artifact creatures and/or creatures that share a color with it.)"
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.GrantKeyword(Keyword.INTIMIDATE, EffectTarget.Self)
     }
 

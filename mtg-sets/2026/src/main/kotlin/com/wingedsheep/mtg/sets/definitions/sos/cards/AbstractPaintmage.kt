@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Abstract Paintmage — Secrets of Strixhaven #171
@@ -14,7 +15,7 @@ import com.wingedsheep.sdk.scripting.effects.ManaRestriction
  * At the beginning of your first main phase, add {U}{R}. Spend this mana only to cast instant and
  * sorcery spells.
  *
- * Modeled as a [Triggers.FirstMainPhase] triggered ability that adds one {U} and one {R}, both
+ * Modeled as a `Triggers.you.beginningOf(Step.PRECOMBAT_MAIN)` triggered ability that adds one {U} and one {R}, both
  * carrying [ManaRestriction.InstantOrSorceryOnly] (the engine's "spend only to cast instant or
  * sorcery spells" restriction).
  */
@@ -27,11 +28,9 @@ val AbstractPaintmage = card("Abstract Paintmage") {
     oracleText = "At the beginning of your first main phase, add {U}{R}. Spend this mana only to cast instant and sorcery spells."
 
     triggeredAbility {
-        trigger = Triggers.FirstMainPhase
-        effect = Effects.Composite(
-            Effects.AddMana(Color.BLUE, 1, ManaRestriction.InstantOrSorceryOnly),
+        trigger = Triggers.you.beginningOf(Step.PRECOMBAT_MAIN)
+        effect = Effects.AddMana(Color.BLUE, 1, ManaRestriction.InstantOrSorceryOnly) then
             Effects.AddMana(Color.RED, 1, ManaRestriction.InstantOrSorceryOnly)
-        )
     }
 
     metadata {

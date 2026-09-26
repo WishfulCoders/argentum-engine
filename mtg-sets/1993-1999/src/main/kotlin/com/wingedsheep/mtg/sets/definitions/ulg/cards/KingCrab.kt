@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -31,7 +30,7 @@ val KingCrab = card("King Crab") {
     toughness = 5
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{U}"), Costs.Tap)
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.withColor(Color.GREEN)))
+        val t = target(TargetFilter.Creature.withColor(Color.GREEN))
         effect = Effects.Move(t, Zone.LIBRARY, ZonePlacement.Top)
     }
     metadata {

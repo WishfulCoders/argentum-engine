@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Glóin the Mighty // Easy Pickings — The Hobbit #99
@@ -20,11 +21,11 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * The mana trigger is *not* a mana ability (CR 605.1b) — it triggers off a step beginning rather
  * than off a mana ability resolving, so it uses the stack like any other triggered ability. Modeled
- * as [Triggers.FirstMainPhase], which is the precombat main phase of the controller's turn; the
+ * as `Triggers.you.beginningOf(Step.PRECOMBAT_MAIN)`, which is the precombat main phase of the controller's turn; the
  * mana lands in the pool once the trigger resolves and empties at the end of that phase.
  *
  * Easy Pickings is a group effect, not a targeted one — [GroupFilter.AllCreaturesOpponentsControl]
- * snapshots the affected set before iterating, and [EffectTarget.Self] inside the body binds to the
+ * snapshots the affected set before iterating, and [EffectTarget.IterationEntity] inside the body binds to the
  * creature currently being damaged. Hexproof and shroud don't apply; protection from red does, and
  * the engine's damage handling covers that.
  *
@@ -40,7 +41,7 @@ val GloinTheMighty = card("Glóin the Mighty") {
     oracleText = "At the beginning of your first main phase, add {R}{R}."
 
     triggeredAbility {
-        trigger = Triggers.FirstMainPhase
+        trigger = Triggers.you.beginningOf(Step.PRECOMBAT_MAIN)
         effect = Effects.AddMana(Color.RED, 2)
     }
 
@@ -52,7 +53,7 @@ val GloinTheMighty = card("Glóin the Mighty") {
         spell {
             effect = Effects.ForEachInGroup(
                 filter = GroupFilter.AllCreaturesOpponentsControl,
-                effect = Effects.DealDamage(1, EffectTarget.Self)
+                effect = Effects.DealDamage(1, EffectTarget.IterationEntity)
             )
         }
     }

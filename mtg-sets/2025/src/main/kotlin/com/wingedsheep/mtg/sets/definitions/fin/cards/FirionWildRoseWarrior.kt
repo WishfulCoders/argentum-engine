@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ReduceEquipCost
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -26,7 +25,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * First ability: a continuous [GrantKeyword] of haste over the equipped creatures you control
  * (`GameObjectFilter.Creature.youControl().equipped()`), projected each turn.
  *
- * Second ability: a [Triggers.entersBattlefield] trigger over nontoken Equipment you control
+ * Second ability: a `Triggers.a(filter).enters()` trigger over nontoken Equipment you control
  * (`.nontoken()` also stops the created token — itself an Equipment — from re-triggering, so no
  * loop). It copies the Equipment that entered ([EffectTarget.TriggeringEntity]) via
  * [Effects.CreateTokenCopyOfTarget], granting the copy the "except it has …" clause as an added
@@ -55,10 +54,7 @@ val FirionWildRoseWarrior = card("Firion, Wild Rose Warrior") {
 
     // Whenever a nontoken Equipment you control enters, create a sacrificing token copy of it.
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.withSubtype("Equipment").youControl().nontoken(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Artifact.withSubtype("Equipment").youControl().nontoken()).enters()
         effect = Effects.CreateTokenCopyOfTarget(
             target = EffectTarget.TriggeringEntity,
             addedStaticAbilities = listOf(ReduceEquipCost(amount = 2, onlyOwnEquip = true)),

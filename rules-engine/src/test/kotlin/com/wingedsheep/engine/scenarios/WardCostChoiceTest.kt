@@ -51,7 +51,7 @@ class WardCostChoiceTest : FunSpec({
         power = 2
         toughness = 2
         keywords(Keyword.WARD)
-        keywordAbility(KeywordAbility.wardDiscardOrPay("{2}"))
+        keywordAbility(KeywordAbility.Ward(WardCost.Choice(listOf(WardCost.Discard(), WardCost.Mana("{2}")))))
     }
 
     // Both legs need a resource the payer can lack, so "no option payable" is reachable: a hand of
@@ -63,10 +63,10 @@ class WardCostChoiceTest : FunSpec({
         toughness = 2
         keywords(Keyword.WARD)
         keywordAbility(
-            KeywordAbility.wardChoice(
+            KeywordAbility.Ward(WardCost.Choice(listOf(
                 WardCost.Discard(filter = GameObjectFilter.Creature),
                 WardCost.Sacrifice(GameObjectFilter.Creature),
-            )
+            )))
         )
     }
 
@@ -283,11 +283,11 @@ class WardCostChoiceTest : FunSpec({
     }
 
     test("the printed wording renders as oracle text") {
-        KeywordAbility.wardDiscardOrPay("{2}").description shouldBe "Ward—Discard a card or pay {2}"
-        KeywordAbility.wardChoice(
+        KeywordAbility.Ward(WardCost.Choice(listOf(WardCost.Discard(), WardCost.Mana("{2}")))).description shouldBe "Ward—Discard a card or pay {2}"
+        KeywordAbility.Ward(WardCost.Choice(listOf(
             WardCost.Life(2),
             WardCost.Sacrifice(GameObjectFilter.Creature),
-        ).description shouldBe "Ward—Pay 2 life or sacrifice a creature"
+        ))).description shouldBe "Ward—Pay 2 life or sacrifice a creature"
     }
 
     test("the trigger's own effect and a static grant render the disjunction too") {

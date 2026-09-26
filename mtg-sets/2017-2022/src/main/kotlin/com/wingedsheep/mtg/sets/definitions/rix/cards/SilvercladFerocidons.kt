@@ -26,7 +26,7 @@ val SilvercladFerocidons = card("Silverclad Ferocidons") {
     toughness = 5
 
     triggeredAbility {
-        trigger = Triggers.TakesDamage
+        trigger = Triggers.self.isDealtDamage()
         effect = Effects.Sacrifice(
             GameObjectFilter.Permanent,
             1,

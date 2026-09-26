@@ -1,25 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MakePlottedEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Kellan Joins Up
@@ -36,7 +27,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * hand and filtered to nonland cards with mana value ≤ 3. `ChooseUpTo(1)` is the optional
  * "you may exile" fork; [MakePlottedEffect] (CR 718) no-ops on an empty selection, so declining
  * is safe. The legendary-enters trigger distributes a +1/+1 counter over every creature you
- * control via `ForEachInGroup` + `AddCounters(Self)`.
+ * control via `ForEachInGroup` + `AddCounters(IterationEntity)`.
  */
 val KellanJoinsUp = card("Kellan Joins Up") {
     manaCost = "{G}{W}{U}"
@@ -46,32 +37,25 @@ val KellanJoinsUp = card("Kellan Joins Up") {
         "Whenever a legendary creature you control enters, put a +1/+1 counter on each creature you control."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.HAND, Player.You),
-                storeAs = "kju_hand"
-            ),
-            SelectFromCollectionEffect(
-                from = "kju_hand",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val kjuHand = gather(CardSource.FromZone(Zone.HAND, Player.You))
+            val kjuToPlot = chooseUpTo(
+                1,
+                from = kjuHand,
                 filter = GameObjectFilter.Nonland.manaValueAtMost(3),
-                storeSelected = "kju_toPlot",
                 selectedLabel = "Exile and plot"
-            ),
-            MoveCollectionEffect(from = "kju_toPlot", destination = CardDestination.ToZone(Zone.EXILE)),
-            MakePlottedEffect(from = "kju_toPlot")
-        )
+            )
+            exile(kjuToPlot)
+            run(Effects.MakePlotted(from = kjuToPlot))
+        }
     }
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.legendary().youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.legendary().youControl()).enters()
         effect = Effects.ForEachInGroup(
             filter = GroupFilter.AllCreaturesYouControl,
-            effect = AddCountersEffect(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity)
         )
     }
 

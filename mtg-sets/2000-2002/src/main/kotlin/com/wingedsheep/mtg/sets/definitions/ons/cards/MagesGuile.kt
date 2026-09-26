@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Mage's Guile
@@ -21,8 +21,8 @@ val MagesGuile = card("Mage's Guile") {
     oracleText = "Target creature gains shroud until end of turn.\nCycling {U}"
 
     spell {
-        val t = target("target", TargetCreature())
-        effect = GrantKeywordEffect(Keyword.SHROUD, t)
+        val t = target(TargetFilter.Creature)
+        effect = Effects.GrantKeyword(Keyword.SHROUD, t)
     }
 
     keywordAbility(KeywordAbility.cycling("{U}"))

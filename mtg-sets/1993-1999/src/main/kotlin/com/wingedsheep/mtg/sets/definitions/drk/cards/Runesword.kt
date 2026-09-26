@@ -2,14 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.drk.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CreaturesDamagedBySourceAreDoomed
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Runesword
@@ -47,24 +45,22 @@ val Runesword = card("Runesword") {
         "exile that creature instead."
 
     activatedAbility {
+        val attackingCreature = target(TargetFilter.AttackingCreature)
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap)
-        target = Targets.AttackingCreature
 
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 0, EffectTarget.ContextTarget(0)),
+        effect = Effects.ModifyStats(2, 0, attackingCreature) then
             // The two death riders are one granted static, not a trigger: a trigger for "whenever
             // this deals damage to a creature" resolves only after state-based actions have binned
             // the dying creature (CR 704.3), too late to send it to exile instead.
             Effects.GrantStaticAbility(
                 CreaturesDamagedBySourceAreDoomed(),
-                EffectTarget.ContextTarget(0),
-            ),
-            CreateDelayedTriggerEffect(
-                trigger = Triggers.LeavesBattlefield,
-                watchedTarget = EffectTarget.ContextTarget(0),
+                attackingCreature,
+            ) then
+            Effects.CreateDelayedTrigger(
+                trigger = Triggers.self.leaves(),
+                watchedTarget = attackingCreature,
                 effect = SacrificeSelfEffect,
-            ),
-        )
+            )
         description = "{3}, {T}: Target attacking creature gets +2/+0 until end of turn. When " +
             "that creature leaves the battlefield this turn, sacrifice this artifact."
     }

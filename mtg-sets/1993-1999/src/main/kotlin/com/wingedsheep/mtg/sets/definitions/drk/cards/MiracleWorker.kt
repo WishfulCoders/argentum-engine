@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.StatePredicate
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Miracle Worker
@@ -31,16 +30,13 @@ val MiracleWorker = card("Miracle Worker") {
     activatedAbility {
         cost = Costs.Tap
         val aura = target(
-            "target",
-            TargetPermanent(
-                filter = TargetFilter(
-                    GameObjectFilter.Enchantment.withSubtype("Aura").copy(
-                        statePredicates = listOf(
-                            StatePredicate.AttachedTo(GameObjectFilter.Creature.youControl())
-                        )
+            TargetFilter(
+                GameObjectFilter.Enchantment.withSubtype("Aura").copy(
+                    statePredicates = listOf(
+                        StatePredicate.AttachedTo(GameObjectFilter.Creature.youControl())
                     )
                 )
-            )
+            ),
         )
         effect = Effects.Destroy(aura)
     }

@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Liminal Hold
@@ -21,17 +20,13 @@ val LiminalHold = card("Liminal Hold") {
     oracleText = "When this enchantment enters, exile up to one target nonland permanent an opponent controls until this enchantment leaves the battlefield. You gain 2 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val permanent = target(
-            "up to one nonland permanent an opponent controls",
-            TargetPermanent(optional = true, filter = TargetFilter.NonlandPermanentOpponentControls)
-        )
-        effect = Effects.ExileUntilLeaves(permanent)
-            .then(Effects.GainLife(2))
+        trigger = Triggers.self.enters()
+        val permanent = target(TargetFilter.NonlandPermanentOpponentControls, optional = true)
+        effect = Effects.ExileUntilLeaves(permanent) then Effects.GainLife(2)
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 

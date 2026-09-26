@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sunshower Druid
@@ -24,10 +24,9 @@ val SunshowerDruid = card("Sunshower Druid") {
     oracleText = "When this creature enters, put a +1/+1 counter on target creature and you gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creature)
-            .then(Effects.GainLife(1))
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature) then Effects.GainLife(1)
     }
 
     metadata {

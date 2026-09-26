@@ -2,7 +2,6 @@ package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -11,17 +10,10 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Dáin's Company — The Hobbit #152
@@ -66,29 +58,23 @@ val DainsCompany = card("Dáin's Company") {
     }
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            GatherCardsEffect(CardSource.TopOfLibrary(DynamicAmount.Fixed(4)), storeAs = "looked"),
-            SelectFromCollectionEffect(
-                from = "looked",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val looked = gather(CardSource.TopOfLibrary(4))
+            val (kept, rest) = chooseUpToSplit(
+                1,
+                from = looked,
                 filter = GameObjectFilter(
                     cardPredicates = listOf(
                         CardPredicate.HasAnyOfSubtypes(listOf(Subtype.DWARF, Subtype.EQUIPMENT))
                     )
                 ),
-                storeSelected = "kept",
-                storeRemainder = "rest",
                 selectedLabel = "Put in hand",
                 remainderLabel = "Put on bottom"
-            ),
-            MoveCollectionEffect(from = "kept", destination = CardDestination.ToZone(Zone.HAND), revealed = true),
-            MoveCollectionEffect(
-                from = "rest",
-                destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
-                order = CardOrder.Random
             )
-        )
+            toHand(kept, revealed = true)
+            toLibraryBottom(rest, order = CardOrder.Random)
+        }
     }
 
     metadata {

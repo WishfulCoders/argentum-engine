@@ -1,5 +1,6 @@
 package com.wingedsheep.sdk.scripting.predicates
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.CardType
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import kotlinx.serialization.SerialName
@@ -48,6 +49,22 @@ sealed interface StatePredicate {
     }
 
     // =============================================================================
+    // Prepared (Entity)
+    // =============================================================================
+
+    /**
+     * The permanent is prepared (Secrets of Strixhaven prepare): it has a castable copy of its
+     * prepare spell in exile. Only a permanent with a prepare spell can be prepared, so this is
+     * false for everything else. Negate with [Not] for "if this creature isn't prepared"
+     * (Woodwork Prodigy, Paradox Shaper).
+     */
+    @SerialName("IsPrepared")
+    @Serializable
+    data object IsPrepared : Entity {
+        override val description: String = "prepared"
+    }
+
+    // =============================================================================
     // Zone (Entity)
     // =============================================================================
 
@@ -65,6 +82,27 @@ sealed interface StatePredicate {
     @Serializable
     data object IsOnBattlefield : Entity {
         override val description: String = "on the battlefield"
+    }
+
+    /**
+     * The object is in [zone] *right now* — a zone-agnostic, current-location test. A spell is an
+     * object on the stack (CR 112.1), so `InZone(Zone.STACK)` is "a spell" as a damage source
+     * ("a spell you control would deal damage", Hostility): a spell stays on the stack until it has
+     * finished resolving, so its damage is dealt from there. A pipeline collection re-reads it to
+     * keep only the cards still where they were gathered ("…if you don't cast it, put that card
+     * into your hand").
+     *
+     * Only true of an object that is still that object: a card that has since moved on is in its
+     * new zone. For the battlefield prefer [IsOnBattlefield], which also cancels other predicates'
+     * last-known fallbacks.
+     */
+    @SerialName("InZone")
+    @Serializable
+    data class InZone(val zone: com.wingedsheep.sdk.core.Zone) : Entity {
+        override val description: String = when (zone) {
+            com.wingedsheep.sdk.core.Zone.STACK -> "spell"
+            else -> "in ${zone.displayName}"
+        }
     }
 
     // =============================================================================
@@ -160,14 +198,14 @@ sealed interface StatePredicate {
         override val description: String = "blocking"
     }
 
-    /** Creature that is being blocked (has at least one blocker) */
+    /** Attacker with blocked status, even after all its blockers leave combat */
     @SerialName("IsBlocked")
     @Serializable
     data object IsBlocked : Entity {
         override val description: String = "blocked"
     }
 
-    /** Creature that is attacking and has no blockers */
+    /** Attacker with unblocked status after blockers are declared */
     @SerialName("IsUnblocked")
     @Serializable
     data object IsUnblocked : Entity {
@@ -322,7 +360,7 @@ sealed interface StatePredicate {
      *
      * Both parameters default to the widest reading and narrow it along the two axes printed cards
      * vary:
-     *  - [counterType] (e.g. `Counters.PLUS_ONE_PLUS_ONE`) restricts it to one kind of counter, so a
+     *  - [counterType] (e.g. `CounterType.PLUS_ONE_PLUS_ONE`) restricts it to one kind of counter, so a
      *    stun or shield counter doesn't satisfy a "+1/+1 counters" clause.
      *  - [placedByController] restricts it to counters put on by the permanent's own controller —
      *    the "**you've** put" half. Named for the controller rather than "you" because that is what
@@ -338,7 +376,7 @@ sealed interface StatePredicate {
     @SerialName("ReceivedCounterThisTurn")
     @Serializable
     data class ReceivedCounterThisTurn(
-        val counterType: String? = null,
+        val counterType: CounterType? = null,
         val placedByController: Boolean = false
     ) : History {
         // Rendered in the adjective slot a GameObjectFilter puts state predicates in, ahead of the
@@ -394,16 +432,26 @@ sealed interface StatePredicate {
      * no memory), which is what "that dealt damage this turn" asks for: the object in front of you
      * must be the one that dealt it.
      *
-     * Damage *type* is not an axis here — combat and noncombat damage both count, matching the
-     * printed wording. "Dealt combat damage" specifically has its own predicates
-     * ([HasDealtCombatDamageToPlayer], [DealtCombatDamageToSourceControllerThisTurn]) because those
-     * also scope by recipient.
+     * [combatOnly] narrows the damage *type*: `false` (default) counts combat and noncombat damage
+     * alike, matching the bare "dealt damage" wording; `true` counts only combat damage, to any
+     * recipient — "Ruric Thar has hexproof as long as they haven't dealt combat damage yet" (Ruric
+     * Thar, Magecrusher), via `Conditions.SourceHasDealtCombatDamage`. The same marker records the
+     * turn of the most recent *combat* damage beside the turn of the most recent damage of any kind,
+     * so both windows work for both types. The recipient-scoped combat predicates
+     * ([HasDealtCombatDamageToPlayer], [DealtCombatDamageToSourceControllerThisTurn]) stay separate
+     * because they also scope by who was dealt the damage.
      */
     @SerialName("HasDealtDamage")
     @Serializable
-    data class HasDealtDamage(val thisTurnOnly: Boolean = false) : History {
-        override val description: String =
-            if (thisTurnOnly) "dealt damage this turn" else "has dealt damage"
+    data class HasDealtDamage(
+        val thisTurnOnly: Boolean = false,
+        val combatOnly: Boolean = false
+    ) : History {
+        override val description: String = buildString {
+            append(if (thisTurnOnly) "dealt " else "has dealt ")
+            append(if (combatOnly) "combat damage" else "damage")
+            if (thisTurnOnly) append(" this turn")
+        }
     }
 
     /** Has dealt combat damage to a player (ever, since entering the battlefield) */
@@ -428,6 +476,22 @@ sealed interface StatePredicate {
     }
 
     /**
+     * Dealt damage — combat or noncombat — *this turn* to the player who controls the effect's
+     * source: the any-damage sibling of [DealtCombatDamageToSourceControllerThisTurn]. "Exile target
+     * creature that dealt damage to you this turn" (Reciprocate).
+     *
+     * Reads the candidate's own per-recipient damage memory (the turn it last dealt damage to each
+     * player), so the creature must be the same object that dealt the damage — one that left the
+     * battlefield and returned is a new object with no history (CR 400.7). Who controlled it when
+     * it dealt the damage doesn't matter. Inert with no source context.
+     */
+    @SerialName("DealtDamageToSourceControllerThisTurn")
+    @Serializable
+    data object DealtDamageToSourceControllerThisTurn : History {
+        override val description: String = "dealt damage to you this turn"
+    }
+
+    /**
      * Controlled by a player the effect's *source* dealt combat damage to this turn — the mirror of
      * [DealtCombatDamageToSourceControllerThisTurn]. Source-relative: reads the per-turn recipient
      * marker off `context.sourceId` and asks whether this permanent's controller is among the
@@ -442,6 +506,22 @@ sealed interface StatePredicate {
     @Serializable
     data object ControllerDealtCombatDamageBySourceThisTurn : History {
         override val description: String = "whose controller was dealt combat damage by this creature this turn"
+    }
+
+    /**
+     * Was dealt damage this turn by the effect's *source* — the recipient-side view of the source's
+     * per-turn damaged-creature record (the same record `Triggers` "a creature dealt damage by this
+     * creature this turn dies" reads). Source-relative and inert with no source context.
+     *
+     * The record lives on the source and is dropped when the source leaves the battlefield
+     * (CR 400.7), so the predicate stops matching once the source is gone — which is what Kumano's
+     * "if a creature dealt damage by Kumano this turn would die, exile it instead" asks for: Kumano
+     * must still be on the battlefield (or leaving simultaneously) for the replacement to apply.
+     */
+    @SerialName("WasDealtDamageBySourceThisTurn")
+    @Serializable
+    data object WasDealtDamageBySourceThisTurn : History {
+        override val description: String = "dealt damage by this creature this turn"
     }
 
     /**
@@ -616,6 +696,27 @@ sealed interface StatePredicate {
         override val description: String = "that blocked or was blocked by a legendary creature this turn"
     }
 
+    /**
+     * This creature blocked, or was blocked by, the creature [reference] names at some point
+     * during the current turn — "destroy all creatures that blocked or were blocked by **it** this
+     * turn" (Gaze of the Gorgon). The relational sibling of [BlockedOrWasBlockedByLegendaryThisTurn].
+     *
+     * Backed by the turn-scoped `CombatPartnersThisTurnComponent`, stamped on both creatures of a
+     * blocking pair at block declaration and cleared at end-of-turn cleanup, so it covers blocks
+     * made before the spell was cast and keeps matching after the referenced creature has left the
+     * battlefield (the card's own ruling). A reference that resolves to nothing matches nothing.
+     *
+     * In a delayed trigger, [EffectTarget.TriggeringEntity] names the trigger's watched entity — a
+     * step-based `CreateDelayedTriggerEffect` exposes its baked `watchedTarget` that way.
+     */
+    @SerialName("BlockedOrWasBlockedByEntityThisTurn")
+    @Serializable
+    data class BlockedOrWasBlockedByEntityThisTurn(
+        val reference: com.wingedsheep.sdk.scripting.targets.EffectTarget.SingleEntity
+    ) : History {
+        override val description: String = "that blocked or was blocked by ${reference.description} this turn"
+    }
+
     // =============================================================================
     // Face-Down State (Entity)
     // =============================================================================
@@ -666,8 +767,8 @@ sealed interface StatePredicate {
     /** Has a counter of the specified type */
     @SerialName("HasCounter")
     @Serializable
-    data class HasCounter(val counterType: String) : Entity {
-        override val description: String = "with a $counterType counter"
+    data class HasCounter(val counterType: CounterType) : Entity {
+        override val description: String = "with a ${counterType.printed} counter"
     }
 
     /** Has any counter of any type */
@@ -1144,7 +1245,7 @@ sealed interface StatePredicate {
     /**
      * The candidate card is one this effect's source permanent exiled — i.e. its entity id is
      * recorded in the source's `LinkedExileComponent` (the same linkage set by
-     * `RedirectZoneChange(linkToSource = true)`, `RedirectZoneChangeWithEffect(linkToSource = true)`,
+     * `RedirectZoneChange(linkToSource = true)`, `RedirectZoneChangeWith(linkToSource = true)`,
      * `MoveToZoneEffect(linkToSource = true)`, and the `FromLinkedExile` pipeline source).
      * Source-relative: resolves against the source supplied in the evaluation context, and is false
      * if the source has no linked exile or there is no source context.

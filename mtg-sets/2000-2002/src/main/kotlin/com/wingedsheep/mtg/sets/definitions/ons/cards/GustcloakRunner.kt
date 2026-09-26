@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 
 /**
  * Gustcloak Runner
@@ -23,8 +22,8 @@ val GustcloakRunner = card("Gustcloak Runner") {
     oracleText = "Whenever Gustcloak Runner becomes blocked, you may untap it and remove it from combat."
 
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
-        effect = MayEffect(
+        trigger = Triggers.self.becomesBlocked()
+        effect = Effects.May(
             Effects.Untap(EffectTarget.Self) then Effects.RemoveFromCombat(EffectTarget.Self)
         )
     }

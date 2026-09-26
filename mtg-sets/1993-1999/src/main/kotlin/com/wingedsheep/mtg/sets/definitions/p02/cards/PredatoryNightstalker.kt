@@ -5,8 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Predatory Nightstalker
@@ -31,9 +30,9 @@ val PredatoryNightstalker = card("Predatory Nightstalker") {
     oracleText = "When this creature enters, you may have target opponent sacrifice a creature of their choice."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val opponent = target("target", TargetOpponent())
-        effect = MayEffect(Effects.Sacrifice(GameObjectFilter.Creature, 1, opponent))
+        trigger = Triggers.self.enters()
+        val opponent = target(Targets.Opponent)
+        effect = Effects.May(Effects.Sacrifice(GameObjectFilter.Creature, 1, opponent))
     }
 
     metadata {

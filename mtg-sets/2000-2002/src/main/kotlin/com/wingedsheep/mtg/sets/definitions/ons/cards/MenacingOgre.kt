@@ -1,16 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.conditions.YouControlSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.SecretBidEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Menacing Ogre
@@ -33,17 +31,15 @@ val MenacingOgre = card("Menacing Ogre") {
     keywords(Keyword.TRAMPLE, Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = SecretBidEffect(
-            highestBidderEffect = Effects.Composite(listOf(
-                // Each highest bidder loses life equal to their bid
-                Effects.LoseLife(DynamicAmount.XValue, EffectTarget.Controller),
+        trigger = Triggers.self.enters()
+        effect = Effects.SecretBid(
+            // Each highest bidder loses life equal to their bid
+            highestBidderEffect = Effects.LoseLife(DynamicAmounts.xValue(), EffectTarget.Controller) then
                 // If the controller is among them, put counters on this creature
-                ConditionalEffect(
+                Effects.If(
                     condition = YouControlSource,
-                    effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
+                    then = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
                 )
-            ))
         )
     }
 

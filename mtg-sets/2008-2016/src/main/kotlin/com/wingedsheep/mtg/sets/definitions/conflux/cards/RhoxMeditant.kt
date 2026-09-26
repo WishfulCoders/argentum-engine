@@ -30,7 +30,7 @@ val RhoxMeditant = card("Rhox Meditant") {
     oracleText = "When this creature enters, if you control a green permanent, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouControl(GameObjectFilter.Permanent.withColor(Color.GREEN))
         effect = Effects.DrawCards(1)
     }

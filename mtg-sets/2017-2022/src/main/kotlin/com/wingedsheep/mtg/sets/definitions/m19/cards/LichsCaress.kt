@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.m19.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Lich's Caress
@@ -22,11 +22,8 @@ val LichsCaress = card("Lich's Caress") {
     oracleText = "Destroy target creature. You gain 3 life."
 
     spell {
-        val creature = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.Destroy(creature),
-            Effects.GainLife(3)
-        )
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.Destroy(creature) then Effects.GainLife(3)
     }
 
     metadata {

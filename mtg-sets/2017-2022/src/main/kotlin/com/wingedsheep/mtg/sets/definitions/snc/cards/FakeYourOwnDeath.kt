@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.snc.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.GrantTriggeredAbilityEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Fake Your Own Death
@@ -23,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Thunder Junction (OTJ) and others.
  *
  * Modeled as a temporary +2/+0 [Effects.ModifyStats] plus a granted self dies-trigger
- * ([GrantTriggeredAbilityEffect] with [Triggers.Dies]). When the buffed creature dies,
+ * ([GrantTriggeredAbilityEffect] with `Triggers.self.dies()`). When the buffed creature dies,
  * the granted ability returns it to the battlefield tapped from the graveyard
  * ([Effects.PutOntoBattlefield] of [EffectTarget.Self], which with no controllerOverride
  * lands under its owner's control) and creates a Treasure token. Both the buff and the
@@ -39,24 +38,19 @@ val FakeYourOwnDeath = card("Fake Your Own Death") {
         "(It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")"
 
     spell {
-        val t = target("target creature", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 0, t),
-            GrantTriggeredAbilityEffect(
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 0, t) then
+            Effects.GrantTriggeredAbility(
                 ability = TriggeredAbility.create(
-                    trigger = Triggers.Dies.event,
-                    binding = Triggers.Dies.binding,
-                    effect = Effects.Composite(
-                        Effects.PutOntoBattlefield(EffectTarget.Self, tapped = true),
+                    trigger = Triggers.self.dies(),
+                    effect = Effects.PutOntoBattlefield(EffectTarget.Self, tapped = true) then
                         Effects.CreateTreasure(1),
-                    ),
                     descriptionOverride = "When this creature dies, return it to the battlefield tapped " +
                         "under its owner's control and you create a Treasure token.",
                 ),
                 target = t,
                 duration = Duration.EndOfTurn,
-            ),
-        )
+            )
     }
 
     metadata {

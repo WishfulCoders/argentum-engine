@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Geyserfield Stalker
@@ -15,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Menace (This creature can't be blocked except by two or more creatures.)
  * Landfall — Whenever a land you control enters, this creature gets +2/+2 until end of turn.
  *
- * Landfall is a plain [Triggers.LandYouControlEnters] — ANY binding, because the printed line never says "another".
+ * Landfall is a plain `Triggers.a(GameObjectFilter.Land.youControl()).enters()` — ANY binding, because the printed line never says "another".
  */
 val GeyserfieldStalker = card("Geyserfield Stalker") {
     manaCost = "{4}{B}"
@@ -29,7 +30,7 @@ val GeyserfieldStalker = card("Geyserfield Stalker") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
     }
 

@@ -9,12 +9,11 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -34,13 +33,12 @@ val OltecArchaeologists = card("Oltec Archaeologists") {
     power = 4
     toughness = 4
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseOne(
-            Mode.withTarget(
-                Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND),
-                TargetObject(filter = TargetFilter.ArtifactInYourGraveyard),
-                "Return target artifact card from your graveyard to your hand"
-            ),
+            mode("Return target artifact card from your graveyard to your hand") {
+                val artifactInYourGraveyard = target(TargetFilter.ArtifactInYourGraveyard)
+                effect = Effects.Move(artifactInYourGraveyard, Zone.HAND)
+            },
             Mode.noTarget(
                 Patterns.Library.scry(3),
                 "Scry 3. (Look at the top three cards of your library, then put any number of them on the bottom and the rest on top in any order.)"

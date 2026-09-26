@@ -1,11 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardLayout
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Stand // Deliver (INV 292) — split-layout spell (CR 709).
@@ -28,8 +27,8 @@ val StandDeliver = card("Stand // Deliver") {
         oracleText = "Prevent the next 2 damage that would be dealt to target creature this turn."
 
         spell {
-            target("target creature", Targets.Creature)
-            effect = Effects.PreventNextDamage(2, EffectTarget.ContextTarget(0))
+            val creature = target(TargetFilter.Creature)
+            effect = Effects.PreventNextDamage(2, creature)
         }
     }
 
@@ -39,8 +38,8 @@ val StandDeliver = card("Stand // Deliver") {
         oracleText = "Return target permanent to its owner's hand."
 
         spell {
-            target("target permanent", Targets.Permanent)
-            effect = Effects.ReturnToHand(EffectTarget.ContextTarget(0))
+            val permanent = target(TargetFilter.Permanent)
+            effect = Effects.ReturnToHand(permanent)
         }
     }
 

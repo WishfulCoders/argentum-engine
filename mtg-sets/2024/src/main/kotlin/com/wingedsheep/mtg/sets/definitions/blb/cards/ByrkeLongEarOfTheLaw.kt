@@ -1,16 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Byrke, Long Ear of the Law
@@ -46,20 +44,17 @@ val ByrkeLongEarOfTheLaw = card("Byrke, Long Ear of the Law") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target("up to two target creatures", TargetCreature(count = 2, optional = true))
-        effect = ForEachTargetEffect(
-            listOf(Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0)))
+        trigger = Triggers.self.enters()
+        targets(TargetFilter.Creature, count = 2, optional = true)
+        effect = Effects.ForEachTarget(
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0))
         )
         description = "When Byrke enters, put a +1/+1 counter on each of up to two target creatures."
     }
 
     triggeredAbility {
-        trigger = Triggers.attacks(
-            filter = GameObjectFilter.Creature.youControl().withCounter(Counters.PLUS_ONE_PLUS_ONE),
-            binding = TriggerBinding.ANY,
-        )
-        effect = Effects.DoubleCounters(Counters.PLUS_ONE_PLUS_ONE, EffectTarget.TriggeringEntity)
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl().withCounter(CounterType.PLUS_ONE_PLUS_ONE)).attacks()
+        effect = Effects.DoubleCounters(CounterType.PLUS_ONE_PLUS_ONE, EffectTarget.TriggeringEntity)
         description = "Whenever a creature you control with a +1/+1 counter on it attacks, " +
             "double the number of +1/+1 counters on it."
     }

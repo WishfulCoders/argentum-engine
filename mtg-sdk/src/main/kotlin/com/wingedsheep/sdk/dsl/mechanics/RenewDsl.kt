@@ -26,7 +26,7 @@ import com.wingedsheep.sdk.scripting.costs.CostAtom
  *
  * ```kotlin
  * renew("{2}{G}") {
- *     effect = Effects.PutCounters(Counters.PLUS_ONE_PLUS_ONE, 1, target("creature", Targets.Creature))
+ *     effect = Effects.PutCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, target(TargetFilter.Creature))
  * }
  * ```
  */

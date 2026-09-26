@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -12,9 +12,7 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Lodestone Needle // Guidestone Compass (CR 702.167, The Lost Caverns of Ixalan #62)
@@ -35,7 +33,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  * Implementation:
  *  - Front ETB: "up to one target artifact or creature" is a [TargetPermanent] with
  *    `optional = true` (Queen's Bay Paladin idiom); the effect is a [Effects.Composite]
- *    of [Effects.Tap] plus [AddCountersEffect] with two [Counters.STUN] counters — the
+ *    of [Effects.Tap] plus [AddCountersEffect] with two [CounterType.STUN] counters — the
  *    tap + stun-counter pairing proven by Waylaying Pirates. If the target is declined,
  *    both steps are no-ops.
  *  - Craft: the `craft(...)` helper wires [com.wingedsheep.sdk.scripting.AbilityCost.Craft]
@@ -61,18 +59,10 @@ private val LodestoneNeedleFront = card("Lodestone Needle") {
     // When this artifact enters, tap up to one target artifact or creature
     // and put two stun counters on it.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val permanent = target(
-            "up to one target artifact or creature",
-            TargetPermanent(
-                optional = true,
-                filter = TargetFilter(GameObjectFilter.CreatureOrArtifact)
-            )
-        )
-        effect = Effects.Composite(
-            Effects.Tap(permanent),
-            AddCountersEffect(counterType = Counters.STUN, count = 2, target = permanent)
-        )
+        trigger = Triggers.self.enters()
+        val permanent = target(TargetFilter(GameObjectFilter.CreatureOrArtifact), optional = true)
+        effect = Effects.Tap(permanent) then
+            Effects.AddCounters(counterType = CounterType.STUN, count = 2, target = permanent)
     }
 
     // Craft with artifact {2}{U} — exactly one artifact material.
@@ -103,7 +93,7 @@ private val GuidestoneCompass = card("Guidestone Compass") {
     // {1}, {T}: Target creature you control explores. Activate only as a sorcery.
     // Same shape as the predefined Map token's ability, without the sacrifice.
     activatedAbility {
-        val creature = target("target creature you control", Targets.CreatureYouControl)
+        val creature = target(TargetFilter.CreatureYouControl)
         cost = Costs.Composite(
             Costs.Mana("{1}"),
             Costs.Tap

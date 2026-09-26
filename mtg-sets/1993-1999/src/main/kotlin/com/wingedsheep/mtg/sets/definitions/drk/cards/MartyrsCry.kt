@@ -6,14 +6,9 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CaptureControllersEffect
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ForEachCapturedControllerEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Martyr's Cry
@@ -40,31 +35,20 @@ val MartyrsCry = card("Martyr's Cry") {
     oracleText = "Exile all white creatures. For each creature exiled this way, its controller draws a card."
 
     spell {
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.FromZone(
+        effect = Effects.Pipeline {
+            val martyrs = gather(
+                CardSource.FromZone(
                     zone = Zone.BATTLEFIELD,
                     player = Player.Each,
                     filter = GameObjectFilter.Creature.withColor(Color.WHITE),
-                ),
-                storeAs = "martyrs",
-            ),
-            CaptureControllersEffect(from = "martyrs", storeAs = "martyrControllers"),
-            MoveCollectionEffect(
-                from = "martyrs",
-                destination = CardDestination.ToZone(Zone.EXILE),
-                storeMovedAs = "exiledMartyrs",
-            ),
-            ForEachCapturedControllerEffect(
-                collection = "exiledMartyrs",
-                originalCollection = "martyrs",
-                controllerSnapshot = "martyrControllers",
-                countVariable = "martyrCount",
-                effects = listOf(
-                    Effects.DrawCards(DynamicAmount.VariableReference("martyrCount")),
-                ),
-            ),
-        )
+                )
+            )
+            val martyrControllers = captureControllers(martyrs)
+            val exiledMartyrs = moveTracked(martyrs, CardDestination.ToZone(Zone.EXILE))
+            forEachCaptured(exiledMartyrs, original = martyrs, controllers = martyrControllers) { martyrCount ->
+                run(Effects.DrawCards(martyrCount.amount))
+            }
+        }
     }
 
     metadata {

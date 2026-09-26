@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 val PesteredWellguard = card("Pestered Wellguard") {
     manaCost = "{3}{U}"
@@ -17,8 +16,8 @@ val PesteredWellguard = card("Pestered Wellguard") {
     oracleText = "Whenever this creature becomes tapped, create a 1/1 blue and black Faerie creature token with flying."
 
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
-        effect = CreateTokenEffect(
+        trigger = Triggers.self.becomesTapped()
+        effect = Effects.CreateToken(
             count = 1,
             power = 1,
             toughness = 1,

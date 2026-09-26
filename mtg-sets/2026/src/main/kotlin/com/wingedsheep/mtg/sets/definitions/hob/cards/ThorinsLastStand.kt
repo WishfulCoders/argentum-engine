@@ -9,11 +9,9 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -34,15 +32,12 @@ val ThorinsLastStand = card("Thorin's Last Stand") {
             mode("Creatures you control get +2/+1 until end of turn") {
                 effect = Effects.ForEachInGroup(
                     GroupFilter(GameObjectFilter.Creature.youControl()),
-                    Effects.ModifyStats(2, 1, EffectTarget.Self)
+                    Effects.ModifyStats(2, 1, EffectTarget.IterationEntity)
                 )
             }
             mode("Destroy target artifact or enchantment. You gain 2 life") {
-                val t = target("target", TargetPermanent(filter = TargetFilter.ArtifactOrEnchantment))
-                effect = Effects.Composite(
-                    Effects.Move(t, Zone.GRAVEYARD, byDestruction = true),
-                    GainLifeEffect(2)
-                )
+                val t = target(TargetFilter.ArtifactOrEnchantment)
+                effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true) then Effects.GainLife(2)
             }
         }
     }

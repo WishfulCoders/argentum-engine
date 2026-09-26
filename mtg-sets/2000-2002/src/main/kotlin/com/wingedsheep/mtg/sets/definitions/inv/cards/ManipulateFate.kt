@@ -5,17 +5,10 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Manipulate Fate
@@ -35,32 +28,26 @@ val ManipulateFate = card("Manipulate Fate") {
     oracleText = "Search your library for three cards, exile them, then shuffle.\nDraw a card."
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                // Search your library.
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.Any),
-                    storeAs = "searchable"
-                ),
-                // Choose up to three cards.
-                SelectFromCollectionEffect(
-                    from = "searchable",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(3)),
-                    chooser = Chooser.Controller,
-                    storeSelected = "exiled",
-                    prompt = "Choose up to three cards to exile"
-                ),
-                // Exile them.
-                MoveCollectionEffect(
-                    from = "exiled",
-                    destination = CardDestination.ToZone(Zone.EXILE, Player.You)
-                ),
-                // Then shuffle.
-                ShuffleLibraryEffect(EffectTarget.Controller),
-                // Draw a card.
-                Effects.DrawCards(1)
+        effect = Effects.Pipeline {
+            // Search your library.
+            val searchable = gather(
+                CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.Any),
+                search = true
             )
-        )
+            // Choose up to three cards.
+            val exiled = chooseUpTo(
+                3,
+                from = searchable,
+                chooser = Chooser.Controller,
+                prompt = "Choose up to three cards to exile"
+            )
+            // Exile them.
+            exile(exiled)
+            // Then shuffle.
+            run(Effects.ShuffleLibrary(EffectTarget.Controller))
+            // Draw a card.
+            run(Effects.DrawCards(1))
+        }
     }
 
     metadata {

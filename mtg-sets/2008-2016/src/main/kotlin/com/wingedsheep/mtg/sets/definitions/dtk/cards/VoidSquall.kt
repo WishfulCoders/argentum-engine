@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Void Squall
@@ -31,7 +30,7 @@ val VoidSquall = card("Void Squall") {
     keywords(Keyword.REBOUND)
 
     spell {
-        val t = target("target", TargetObject(filter = TargetFilter.NonlandPermanent))
+        val t = target(TargetFilter.NonlandPermanent)
         effect = Effects.Move(t, Zone.HAND)
     }
 

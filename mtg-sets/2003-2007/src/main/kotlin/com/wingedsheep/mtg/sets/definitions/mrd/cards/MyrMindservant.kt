@@ -5,9 +5,9 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 
 
 /**
@@ -26,7 +26,7 @@ val MyrMindservant = card("Myr Mindservant") {
     toughness = 1
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        effect = ShuffleLibraryEffect()
+        effect = Effects.ShuffleLibrary()
     }
     metadata {
         rarity = Rarity.UNCOMMON

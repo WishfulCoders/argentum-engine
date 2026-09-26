@@ -1,10 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ptk.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.OwnerGainsLifeEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Misfortune's Gain
@@ -19,11 +18,8 @@ val MisfortunesGain = card("Misfortune's Gain") {
     oracleText = "Destroy target creature. Its owner gains 4 life."
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.Destroy(t),
-            OwnerGainsLifeEffect(4)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.Destroy(t) then Effects.OwnerGainsLife(4)
     }
 
     metadata {

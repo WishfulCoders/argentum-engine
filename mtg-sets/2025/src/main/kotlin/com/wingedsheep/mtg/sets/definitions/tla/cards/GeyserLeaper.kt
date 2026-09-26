@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -32,10 +31,7 @@ val GeyserLeaper = card("Geyser Leaper") {
     activatedAbility {
         cost = Costs.Mana("{4}")
         hasWaterbend = true
-        effect = Effects.Composite(
-            DrawCardsEffect(1),
-            Patterns.Hand.discardCards(1)
-        )
+        effect = Effects.DrawCards(1) then Patterns.Hand.discardCards(1)
     }
     metadata {
         rarity = Rarity.COMMON

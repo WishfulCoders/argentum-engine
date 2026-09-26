@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -42,8 +42,7 @@ val WhiteTigerAvaAyala = card("White Tiger, Ava Ayala") {
     activatedAbility {
         isPowerUp = true
         cost = Costs.Mana("{5}{G}")
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self) then
             Effects.CreateToken(
                 power = 4,
                 toughness = 4,
@@ -54,7 +53,6 @@ val WhiteTigerAvaAyala = card("White Tiger, Ava Ayala") {
                 staticAbilities = listOf(CantBeBlockedByMoreThan(maxBlockers = 1)),
                 imageUri = "https://cards.scryfall.io/normal/front/4/d/4d1ca2ed-c987-4f92-ad7b-991d7a64d145.jpg?1783902800"
             )
-        )
     }
 
     metadata {

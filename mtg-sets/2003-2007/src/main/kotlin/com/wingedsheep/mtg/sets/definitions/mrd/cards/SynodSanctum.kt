@@ -7,11 +7,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Synod Sanctum — Mirrodin #252
@@ -44,10 +41,7 @@ val SynodSanctum = card("Synod Sanctum") {
         "battlefield under your control."
 
     activatedAbility {
-        val permanent = target(
-            "target permanent you control",
-            TargetPermanent(filter = TargetFilter.PermanentYouControl)
-        )
+        val permanent = target(TargetFilter.PermanentYouControl)
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
         effect = Effects.Move(permanent, Zone.EXILE, linkToSource = true)
         description = "{2}, {T}: Exile target permanent you control."
@@ -55,15 +49,10 @@ val SynodSanctum = card("Synod Sanctum") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.SacrificeSelf)
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(source = CardSource.FromLinkedExile(), storeAs = "exiled"),
-                MoveCollectionEffect(
-                    from = "exiled",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD, Player.You)
-                )
-            )
-        )
+        effect = Effects.Pipeline {
+            val exiled = gather(CardSource.FromLinkedExile())
+            move(exiled, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You))
+        }
         description = "{2}, Sacrifice this artifact: Return all cards exiled with this artifact " +
             "to the battlefield under your control."
     }

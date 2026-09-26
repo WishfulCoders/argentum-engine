@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ths.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Titan's Strength
@@ -19,11 +19,8 @@ val TitansStrength = card("Titan's Strength") {
     oracleText = "Target creature gets +3/+1 until end of turn. Scry 1. (Look at the top card of your library. You may put that card on the bottom.)"
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(3, 1, t),
-            Effects.Scry(1),
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(3, 1, t) then Effects.Scry(1)
     }
 
     metadata {

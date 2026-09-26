@@ -24,7 +24,7 @@ val AkromasBlessing = card("Akroma's Blessing") {
         effect = Effects.ChooseColorThen(
             Effects.ForEachInGroup(
                 GroupFilter.AllCreaturesYouControl,
-                Effects.GrantProtectionFromChosenColor(EffectTarget.Self)
+                Effects.GrantProtectionFromChosenColor(EffectTarget.IterationEntity)
             )
         )
     }

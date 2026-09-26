@@ -32,7 +32,7 @@ class SaddleScenarioTest : FunSpec({
         oracleText = "Saddle 2\nWhenever Test Mount attacks while saddled, draw a card."
         keywordAbility(KeywordAbility.saddle(2))
         triggeredAbility {
-            trigger = Triggers.Attacks
+            trigger = Triggers.self.attacks()
             triggerRestriction = Conditions.SourceIsSaddled
             effect = Effects.DrawCards(1)
         }

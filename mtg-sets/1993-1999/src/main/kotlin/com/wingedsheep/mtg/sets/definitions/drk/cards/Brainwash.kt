@@ -1,10 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.drk.cards
 
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantAttackOrBlockUnlessPay
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Brainwash
@@ -27,11 +28,11 @@ val Brainwash = card("Brainwash") {
     colorIdentity = "W"
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature\nEnchanted creature can't attack unless its controller pays {3}."
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = CantAttackOrBlockUnlessPay(
-            amount = DynamicAmount.Fixed(3),
+            amount = DynamicAmounts.fixed(3),
             appliesToBlocking = false,
         )
     }

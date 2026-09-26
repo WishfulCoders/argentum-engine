@@ -26,7 +26,7 @@ val FeatherbrainedFilcher = card("Featherbrained Filcher") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.CreateFood()
     }
 

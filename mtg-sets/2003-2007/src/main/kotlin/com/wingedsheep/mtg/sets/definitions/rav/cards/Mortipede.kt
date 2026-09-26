@@ -5,9 +5,9 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MustBeBlockedEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 
@@ -27,7 +27,7 @@ val Mortipede = card("Mortipede") {
     toughness = 1
     activatedAbility {
         cost = Costs.Mana("{2}{G}")
-        effect = MustBeBlockedEffect(EffectTarget.Self)
+        effect = Effects.MustBeBlocked(EffectTarget.Self)
     }
     metadata {
         rarity = Rarity.COMMON

@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.TimingRule
  * When this creature enters, scry 2. (Look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.)
  * {T}: Add one mana of any color.
  *
- * Two stock bodies side by side: [Triggers.EntersBattlefield] with the [Effects.Scry] macro, and the
+ * Two stock bodies side by side: `Triggers.self.enters()` with the [Effects.Scry] macro, and the
  * any-color mana ability, which needs `manaAbility`/[TimingRule.ManaAbility] so it resolves without the stack.
  */
 val BronzeWalrus = card("Bronze Walrus") {
@@ -28,7 +28,7 @@ val BronzeWalrus = card("Bronze Walrus") {
         "{T}: Add one mana of any color."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Scry(2)
         description = "When this creature enters, scry 2."
     }

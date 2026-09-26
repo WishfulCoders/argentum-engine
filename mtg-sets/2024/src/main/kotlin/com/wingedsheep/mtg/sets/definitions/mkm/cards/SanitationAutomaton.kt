@@ -25,7 +25,7 @@ val SanitationAutomaton = card("Sanitation Automaton") {
     power = 2
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.surveil(1)
     }
     metadata {

@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Axebane Ferox — Murders at Karlov Manor #153
@@ -18,7 +19,7 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
  * evidence**, so the removal spell is countered with no prompt. Late, with a stocked graveyard, it
  * costs a real chunk of the opponent's recursion instead.
  *
- * The ward cost is [KeywordAbility.wardCollectEvidence], which this card introduces — the fourth of
+ * The ward cost is [WardCost.CollectEvidence], which this card introduces — the fourth of
  * the four collect-evidence contexts and the only one that is a *ward* cost. It exiles any number
  * of cards from the paying player's graveyard with total mana value 4 or greater; the constraint is
  * a **sum**, not a count, so a graveyard of five lands is never enough and over-paying (exiling a
@@ -37,7 +38,7 @@ val AxebaneFerox = card("Axebane Ferox") {
         "value 4 or greater from their graveyard.)"
 
     keywords(Keyword.DEATHTOUCH, Keyword.HASTE)
-    keywordAbility(KeywordAbility.wardCollectEvidence(4))
+    keywordAbility(KeywordAbility.Ward(WardCost.CollectEvidence(4)))
 
     metadata {
         rarity = Rarity.RARE

@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Nivix Barrier
@@ -31,8 +30,8 @@ val NivixBarrier = card("Nivix Barrier") {
     keywords(Keyword.FLASH, Keyword.DEFENDER)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target attacking creature", TargetCreature(filter = TargetFilter.Creature.attacking()))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature.attacking())
         effect = Effects.ModifyStats(-4, 0, t)
     }
 

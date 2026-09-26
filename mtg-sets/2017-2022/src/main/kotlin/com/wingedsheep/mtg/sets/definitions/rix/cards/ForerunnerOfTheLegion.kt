@@ -3,13 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.rix.cards
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Forerunner of the Legion
@@ -33,7 +32,7 @@ val ForerunnerOfTheLegion = card("Forerunner of the Legion") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Any.withSubtype(Subtype.VAMPIRE),
@@ -43,11 +42,8 @@ val ForerunnerOfTheLegion = card("Forerunner of the Legion") {
     }
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            GameObjectFilter.Permanent.withSubtype(Subtype.VAMPIRE).youControl(),
-            TriggerBinding.OTHER
-        )
-        val boosted = target("target creature", Targets.Creature)
+        trigger = Triggers.another(GameObjectFilter.Permanent.withSubtype(Subtype.VAMPIRE).youControl()).enters()
+        val boosted = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(1, 1, boosted)
     }
 

@@ -1,18 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Suspend Aggression
@@ -36,34 +30,25 @@ val SuspendAggression = card("Suspend Aggression") {
         "those cards, its owner may play it until the end of their next turn."
 
     spell {
-        target("permanent", Targets.NonlandPermanent)
-        effect = Effects.Composite(
+        target(TargetFilter.NonlandPermanent)
+        effect = Effects.Pipeline {
             // Exile the targeted nonland permanent; its owner may replay it.
-            GatherCardsEffect(source = CardSource.ChosenTargets, storeAs = "suspendAggression_permanent"),
-            MoveCollectionEffect(
-                from = "suspendAggression_permanent",
-                destination = CardDestination.ToZone(Zone.EXILE)
-            ),
-            GrantMayPlayFromExileEffect(
-                from = "suspendAggression_permanent",
+            val suspendAggressionPermanent = gather(CardSource.ChosenTargets)
+            exile(suspendAggressionPermanent)
+            run(Effects.GrantMayPlayFromExile(
+                from = suspendAggressionPermanent,
                 expiry = MayPlayExpiry.UntilEndOfNextTurn,
                 ownerControls = true
-            ),
+            ))
             // Exile the top card of your library; you may play it.
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1), Player.You),
-                storeAs = "suspendAggression_top"
-            ),
-            MoveCollectionEffect(
-                from = "suspendAggression_top",
-                destination = CardDestination.ToZone(Zone.EXILE)
-            ),
-            GrantMayPlayFromExileEffect(
-                from = "suspendAggression_top",
+            val suspendAggressionTop = gather(CardSource.TopOfLibrary(1, Player.You))
+            exile(suspendAggressionTop)
+            run(Effects.GrantMayPlayFromExile(
+                from = suspendAggressionTop,
                 expiry = MayPlayExpiry.UntilEndOfNextTurn,
                 ownerControls = true
-            )
-        )
+            ))
+        }
     }
 
     metadata {

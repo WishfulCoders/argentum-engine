@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.scg.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 /**
  * Ark of Blight
  * {2}
@@ -20,7 +20,7 @@ val ArkOfBlight = card("Ark of Blight") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap, Costs.SacrificeSelf)
-        val t = target("target", Targets.Land)
+        val t = target(TargetFilter.Land)
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
 

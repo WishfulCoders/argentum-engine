@@ -24,7 +24,7 @@ val Dreadbore = card("Dreadbore") {
     oracleText = "Destroy target creature or planeswalker."
 
     spell {
-        val t = target("target creature or planeswalker", Targets.CreatureOrPlaneswalker)
+        val t = target(Targets.CreatureOrPlaneswalker)
         effect = Effects.Destroy(t)
     }
 

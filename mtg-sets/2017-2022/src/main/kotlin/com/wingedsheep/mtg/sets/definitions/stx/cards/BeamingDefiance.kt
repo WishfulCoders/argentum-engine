@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Beaming Defiance — Strixhaven: School of Mages #9 (canonical printing)
@@ -23,9 +24,8 @@ val BeamingDefiance = card("Beaming Defiance") {
         "Target creature you control gets +2/+2 and gains hexproof until end of turn. (It can't be the target of spells or abilities your opponents control.)"
 
     spell {
-        val creature = target("target creature you control", Targets.CreatureYouControl)
-        effect = Effects.ModifyStats(2, 2, creature) then
-            Effects.GrantKeyword(Keyword.HEXPROOF, creature)
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.ModifyStats(2, 2, creature) then Effects.GrantKeyword(Keyword.HEXPROOF, creature)
     }
 
     metadata {

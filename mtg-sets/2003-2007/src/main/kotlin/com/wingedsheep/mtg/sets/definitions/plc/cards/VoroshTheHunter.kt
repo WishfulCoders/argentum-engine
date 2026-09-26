@@ -1,16 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.plc.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.Gate
-import com.wingedsheep.sdk.scripting.effects.GatedEffect
-import com.wingedsheep.sdk.scripting.effects.PayManaCostEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Vorosh, the Hunter
@@ -32,10 +29,10 @@ val VoroshTheHunter = card("Vorosh, the Hunter") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = GatedEffect(
-            gate = Gate.MayPay(PayManaCostEffect(ManaCost.parse("{2}{G}"))),
-            then = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 6, EffectTarget.Self)
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.MayPay(
+            cost = Effects.PayMana("{2}{G}"),
+            then = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 6, EffectTarget.Self)
         )
     }
 

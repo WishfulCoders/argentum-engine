@@ -9,10 +9,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.BecomeArtifactEffect
 import com.wingedsheep.sdk.scripting.effects.WardCost
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Kitesail Larcenist
@@ -106,36 +104,23 @@ val KitesailLarcenist = card("Kitesail Larcenist") {
     val whileKitesailRemains = Duration.WhileSourceOnBattlefield("Kitesail Larcenist")
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
 
         // "for each player, choose up to one other target artifact or creature that player controls"
         // (two-player rendering: one optional slot per player — see KDoc).
-        val yours = target(
-            "up to one other target artifact or creature you control",
-            TargetPermanent(
-                filter = TargetFilter.CreatureOrArtifact.youControl().other(),
-                optional = true
-            )
-        )
-        val theirs = target(
-            "up to one target artifact or creature an opponent controls",
-            TargetPermanent(
-                filter = TargetFilter.CreatureOrArtifact.opponentControls(),
-                optional = true
-            )
-        )
+        val yours = target(TargetFilter.CreatureOrArtifact.youControl().other(), optional = true)
+        val theirs = target(TargetFilter.CreatureOrArtifact.opponentControls(), optional = true)
 
-        effect = Effects.Composite(
-            BecomeArtifactEffect(
-                target = yours,
-                cardTypes = setOf("ARTIFACT"),
-                subtypes = setOf("Treasure"),
-                colors = null,
-                loseAllAbilities = true,
-                grantedAbility = treasureManaAbility,
-                duration = whileKitesailRemains
-            ),
-            BecomeArtifactEffect(
+        effect = Effects.BecomeArtifact(
+            target = yours,
+            cardTypes = setOf("ARTIFACT"),
+            subtypes = setOf("Treasure"),
+            colors = null,
+            loseAllAbilities = true,
+            grantedAbility = treasureManaAbility,
+            duration = whileKitesailRemains
+        ) then
+            Effects.BecomeArtifact(
                 target = theirs,
                 cardTypes = setOf("ARTIFACT"),
                 subtypes = setOf("Treasure"),
@@ -144,7 +129,6 @@ val KitesailLarcenist = card("Kitesail Larcenist") {
                 grantedAbility = treasureManaAbility,
                 duration = whileKitesailRemains
             )
-        )
         description = "When this creature enters, for each player, choose up to one other target " +
             "artifact or creature that player controls. For as long as this creature remains on " +
             "the battlefield, the chosen permanents become Treasure artifacts with \"{T}, " +

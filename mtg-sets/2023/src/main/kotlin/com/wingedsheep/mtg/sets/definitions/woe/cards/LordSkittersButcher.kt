@@ -42,7 +42,7 @@ val LordSkittersButcher = card("Lord Skitter's Butcher") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseOne(
             Mode(
                 effect = woeRatToken(),
@@ -64,10 +64,7 @@ val LordSkittersButcher = card("Lord Skitter's Butcher") {
                         )
                         sacrifice(chosen)
                     },
-                    ifYouDo = Effects.Composite(
-                        Patterns.Library.scry(2),
-                        Effects.DrawCards(1)
-                    )
+                    then = Patterns.Library.scry(2) then Effects.DrawCards(1)
                 ),
                 description = "You may sacrifice another creature. If you do, scry 2, then draw a card."
             ),

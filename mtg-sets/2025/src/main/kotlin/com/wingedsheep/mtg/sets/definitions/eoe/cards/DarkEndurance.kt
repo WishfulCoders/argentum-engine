@@ -3,13 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.eoe.cards
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.scripting.CostModification
 import com.wingedsheep.sdk.scripting.CostReductionSource
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Dark Endurance
@@ -39,10 +39,9 @@ val DarkEndurance = card("Dark Endurance") {
 
     // Main spell effect
     spell {
-        val target = target("target creature", Targets.Creature)
+        val target = target(TargetFilter.Creature)
         
-        effect = Effects.ModifyStats(2, 0, target)
-            .then(Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, target))
+        effect = Effects.ModifyStats(2, 0, target) then Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, target)
     }
 
     metadata {

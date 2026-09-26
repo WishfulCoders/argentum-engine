@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Syncopate
@@ -20,8 +20,8 @@ val Syncopate = card("Syncopate") {
     oracleText = "Counter target spell unless its controller pays {X}. If that spell is countered this way, exile it instead of putting it into its owner's graveyard."
 
     spell {
-        val spell = target("spell", Targets.Spell)
-        effect = Effects.CounterUnlessDynamicPays(DynamicAmount.XValue, exileOnCounter = true)
+        val spell = target(TargetFilter.SpellOnStack)
+        effect = Effects.CounterUnlessDynamicPays(DynamicAmounts.xValue(), exileOnCounter = true)
     }
 
     metadata {

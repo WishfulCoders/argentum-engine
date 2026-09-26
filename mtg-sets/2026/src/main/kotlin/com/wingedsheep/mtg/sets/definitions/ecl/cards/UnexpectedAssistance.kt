@@ -25,7 +25,7 @@ val UnexpectedAssistance = card("Unexpected Assistance") {
     keywords(Keyword.CONVOKE)
 
     spell {
-        effect = Effects.DrawCards(3).then(Patterns.Hand.discardCards(1))
+        effect = Effects.DrawCards(3) then Patterns.Hand.discardCards(1)
     }
 
     metadata {

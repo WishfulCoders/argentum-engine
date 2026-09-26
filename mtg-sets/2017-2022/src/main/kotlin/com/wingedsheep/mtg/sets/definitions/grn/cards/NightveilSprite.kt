@@ -25,7 +25,7 @@ val NightveilSprite = card("Nightveil Sprite") {
 
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Library.surveil(1)
     }
 

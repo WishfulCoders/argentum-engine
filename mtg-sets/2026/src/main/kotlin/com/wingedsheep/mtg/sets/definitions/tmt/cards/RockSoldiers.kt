@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Rock Soldiers
@@ -27,20 +26,17 @@ val RockSoldiers = card("Rock Soldiers") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val artifact = target(
-            "noncreature artifact",
-            TargetPermanent(
-                optional = true,
-                filter = TargetFilter(
-                    GameObjectFilter(
-                        cardPredicates = listOf(
-                            CardPredicate.IsArtifact,
-                            CardPredicate.Not(CardPredicate.IsCreature),
-                        )
+            TargetFilter(
+                GameObjectFilter(
+                    cardPredicates = listOf(
+                        CardPredicate.IsArtifact,
+                        CardPredicate.Not(CardPredicate.IsCreature),
                     )
                 )
-            )
+            ),
+            optional = true,
         )
         effect = Effects.Destroy(artifact)
     }

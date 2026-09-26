@@ -3,8 +3,8 @@ package com.wingedsheep.mtg.sets.definitions.inv.cards
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Wandering Stream
@@ -20,7 +20,7 @@ val WanderingStream = card("Wandering Stream") {
 
     spell {
         // 2 life per basic land type = domain × 2.
-        effect = Effects.GainLife(DynamicAmount.Multiply(DynamicAmounts.domain(), 2))
+        effect = Effects.GainLife(DynamicAmounts.domain() * 2)
     }
 
     metadata {

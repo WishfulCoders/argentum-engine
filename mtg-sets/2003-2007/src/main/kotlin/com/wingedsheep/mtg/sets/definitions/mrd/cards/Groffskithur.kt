@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Groffskithur — Mirrodin #121 (canonical printing; the Salvat 2005 boxes are later reprints)
@@ -16,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  * Whenever this creature becomes blocked, you may return target card named Groffskithur from your
  * graveyard to your hand.
  *
- * `Triggers.BecomesBlocked` fires once per combat no matter how many creatures block, which is the
+ * `Triggers.self.becomesBlocked()` fires once per combat no matter how many creatures block, which is the
  * printed behaviour — the ability isn't the "becomes blocked by a creature" per-blocker variant.
  *
  * The target is a *card named Groffskithur* in your graveyard, not "another Groffskithur creature
@@ -35,15 +34,12 @@ val Groffskithur = card("Groffskithur") {
         "Groffskithur from your graveyard to your hand."
 
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
+        trigger = Triggers.self.becomesBlocked()
         optional = true
         val card = target(
-            "target card named Groffskithur from your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter.Any.named("Groffskithur").ownedByYou(),
-                    zone = Zone.GRAVEYARD,
-                ),
+            TargetFilter(
+                baseFilter = GameObjectFilter.Any.named("Groffskithur").ownedByYou(),
+                zone = Zone.GRAVEYARD,
             ),
         )
         effect = Effects.ReturnToHand(card)

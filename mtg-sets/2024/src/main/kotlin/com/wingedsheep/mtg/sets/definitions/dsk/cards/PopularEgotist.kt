@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -26,7 +25,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * ([Costs.SacrificeAnother] over [GameObjectFilter.CreatureOrEnchantment]). It grants this creature
  * indestructible until end of turn ([Duration.EndOfTurn]) and taps it.
  *
- * The sacrifice trigger ([Triggers.YouSacrificeOneOrMore] over any permanent) is a batching trigger
+ * The sacrifice trigger (`Triggers.you.sacrifices(filter, batch = true)` over any permanent) is a batching trigger
  * that fires once per sacrifice event — including the activated ability's own sacrifice cost — and
  * drains a chosen opponent ([Targets.Opponent] loses 1 life, controller gains 1 life).
  */
@@ -45,20 +44,15 @@ val PopularEgotist = card("Popular Egotist") {
             Costs.Mana("{1}{B}"),
             Costs.SacrificeAnother(GameObjectFilter.CreatureOrEnchantment)
         )
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self, Duration.EndOfTurn),
+        effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self, Duration.EndOfTurn) then
             Effects.Tap(EffectTarget.Self)
-        )
         description = "This creature gains indestructible until end of turn. Tap it."
     }
 
     triggeredAbility {
-        trigger = Triggers.YouSacrificeOneOrMore(GameObjectFilter.Permanent)
-        val opponent = target("target opponent", Targets.Opponent)
-        effect = Effects.Composite(
-            Effects.LoseLife(1, opponent),
-            GainLifeEffect(1)
-        )
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Permanent, batch = true)
+        val opponent = target(Targets.Opponent)
+        effect = Effects.LoseLife(1, opponent) then Effects.GainLife(1)
         description = "Whenever you sacrifice a permanent, target opponent loses 1 life and you gain 1 life."
     }
 

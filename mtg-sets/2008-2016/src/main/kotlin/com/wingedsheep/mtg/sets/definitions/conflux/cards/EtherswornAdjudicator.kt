@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ethersworn Adjudicator
@@ -36,7 +37,7 @@ val EtherswornAdjudicator = card("Ethersworn Adjudicator") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{W}{B}"), Costs.Tap)
-        val victim = target("target", Targets.CreatureOrEnchantment)
+        val victim = target(TargetFilter.CreatureOrEnchantment)
         effect = Effects.Destroy(victim)
     }
 

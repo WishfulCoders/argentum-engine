@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Agatha's Champion
@@ -51,12 +50,9 @@ val AgathasChampion = card("Agatha's Champion") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.WasBargained
-        val foe = target(
-            "up to one target creature you don't control",
-            TargetCreature(optional = true, filter = TargetFilter.CreatureOpponentControls),
-        )
+        val foe = target(TargetFilter.CreatureOpponentControls, optional = true)
         effect = Effects.Fight(EffectTarget.Self, foe)
         description = "When this creature enters, if it was bargained, it fights up to one target " +
             "creature you don't control."

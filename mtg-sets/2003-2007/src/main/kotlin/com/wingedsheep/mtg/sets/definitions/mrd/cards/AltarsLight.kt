@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Altar's Light — Mirrodin #1
@@ -21,7 +21,7 @@ val AltarsLight = card("Altar's Light") {
     oracleText = "Exile target artifact or enchantment."
 
     spell {
-        val t = target("target artifact or enchantment", Targets.ArtifactOrEnchantment)
+        val t = target(TargetFilter.ArtifactOrEnchantment)
         effect = Effects.Exile(t)
     }
 

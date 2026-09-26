@@ -10,13 +10,14 @@ import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Spiteful Banditry (LTR) — "Whenever one or more creatures your opponents control die, you create
  * a Treasure token. This ability triggers only once each turn."
  *
  * Exercises the batched, opponent-scoped creature-death trigger
- * (`Triggers.OneOrMoreCreaturesAnOpponentControlsDie`): it fires at most once per death batch
+ * (`Triggers.oneOrMore(filter.opponentControls()).die()`): it fires at most once per death batch
  * (CR 603.3b) — so a single event that kills several of an opponent's creatures makes one
  * Treasure, not one per creature — and only creatures an opponent controls count. Both cases drive
  * the deaths through the real resolution pipeline via the card's own "deals X damage to each
@@ -53,7 +54,7 @@ class SpitefulBanditryScenarioTest : FunSpec({
         val banditry = d.putCardInHand(active, "Spiteful Banditry")
         d.giveMana(active, Color.RED, 2)
         d.giveColorlessMana(active, 2) // X = 2: ETB deals 2 to each creature, killing both 2/2s at once
-        d.castXSpell(active, banditry, xValue = 2).isSuccess shouldBe true
+        d.castXSpell(active, banditry, xValue = 2).outcome shouldBe Outcome.Done
         repeat(8) { if (d.pendingDecision != null) d.autoResolveDecision() else d.bothPass() }
 
         d.treasures(active) shouldBe 1
@@ -73,7 +74,7 @@ class SpitefulBanditryScenarioTest : FunSpec({
         val banditry = d.putCardInHand(active, "Spiteful Banditry")
         d.giveMana(active, Color.RED, 2)
         d.giveColorlessMana(active, 2) // X = 2 kills the caster's own 2/2s
-        d.castXSpell(active, banditry, xValue = 2).isSuccess shouldBe true
+        d.castXSpell(active, banditry, xValue = 2).outcome shouldBe Outcome.Done
         repeat(8) { if (d.pendingDecision != null) d.autoResolveDecision() else d.bothPass() }
 
         d.treasures(active) shouldBe 0

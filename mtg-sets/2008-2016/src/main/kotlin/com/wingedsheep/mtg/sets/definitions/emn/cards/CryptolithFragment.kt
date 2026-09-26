@@ -10,9 +10,9 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 private val CryptolithFragmentFront = card("Cryptolith Fragment") {
     manaCost = "{3}"
@@ -25,18 +25,15 @@ private val CryptolithFragmentFront = card("Cryptolith Fragment") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.Composite(
-            Effects.AddManaOfChoice(),
-            Effects.LoseLife(1, EffectTarget.PlayerRef(Player.Each)),
-        )
+        effect = Effects.AddManaOfChoice() then Effects.LoseLife(1, EffectTarget.PlayerRef(Player.Each))
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         interveningIf = Conditions.EachPlayerLifeAtMost(10)
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
     }
 
     metadata {
@@ -58,7 +55,7 @@ private val AuroraOfEmrakul = card("Aurora of Emrakul") {
     keywords(Keyword.FLYING, Keyword.DEATHTOUCH)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.LoseLife(3, EffectTarget.PlayerRef(Player.EachOpponent))
     }
 

@@ -1,5 +1,6 @@
 package com.wingedsheep.sdk.scripting.conditions
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.CardType
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
@@ -127,6 +128,19 @@ data object IsFirstEndStepOfTurn : Condition {
 @Serializable
 data object IsFirstCombatPhaseOfTurn : Condition {
     override val description: String = "if it's the first combat phase of the turn"
+}
+
+/**
+ * Condition: "before attackers are declared" this turn — the game hasn't yet reached the declare
+ * attackers step of the turn's first combat phase (Master Warcraft's ruling: with several combat
+ * phases, it can only be cast before the first one's declare attackers step). True from the start
+ * of the turn through the beginning of combat step of the first combat; false from its declare
+ * attackers step on, including the postcombat main phase and any additional combat phase.
+ */
+@SerialName("BeforeAttackersDeclaredThisTurn")
+@Serializable
+data object BeforeAttackersDeclaredThisTurn : Condition {
+    override val description: String = "before attackers are declared"
 }
 
 /**
@@ -366,11 +380,11 @@ data class PlayerPlayedLandThisTurn(
 @SerialName("PutCounterKindOnCreatureThisTurn")
 @Serializable
 data class PutCounterKindOnCreatureThisTurn(
-    val counterType: String? = null,
+    val counterType: CounterType? = null,
     val player: Player = Player.You
 ) : Condition {
     override val description: String =
-        "if ${player.description} put one or more ${counterType?.plus(" ") ?: ""}counters on a " +
+        "if ${player.description} put one or more ${counterType?.let { "${it.printed} " } ?: ""}counters on a " +
             "creature this turn"
 }
 

@@ -2,10 +2,8 @@ package com.wingedsheep.mtg.sets.definitions.lea.cards
 
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -20,8 +18,8 @@ val RaiseDead = card("Raise Dead") {
     typeLine = "Sorcery"
 
     spell {
-        target = TargetObject(filter = TargetFilter.CreatureInYourGraveyard)
-        effect = Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND)
+        val target = target(TargetFilter.CreatureInYourGraveyard)
+        effect = Effects.Move(target, Zone.HAND)
     }
 
     metadata {

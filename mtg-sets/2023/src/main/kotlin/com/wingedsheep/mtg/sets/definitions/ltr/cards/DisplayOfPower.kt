@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Display of Power
@@ -30,7 +30,7 @@ val DisplayOfPower = card("Display of Power") {
     cantBeCopied = true
 
     spell {
-        target("any number of target instant and/or sorcery spells", Targets.AnyNumberOfInstantOrSorcerySpells)
+        targets(TargetFilter.InstantOrSorcerySpellOnStack, unlimited = true)
         effect = Effects.CopyEachTargetSpell()
     }
 

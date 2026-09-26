@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.multiplayer
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.Concede
 import com.wingedsheep.engine.core.GameConfig
 import com.wingedsheep.engine.core.GameEndReason
@@ -9,6 +10,7 @@ import com.wingedsheep.engine.core.PlayerConfig
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.actions.special.ConcedeHandler
 import com.wingedsheep.engine.handlers.effects.DamageUtils
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.handlers.effects.player.WinGameExecutor
 import com.wingedsheep.engine.mechanics.StateBasedActionChecker
 import com.wingedsheep.engine.registry.CardRegistry
@@ -43,8 +45,9 @@ import io.kotest.matchers.shouldBe
 class TwoHeadedGiantTeamLossTest : FunSpec({
 
     fun registry(): CardRegistry = CardRegistry().also { it.register(TestCards.all) }
+    val zones = ZoneTransitionService(registry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
-    fun checker() = StateBasedActionChecker(cardRegistry = registry())
+    fun checker() = StateBasedActionChecker(zones, cardRegistry = registry())
 
     fun boot(format: Format = Format.TwoHeadedGiant(), playerCount: Int = 4): Pair<GameState, List<EntityId>> {
         val result = GameInitializer(registry()).initializeGame(
@@ -63,7 +66,7 @@ class TwoHeadedGiantTeamLossTest : FunSpec({
 
     test("a team at 0 shared life loses; the opposing team wins together (CR 810.8a/c)") {
         val (state, p) = boot()
-        val zeroed = DamageUtils.loseLife(state, p[0], 30, LifeChangeReason.LIFE_LOSS).first
+        val zeroed = DamageUtils.loseLife(state, p[0], 30, LifeChangeReason.LIFE_LOSS, predicateEvaluator = PredicateEvaluator(cardRegistry = null)).first
 
         val result = checker().checkAndApply(zeroed)
         val s = result.newState
@@ -144,7 +147,7 @@ class TwoHeadedGiantTeamLossTest : FunSpec({
             )
             .addToZone(ZoneKey(p[1], Zone.BATTLEFIELD), permId)
         // Now drop team 0 to 0 life.
-        val zeroed = DamageUtils.loseLife(protectedState, p[0], 30, LifeChangeReason.LIFE_LOSS).first
+        val zeroed = DamageUtils.loseLife(protectedState, p[0], 30, LifeChangeReason.LIFE_LOSS, predicateEvaluator = PredicateEvaluator(cardRegistry = null)).first
 
         val s = checker().checkAndApply(zeroed).newState
         // The team is protected — neither teammate is marked, game continues.
@@ -166,7 +169,7 @@ class TwoHeadedGiantTeamLossTest : FunSpec({
                 )
             )
             .addToZone(ZoneKey(p[1], Zone.BATTLEFIELD), permId)
-        val zeroed = DamageUtils.loseLife(protectedState, p[0], 30, LifeChangeReason.LIFE_LOSS).first
+        val zeroed = DamageUtils.loseLife(protectedState, p[0], 30, LifeChangeReason.LIFE_LOSS, predicateEvaluator = PredicateEvaluator(cardRegistry = null)).first
 
         val s = checker().checkAndApply(zeroed).newState
         // CR 810.8a: "If that player's team's life total is 0 or less, that team doesn't lose."
@@ -177,7 +180,7 @@ class TwoHeadedGiantTeamLossTest : FunSpec({
 
     test("'you win the game' wins for your whole team and defeats only opposing teams (CR 810.8a)") {
         val (state, p) = boot()
-        val result = WinGameExecutor().execute(
+        val result = WinGameExecutor(predicateEvaluator = PredicateEvaluator(cardRegistry = null)).execute(
             state, WinGameEffect(), EffectContext(sourceId = null, controllerId = p[0])
         )
         val s = checker().checkAndApply(result.state).newState
@@ -208,7 +211,7 @@ class TwoHeadedGiantTeamLossTest : FunSpec({
 
     test("non-team game is unchanged: a player at 0 loses alone and poison threshold stays 10") {
         val (state, p) = boot(format = Format.Standard, playerCount = 2)
-        val zeroed = DamageUtils.loseLife(state, p[0], 20, LifeChangeReason.LIFE_LOSS).first
+        val zeroed = DamageUtils.loseLife(state, p[0], 20, LifeChangeReason.LIFE_LOSS, predicateEvaluator = PredicateEvaluator(cardRegistry = null)).first
         val s = checker().checkAndApply(zeroed).newState
         lost(s, p[0]) shouldBe true
         s.gameOver shouldBe true

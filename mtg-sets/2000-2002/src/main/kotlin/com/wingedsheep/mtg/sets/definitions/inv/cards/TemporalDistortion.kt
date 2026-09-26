@@ -1,17 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.core.AbilityFlag
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.RemoveCountersEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Temporal Distortion
@@ -40,28 +39,25 @@ val TemporalDistortion = card("Temporal Distortion") {
 
     // Whenever a creature or land becomes tapped, put an hourglass counter on it.
     triggeredAbility {
-        trigger = Triggers.becomesTapped(
-            binding = TriggerBinding.ANY,
-            filter = GameObjectFilter.CreatureOrLand
-        )
-        effect = Effects.AddCounters(Counters.HOURGLASS, 1, EffectTarget.TriggeringEntity)
+        trigger = Triggers.a(GameObjectFilter.CreatureOrLand).becomesTapped()
+        effect = Effects.AddCounters(CounterType.HOURGLASS, 1, EffectTarget.TriggeringEntity)
     }
 
     // Each permanent with an hourglass counter on it doesn't untap during its controller's untap step.
     staticAbility {
         ability = GrantKeyword(
             AbilityFlag.DOESNT_UNTAP.name,
-            GroupFilter(GameObjectFilter.Permanent.withCounter(Counters.HOURGLASS))
+            GroupFilter(GameObjectFilter.Permanent.withCounter(CounterType.HOURGLASS))
         )
     }
 
     // At the beginning of each player's upkeep, remove all hourglass counters from permanents
     // that player controls (the upkeep player is the active player).
     triggeredAbility {
-        trigger = Triggers.EachUpkeep
+        trigger = Triggers.anyPlayer.beginningOf(Step.UPKEEP)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Permanent.controlledByActivePlayer()),
-            RemoveCountersEffect(Counters.HOURGLASS, Int.MAX_VALUE, EffectTarget.Self)
+            Effects.RemoveCounters(CounterType.HOURGLASS, Int.MAX_VALUE, EffectTarget.IterationEntity)
         )
     }
 

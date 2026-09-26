@@ -3,19 +3,14 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Gossip's Talent
@@ -41,7 +36,7 @@ val GossipsTalent = card("Gossip's Talent") {
 
     // Level 1: Whenever a creature you control enters, surveil 1
     triggeredAbility {
-        trigger = Triggers.OtherCreatureEnters
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
         effect = Patterns.Library.surveil(1)
     }
 
@@ -49,11 +44,8 @@ val GossipsTalent = card("Gossip's Talent") {
     // can't be blocked this turn
     classLevel(2, "{1}{U}") {
         triggeredAbility {
-            trigger = Triggers.YouAttack
-            val creature = target(
-                "attacking creature with power 3 or less",
-                TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.attacking().powerAtMost(3)))
-            )
+            trigger = Triggers.you.attacks()
+            val creature = target(TargetFilter(GameObjectFilter.Creature.attacking().powerAtMost(3)))
             effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, creature)
         }
     }
@@ -62,17 +54,10 @@ val GossipsTalent = card("Gossip's Talent") {
     // you may exile it, then return it to the battlefield under its owner's control
     classLevel(3, "{3}{U}") {
         triggeredAbility {
-            trigger = Triggers.dealsDamage(
-                damageType = DamageType.Combat,
-                recipient = RecipientFilter.AnyPlayer,
-                sourceFilter = GameObjectFilter.Creature.youControl(),
-                binding = TriggerBinding.ANY,
-            )
-            effect = MayEffect(
-                Effects.Composite(listOf(
-                    Effects.Move(EffectTarget.TriggeringEntity, Zone.EXILE),
+            trigger = Triggers.a(GameObjectFilter.Creature.youControl()).dealsCombatDamage(Recipient.AnyPlayer)
+            effect = Effects.May(
+                Effects.Move(EffectTarget.TriggeringEntity, Zone.EXILE) then
                     Effects.Move(EffectTarget.TriggeringEntity, Zone.BATTLEFIELD)
-                ))
             )
         }
     }

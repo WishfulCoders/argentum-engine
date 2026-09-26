@@ -26,8 +26,8 @@ val Pyroconvergence = card("Pyroconvergence") {
     oracleText = "Whenever you cast a multicolored spell, this enchantment deals 2 damage to any target."
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(GameObjectFilter.Multicolored)
-        val t = target("any target", Targets.Any)
+        trigger = Triggers.you.casts(GameObjectFilter.Multicolored)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(2, t)
     }
 

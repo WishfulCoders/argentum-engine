@@ -8,9 +8,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.FaceDownMode
-import com.wingedsheep.sdk.scripting.effects.TurnFaceUpEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Expose the Culprit — Murders at Karlov Manor #124
@@ -72,11 +70,8 @@ val ExposeTheCulprit = card("Expose the Culprit") {
     spell {
         modal(chooseCount = 2, minChooseCount = 1) {
             mode("Turn target face-down creature face up") {
-                val faceDownCreature = target(
-                    "face-down creature",
-                    TargetPermanent(filter = TargetFilter(GameObjectFilter.Creature.faceDown()))
-                )
-                effect = TurnFaceUpEffect(faceDownCreature)
+                val faceDownCreature = target(TargetFilter(GameObjectFilter.Creature.faceDown()))
+                effect = Effects.TurnFaceUp(faceDownCreature)
             }
             mode("Exile any number of face-up creatures you control with disguise, then cloak them") {
                 effect = Effects.Pipeline {

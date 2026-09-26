@@ -11,13 +11,14 @@ import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Scenario tests for Tawnos's Coffin (ATQ #68):
@@ -36,7 +37,7 @@ class TawnossCoffinScenarioTest : ScenarioTestBase() {
         manaCost = "{1}{W}"
         typeLine = "Enchantment — Aura"
         oracleText = "Enchanted creature gets +1/+1."
-        auraTarget = Targets.Creature
+        auraTarget = TargetObject(filter = TargetFilter.Creature)
         staticAbility { ability = ModifyStats(1, 1, GroupFilter.attachedCreature()) }
     }
 
@@ -46,7 +47,7 @@ class TawnossCoffinScenarioTest : ScenarioTestBase() {
         typeLine = "Sorcery"
         oracleText = "Destroy target artifact."
         spell {
-            val t = target("target artifact", Targets.Artifact)
+            val t = target(TargetFilter.Artifact)
             effect = Effects.Destroy(t)
         }
     }
@@ -57,7 +58,7 @@ class TawnossCoffinScenarioTest : ScenarioTestBase() {
         typeLine = "Sorcery"
         oracleText = "Untap target artifact."
         spell {
-            val t = target("target artifact", Targets.Artifact)
+            val t = target(TargetFilter.Artifact)
             effect = Effects.Untap(t)
         }
     }

@@ -3,10 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.drk.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /** Dust to Dust — exile two target artifacts. */
 val DustToDust = card("Dust to Dust") {
@@ -16,8 +15,8 @@ val DustToDust = card("Dust to Dust") {
     oracleText = "Exile two target artifacts."
 
     spell {
-        target = TargetPermanent(count = 2, filter = TargetFilter.Artifact)
-        effect = ForEachTargetEffect(listOf(Effects.Exile(EffectTarget.ContextTarget(0))))
+        target = TargetObject(filter = TargetFilter.Artifact, count = 2)
+        effect = Effects.ForEachTarget(Effects.Exile(EffectTarget.ContextTarget(0)))
     }
 
     metadata {

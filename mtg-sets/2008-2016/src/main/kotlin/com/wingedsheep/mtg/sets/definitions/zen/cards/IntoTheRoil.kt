@@ -1,13 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.zen.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Into the Roil
@@ -26,10 +24,10 @@ val IntoTheRoil = card("Into the Roil") {
     keywordAbility(KeywordAbility.kicker("{1}{U}"))
 
     spell {
-        target = Targets.NonlandPermanent
-        effect = Effects.ReturnToHand(EffectTarget.ContextTarget(0)) then ConditionalEffect(
+        val nonlandPermanent = target(TargetFilter.NonlandPermanent)
+        effect = Effects.ReturnToHand(nonlandPermanent) then Effects.If(
             condition = WasKicked,
-            effect = Effects.DrawCards(1)
+            then = Effects.DrawCards(1)
         )
     }
 

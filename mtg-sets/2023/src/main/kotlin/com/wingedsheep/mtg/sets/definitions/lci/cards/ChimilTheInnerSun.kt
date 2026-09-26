@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantCantBeCountered
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Chimil, the Inner Sun
@@ -24,7 +25,7 @@ val ChimilTheInnerSun = card("Chimil, the Inner Sun") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         effect = Effects.Discover(5)
     }
 

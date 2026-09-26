@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.fdn.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Battlesong Berserker
@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Whenever you attack, target creature you control gets +1/+0 and gains menace
  * until end of turn.
  *
- * "Whenever you attack" is the [Triggers.YouAttack] combat trigger (fires once per
+ * "Whenever you attack" is the `Triggers.you.attacks()` combat trigger (fires once per
  * declare-attackers, not per attacker). The boost and the menace grant are composed
  * and both expire at end of turn.
  */
@@ -29,12 +29,9 @@ val BattlesongBerserker = card("Battlesong Berserker") {
     oracleText = "Whenever you attack, target creature you control gets +1/+0 and gains menace until end of turn. (It can't be blocked except by two or more creatures.)"
 
     triggeredAbility {
-        trigger = Triggers.YouAttack
-        val t = target("target creature you control", Targets.CreatureYouControl)
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 0, t),
-            Effects.GrantKeyword(Keyword.MENACE, t),
-        )
+        trigger = Triggers.you.attacks()
+        val t = target(TargetFilter.CreatureYouControl)
+        effect = Effects.ModifyStats(1, 0, t) then Effects.GrantKeyword(Keyword.MENACE, t)
         description = "Whenever you attack, target creature you control gets +1/+0 and gains menace until end of turn."
     }
 

@@ -24,11 +24,9 @@ val RushOfBattle = card("Rush of Battle") {
             power = 2,
             toughness = 1,
             filter = GroupFilter.AllCreaturesYouControl
-        ).then(
-            Patterns.Group.grantKeywordToAll(
-                keyword = Keyword.LIFELINK,
-                filter = GroupFilter.AllCreaturesYouControl.withSubtype("Warrior")
-            )
+        ) then Patterns.Group.grantKeywordToAll(
+            keyword = Keyword.LIFELINK,
+            filter = GroupFilter.AllCreaturesYouControl.withSubtype("Warrior")
         )
     }
 

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.support.GameTestDriver
@@ -35,7 +36,7 @@ class SoulBurnAndAtalyaXManaTest : FunSpec({
     fun solver(): ManaSolver {
         val registry = CardRegistry()
         registry.register(TestCards.all + listOf(SoulBurn, AtalyaSamiteMaster))
-        return ManaSolver(registry)
+        return ManaSolver(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
     }
 
     test("Soul Burn: life gained equals the black mana spent on X") {

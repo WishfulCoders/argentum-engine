@@ -8,9 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
-import com.wingedsheep.sdk.scripting.effects.GatherUntilMatchEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
 
@@ -37,40 +34,26 @@ val TheRingGoesSouth = card("The Ring Goes South") {
         "random order."
 
     spell {
-        effect = Effects.TheRingTemptsYou()
-            .then(
-                GatherUntilMatchEffect(
-                    player = Player.You,
-                    filter = GameObjectFilter.Land,
-                    count = DynamicAmounts.battlefield(Player.You, GameObjectFilter.Creature.legendary()).count(),
-                    storeMatch = "lands",
-                    storeRevealed = "allRevealed"
-                )
+        effect = Effects.Pipeline {
+            run(Effects.TheRingTemptsYou())
+            val (_, allRevealed) = gatherUntilMatch(
+                GameObjectFilter.Land,
+                player = Player.You,
+                count = DynamicAmounts.battlefield(Player.You, GameObjectFilter.Creature.legendary()).count()
             )
-            .then(RevealCollectionEffect(from = "allRevealed"))
-            .then(
-                MoveCollectionEffect(
-                    from = "allRevealed",
-                    filter = GameObjectFilter.Land,
-                    destination = CardDestination.ToZone(
-                        Zone.BATTLEFIELD,
-                        player = Player.You,
-                        placement = ZonePlacement.Tapped
-                    )
-                )
+            reveal(allRevealed)
+            move(
+                allRevealed,
+                CardDestination.ToZone(Zone.BATTLEFIELD, Player.You, ZonePlacement.Tapped),
+                filter = GameObjectFilter.Land
             )
-            .then(
-                MoveCollectionEffect(
-                    from = "allRevealed",
-                    filter = GameObjectFilter.Nonland,
-                    destination = CardDestination.ToZone(
-                        Zone.LIBRARY,
-                        player = Player.You,
-                        placement = ZonePlacement.Bottom
-                    ),
-                    order = CardOrder.Random
-                )
+            move(
+                allRevealed,
+                CardDestination.ToZone(Zone.LIBRARY, Player.You, ZonePlacement.Bottom),
+                order = CardOrder.Random,
+                filter = GameObjectFilter.Nonland
             )
+        }
     }
 
     metadata {

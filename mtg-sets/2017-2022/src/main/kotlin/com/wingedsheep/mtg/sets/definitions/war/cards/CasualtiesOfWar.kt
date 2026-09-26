@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.war.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Casualties of War
@@ -34,23 +34,23 @@ val CasualtiesOfWar = card("Casualties of War") {
     spell {
         modal(chooseCount = 5, minChooseCount = 1) {
             mode("Destroy target artifact") {
-                val t = target("target artifact", Targets.Artifact)
+                val t = target(TargetFilter.Artifact)
                 effect = Effects.Destroy(t)
             }
             mode("Destroy target creature") {
-                val t = target("target creature", Targets.Creature)
+                val t = target(TargetFilter.Creature)
                 effect = Effects.Destroy(t)
             }
             mode("Destroy target enchantment") {
-                val t = target("target enchantment", Targets.Enchantment)
+                val t = target(TargetFilter.Enchantment)
                 effect = Effects.Destroy(t)
             }
             mode("Destroy target land") {
-                val t = target("target land", Targets.Land)
+                val t = target(TargetFilter.Land)
                 effect = Effects.Destroy(t)
             }
             mode("Destroy target planeswalker") {
-                val t = target("target planeswalker", Targets.Planeswalker)
+                val t = target(TargetFilter.Planeswalker)
                 effect = Effects.Destroy(t)
             }
         }

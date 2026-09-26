@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.iko.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Light of Hope
@@ -30,20 +30,18 @@ val LightOfHope = card("Light of Hope") {
                 effect = Effects.GainLife(4),
                 description = "You gain 4 life."
             ),
-            Mode.withTarget(
-                effect = Effects.Destroy(EffectTarget.ContextTarget(0)),
-                target = Targets.Enchantment,
-                description = "Destroy target enchantment."
-            ),
-            Mode.withTarget(
+            mode("Destroy target enchantment.") {
+                val enchantment = target(TargetFilter.Enchantment)
+                effect = Effects.Destroy(enchantment)
+            },
+            mode("Put a +1/+1 counter on target creature.") {
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.AddCounters(
-                    Counters.PLUS_ONE_PLUS_ONE,
+                    CounterType.PLUS_ONE_PLUS_ONE,
                     1,
-                    EffectTarget.ContextTarget(0)
-                ),
-                target = Targets.Creature,
-                description = "Put a +1/+1 counter on target creature."
-            )
+                    creature
+                )
+            }
         )
     }
 

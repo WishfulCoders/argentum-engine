@@ -1,6 +1,5 @@
 package com.wingedsheep.mtg.sets.definitions.emn.cards
 
-import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
@@ -50,14 +49,11 @@ val BedlamReveler = card("Bedlam Reveler") {
         )
     }
 
-    keywords(Keyword.PROWESS)
+    prowess()
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Patterns.Hand.discardHand(),
-            Effects.DrawCards(3)
-        )
+        trigger = Triggers.self.enters()
+        effect = Patterns.Hand.discardHand() then Effects.DrawCards(3)
         description = "When this creature enters, discard your hand, then draw three cards."
     }
 

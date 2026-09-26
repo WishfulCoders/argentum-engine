@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.m19.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Take Vengeance
@@ -18,7 +18,7 @@ val TakeVengeance = card("Take Vengeance") {
     oracleText = "Destroy target tapped creature."
 
     spell {
-        val creature = target("target", Targets.TappedCreature)
+        val creature = target(TargetFilter.TappedCreature)
         effect = Effects.Destroy(creature)
     }
 

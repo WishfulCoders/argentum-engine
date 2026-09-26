@@ -22,7 +22,7 @@ val Mindslaver = card("Mindslaver") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{4}"), Costs.Tap, Costs.SacrificeSelf)
-        val player = target("target player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Effects.HijackNextTurn(player)
         description = "{4}, {T}, Sacrifice Mindslaver: You control target player during that " +
             "player's next turn."

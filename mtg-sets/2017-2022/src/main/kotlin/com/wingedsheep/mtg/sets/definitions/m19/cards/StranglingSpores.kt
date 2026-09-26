@@ -3,7 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.m19.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Strangling Spores
@@ -18,7 +18,7 @@ val StranglingSpores = card("Strangling Spores") {
     oracleText = "Target creature gets -3/-3 until end of turn."
 
     spell {
-        val creature = target("target creature", TargetCreature())
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(power = -3, toughness = -3, target = creature)
     }
 

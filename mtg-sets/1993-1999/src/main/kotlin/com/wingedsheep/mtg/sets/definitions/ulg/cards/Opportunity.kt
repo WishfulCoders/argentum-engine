@@ -4,10 +4,10 @@
 
 package com.wingedsheep.mtg.sets.definitions.ulg.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -22,8 +22,8 @@ val Opportunity = card("Opportunity") {
     typeLine = "Instant"
     oracleText = "Target player draws four cards."
     spell {
-        val t = target("target", TargetPlayer())
-        effect = DrawCardsEffect(4, t)
+        val t = target(Targets.Player)
+        effect = Effects.DrawCards(4, t)
     }
     metadata {
         rarity = Rarity.UNCOMMON

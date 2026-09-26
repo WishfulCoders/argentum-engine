@@ -4,18 +4,17 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.TurnTracker
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Moseo, Vein's New Dean — Secrets of Strixhaven #91
@@ -54,16 +53,15 @@ val MoseoVeinsNewDean = card("Moseo, Vein's New Dean") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreateTokenEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
             colors = setOf(Color.BLACK, Color.GREEN),
             creatureTypes = setOf("Pest"),
             triggeredAbilities = listOf(
                 TriggeredAbility.create(
-                    trigger = Triggers.Attacks.event,
-                    binding = Triggers.Attacks.binding,
+                    trigger = Triggers.self.attacks(),
                     effect = Effects.GainLife(1)
                 )
             ),
@@ -74,20 +72,17 @@ val MoseoVeinsNewDean = card("Moseo, Vein's New Dean") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.YouGainedLifeThisTurn
         val t = target(
-            "up to one target creature card with mana value X or less from your graveyard",
-            TargetObject(
-                optional = true,
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.ownedByYou()
-                        .manaValueAtMostDynamic(
-                            DynamicAmount.TurnTracking(Player.You, TurnTracker.LIFE_GAINED)
-                        ),
-                    zone = Zone.GRAVEYARD,
-                ),
-            )
+            TargetFilter(
+                GameObjectFilter.Creature.ownedByYou()
+                    .manaValueAtMostDynamic(
+                        DynamicAmounts.lifeGainedThisTurn(Player.You)
+                    ),
+                zone = Zone.GRAVEYARD,
+            ),
+            optional = true,
         )
         effect = Effects.PutOntoBattlefield(t)
         description = "Infusion — At the beginning of your end step, if you gained life this turn, " +

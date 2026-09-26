@@ -5,12 +5,10 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.AddCreatureTypeEffect
-import com.wingedsheep.sdk.scripting.effects.RemoveAllAbilitiesEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Curious Colossus
@@ -35,17 +33,13 @@ val CuriousColossus = card("Curious Colossus") {
     oracleText = "When this creature enters, each creature target opponent controls loses all abilities, becomes a Coward in addition to its other types, and has base power and toughness 1/1."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val opponent = target("target opponent", TargetOpponent())
+        trigger = Triggers.self.enters()
+        val opponent = target(Targets.Opponent)
         effect = Effects.ForEachInGroup(
             filter = GroupFilter(GameObjectFilter.Creature.targetPlayerControls(opponent)),
-            effect = Effects.Composite(
-                listOf(
-                    RemoveAllAbilitiesEffect(EffectTarget.Self, Duration.Permanent),
-                    AddCreatureTypeEffect("Coward", EffectTarget.Self, Duration.Permanent),
-                    Effects.SetBasePowerAndToughness(1, 1, EffectTarget.Self, Duration.Permanent)
-                )
-            )
+            effect = Effects.RemoveAllAbilities(EffectTarget.IterationEntity, Duration.Permanent) then
+                Effects.AddCreatureType("Coward", EffectTarget.IterationEntity, Duration.Permanent) then
+                Effects.SetBasePowerAndToughness(1, 1, EffectTarget.IterationEntity, Duration.Permanent)
         )
     }
 

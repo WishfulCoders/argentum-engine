@@ -1,15 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Rayblade Trooper
@@ -32,19 +30,15 @@ val RaybladeTrooper = card("Rayblade Trooper") {
         "Warp {1}{W} (You may cast this card from your hand for its warp cost. Exile this creature at the beginning of the next end step, then you may cast it from exile on a later turn.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val target = target("target creature you control", Targets.CreatureYouControl)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, target)
+        trigger = Triggers.self.enters()
+        val target = target(TargetFilter.CreatureYouControl)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, target)
         description = "When this creature enters, put a +1/+1 counter on target creature you control."
     }
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.youControl().nontoken()
-                .withCounter(Counters.PLUS_ONE_PLUS_ONE),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl().nontoken()
+                .withCounter(CounterType.PLUS_ONE_PLUS_ONE)).dies()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

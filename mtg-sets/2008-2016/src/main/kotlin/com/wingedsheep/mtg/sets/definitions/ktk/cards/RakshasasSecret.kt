@@ -3,7 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.ktk.cards
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Rakshasa's Secret
@@ -18,9 +18,8 @@ val RakshasasSecret = card("Rakshasa's Secret") {
     oracleText = "Target opponent discards two cards. You mill two cards."
 
     spell {
-        val t = target("target opponent", TargetOpponent())
-        effect = Patterns.Hand.discardCards(2, t)
-            .then(Patterns.Library.mill(2))
+        val t = target(Targets.Opponent)
+        effect = Patterns.Hand.discardCards(2, t) then Patterns.Library.mill(2)
     }
 
     metadata {

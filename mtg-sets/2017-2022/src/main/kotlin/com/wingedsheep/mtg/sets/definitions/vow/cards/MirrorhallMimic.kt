@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.disturb
@@ -13,6 +12,9 @@ import com.wingedsheep.sdk.scripting.EntersAsCopy
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.RedirectZoneChange
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Mirrorhall Mimic // Ghastly Mimicry (Innistrad: Crimson Vow #68)
@@ -103,10 +105,10 @@ private val GhastlyMimicry = card("Ghastly Mimicry") {
         "it's a Spirit in addition to its other types.\n" +
         "If Ghastly Mimicry would be put into a graveyard from anywhere, exile it instead."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.CreateTokenCopyOfTarget(
             target = EffectTarget.EnchantedCreature,
             addedSubtypes = setOf(Subtype.SPIRIT),

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.handlers.TargetingSourceType
 import com.wingedsheep.engine.mechanics.targeting.TargetValidator
@@ -14,11 +15,13 @@ import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Tests for Dragonfire Blade (TDM) — exercises gap item 18:
@@ -63,7 +66,7 @@ class DragonfireBladeTest : FunSpec({
         val result = driver.submit(
             ActivateAbility(player, blade, equipAbilityId, targets = listOf(ChosenTarget.Permanent(beast)))
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         driver.bothPass()
 
         driver.state.getEntity(blade)?.get<AttachedToComponent>()?.targetId shouldBe beast
@@ -87,7 +90,7 @@ class DragonfireBladeTest : FunSpec({
         driver.giveColorlessMana(player, 1)
         driver.submit(
             ActivateAbility(player, blade, equipAbilityId, targets = listOf(ChosenTarget.Permanent(beast)))
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
         driver.state.getEntity(blade)?.get<AttachedToComponent>()?.targetId shouldBe beast
     }
@@ -109,7 +112,7 @@ class DragonfireBladeTest : FunSpec({
         driver.giveColorlessMana(player, 1)
         driver.submit(
             ActivateAbility(player, blade, equipAbilityId, targets = listOf(ChosenTarget.Permanent(golem)))
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
         driver.state.getEntity(blade)?.get<AttachedToComponent>()?.targetId shouldBe golem
     }
@@ -124,12 +127,12 @@ class DragonfireBladeTest : FunSpec({
         driver.giveColorlessMana(player, 1)
         driver.submit(
             ActivateAbility(player, blade, equipAbilityId, targets = listOf(ChosenTarget.Permanent(beast)))
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
 
-        val validator = TargetValidator()
+        val validator = TargetValidator(PredicateEvaluator(cardRegistry = null))
         val target = listOf<ChosenTarget>(ChosenTarget.Permanent(beast))
-        val req = listOf(TargetCreature())
+        val req = listOf(TargetObject(filter = TargetFilter.Creature))
 
         // A monocolored opponent's source can't target it.
         validator.validateTargets(
@@ -156,7 +159,7 @@ class DragonfireBladeTest : FunSpec({
         ).shouldBeNull()
 
         // The client DTO surfaces the quality so the FE can render the hexproof-from-monocolored chip.
-        val view = ClientStateTransformer(cardRegistry = driver.cardRegistry).transform(driver.state, viewingPlayerId = opponent)
+        val view = ClientStateTransformer(cardRegistry = driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)).transform(driver.state, viewingPlayerId = opponent)
         view.cards[beast]?.hexproofFromMonocolored shouldBe true
     }
 })

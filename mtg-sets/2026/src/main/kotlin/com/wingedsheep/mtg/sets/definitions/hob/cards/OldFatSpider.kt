@@ -5,12 +5,12 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBeBlockedBy
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -34,8 +34,8 @@ val OldFatSpider = card("Old Fat Spider") {
         ability = CantBeBlockedBy(blockerFilter = GameObjectFilter.Creature.powerAtMost(2))
     }
     triggeredAbility {
-        trigger = Triggers.BecomesTargetByOpponent
-        effect = DrawCardsEffect(1)
+        trigger = Triggers.self.becomesTarget(byOpponent = true)
+        effect = Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.UNCOMMON

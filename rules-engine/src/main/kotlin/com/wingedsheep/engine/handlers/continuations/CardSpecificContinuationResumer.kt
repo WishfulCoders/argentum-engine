@@ -50,7 +50,8 @@ class CardSpecificContinuationResumer(
             originalTargets = continuation.originalTargets,
             newTargets = continuation.newTargets + chosenTarget,
             startSlot = continuation.currentSlot + 1,
-            sourceId = continuation.sourceId
+            sourceId = continuation.sourceId,
+            targetFinder = services.targetFinder
         )
         return if (result.pendingDecision != null) {
             result.toExecutionResult()

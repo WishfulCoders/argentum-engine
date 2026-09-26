@@ -9,13 +9,11 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Tomik, Wielder of Law — Murders at Karlov Manor #431
@@ -67,25 +65,17 @@ val TomikWielderOfLaw = card("Tomik, Wielder of Law") {
     keywords(Keyword.FLYING, Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = EventPattern.CreaturesAttackYouEvent(
-                minAttackers = 2,
-                includePlaneswalkersYouControl = true,
-            ),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.you.isAttacked(2, includePlaneswalkers = true)
         interveningIf = Conditions.CompareAmounts(
             DynamicAmounts.battlefield(
                 Player.Each,
                 GameObjectFilter.Creature.attackingYouOrYourPlaneswalkers(),
             ).count(),
             ComparisonOperator.GTE,
-            DynamicAmount.Fixed(2),
+            2,
         )
-        effect = Effects.Composite(
-            Effects.LoseLife(3, EffectTarget.PlayerRef(Player.TriggeringPlayer)),
-            Effects.DrawCards(1),
-        )
+        effect = Effects.LoseLife(3, EffectTarget.PlayerRef(Player.TriggeringPlayer)) then
+            Effects.DrawCards(1)
         description = "Whenever an opponent attacks with creatures, if two or more of those " +
             "creatures are attacking you and/or planeswalkers you control, that opponent loses 3 " +
             "life and you draw a card."

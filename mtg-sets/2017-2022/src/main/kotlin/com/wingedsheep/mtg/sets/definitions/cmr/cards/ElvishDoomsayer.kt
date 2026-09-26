@@ -25,7 +25,7 @@ val ElvishDoomsayer = card("Elvish Doomsayer") {
     power = 1
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Patterns.Hand.eachOpponentDiscards(1)
     }
     metadata {

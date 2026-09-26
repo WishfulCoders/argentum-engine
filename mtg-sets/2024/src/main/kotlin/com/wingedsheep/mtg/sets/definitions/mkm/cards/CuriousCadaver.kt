@@ -39,7 +39,7 @@ val CuriousCadaver = card("Curious Cadaver") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YouSacrificeA(GameObjectFilter.Artifact.withSubtype("Clue"))
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Artifact.withSubtype("Clue"))
         triggerZone = Zone.GRAVEYARD
         effect = Effects.ReturnToHand(EffectTarget.Self)
     }

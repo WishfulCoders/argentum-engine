@@ -4,8 +4,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Call of the Ring
@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * At the beginning of your upkeep, the Ring tempts you.
  * Whenever you choose a creature as your Ring-bearer, you may pay 2 life. If you do, draw a card.
  *
- * The second ability uses the new `Triggers.WheneverYouChooseRingBearer` (a `RingTemptedEvent`
+ * The second ability uses the new `Triggers.you.isTemptedByTheRing(true)` (a `RingTemptedEvent`
  * pattern with `requireBearerChosen = true`), so it only fires when a temptation actually
  * designates a creature — not when you control none to choose.
  */
@@ -27,19 +27,14 @@ val CallOfTheRing = card("Call of the Ring") {
         "Whenever you choose a creature as your Ring-bearer, you may pay 2 life. If you do, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.TheRingTemptsYou()
     }
 
     triggeredAbility {
-        trigger = Triggers.WheneverYouChooseRingBearer
-        effect = MayEffect(
-            effect = Effects.Composite(
-                listOf(
-                    Effects.LoseLife(2, EffectTarget.Controller),
-                    Effects.DrawCards(1),
-                )
-            )
+        trigger = Triggers.you.isTemptedByTheRing(true)
+        effect = Effects.May(
+            effect = Effects.LoseLife(2, EffectTarget.Controller) then Effects.DrawCards(1)
         )
     }
 

@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.events.AttackPredicate
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Intrepid Trufflesnout // Go Hog Wild
@@ -34,7 +34,7 @@ val IntrepidTrufflesnout = card("Intrepid Trufflesnout") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.attacks(requires = setOf(AttackPredicate.Alone))
+        trigger = Triggers.self.attacks(setOf(AttackPredicate.Alone))
         effect = Effects.CreateFood()
     }
 
@@ -44,7 +44,7 @@ val IntrepidTrufflesnout = card("Intrepid Trufflesnout") {
         oracleText = "Target creature gets +2/+2 until end of turn. " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            val t = target("target", Targets.Creature)
+            val t = target(TargetFilter.Creature)
             effect = Effects.ModifyStats(2, 2, t)
         }
     }

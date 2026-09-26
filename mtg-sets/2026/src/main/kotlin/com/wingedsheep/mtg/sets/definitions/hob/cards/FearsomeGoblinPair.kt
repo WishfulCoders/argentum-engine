@@ -23,7 +23,7 @@ val FearsomeGoblinPair = card("Fearsome Goblin Pair") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.Amass(4, "Goblin")
     }
 

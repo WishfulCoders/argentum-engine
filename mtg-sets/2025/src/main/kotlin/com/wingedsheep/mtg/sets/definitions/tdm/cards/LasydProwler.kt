@@ -1,18 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.renew
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Lasyd Prowler — Tarkir: Dragonstorm #149
@@ -36,9 +35,9 @@ val LasydProwler = card("Lasyd Prowler") {
         "where X is the number of land cards in your graveyard. Activate only as a sorcery."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(
-            Patterns.Library.mill(DynamicAmount.Count(Player.You, Zone.BATTLEFIELD, Filters.Land)),
+        trigger = Triggers.self.enters()
+        effect = Effects.May(
+            Patterns.Library.mill(DynamicAmounts.count(Player.You, Zone.BATTLEFIELD, Filters.Land)),
             descriptionOverride = "You may mill cards equal to the number of lands you control."
         )
         description = "When this creature enters, you may mill cards equal to the number of lands you control."
@@ -46,9 +45,9 @@ val LasydProwler = card("Lasyd Prowler") {
 
     renew("{1}{G}") {
         effect = Effects.AddDynamicCounters(
-            Counters.PLUS_ONE_PLUS_ONE,
-            DynamicAmount.Count(Player.You, Zone.GRAVEYARD, Filters.Land),
-            target("creature", Targets.Creature)
+            CounterType.PLUS_ONE_PLUS_ONE,
+            DynamicAmounts.count(Player.You, Zone.GRAVEYARD, Filters.Land),
+            target(TargetFilter.Creature)
         )
     }
 

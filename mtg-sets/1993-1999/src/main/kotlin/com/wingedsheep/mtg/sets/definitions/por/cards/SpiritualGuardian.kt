@@ -4,10 +4,10 @@
 
 package com.wingedsheep.mtg.sets.definitions.por.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -25,8 +25,8 @@ val SpiritualGuardian = card("Spiritual Guardian") {
     power = 3
     toughness = 4
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = GainLifeEffect(4)
+        trigger = Triggers.self.enters()
+        effect = Effects.GainLife(4)
     }
     metadata {
         rarity = Rarity.RARE

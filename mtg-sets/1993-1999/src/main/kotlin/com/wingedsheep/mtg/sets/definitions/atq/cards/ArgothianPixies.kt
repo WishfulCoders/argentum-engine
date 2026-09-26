@@ -6,8 +6,7 @@ import com.wingedsheep.sdk.scripting.CantBeBlockedBy
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.PreventDamage
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
-import com.wingedsheep.sdk.scripting.events.SourceFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Argothian Pixies
@@ -19,7 +18,7 @@ import com.wingedsheep.sdk.scripting.events.SourceFilter
  *
  * Two static abilities filtered to artifact creatures ([GameObjectFilter.ArtifactCreature]):
  *  - a [CantBeBlockedBy] blocking restriction, and
- *  - a continuous [PreventDamage] replacement (CR 615) with recipient = [RecipientFilter.Self]
+ *  - a continuous [PreventDamage] replacement (CR 615) with recipient = [Recipient.Self]
  *    (only Argothian Pixies) and source = any artifact creature.
  */
 val ArgothianPixies = card("Argothian Pixies") {
@@ -38,8 +37,8 @@ val ArgothianPixies = card("Argothian Pixies") {
     replacementEffect(
         PreventDamage(
             appliesTo = EventPattern.DamageEvent(
-                recipient = RecipientFilter.Self,
-                source = SourceFilter.Matching(GameObjectFilter.ArtifactCreature)
+                recipient = Recipient.Self,
+                source = GameObjectFilter.ArtifactCreature
             )
         )
     )

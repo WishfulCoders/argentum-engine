@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Law-Rune Enforcer — War of the Spark #20 (canonical printing)
@@ -29,7 +28,7 @@ val LawRuneEnforcer = card("Law-Rune Enforcer") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
-        val creature = target("target", TargetCreature(filter = TargetFilter.Creature.manaValueAtLeast(2)))
+        val creature = target(TargetFilter.Creature.manaValueAtLeast(2))
         effect = Effects.Tap(creature)
     }
 

@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Collapsing Borders
@@ -23,7 +24,7 @@ val CollapsingBorders = card("Collapsing Borders") {
         "basic land type among lands they control. Then this enchantment deals 3 damage to that player."
 
     triggeredAbility {
-        trigger = Triggers.EachUpkeep
+        trigger = Triggers.anyPlayer.beginningOf(Step.UPKEEP)
         // Domain is computed for the upkeep player (the lands *they* control), and both the
         // life gain and the 3 damage are applied to that same player.
         effect = Effects.GainLife(

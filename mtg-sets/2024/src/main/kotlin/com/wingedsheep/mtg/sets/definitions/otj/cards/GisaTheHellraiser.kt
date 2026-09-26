@@ -3,6 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.otj.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -10,10 +11,8 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.effects.WardCost
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Gisa, the Hellraiser
@@ -35,7 +34,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *   [ModifyStats] (layer 7c) and a [GrantKeyword] of menace (layer 6). Gisa is a Human Warlock, so
  *   she doesn't buff herself; the filter carries no excludeSelf because the printed text says
  *   "Skeletons and Zombies you control", not "other".
- * - The crime payoff is the standard [Triggers.YouCommitCrime] trigger with `oncePerTurn = true`,
+ * - The crime payoff is the standard `Triggers.you.commitsCrime()` trigger with `oncePerTurn = true`,
  *   creating two tapped 2/2 blue-black Zombie Rogue tokens (the canonical OTJ Zombie Rogue, cf.
  *   Outlaw Stitcher).
  */
@@ -52,7 +51,7 @@ val GisaTheHellraiser = card("Gisa, the Hellraiser") {
         "control, and/or cards in their graveyards is a crime.)"
 
     keywordAbility(
-        KeywordAbility.wardComposite(WardCost.Mana("{2}"), WardCost.Life(2))
+        KeywordAbility.Ward(WardCost.Composite(listOf(WardCost.Mana("{2}"), WardCost.Life(2))))
     )
 
     staticAbility {
@@ -79,10 +78,10 @@ val GisaTheHellraiser = card("Gisa, the Hellraiser") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YouCommitCrime
+        trigger = Triggers.you.commitsCrime()
         oncePerTurn = true
-        effect = CreateTokenEffect(
-            count = DynamicAmount.Fixed(2),
+        effect = Effects.CreateToken(
+            count = 2,
             power = 2,
             toughness = 2,
             colors = setOf(Color.BLUE, Color.BLACK),

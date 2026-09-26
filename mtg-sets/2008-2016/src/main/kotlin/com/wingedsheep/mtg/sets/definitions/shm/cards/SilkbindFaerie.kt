@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Silkbind Faerie
@@ -35,7 +36,7 @@ val SilkbindFaerie = card("Silkbind Faerie") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{W/U}"), Costs.Untap)
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.Tap(t)
         description = "{1}{W/U}, {Q}: Tap target creature."
     }

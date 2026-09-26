@@ -2,15 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Force Away
@@ -27,13 +25,13 @@ val ForceAway = card("Force Away") {
     oracleText = "Return target creature to its owner's hand.\nFerocious — If you control a creature with power 4 or greater, you may draw a card. If you do, discard a card."
 
     spell {
-        val creature = target("creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
 
-        effect = Effects.ReturnToHand(creature)
-            .then(ConditionalEffect(
+        effect = Effects.ReturnToHand(creature) then
+            Effects.If(
                 condition = Exists(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature.powerAtLeast(4)),
-                effect = MayEffect(Patterns.Hand.loot())
-            ))
+                then = Effects.May(Patterns.Hand.loot())
+            )
     }
 
     metadata {

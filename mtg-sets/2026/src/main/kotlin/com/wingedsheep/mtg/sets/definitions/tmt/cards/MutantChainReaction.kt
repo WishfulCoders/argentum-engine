@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Mutant Chain Reaction
@@ -27,35 +26,28 @@ val MutantChainReaction = card("Mutant Chain Reaction") {
     spell {
         // "up to one target artifact, enchantment, or creature with flying"
         val permanent = target(
-            "up to one target artifact, enchantment, or creature with flying",
-            TargetPermanent(
-                count = 1,
-                optional = true,
-                filter = TargetFilter(
-                    GameObjectFilter(
-                        cardPredicates = listOf(
-                            CardPredicate.Or(
-                                listOf(
-                                    CardPredicate.IsArtifact,
-                                    CardPredicate.IsEnchantment,
-                                    CardPredicate.And(
-                                        listOf(
-                                            CardPredicate.IsCreature,
-                                            CardPredicate.HasKeyword(Keyword.FLYING)
-                                        )
+            TargetFilter(
+                GameObjectFilter(
+                    cardPredicates = listOf(
+                        CardPredicate.Or(
+                            listOf(
+                                CardPredicate.IsArtifact,
+                                CardPredicate.IsEnchantment,
+                                CardPredicate.And(
+                                    listOf(
+                                        CardPredicate.IsCreature,
+                                        CardPredicate.HasKeyword(Keyword.FLYING)
                                     )
                                 )
                             )
                         )
                     )
                 )
-            )
+            ),
+            optional = true,
         )
         // The destroy no-ops if no target was chosen; the token is always created.
-        effect = Effects.Composite(
-            Effects.Destroy(permanent),
-            Effects.CreateMutagenToken()
-        )
+        effect = Effects.Destroy(permanent) then Effects.CreateMutagenToken()
     }
 
     metadata {

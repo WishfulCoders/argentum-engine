@@ -6,8 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Thopter Architect
@@ -28,11 +27,8 @@ val ThopterArchitect = card("Thopter Architect") {
     oracleText = "Whenever an artifact you control enters, target creature gains flying until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            binding = TriggerBinding.ANY
-        )
-        val creature = target("creature", TargetCreature())
+        trigger = Triggers.a(GameObjectFilter.Artifact.youControl()).enters()
+        val creature = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(Keyword.FLYING, creature)
         description = "Target creature gains flying until end of turn."
     }

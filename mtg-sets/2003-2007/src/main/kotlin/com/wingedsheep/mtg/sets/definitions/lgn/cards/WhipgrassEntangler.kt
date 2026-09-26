@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.lgn.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Whipgrass Entangler
@@ -25,7 +25,7 @@ val WhipgrassEntangler = card("Whipgrass Entangler") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{W}")
-        val creature = target("creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.GrantAttackBlockTaxPerCreatureType(
             target = creature,
             creatureType = "Cleric",

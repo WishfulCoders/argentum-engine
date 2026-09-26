@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Threadbind Clique // Rip the Seams
@@ -44,10 +43,7 @@ val ThreadbindClique = card("Threadbind Clique") {
         oracleText = "Destroy target tapped creature. " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            val victim = target(
-                "target tapped creature",
-                TargetCreature(filter = TargetFilter.TappedCreature),
-            )
+            val victim = target(TargetFilter.TappedCreature)
             effect = Effects.Destroy(victim)
         }
     }

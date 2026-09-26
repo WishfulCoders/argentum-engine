@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Wose Pathfinder
@@ -37,9 +36,8 @@ val WosePathfinder = card("Wose Pathfinder") {
     // {6}{G}, {T}: Another target creature gets +3/+3 and gains trample until end of turn.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{6}{G}"), Costs.Tap)
-        val other = target("another target creature", TargetCreature(filter = TargetFilter.OtherCreature))
-        effect = Effects.ModifyStats(3, 3, other)
-            .then(Effects.GrantKeyword(Keyword.TRAMPLE, other))
+        val other = target(TargetFilter.OtherCreature)
+        effect = Effects.ModifyStats(3, 3, other) then Effects.GrantKeyword(Keyword.TRAMPLE, other)
     }
 
     metadata {

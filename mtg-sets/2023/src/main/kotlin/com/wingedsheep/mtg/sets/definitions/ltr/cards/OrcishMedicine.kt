@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Orcish Medicine
@@ -28,14 +28,12 @@ val OrcishMedicine = card("Orcish Medicine") {
     spell {
         modal(chooseCount = 1) {
             mode("Target creature gains lifelink until end of turn") {
-                val creature = target("target creature", Targets.Creature)
-                effect = Effects.GrantKeyword(Keyword.LIFELINK, creature)
-                    .then(Effects.Amass(1, "Orc"))
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.GrantKeyword(Keyword.LIFELINK, creature) then Effects.Amass(1, "Orc")
             }
             mode("Target creature gains indestructible until end of turn") {
-                val creature = target("target creature", Targets.Creature)
-                effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, creature)
-                    .then(Effects.Amass(1, "Orc"))
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, creature) then Effects.Amass(1, "Orc")
             }
         }
     }

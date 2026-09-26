@@ -27,7 +27,7 @@ val AbuJafar = card("Abu Ja'far") {
     oracleText = "When this creature dies, destroy all creatures blocking or blocked by it. They can't be regenerated."
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.DestroyCreaturesBlockingOrBlockedBySource(noRegenerate = true)
     }
 

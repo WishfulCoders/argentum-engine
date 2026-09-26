@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.stx.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -46,15 +44,12 @@ val FirstDayOfClass = card("First Day of Class") {
         "hand, or discard a card to draw a card.)"
 
     spell {
-        effect = CreateDelayedTriggerEffect(
-            trigger = Triggers.entersBattlefield(
-                filter = GameObjectFilter.Creature.youControl(),
-                binding = TriggerBinding.ANY
-            ),
+        effect = Effects.CreateDelayedTrigger(
+            trigger = Triggers.a(GameObjectFilter.Creature.youControl()).enters(),
             fireOnce = false,
             expiry = DelayedTriggerExpiry.EndOfTurn,
             effect = Effects.AddCounters(
-                Counters.PLUS_ONE_PLUS_ONE,
+                CounterType.PLUS_ONE_PLUS_ONE,
                 1,
                 EffectTarget.TriggeringEntity
             ) then Effects.GrantKeyword(Keyword.HASTE, EffectTarget.TriggeringEntity)

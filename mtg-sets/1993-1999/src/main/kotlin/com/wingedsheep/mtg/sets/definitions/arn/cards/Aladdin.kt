@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.arn.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Aladdin
@@ -24,7 +24,7 @@ val Aladdin = card("Aladdin") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{R}{R}"), Costs.Tap)
-        val artifact = target("target artifact", Targets.Artifact)
+        val artifact = target(TargetFilter.Artifact)
         effect = Effects.GainControl(artifact, Duration.WhileYouControlSource("Aladdin"))
     }
 

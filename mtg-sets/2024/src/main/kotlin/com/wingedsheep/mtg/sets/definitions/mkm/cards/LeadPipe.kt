@@ -1,6 +1,5 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
@@ -46,7 +45,7 @@ val LeadPipe = card("Lead Pipe") {
     }
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(to = Zone.GRAVEYARD, binding = TriggerBinding.ATTACHED)
+        trigger = Triggers.attached.dies()
         effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent))
         description = "Whenever equipped creature dies, each opponent loses 1 life."
     }

@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Airbending Lesson — {2}{W} Instant — Lesson
@@ -24,11 +24,8 @@ val AirbendingLesson = card("Airbending Lesson") {
     oracleText = "Airbend target nonland permanent. (Exile it. While it's exiled, its owner may cast it for {2} rather than its mana cost.)\nDraw a card."
 
     spell {
-        target("target nonland permanent", Targets.NonlandPermanent)
-        effect = Effects.Composite(
-            Effects.Airbend(),
-            Effects.DrawCards(1)
-        )
+        target(TargetFilter.NonlandPermanent)
+        effect = Effects.Airbend() then Effects.DrawCards(1)
     }
 
     metadata {

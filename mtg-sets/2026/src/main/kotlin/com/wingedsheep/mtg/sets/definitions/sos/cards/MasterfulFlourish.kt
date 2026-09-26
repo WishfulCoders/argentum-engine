@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -24,11 +23,8 @@ val MasterfulFlourish = card("Masterful Flourish") {
     typeLine = "Instant"
     oracleText = "Target creature you control gets +1/+0 and gains indestructible until end of turn. (Damage and effects that say \"destroy\" don't destroy it.)"
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.youControl()))
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 0, t),
-            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t)
-        )
+        val t = target(TargetFilter.Creature.youControl())
+        effect = Effects.ModifyStats(1, 0, t) then Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t)
     }
     metadata {
         rarity = Rarity.COMMON

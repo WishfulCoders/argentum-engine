@@ -7,8 +7,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateTokenCopyOfSourceEffect
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Dreadfeast Demon — Innistrad: Crimson Vow #108
@@ -44,7 +44,7 @@ val DreadfeastDemon = card("Dreadfeast Demon") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         effect = Effects.IfYouDo(
             action = Effects.Pipeline {
                 val fodder = gather(GameObjectFilter.Creature.notSubtype(Subtype.DEMON), player = Player.You)
@@ -56,7 +56,7 @@ val DreadfeastDemon = card("Dreadfeast Demon") {
                 )
                 sacrifice(chosen)
             },
-            ifYouDo = CreateTokenCopyOfSourceEffect()
+            then = Effects.CreateTokenCopyOfSelf()
         )
         description = "At the beginning of your end step, sacrifice a non-Demon creature. If you " +
             "do, create a token that's a copy of this creature."

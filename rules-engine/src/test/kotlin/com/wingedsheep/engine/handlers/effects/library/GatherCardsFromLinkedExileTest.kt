@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.library
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.state.ComponentContainer
 import com.wingedsheep.engine.state.GameState
@@ -18,10 +19,12 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import io.kotest.matchers.shouldNotBe
 
 class GatherCardsFromLinkedExileTest : FunSpec({
 
-    val executor = GatherCardsExecutor()
+    val executor = GatherCardsExecutor(predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
     val playerId = EntityId.generate()
     val opponentId = EntityId.generate()
@@ -73,7 +76,7 @@ class GatherCardsFromLinkedExileTest : FunSpec({
 
         val result = executor.execute(state, gatherEffect(), context())
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         result.updatedCollections["linked"]!!.shouldContainExactlyInAnyOrder(exiledCard1, exiledCard2)
     }
 
@@ -109,7 +112,7 @@ class GatherCardsFromLinkedExileTest : FunSpec({
 
         val result = executor.execute(state, gatherEffect(), context())
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         result.updatedCollections["linked"]!!.shouldContainExactlyInAnyOrder(exiledCard1)
     }
 
@@ -126,7 +129,7 @@ class GatherCardsFromLinkedExileTest : FunSpec({
 
         val result = executor.execute(state, gatherEffect(), context())
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         result.updatedCollections["linked"]!!.shouldBeEmpty()
     }
 
@@ -143,7 +146,7 @@ class GatherCardsFromLinkedExileTest : FunSpec({
 
         val result = executor.execute(state, gatherEffect(), context())
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         result.updatedCollections["linked"]!!.shouldBeEmpty()
     }
 
@@ -171,7 +174,7 @@ class GatherCardsFromLinkedExileTest : FunSpec({
 
         val result = executor.execute(state, gatherEffect(), context())
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         result.updatedCollections["linked"]!!.shouldContainExactlyInAnyOrder(exiledCard1, exiledCard2)
     }
 
@@ -187,6 +190,6 @@ class GatherCardsFromLinkedExileTest : FunSpec({
 
         val result = executor.execute(state, gatherEffect(), noSourceContext)
 
-        result.isSuccess shouldBe false
+        result.outcome shouldNotBe Outcome.Done
     }
 })

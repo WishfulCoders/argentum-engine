@@ -42,7 +42,7 @@ val Ringskipper = card("Ringskipper") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Patterns.Mechanic.clash(
             Effects.ReturnToHandFromGraveyard(EffectTarget.Self)
         )

@@ -7,7 +7,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Cloudstone Curio — Ravnica: City of Guilds #257
@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * control that shares a permanent type with it to its owner's hand.
  *
  * The bounce is a non-targeted choice made on resolution, so it is a battlefield pipeline: gather
- * every permanent you control that `sharingCardTypeWith(EntityReference.Triggering)` — both sides
+ * every permanent you control that `sharingCardTypeWith(EffectTarget.TriggeringEntity)` — both sides
  * read projected types, so an animated land that enters can bounce a creature — with
  * `excludeTriggering` carrying the printed "another", then `chooseUpTo(1)` is the "you may"
  * (zero picks is the decline) and the move routes the card to its *owner's* hand, as printed.
@@ -40,16 +40,12 @@ val CloudstoneCurio = card("Cloudstone Curio") {
         "permanent you control that shares a permanent type with it to its owner's hand."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Permanent.nonartifact().youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Permanent.nonartifact().youControl()).enters()
         effect = Effects.Pipeline {
             val candidates = gather(
-                filter = GameObjectFilter.Permanent.sharingCardTypeWith(EntityReference.Triggering),
+                filter = GameObjectFilter.Permanent.sharingCardTypeWith(EffectTarget.TriggeringEntity),
                 player = Player.You,
                 excludeTriggering = true,
-                name = "candidates",
             )
             val returned = chooseUpTo(
                 1,
@@ -57,7 +53,6 @@ val CloudstoneCurio = card("Cloudstone Curio") {
                 prompt = "You may return another permanent you control that shares a permanent " +
                     "type with the one that entered to its owner's hand",
                 useTargetingUI = true,
-                name = "returned",
             )
             toHand(returned)
         }

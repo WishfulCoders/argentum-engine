@@ -21,7 +21,7 @@ import io.kotest.matchers.shouldBe
  *    each deal damage equal to their power to target creature you don't control [2]."
  *
  * Friendly Rivalry has THREE targets and two damage instructions whose *amount* is a positional
- * `EntityReference.Target(n)` power read — Target(0) for the first creature, Target(1) for the
+ * `EffectTarget.ContextTarget(n)` power read — Target(0) for the first creature, Target(1) for the
  * legendary. CR 608.2b drops illegal targets at resolution and the engine compacts
  * `context.targets`. Before the fix, the second instruction's `Target(1)` indexed the COMPACTED
  * list: once the first target (creature you control) died in response, the legendary slid into

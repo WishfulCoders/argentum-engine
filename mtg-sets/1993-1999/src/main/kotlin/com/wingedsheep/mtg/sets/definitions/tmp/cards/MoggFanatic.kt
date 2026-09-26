@@ -23,7 +23,7 @@ val MoggFanatic = card("Mogg Fanatic") {
 
     activatedAbility {
         cost = Costs.SacrificeSelf
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
         description = "Sacrifice this creature: It deals 1 damage to any target."
     }

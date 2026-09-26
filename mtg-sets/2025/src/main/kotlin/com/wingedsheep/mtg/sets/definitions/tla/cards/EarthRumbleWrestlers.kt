@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Earth Rumble Wrestlers
@@ -50,7 +49,7 @@ val EarthRumbleWrestlers = card("Earth Rumble Wrestlers") {
         Conditions.CompareAmounts(
             DynamicAmounts.landsEnteredUnderControlThisTurn(Player.You),
             ComparisonOperator.GTE,
-            DynamicAmount.Fixed(1),
+            1,
         ),
     )
 

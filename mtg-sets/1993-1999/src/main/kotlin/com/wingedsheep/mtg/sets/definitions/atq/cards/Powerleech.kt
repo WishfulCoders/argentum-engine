@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -17,9 +16,9 @@ import com.wingedsheep.sdk.scripting.references.Player
  *
  * Same "tap / activate an artifact" punisher template as Haunting Wind, but scoped to opponents'
  * artifacts and rewarding the enchantment's controller with life instead of dealing damage:
- *  - tap half: [Triggers.becomesTapped] over `Artifact.opponentControls()` ("an artifact an
+ *  - tap half: `Triggers.<subject>.becomesTapped(reason, firstTimeEachTurn)` over `Artifact.opponentControls()` ("an artifact an
  *    opponent controls becomes tapped").
- *  - ability half: [Triggers.activatesAbilityWithoutTap] with [Player.EachOpponent] and NO
+ *  - ability half: `Triggers.<player>.activatesAbility(of, withoutTapInCost = true)` with [Player.EachOpponent] and NO
  *    controller restriction on the artifact — oracle only requires that "an opponent activates
  *    an artifact's ability", so an opponent activating an any-player ability of an artifact
  *    you control (e.g. Armageddon Clock) also triggers it.
@@ -35,18 +34,12 @@ val Powerleech = card("Powerleech") {
         "activates an artifact's ability without {T} in its activation cost, you gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.becomesTapped(
-            binding = TriggerBinding.ANY,
-            filter = GameObjectFilter.Artifact.opponentControls()
-        )
+        trigger = Triggers.a(GameObjectFilter.Artifact.opponentControls()).becomesTapped()
         effect = Effects.GainLife(1)
     }
 
     triggeredAbility {
-        trigger = Triggers.activatesAbilityWithoutTap(
-            player = Player.EachOpponent,
-            sourceFilter = GameObjectFilter.Artifact
-        )
+        trigger = Triggers.anOpponent.activatesAbility(of = GameObjectFilter.Artifact, withoutTapInCost = true)
         effect = Effects.GainLife(1)
     }
 

@@ -58,6 +58,16 @@ export const TIGHT_HUD_GAP = 16
 export const DIVIDER_STRIP_HEIGHT = 24
 
 /**
+ * Compact spacing, used once the board is crowded enough that size is being
+ * traded for fit (the squeezed pass): no divider strip and no row padding, so
+ * the rows sit one ordinary line gap apart like wrap lines of one grid. At full
+ * size the divider, its margins and the row paddings cost ~45 px — on a 220 px
+ * multiplayer cell holding three lines of cards, a fifth of the height.
+ */
+export const COMPACT_DIVIDER_STRIP_HEIGHT = 0
+export const COMPACT_DIVIDER_MARGIN = 4
+
+/**
  * Height an empty row reserves. Zero: the row element stays in the DOM (its
  * order and `data-zone` spotlights are unchanged) but costs no line — the
  * turn-1 board no longer pays a full card height for a creature row with
@@ -135,6 +145,8 @@ export interface SlotLayout {
   /** Wrap lines each row is budgeted for; 0 for an empty row. */
   frontLines: number
   backLines: number
+  /** Solved in the squeezed pass: compact divider and no row padding (`dividerFor`, `rowPaddingFor`). */
+  compact: boolean
 }
 
 export interface PooledLayout {
@@ -188,6 +200,18 @@ export const cardHeightFor = (cardWidth: number): number => Math.round(cardWidth
  */
 export const dividerMarginFor = (cardHeight: number): number => Math.max(6, Math.round(cardHeight * 0.1))
 
+/** Strip height and the margin on each side of it, full size or compact. */
+export const dividerFor = (cardHeight: number, compact: boolean): { strip: number; margin: number } =>
+  compact
+    ? { strip: COMPACT_DIVIDER_STRIP_HEIGHT, margin: COMPACT_DIVIDER_MARGIN }
+    : { strip: DIVIDER_STRIP_HEIGHT, margin: dividerMarginFor(cardHeight) }
+
+/** Total height the between-rows divider costs, margins included. */
+export const dividerSpaceFor = (cardHeight: number, compact: boolean): number => {
+  const { strip, margin } = dividerFor(cardHeight, compact)
+  return strip + 2 * margin
+}
+
 /**
  * Gap left between the battlefield cards and the center HUD. Scales with the
  * card so a small crowded board doesn't spend up to 48 px of slot on air.
@@ -195,17 +219,21 @@ export const dividerMarginFor = (cardHeight: number): number => Math.max(6, Math
  */
 export const breathingFor = (cardHeight: number): number => clamp(Math.round(cardHeight * 0.15), 12, 48)
 
-/** Min padding each populated row reserves (the `battlefieldRowPadding` responsive value). */
-export const rowPaddingFor = (cardHeight: number): number => Math.round(cardHeight * 0.08)
+/**
+ * Min padding each populated row reserves (the `battlefieldRowPadding` responsive value);
+ * none under compact spacing.
+ */
+export const rowPaddingFor = (cardHeight: number, compact = false): number =>
+  compact ? 0 : Math.round(cardHeight * 0.08)
 
 /**
  * Height a row's wrap lines reserve (`minHeight` in Battlefield.tsx): one card
  * height per line, the flex gap between lines, plus the row padding. An empty
  * row keeps only `EMPTY_ROW_MIN_HEIGHT` — it costs no line.
  */
-export function rowMinHeightFor(lines: number, cardHeight: number, cardGap: number): number {
+export function rowMinHeightFor(lines: number, cardHeight: number, cardGap: number, compact = false): number {
   if (lines <= 0) return EMPTY_ROW_MIN_HEIGHT
-  return lines * cardHeight + (lines - 1) * cardGap + rowPaddingFor(cardHeight)
+  return lines * cardHeight + (lines - 1) * cardGap + rowPaddingFor(cardHeight, compact)
 }
 
 /**
@@ -257,11 +285,11 @@ export function slotHeightNeeded(
   const fl = stats.front.count > 0 ? frontLines : 0
   const bl = stats.back.count > 0 ? backLines : 0
   let total = 0
-  if (fl > 0) total += fl * h + (fl - 1) * env.cardGap + rowPaddingFor(h)
+  if (fl > 0) total += fl * h + (fl - 1) * env.cardGap + rowPaddingFor(h, tight)
   else total += EMPTY_ROW_MIN_HEIGHT
-  if (bl > 0) total += bl * hb + (bl - 1) * env.cardGap + rowPaddingFor(hb)
+  if (bl > 0) total += bl * hb + (bl - 1) * env.cardGap + rowPaddingFor(hb, tight)
   else total += EMPTY_ROW_MIN_HEIGHT
-  if (fl > 0 && bl > 0) total += DIVIDER_STRIP_HEIGHT + 2 * dividerMarginFor(h)
+  if (fl > 0 && bl > 0) total += dividerSpaceFor(h, tight)
   total += hudGapFor(h, tight)
   return total
 }
@@ -325,7 +353,13 @@ function largestFitting(lo: number, hi: number, fits: (w: number) => boolean): n
   return good
 }
 
-function makeLayout(cardWidth: number, c: LineCandidate, stats: BoardStats, env: LayoutEnv): SlotLayout {
+function makeLayout(
+  cardWidth: number,
+  c: LineCandidate,
+  stats: BoardStats,
+  env: LayoutEnv,
+  compact: boolean,
+): SlotLayout {
   const scale = env.backRowScale ?? BACK_ROW_SCALE
   const backCardWidth = Math.round(cardWidth * scale)
   return {
@@ -335,6 +369,7 @@ function makeLayout(cardWidth: number, c: LineCandidate, stats: BoardStats, env:
     backCardHeight: cardHeightFor(backCardWidth),
     frontLines: stats.front.count > 0 ? c.frontLines : 0,
     backLines: stats.back.count > 0 ? c.backLines : 0,
+    compact,
   }
 }
 
@@ -363,6 +398,7 @@ function floorLayout(slotWidth: number, stats: BoardStats, env: LayoutEnv): Slot
     },
     stats,
     env,
+    true,
   )
 }
 
@@ -372,7 +408,8 @@ function floorLayout(slotWidth: number, stats: BoardStats, env: LayoutEnv): Slot
  *
  * Pass 1 keeps the comfortable breathing gap toward the HUD and lets cards grow
  * to the environment's ceiling (`maxCardWidthFor`). If that lands under `PREFERRED_MIN_CARD_WIDTH`, pass
- * 2 trades the breathing gap for size with the floor as the ceiling. If even
+ * 2 trades the breathing gap and the roomy spacing (`dividerFor`, `rowPaddingFor`) for size,
+ * with the floor as the ceiling. If even
  * that can't fit, cards clamp to `ABSOLUTE_MIN_CARD_WIDTH` and the line counts
  * follow what greedy wrapping will actually do.
  */
@@ -385,7 +422,7 @@ export function solveSlotLayout(slotWidth: number, slotHeight: number, stats: Bo
       const w = largestFitting(ABSOLUTE_MIN_CARD_WIDTH, cap, (cw) =>
         slotHeightNeeded(stats, c.frontLines, c.backLines, cw, env, tight) <= slotHeight,
       )
-      if (w !== null && (best === null || w > best.cardWidth)) best = makeLayout(w, c, stats, env)
+      if (w !== null && (best === null || w > best.cardWidth)) best = makeLayout(w, c, stats, env, tight)
     }
     return best
   }
@@ -443,7 +480,14 @@ export function solvePooledLayout(
     if (w === null) return null
     const a = cheapest(player, playerCandidates, w, tight)!
     const b = cheapest(opponent, opponentCandidates, w, tight)!
-    return splitHeights(w, makeLayout(w, a.c, player, env), a.need, makeLayout(w, b.c, opponent, env), b.need, pooledHeight)
+    return splitHeights(
+      w,
+      makeLayout(w, a.c, player, env, tight),
+      a.need,
+      makeLayout(w, b.c, opponent, env, tight),
+      b.need,
+      pooledHeight,
+    )
   }
 
   const comfortable = pass(false, maxCardWidthFor(env))

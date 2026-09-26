@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * "Each creature with flying" is untargeted, so it is [Effects.ForEachInGroup] over
  * `Filters.Group.allCreatures.withKeyword(Keyword.FLYING)` rather than a target requirement —
- * `IterationSpace.Group` binds each flier in turn as the body's [EffectTarget.Self], so a single
+ * `IterationSpace.Group` binds each flier in turn as the body's [EffectTarget.IterationEntity], so a single
  * one-damage facade applies once per flier. The group is snapshotted before the first iteration,
  * and each flier takes damage from this creature independently (so lifelink, deathtouch, and
  * protection from green all read the archer as the source).
@@ -33,7 +33,7 @@ val ScattershotArcher = card("Scattershot Archer") {
         cost = Costs.Tap
         effect = Effects.ForEachInGroup(
             filter = Filters.Group.allCreatures.withKeyword(Keyword.FLYING),
-            effect = Effects.DealDamage(1, EffectTarget.Self)
+            effect = Effects.DealDamage(1, EffectTarget.IterationEntity)
         )
     }
 

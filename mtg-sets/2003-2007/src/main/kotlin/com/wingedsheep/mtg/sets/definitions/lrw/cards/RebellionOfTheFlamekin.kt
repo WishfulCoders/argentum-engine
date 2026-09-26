@@ -2,7 +2,6 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -10,10 +9,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.effects.CREATED_TOKENS
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.Gate
-import com.wingedsheep.sdk.scripting.effects.GatedEffect
-import com.wingedsheep.sdk.scripting.effects.PayManaCostEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -25,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Three nested riders, each a different primitive:
  *
- *  - **"Whenever you clash"** — [Triggers.WheneverYouClash], not the "and win" variant: the {1} is
+ *  - **"Whenever you clash"** — `Triggers.you.clashes()`, not the "and win" variant: the {1} is
  *    offered whether or not you won, and per its ruling it is offered on a clash an opponent's spell
  *    started too.
  *  - **"you may pay {1}. If you do, …"** — a [Gate.MayPay] over [PayManaCostEffect]; declining or
@@ -48,18 +43,17 @@ val RebellionOfTheFlamekin = card("Rebellion of the Flamekin") {
         "(This ability triggers after the clash ends.)"
 
     triggeredAbility {
-        trigger = Triggers.WheneverYouClash
-        effect = GatedEffect(
-            gate = Gate.MayPay(PayManaCostEffect(ManaCost.parse("{1}"))),
-            then = Effects.Composite(
-                Effects.CreateToken(
-                    power = 3,
-                    toughness = 1,
-                    colors = setOf(Color.RED),
-                    creatureTypes = setOf("Elemental", "Shaman"),
-                    imageUri = "https://cards.scryfall.io/normal/front/a/2/a280aee2-e15a-4625-b429-4032eae08a41.jpg?1783942839"
-                ),
-                ConditionalEffect(
+        trigger = Triggers.you.clashes()
+        effect = Effects.MayPay(
+            cost = Effects.PayMana("{1}"),
+            then = Effects.CreateToken(
+                power = 3,
+                toughness = 1,
+                colors = setOf(Color.RED),
+                creatureTypes = setOf("Elemental", "Shaman"),
+                imageUri = "https://cards.scryfall.io/normal/front/a/2/a280aee2-e15a-4625-b429-4032eae08a41.jpg?1783942839"
+            ) then
+                Effects.If(
                     Conditions.YouWonTheClash,
                     Effects.GrantKeyword(
                         Keyword.HASTE,
@@ -67,7 +61,6 @@ val RebellionOfTheFlamekin = card("Rebellion of the Flamekin") {
                         Duration.EndOfTurn
                     )
                 )
-            )
         )
         description = "you may pay {1}. If you do, create a 3/1 red Elemental Shaman creature " +
             "token. If you won, that token gains haste until end of turn."

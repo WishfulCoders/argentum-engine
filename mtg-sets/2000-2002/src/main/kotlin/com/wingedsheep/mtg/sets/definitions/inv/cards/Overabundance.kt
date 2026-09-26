@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AdditionalManaOnSourceTap
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -33,7 +33,7 @@ val Overabundance = card("Overabundance") {
         ability = AdditionalManaOnSourceTap(
             sourceFilter = GameObjectFilter.Land,
             color = null, // mirror the produced color ("any type that land produced")
-            rider = DealDamageEffect(1, EffectTarget.Controller, damageSource = EffectTarget.Self)
+            rider = Effects.DealDamage(1, EffectTarget.Controller, damageSource = EffectTarget.Self)
         )
     }
 

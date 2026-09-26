@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.stx.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sparring Regimen — Strixhaven: School of Mages #29 (canonical printing)
@@ -15,7 +16,7 @@ import com.wingedsheep.sdk.model.Rarity
  * When this enchantment enters, learn.
  * Whenever you attack, put a +1/+1 counter on target attacking creature and untap it.
  *
- * "Whenever you attack" is [Triggers.YouAttack] — a player-level trigger that fires once per
+ * "Whenever you attack" is `Triggers.you.attacks()` — a player-level trigger that fires once per
  * combat when attackers are declared (CR 508.1), *not* once per attacker. The target is chosen
  * when the ability goes on the stack, by which time attackers are declared, so
  * [Targets.AttackingCreature] always has a legal choice when the trigger fires at all.
@@ -34,15 +35,14 @@ val SparringRegimen = card("Sparring Regimen") {
         "Whenever you attack, put a +1/+1 counter on target attacking creature and untap it."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Mechanic.learn()
     }
 
     triggeredAbility {
-        trigger = Triggers.YouAttack
-        val attacker = target("target attacking creature", Targets.AttackingCreature)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, attacker) then
-            Effects.Untap(attacker)
+        trigger = Triggers.you.attacks()
+        val attacker = target(TargetFilter.AttackingCreature)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, attacker) then Effects.Untap(attacker)
     }
 
     metadata {

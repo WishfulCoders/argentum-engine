@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.ala.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.ModifyStats
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Savage Hunger
@@ -30,7 +31,7 @@ val SavageHunger = card("Savage Hunger") {
         "Enchanted creature gets +1/+0 and has trample.\n" +
         "Cycling {2} ({2}, Discard this card: Draw a card.)"
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = ModifyStats(1, 0)

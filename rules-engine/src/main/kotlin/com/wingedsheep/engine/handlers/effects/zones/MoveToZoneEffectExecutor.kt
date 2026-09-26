@@ -30,6 +30,7 @@ import com.wingedsheep.sdk.scripting.effects.FaceDownMode
 import com.wingedsheep.sdk.scripting.effects.MoveToZoneEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import kotlin.reflect.KClass
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Executor for MoveToZoneEffect.
@@ -39,14 +40,15 @@ import kotlin.reflect.KClass
  * Delegates all zone movement to [ZoneTransitionService] for consistent cleanup.
  *
  * @param effectExecutor the registry's recursive executor, used to run an entering permanent's
- *   [com.wingedsheep.sdk.scripting.OnEnterRunEffect] replacement. Required rather than nullable:
+ *   [com.wingedsheep.sdk.scripting.OnEnterRun] replacement. Required rather than nullable:
  *   a caller that provably never reaches the battlefield passes a throwing stub (the
  *   bounce-to-hand reuse in `ReturnSpellOrPermanentToOwnersHandExecutor`), so if that destination
  *   ever changes it fails loudly instead of silently skipping a rules-required replacement.
  */
 class MoveToZoneEffectExecutor(
+    private val zones: ZoneTransitionService,
     private val cardRegistry: CardRegistry,
-    private val targetFinder: TargetFinder = TargetFinder(),
+    private val targetFinder: TargetFinder,
     private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult
 ) : EffectExecutor<MoveToZoneEffect> {
 
@@ -59,6 +61,7 @@ class MoveToZoneEffectExecutor(
     ): EffectResult {
         val targetId = context.resolveTarget(effect.target, state)
             ?: return if (effect.target == com.wingedsheep.sdk.scripting.targets.EffectTarget.Self ||
+                effect.target == com.wingedsheep.sdk.scripting.targets.EffectTarget.IterationEntity ||
                 effect.target == com.wingedsheep.sdk.scripting.targets.EffectTarget.TriggeringEntity ||
                 effect.target is com.wingedsheep.sdk.scripting.targets.EffectTarget.LibraryTop) {
                 EffectResult.success(state)
@@ -66,7 +69,7 @@ class MoveToZoneEffectExecutor(
 
         // byDestruction delegates to destroyPermanent (handles indestructible)
         if (effect.byDestruction) {
-            return destroyPermanent(state, targetId)
+            return destroyPermanent(zones, state, targetId)
         }
 
         val container = state.getEntity(targetId)
@@ -111,7 +114,7 @@ class MoveToZoneEffectExecutor(
         // *playing* a land is stopped earlier by PlayersCantPlayLands, and a land can't be cast.
         if (effect.destination == Zone.BATTLEFIELD &&
             cardComponent.typeLine.isLand &&
-            LandEntryLocks.landsCantEnter(state, cardRegistry)
+            LandEntryLocks.landsCantEnter(state, cardRegistry, predicateEvaluator = zones.predicateEvaluator)
         ) {
             return EffectResult.success(state)
         }
@@ -119,7 +122,7 @@ class MoveToZoneEffectExecutor(
         // Build ZoneEntryOptions based on placement and effect properties
         val entryOptions = buildEntryOptions(effect, cardComponent, controllerId, context.controllerId)
 
-        val transitionResult = ZoneTransitionService.moveToZone(
+        val transitionResult = zones.moveToZone(
             state, targetId, effect.destination, entryOptions, currentZone
         )
 
@@ -134,7 +137,8 @@ class MoveToZoneEffectExecutor(
         val actualDestZone = transitionResult.actualDestination
         if (actualDestZone == Zone.BATTLEFIELD && effect.faceDown == null) {
             val (counterState, counterEvents) = EntersWithReplacements.applyOnEntry(
-                resultState, targetId, controllerId, cardRegistry
+                resultState, targetId, controllerId, cardRegistry,
+                predicateEvaluator = zones.predicateEvaluator
             )
             resultState = counterState
             extraEvents.addAll(counterEvents)
@@ -180,7 +184,7 @@ class MoveToZoneEffectExecutor(
             )
         )
 
-        // "As this permanent enters, run [effect]" (OnEnterRunEffect) — the self-replacement
+        // "As this permanent enters, run [effect]" (OnEnterRun) — the self-replacement
         // PlayLandHandler runs inline for a played land, applied here for every *other* way a card
         // reaches the battlefield: reanimation, a blink or earthbend return from exile. Without it
         // a permanent whose entry choice lives in this replacement — Multiversal Passage's "as
@@ -207,23 +211,16 @@ class MoveToZoneEffectExecutor(
             if (onEnterResult != null) {
                 resultState = onEnterResult.state
                 extraEvents.addAll(onEnterResult.events)
-                // pendingDecision is null when the replacement finished without asking anything,
-                // so this one return covers both the paused and the completed case.
+                // One return covers both the paused and the completed case.
                 //
-                // triggersAlreadyProcessed must ride along: the replacement can nest a cast
-                // (CastFromCollectionWithoutPayingCost routes through CastSpellHandler, which
-                // stacks its own cast-triggers), and dropping the flag makes the resume path
-                // re-scan those events and fire the trigger twice.
-                //
-                // onEnterResult.error is deliberately NOT propagated. The permanent did enter —
+                // A rejection is deliberately NOT propagated. The permanent did enter —
                 // only the as-enters clause failed — and surfacing an error here would make the
                 // enclosing composite treat the whole move as the failed step (CR 609.3: an
                 // effect that attempts something impossible does only as much as possible).
                 return EffectResult(
                     state = resultState,
                     events = transitionResult.events + extraEvents,
-                    pendingDecision = onEnterResult.pendingDecision,
-                    triggersAlreadyProcessed = onEnterResult.triggersAlreadyProcessed,
+                    outcome = onEnterResult.outcome.takeIf { it is Outcome.Paused } ?: Outcome.Done,
                 )
             }
         }

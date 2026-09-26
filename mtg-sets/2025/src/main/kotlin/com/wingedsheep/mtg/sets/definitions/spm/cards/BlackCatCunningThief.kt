@@ -11,15 +11,8 @@ import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
 import com.wingedsheep.sdk.scripting.effects.FaceDownMode
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Black Cat, Cunning Thief
@@ -56,45 +49,38 @@ val BlackCatCunningThief = card("Black Cat, Cunning Thief") {
         "can be spent to cast spells this way."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target("target opponent", Targets.Opponent)
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(
-                    count = DynamicAmount.Fixed(9),
-                    player = Player.ContextPlayer(0),
-                ),
-                storeAs = "topNine",
-            ),
-            SelectFromCollectionEffect(
-                from = "topNine",
-                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(2)),
+        trigger = Triggers.self.enters()
+        val opponent = target(Targets.Opponent)
+        effect = Effects.Pipeline {
+            val topNine = gather(
+                CardSource.TopOfLibrary(
+                    count = 9,
+                    player = opponent.asPlayer,
+                )
+            )
+            val (exiled, rest) = chooseExactlySplit(
+                2,
+                from = topNine,
                 chooser = Chooser.Controller,
-                storeSelected = "exiled",
-                storeRemainder = "rest",
                 prompt = "Exile two of those cards face down.",
-                showAllCards = true,
-            ),
-            MoveCollectionEffect(
-                from = "exiled",
-                destination = CardDestination.ToZone(Zone.EXILE, Player.ContextPlayer(0)),
-                faceDown = FaceDownMode.HIDDEN,
-            ),
-            MoveCollectionEffect(
-                from = "rest",
-                destination = CardDestination.ToZone(
+                showAllCards = true
+            )
+            exile(exiled, opponent.asPlayer, faceDown = FaceDownMode.HIDDEN)
+            move(
+                rest,
+                CardDestination.ToZone(
                     Zone.LIBRARY,
-                    Player.ContextPlayer(0),
+                    opponent.asPlayer,
                     ZonePlacement.Bottom,
                 ),
-                order = CardOrder.Random,
-            ),
-            GrantMayPlayFromExileEffect(
-                from = "exiled",
+                order = CardOrder.Random
+            )
+            run(Effects.GrantMayPlayFromExile(
+                from = exiled,
                 expiry = MayPlayExpiry.Permanent,
                 withAnyManaType = true,
-            ),
-        )
+            ))
+        }
         description = "When Black Cat enters, look at the top nine cards of target opponent's " +
             "library, exile two of them face down, then put the rest on the bottom of their " +
             "library in a random order. You may play the exiled cards for as long as they remain " +

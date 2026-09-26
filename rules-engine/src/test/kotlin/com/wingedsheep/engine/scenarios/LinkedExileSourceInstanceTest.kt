@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
@@ -19,6 +18,7 @@ import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /** The linked-exile slice needed by champion, independently of its sacrifice and champion event. */
 class LinkedExileSourceInstanceTest : FunSpec({
@@ -28,7 +28,7 @@ class LinkedExileSourceInstanceTest : FunSpec({
         power = 3
         toughness = 3
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             effect = Effects.Pipeline {
                 val eligible = gather(CardSource.BattlefieldMatching(
                     GameObjectFilter.Creature.youControl().notSourceItself()
@@ -38,7 +38,7 @@ class LinkedExileSourceInstanceTest : FunSpec({
             }
         }
         triggeredAbility {
-            trigger = Triggers.LeavesBattlefield
+            trigger = Triggers.self.leaves()
             effect = Effects.ReturnLinkedExileUnderOwnersControl()
         }
     }
@@ -46,15 +46,15 @@ class LinkedExileSourceInstanceTest : FunSpec({
         manaCost = "{U}"
         typeLine = "Instant"
         spell {
-            val creature = target("creature", Targets.Creature)
-            effect = Effects.Exile(creature).then(Effects.PutOntoBattlefield(creature))
+            val creature = target(TargetFilter.Creature)
+            effect = Effects.Exile(creature) then Effects.PutOntoBattlefield(creature)
         }
     }
     val banish = card("Linked Exile Banish") {
         manaCost = "{U}"
         typeLine = "Instant"
         spell {
-            val creature = target("creature", Targets.Creature)
+            val creature = target(TargetFilter.Creature)
             effect = Effects.Exile(creature)
         }
     }
@@ -63,7 +63,7 @@ class LinkedExileSourceInstanceTest : FunSpec({
         manaCost = "{U}"
         typeLine = "Instant"
         spell {
-            val exiled = target("exiled", com.wingedsheep.sdk.scripting.targets.TargetObject(filter = Targets.Unified.inExile()))
+            val exiled = target(TargetFilter(GameObjectFilter.Any, zone = Zone.EXILE))
             effect = Effects.PutOntoBattlefield(exiled)
         }
     }

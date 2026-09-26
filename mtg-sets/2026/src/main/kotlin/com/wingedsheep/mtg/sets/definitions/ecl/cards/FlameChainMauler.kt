@@ -26,8 +26,8 @@ val FlameChainMauler = card("Flame-Chain Mauler") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{R}")
-        effect = Effects.ModifyStats(1, 0, EffectTarget.Self)
-            .then(Effects.GrantKeyword(Keyword.MENACE, EffectTarget.Self))
+        effect = Effects.ModifyStats(1, 0, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.MENACE, EffectTarget.Self)
     }
 
     metadata {

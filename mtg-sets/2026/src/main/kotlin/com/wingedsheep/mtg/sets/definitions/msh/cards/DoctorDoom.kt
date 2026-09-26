@@ -9,9 +9,9 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.effects.CreatePredefinedTokenEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Doctor Doom
@@ -48,8 +48,8 @@ val DoctorDoom = card("Doctor Doom") {
         "At the beginning of your end step, you draw a card and lose 1 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreatePredefinedTokenEffect("Doombot", count = 2)
+        trigger = Triggers.self.enters()
+        effect = Effects.CreatePredefinedToken("Doombot", 2)
         description = "When Doctor Doom enters, create two 3/3 colorless Robot Villain artifact " +
             "creature tokens named Doombot."
     }
@@ -64,7 +64,7 @@ val DoctorDoom = card("Doctor Doom") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         effect = Effects.DrawCards(1) then Effects.LoseLife(1, EffectTarget.Controller)
         description = "At the beginning of your end step, you draw a card and lose 1 life."
     }

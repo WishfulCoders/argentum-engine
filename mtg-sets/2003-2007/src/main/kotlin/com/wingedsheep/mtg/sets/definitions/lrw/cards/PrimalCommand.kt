@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Primal Command
@@ -42,18 +41,15 @@ val PrimalCommand = card("Primal Command") {
     spell {
         modal(chooseCount = 2) {
             mode("Target player gains 7 life") {
-                val player = target("player to gain life", Targets.Player)
+                val player = target(Targets.Player)
                 effect = Effects.GainLife(7, player)
             }
             mode("Put target noncreature permanent on top of its owner's library") {
-                val permanent = target(
-                    "noncreature permanent to tuck",
-                    TargetPermanent(filter = TargetFilter.NoncreaturePermanent)
-                )
+                val permanent = target(TargetFilter.NoncreaturePermanent)
                 effect = Effects.PutOnTopOfLibrary(permanent)
             }
             mode("Target player shuffles their graveyard into their library") {
-                val player = target("player to shuffle their graveyard", Targets.Player)
+                val player = target(Targets.Player)
                 effect = Patterns.Library.shuffleGraveyardIntoLibrary(player)
             }
             mode("Search your library for a creature card, reveal it, put it into your hand, then shuffle") {

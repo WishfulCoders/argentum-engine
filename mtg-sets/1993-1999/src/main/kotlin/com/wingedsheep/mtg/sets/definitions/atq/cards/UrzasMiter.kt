@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 
 /**
  * Urza's Miter
@@ -32,13 +31,8 @@ val UrzasMiter = card("Urza's Miter") {
         "if it wasn't sacrificed, you may pay {3}. If you do, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY,
-            excludeSacrifice = true,
-        )
-        effect = MayPayManaEffect(ManaCost.parse("{3}"), Effects.DrawCards(1))
+        trigger = Triggers.a(GameObjectFilter.Artifact.youControl()).leaves(to = Zone.GRAVEYARD, excludeSacrifice = true)
+        effect = Effects.MayPay(ManaCost.parse("{3}"), Effects.DrawCards(1))
     }
 
     metadata {

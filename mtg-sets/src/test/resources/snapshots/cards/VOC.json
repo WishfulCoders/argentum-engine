@@ -11,7 +11,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Crossway Troublemakers:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "creature Vampire ctrl:you",

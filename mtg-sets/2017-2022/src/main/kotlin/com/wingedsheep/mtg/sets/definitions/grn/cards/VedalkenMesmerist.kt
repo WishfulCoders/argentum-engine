@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.grn.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Vedalken Mesmerist
@@ -22,8 +22,8 @@ val VedalkenMesmerist = card("Vedalken Mesmerist") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val creature = target("target", Targets.CreatureOpponentControls)
+        trigger = Triggers.self.attacks()
+        val creature = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.ModifyStats(-2, 0, creature)
     }
 

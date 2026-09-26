@@ -28,7 +28,7 @@ val WaterspoutWarden = card("Waterspout Warden") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         interveningIf = Exists(
             player = Player.You,
             zone = Zone.BATTLEFIELD,

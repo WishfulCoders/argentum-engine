@@ -165,7 +165,7 @@ data class CardFragment(
      * "Exile a card from a graveyard." says nothing about linkage. "…if it shares a card type with
      * **the exiled card**", "…cards exiled **with this creature**" is what makes the pair linked
      * (CR 607.2), and the SDK carries the fact twice: on the read
-     * ([com.wingedsheep.sdk.scripting.values.EntityReference.LinkedExiledCard],
+     * ([com.wingedsheep.sdk.scripting.targets.EffectTarget.LinkedExiledCard],
      * [com.wingedsheep.sdk.scripting.CostReductionSource.SharedCardTypesWithLinkedExile]) and on
      * the move that fills the pile (`MoveCollectionEffect.linkToSource`). This module's rule for a
      * value the SDK carries twice is to **derive** it rather than spell it, and no single line can:

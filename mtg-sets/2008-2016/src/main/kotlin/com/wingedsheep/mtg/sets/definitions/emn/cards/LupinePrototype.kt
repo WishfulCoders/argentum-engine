@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.emn.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantAttackUnless
 import com.wingedsheep.sdk.scripting.CantBlockUnless
 import com.wingedsheep.sdk.dsl.Conditions
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Lupine Prototype
@@ -37,10 +36,10 @@ val LupinePrototype = card("Lupine Prototype") {
     power = 5
     toughness = 5
 
-    val aPlayerHasEmptyHand = Compare(
-        DynamicAmount.CountPlayersWith(Player.Each, Conditions.EmptyHand),
+    val aPlayerHasEmptyHand = Conditions.CompareAmounts(
+        DynamicAmounts.countPlayersWith(Player.Each, Conditions.EmptyHand),
         ComparisonOperator.GTE,
-        DynamicAmount.Fixed(1)
+        1
     )
 
     staticAbility {

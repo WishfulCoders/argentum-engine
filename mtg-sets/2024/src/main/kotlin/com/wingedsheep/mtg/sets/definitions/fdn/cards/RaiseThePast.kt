@@ -34,7 +34,6 @@ val RaiseThePast = card("Raise the Past") {
                     player = Player.You,
                     filter = GameObjectFilter.Creature.manaValueAtMost(2),
                 ),
-                name = "graveyardCreatures",
             )
             move(
                 creatures,

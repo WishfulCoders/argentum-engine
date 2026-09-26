@@ -4,14 +4,15 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Breeches, Eager Pillager
@@ -59,10 +60,7 @@ val BreechesEagerPillager = card("Breeches, Eager Pillager") {
     keywords(Keyword.FIRST_STRIKE)
 
     triggeredAbility {
-        trigger = Triggers.attacks(
-            filter = GameObjectFilter.Creature.withSubtype(Subtype.PIRATE).youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.withSubtype(Subtype.PIRATE).youControl()).attacks()
         effect = ModalEffect.chooseOneNotYetChosenThisTurn(
             // • Create a Treasure token.
             Mode.noTarget(
@@ -70,14 +68,13 @@ val BreechesEagerPillager = card("Breeches, Eager Pillager") {
                 "Create a Treasure token",
             ),
             // • Target creature can't block this turn.
-            Mode.withTarget(
-                Effects.CantBlock(),
-                Targets.Creature,
-                "Target creature can't block this turn",
-            ),
+            mode("Target creature can't block this turn") {
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.CantBlock(target = creature)
+            },
             // • Exile the top card of your library. You may play it this turn.
             Mode.noTarget(
-                Patterns.Exile.impulse(count = 1, storeAs = "breechesExiled"),
+                Patterns.Exile.impulse(count = 1),
                 "Exile the top card of your library. You may play it this turn",
             ),
         )

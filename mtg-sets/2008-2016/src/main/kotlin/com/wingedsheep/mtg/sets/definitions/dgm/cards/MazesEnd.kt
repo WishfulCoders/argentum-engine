@@ -12,10 +12,8 @@ import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 private val gate = GameObjectFilter.Land.withSubtype(Subtype.GATE.value)
 
@@ -34,7 +32,7 @@ private val gate = GameObjectFilter.Land.withSubtype(Subtype.GATE.value)
  *    and the ability resolves even though its source has left the battlefield.
  *  - The win check happens *as the ability resolves*, after the search, and happens even if no
  *    Gate was found (the search is "search for a Gate card", which may fail or be declined). It's
- *    modeled as a `ConditionalEffect` sequenced after the search rather than a separate trigger,
+ *    modeled as a `Effects.If` sequenced after the search rather than a separate trigger,
  *    so it is checked once, at resolution, and never at other times.
  *  - "ten or more Gates with different names" counts each name once, hence
  *    `distinctNames()` — controlling several Guildgates of the same name adds nothing.
@@ -58,22 +56,20 @@ val MazesEnd = card("Maze's End") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap, Costs.ReturnSelfToHand)
-        effect = Effects.Composite(
-            Patterns.Library.searchLibrary(
-                filter = gate,
-                count = 1,
-                destination = SearchDestination.BATTLEFIELD,
-                shuffleAfter = true
-            ),
-            ConditionalEffect(
+        effect = Patterns.Library.searchLibrary(
+            filter = gate,
+            count = 1,
+            destination = SearchDestination.BATTLEFIELD,
+            shuffleAfter = true
+        ) then
+            Effects.If(
                 condition = Conditions.CompareAmounts(
                     DynamicAmounts.battlefield(Player.You, gate).distinctNames(),
                     ComparisonOperator.GTE,
-                    DynamicAmount.Fixed(10)
+                    10
                 ),
-                effect = Effects.WinGame()
+                then = Effects.WinGame()
             )
-        )
     }
 
     metadata {

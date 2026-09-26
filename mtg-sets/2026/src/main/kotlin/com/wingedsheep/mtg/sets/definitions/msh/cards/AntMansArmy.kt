@@ -30,7 +30,7 @@ val AntMansArmy = card("Ant-Man's Army") {
         "color.\")"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseOne(
             Mode.noTarget(Effects.CreateFood(), "Create a Food token"),
             Mode.noTarget(Effects.CreateTreasure(), "Create a Treasure token"),

@@ -27,11 +27,9 @@ val DromarsAttendant = card("Dromar's Attendant") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeSelf)
-        effect = Effects.Composite(
-            Effects.AddMana(Color.WHITE),
-            Effects.AddMana(Color.BLUE),
+        effect = Effects.AddMana(Color.WHITE) then
+            Effects.AddMana(Color.BLUE) then
             Effects.AddMana(Color.BLACK)
-        )
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

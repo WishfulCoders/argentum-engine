@@ -6,7 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Meteorite
@@ -22,8 +22,8 @@ val Meteorite = card("Meteorite") {
     oracleText = "When this artifact enters, it deals 2 damage to any target.\n{T}: Add one mana of any color."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("any target", AnyTarget())
+        trigger = Triggers.self.enters()
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(2, t)
     }
 

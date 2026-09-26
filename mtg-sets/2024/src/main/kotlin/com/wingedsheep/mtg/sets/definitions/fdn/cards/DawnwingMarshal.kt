@@ -34,7 +34,7 @@ val DawnwingMarshal = card("Dawnwing Marshal") {
         cost = Costs.Mana("{4}{W}")
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(1, 1, EffectTarget.Self)
+            Effects.ModifyStats(1, 1, EffectTarget.IterationEntity)
         )
     }
     metadata {

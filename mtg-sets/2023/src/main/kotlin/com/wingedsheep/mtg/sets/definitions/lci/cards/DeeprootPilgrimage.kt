@@ -25,9 +25,7 @@ val DeeprootPilgrimage = card("Deeproot Pilgrimage") {
     triggeredAbility {
         // Batch trigger (CR 603.2c): tapping several Merfolk at once (attacking, convoke) makes one
         // token, not one per Merfolk.
-        trigger = Triggers.OneOrMoreBecomeTapped(
-            GameObjectFilter.Creature.withSubtype("Merfolk").youControl().nontoken()
-        )
+        trigger = Triggers.oneOrMore(GameObjectFilter.Creature.withSubtype("Merfolk").youControl().nontoken()).becomeTapped()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
  *
  * A [com.wingedsheep.sdk.scripting.EventPattern.BendPerformedEvent] carries which one a player just
  * performed, so a "Whenever you waterbend, earthbend, firebend, or airbend, …" trigger
- * ([com.wingedsheep.sdk.dsl.Triggers.YouBend]) fires uniformly off any of them, and the per-turn
+ * (`Triggers.you.bends(types)`) fires uniformly off any of them, and the per-turn
  * distinct-bend tracker ([com.wingedsheep.sdk.scripting.values.TurnTracker.DISTINCT_BENDS]) backs
  * "if you've done all four this turn" (Avatar Aang).
  */

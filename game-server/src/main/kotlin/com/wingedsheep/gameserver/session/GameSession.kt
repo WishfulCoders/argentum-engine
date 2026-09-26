@@ -1,5 +1,6 @@
 package com.wingedsheep.gameserver.session
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.view.ClientEvent
 import com.wingedsheep.engine.view.ClientEventTransformer
 import com.wingedsheep.engine.view.ClientGameState
@@ -13,6 +14,7 @@ import com.wingedsheep.engine.view.LegalActionInfo
 import com.wingedsheep.gameserver.protocol.ServerMessage
 import com.wingedsheep.gameserver.priority.AutoPassManager
 import com.wingedsheep.engine.core.*
+import com.wingedsheep.engine.mechanics.combat.CombatDeclarationControl
 import com.wingedsheep.engine.legalactions.LegalActionEnumerator
 import com.wingedsheep.engine.mechanics.mana.ManaPaymentWindow
 import com.wingedsheep.engine.registry.CardRegistry
@@ -47,7 +49,7 @@ private val logger = LoggerFactory.getLogger(GameSession::class.java)
 class GameSession(
     val sessionId: String = UUID.randomUUID().toString(),
     private val services: EngineServices,
-    private val stateTransformer: ClientStateTransformer = ClientStateTransformer(services.cardRegistry),
+    private val stateTransformer: ClientStateTransformer = ClientStateTransformer(services.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)),
     private val useHandSmoother: Boolean = false,
     /**
      * Number of seats this session fills before it is [isReady] to start. Defaults to 2 (the
@@ -60,13 +62,13 @@ class GameSession(
     constructor(
         sessionId: String = UUID.randomUUID().toString(),
         cardRegistry: CardRegistry,
-        stateTransformer: ClientStateTransformer = ClientStateTransformer(cardRegistry),
+        stateTransformer: ClientStateTransformer = ClientStateTransformer(cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)),
         useHandSmoother: Boolean = false,
         debugMode: Boolean = false,
         printingRegistry: com.wingedsheep.engine.registry.PrintingRegistry? = null,
         maxPlayers: Int = 2,
         tokenArtRegistry: com.wingedsheep.engine.registry.TokenArtRegistry? = null,
-    ) : this(sessionId, EngineServices(cardRegistry, printingRegistry, tokenArtRegistry), if (debugMode) ClientStateTransformer(cardRegistry, debugMode = true) else stateTransformer, useHandSmoother, maxPlayers)
+    ) : this(sessionId, EngineServices(cardRegistry, printingRegistry, tokenArtRegistry), if (debugMode) ClientStateTransformer(cardRegistry, debugMode = true, predicateEvaluator = PredicateEvaluator(cardRegistry = null)) else stateTransformer, useHandSmoother, maxPlayers)
 
     private val cardRegistry: CardRegistry get() = services.cardRegistry
     // Lock for synchronizing state modifications to prevent lost updates
@@ -892,7 +894,16 @@ class GameSession(
         // device. Concede is excluded — the affected player can always concede regardless
         // of who's controlling them.
         val actionPlayerId = action.playerId
-        if (action !is Concede && playerId != actionPlayerId && state.actorFor(actionPlayerId) != playerId) {
+        // Master Warcraft: while another player has taken over a combat declaration, only they may
+        // submit it — not even the seat that owes it.
+        val combatDeclarer = if (action is DeclareAttackers || action is DeclareBlockers) {
+            CombatDeclarationControl.declarerFor(state, actionPlayerId)
+        } else null
+        if (combatDeclarer != null) {
+            if (combatDeclarer != playerId) {
+                return ActionResult.Failure("Another player chooses this combat declaration")
+            }
+        } else if (action !is Concede && playerId != actionPlayerId && state.actorFor(actionPlayerId) != playerId) {
             return ActionResult.Failure("Not authorized to submit actions for player $actionPlayerId")
         }
 
@@ -919,22 +930,31 @@ class GameSession(
 
         val (result, undoPolicy) = actionProcessor.process(state, action)
 
-        val error = result.error
-        if (error != null) {
-            return ActionResult.Failure(error)
+        fun accept() {
+            applyUndoPolicy(undoPolicy, action, state, playerId)
+            gameState = result.state
+            recordAction(action)
+            if (messageId != null) lastProcessedMessageId[playerId] = messageId
         }
 
-        // Apply the engine's undo policy
-        applyUndoPolicy(undoPolicy, action, state, playerId)
-
-        gameState = result.state
-        recordAction(action)
-        if (messageId != null) lastProcessedMessageId[playerId] = messageId
-        val pendingDecision = result.pendingDecision
-        return if (pendingDecision != null) {
-            ActionResult.PausedForDecision(result.state, pendingDecision, result.events)
-        } else {
-            ActionResult.Success(result.state, result.events)
+        return when (val outcome = result.outcome) {
+            is Outcome.Rejected -> {
+                // An illegal action is routine (a stale or wrong client request). A failure during
+                // execution means validation let through something the engine could not carry
+                // out, which is worth a look.
+                if (outcome.reason is Rejection.ExecutionFailed) {
+                    logger.warn("Action ${action::class.simpleName} by $playerId failed during execution: ${outcome.reason.message}")
+                }
+                ActionResult.Failure(outcome.reason.message)
+            }
+            is Outcome.Paused -> {
+                accept()
+                ActionResult.PausedForDecision(result.state, outcome.decision, result.events)
+            }
+            Outcome.Done -> {
+                accept()
+                ActionResult.Success(result.state, result.events)
+            }
         }
     }
 
@@ -984,8 +1004,10 @@ class GameSession(
         // The baton holder is tried first so a hotseat client (the actor for every seat) keeps
         // driving exactly the seat the UI is focused on. Outside a shared-turns format
         // [GameState.priorityTeam] is the singleton baton holder and this is the old expression.
+        // A combat declaration taken over by Master Warcraft routes to its new declarer (and away
+        // from the seat's usual actor) — CombatDeclarationControl.inputActorFor.
         val actingSeat = (listOf(priorityPlayer) + state.priorityTeam.filter { it != priorityPlayer })
-            .firstOrNull { state.actorFor(it) == playerId }
+            .firstOrNull { CombatDeclarationControl.inputActorFor(state, it) == playerId }
             ?: return emptyList()
         if (state.pendingDecision != null) return emptyList()
         val engineActions = legalActionEnumerator.enumerate(state, actingSeat)
@@ -1031,7 +1053,7 @@ class GameSession(
         val playerMode = getPriorityMode(playerId)
         // "Can this connection act in the current priority window?" — the baton holder's seat, or
         // (CR 805.5) any seat on the baton holder's team under shared team turns.
-        val isActorForPriority = state.priorityTeam.any { state.actorFor(it) == playerId }
+        val isActorForPriority = state.priorityTeam.any { CombatDeclarationControl.inputActorFor(state, it) == playerId }
         val nextStopPoint = if (isActorForPriority && playerMode != PriorityMode.FULL_CONTROL) {
             // The same notion of "meaningful" the stop decision itself uses — otherwise the
             // button can promise a stop (say, at the opponent's end step for a spell we can't
@@ -1206,7 +1228,7 @@ class GameSession(
         // The actor is whoever is actually clicking — normally the priority player, or
         // the controller during a hijacked turn. Auto-pass settings track per-seat,
         // so consult the actor's preferences and the actor's legal-actions view.
-        val actorPlayer = state.actorFor(priorityPlayer)
+        val actorPlayer = CombatDeclarationControl.inputActorFor(state, priorityPlayer)
 
         // Check if player has full control enabled - never auto-pass
         val playerMode = getPriorityMode(actorPlayer)

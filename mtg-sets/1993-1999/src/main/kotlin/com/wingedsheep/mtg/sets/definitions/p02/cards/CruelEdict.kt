@@ -4,11 +4,11 @@
 
 package com.wingedsheep.mtg.sets.definitions.p02.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ForceSacrificeEffect
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -23,8 +23,8 @@ val CruelEdict = card("Cruel Edict") {
     typeLine = "Sorcery"
     oracleText = "Target opponent sacrifices a creature of their choice."
     spell {
-        val t = target("target", TargetOpponent())
-        effect = ForceSacrificeEffect(GameObjectFilter.Creature, 1, t)
+        val t = target(Targets.Opponent)
+        effect = Effects.Sacrifice(GameObjectFilter.Creature, 1, t)
     }
     metadata {
         rarity = Rarity.COMMON

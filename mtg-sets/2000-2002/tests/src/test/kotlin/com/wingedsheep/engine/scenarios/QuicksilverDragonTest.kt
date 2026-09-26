@@ -9,7 +9,6 @@ import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.*
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.model.CreatureStats
@@ -22,6 +21,9 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import java.util.UUID
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Subtype
 
 /**
  * Tests for Quicksilver Dragon (ONS)
@@ -50,7 +52,7 @@ class QuicksilverDragonTest : FunSpec({
                 id = abilityId,
                 cost = Costs.Mana(ManaCost.parse("{U}")),
                 effect = Effects.ChangeSpellTarget(targetMustBeSource = true),
-                targetRequirement = Targets.Spell
+                targetRequirement = TargetObject(filter = TargetFilter.SpellOnStack)
             )
         )
     )

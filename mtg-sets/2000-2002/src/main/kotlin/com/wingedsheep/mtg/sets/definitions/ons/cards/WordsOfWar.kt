@@ -20,7 +20,7 @@ val WordsOfWar = card("Words of War") {
 
     activatedAbility {
         cost = Costs.Mana("{1}")
-        val t = target("any target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.ReplaceNextDraw(Effects.DealDamage(2, t))
     }
 

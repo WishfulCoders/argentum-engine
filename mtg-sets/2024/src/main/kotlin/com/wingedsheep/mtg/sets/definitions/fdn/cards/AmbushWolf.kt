@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -31,8 +30,8 @@ val AmbushWolf = card("Ambush Wolf") {
     toughness = 2
     keywords(Keyword.FLASH)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetObject(optional = true, filter = TargetFilter.CardInGraveyard))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.CardInGraveyard, optional = true)
         effect = Effects.Move(t, Zone.EXILE)
     }
     metadata {

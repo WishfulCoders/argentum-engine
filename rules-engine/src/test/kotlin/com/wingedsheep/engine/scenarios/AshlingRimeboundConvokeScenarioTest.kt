@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.ChooseColorDecision
 import com.wingedsheep.engine.core.ColorChosenResponse
@@ -21,6 +22,7 @@ import com.wingedsheep.sdk.scripting.ConvokePayment
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Real-card version of [ConvokeWithConditionalManaTest]: Ashling, Rimebound's conditional mana
@@ -98,7 +100,7 @@ class AshlingRimeboundConvokeScenarioTest : FunSpec({
                 )
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         // Both restricted mana were spent; the Druid was tapped for the remainder.
         driver.state.getEntity(player)!!.get<ManaPoolComponent>()!!.restrictedMana.size shouldBe 0
@@ -141,7 +143,7 @@ private fun GameTestDriver.drainDecisionsChoosingRed(player: EntityId) {
 
 /** The client-facing legal-action payload for casting [cardId], or null when not offered. */
 private fun GameTestDriver.legalActionInfoFor(playerId: EntityId, cardId: EntityId) =
-    LegalActionEnricher(ManaSolver(cardRegistry), cardRegistry)
+    LegalActionEnricher(ManaSolver(cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)), cardRegistry)
         .enrich(
             LegalActionEnumerator.create(cardRegistry).enumerate(state, playerId, EnumerationMode.FULL),
             state,

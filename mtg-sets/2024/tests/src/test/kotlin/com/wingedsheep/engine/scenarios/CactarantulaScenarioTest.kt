@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.mana.CostCalculator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.support.GameTestDriver
@@ -34,7 +35,7 @@ class CactarantulaCostScenarioTest : FunSpec({
 
     test("no Desert - full {4}{G}{G} cost") {
         val (driver, registry) = createDriver()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, PredicateEvaluator(registry))
         driver.initMirrorMatch(deck = Deck.of("Forest" to 40), startingLife = 20)
         val active = driver.activePlayer!!
         driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
@@ -45,7 +46,7 @@ class CactarantulaCostScenarioTest : FunSpec({
 
     test("control a Desert - costs {1} less") {
         val (driver, registry) = createDriver()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, PredicateEvaluator(registry))
         driver.initMirrorMatch(deck = Deck.of("Forest" to 40), startingLife = 20)
         val active = driver.activePlayer!!
         driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
@@ -61,7 +62,7 @@ class CactarantulaCostScenarioTest : FunSpec({
  * "Whenever this creature becomes the target of a spell or ability an opponent controls,
  *  you may draw a card."
  *
- * Exercises the new self-bound [com.wingedsheep.sdk.dsl.Triggers.BecomesTargetByOpponent] facade.
+ * Exercises the new self-bound `Triggers.self.becomesTarget(byOpponent = true)` facade.
  */
 class CactarantulaTriggerScenarioTest : ScenarioTestBase() {
 

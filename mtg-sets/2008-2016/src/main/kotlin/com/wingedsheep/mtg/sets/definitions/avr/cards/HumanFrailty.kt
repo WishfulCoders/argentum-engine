@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Human Frailty
@@ -21,10 +20,7 @@ val HumanFrailty = card("Human Frailty") {
     oracleText = "Destroy target Human creature."
 
     spell {
-        val t = target(
-            "Human creature",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.withSubtype(Subtype.HUMAN))),
-        )
+        val t = target(TargetFilter(GameObjectFilter.Creature.withSubtype(Subtype.HUMAN)))
         effect = Effects.Destroy(t)
     }
 

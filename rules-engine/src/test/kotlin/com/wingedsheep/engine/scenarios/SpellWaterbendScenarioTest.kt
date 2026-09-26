@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.engine.view.LegalActionInfo
 import com.wingedsheep.sdk.scripting.AlternativePaymentChoice
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
@@ -60,10 +59,10 @@ class SpellWaterbendScenarioTest : ScenarioTestBase() {
                 "You gain 3 life. If this spell's additional cost was paid, you gain 10 life instead."
             waterbendCost(amount = 4, optional = true)
             spell {
-                effect = ConditionalEffect(
+                effect = Effects.If(
                     condition = Conditions.WaterbendWasPaid,
-                    effect = Effects.GainLife(10),
-                    elseEffect = Effects.GainLife(3)
+                    then = Effects.GainLife(10),
+                    otherwise = Effects.GainLife(3)
                 )
             }
         }

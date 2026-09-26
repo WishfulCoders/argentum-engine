@@ -1,9 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -11,7 +12,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Jadzi, Steward of Fate // Oracle's Gift — Secrets of Strixhaven #55
@@ -34,7 +34,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *    prepare spell — evaluated once at resolution, CR 613.4c) for the 0/0 green/blue Fractals.
  *  - [Effects.ForEachInGroup] over every Fractal you control (the just-made tokens *and* any
  *    pre-existing Fractals), each iteration adding X +1/+1 counters to the iterated permanent
- *    (`EffectTarget.Self` inside a ForEach body, per the linter's iteration-space rule).
+ *    (`EffectTarget.IterationEntity` inside a ForEach body, per the linter's iteration-space rule).
  */
 val JadziStewardOfFate = card("Jadzi, Steward of Fate") {
     manaCost = "{2}{U}"
@@ -50,8 +50,8 @@ val JadziStewardOfFate = card("Jadzi, Steward of Fate") {
 
     // When Jadzi enters, draw two cards, then discard two cards.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.DrawCards(2).then(Effects.Discard(2))
+        trigger = Triggers.self.enters()
+        effect = Effects.DrawCards(2) then Effects.Discard(2)
     }
 
     // Oracle's Gift — the prepare spell.
@@ -62,20 +62,18 @@ val JadziStewardOfFate = card("Jadzi, Steward of Fate") {
             "counters on each Fractal you control."
         spell {
             effect = Effects.CreateToken(
-                count = DynamicAmount.XValue,
+                count = DynamicAmounts.xValue(),
                 power = 0,
                 toughness = 0,
                 colors = setOf(Color.GREEN, Color.BLUE),
                 creatureTypes = setOf(Subtype.FRACTAL.value),
                 imageUri = "https://cards.scryfall.io/normal/front/d/e/de564776-9d88-4533-8717-842eecdd0594.jpg?1775828279"
-            ).then(
-                Effects.ForEachInGroup(
-                    GroupFilter(GameObjectFilter.Creature.withSubtype(Subtype.FRACTAL)).youControl(),
-                    Effects.AddDynamicCounters(
-                        counterType = Counters.PLUS_ONE_PLUS_ONE,
-                        amount = DynamicAmount.XValue,
-                        target = EffectTarget.Self,
-                    ),
+            ) then Effects.ForEachInGroup(
+                GroupFilter(GameObjectFilter.Creature.withSubtype(Subtype.FRACTAL)).youControl(),
+                Effects.AddDynamicCounters(
+                    counterType = CounterType.PLUS_ONE_PLUS_ONE,
+                    amount = DynamicAmounts.xValue(),
+                    target = EffectTarget.IterationEntity,
                 ),
             )
         }

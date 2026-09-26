@@ -1,15 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Fatal Fissure
@@ -22,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  * battlefield tapped.)
  *
  * The spell only chooses the watched creature and installs a death-watch delayed
- * trigger (`Triggers.Dies` scoped to that creature via `watchedTarget`, expiring at
+ * trigger (`Triggers.self.dies()` scoped to that creature via `watchedTarget`, expiring at
  * end of turn). The earthbend payoff lands on a land *you* control chosen when the
  * delayed trigger fires — modeled with `targetRequirement` (exposed to the effect as
  * `ContextTarget(0)`) feeding `Effects.Earthbend`. Earthbend is a keyword action
@@ -38,14 +34,14 @@ val FatalFissure = card("Fatal Fissure") {
         "Put four +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped.)"
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = CreateDelayedTriggerEffect(
-            trigger = Triggers.Dies,
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.CreateDelayedTrigger(
+            trigger = Triggers.self.dies(),
             watchedTarget = creature,
-            expiry = DelayedTriggerExpiry.EndOfTurn,
-            targetRequirement = TargetObject(filter = TargetFilter.Land.youControl()),
-            effect = Effects.Earthbend(4, EffectTarget.ContextTarget(0))
-        )
+            expiry = DelayedTriggerExpiry.EndOfTurn) {
+            val land = target(TargetFilter.Land.youControl())
+            effect = Effects.Earthbend(4, land)
+        }
     }
 
     metadata {

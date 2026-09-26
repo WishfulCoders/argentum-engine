@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 
 /**
  * Channeled Dragonfire — Tarkir: Dragonstorm #102
@@ -24,8 +24,8 @@ val ChanneledDragonfire = card("Channeled Dragonfire") {
         "You may tap a creature you control to reduce that cost by {X}, where X is its power. Then exile this spell.)"
 
     spell {
-        val t = target("target", Targets.Any)
-        effect = DealDamageEffect(2, t)
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(2, t)
     }
 
     keywordAbility(KeywordAbility.harmonize("{5}{R}{R}"))

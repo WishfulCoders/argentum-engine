@@ -6,9 +6,9 @@ package com.wingedsheep.mtg.sets.definitions.avr.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -29,7 +29,7 @@ val Griselbrand = card("Griselbrand") {
     keywords(Keyword.FLYING, Keyword.LIFELINK)
     activatedAbility {
         cost = Costs.PayLife(7)
-        effect = DrawCardsEffect(7)
+        effect = Effects.DrawCards(7)
     }
     metadata {
         rarity = Rarity.MYTHIC

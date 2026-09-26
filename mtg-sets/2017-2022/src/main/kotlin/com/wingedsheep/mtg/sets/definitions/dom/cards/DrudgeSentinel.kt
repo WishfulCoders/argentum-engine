@@ -24,10 +24,8 @@ val DrudgeSentinel = card("Drudge Sentinel") {
 
     activatedAbility {
         cost = Costs.Mana("{3}")
-        effect = Effects.Composite(
-            Effects.Tap(EffectTarget.Self),
+        effect = Effects.Tap(EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self)
-        )
     }
 
     metadata {

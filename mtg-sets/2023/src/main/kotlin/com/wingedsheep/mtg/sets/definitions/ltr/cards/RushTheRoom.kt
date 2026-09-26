@@ -3,11 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.ltr.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Rush the Room
@@ -25,14 +24,12 @@ val RushTheRoom = card("Rush the Room") {
         "or Orc, it also gains haste until end of turn."
 
     spell {
-        val creature = target("creature", Targets.Creature)
-        effect = Effects.ModifyStats(1, 0, creature)
-            .then(Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature))
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.withAnySubtype("Goblin", "Orc")),
-                    effect = Effects.GrantKeyword(Keyword.HASTE, creature)
-                )
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(1, 0, creature) then
+            Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature) then
+            Effects.If(
+                condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.withAnySubtype("Goblin", "Orc"), creature),
+                then = Effects.GrantKeyword(Keyword.HASTE, creature)
             )
     }
 

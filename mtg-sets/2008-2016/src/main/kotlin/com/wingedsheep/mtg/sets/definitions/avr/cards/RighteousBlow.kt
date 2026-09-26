@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Righteous Blow
@@ -20,10 +19,7 @@ val RighteousBlow = card("Righteous Blow") {
     oracleText = "Righteous Blow deals 2 damage to target attacking or blocking creature."
 
     spell {
-        val creature = target(
-            "target",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Creature.attackingOrBlocking()))
-        )
+        val creature = target(TargetFilter(GameObjectFilter.Creature.attackingOrBlocking()))
         effect = Effects.DealDamage(2, creature)
     }
 

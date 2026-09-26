@@ -1,20 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBlock
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 
 /**
  * Norin, Swift Survivalist
@@ -46,22 +39,13 @@ val NorinSwiftSurvivalist = card("Norin, Swift Survivalist") {
     }
 
     triggeredAbility {
-        trigger = Triggers.becomesBlocked(
-            filter = GameObjectFilter.Creature.youControl(),
-            binding = TriggerBinding.ANY,
-        )
-        effect = MayEffect(
-            Effects.Composite(listOf(
-                GatherCardsEffect(
-                    source = CardSource.TriggeringEntity,
-                    storeAs = "exiledBlockedCreature",
-                ),
-                MoveCollectionEffect(
-                    from = "exiledBlockedCreature",
-                    destination = CardDestination.ToZone(Zone.EXILE),
-                ),
-                GrantMayPlayFromExileEffect("exiledBlockedCreature", MayPlayExpiry.EndOfTurn),
-            ))
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).becomesBlocked()
+        effect = Effects.May(
+            Effects.Pipeline {
+                val exiledBlockedCreature = gather(CardSource.TriggeringEntity)
+                exile(exiledBlockedCreature)
+                run(Effects.GrantMayPlayFromExile(exiledBlockedCreature, MayPlayExpiry.EndOfTurn))
+            }
         )
     }
 

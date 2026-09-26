@@ -6,8 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Songcrafter Mage
@@ -41,11 +39,9 @@ val SongcrafterMage = card("Songcrafter Mage") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = TargetObject(
-            filter = TargetFilter.InstantOrSorceryInGraveyard.ownedByYou()
-        )
-        effect = Effects.GrantHarmonize(EffectTarget.ContextTarget(0))
+        val target = target(TargetFilter.InstantOrSorceryInGraveyard.ownedByYou())
+        trigger = Triggers.self.enters()
+        effect = Effects.GrantHarmonize(target)
         description = "When this creature enters, target instant or sorcery card in your " +
             "graveyard gains harmonize until end of turn. Its harmonize cost is equal to its mana cost."
     }

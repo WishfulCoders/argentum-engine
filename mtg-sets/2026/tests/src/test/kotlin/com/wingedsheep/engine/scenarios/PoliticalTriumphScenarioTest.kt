@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.view.ClientStateTransformer
 import com.wingedsheep.engine.support.GameTestDriver
@@ -12,6 +13,7 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Political Triumph (MSH) — "Whenever a creature you control enters, scry 1 and put a plan counter
@@ -56,7 +58,7 @@ class PoliticalTriumphScenarioTest : FunSpec({
 
         val creature = d.putCardInHand(d.player1, "Centaur Courser")
         d.giveMana(d.player1, Color.GREEN, 3)
-        d.castSpell(d.player1, creature).isSuccess shouldBe true
+        d.castSpell(d.player1, creature).outcome shouldBe Outcome.Done
         d.settle()
 
         d.planCounters(triumph) shouldBe 1
@@ -68,19 +70,19 @@ class PoliticalTriumphScenarioTest : FunSpec({
         val d = driver()
         val triumphCard = d.putCardInHand(d.player1, "Political Triumph")
         d.giveMana(d.player1, Color.WHITE, 1)
-        d.castSpell(d.player1, triumphCard).isSuccess shouldBe true
+        d.castSpell(d.player1, triumphCard).outcome shouldBe Outcome.Done
         d.settle()
 
         val creature = d.putCardInHand(d.player1, "Centaur Courser")
         d.giveMana(d.player1, Color.GREEN, 3)
-        d.castSpell(d.player1, creature).isSuccess shouldBe true
+        d.castSpell(d.player1, creature).outcome shouldBe Outcome.Done
         d.settle()
 
         d.planCounters(triumphCard) shouldBe 1
     }
 
     // The client renders an intervening-if condition as a "current/required" badge. It used to be
-    // evaluated with sourceId = null, so any condition reading EntityReference.Source — counters on
+    // evaluated with sourceId = null, so any condition reading EffectTarget.Self — counters on
     // this permanent, its power, whether it's attacking — resolved to 0 and the badge sat at "0/4"
     // forever while the ability itself worked. Pin the badge against the real counter count.
     test("the trigger-condition badge tracks the real plan-counter count") {
@@ -89,11 +91,11 @@ class PoliticalTriumphScenarioTest : FunSpec({
 
         val creature = d.putCardInHand(d.player1, "Centaur Courser")
         d.giveMana(d.player1, Color.GREEN, 3)
-        d.castSpell(d.player1, creature).isSuccess shouldBe true
+        d.castSpell(d.player1, creature).outcome shouldBe Outcome.Done
         d.settle()
         d.planCounters(triumph) shouldBe 1
 
-        val view = ClientStateTransformer(d.cardRegistry).transform(d.state, d.player1)
+        val view = ClientStateTransformer(d.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)).transform(d.state, d.player1)
         val badge = view.cards.getValue(triumph)
             .activeEffects.first { effect -> effect.effectId == "condition_compare" }
         badge.name shouldBe "1/4"
@@ -106,7 +108,7 @@ class PoliticalTriumphScenarioTest : FunSpec({
         repeat(2) {
             val creature = d.putCardInHand(d.player1, "Centaur Courser")
             d.giveMana(d.player1, Color.GREEN, 3)
-            d.castSpell(d.player1, creature).isSuccess shouldBe true
+            d.castSpell(d.player1, creature).outcome shouldBe Outcome.Done
             d.settle()
         }
 

@@ -5,9 +5,9 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Mindstorm Crown — Mirrodin #207 (canonical printing)
@@ -25,7 +25,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * something touched your hand before the upkeep.
  *
  * The two branches are exhaustive on the card's own terms ("no cards" versus "a card"), so one
- * [ConditionalEffect] covers both halves; the damage is dealt by the artifact to its own
+ * [Effects.If] covers both halves; the damage is dealt by the artifact to its own
  * controller, which is the default source, so no `damageSource` override is needed.
  */
 val MindstormCrown = card("Mindstorm Crown") {
@@ -36,11 +36,11 @@ val MindstormCrown = card("Mindstorm Crown") {
         "the beginning of this turn. If you had a card in hand, this artifact deals 1 damage to you."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = ConditionalEffect(
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.If(
             condition = Conditions.YouHadNoCardsInHandAtTurnStart,
-            effect = Effects.DrawCards(1),
-            elseEffect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You))
+            then = Effects.DrawCards(1),
+            otherwise = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You))
         )
         description = "At the beginning of your upkeep, draw a card if you had no cards in hand " +
             "at the beginning of this turn. If you had a card in hand, this artifact deals 1 " +

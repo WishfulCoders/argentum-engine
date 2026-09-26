@@ -2,13 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantMayCastFromLinkedExile
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Dawnhand Dissident
@@ -43,7 +43,7 @@ val DawnhandDissident = card("Dawnhand Dissident") {
     // {T}, Blight 2: Exile target card from a graveyard, linked to this creature.
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.Blight(2))
-        val graveyardTarget = target("target card in a graveyard", Targets.CardInGraveyard)
+        val graveyardTarget = target(TargetFilter.CardInGraveyard)
         effect = Effects.Move(
             target = graveyardTarget,
             destination = Zone.EXILE,

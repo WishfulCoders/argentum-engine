@@ -69,11 +69,9 @@ val RestlessFortress = card("Restless Fortress") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(
-            Effects.LoseLife(2, EffectTarget.PlayerRef(Player.DefendingPlayer)),
-            Effects.GainLife(2, EffectTarget.Controller),
-        )
+        trigger = Triggers.self.attacks()
+        effect = Effects.LoseLife(2, EffectTarget.PlayerRef(Player.DefendingPlayer)) then
+            Effects.GainLife(2, EffectTarget.Controller)
         description = "Whenever this land attacks, defending player loses 2 life and you gain 2 life."
     }
 

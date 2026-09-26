@@ -41,7 +41,7 @@ val GalazethPrismari = card("Galazeth Prismari") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateTreasure(1)
     }
 

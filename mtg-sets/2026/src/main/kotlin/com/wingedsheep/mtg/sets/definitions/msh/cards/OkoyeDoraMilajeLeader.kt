@@ -32,7 +32,7 @@ val OkoyeDoraMilajeLeader = card("Okoye, Dora Milaje Leader") {
         "Attacking creature tokens you control have first strike."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

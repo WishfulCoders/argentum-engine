@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Prey's Vengeance
@@ -35,7 +34,7 @@ val PreysVengeance = card("Prey's Vengeance") {
     keywords(Keyword.REBOUND)
 
     spell {
-        val t = target("target", TargetObject(filter = TargetFilter.Creature))
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(2, 2, t)
     }
 

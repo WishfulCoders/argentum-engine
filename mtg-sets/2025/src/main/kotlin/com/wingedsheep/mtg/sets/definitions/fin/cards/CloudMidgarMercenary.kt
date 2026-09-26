@@ -40,7 +40,7 @@ val CloudMidgarMercenary = card("Cloud, Midgar Mercenary") {
         "to it triggers, that ability triggers an additional time."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Artifact.withSubtype("Equipment"),
             destination = SearchDestination.HAND,

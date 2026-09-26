@@ -5,10 +5,10 @@
 package com.wingedsheep.mtg.sets.definitions.usg.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -24,7 +24,7 @@ val ClawsOfGix = card("Claws of Gix") {
     oracleText = "{1}, Sacrifice a permanent: You gain 1 life."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Sacrifice(GameObjectFilter.Permanent))
-        effect = GainLifeEffect(1)
+        effect = Effects.GainLife(1)
     }
     metadata {
         rarity = Rarity.UNCOMMON

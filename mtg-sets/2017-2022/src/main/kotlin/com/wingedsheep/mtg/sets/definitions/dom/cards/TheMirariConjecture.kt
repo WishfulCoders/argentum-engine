@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * The Mirari Conjecture
@@ -29,18 +28,12 @@ val TheMirariConjecture = card("The Mirari Conjecture") {
         "III — Until end of turn, whenever you cast an instant or sorcery spell, copy it. You may choose new targets for the copy."
 
     sagaChapter(1) {
-        val instant = target(
-            "instant card in your graveyard",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Instant.ownedByYou(), zone = Zone.GRAVEYARD))
-        )
+        val instant = target(TargetFilter(GameObjectFilter.Instant.ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.ReturnToHand(instant)
     }
 
     sagaChapter(2) {
-        val sorcery = target(
-            "sorcery card in your graveyard",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Sorcery.ownedByYou(), zone = Zone.GRAVEYARD))
-        )
+        val sorcery = target(TargetFilter(GameObjectFilter.Sorcery.ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.ReturnToHand(sorcery)
     }
 

@@ -23,7 +23,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * - The untap restriction is the narrow [AbilityFlag.DOESNT_UNTAP] ("doesn't untap during your
  *   untap step"), *not* [AbilityFlag.CANT_BECOME_UNTAPPED]: an untap *effect* — including the
  *   Titan's own damage trigger below — still works.
- * - [Triggers.TakesDamage] is the SELF-bound incoming-damage event. It fires on damage from any
+ * - `Triggers.self.isDealtDamage()` is the SELF-bound incoming-damage event. It fires on damage from any
  *   source, combat or otherwise, and on any amount; the Titan surviving is not a condition, so a
  *   lethal hit still queues the (now pointless) untap.
  */
@@ -44,7 +44,7 @@ val DeepSlumberTitan = card("Deep-Slumber Titan") {
 
     // "Whenever this creature is dealt damage, untap it."
     triggeredAbility {
-        trigger = Triggers.TakesDamage
+        trigger = Triggers.self.isDealtDamage()
         effect = Effects.Untap(EffectTarget.Self)
         description = "Whenever this creature is dealt damage, untap it."
     }

@@ -1,14 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.avr.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Blood Artist
@@ -26,21 +23,9 @@ val BloodArtist = card("Blood Artist") {
     oracleText = "Whenever this creature or another creature dies, target player loses 1 life and you gain 1 life."
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Creature,
-                from = Zone.BATTLEFIELD,
-                to = Zone.GRAVEYARD
-            ),
-            binding = TriggerBinding.ANY
-        )
-        val player = target("player", Targets.Player)
-        effect = Effects.Composite(
-            listOf(
-                Effects.LoseLife(1, player),
-                Effects.GainLife(1)
-            )
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature).dies()
+        val player = target(Targets.Player)
+        effect = Effects.LoseLife(1, player) then Effects.GainLife(1)
     }
 
     metadata {

@@ -40,7 +40,7 @@ class PayOrSufferManaWindowTest : FunSpec({
         power = 2
         toughness = 2
         triggeredAbility {
-            trigger = Triggers.YourUpkeep
+            trigger = Triggers.you.beginningOf(Step.UPKEEP)
             effect = PayOrSufferEffect(
                 cost = Costs.pay.Mana("{2}"),
                 suffer = SacrificeSelfEffect

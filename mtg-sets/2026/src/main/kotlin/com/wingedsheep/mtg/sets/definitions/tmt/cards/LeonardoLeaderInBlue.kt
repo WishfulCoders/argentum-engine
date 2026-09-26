@@ -37,7 +37,7 @@ val LeonardoLeaderInBlue = card("Leonardo, Leader in Blue") {
     sneak("{3}{W}{W}")
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.SneakCostWasPaid
         effect = Patterns.Group.modifyStatsForAll(2, 0, Filters.Group.creaturesYouControl)
     }

@@ -26,11 +26,11 @@ val GoblinEliteInfantry = card("Goblin Elite Infantry") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         effect = Effects.ModifyStats(-1, -1, EffectTarget.Self)
     }
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
+        trigger = Triggers.self.becomesBlocked()
         effect = Effects.ModifyStats(-1, -1, EffectTarget.Self)
     }
     metadata {

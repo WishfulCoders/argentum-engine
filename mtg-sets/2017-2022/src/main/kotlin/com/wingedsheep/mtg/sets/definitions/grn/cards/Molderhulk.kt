@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Molderhulk
@@ -39,13 +38,8 @@ val Molderhulk = card("Molderhulk") {
         )
     }
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val land = target(
-            "target",
-            TargetObject(
-                filter = TargetFilter(GameObjectFilter.Land.ownedByYou(), zone = Zone.GRAVEYARD)
-            )
-        )
+        trigger = Triggers.self.enters()
+        val land = target(TargetFilter(GameObjectFilter.Land.ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.PutOntoBattlefieldFromGraveyard(land)
     }
 

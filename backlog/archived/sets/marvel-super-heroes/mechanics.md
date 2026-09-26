@@ -196,7 +196,7 @@ tapped, not on the spell that was cast, which is why `Conditions.TeamworkWasPaid
 > remove a shield counter from him instead.)*
 
 Not implemented at all. `docs/card-sdk-language-reference.md` §16 lists `shield` among printed
-counter kinds, but there is no `CounterType.SHIELD`, no `Counters.SHIELD`, and no engine handling
+counter kinds, but there is no `CounterType.SHIELD`, no `CounterType.SHIELD`, and no engine handling
 anywhere. Needed: the enum constant + string constant in `mtg-sdk/.../core/CounterType.kt`, plus the
 built-in replacement per CR 122.1e.
 
@@ -368,7 +368,7 @@ when the action was submitted. Both readers now go through the single
 `KeywordStaticAbilities.kt` / `StackEffects.kt`:
 
 - **`WardCost.PlayerCounters(counterType, amount)`** — "Ward—Get five poison counters"
-  (`KeywordAbility.wardPlayerCounters(Counters.POISON, 5)`). Counters placed on the *paying* player
+  (`KeywordAbility.wardPlayerCounters(CounterType.POISON, 5)`). Counters placed on the *paying* player
   (CR 122.1), through the ordinary `AddCountersEffect` executor so replacement effects, the
   `CountersAddedEvent` and the ten-poison state-based action (CR 122.1f) all follow for free. It is
   the one ward cost with no affordability gate — a player can always get counters, so it always

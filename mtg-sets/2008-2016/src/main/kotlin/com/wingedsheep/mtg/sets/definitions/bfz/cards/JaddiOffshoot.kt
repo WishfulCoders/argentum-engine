@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Jaddi Offshoot
@@ -14,7 +15,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Defender
  * Landfall — Whenever a land you control enters, you gain 1 life.
  *
- * Landfall is a plain [Triggers.LandYouControlEnters] — ANY binding, because the printed line never says "another".
+ * Landfall is a plain `Triggers.a(GameObjectFilter.Land.youControl()).enters()` — ANY binding, because the printed line never says "another".
  */
 val JaddiOffshoot = card("Jaddi Offshoot") {
     manaCost = "{G}"
@@ -28,7 +29,7 @@ val JaddiOffshoot = card("Jaddi Offshoot") {
     keywords(Keyword.DEFENDER)
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.GainLife(1)
     }
 

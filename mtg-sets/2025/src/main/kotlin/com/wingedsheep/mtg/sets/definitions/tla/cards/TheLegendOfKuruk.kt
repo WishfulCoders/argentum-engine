@@ -9,8 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CanOnlyBlockCreaturesWith
 import com.wingedsheep.sdk.scripting.CantBeBlockedExceptBy
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * The Legend of Kuruk // Avatar Kuruk
@@ -45,9 +43,9 @@ private val AvatarKuruk = card("Avatar Kuruk") {
         "ability only once.)"
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell()
-        effect = CreateTokenEffect(
-            count = DynamicAmount.Fixed(1),
+        trigger = Triggers.you.casts()
+        effect = Effects.CreateToken(
+            count = 1,
             power = 1,
             toughness = 1,
             colors = emptySet(),
@@ -88,18 +86,12 @@ private val TheLegendOfKurukFront = card("The Legend of Kuruk") {
 
     // I — Scry 2, then draw a card.
     sagaChapter(1) {
-        effect = Effects.Composite(
-            Effects.Scry(2),
-            Effects.DrawCards(1),
-        )
+        effect = Effects.Scry(2) then Effects.DrawCards(1)
     }
 
     // II — Scry 2, then draw a card.
     sagaChapter(2) {
-        effect = Effects.Composite(
-            Effects.Scry(2),
-            Effects.DrawCards(1),
-        )
+        effect = Effects.Scry(2) then Effects.DrawCards(1)
     }
 
     // III — Exile this Saga, then return it to the battlefield transformed under your control.

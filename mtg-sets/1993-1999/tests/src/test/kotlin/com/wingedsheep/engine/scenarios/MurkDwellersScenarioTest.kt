@@ -12,7 +12,7 @@ import io.kotest.matchers.shouldBe
  * Oracle: "Whenever this creature attacks and isn't blocked, it gets +2/+0 until end of combat."
  *
  * The card composes two existing primitives, but their *combination* is what these cover: the
- * [com.wingedsheep.sdk.dsl.Triggers.AttacksAndIsntBlocked] trigger resolving a self-targeted pump
+ * `Triggers.self.attacksAndIsntBlocked()` trigger resolving a self-targeted pump
  * (rather than Merchant Ship's player-targeted life gain), and that pump expiring on
  * [com.wingedsheep.sdk.scripting.Duration.EndOfCombat] rather than at end of turn.
  */

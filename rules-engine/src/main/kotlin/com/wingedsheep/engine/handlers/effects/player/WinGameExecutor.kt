@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.player
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.core.GameEndReason
 import com.wingedsheep.engine.core.PlayerLostEvent
@@ -19,7 +20,9 @@ import kotlin.reflect.KClass
  * Skips opponents who already lost or who control a permanent that grants
  * "can't lose the game".
  */
-class WinGameExecutor : EffectExecutor<WinGameEffect> {
+class WinGameExecutor(
+    private val predicateEvaluator: PredicateEvaluator
+) : EffectExecutor<WinGameEffect> {
 
     override val effectType: KClass<WinGameEffect> = WinGameEffect::class
 
@@ -34,7 +37,7 @@ class WinGameExecutor : EffectExecutor<WinGameEffect> {
         // "Your opponents can't win the game" (Herald of Eternal Dawn): if an opponent of the
         // prospective winner controls such a grant, the win effect does nothing at all — so it also
         // doesn't collaterally eliminate the winner's other opponents.
-        if (com.wingedsheep.engine.mechanics.sba.player.playerCantWinGame(state, winnerId)) {
+        if (com.wingedsheep.engine.mechanics.sba.player.playerCantWinGame(state, winnerId, predicateEvaluator = predicateEvaluator)) {
             return EffectResult.success(state)
         }
 
@@ -52,7 +55,7 @@ class WinGameExecutor : EffectExecutor<WinGameEffect> {
             val container = newState.getEntity(opponentId) ?: continue
             if (container.has<PlayerLostComponent>()) continue
             // CR 810.8a — a can't-lose grant controlled by any teammate protects the whole team.
-            if (com.wingedsheep.engine.mechanics.sba.player.playerCantLoseGame(newState, opponentId)) continue
+            if (com.wingedsheep.engine.mechanics.sba.player.playerCantLoseGame(newState, opponentId, predicateEvaluator = predicateEvaluator)) continue
 
             newState = newState.updateEntity(opponentId) { c ->
                 c.with(PlayerLostComponent(LossReason.CARD_EFFECT))

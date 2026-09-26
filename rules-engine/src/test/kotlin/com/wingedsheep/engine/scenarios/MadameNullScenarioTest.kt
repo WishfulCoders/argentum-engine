@@ -17,7 +17,7 @@ import io.kotest.matchers.shouldBe
  * "Whenever another creature you control enters, you may pay life equal to its power. If you
  *  do, put that many +1/+1 counters on it."
  *
- * Exercises the `OptionalCostEffect(PayDynamicLife(power), AddDynamicCounters(power))` gate:
+ * Exercises the `Effects.MayPay(PayDynamicLife(power), AddDynamicCounters(power))` gate:
  *  - pay → life drops by the entering creature's power and it gets that many +1/+1 counters,
  *  - decline → no life paid, no counters,
  *  - a 0-power creature → "pay 0 life" is a no-op payment (CR 119.4) that still adds 0 counters.

@@ -3,6 +3,7 @@ package com.wingedsheep.engine.state.components.player
 import com.wingedsheep.engine.state.Component
 import com.wingedsheep.sdk.core.BendType
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.TurnPart
@@ -11,7 +12,6 @@ import com.wingedsheep.sdk.scripting.effects.HijackScope
 import com.wingedsheep.sdk.scripting.effects.ManaExpiry
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
 import com.wingedsheep.sdk.scripting.effects.ManaSpellRider
-import com.wingedsheep.sdk.scripting.events.SourceFilter
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import kotlinx.serialization.Serializable
 
@@ -522,6 +522,18 @@ data class SkipUntapComponent(
 ) : Component
 
 /**
+ * This player skips their next [steps] untap steps entirely — Shisato, Whispering Hunter. Stacks
+ * per CR 614.10a: each skip effect is satisfied by one skipped occurrence.
+ *
+ * Read by `BeginningPhaseManager.performUntapStep`, which leaves the marked player out of every
+ * untap-step action (phasing, untapping, their own [SkipUntapComponent]), and decremented by
+ * `TurnManager` once the step is over (`finishUntapStep`, or `advanceStep`'s untap branch). Because the skipped step never happened,
+ * a [SkipUntapComponent] and any "until your next untap step" effect wait for the next real one.
+ */
+@Serializable
+data class SkipNextUntapStepComponent(val steps: Int = 1) : Component
+
+/**
  * The parts of the *current* turn this player skips every instance of — Fatespinner's "the player
  * skips each instance of the chosen step or phase this turn".
  *
@@ -561,6 +573,18 @@ data object SkipDrawStepComponent : Component
 data class PlayerLostComponent(
     val reason: LossReason
 ) : Component
+
+/**
+ * Marks that a player attempted to draw a card from a library with no cards in it since state-based
+ * actions were last checked (CR 121.4). The draw itself does **not** end the player's game: the loss
+ * is the state-based action of CR 704.5b, applied by
+ * [com.wingedsheep.engine.mechanics.sba.player.EmptyLibraryDrawLossCheck], which consumes this
+ * marker. Deferring it is what lets an effect that makes the drawing player win later in the same
+ * resolution take effect first — Fblthp, Impossibly Lost's "draw two cards. If your library has no
+ * cards in it, you win the game" (CR 104.2b) wins even when the second draw found an empty library.
+ */
+@Serializable
+data object AttemptedDrawFromEmptyLibraryComponent : Component
 
 /**
  * Marks that a player who lost the game has already had the "leaving the game"
@@ -728,9 +752,14 @@ data object PlayerEnduringStoryComponent : Component
  * [com.wingedsheep.sdk.scripting.NoMaximumHandSize] static ability (Reliquary Tower, Thought
  * Vessel), which only applies while its permanent is in play. Like the city's blessing, this is
  * permanent for the rest of the game — cleanup never removes it, so it has no `removeOn` field.
+ *
+ * [timestamp] is the [com.wingedsheep.engine.state.GameState.timestamp] of the effect that
+ * conferred it: maximum-hand-size effects apply in timestamp order (CR 613.11), so a later
+ * "your maximum hand size is N" static still sets a limit (see
+ * [com.wingedsheep.engine.core.MaximumHandSize.effective]).
  */
 @Serializable
-data object PlayerNoMaximumHandSizeComponent : Component
+data class PlayerNoMaximumHandSizeComponent(val timestamp: Long) : Component
 
 /**
  * Reduces a player's maximum hand size by [amount] for the rest of the game (Inspired Idea,
@@ -874,6 +903,20 @@ data class CantCastSpellsComponent(
 ) : Component
 
 /**
+ * Component indicating that a player can't search libraries — applied by
+ * [com.wingedsheep.sdk.scripting.effects.CantSearchLibrariesEffect] (Shadow of Doubt: "Players
+ * can't search libraries this turn"). Sibling of [CantCastSpellsComponent].
+ *
+ * Read by `GatherCardsExecutor` for a gather marked `search = true` (the searcher finds no
+ * library cards) and by `EmitLibrarySearchedEventExecutor` (no search took place, so no
+ * "whenever a player searches their library" event).
+ */
+@Serializable
+data class CantSearchLibrariesComponent(
+    val removeOn: PlayerEffectRemoval = PlayerEffectRemoval.EndOfTurn
+) : Component
+
+/**
  * Component indicating that a player can't gain life. Conferred directly on the player by
  * [com.wingedsheep.sdk.scripting.effects.LockLifeGainEffect] (Screaming Nemesis), so the lock is
  * independent of any source permanent — distinct from the
@@ -977,6 +1020,33 @@ data class EquipActivationsThisTurnComponent(
 @Serializable
 data class ExhaustAbilitiesActivatedThisTurnComponent(
     val count: Int = 0
+) : Component
+
+/**
+ * Number of loyalty abilities (CR 606) this player has activated during the current turn. Reset to
+ * 0 for every player at turn start by TurnManager. Backs
+ * [com.wingedsheep.sdk.scripting.values.TurnTracker.LOYALTY_ABILITIES_ACTIVATED] — "if you've
+ * activated a loyalty ability this turn" (Kiora of Salt and Sand). Unlike the per-planeswalker
+ * CR 606.3 tally on `AbilityActivatedThisTurnComponent`, this lives on the player, so it survives
+ * the planeswalker leaving the battlefield.
+ */
+@Serializable
+data class LoyaltyAbilitiesActivatedThisTurnComponent(
+    val count: Int = 0
+) : Component
+
+/**
+ * Turn-scoped permission to activate loyalty abilities of planeswalkers matching any of [filters]
+ * on any player's turn, any time this player could cast an instant (Jace's Machinations). Lifts
+ * only the sorcery-timing half of CR 606.3; the once-per-turn limit still applies. Written by
+ * [com.wingedsheep.sdk.scripting.effects.GrantInstantSpeedLoyaltyAbilitiesEffect]; grants stack
+ * by appending filters, and the component is removed whole at cleanup when [removeOn] is
+ * [PlayerEffectRemoval.EndOfTurn].
+ */
+@Serializable
+data class InstantSpeedLoyaltyGrantsComponent(
+    val filters: List<GameObjectFilter> = emptyList(),
+    val removeOn: PlayerEffectRemoval = PlayerEffectRemoval.EndOfTurn
 ) : Component
 
 /**
@@ -1198,6 +1268,14 @@ data class CardsPutIntoExileThisTurnComponent(val count: Int = 0) : Component
 data object SacrificedFoodThisTurnComponent : Component
 
 /**
+ * Marker: this player scried or surveilled this turn. Set by `EmitScriedEventExecutor` and
+ * `EmitSurveiledEventExecutor` — the two places a scry / surveil event is emitted — and cleared at
+ * end of turn by CleanupPhaseManager. Read through `TurnTracker.SCRIED_OR_SURVEILED`.
+ */
+@Serializable
+data object ScriedOrSurveiledThisTurnComponent : Component
+
+/**
  * Marker component indicating that this player has sacrificed an artifact this turn.
  * Cleared at end of turn by CleanupPhaseManager.
  *
@@ -1376,6 +1454,21 @@ data class PlayerDescendedThisTurnComponent(val count: Int = 0) : Component
 data class CreatureCardsPutIntoGraveyardThisTurnComponent(val count: Int = 0) : Component
 
 /**
+ * Tracks the number of cards put into this player's graveyard **from their library** during the
+ * current turn — milled, surveilled, or any other library → graveyard move. Cleared at end of turn
+ * by CleanupPhaseManager.
+ *
+ * Recorded by the same `moveToZone` hook as [CreatureCardsPutIntoGraveyardThisTurnComponent] and
+ * keyed on the card's owner (a library card only ever goes to its owner's graveyard). Turn history,
+ * not a graveyard scan: a card that later leaves the graveyard still counts.
+ *
+ * Backs Cruel Calculations' "the number of cards that were put into target player's graveyard
+ * from their library this turn".
+ */
+@Serializable
+data class CardsPutIntoGraveyardFromLibraryThisTurnComponent(val count: Int = 0) : Component
+
+/**
  * Marks that this player has flipped one or more coins already this turn. Presence alone is the
  * signal — it is set the first time the player flips (regardless of who controls any coin-flip
  * replacement) so that a "the first time you flip one or more coins each turn" effect
@@ -1452,10 +1545,10 @@ data class PermanentsEnteredUnderControlThisTurnComponent(
  */
 @Serializable
 data class PutCounterOnCreatureThisTurnComponent(
-    val kinds: Set<String> = emptySet()
+    val kinds: Set<CounterType> = emptySet()
 ) : Component {
     /** This turn's record plus one more placement of [kind]. */
-    fun with(kind: String): PutCounterOnCreatureThisTurnComponent =
+    fun with(kind: CounterType): PutCounterOnCreatureThisTurnComponent =
         if (kind in kinds) this else copy(kinds = kinds + kind)
 }
 
@@ -1510,18 +1603,38 @@ data object WasDealtCombatDamageByLegendaryCreatureThisTurnComponent : Component
 data class SkipNextTurnComponent(val turns: Int = 1) : Component
 
 /**
- * Marks that an "end the turn" effect (CR 720) has resolved this turn and the end-the-turn
+ * Marks that an "end the turn" effect (CR 724.1) has resolved this turn and the end-the-turn
  * sequence still needs to run. Placed on the active player when [EndTheTurnEffect] resolves; the
  * executor cannot end the turn itself (it has no access to the turn machinery and the rest of the
- * stack has not finished resolving), so it records the request and [PassPriorityHandler] carries
- * out the sequence via [TurnManager.performEndTheTurn] once the current resolution completes.
+ * stack has not finished resolving), so it records the request and the settle boundary
+ * ([com.wingedsheep.engine.core.Settler]) carries out the sequence via
+ * [TurnManager.performEndTheTurn] once the current resolution completes, whether or not it paused.
  *
- * @property sourceId The spell/ability that caused the turn to end. CR 720.1a exiles it along with
+ * @property sourceId The spell/ability that caused the turn to end. CR 724.1b exiles it along with
  *   the rest of the stack, so it is moved to exile rather than left in the graveyard. Null when the
  *   source is unknown (defensive — the sequence still runs).
  */
 @Serializable
 data class EndTheTurnRequestedComponent(val sourceId: EntityId? = null) : Component
+
+/**
+ * "You choose which creatures attack this turn. You choose which creatures block this turn and how
+ * those creatures block." (Master Warcraft.) Placed on the player who makes every attack and block
+ * declaration during turn [turnNumber].
+ *
+ * Moves only the *declaration*: the declared attackers and blockers still belong to — and must be
+ * legal for — the players who control them (the engine validates the declaration exactly as it
+ * would theirs), and every other decision, priority and hidden zone stays with its owner. Read
+ * through [com.wingedsheep.engine.mechanics.combat.CombatDeclarationControl]; expires on its own
+ * once the turn number moves on.
+ */
+@Serializable
+data class CombatDeclarationControlComponent(
+    /** The turn during which this player makes every attack and block declaration. */
+    val turnNumber: Int,
+    /** When the effect was created; the latest one wins when two players cast it the same turn. */
+    val timestamp: Long
+) : Component
 
 /**
  * Tracks a Mindslaver-style "you control target opponent" effect, scoped to either the
@@ -1608,13 +1721,13 @@ data class LoseAtEndStepComponent(
  * would deal damage to a permanent or player this turn, it deals that much damage plus 2 instead."
  *
  * @param bonusAmount The flat bonus to add to damage
- * @param sourceFilter Which sources get the bonus (e.g., SourceFilter.HasColor(Color.RED) for red sources)
+ * @param sourceFilter Which sources get the bonus (e.g., GameObjectFilter.Any.withColor(Color.RED) for red sources)
  * @param removeOn When this component should be removed
  */
 @Serializable
 data class DamageBonusComponent(
     val bonusAmount: Int,
-    val sourceFilter: SourceFilter = SourceFilter.Any,
+    val sourceFilter: GameObjectFilter = GameObjectFilter.Any,
     val removeOn: PlayerEffectRemoval = PlayerEffectRemoval.EndOfTurn
 ) : Component
 

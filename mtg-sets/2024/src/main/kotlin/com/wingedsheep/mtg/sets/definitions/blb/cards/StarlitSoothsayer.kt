@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Starlit Soothsayer {2}{B}
@@ -26,7 +27,7 @@ val StarlitSoothsayer = card("Starlit Soothsayer") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.YouGainedOrLostLifeThisTurn
         effect = Patterns.Library.surveil(1)
     }

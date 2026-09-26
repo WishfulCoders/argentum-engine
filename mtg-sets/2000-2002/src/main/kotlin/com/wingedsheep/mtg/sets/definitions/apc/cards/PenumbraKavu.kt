@@ -26,7 +26,7 @@ val PenumbraKavu = card("Penumbra Kavu") {
     power = 3
     toughness = 3
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateToken(
             power = 3,
             toughness = 3,

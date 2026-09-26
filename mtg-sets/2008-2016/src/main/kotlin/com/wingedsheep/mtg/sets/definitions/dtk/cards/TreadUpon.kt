@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.dtk.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Tread Upon
@@ -24,11 +24,8 @@ val TreadUpon = card("Tread Upon") {
     oracleText = "Target creature gets +2/+2 and gains trample until end of turn."
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 2, t),
-            Effects.GrantKeyword(Keyword.TRAMPLE, t)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 2, t) then Effects.GrantKeyword(Keyword.TRAMPLE, t)
     }
 
     metadata {

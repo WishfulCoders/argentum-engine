@@ -36,12 +36,7 @@ class AssimilationAegisScenarioTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Destroy target artifact."
         spell {
-            val t = target(
-                "target artifact",
-                com.wingedsheep.sdk.scripting.targets.TargetPermanent(
-                    filter = com.wingedsheep.sdk.scripting.filters.unified.TargetFilter.Artifact
-                )
-            )
+            val t = target(com.wingedsheep.sdk.scripting.filters.unified.TargetFilter.Artifact)
             effect = com.wingedsheep.sdk.dsl.Effects.Destroy(t)
         }
         metadata { rarity = com.wingedsheep.sdk.model.Rarity.COMMON; collectorNumber = "9" }

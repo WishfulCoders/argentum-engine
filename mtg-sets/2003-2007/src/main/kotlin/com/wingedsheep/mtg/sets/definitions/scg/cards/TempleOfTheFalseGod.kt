@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddColorlessManaEffect
 
 /**
  * Temple of the False God
@@ -20,7 +20,7 @@ val TempleOfTheFalseGod = card("Temple of the False God") {
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddColorlessManaEffect(2)
+        effect = Effects.AddColorlessMana(2)
         manaAbility = true
         timing = TimingRule.ManaAbility
         restrictions = listOf(

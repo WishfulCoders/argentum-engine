@@ -23,7 +23,7 @@ val InfectiousHorror = card("Infectious Horror") {
     oracleText = "Whenever this creature attacks, each opponent loses 2 life."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent))
     }
 

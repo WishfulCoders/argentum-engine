@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.madness
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Terminal Agony — Modern Horizons 2 #215
@@ -30,7 +30,7 @@ val TerminalAgony = card("Terminal Agony") {
         "Madness {B}{R} (If you discard this card, discard it into exile. When you do, cast it for its madness cost or put it into your graveyard.)"
 
     spell {
-        val t = target("target", TargetCreature())
+        val t = target(TargetFilter.Creature)
         effect = Effects.Destroy(t)
     }
 

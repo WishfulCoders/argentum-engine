@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -9,10 +10,9 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Wedding Announcement // Wedding Festivity (Innistrad: Crimson Vow)
@@ -29,9 +29,9 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * The end-step ability is a [Effects.Composite] of three ordered steps:
  *  1. add an invitation counter to itself;
- *  2. a [ConditionalEffect] whose then/else honor "if you attacked with two or more creatures … draw
+ *  2. a [Effects.If] whose then/else honor "if you attacked with two or more creatures … draw
  *     a card. Otherwise, create a 1/1 white Human token" via [Conditions.YouAttackedWithCreaturesThisTurn];
- *  3. a second [ConditionalEffect] gated on [Conditions.SourceCounterCountAtLeast] 3, transforming it
+ *  3. a second [Effects.If] gated on [Conditions.SourceCounterCountAtLeast] 3, transforming it
  *     (Treasure Map's counter-then-transform idiom). The back is a transformed face with no mana
  *     cost, so its color comes from a color indicator (CR 204): `colorIndicator = "W"`.
  */
@@ -46,25 +46,23 @@ private val WeddingAnnouncementFront = card("Wedding Announcement") {
         "on it, transform it."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
-        effect = Effects.Composite(
-            Effects.AddCounters("invitation", 1, EffectTarget.Self),
-            ConditionalEffect(
+        trigger = Triggers.you.beginningOf(Step.END)
+        effect = Effects.AddCounters(CounterType.INVITATION, 1, EffectTarget.Self) then
+            Effects.If(
                 condition = Conditions.YouAttackedWithCreaturesThisTurn(GameObjectFilter.Creature, atLeast = 2),
-                effect = Effects.DrawCards(1),
-                elseEffect = Effects.CreateToken(
+                then = Effects.DrawCards(1),
+                otherwise = Effects.CreateToken(
                     power = 1,
                     toughness = 1,
                     colors = setOf(Color.WHITE),
                     creatureTypes = setOf("Human"),
                     imageUri = "https://cards.scryfall.io/normal/front/7/d/7d13a93a-a43d-4cf5-8300-8341f3b7f1b1.jpg?1783924701",
                 ),
-            ),
-            ConditionalEffect(
-                condition = Conditions.SourceCounterCountAtLeast("invitation", 3),
-                effect = TransformEffect(EffectTarget.Self),
-            ),
-        )
+            ) then
+            Effects.If(
+                condition = Conditions.SourceCounterCountAtLeast(CounterType.INVITATION, 3),
+                then = Effects.Transform(EffectTarget.Self),
+            )
         description = "At the beginning of your end step, put an invitation counter on this " +
             "enchantment. If you attacked with two or more creatures this turn, draw a card. " +
             "Otherwise, create a 1/1 white Human creature token. Then if this enchantment has three " +

@@ -5,8 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Frenzied Goblin
@@ -24,11 +23,11 @@ val FrenziedGoblin = card("Frenzied Goblin") {
     oracleText = "Whenever this creature attacks, you may pay {R}. If you do, target creature can't block this turn."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val creature = target("creature", TargetCreature())
-        effect = MayPayManaEffect(
+        trigger = Triggers.self.attacks()
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{R}"),
-            effect = Effects.CantBlock(creature)
+            then = Effects.CantBlock(creature)
         )
     }
 

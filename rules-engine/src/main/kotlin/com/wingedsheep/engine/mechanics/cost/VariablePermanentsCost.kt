@@ -38,8 +38,6 @@ import com.wingedsheep.sdk.scripting.costs.VariableCostMeasure
  */
 object VariablePermanentsCost {
 
-    private val predicateEvaluator = PredicateEvaluator()
-
     /** Lower-case verb for this action, used in payment-failure messages and prompts. */
     fun verb(action: PermanentCostAction): String = when (action) {
         PermanentCostAction.EXILE -> "exile"
@@ -88,6 +86,7 @@ object VariablePermanentsCost {
         playerId: EntityId,
         atom: CostAtom.VariablePermanents,
         sourceId: EntityId? = null,
+        predicateEvaluator: PredicateEvaluator
     ): List<EntityId> {
         val projected = state.projectedState
         val context = PredicateContext(controllerId = playerId)
@@ -146,8 +145,9 @@ object VariablePermanentsCost {
         playerId: EntityId,
         atom: CostAtom.VariablePermanents,
         sourceId: EntityId? = null,
+        predicateEvaluator: PredicateEvaluator
     ): Boolean {
-        val candidates = candidates(state, playerId, atom, sourceId)
+        val candidates = candidates(state, playerId, atom, sourceId, predicateEvaluator = predicateEvaluator)
         if (candidates.size < atom.minCount) return false
         if (atom.minMeasure <= 0) return true
         val reachable = candidates.sumOf { id ->

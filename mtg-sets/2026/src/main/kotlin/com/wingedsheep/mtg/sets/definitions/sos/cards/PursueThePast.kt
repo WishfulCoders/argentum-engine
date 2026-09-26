@@ -5,8 +5,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 
 /**
  * Pursue the Past
@@ -17,7 +15,7 @@ import com.wingedsheep.sdk.scripting.effects.MayEffect
  * Flashback {2}{R}{W}
  *
  * Loot effect: the unconditional life gain resolves first, then the optional "may discard a
- * card. If you do, draw two cards" is the standard MayEffect → IfYouDo loot shape. Flashback is
+ * card. If you do, draw two cards" is the standard Effects.May → IfYouDo loot shape. Flashback is
  * a keyword ability so the spell can be re-cast from the graveyard for {2}{R}{W}.
  */
 val PursueThePast = card("Pursue the Past") {
@@ -29,15 +27,13 @@ val PursueThePast = card("Pursue the Past") {
         "Then exile it.)"
 
     spell {
-        effect = Effects.GainLife(2)
-            .then(
-                MayEffect(
-                    effect = IfYouDoEffect(
-                        action = Patterns.Hand.discardCards(1),
-                        ifYouDo = Effects.DrawCards(2),
-                    ),
-                    descriptionOverride = "You may discard a card. If you do, draw two cards.",
+        effect = Effects.GainLife(2) then
+            Effects.May(
+                effect = Effects.IfYouDo(
+                    action = Patterns.Hand.discardCards(1),
+                    then = Effects.DrawCards(2),
                 ),
+                descriptionOverride = "You may discard a card. If you do, draw two cards.",
             )
     }
 

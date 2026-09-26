@@ -1,6 +1,6 @@
 package com.wingedsheep.sdk.dsl
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
@@ -40,6 +40,19 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * and hand-to-zone operations.
  */
 object HandPatterns {
+
+    // Fixed output collections of the patterns below, as typed handles — a card that reads what
+    // a pattern put somewhere ("draw a card for each card discarded this way") uses these rather
+    // than spelling the pattern's key.
+
+    /** The cards [discardCards] / [discardAnyNumber] (default `storeAs`) discarded. */
+    val discarded: CollectionSlot = CollectionSlot("discarded")
+
+    /** The hand [discardHand] discarded. */
+    val discardedHand: CollectionSlot = CollectionSlot("discardedHand")
+
+    /** The card(s) [putFromHand] chose to put onto the battlefield. */
+    val putFromHandCards: CollectionSlot = CollectionSlot("putting")
 
     fun eachOpponentDiscards(count: Int, controllerDrawsPerDiscard: Int = 0): Effect {
         if (controllerDrawsPerDiscard > 0) {
@@ -694,7 +707,7 @@ object HandPatterns {
         subject = target,
         body = connivePipeline(
             AddCountersEffect(
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
                 count = 1,
                 target = target
             )
@@ -718,7 +731,7 @@ object HandPatterns {
      * would connive" replacements and make it fire connive triggers.
      *
      * @param requirement what the chosen counter recipient must satisfy (e.g.
-     *   `Targets.CreatureYouControl`).
+     *   `TargetObject(filter = TargetFilter.CreatureYouControl)`).
      */
     fun conniveTargeting(
         requirement: TargetRequirement,
@@ -728,7 +741,7 @@ object HandPatterns {
             listOf(
                 SelectTargetEffect(requirement = requirement, storeAs = storeAs),
                 AddCountersEffect(
-                    counterType = Counters.PLUS_ONE_PLUS_ONE,
+                    counterType = CounterType.PLUS_ONE_PLUS_ONE,
                     count = 1,
                     target = EffectTarget.PipelineTarget(storeAs)
                 )
@@ -790,7 +803,7 @@ object HandPatterns {
      *   how a hand exile joins the same pile.
      */
     fun revealHandAndExileChosen(
-        target: EffectTarget = EffectTarget.ContextTarget(0),
+        target: EffectTarget,
         filter: GameObjectFilter = GameObjectFilter.Nonland,
         prompt: String = "Choose a nonland card to exile",
         storeChosenAs: String = "chosenCard",
@@ -827,7 +840,7 @@ object HandPatterns {
      * Target player exiles cards from their hand.
      * "Target opponent exiles a card from their hand."
      */
-    fun exileFromHand(count: Int = 1, target: EffectTarget = EffectTarget.ContextTarget(0)): CompositeEffect {
+    fun exileFromHand(count: Int = 1, target: EffectTarget): CompositeEffect {
         val player = effectTargetToPlayer(target)
         val chooser = effectTargetToChooser(target)
         return CompositeEffect(

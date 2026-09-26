@@ -1,13 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Firebending Lesson — {R}
@@ -30,11 +28,11 @@ val FirebendingLesson = card("Firebending Lesson") {
     keywordAbility(KeywordAbility.kicker("{4}"))
 
     spell {
-        val t = target("target creature", Targets.Creature)
-        effect = ConditionalEffect(
+        val t = target(TargetFilter.Creature)
+        effect = Effects.If(
             condition = WasKicked,
-            effect = DealDamageEffect(5, t),
-            elseEffect = Effects.DealDamage(2, t),
+            then = Effects.DealDamage(5, t),
+            otherwise = Effects.DealDamage(2, t),
         )
     }
 

@@ -2,20 +2,15 @@ package com.wingedsheep.mtg.sets.definitions.scg.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Metamorphose
@@ -32,47 +27,43 @@ val Metamorphose = card("Metamorphose") {
     oracleText = "Put target permanent an opponent controls on top of its owner's library. That opponent may put an artifact, creature, enchantment, or land card from their hand onto the battlefield."
 
     spell {
-        val permanent = target("permanent an opponent controls", Targets.PermanentOpponentControls)
-        effect = Effects.Composite(
-            listOf(
-                // Put targeted permanent on top of its owner's library
-                Effects.PutOnTopOfLibrary(permanent),
-                // That opponent may put a permanent card from their hand onto the battlefield
-                // "That opponent" — the player whose permanent was targeted. By the time the
-                // hand is gathered the permanent is on its owner's library, so ControllerOf
-                // resolves through the card's owner (controller == owner for all but stolen
-                // permanents).
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        Zone.HAND, Player.ControllerOf("permanent an opponent controls"),
-                        GameObjectFilter(
-                            cardPredicates = listOf(
-                                CardPredicate.Or(
-                                    listOf(
-                                        CardPredicate.IsArtifact,
-                                        CardPredicate.IsCreature,
-                                        CardPredicate.IsEnchantment,
-                                        CardPredicate.IsLand
-                                    )
+        val permanent = target(TargetFilter.PermanentOpponentControls)
+        effect = Effects.Pipeline {
+            // Put targeted permanent on top of its owner's library
+            run(Effects.PutOnTopOfLibrary(permanent))
+            // That opponent may put a permanent card from their hand onto the battlefield
+            // "That opponent" — the player whose permanent was targeted. By the time the
+            // hand is gathered the permanent is on its owner's library, so ControllerOf
+            // resolves through the card's owner (controller == owner for all but stolen
+            // permanents).
+            val putCandidates = gather(
+                CardSource.FromZone(
+                    Zone.HAND, Player.ControllerOf("permanent an opponent controls"),
+                    GameObjectFilter(
+                        cardPredicates = listOf(
+                            CardPredicate.Or(
+                                listOf(
+                                    CardPredicate.IsArtifact,
+                                    CardPredicate.IsCreature,
+                                    CardPredicate.IsEnchantment,
+                                    CardPredicate.IsLand
                                 )
                             )
                         )
-                    ),
-                    storeAs = "put_candidates"
-                ),
-                SelectFromCollectionEffect(
-                    from = "put_candidates",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    chooser = Chooser.ControllerOfSelection,
-                    storeSelected = "putting",
-                    prompt = "You may put an artifact, creature, enchantment, or land card from your hand onto the battlefield"
-                ),
-                MoveCollectionEffect(
-                    from = "putting",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD, player = Player.ControllerOf("permanent an opponent controls"))
+                    )
                 )
             )
-        )
+            val putting = chooseUpTo(
+                1,
+                from = putCandidates,
+                chooser = Chooser.ControllerOfSelection,
+                prompt = "You may put an artifact, creature, enchantment, or land card from your hand onto the battlefield"
+            )
+            move(
+                putting,
+                CardDestination.ToZone(Zone.BATTLEFIELD, player = Player.ControllerOf("permanent an opponent controls"))
+            )
+        }
     }
 
     metadata {

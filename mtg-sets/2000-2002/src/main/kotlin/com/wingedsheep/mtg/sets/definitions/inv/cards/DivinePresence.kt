@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CapDamage
 import com.wingedsheep.sdk.scripting.EventPattern
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Divine Presence
@@ -26,7 +26,7 @@ val DivinePresence = card("Divine Presence") {
     replacementEffect(
         CapDamage(
             maxAmount = 3,
-            appliesTo = EventPattern.DamageEvent(recipient = RecipientFilter.Any)
+            appliesTo = EventPattern.DamageEvent(recipient = Recipient.Any)
         )
     )
 

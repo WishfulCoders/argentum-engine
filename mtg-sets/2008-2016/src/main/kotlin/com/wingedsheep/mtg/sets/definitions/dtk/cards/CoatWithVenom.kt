@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Coat with Venom
@@ -24,11 +25,8 @@ val CoatWithVenom = card("Coat with Venom") {
     oracleText = "Target creature gets +1/+2 and gains deathtouch until end of turn. (Any amount of damage it deals to a creature is enough to destroy it.)"
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 2, t),
-            Effects.GrantKeyword(Keyword.DEATHTOUCH, t)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(1, 2, t) then Effects.GrantKeyword(Keyword.DEATHTOUCH, t)
     }
 
     metadata {

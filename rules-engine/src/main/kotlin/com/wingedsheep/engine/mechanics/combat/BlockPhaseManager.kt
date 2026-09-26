@@ -7,11 +7,12 @@ import com.wingedsheep.engine.mechanics.mana.ManaPool
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
-import com.wingedsheep.engine.state.components.battlefield.TappedComponent
+import com.wingedsheep.engine.mechanics.combat.rules.TappedBlockBypass
 import com.wingedsheep.engine.state.components.combat.AttackingComponent
 import com.wingedsheep.engine.state.components.combat.BlockedComponent
 import com.wingedsheep.engine.state.components.combat.BlockedThisCombatComponent
 import com.wingedsheep.engine.state.components.combat.BlockedThisTurnComponent
+import com.wingedsheep.engine.state.components.combat.CombatPartnersThisTurnComponent
 import com.wingedsheep.engine.state.components.combat.BlockersDeclaredThisCombatComponent
 import com.wingedsheep.engine.state.components.combat.BlockingComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
@@ -23,7 +24,6 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.ManaSymbol
 import com.wingedsheep.sdk.model.EntityId
-import com.wingedsheep.engine.handlers.ConditionEvaluator
 import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PredicateContext
@@ -57,10 +57,9 @@ internal class BlockPhaseManager(
     private val cardRegistry: CardRegistry,
     private val blockEvasionRules: List<BlockEvasionRule>,
     private val manaAbilitySideEffectExecutor: com.wingedsheep.engine.mechanics.mana.ManaAbilitySideEffectExecutor,
+    private val predicateEvaluator: PredicateEvaluator
 ) {
-    private val conditionEvaluator = ConditionEvaluator()
-    private val predicateEvaluator = PredicateEvaluator()
-
+    private val conditionEvaluator = predicateEvaluator.conditions
     /**
      * Validate and declare blockers.
      *
@@ -134,7 +133,7 @@ internal class BlockPhaseManager(
         // player to confirm — same reasoning as attack taxes: don't tap their mana
         // without consent.
         val projected = state.projectedState
-        val totalBlockTax = CombatTaxes.blockTax(state, cardRegistry, blockers.keys, projected)
+        val totalBlockTax = CombatTaxes.blockTax(state, cardRegistry, blockers.keys, projected, predicateEvaluator = predicateEvaluator)
         if (totalBlockTax > 0) {
             return pauseForBlockTaxConfirmation(state, blockingPlayer, blockers, totalBlockTax)
         }
@@ -192,6 +191,10 @@ internal class BlockPhaseManager(
                     container.with(BlockedComponent(existing + blockerId))
                 }
             }
+
+            // Record the pairing on both sides as turn-scoped combat history ("blocked or was
+            // blocked by it this turn" — Gaze of the Gorgon).
+            newState = recordCombatPartners(newState, blockerId, attackerIds)
 
             // Stamp the "paired with a legendary in combat this turn" marker on each side
             // whose partner is legendary.
@@ -408,12 +411,16 @@ internal class BlockPhaseManager(
         if (!projected.isCreature(blockerId)) {
             return "Only creatures can block: ${cardComponent.name}"
         }
+        // CR 509.1a / 506.3f: a creature that is also a battle can't block.
+        if (projected.isBattle(blockerId)) {
+            return "A battle can't block: ${cardComponent.name}"
+        }
         val controller = projected.getController(blockerId)
         if (controller != blockingPlayer) {
             return "You don't control ${cardComponent.name}"
         }
 
-        if (container.has<TappedComponent>()) {
+        if (TappedBlockBypass.tappedPreventsBlocking(state, blockerId, cardRegistry, predicateEvaluator)) {
             return "${cardComponent.name} is tapped and cannot block"
         }
 
@@ -889,7 +896,7 @@ internal class BlockPhaseManager(
 
             val blockerContainer = state.getEntity(blockerId) ?: continue
             if (blockerId !in state.getBattlefield()) continue
-            if (blockerContainer.has<TappedComponent>()) continue
+            if (TappedBlockBypass.tappedPreventsBlocking(state, blockerId, cardRegistry, predicateEvaluator)) continue
 
             val attackerContainer = state.getEntity(attackerId) ?: continue
             if (!attackerContainer.has<AttackingComponent>()) continue
@@ -1069,7 +1076,8 @@ internal class BlockPhaseManager(
     }
 
     /**
-     * Find all potential blockers (untapped creatures controlled by the blocking player).
+     * Find all potential blockers (untapped creatures controlled by the blocking player, plus tapped
+     * ones a [com.wingedsheep.sdk.scripting.CanBlockAsThoughUntapped] covers).
      */
     private fun findPotentialBlockers(state: GameState, blockingPlayer: EntityId): List<EntityId> {
         val projected = state.projectedState
@@ -1080,8 +1088,9 @@ internal class BlockPhaseManager(
                 val controller = projected.getController(entityId)
 
                 projected.isCreature(entityId) &&
+                    !projected.isBattle(entityId) &&
                     controller == blockingPlayer &&
-                    !container.has<TappedComponent>()
+                    !TappedBlockBypass.tappedPreventsBlocking(state, entityId, cardRegistry, predicateEvaluator)
             }
     }
 
@@ -1168,7 +1177,7 @@ internal class BlockPhaseManager(
         val manaCost = com.wingedsheep.sdk.core.ManaCost(
             List(totalTax) { com.wingedsheep.sdk.core.ManaSymbol.generic(1) }
         )
-        val manaSolver = com.wingedsheep.engine.mechanics.mana.ManaSolver(cardRegistry)
+        val manaSolver = com.wingedsheep.engine.mechanics.mana.ManaSolver(cardRegistry, predicateEvaluator)
         val sources = manaSolver.findAvailableManaSources(state, blockingPlayer)
         val sourceOptions = sources.map { source ->
             com.wingedsheep.engine.core.ManaSourceOption(
@@ -1210,5 +1219,19 @@ internal class BlockPhaseManager(
             },
             answer = continuation
         )
+    }
+
+    private fun recordCombatPartners(state: GameState, blockerId: EntityId, attackerIds: List<EntityId>): GameState {
+        var newState = state.updateEntity(blockerId) { container ->
+            val existing = container.get<CombatPartnersThisTurnComponent>()?.partnerIds ?: emptySet()
+            container.with(CombatPartnersThisTurnComponent(existing + attackerIds))
+        }
+        for (attackerId in attackerIds) {
+            newState = newState.updateEntity(attackerId) { container ->
+                val existing = container.get<CombatPartnersThisTurnComponent>()?.partnerIds ?: emptySet()
+                container.with(CombatPartnersThisTurnComponent(existing + blockerId))
+            }
+        }
+        return newState
     }
 }

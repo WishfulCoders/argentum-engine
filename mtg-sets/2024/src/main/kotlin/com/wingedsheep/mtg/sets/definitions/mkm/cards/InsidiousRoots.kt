@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -35,7 +35,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * somehow a creature token falls out of the filter — it says "creature tokens you control", not
  * "other", so nothing excludes the source.
  *
- * The trigger is [Triggers.CardsLeaveYourGraveyard], the CR 603.2c batch shape [ChalkOutline] uses:
+ * The trigger is `Triggers.oneOrMore(filter).leaveYourGraveyard()`, the CR 603.2c batch shape [ChalkOutline] uses:
  * a mass reanimation, a flashback cast and a graveyard-exiling sweep each fire it exactly once no
  * matter how many creature cards moved or where they went — which is what the second printed ruling
  * says in as many words. The filter matches the *card*, so a creature card cast from the graveyard
@@ -58,7 +58,7 @@ val InsidiousRoots = card("Insidious Roots") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Tap,
                 effect = Effects.AddManaOfChoice(),
                 isManaAbility = true,
@@ -69,19 +69,17 @@ val InsidiousRoots = card("Insidious Roots") {
     }
 
     triggeredAbility {
-        trigger = Triggers.CardsLeaveYourGraveyard(GameObjectFilter.Creature)
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                power = 0,
-                toughness = 1,
-                colors = setOf(Color.GREEN),
-                creatureTypes = setOf("Plant"),
-            ),
+        trigger = Triggers.oneOrMore(GameObjectFilter.Creature).leaveYourGraveyard()
+        effect = Effects.CreateToken(
+            power = 0,
+            toughness = 1,
+            colors = setOf(Color.GREEN),
+            creatureTypes = setOf("Plant"),
+        ) then
             Effects.ForEachInGroup(
                 GroupFilter(GameObjectFilter.Creature.withSubtype("Plant").youControl()),
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
-            ),
-        )
+                Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity),
+            )
         description = "Whenever one or more creature cards leave your graveyard, create a 0/1 " +
             "green Plant creature token, then put a +1/+1 counter on each Plant you control."
     }

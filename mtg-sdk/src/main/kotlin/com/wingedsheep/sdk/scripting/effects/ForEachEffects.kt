@@ -4,7 +4,8 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.text.TextReplacer
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.targets.ITERATION_ENTITY_NOUN
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -51,10 +52,10 @@ sealed interface IterationSpace {
 
     /**
      * Iterate the entities in a named pipeline collection. Per iteration, the body runs
-     * with `pipeline.iterationTarget` set to the current entity — so a single-target
-     * body referencing `EffectTarget.Self` applies to it. The outer `storedCollections`
-     * are preserved (the body usually needs the very collection being iterated;
-     * Fight or Flight).
+     * with the current entity bound as [EffectTarget.IterationEntity] — so a single-target
+     * body referencing it applies to that entity, while `EffectTarget.Self` stays the
+     * source. The outer `storedCollections` are preserved (the body usually needs the very
+     * collection being iterated; Fight or Flight).
      */
     @SerialName("IterationSpace.Collection")
     @Serializable
@@ -63,7 +64,7 @@ sealed interface IterationSpace {
     /**
      * Iterate battlefield permanents matching [filter], snapshotted before any
      * iteration runs (simultaneous semantics — entities destroyed during iteration
-     * stay in the list). Same `iterationTarget` binding as [Collection]; outer
+     * stay in the list). Same [EffectTarget.IterationEntity] binding as [Collection]; outer
      * `storedCollections` are preserved.
      *
      * @property filter Which entities are affected
@@ -90,7 +91,7 @@ sealed interface IterationSpace {
      */
     @SerialName("IterationSpace.ColorsOf")
     @Serializable
-    data class ColorsOf(val source: EntityReference) : IterationSpace
+    data class ColorsOf(val source: EffectTarget.SingleEntity) : IterationSpace
 
     fun applyTextReplacement(replacer: TextReplacer): IterationSpace = when (this) {
         is Group -> {
@@ -105,8 +106,8 @@ sealed interface IterationSpace {
          * Well-known [Collection] name under which a batch trigger seeds the entities it captured
          * (the matching members of a `PermanentsEnteredEvent` batch). A payoff iterates them with
          * `ForEachInCollectionEffect(IterationSpace.TRIGGER_CAPTURED_COLLECTION, body)` and a body
-         * that uses `EffectTarget.Self` — "for each of them, create a tapped copy of it" (Kambal,
-         * Profiteering Mayor). The engine seeds this collection when the triggered ability resolves.
+         * that uses `EffectTarget.IterationEntity` — "for each of them, create a tapped copy of it"
+         * (Kambal, Profiteering Mayor). The engine seeds this collection when the triggered ability resolves.
          */
         const val TRIGGER_CAPTURED_COLLECTION = "trigger.captured"
     }
@@ -178,27 +179,22 @@ data class ForEachEffect(
 
 /**
  * Compose the inner effect's text with the group filter so the result reads
- * naturally on the stack and in oracle text. The inner effect describes a
- * single iteration target as "this creature" (i.e. `EffectTarget.Self`); we
- * rewrite that mention to "each [filter]" so e.g. "Deal X damage to this
- * creature" + `AllCreaturesOpponentsControl` renders as "Deal X damage to
+ * naturally on the stack and in oracle text. The inner effect describes the
+ * visited entity as [ITERATION_ENTITY_NOUN] (`EffectTarget.IterationEntity`); we
+ * rewrite that mention to "each [filter]" so e.g. "Deal X damage to that
+ * permanent" + `AllCreaturesOpponentsControl` renders as "Deal X damage to
  * each creature an opponent controls" rather than the broken concatenation
- * "Deal X damage to this creature all creatures an opponent controls".
+ * "Deal X damage to that permanent all creatures an opponent controls".
  */
 private fun renderGroupDescription(innerText: String, filter: GroupFilter, noRegenerate: Boolean): String {
-    val capitalizedInner = innerText.replaceFirstChar { it.uppercase() }
     // Strip the leading "all " from the filter description so we can splice it in
     // after "each".
-    val filterNoun = filter.description.removePrefix("all ").trimStart()
-    val rewritten = when {
-        capitalizedInner.contains(" to this creature") ->
-            capitalizedInner.replace(" to this creature", " to each $filterNoun")
-        capitalizedInner.endsWith(" this creature") ->
-            capitalizedInner.removeSuffix(" this creature") + " each $filterNoun"
-        capitalizedInner.contains(" this creature ") ->
-            capitalizedInner.replace(" this creature ", " each $filterNoun ")
-        else -> "$capitalizedInner ${filter.description.replaceFirstChar { it.lowercase() }}"
-    }
+    val each = "each ${filter.description.removePrefix("all ").trimStart()}"
+    val rewritten = if (innerText.contains(ITERATION_ENTITY_NOUN, ignoreCase = true)) {
+        innerText.replace(ITERATION_ENTITY_NOUN, each, ignoreCase = true)
+    } else {
+        "$innerText ${filter.description.replaceFirstChar { it.lowercase() }}"
+    }.replaceFirstChar { it.uppercase() }
     return if (noRegenerate) "$rewritten. They can't be regenerated" else rewritten
 }
 
@@ -207,7 +203,7 @@ private fun List<Effect>.asBody(): Effect =
 
 // =============================================================================
 // Lowering facades — the five pre-unification names, kept so card source (and the
-// mtgish emitter's rendered DSL) is unchanged. Same precedent as IfYouDoEffect →
+// mtgish emitter's rendered DSL) is unchanged. Same precedent as Effects.IfYouDo →
 // GatedEffect: only the compiled/serialized representation moved to `ForEach`.
 // =============================================================================
 
@@ -247,9 +243,9 @@ fun ForEachPlayerCollectingEffect(
 )
 
 /**
- * Run [effect] once per entity in a named pipeline collection, with
- * `pipeline.iterationTarget` bound so `EffectTarget.Self` applies to the current
- * entity (Fight or Flight). Lowers to [ForEachEffect] over [IterationSpace.Collection].
+ * Run [effect] once per entity in a named pipeline collection, with the current entity
+ * bound as [EffectTarget.IterationEntity] (Fight or Flight). Lowers to [ForEachEffect]
+ * over [IterationSpace.Collection].
  */
 @Suppress("FunctionName")
 fun ForEachInCollectionEffect(collection: String, effect: Effect): ForEachEffect =
@@ -257,7 +253,8 @@ fun ForEachInCollectionEffect(collection: String, effect: Effect): ForEachEffect
 
 /**
  * Apply [effect] to every battlefield entity matching [filter] (snapshotted before any
- * iteration). Lowers to [ForEachEffect] over [IterationSpace.Group].
+ * iteration), with the current entity bound as [EffectTarget.IterationEntity]. Lowers to
+ * [ForEachEffect] over [IterationSpace.Group].
  */
 @Suppress("FunctionName")
 fun ForEachInGroupEffect(
@@ -273,5 +270,5 @@ fun ForEachInGroupEffect(
  * [IterationSpace.ColorsOf].
  */
 @Suppress("FunctionName")
-fun ForEachColorOfEffect(source: EntityReference, effect: Effect): ForEachEffect =
+fun ForEachColorOfEffect(source: EffectTarget.SingleEntity, effect: Effect): ForEachEffect =
     ForEachEffect(IterationSpace.ColorsOf(source), effect)

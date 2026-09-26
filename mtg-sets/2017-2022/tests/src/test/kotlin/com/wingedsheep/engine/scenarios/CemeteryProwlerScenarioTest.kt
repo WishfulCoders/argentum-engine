@@ -50,7 +50,7 @@ class CemeteryProwlerScenarioTest : ScenarioTestBase() {
             }
 
             fun genericCost(game: TestGame, spellName: String): Int =
-                CostCalculator(cardRegistry).calculateEffectiveCost(
+                CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard(spellName),
                     game.player1Id,

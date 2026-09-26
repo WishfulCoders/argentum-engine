@@ -16,10 +16,9 @@ import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Effect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Tony Stark // The Invincible Iron Man — Marvel Super Heroes #80 (mythic)
@@ -69,7 +68,7 @@ private val TonyStarkFront = card("Tony Stark") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
         effect = Patterns.Library.lookAtTopRevealMatchingToHand(
-            count = DynamicAmount.Fixed(4),
+            count = 4,
             filter = GameObjectFilter.Artifact,
             prompt = "You may reveal an artifact card and put it into your hand",
             restOrder = CardOrder.Random,
@@ -79,7 +78,7 @@ private val TonyStarkFront = card("Tony Stark") {
     // {4}{U}{R}: Transform Tony Stark. Activate only as a sorcery.
     activatedAbility {
         cost = Costs.Mana("{4}{U}{R}")
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
         timing = TimingRule.SorcerySpeed
         description = "Transform Tony Stark. Activate only as a sorcery."
     }
@@ -107,7 +106,7 @@ private val TheInvincibleIronManBack = card("The Invincible Iron Man") {
     // At the beginning of combat on your turn, you may put an artifact card from your hand onto
     // the battlefield. If it's an Equipment, attach it to The Invincible Iron Man.
     triggeredAbility {
-        trigger = Triggers.BeginCombat
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
         effect = putArtifactFromHandAndAttach()
         description = "At the beginning of combat on your turn, you may put an artifact card from " +
             "your hand onto the battlefield. If it's an Equipment, attach it to The Invincible " +
@@ -147,7 +146,7 @@ private fun putArtifactFromHandAndAttach(): Effect = Effects.Pipeline {
     )
     run(
         Effects.AttachTargetEquipmentToCreature(
-            equipmentTarget = EffectTarget.PipelineTarget(equipment.key, 0),
+            equipmentTarget = equipment.asTarget,
             creatureTarget = EffectTarget.Self,
         )
     )

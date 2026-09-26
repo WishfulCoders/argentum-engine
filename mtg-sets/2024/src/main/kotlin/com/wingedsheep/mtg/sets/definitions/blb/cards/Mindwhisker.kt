@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Mindwhisker
@@ -29,7 +30,7 @@ val Mindwhisker = card("Mindwhisker") {
 
     // At the beginning of your upkeep, surveil 1
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Patterns.Library.surveil(1)
     }
 

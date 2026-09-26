@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Thought Prison — Mirrodin #261
@@ -23,7 +22,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * Modelling notes:
  * - The imprint and the payoff are a *linked* pair (CR 607): `linkToSource = true` files the exiled
  *   card in this artifact's own pile, and the cast trigger reads that pile back through
- *   [EntityReference.LinkedExiledCard] — "the exiled card", not "a card in exile".
+ *   [EffectTarget.LinkedExiledCard] — "the exiled card", not "a card in exile".
  * - "Shares a color **or** mana value" is two independent predicates over the same reference, OR-ed
  *   at the filter level. Neither knows about the other: `sharingColorWith` was already there for
  *   any entity reference, and `sharingManaValueWith` is its mana-value sibling. Note that colorless
@@ -49,14 +48,13 @@ val ThoughtPrison = card("Thought Prison") {
     // "Imprint — When this artifact enters, you may have target player reveal their hand. If you
     // do, choose a nonland card from it and exile that card."
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
-        val player = target("target player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Patterns.Hand.revealHandAndExileChosen(
             target = player,
             filter = GameObjectFilter.Nonland,
             prompt = "Choose a nonland card to exile with Thought Prison",
-            storeChosenAs = "thoughtPrisonImprint",
             revealHand = true,
             linkToSource = true
         )
@@ -67,10 +65,8 @@ val ThoughtPrison = card("Thought Prison") {
     // "Whenever a player casts a spell that shares a color or mana value with the exiled card,
     // this artifact deals 2 damage to that player."
     triggeredAbility {
-        trigger = Triggers.anyPlayerCasts(
-            spellFilter = GameObjectFilter.Any.sharingColorWith(EntityReference.LinkedExiledCard()) or
-                GameObjectFilter.Any.sharingManaValueWith(EntityReference.LinkedExiledCard())
-        )
+        trigger = Triggers.anyPlayer.casts(GameObjectFilter.Any.sharingColorWith(EffectTarget.LinkedExiledCard()) or
+                GameObjectFilter.Any.sharingManaValueWith(EffectTarget.LinkedExiledCard()))
         effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.TriggeringPlayer))
         description = "Whenever a player casts a spell that shares a color or mana value with the " +
             "exiled card, this artifact deals 2 damage to that player."

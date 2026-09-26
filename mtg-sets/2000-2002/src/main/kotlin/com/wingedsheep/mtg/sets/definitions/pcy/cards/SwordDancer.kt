@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -28,7 +27,7 @@ val SwordDancer = card("Sword Dancer") {
     toughness = 2
     activatedAbility {
         cost = Costs.Mana("{W}{W}")
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.attacking()))
+        val t = target(TargetFilter.Creature.attacking())
         effect = Effects.ModifyStats(-1, 0, t)
     }
     metadata {

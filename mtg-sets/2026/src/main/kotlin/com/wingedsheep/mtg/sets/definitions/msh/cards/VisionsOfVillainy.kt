@@ -47,10 +47,8 @@ val VisionsOfVillainy = card("Visions of Villainy") {
     }
 
     spell {
-        effect = Effects.Composite(
-            Effects.DrawCards(2, EffectTarget.Controller),
+        effect = Effects.DrawCards(2, EffectTarget.Controller) then
             Effects.LoseLife(2, EffectTarget.Controller)
-        )
     }
 
     metadata {

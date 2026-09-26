@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Bofur, Reliable Guardian // Concerted Care — The Hobbit #6
@@ -43,12 +42,9 @@ val BofurReliableGuardian = card("Bofur, Reliable Guardian") {
         oracleText = "Target artifact or creature you control gains hexproof and indestructible " +
             "until end of turn. (Then exile this card. You may cast the creature later from exile.)"
         spell {
-            val permanent = target(
-                "target artifact or creature you control",
-                TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrArtifact.youControl()))
-            )
-            effect = Effects.GrantKeyword(Keyword.HEXPROOF, permanent, Duration.EndOfTurn)
-                .then(Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, permanent, Duration.EndOfTurn))
+            val permanent = target(TargetFilter(GameObjectFilter.CreatureOrArtifact.youControl()))
+            effect = Effects.GrantKeyword(Keyword.HEXPROOF, permanent, Duration.EndOfTurn) then
+                Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, permanent, Duration.EndOfTurn)
         }
     }
 

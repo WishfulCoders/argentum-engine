@@ -1,7 +1,8 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Triggers
@@ -10,13 +11,9 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBeBlockedBy
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.RemoveCountersEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Ingenious Prodigy
@@ -47,25 +44,23 @@ val IngeniousProdigy = card("Ingenious Prodigy") {
 
     staticAbility {
         ability = CantBeBlockedBy(
-            GameObjectFilter.Creature.powerGreaterThanEntity(EntityReference.Source)
+            GameObjectFilter.Creature.powerGreaterThanEntity(EffectTarget.Self)
         )
     }
 
     replacementEffect(
         EntersWithDynamicCounters(
-            counterType = CounterTypeFilter.PlusOnePlusOne,
-            count = DynamicAmount.CastX,
+            counterType = CounterType.PLUS_ONE_PLUS_ONE,
+            count = DynamicAmounts.castX(),
         )
     )
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        interveningIf = Conditions.SourceHasCounter(CounterTypeFilter.PlusOnePlusOne)
-        effect = MayEffect(
-            Effects.Composite(
-                RemoveCountersEffect(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
-                Effects.DrawCards(1),
-            )
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        interveningIf = Conditions.SourceHasCounter(CounterType.PLUS_ONE_PLUS_ONE)
+        effect = Effects.May(
+            Effects.RemoveCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self) then
+                Effects.DrawCards(1)
         )
     }
 

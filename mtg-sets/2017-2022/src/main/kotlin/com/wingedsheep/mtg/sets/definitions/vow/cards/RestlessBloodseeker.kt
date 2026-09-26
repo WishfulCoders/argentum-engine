@@ -9,9 +9,9 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Restless Bloodseeker // Bloodsoaked Reveler (Innistrad: Crimson Vow)
@@ -35,7 +35,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /** "At the beginning of your end step, if you gained life this turn, create a Blood token." */
 private fun bloodOnEndStep(builder: com.wingedsheep.sdk.dsl.TriggeredAbilityBuilder) {
-    builder.trigger = Triggers.YourEndStep
+    builder.trigger = Triggers.you.beginningOf(Step.END)
     builder.interveningIf = Conditions.YouGainedLifeThisTurn
     builder.effect = Effects.CreateBlood()
     builder.description = "At the beginning of your end step, if you gained life this turn, create a " +
@@ -56,7 +56,7 @@ private val RestlessBloodseekerFront = card("Restless Bloodseeker") {
 
     activatedAbility {
         cost = Costs.SacrificeMultiple(2, GameObjectFilter.Artifact.withSubtype("Blood"))
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
         timing = TimingRule.SorcerySpeed
         description = "Transform this creature. Activate only as a sorcery."
     }

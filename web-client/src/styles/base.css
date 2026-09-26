@@ -1,0 +1,85 @@
+/**
+ * Global element defaults for the Argentum Engine web client.
+ *
+ * Nothing here set a typeface before, so every screen fell back to the browser default serif
+ * (Times) for text and to the platform sans for form controls — two families side by side on
+ * every panel. One sans family for the interface, one serif reserved for display titles, and form
+ * controls that inherit rather than pick their own.
+ *
+ * Only native font stacks: no webfont download, no layout shift while one swaps in.
+ */
+
+html {
+  font-family: var(--font-sans);
+  color: var(--text-secondary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
+  color-scheme: dark;
+}
+
+/* Form controls pick the UA font unless told otherwise. Family only — their sizes are tuned
+ * per screen and inheriting `font` wholesale would grow every unsized button to 16px. */
+button,
+input,
+select,
+textarea,
+optgroup {
+  font-family: inherit;
+  letter-spacing: inherit;
+}
+
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--font-mono);
+}
+
+::selection {
+  background: rgba(125, 160, 255, 0.35);
+  color: #fff;
+}
+
+/* A keyboard focus ring that matches the palette, shown only for keyboard navigation. */
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Quiet scrollbars — the default light-grey gutter was the brightest thing on most dark panels. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.26);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.01em;
+}

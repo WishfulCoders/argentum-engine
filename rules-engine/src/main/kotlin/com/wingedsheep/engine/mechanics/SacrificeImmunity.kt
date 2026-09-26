@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.mechanics
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.GrantsSacrificeImmunityComponent
 import com.wingedsheep.sdk.model.EntityId
@@ -35,10 +36,11 @@ object SacrificeImmunity {
     fun appliesTo(
         state: GameState,
         sacrificingPlayerId: EntityId,
-        effectControllerId: EntityId?
+        effectControllerId: EntityId?,
+        predicateEvaluator: PredicateEvaluator
     ): Boolean {
         if (effectControllerId == null || effectControllerId == sacrificingPlayerId) return false
         if (effectControllerId !in state.getOpponents(sacrificingPlayerId)) return false
-        return ControllerGrants.grantedTo<GrantsSacrificeImmunityComponent>(state, sacrificingPlayerId)
+        return ControllerGrants.grantedTo<GrantsSacrificeImmunityComponent>(state, sacrificingPlayerId, predicateEvaluator = predicateEvaluator)
     }
 }

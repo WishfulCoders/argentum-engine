@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 /**
  * Gravespawn Sovereign
  * {4}{B}{B}
@@ -24,7 +24,7 @@ val GravespawnSovereign = card("Gravespawn Sovereign") {
 
     activatedAbility {
         cost = Costs.TapPermanents(5, GameObjectFilter.Creature.withSubtype("Zombie"))
-        val t = target("target", Targets.CreatureCardInGraveyard)
+        val t = target(TargetFilter.CreatureInGraveyard)
         effect = Effects.Move(t, Zone.BATTLEFIELD)
     }
 

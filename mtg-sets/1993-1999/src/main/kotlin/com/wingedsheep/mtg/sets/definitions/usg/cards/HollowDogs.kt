@@ -26,7 +26,7 @@ val HollowDogs = card("Hollow Dogs") {
     power = 3
     toughness = 3
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ModifyStats(2, 0, EffectTarget.Self)
     }
     metadata {

@@ -42,7 +42,7 @@ val ValkyrieAerialUnit = card("Valkyrie Aerial Unit") {
         )
     }
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.surveil(2)
     }
     metadata {

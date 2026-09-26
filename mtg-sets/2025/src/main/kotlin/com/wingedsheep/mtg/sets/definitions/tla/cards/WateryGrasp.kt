@@ -8,6 +8,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Watery Grasp
@@ -38,7 +40,7 @@ val WateryGrasp = card("Watery Grasp") {
         "(While paying a waterbend cost, you can tap your artifacts and creatures to help. " +
         "Each one pays for {1}.)"
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = GrantKeyword(AbilityFlag.DOESNT_UNTAP.name)

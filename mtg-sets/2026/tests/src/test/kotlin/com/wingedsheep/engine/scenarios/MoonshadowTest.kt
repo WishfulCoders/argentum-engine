@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.support.GameTestDriver
@@ -121,7 +122,7 @@ class MoonshadowTest : FunSpec({
         state = state.addToZone(graveyardZone, a).addToZone(graveyardZone, b)
         driver.replaceState(state)
 
-        val detector = com.wingedsheep.engine.event.TriggerDetector(driver.cardRegistry)
+        val detector = com.wingedsheep.engine.event.TriggerDetector(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null), conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
         val triggers = detector.detectTriggers(driver.state, events)
 
         // Only one Moonshadow trigger should fire despite two permanents hitting the graveyard.
@@ -160,7 +161,7 @@ class MoonshadowTest : FunSpec({
             driver.state.removeFromZone(battlefieldZone, fodder).addToZone(graveyardZone, fodder)
         )
 
-        val detector = com.wingedsheep.engine.event.TriggerDetector(driver.cardRegistry)
+        val detector = com.wingedsheep.engine.event.TriggerDetector(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null), conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
         val triggers = detector.detectTriggers(driver.state, events)
 
         triggers.none { it.sourceId == moon } shouldBe true
@@ -197,7 +198,7 @@ class MoonshadowTest : FunSpec({
             )
         )
 
-        val detector = com.wingedsheep.engine.event.TriggerDetector(driver.cardRegistry)
+        val detector = com.wingedsheep.engine.event.TriggerDetector(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null), conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
         val triggers = detector.detectTriggers(driver.state, events)
 
         triggers.none { it.sourceId == moon } shouldBe true
@@ -235,7 +236,7 @@ class MoonshadowTest : FunSpec({
             )
         )
 
-        val detector = com.wingedsheep.engine.event.TriggerDetector(driver.cardRegistry)
+        val detector = com.wingedsheep.engine.event.TriggerDetector(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null), conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
         val triggers = detector.detectTriggers(driver.state, events)
 
         triggers.count { it.sourceId == moon } shouldBe 1
@@ -272,7 +273,7 @@ class MoonshadowTest : FunSpec({
             )
         )
 
-        val detector = com.wingedsheep.engine.event.TriggerDetector(driver.cardRegistry)
+        val detector = com.wingedsheep.engine.event.TriggerDetector(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null), conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
         val triggers = detector.detectTriggers(driver.state, events)
 
         triggers.count { it.sourceId == moon } shouldBe 1
@@ -334,7 +335,7 @@ class MoonshadowTest : FunSpec({
             ),
         )
 
-        val detector = com.wingedsheep.engine.event.TriggerDetector(driver.cardRegistry)
+        val detector = com.wingedsheep.engine.event.TriggerDetector(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null), conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
         val triggers = detector.detectTriggers(driver.state, events)
 
         triggers.count { it.sourceId == moon } shouldBe 1
@@ -372,7 +373,7 @@ class MoonshadowTest : FunSpec({
             )
         )
 
-        val detector = com.wingedsheep.engine.event.TriggerDetector(driver.cardRegistry)
+        val detector = com.wingedsheep.engine.event.TriggerDetector(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null), conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
         val triggers = detector.detectTriggers(driver.state, events)
 
         triggers.none { it.sourceId == moon } shouldBe true
@@ -417,7 +418,7 @@ class MoonshadowTest : FunSpec({
             )
         )
 
-        val detector = com.wingedsheep.engine.event.TriggerDetector(driver.cardRegistry)
+        val detector = com.wingedsheep.engine.event.TriggerDetector(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null), conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
         val triggers = detector.detectTriggers(driver.state, events)
 
         triggers.none { it.sourceId == moon } shouldBe true

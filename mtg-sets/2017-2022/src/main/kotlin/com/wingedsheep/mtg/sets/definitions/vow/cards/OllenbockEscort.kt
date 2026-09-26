@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Ollenbock Escort
@@ -30,15 +29,10 @@ val OllenbockEscort = card("Ollenbock Escort") {
     activatedAbility {
         cost = Costs.SacrificeSelf
         val t = target(
-            "target",
-            TargetCreature(
-                filter = TargetFilter(GameObjectFilter.Creature.withCounter(Counters.PLUS_ONE_PLUS_ONE).youControl())
-            )
+            TargetFilter(GameObjectFilter.Creature.withCounter(CounterType.PLUS_ONE_PLUS_ONE).youControl()),
         )
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.LIFELINK, t),
+        effect = Effects.GrantKeyword(Keyword.LIFELINK, t) then
             Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t)
-        )
     }
     metadata {
         rarity = Rarity.UNCOMMON

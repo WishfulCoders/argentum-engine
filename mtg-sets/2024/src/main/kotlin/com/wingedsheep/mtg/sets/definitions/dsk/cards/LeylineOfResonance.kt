@@ -38,10 +38,7 @@ val LeylineOfResonance = card("Leyline of Resonance") {
     mayBeginGameOnBattlefield()
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.InstantOrSorcery,
-            requires = setOf(SpellCastPredicate.TargetsMatching(GameObjectFilter.Creature.youControl()))
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery, requires = setOf(SpellCastPredicate.TargetsMatching(GameObjectFilter.Creature.youControl())))
         triggerRestriction = Conditions.TriggeringSpellHasSingleTarget
         effect = Effects.CopyTargetSpell(target = EffectTarget.TriggeringEntity)
     }

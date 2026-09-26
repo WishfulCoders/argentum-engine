@@ -40,13 +40,13 @@ val Catharsis = card("Catharsis") {
     // creating tokens before the pump effect. This way the tokens
     // also receive the +1/+1 and haste buff.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.ManaSpentToCastIncludes(requiredRed = 2)
         effect = Patterns.Group.pumpAndGrantToAll(1, 1, Keyword.HASTE, GroupFilter.AllCreaturesYouControl)
     }
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.ManaSpentToCastIncludes(requiredWhite = 2)
         effect = Effects.CreateToken(
             power = 1,

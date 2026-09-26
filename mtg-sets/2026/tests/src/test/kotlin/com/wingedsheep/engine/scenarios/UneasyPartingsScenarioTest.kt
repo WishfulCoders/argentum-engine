@@ -22,7 +22,7 @@ import io.kotest.matchers.shouldBe
  */
 class UneasyPartingsScenarioTest : ScenarioTestBase() {
 
-    private val calculator = CostCalculator(cardRegistry)
+    private val calculator = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator)
 
     init {
         context("Uneasy Partings") {

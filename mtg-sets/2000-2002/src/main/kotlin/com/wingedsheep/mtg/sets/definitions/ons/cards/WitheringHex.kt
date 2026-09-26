@@ -1,18 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.dsl.unaryMinus
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.core.Counters
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 import com.wingedsheep.sdk.dsl.Triggers
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Withering Hex
@@ -28,22 +27,19 @@ val WitheringHex = card("Withering Hex") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature\nWhenever a player cycles a card, put a plague counter on Withering Hex.\nEnchanted creature gets -1/-1 for each plague counter on Withering Hex."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.AnyPlayerCycles
-        effect = AddCountersEffect(Counters.PLAGUE, 1, EffectTarget.Self)
+        trigger = Triggers.anyPlayer.cycles()
+        effect = Effects.AddCounters(CounterType.PLAGUE, 1, EffectTarget.Self)
     }
 
     staticAbility {
-        val plagueCounters = DynamicAmount.EntityProperty(
-            EntityReference.Source,
-            EntityNumericProperty.CounterCount(CounterTypeFilter.Named(Counters.PLAGUE))
-        )
-        ability = GrantDynamicStatsEffect(
+        val plagueCounters = DynamicAmounts.countersOnSelf(CounterType.PLAGUE)
+        ability = GrantDynamicStats(
             filter = GroupFilter.attachedCreature(),
-            powerBonus = DynamicAmount.Multiply(plagueCounters, -1),
-            toughnessBonus = DynamicAmount.Multiply(plagueCounters, -1)
+            powerBonus = -plagueCounters,
+            toughnessBonus = -plagueCounters
         )
     }
 

@@ -2,11 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.ths.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.PreventDamageEffect
-import com.wingedsheep.sdk.scripting.effects.PreventionScope
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Decorated Griffin
@@ -17,12 +16,10 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Flying
  * {1}{W}: Prevent the next 1 combat damage that would be dealt to you this turn.
  *
- * The shield's recipient is the controller — [PreventDamageEffect]'s default `target` — so "dealt
- * to you" is the absence of a target, not a target of its own. `Effects` publishes fourteen
- * prevention facades and none of them freezes *this* point of the product (a bounded amount **and**
- * [PreventionScope.CombatOnly]), so the type is constructed directly, as Al-abara's Carpet does for
- * the same reason. Keeping the amount non-null is load-bearing: an amount-less combat-only shield
- * on the default target is what `PreventDamageExecutor` reads as the global Fog.
+ * The shield's recipient is the controller — [Effects.PreventDamage]'s default `target` — so "dealt
+ * to you" is the absence of a target, not a target of its own. Keeping the amount non-null is
+ * load-bearing: an amount-less combat-only shield on the default target is what
+ * `PreventDamageExecutor` reads as the global Fog.
  */
 val DecoratedGriffin = card("Decorated Griffin") {
     manaCost = "{4}{W}"
@@ -36,10 +33,7 @@ val DecoratedGriffin = card("Decorated Griffin") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{W}")
-        effect = PreventDamageEffect(
-            amount = DynamicAmount.Fixed(1),
-            scope = PreventionScope.CombatOnly
-        )
+        effect = Effects.PreventDamage(amount = DynamicAmounts.fixed(1), combatOnly = true)
     }
 
     metadata {

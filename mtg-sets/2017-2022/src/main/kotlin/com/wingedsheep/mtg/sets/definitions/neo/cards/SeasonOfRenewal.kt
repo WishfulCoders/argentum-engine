@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Season of Renewal — Kamigawa: Neon Dynasty #205 (canonical printing)
@@ -32,21 +31,11 @@ val SeasonOfRenewal = card("Season of Renewal") {
     spell {
         modal(chooseCount = 2, minChooseCount = 1) {
             mode("Return target creature card from your graveyard to your hand.") {
-                val t = target(
-                    "creature card in your graveyard",
-                    TargetObject(
-                        filter = TargetFilter(GameObjectFilter.Creature.ownedByYou(), zone = Zone.GRAVEYARD),
-                    ),
-                )
+                val t = target(TargetFilter(GameObjectFilter.Creature.ownedByYou(), zone = Zone.GRAVEYARD))
                 effect = Effects.ReturnToHand(t)
             }
             mode("Return target enchantment card from your graveyard to your hand.") {
-                val t = target(
-                    "enchantment card in your graveyard",
-                    TargetObject(
-                        filter = TargetFilter(GameObjectFilter.Enchantment.ownedByYou(), zone = Zone.GRAVEYARD),
-                    ),
-                )
+                val t = target(TargetFilter(GameObjectFilter.Enchantment.ownedByYou(), zone = Zone.GRAVEYARD))
                 effect = Effects.ReturnToHand(t)
             }
         }

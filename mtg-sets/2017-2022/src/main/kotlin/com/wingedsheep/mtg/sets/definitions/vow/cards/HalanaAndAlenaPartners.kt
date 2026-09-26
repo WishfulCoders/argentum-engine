@@ -4,7 +4,7 @@
 
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
@@ -12,7 +12,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.core.Step
 
 
 /**
@@ -33,16 +33,14 @@ val HalanaAndAlenaPartners = card("Halana and Alena, Partners") {
     toughness = 3
     keywords(Keyword.FIRST_STRIKE, Keyword.REACH)
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        val t = target("target", TargetCreature(filter = TargetFilter.OtherCreatureYouControl))
-        effect = Effects.Composite(
-            Effects.AddDynamicCounters(
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
-                amount = DynamicAmounts.sourcePower(),
-                target = t
-            ),
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        val t = target(TargetFilter.OtherCreatureYouControl)
+        effect = Effects.AddDynamicCounters(
+            counterType = CounterType.PLUS_ONE_PLUS_ONE,
+            amount = DynamicAmounts.sourcePower(),
+            target = t
+        ) then
             Effects.GrantKeyword(Keyword.HASTE, t)
-        )
     }
     metadata {
         rarity = Rarity.RARE

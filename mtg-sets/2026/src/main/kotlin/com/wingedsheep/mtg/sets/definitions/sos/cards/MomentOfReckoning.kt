@@ -6,8 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Moment of Reckoning
@@ -35,19 +33,11 @@ val MomentOfReckoning = card("Moment of Reckoning") {
     spell {
         modal(chooseCount = 4, minChooseCount = 0, allowRepeat = true) {
             mode("Destroy target nonland permanent") {
-                val t = target("target", TargetPermanent(filter = TargetFilter.NonlandPermanent))
+                val t = target(TargetFilter.NonlandPermanent)
                 effect = Effects.Destroy(t)
             }
             mode("Return target nonland permanent card from your graveyard to the battlefield") {
-                val t = target(
-                    "target",
-                    TargetObject(
-                        filter = TargetFilter(
-                            GameObjectFilter.NonlandPermanent.ownedByYou(),
-                            zone = Zone.GRAVEYARD,
-                        ),
-                    ),
-                )
+                val t = target(TargetFilter(GameObjectFilter.NonlandPermanent.ownedByYou(), zone = Zone.GRAVEYARD))
                 effect = Effects.PutOntoBattlefield(t)
             }
         }

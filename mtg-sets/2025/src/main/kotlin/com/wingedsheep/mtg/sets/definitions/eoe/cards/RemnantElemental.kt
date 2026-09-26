@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Remnant Elemental
@@ -27,7 +28,7 @@ val RemnantElemental = card("Remnant Elemental") {
 
     // Landfall triggered ability: +2/+0 until end of turn when land enters
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.ModifyStats(2, 0, EffectTarget.Self)
     }
 

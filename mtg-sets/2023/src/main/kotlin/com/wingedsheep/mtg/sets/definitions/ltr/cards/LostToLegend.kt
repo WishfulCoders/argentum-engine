@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Lost to Legend
@@ -23,12 +22,7 @@ val LostToLegend = card("Lost to Legend") {
         "(Artifacts, legendaries, and Sagas are historic.)"
 
     spell {
-        val permanent = target(
-            "nonland historic permanent",
-            TargetPermanent(
-                filter = TargetFilter(GameObjectFilter.NonlandPermanent and GameObjectFilter.Historic)
-            )
-        )
+        val permanent = target(TargetFilter(GameObjectFilter.NonlandPermanent and GameObjectFilter.Historic))
         // "fourth from the top" → 0-indexed position 3
         effect = Effects.PutIntoLibraryNthFromTop(permanent, positionFromTop = 3)
     }

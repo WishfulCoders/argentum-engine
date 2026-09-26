@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Bramble Armor
@@ -31,8 +30,8 @@ val BrambleArmor = card("Bramble Armor") {
         "Equip {4} ({4}: Attach to target creature you control. Equip only as a sorcery.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.youControl()))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature.youControl())
         effect = Effects.AttachEquipment(t)
     }
 

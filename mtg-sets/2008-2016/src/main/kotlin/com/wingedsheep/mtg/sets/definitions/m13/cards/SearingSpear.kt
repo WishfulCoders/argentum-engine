@@ -18,7 +18,7 @@ val SearingSpear = card("Searing Spear") {
     oracleText = "Searing Spear deals 3 damage to any target."
 
     spell {
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(3, t)
     }
 

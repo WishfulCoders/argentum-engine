@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.card
@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.MayCastFromGraveyard
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 
 /**
  * Leonardo, Sewer Samurai
@@ -47,7 +46,7 @@ val LeonardoSewerSamurai = card("Leonardo, Sewer Samurai") {
     // *other* creature it casts; WasCastFromGraveyard is evaluated against that entering creature.
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.Named(Counters.FINALITY),
+            counterType = CounterType.FINALITY,
             count = 1,
             selfOnly = false,
             condition = Conditions.WasCastFromGraveyard

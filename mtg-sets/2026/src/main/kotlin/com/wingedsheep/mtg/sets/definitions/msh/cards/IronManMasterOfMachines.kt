@@ -2,15 +2,15 @@ package com.wingedsheep.mtg.sets.definitions.msh.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Iron Man, Master of Machines — Marvel Super Heroes #216
@@ -22,14 +22,14 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * draw a card.
  *
  * Modeling notes:
- *  - The self-pump is Persistent Marshstalker's shape: a [GrantDynamicStatsEffect] over
+ *  - The self-pump is Persistent Marshstalker's shape: a [GrantDynamicStats] over
  *    `GroupFilter.source()` whose power bonus counts artifacts you control with `excludeSelf = true`
  *    ("each *other* artifact"). Iron Man is himself an artifact, so the exclusion is load-bearing.
  *    Keeping it a Layer 7c continuous effect (rather than a one-shot) lets the projector re-evaluate
  *    it as artifacts come and go mid-combat.
  *  - "Whenever Iron Man attacks, if …" is an intervening-if clause (CR 603.4): checked both when the
  *    trigger would go on the stack and again on resolution, which is exactly what `interveningIf`
- *    models — *not* a `ConditionalEffect` inside the body.
+ *    models — *not* a `Effects.If` inside the body.
  *  - The condition reads the ETB-by-type *event* tracker
  *    ([Conditions.ArtifactEnteredBattlefieldThisTurn], Mechan Shieldmate's precedent), not the
  *    current battlefield population: an artifact that entered and then left (or stopped being an
@@ -50,21 +50,21 @@ val IronManMasterOfMachines = card("Iron Man, Master of Machines") {
 
     // Iron Man gets +1/+0 for each other artifact you control.
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
-            powerBonus = DynamicAmount.AggregateBattlefield(
-                player = Player.You,
-                filter = GameObjectFilter.Artifact,
+            powerBonus = DynamicAmounts.battlefield(
+                Player.You,
+                GameObjectFilter.Artifact,
                 excludeSelf = true,
-            ),
-            toughnessBonus = DynamicAmount.Fixed(0),
+            ).count(),
+            toughnessBonus = DynamicAmounts.fixed(0),
         )
     }
 
     // Whenever Iron Man attacks, if an artifact entered the battlefield under your control this
     // turn, draw a card.
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         interveningIf = Conditions.ArtifactEnteredBattlefieldThisTurn
         effect = Effects.DrawCards(1)
         description = "Whenever Iron Man attacks, if an artifact entered the battlefield under " +

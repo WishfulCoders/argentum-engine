@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.effects.MoveType
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
@@ -49,7 +48,7 @@ val SilvanReveler = card("Silvan Reveler") {
         "this card from your graveyard to your hand."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Pipeline {
             // "draw a card, then discard a card"
             run(Effects.DrawCards(1))
@@ -64,7 +63,7 @@ val SilvanReveler = card("Silvan Reveler") {
             // "If you discard a land card this way, put it from your graveyard onto the
             // battlefield tapped."
             val discardedLand = filter(discarded, GameObjectFilter.Land)
-            val landInGraveyard = filter(discardedLand, CollectionFilter.InZone(Zone.GRAVEYARD))
+            val landInGraveyard = filter(discardedLand, GameObjectFilter.Any.currentlyIn(Zone.GRAVEYARD))
             move(
                 landInGraveyard,
                 CardDestination.ToZone(Zone.BATTLEFIELD, Player.You, ZonePlacement.Tapped)
@@ -75,11 +74,11 @@ val SilvanReveler = card("Silvan Reveler") {
     }
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         triggerZone = Zone.GRAVEYARD
-        effect = MayPayManaEffect(
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{1}{G}{U}"),
-            effect = Effects.Move(EffectTarget.Self, Zone.HAND)
+            then = Effects.Move(EffectTarget.Self, Zone.HAND)
         )
         description = "Landfall — Whenever a land you control enters, you may pay {1}{G}{U}. If " +
             "you do, return this card from your graveyard to your hand."

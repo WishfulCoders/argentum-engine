@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Self-Reflection
@@ -23,7 +23,7 @@ val SelfReflection = card("Self-Reflection") {
         "Flashback {3}{U} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
 
     spell {
-        val t = target("target creature you control", Targets.CreatureYouControl)
+        val t = target(TargetFilter.CreatureYouControl)
         effect = Effects.CreateTokenCopyOfTarget(t)
     }
     keywordAbility(KeywordAbility.flashback("{3}{U}"))

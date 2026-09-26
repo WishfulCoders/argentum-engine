@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -30,11 +30,11 @@ val AinokBondKin = card("Ainok Bond-Kin") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{W}"), Costs.Tap)
         timing = TimingRule.SorcerySpeed
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     // Each creature you control with a +1/+1 counter on it has first strike.
-    staticAbility { ability = GrantKeywordByCounter(Keyword.FIRST_STRIKE, Counters.PLUS_ONE_PLUS_ONE, controllerOnly = true) }
+    staticAbility { ability = GrantKeywordByCounter(Keyword.FIRST_STRIKE, CounterType.PLUS_ONE_PLUS_ONE, controllerOnly = true) }
 
     metadata {
         rarity = Rarity.COMMON

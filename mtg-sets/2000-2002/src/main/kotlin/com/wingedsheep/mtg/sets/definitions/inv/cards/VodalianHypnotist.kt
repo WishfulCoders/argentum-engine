@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Vodalian Hypnotist
@@ -25,7 +25,7 @@ val VodalianHypnotist = card("Vodalian Hypnotist") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{B}"), Costs.Tap)
         timing = TimingRule.SorcerySpeed
-        val targetPlayer = target("target player", TargetPlayer())
+        val targetPlayer = target(Targets.Player)
         effect = Effects.Discard(1, targetPlayer)
         description = "{2}{B}, {T}: Target player discards a card. Activate only as a sorcery."
     }

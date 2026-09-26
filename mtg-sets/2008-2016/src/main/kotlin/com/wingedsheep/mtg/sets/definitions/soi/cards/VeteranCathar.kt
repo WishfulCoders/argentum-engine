@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Veteran Cathar (Shadows over Innistrad #238)
@@ -29,7 +28,7 @@ val VeteranCathar = card("Veteran Cathar") {
 
     activatedAbility {
         cost = Costs.Mana("{3}{W}")
-        val t = target("target", TargetPermanent(filter = TargetFilter.Permanent.withSubtype("Human")))
+        val t = target(TargetFilter.Permanent.withSubtype("Human"))
         effect = Effects.GrantKeyword(Keyword.DOUBLE_STRIKE, t)
     }
 

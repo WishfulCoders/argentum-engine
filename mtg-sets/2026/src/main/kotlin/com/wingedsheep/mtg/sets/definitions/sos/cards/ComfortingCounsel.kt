@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * As long as there are five or more growth counters on this enchantment, creatures you control
  * get +3/+3.
  *
- * Same shape as Beastmaster Ascension: a [Triggers.YouGainLife] trigger that drops a [Counters.GROWTH]
+ * Same shape as Beastmaster Ascension: a `Triggers.you.gainsLife()` trigger that drops a [CounterType.GROWTH]
  * counter on [EffectTarget.Self], plus a counter-gated anthem. The threshold gate is the generic
  * [Conditions.SourceCounterCountAtLeast] (≥5 growth counters), which reads the enchantment's counters
  * live, and the buff applies to all creatures you control via [GroupFilter.AllCreaturesYouControl].
@@ -32,12 +32,12 @@ val ComfortingCounsel = card("Comforting Counsel") {
         "As long as there are five or more growth counters on this enchantment, creatures you control get +3/+3."
 
     triggeredAbility {
-        trigger = Triggers.YouGainLife
-        effect = Effects.AddCounters(Counters.GROWTH, 1, EffectTarget.Self)
+        trigger = Triggers.you.gainsLife()
+        effect = Effects.AddCounters(CounterType.GROWTH, 1, EffectTarget.Self)
     }
 
     staticAbility {
-        condition = Conditions.SourceCounterCountAtLeast(Counters.GROWTH, 5)
+        condition = Conditions.SourceCounterCountAtLeast(CounterType.GROWTH, 5)
         ability = ModifyStats(
             powerBonus = 3,
             toughnessBonus = 3,

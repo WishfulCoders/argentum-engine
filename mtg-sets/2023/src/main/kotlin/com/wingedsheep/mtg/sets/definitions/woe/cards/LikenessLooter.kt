@@ -3,6 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.woe.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -10,10 +11,8 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.effects.CopyExceptions
-import com.wingedsheep.sdk.scripting.effects.EachPermanentBecomesCopyOfTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Likeness Looter {U}{B}
@@ -60,16 +59,8 @@ val LikenessLooter = card("Likeness Looter") {
 
     activatedAbility {
         cost = Costs.Mana("{X}")
-        val creatureCard = target(
-            "target creature card in your graveyard with mana value X",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.ownedByYou().manaValueEqualsX(),
-                    zone = Zone.GRAVEYARD,
-                ),
-            ),
-        )
-        effect = EachPermanentBecomesCopyOfTargetEffect(
+        val creatureCard = target(TargetFilter(GameObjectFilter.Creature.ownedByYou().manaValueEqualsX(), zone = Zone.GRAVEYARD))
+        effect = Effects.EachPermanentBecomesCopyOfTarget(
             target = creatureCard,
             affected = EffectTarget.Self,
             sourceFromAnyZone = true,

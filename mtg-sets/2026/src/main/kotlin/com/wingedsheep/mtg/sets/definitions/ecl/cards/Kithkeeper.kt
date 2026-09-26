@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.vividEtb
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -34,7 +33,7 @@ val Kithkeeper = card("Kithkeeper") {
     toughness = 3
 
     vividEtb { colorCount ->
-        CreateTokenEffect(
+        Effects.CreateToken(
             count = colorCount,
             power = 1,
             toughness = 1,
@@ -46,12 +45,8 @@ val Kithkeeper = card("Kithkeeper") {
 
     activatedAbility {
         cost = Costs.TapPermanents(3, GameObjectFilter.Creature)
-        effect = Effects.Composite(
-            listOf(
-                Effects.ModifyStats(3, 0, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
-            )
-        )
+        effect = Effects.ModifyStats(3, 0, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
     }
 
     metadata {

@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Loxodon Punisher — Mirrodin #14
@@ -13,7 +13,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *
  * This creature gets +2/+2 for each Equipment attached to it.
  *
- * The Winter Soldier shape: a [GrantDynamicStatsEffect] over [GroupFilter.source] whose bonus is
+ * The Winter Soldier shape: a [GrantDynamicStats] over [GroupFilter.source] whose bonus is
  * `Multiply(equipmentAttachedToSelf(), 2)`. The attachment count is read off *projected* subtypes,
  * so a permanent that becomes — or stops being — an Equipment is counted correctly, Auras and
  * Fortifications are excluded, and the bonus recomputes continuously as Equipment is attached or
@@ -28,10 +28,10 @@ val LoxodonPunisher = card("Loxodon Punisher") {
     oracleText = "This creature gets +2/+2 for each Equipment attached to it."
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
-            powerBonus = DynamicAmount.Multiply(DynamicAmounts.equipmentAttachedToSelf(), 2),
-            toughnessBonus = DynamicAmount.Multiply(DynamicAmounts.equipmentAttachedToSelf(), 2)
+            powerBonus = DynamicAmounts.equipmentAttachedToSelf() * 2,
+            toughnessBonus = DynamicAmounts.equipmentAttachedToSelf() * 2
         )
     }
 

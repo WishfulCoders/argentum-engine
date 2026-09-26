@@ -1,7 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -11,18 +10,10 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.PlayersCantCastSpells
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Unstable Glyphbridge // Sandswirl Wanderglyph (CR 702.167, The Lost Caverns of Ixalan)
@@ -55,7 +46,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *    return (and any reanimation/blink), so the wipe only fires on a cast.
  *  - **Craft with artifact {3}{W}{W}** — exact-count craft (`minCount = 1, maxCount = 1`) via the
  *    `craft(...)` helper; returns transformed as Sandswirl Wanderglyph.
- *  - **Back trigger** — [Triggers.OpponentCastsSpell] gated on [Conditions.IsNotYourTurn]
+ *  - **Back trigger** — `Triggers.anOpponent.casts()` gated on [Conditions.IsNotYourTurn]
  *    ("during their turn"; exact in two-player games). The one-shot effect is a floating
  *    until-end-of-turn [Effects.CantAttackGroup] over creatures the *active player* controls:
  *    for the remainder of that turn the triggering opponent is the active player, and only the
@@ -88,36 +79,29 @@ private val UnstableGlyphbridgeFront = card("Unstable Glyphbridge") {
     // When this artifact enters, if you cast it, for each player, choose a creature with power
     // 2 or less that player controls. Then destroy all creatures except creatures chosen this way.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.WasCast
-        effect = ForEachPlayerEffect(
+        effect = Effects.ForEachPlayer(
             players = Player.ActivePlayerFirst,
-            effects = listOf(
-                GatherCardsEffect(
-                    source = CardSource.ControlledPermanents(
+            Effects.Pipeline {
+                val playerCreatures = gather(
+                    CardSource.ControlledPermanents(
                         player = Player.You,
                         filter = GameObjectFilter.Creature
-                    ),
-                    storeAs = "playerCreatures"
-                ),
+                    )
+                )
                 // The ability's controller (not the iterated player) chooses; only creatures
                 // with power 2 or less are selectable. No eligible creature -> nothing spared.
-                SelectFromCollectionEffect(
-                    from = "playerCreatures",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
+                val (_, doomed) = chooseExactlySplit(
+                    1,
+                    from = playerCreatures,
                     chooser = Chooser.SourceController,
                     filter = GameObjectFilter.Creature.powerAtMost(2),
-                    storeSelected = "spared",
-                    storeRemainder = "doomed",
                     prompt = "Choose a creature with power 2 or less this player controls",
                     useTargetingUI = true
-                ),
-                MoveCollectionEffect(
-                    from = "doomed",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD),
-                    moveType = MoveType.Destroy
                 )
-            )
+                destroy(doomed)
+            }
         )
     }
 
@@ -154,7 +138,7 @@ private val SandswirlWanderglyph = card("Sandswirl Wanderglyph") {
     // planeswalkers you control this turn. (See KDoc: active-player-scoped floating
     // restriction, exact for two-player games.)
     triggeredAbility {
-        trigger = Triggers.OpponentCastsSpell
+        trigger = Triggers.anOpponent.casts()
         triggerRestriction = Conditions.IsNotYourTurn
         effect = Effects.CantAttackGroup(
             GroupFilter(GameObjectFilter.Creature.controlledByActivePlayer())

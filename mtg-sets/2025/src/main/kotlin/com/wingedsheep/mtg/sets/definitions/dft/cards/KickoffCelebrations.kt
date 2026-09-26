@@ -10,8 +10,6 @@ import com.wingedsheep.sdk.dsl.maxSpeed
 import com.wingedsheep.sdk.dsl.startYourEngines
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -24,8 +22,8 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Max speed — Sacrifice this enchantment: Creatures and Vehicles you control gain haste until end
  * of turn.
  *
- * The ETB is the standard "you may X. If you do, Y" nesting: [MayEffect] is the optional outer
- * wrapper (declining does nothing at all), [IfYouDoEffect] gates the draw on the discard actually
+ * The ETB is the standard "you may X. If you do, Y" nesting: [Effects.May] is the optional outer
+ * wrapper (declining does nothing at all), [Effects.IfYouDo] gates the draw on the discard actually
  * happening — so saying yes with an empty hand discards nothing and draws nothing.
  *
  * "Creatures and Vehicles you control" is one union filter rather than two grants, and it is
@@ -44,11 +42,11 @@ val KickoffCelebrations = card("Kickoff Celebrations") {
     startYourEngines()
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(
-            effect = IfYouDoEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.May(
+            effect = Effects.IfYouDo(
                 action = Patterns.Hand.discardCards(1),
-                ifYouDo = Effects.DrawCards(2)
+                then = Effects.DrawCards(2)
             )
         )
     }
@@ -60,7 +58,7 @@ val KickoffCelebrations = card("Kickoff Celebrations") {
                 GroupFilter(
                     (GameObjectFilter.Creature or GameObjectFilter.Any.withSubtype("Vehicle")).youControl()
                 ),
-                Effects.GrantKeyword(Keyword.HASTE, EffectTarget.Self)
+                Effects.GrantKeyword(Keyword.HASTE, EffectTarget.IterationEntity)
             )
             description = "Creatures and Vehicles you control gain haste until end of turn."
         }

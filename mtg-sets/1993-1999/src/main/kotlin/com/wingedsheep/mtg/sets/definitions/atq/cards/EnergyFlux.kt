@@ -7,9 +7,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Energy Flux
@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * The artifact-flavored sibling of Vile Consumption: a [GrantTriggeredAbility] static over
  * [GroupFilter.AllArtifacts] gives every artifact on the battlefield — including opponents' — its
- * own beginning-of-upkeep trigger. Because the granted trigger uses [Triggers.YourUpkeep], the
+ * own beginning-of-upkeep trigger. Because the granted trigger uses `Triggers.you.beginningOf(Step.UPKEEP)`, the
  * engine resolves "your upkeep" against the *affected artifact's controller* (TriggerMatcher keys
  * the step off each granted permanent's controller, not Energy Flux's controller), so each artifact
  * is taxed on its own controller's upkeep. [PayOrSufferEffect] then lets that controller
@@ -35,9 +35,8 @@ val EnergyFlux = card("Energy Flux") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.YourUpkeep.event,
-                binding = Triggers.YourUpkeep.binding,
-                effect = PayOrSufferEffect(
+                trigger = Triggers.you.beginningOf(Step.UPKEEP),
+                effect = Effects.PayOrSuffer(
                     cost = Costs.pay.Mana("{2}"),
                     suffer = Effects.SacrificeTarget(EffectTarget.Self)
                 )

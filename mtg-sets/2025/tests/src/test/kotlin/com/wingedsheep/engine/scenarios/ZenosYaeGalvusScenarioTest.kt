@@ -26,6 +26,7 @@ import com.wingedsheep.sdk.scripting.ChoiceSlot
 import com.wingedsheep.sdk.scripting.references.Player
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Zenos yae Galvus // Shinryu, Transcendent Rival (FIN #127).
@@ -36,7 +37,7 @@ import io.kotest.matchers.shouldBe
  *  - "When the chosen creature leaves the battlefield, transform" is a persistent
  *    ([DelayedTriggerExpiry.Never]) reflexive delayed trigger — it survives an end-of-turn cleanup
  *    and fires only for the watched creature, then flips Zenos to its Shinryu back face.
- *  - Shinryu's `Triggers.AnyPlayerLosesGame` + `Conditions.TriggeringPlayerIs(Player.ChosenOpponent)`
+ *  - Shinryu's `Triggers.anyPlayer.losesGame()` + `Conditions.TriggeringPlayerIs(Player.ChosenOpponent)`
  *    + `Effects.WinGame()` make you win when your chosen opponent loses — proven discriminatingly in
  *    a 3-player pod (an unchosen opponent's loss does not win it for you).
  */
@@ -87,7 +88,7 @@ class ZenosYaeGalvusScenarioTest : FunSpec({
     fun castZenos(driver: GameTestDriver, me: EntityId, chosen: EntityId?): EntityId {
         val card = driver.putCardInHand(me, "Zenos yae Galvus")
         driver.giveMana(me, Color.BLACK, 5) // {3}{B}{B}
-        driver.castSpell(me, card).isSuccess shouldBe true
+        driver.castSpell(me, card).outcome shouldBe Outcome.Done
         resolveWithChoice(driver, chosen)
         return driver.findPermanent(me, "Zenos yae Galvus")
             ?: driver.findPermanent(me, "Shinryu, Transcendent Rival")!!
@@ -97,7 +98,7 @@ class ZenosYaeGalvusScenarioTest : FunSpec({
     fun killWithBolt(driver: GameTestDriver, caster: EntityId, victim: EntityId) {
         val bolt = driver.putCardInHand(caster, "Lightning Bolt")
         driver.giveMana(caster, Color.RED, 1)
-        driver.castSpell(caster, bolt, targets = listOf(victim)).isSuccess shouldBe true
+        driver.castSpell(caster, bolt, targets = listOf(victim)).outcome shouldBe Outcome.Done
         var guard = 0
         while (guard++ < 40 && (driver.state.stack.isNotEmpty() || driver.isPaused)) {
             if (driver.isPaused) driver.autoResolveDecision() else driver.bothPass()
@@ -200,7 +201,7 @@ class ZenosYaeGalvusScenarioTest : FunSpec({
             power = 1
             toughness = 1
             triggeredAbility {
-                trigger = Triggers.AnyPlayerLosesGame
+                trigger = Triggers.anyPlayer.losesGame()
                 triggerRestriction = Conditions.TriggeringPlayerIs(Player.ChosenOpponent)
                 effect = Effects.WinGame()
             }
@@ -236,7 +237,7 @@ class ZenosYaeGalvusScenarioTest : FunSpec({
             var g = 0
             while (g++ < 40 && driver.state.step != Step.PRECOMBAT_MAIN) {
                 val pid = driver.state.priorityPlayerId ?: break
-                if (!driver.submit(PassPriority(pid)).isSuccess) break
+                if (driver.submit(PassPriority(pid)).outcome !is Outcome.Done) break
             }
             return driver to init.playerIds
         }
@@ -265,7 +266,7 @@ class ZenosYaeGalvusScenarioTest : FunSpec({
             val caster = driver.state.priorityPlayerId!!
             val bolt = driver.putCardInHand(caster, "Lightning Bolt")
             driver.giveMana(caster, Color.RED, 1)
-            driver.castSpell(caster, bolt, targets = listOf(victim)).isSuccess shouldBe true
+            driver.castSpell(caster, bolt, targets = listOf(victim)).outcome shouldBe Outcome.Done
             settle(driver, passes = 12)
         }
 

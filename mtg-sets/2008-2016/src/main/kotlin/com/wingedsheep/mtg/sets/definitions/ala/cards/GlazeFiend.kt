@@ -10,6 +10,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Glaze Fiend
@@ -38,13 +39,7 @@ val GlazeFiend = card("Glaze Fiend") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Artifact.youControl(),
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.OTHER
-        )
+        trigger = Triggers.another(GameObjectFilter.Artifact.youControl()).enters()
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
     }
 

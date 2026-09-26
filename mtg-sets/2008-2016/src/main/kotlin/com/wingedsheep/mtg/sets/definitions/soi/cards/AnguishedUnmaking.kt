@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.soi.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Anguished Unmaking (Shadows over Innistrad #242)
@@ -23,7 +23,7 @@ val AnguishedUnmaking = card("Anguished Unmaking") {
     oracleText = "Exile target nonland permanent. You lose 3 life."
 
     spell {
-        val permanent = target("target", Targets.NonlandPermanent)
+        val permanent = target(TargetFilter.NonlandPermanent)
         effect = Effects.Exile(permanent) then Effects.LoseLife(3, EffectTarget.Controller)
     }
 

@@ -1,25 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.atq.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.minus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.conditions.CollectionContainsMatch
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.Gate
-import com.wingedsheep.sdk.scripting.effects.GatedEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Transmute Artifact
@@ -52,77 +44,45 @@ val TransmuteArtifact = card("Transmute Artifact") {
     oracleText = "Sacrifice an artifact. If you do, search your library for an artifact card. If that card's mana value is less than or equal to the sacrificed artifact's mana value, put it onto the battlefield. If it's greater, you may pay {X}, where X is the difference. If you do, put it onto the battlefield. If you don't, put it into its owner's graveyard. Then shuffle."
 
     spell {
-        effect = Effects.Composite(listOf(
+        effect = Effects.Pipeline {
             // Sacrifice an artifact you control (storing the choice so its mana value can be
             // compared later). Scoped with youControl() — you can only sacrifice permanents you
             // control (CR 701.21a), and BattlefieldMatching defaults to all players' battlefields.
-            GatherCardsEffect(
-                source = CardSource.BattlefieldMatching(filter = GameObjectFilter.Artifact.youControl()),
-                storeAs = "sacrificeable"
-            ),
-            SelectFromCollectionEffect(
-                from = "sacrificeable",
-                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                storeSelected = "sacrificed",
-                prompt = "Sacrifice an artifact"
-            ),
-            MoveCollectionEffect(
-                from = "sacrificed",
-                destination = CardDestination.ToZone(Zone.GRAVEYARD),
-                moveType = MoveType.Sacrifice
-            ),
+            val sacrificeable = gather(
+                CardSource.BattlefieldMatching(filter = GameObjectFilter.Artifact.youControl())
+            )
+            val sacrificed = chooseExactly(1, from = sacrificeable, prompt = "Sacrifice an artifact")
+            sacrifice(sacrificed)
             // If you sacrificed one, search and (conditionally) put the found artifact into play.
-            GatedEffect(
-                gate = Gate.WhenCondition(CollectionContainsMatch("sacrificed")),
-                then = Effects.Composite(listOf(
-                    GatherCardsEffect(
-                        source = CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.Artifact),
-                        storeAs = "searchable"
-                    ),
-                    SelectFromCollectionEffect(
-                        from = "searchable",
-                        selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                        storeSelected = "found",
-                        prompt = "Search your library for an artifact card"
-                    ),
-                    GatedEffect(
-                        // found MV ≤ sacrificed MV → free to battlefield.
-                        gate = Gate.WhenCondition(
-                            Compare(
-                                left = DynamicAmount.StoredCardManaValue("found"),
-                                operator = ComparisonOperator.LTE,
-                                right = DynamicAmount.StoredCardManaValue("sacrificed")
-                            )
-                        ),
-                        then = MoveCollectionEffect(
-                            from = "found",
-                            destination = CardDestination.ToZone(Zone.BATTLEFIELD)
-                        ),
-                        // found MV > sacrificed MV → you may pay {X} = the difference.
-                        otherwise = GatedEffect(
-                            gate = Gate.MayPay(
-                                Effects.PayDynamicMana(
-                                    DynamicAmount.Subtract(
-                                        DynamicAmount.StoredCardManaValue("found"),
-                                        DynamicAmount.StoredCardManaValue("sacrificed")
-                                    )
-                                )
-                            ),
-                            then = MoveCollectionEffect(
-                                from = "found",
-                                destination = CardDestination.ToZone(Zone.BATTLEFIELD)
-                            ),
-                            otherwise = MoveCollectionEffect(
-                                from = "found",
-                                destination = CardDestination.ToZone(Zone.GRAVEYARD)
-                            )
-                        )
+            run(Effects.If(
+                condition = whenMatches(sacrificed),
+                then = Effects.Pipeline {
+                    val searchable = gather(
+                        CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.Artifact),
+                        search = true
                     )
-                ))
-            ),
+                    val found = chooseUpTo(1, from = searchable, prompt = "Search your library for an artifact card")
+                    run(Effects.If(
+                        condition = Conditions.CompareAmounts(
+                                left = DynamicAmounts.manaValueOf(found),
+                                operator = ComparisonOperator.LTE,
+                                right = DynamicAmounts.manaValueOf(sacrificed)
+                            ),
+                        then = Effects.Pipeline { move(found, CardDestination.ToZone(Zone.BATTLEFIELD)) },
+                        // found MV > sacrificed MV → you may pay {X} = the difference.
+                        otherwise = Effects.MayPay(
+                            cost = Effects.PayDynamicMana(
+                                    DynamicAmounts.manaValueOf(found) - DynamicAmounts.manaValueOf(sacrificed)
+                                ),
+                            then = Effects.Pipeline { move(found, CardDestination.ToZone(Zone.BATTLEFIELD)) },
+                            otherwise = Effects.Pipeline { toGraveyard(found) }
+                        )
+                    ))
+                }
+            ))
             // Then shuffle.
-            ShuffleLibraryEffect()
-        ))
+            run(Effects.ShuffleLibrary())
+        }
     }
 
     metadata {

@@ -2,10 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.csp.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ronom Unicorn
@@ -24,9 +23,9 @@ val RonomUnicorn = card("Ronom Unicorn") {
     toughness = 2
 
     activatedAbility {
+        val enchantment = target(TargetFilter.Enchantment)
         cost = Costs.SacrificeSelf
-        target = Targets.Enchantment
-        effect = Effects.Destroy(EffectTarget.ContextTarget(0))
+        effect = Effects.Destroy(enchantment)
         description = "Sacrifice this creature: Destroy target enchantment."
     }
 

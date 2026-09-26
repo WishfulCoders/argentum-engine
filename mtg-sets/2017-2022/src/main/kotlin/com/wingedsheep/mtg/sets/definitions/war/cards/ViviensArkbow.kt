@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.war.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Vivien's Arkbow — War of the Spark #181 (canonical printing)
@@ -34,7 +34,7 @@ val ViviensArkbow = card("Vivien's Arkbow") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{X}"), Costs.Tap, Costs.DiscardCard)
         effect = Patterns.Library.lookAtTopAndTakeMatching(
-            count = DynamicAmount.XValue,
+            count = DynamicAmounts.xValue(),
             filter = GameObjectFilter.Creature.manaValueAtMostX(),
             prompt = "You may put a creature card with mana value X or less from among them onto the battlefield",
             keepDestination = CardDestination.ToZone(Zone.BATTLEFIELD)

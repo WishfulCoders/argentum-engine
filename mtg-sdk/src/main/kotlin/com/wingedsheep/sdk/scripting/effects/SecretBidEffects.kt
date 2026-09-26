@@ -12,7 +12,7 @@ import kotlinx.serialization.Serializable
  * Each player secretly chooses a number. Then those numbers are revealed.
  *
  * Effects are executed per matching bidder with `xValue` = bid amount and
- * `controllerId` = that bidder. Use `ConditionalEffect(YouControlSource, ...)`
+ * `controllerId` = that bidder. Use `Effects.If(YouControlSource, ...)`
  * to gate effects that should only apply to the source's controller.
  *
  * When all players bid the same non-zero value, they are all both highest

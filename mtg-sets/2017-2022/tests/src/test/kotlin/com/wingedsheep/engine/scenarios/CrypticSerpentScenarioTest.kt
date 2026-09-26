@@ -16,7 +16,7 @@ import io.kotest.matchers.shouldBe
 class CrypticSerpentScenarioTest : ScenarioTestBase() {
 
     private fun genericCostFor(game: TestGame): Int =
-        CostCalculator(cardRegistry).calculateEffectiveCost(
+        CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
             game.state,
             cardRegistry.requireCard("Cryptic Serpent"),
             game.player1Id,

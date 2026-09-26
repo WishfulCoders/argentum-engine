@@ -7,7 +7,7 @@ import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.EntersWithKeywords
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
+import com.wingedsheep.sdk.core.CounterType
 
 /**
  * Pouncing Kavu
@@ -34,7 +34,7 @@ val PouncingKavu = card("Pouncing Kavu") {
     // "Enters with … counters … and with haste" is a replacement
     // effect (rule 614.1c), not an ETB trigger — no stack, present the moment it enters.
     replacementEffect(EntersWithCounters(
-        counterType = CounterTypeFilter.PlusOnePlusOne,
+        counterType = CounterType.PLUS_ONE_PLUS_ONE,
         count = 2,
         selfOnly = true,
         condition = WasKicked

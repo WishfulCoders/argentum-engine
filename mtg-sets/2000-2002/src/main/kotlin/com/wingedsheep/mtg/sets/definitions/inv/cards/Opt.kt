@@ -18,7 +18,7 @@ val Opt = card("Opt") {
     oracleText = "Scry 1. (Look at the top card of your library. You may put that card on the bottom of your library.)\nDraw a card."
 
     spell {
-        effect = Patterns.Library.scry(1).then(Effects.DrawCards(1))
+        effect = Patterns.Library.scry(1) then Effects.DrawCards(1)
     }
 
     metadata {

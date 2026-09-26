@@ -1,16 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Jet, Freedom Fighter
@@ -39,24 +36,18 @@ val JetFreedomFighter = card("Jet, Freedom Fighter") {
         "When Jet dies, put a +1/+1 counter on each of up to two target creatures."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "target creature an opponent controls",
-            TargetCreature(filter = TargetFilter.CreatureOpponentControls)
-        )
-        effect = DealDamageEffect(DynamicAmounts.creaturesYouControl(), t)
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.DealDamage(DynamicAmounts.creaturesYouControl(), t)
         description = "When Jet enters, he deals damage equal to the number of creatures you control " +
             "to target creature an opponent controls."
     }
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        target(
-            "up to two target creatures",
-            TargetCreature(count = 2, optional = true)
-        )
-        effect = ForEachTargetEffect(
-            listOf(Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0)))
+        trigger = Triggers.self.dies()
+        targets(TargetFilter.Creature, count = 2, optional = true)
+        effect = Effects.ForEachTarget(
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0))
         )
         description = "When Jet dies, put a +1/+1 counter on each of up to two target creatures."
     }

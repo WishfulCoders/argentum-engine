@@ -32,7 +32,7 @@ val SkyshipBuccaneer = card("Skyship Buccaneer") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouAttackedThisTurn
         effect = Effects.DrawCards(1)
     }

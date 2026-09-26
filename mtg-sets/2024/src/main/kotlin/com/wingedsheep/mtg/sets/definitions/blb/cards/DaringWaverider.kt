@@ -6,8 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Daring Waverider {4}{U}{U}
@@ -27,21 +25,15 @@ val DaringWaverider = card("Daring Waverider") {
     oracleText = "When this creature enters, you may cast target instant or sorcery card with mana value 4 or less from your graveyard without paying its mana cost. If that spell would be put into your graveyard, exile it instead."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = TargetObject(
-            filter = TargetFilter.InstantOrSorceryInGraveyard.ownedByYou().manaValueAtMost(4)
-        )
-        effect = Effects.Composite(
-            listOf(
-                // Move the targeted card from graveyard to exile
-                Effects.Move(EffectTarget.ContextTarget(0), Zone.EXILE),
-                // Grant free cast from exile + exile after resolve
-                Effects.GrantFreeCastTargetFromExile(
-                    target = EffectTarget.ContextTarget(0),
-                    exileAfterResolve = true
-                )
+        val target = target(TargetFilter.InstantOrSorceryInGraveyard.ownedByYou().manaValueAtMost(4))
+        trigger = Triggers.self.enters()
+        // Move the targeted card from graveyard to exile
+        effect = Effects.Move(target, Zone.EXILE) then
+            // Grant free cast from exile + exile after resolve
+            Effects.GrantFreeCastTargetFromExile(
+                target = target,
+                exileAfterResolve = true
             )
-        )
     }
 
     metadata {

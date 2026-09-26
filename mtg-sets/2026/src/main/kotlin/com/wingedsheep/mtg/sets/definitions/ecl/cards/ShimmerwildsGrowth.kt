@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AdditionalManaOnTap
@@ -8,7 +8,8 @@ import com.wingedsheep.sdk.scripting.ChoiceType
 import com.wingedsheep.sdk.scripting.EntersWithChoice
 import com.wingedsheep.sdk.scripting.GrantChosenColor
 import com.wingedsheep.sdk.scripting.OverrideEnchantedLandManaColor
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Shimmerwilds Growth
@@ -26,7 +27,7 @@ val ShimmerwildsGrowth = card("Shimmerwilds Growth") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant land\nAs this Aura enters, choose a color.\nEnchanted land is the chosen color.\nWhenever enchanted land is tapped for mana, its controller adds an additional one mana of the chosen color."
 
-    auraTarget = Targets.Land
+    auraTarget = TargetObject(filter = TargetFilter.Land)
 
     replacementEffect(EntersWithChoice(ChoiceType.COLOR))
 
@@ -43,7 +44,7 @@ val ShimmerwildsGrowth = card("Shimmerwilds Growth") {
     staticAbility {
         ability = AdditionalManaOnTap(
             color = null,
-            amount = DynamicAmount.Fixed(1)
+            amount = DynamicAmounts.fixed(1)
         )
     }
 

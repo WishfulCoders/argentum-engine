@@ -4,10 +4,11 @@
 
 package com.wingedsheep.mtg.sets.definitions.lea.cards
 
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -22,7 +23,7 @@ val Weakness = card("Weakness") {
     colorIdentity = "B"
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature\nEnchanted creature gets -2/-1."
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
     staticAbility {
         ability = ModifyStats(-2, -1)
     }

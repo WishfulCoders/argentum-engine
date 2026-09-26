@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
@@ -8,13 +8,11 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Kangee, Aerie Keeper
@@ -46,14 +44,14 @@ val KangeeAerieKeeper = card("Kangee, Aerie Keeper") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = WasKicked
-        effect = Effects.AddDynamicCounters(Counters.FEATHER, DynamicAmount.XValue, EffectTarget.Self)
+        effect = Effects.AddDynamicCounters(CounterType.FEATHER, DynamicAmounts.xValue(), EffectTarget.Self)
     }
 
     staticAbility {
-        val featherCount = DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.FEATHER))
-        ability = GrantDynamicStatsEffect(
+        val featherCount = DynamicAmounts.countersOnSelf(CounterType.FEATHER)
+        ability = GrantDynamicStats(
             filter = GroupFilter(GameObjectFilter.Creature.withSubtype("Bird"), excludeSelf = true),
             powerBonus = featherCount,
             toughnessBonus = featherCount

@@ -28,7 +28,7 @@ import kotlin.reflect.KClass
  * to <= 0.
  */
 class AddCountersUpToExecutor(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<AddCountersUpToEffect> {
 
     override val effectType: KClass<AddCountersUpToEffect> = AddCountersUpToEffect::class
@@ -54,7 +54,7 @@ class AddCountersUpToExecutor(
         val decision = { decisionId: String -> ChooseNumberDecision(
             id = decisionId,
             playerId = context.controllerId,
-            prompt = "Put how many ${effect.counterType} counters on $targetName? (0-$max)",
+            prompt = "Put how many ${effect.counterType.printed} counters on $targetName? (0-$max)",
             context = DecisionContext(
                 sourceId = context.sourceId,
                 sourceName = sourceName,

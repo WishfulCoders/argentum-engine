@@ -1,7 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CostModification
@@ -11,6 +10,7 @@ import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.predicates.StatePredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Bitter Downfall
@@ -26,9 +26,8 @@ val BitterDownfall = card("Bitter Downfall") {
     oracleText = "This spell costs {3} less to cast if it targets a creature that was dealt damage this turn.\nDestroy target creature. Its controller loses 2 life."
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.Destroy(creature)
-            .then(Effects.LoseLife(2, EffectTarget.TargetController))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.Destroy(creature) then Effects.LoseLife(2, EffectTarget.TargetController)
     }
 
     staticAbility {

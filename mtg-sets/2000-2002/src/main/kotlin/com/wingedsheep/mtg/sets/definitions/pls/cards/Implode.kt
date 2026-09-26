@@ -8,9 +8,7 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -26,11 +24,8 @@ val Implode = card("Implode") {
     typeLine = "Sorcery"
     oracleText = "Destroy target land.\nDraw a card."
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter.Land))
-        effect = Effects.Composite(
-            Effects.Move(t, Zone.GRAVEYARD, byDestruction = true),
-            DrawCardsEffect(1)
-        )
+        val t = target(TargetFilter.Land)
+        effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true) then Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.UNCOMMON

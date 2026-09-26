@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.effects.FlipCoinEffect
-import com.wingedsheep.sdk.scripting.effects.TurnFaceDownEffect
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Skittish Valesk
@@ -25,9 +25,9 @@ val SkittishValesk = card("Skittish Valesk") {
     oracleText = "At the beginning of your upkeep, flip a coin. If you lose the flip, turn Skittish Valesk face down.\nMorph {5}{R}"
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = FlipCoinEffect(
-            lostEffect = TurnFaceDownEffect(EffectTarget.Self)
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.FlipCoin(
+            lostEffect = Effects.TurnFaceDown(EffectTarget.Self)
         )
     }
 

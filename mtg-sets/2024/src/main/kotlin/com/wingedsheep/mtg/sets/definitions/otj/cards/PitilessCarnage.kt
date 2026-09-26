@@ -42,7 +42,7 @@ val PitilessCarnage = card("Pitiless Carnage") {
                 prompt = "Choose any number of permanents to sacrifice"
             )
             sacrifice(sacrificed)
-            run(Effects.DrawCards(DynamicAmounts.distinctEntitiesIn(sacrificed.key)))
+            run(Effects.DrawCards(DynamicAmounts.distinctEntitiesIn(sacrificed)))
         }
     }
 

@@ -44,7 +44,7 @@ val TheBelligerent = card("The Belligerent") {
         "Crew 3"
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.CreateTreasure(1)
     }
 

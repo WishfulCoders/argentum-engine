@@ -20,13 +20,9 @@ val BoulderDash = card("Boulder Dash") {
     oracleText = "Boulder Dash deals 2 damage to any target and 1 damage to any other target."
 
     spell {
-        val first = target("first target", AnyTarget(descriptionOverride = "any target (takes 2 damage)"))
-        val second = target(
-            "second target",
-            TargetOther(AnyTarget(descriptionOverride = "any other target (takes 1 damage)"))
-        )
-        effect = Effects.DealDamage(2, first)
-            .then(Effects.DealDamage(1, second))
+        val first = target(AnyTarget(descriptionOverride = "any target (takes 2 damage)"))
+        val second = target(TargetOther(AnyTarget(descriptionOverride = "any other target (takes 1 damage)")))
+        effect = Effects.DealDamage(2, first) then Effects.DealDamage(1, second)
     }
 
     metadata {

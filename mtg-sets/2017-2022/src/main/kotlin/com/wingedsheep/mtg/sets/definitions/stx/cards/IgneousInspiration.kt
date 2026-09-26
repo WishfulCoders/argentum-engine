@@ -30,7 +30,7 @@ val IgneousInspiration = card("Igneous Inspiration") {
         "hand, or discard a card to draw a card.)"
 
     spell {
-        val anyTarget = target("any target", Targets.Any)
+        val anyTarget = target(Targets.Any)
         effect = Effects.DealDamage(3, anyTarget, damageSource = EffectTarget.Self) then
             Patterns.Mechanic.learn()
     }

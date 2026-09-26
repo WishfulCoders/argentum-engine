@@ -2,19 +2,15 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ChoiceType
 import com.wingedsheep.sdk.scripting.EntersWithChoice
-import com.wingedsheep.sdk.scripting.EventPattern.SpellCastEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.references.Player
 
 /**
  * Chronicle of Victory
@@ -56,13 +52,7 @@ val ChronicleOfVictory = card("Chronicle of Victory") {
     }
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = SpellCastEvent(
-                spellFilter = GameObjectFilter.Any.withChosenSubtype(),
-                player = Player.You
-            ),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withChosenSubtype())
         effect = Effects.DrawCards(1)
     }
 

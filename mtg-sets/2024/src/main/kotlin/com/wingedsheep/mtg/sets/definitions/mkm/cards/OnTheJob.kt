@@ -24,10 +24,8 @@ val OnTheJob = card("On the Job") {
         "(Create a Clue token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")"
 
     spell {
-        effect = Effects.Composite(
-            Patterns.Group.modifyStatsForAll(2, 1, Filters.Group.creaturesYouControl),
+        effect = Patterns.Group.modifyStatsForAll(2, 1, Filters.Group.creaturesYouControl) then
             Effects.Investigate()
-        )
     }
 
     metadata {

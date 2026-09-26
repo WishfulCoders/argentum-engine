@@ -9,7 +9,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Erhnam Djinn
@@ -28,11 +28,8 @@ val ErhnamDjinn = card("Erhnam Djinn") {
     oracleText = "At the beginning of your upkeep, target non-Wall creature an opponent controls gains forestwalk until your next upkeep. (It can't be blocked as long as defending player controls a Forest.)"
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        val creature = target(
-            "non-Wall creature an opponent controls",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Creature.opponentControls().notSubtype(Subtype("Wall"))))
-        )
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        val creature = target(TargetFilter(GameObjectFilter.Creature.opponentControls().notSubtype(Subtype("Wall"))))
         effect = Effects.GrantKeyword(Keyword.FORESTWALK, creature, Duration.UntilYourNextUpkeep)
     }
 

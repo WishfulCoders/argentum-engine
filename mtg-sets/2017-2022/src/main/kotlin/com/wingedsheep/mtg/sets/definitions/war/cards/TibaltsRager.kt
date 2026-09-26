@@ -26,8 +26,8 @@ val TibaltsRager = card("Tibalt's Rager") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val victim = target("any target", Targets.Any)
+        trigger = Triggers.self.dies()
+        val victim = target(Targets.Any)
         effect = Effects.DealDamage(1, victim)
         description = "When this creature dies, it deals 1 damage to any target."
     }

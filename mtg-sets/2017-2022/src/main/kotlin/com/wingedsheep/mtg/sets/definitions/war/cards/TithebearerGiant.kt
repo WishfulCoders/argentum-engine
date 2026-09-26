@@ -22,7 +22,7 @@ val TithebearerGiant = card("Tithebearer Giant") {
     toughness = 5
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         // `Effects.LoseLife` defaults its target to TargetOpponent, so "you lose 1 life"
         // must name the controller explicitly.
         effect = Effects.DrawCards(1) then Effects.LoseLife(1, EffectTarget.Controller)

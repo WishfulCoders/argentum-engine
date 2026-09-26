@@ -27,7 +27,7 @@ val SunblastAngel = card("Sunblast Angel") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DestroyAll(GameObjectFilter.Creature.tapped())
         description = "When this creature enters, destroy all tapped creatures."
     }

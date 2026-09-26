@@ -1,8 +1,8 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
@@ -25,7 +25,7 @@ val StagBeetle = card("Stag Beetle") {
 
     replacementEffect(
         EntersWithDynamicCounters(
-            count = DynamicAmount.AggregateBattlefield(Player.Each, GameObjectFilter.Creature)
+            count = DynamicAmounts.allCreatures()
         )
     )
 

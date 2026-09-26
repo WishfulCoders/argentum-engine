@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.scg.cards
 
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 
 /**
  * Chartooth Cougar
@@ -27,7 +27,7 @@ val ChartoothCougar = card("Chartooth Cougar") {
 
     activatedAbility {
         cost = Costs.Mana("{R}")
-        effect = ModifyStatsEffect(1, 0, EffectTarget.Self)
+        effect = Effects.ModifyStats(1, 0, EffectTarget.Self)
     }
 
     keywordAbility(KeywordAbility.typecycling("Mountain", ManaCost.parse("{2}")))

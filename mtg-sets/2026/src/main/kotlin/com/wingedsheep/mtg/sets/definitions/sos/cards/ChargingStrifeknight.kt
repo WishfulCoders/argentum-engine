@@ -6,9 +6,9 @@ package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -29,7 +29,7 @@ val ChargingStrifeknight = card("Charging Strifeknight") {
     keywords(Keyword.HASTE)
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.DiscardCard)
-        effect = DrawCardsEffect(1)
+        effect = Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.UNCOMMON

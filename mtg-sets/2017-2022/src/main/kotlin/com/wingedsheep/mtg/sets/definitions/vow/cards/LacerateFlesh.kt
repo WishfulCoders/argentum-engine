@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Lacerate Flesh
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  *
  * Mirrors Hell to Pay's excess-damage shape, but with a fixed 4 damage instead of X and Blood
  * tokens instead of Treasure: [Effects.DealDamage]`(4)` marks the damage, then
- * [Effects.CreateBlood] reads the post-damage excess via `EntityProperty(Target(0),
+ * [Effects.CreateBlood] reads the post-damage excess via `EntityProperty(ContextTarget(0),
  * ExcessMarkedDamage)` — `max(0, marked − toughness)` (CR 120.4a). CompositeEffect resolves its
  * steps sequentially with no interleaved SBA pass, so the marked damage in scope at the second
  * step is exactly the 4 this spell just dealt.
@@ -31,16 +30,11 @@ val LacerateFlesh = card("Lacerate Flesh") {
         "tokens equal to the amount of excess damage dealt to that creature this way."
 
     spell {
-        val creature = target("creature", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.DealDamage(4, creature),
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.DealDamage(4, creature) then
             Effects.CreateBlood(
-                count = DynamicAmount.EntityProperty(
-                    EntityReference.Target(0),
-                    EntityNumericProperty.ExcessMarkedDamage
-                )
+                count = DynamicAmounts.propertyOf(creature, EntityNumericProperty.ExcessMarkedDamage)
             )
-        )
     }
 
     metadata {

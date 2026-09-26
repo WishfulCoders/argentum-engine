@@ -4,14 +4,11 @@
 
 package com.wingedsheep.mtg.sets.definitions.chk.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -26,11 +23,8 @@ val SwallowingPlague = card("Swallowing Plague") {
     typeLine = "Sorcery — Arcane"
     oracleText = "Swallowing Plague deals X damage to target creature and you gain X life."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            DealDamageEffect(DynamicAmount.XValue, t),
-            GainLifeEffect(DynamicAmount.XValue)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.DealDamage(DynamicAmounts.xValue(), t) then Effects.GainLife(DynamicAmounts.xValue())
     }
     metadata {
         rarity = Rarity.UNCOMMON

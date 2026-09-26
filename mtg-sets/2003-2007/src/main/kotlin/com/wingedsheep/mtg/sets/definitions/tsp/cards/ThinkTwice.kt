@@ -4,10 +4,10 @@
 
 package com.wingedsheep.mtg.sets.definitions.tsp.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -23,7 +23,7 @@ val ThinkTwice = card("Think Twice") {
     typeLine = "Instant"
     oracleText = "Draw a card.\nFlashback {2}{U} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
     spell {
-        effect = DrawCardsEffect(1)
+        effect = Effects.DrawCards(1)
     }
     keywordAbility(KeywordAbility.flashback("{2}{U}"))
     metadata {

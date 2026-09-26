@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.events.SpellCastPredicate
 
 /**
  * Gnarlback Rhino (M20 #300)
@@ -13,7 +14,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Trample
  * Whenever you cast a spell that targets this creature, draw a card.
  *
- * The draw trigger uses the [Triggers.youCastSpellTargetingSource] cast-time predicate
+ * The draw trigger uses the `Triggers.you.casts(requires = setOf(SpellCastPredicate.TargetsSource))` cast-time predicate
  * (`SpellCastPredicate.TargetsSource`) — it fires as the spell is cast, before it resolves,
  * so it still triggers even if the spell is later countered or the Rhino leaves play.
  */
@@ -29,7 +30,7 @@ val GnarlbackRhino = card("Gnarlback Rhino") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.youCastSpellTargetingSource()
+        trigger = Triggers.you.casts(requires = setOf(SpellCastPredicate.TargetsSource))
         effect = Effects.DrawCards(1)
     }
 

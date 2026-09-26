@@ -55,7 +55,7 @@ class BelligerentYearlingScenarioTest : FunSpec({
         driver.castSpell(player, ceratops)
 
         // Ceratops resolves, then Yearling's trigger goes on the stack. Keep passing until the
-        // MayEffect surfaces its yes/no pause (spell resolution + trigger resolution).
+        // Effects.May surfaces its yes/no pause (spell resolution + trigger resolution).
         var guard = 0
         while (!driver.isPaused && guard++ < 20) driver.bothPass()
 
@@ -82,7 +82,7 @@ class BelligerentYearlingScenarioTest : FunSpec({
         driver.giveMana(player, Color.RED, 5)
         driver.castSpell(player, ceratops)
 
-        // Pass until the MayEffect surfaces its yes/no pause.
+        // Pass until the Effects.May surfaces its yes/no pause.
         var guard = 0
         while (!driver.isPaused && guard++ < 20) driver.bothPass()
 

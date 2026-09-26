@@ -1,10 +1,10 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.AlternativeCostType
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.PaymentStrategy
-import com.wingedsheep.engine.handlers.ConditionEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.legalactions.LegalActionEnumerator
 import com.wingedsheep.engine.state.components.battlefield.CastChoicesComponent
@@ -41,6 +41,8 @@ import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Tests for the Web-slinging [cost] keyword (CR 702.188, Marvel's Spider-Man).
@@ -74,7 +76,7 @@ class WebSlingingTest : FunSpec({
         toughness = 3
         webSlinging("{4}{G}{G}")
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             interveningIf = Conditions.WebSlungCostWasPaid
             effect = Effects.GainLife(3)
         }
@@ -110,7 +112,7 @@ class WebSlingingTest : FunSpec({
         power = 3
         toughness = 4
         triggeredAbility {
-            trigger = Triggers.YourEndStep
+            trigger = Triggers.you.beginningOf(Step.END)
             interveningIf = Conditions.CreaturesEnteredThisTurn(atLeast = 2)
             effect = Effects.DrawCards(1) then Effects.GainLife(2)
         }
@@ -132,7 +134,7 @@ class WebSlingingTest : FunSpec({
         power = 1
         toughness = 1
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             effect = Effects.GainLife(5)
         }
     }
@@ -143,7 +145,7 @@ class WebSlingingTest : FunSpec({
         manaCost = "{1}{U}"
         typeLine = "Instant"
         spell {
-            target("target instant/sorcery/triggered ability", Targets.InstantSorceryOrTriggeredAbility)
+            target(TargetFilter.InstantSorcerySpellOrTriggeredAbilityOnStack)
             effect = Effects.CounterSpellOrAbility()
         }
     }
@@ -199,7 +201,7 @@ class WebSlingingTest : FunSpec({
             )
         )
         io.kotest.assertions.withClue("error=${result.error} pending=${result.pendingDecision}") {
-            result.isSuccess shouldBe true
+            result.outcome shouldBe Outcome.Done
         }
         while (driver.state.stack.isNotEmpty()) driver.bothPass()
 
@@ -211,7 +213,7 @@ class WebSlingingTest : FunSpec({
         val perm = driver.findPermanent(player, "Web Vanilla")
         perm.shouldNotBeNull()
         driver.state.getEntity(perm)?.get<CastChoicesComponent>()?.chosen?.containsKey(ChoiceSlot.WEB_SLUNG) shouldBe true
-        ConditionEvaluator().evaluate(
+        PredicateEvaluator(cardRegistry = null).conditions.evaluate(
             driver.state,
             WebSlungCostWasPaid,
             EffectContext(sourceId = perm, controllerId = player)
@@ -284,7 +286,7 @@ class WebSlingingTest : FunSpec({
                 additionalCostPayment = AdditionalCostPayment(bouncedPermanents = listOf(beast)),
                 paymentStrategy = PaymentStrategy.FromPool
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         while (driver.state.stack.isNotEmpty()) driver.bothPass()
 
         val perm = driver.findPermanent(player, "Web Counters")
@@ -302,7 +304,7 @@ class WebSlingingTest : FunSpec({
         val normal = driver.putCardInHand(player, "Web Payoff")
         driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
         driver.giveMana(player, Color.GREEN, 2)
-        driver.castSpell(player, normal).isSuccess shouldBe true
+        driver.castSpell(player, normal).outcome shouldBe Outcome.Done
         // Resolve the creature spell only. Because the ETB is an intervening-'if' gated on the
         // web-slung flag (false here), the trigger is never put on the stack — no empty trigger.
         driver.bothPass()
@@ -310,7 +312,7 @@ class WebSlingingTest : FunSpec({
         driver.assertLifeTotal(player, 20)
         val normalPerm = driver.findPermanent(player, "Web Payoff")
         normalPerm.shouldNotBeNull()
-        ConditionEvaluator().evaluate(
+        PredicateEvaluator(cardRegistry = null).conditions.evaluate(
             driver.state,
             WebSlungCostWasPaid,
             EffectContext(sourceId = normalPerm, controllerId = player)
@@ -338,7 +340,7 @@ class WebSlingingTest : FunSpec({
                 additionalCostPayment = AdditionalCostPayment(bouncedPermanents = listOf(beast)),
                 paymentStrategy = PaymentStrategy.FromPool
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         while (driver.state.stack.isNotEmpty()) driver.bothPass()
 
         driver.assertLifeTotal(player, 23)
@@ -361,10 +363,10 @@ class WebSlingingTest : FunSpec({
         // Cast two 1/1 creatures — two creature entries under the player's control this turn
         // (counted per entry event, CR 400.7).
         driver.giveMana(player, Color.GREEN, 1)
-        driver.castSpell(player, c1).isSuccess shouldBe true
+        driver.castSpell(player, c1).outcome shouldBe Outcome.Done
         driver.bothPass()
         driver.giveMana(player, Color.GREEN, 1)
-        driver.castSpell(player, c2).isSuccess shouldBe true
+        driver.castSpell(player, c2).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         val handBeforeEnd = driver.getHandSize(player)
@@ -388,7 +390,7 @@ class WebSlingingTest : FunSpec({
         driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
 
         driver.giveMana(player, Color.GREEN, 1)
-        driver.castSpell(player, c1).isSuccess shouldBe true
+        driver.castSpell(player, c1).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         driver.passPriorityUntil(Step.END)
@@ -411,7 +413,7 @@ class WebSlingingTest : FunSpec({
 
         // Cast the gainer; on resolution its ETB "gain 5 life" triggered ability goes on the stack.
         driver.giveMana(player, Color.GREEN, 1)
-        driver.castSpell(player, gainer).isSuccess shouldBe true
+        driver.castSpell(player, gainer).outcome shouldBe Outcome.Done
         driver.bothPass()
         val trig = driver.getTopOfStack()
         trig.shouldNotBeNull()
@@ -427,7 +429,7 @@ class WebSlingingTest : FunSpec({
                 targets = listOf(ChosenTarget.Spell(trig)),
                 paymentStrategy = PaymentStrategy.FromPool
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         while (driver.state.stack.isNotEmpty()) driver.bothPass()
 
         // The trigger was countered before it resolved — no 5 life.
@@ -444,7 +446,7 @@ class WebSlingingTest : FunSpec({
         driver.removeSummoningSickness(pinger)
         // Activating a non-mana ability keeps priority with the activator, so it stays on the stack.
         driver.submit(ActivateAbility(playerId = player, sourceId = pinger, abilityId = pingerAbilityId))
-            .isSuccess shouldBe true
+            .outcome shouldBe Outcome.Done
         val abilityOnStack = driver.getTopOfStack()
         abilityOnStack.shouldNotBeNull()
         driver.state.getEntity(abilityOnStack)?.get<ActivatedAbilityOnStackComponent>().shouldNotBeNull()

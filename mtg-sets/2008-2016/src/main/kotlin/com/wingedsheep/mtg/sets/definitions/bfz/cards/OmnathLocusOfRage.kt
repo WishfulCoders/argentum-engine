@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.bfz.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Omnath, Locus of Rage
@@ -33,7 +31,7 @@ val OmnathLocusOfRage = card("Omnath, Locus of Rage") {
         "Whenever Omnath or another Elemental you control dies, Omnath deals 3 damage to any target."
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.CreateToken(
             power = 5,
             toughness = 5,
@@ -43,12 +41,8 @@ val OmnathLocusOfRage = card("Omnath, Locus of Rage") {
     }
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Permanent.withSubtype("Elemental").youControl(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY,
-        )
-        val victim = target("any target", Targets.Any)
+        trigger = Triggers.a(GameObjectFilter.Permanent.withSubtype("Elemental").youControl()).dies()
+        val victim = target(Targets.Any)
         effect = Effects.DealDamage(3, victim)
     }
 

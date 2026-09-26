@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -21,10 +20,7 @@ val Necroduality = card("Necroduality") {
     oracleText = "Whenever a nontoken Zombie you control enters, create a token that's a copy of that creature."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.withSubtype("Zombie").youControl().nontoken(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.withSubtype("Zombie").youControl().nontoken()).enters()
         effect = Effects.CreateTokenCopyOfTarget(target = EffectTarget.TriggeringEntity)
     }
 

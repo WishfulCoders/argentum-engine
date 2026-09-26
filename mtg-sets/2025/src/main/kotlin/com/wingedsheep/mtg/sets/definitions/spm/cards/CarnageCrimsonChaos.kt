@@ -10,11 +10,9 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.MustAttack
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.GrantStaticAbilityEffect
-import com.wingedsheep.sdk.scripting.effects.GrantTriggeredAbilityEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Carnage, Crimson Chaos — Marvel's Spider-Man #125
@@ -42,24 +40,18 @@ val CarnageCrimsonChaos = card("Carnage, Crimson Chaos") {
     mayhem("{B}{R}")
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target(
-            "target creature card",
-            TargetObject(filter = TargetFilter.CreatureInYourGraveyard.manaValueAtMost(3))
-        )
-        effect = Effects.Composite(
-            Effects.Move(creature, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD),
-            GrantStaticAbilityEffect(MustAttack(), creature, Duration.Permanent),
-            GrantTriggeredAbilityEffect(
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.CreatureInYourGraveyard.manaValueAtMost(3))
+        effect = Effects.Move(creature, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD) then
+            Effects.GrantStaticAbility(MustAttack(), creature, Duration.Permanent) then
+            Effects.GrantTriggeredAbility(
                 ability = TriggeredAbility.create(
-                    trigger = Triggers.DealsCombatDamageToPlayer.event,
-                    binding = Triggers.DealsCombatDamageToPlayer.binding,
+                    trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer),
                     effect = SacrificeSelfEffect
                 ),
                 target = creature,
                 duration = Duration.Permanent
             )
-        )
     }
 
     metadata {

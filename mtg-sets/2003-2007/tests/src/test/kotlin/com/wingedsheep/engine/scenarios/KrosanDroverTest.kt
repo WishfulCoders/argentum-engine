@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.mana.CostCalculator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.support.GameTestDriver
@@ -82,7 +83,7 @@ class KrosanDroverTest : FunSpec({
 
     test("creature spell with mana value 6 or greater costs 2 less") {
         val registry = createRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         val driver = createDriver()
         driver.initMirrorMatch(
@@ -105,7 +106,7 @@ class KrosanDroverTest : FunSpec({
 
     test("creature spell with mana value less than 6 is not reduced") {
         val registry = createRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         val driver = createDriver()
         driver.initMirrorMatch(
@@ -127,7 +128,7 @@ class KrosanDroverTest : FunSpec({
 
     test("non-creature spell with mana value 6 or greater is not reduced") {
         val registry = createRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         val driver = createDriver()
         driver.initMirrorMatch(
@@ -149,7 +150,7 @@ class KrosanDroverTest : FunSpec({
 
     test("multiple Drovers stack cost reduction") {
         val registry = createRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         val driver = createDriver()
         driver.initMirrorMatch(

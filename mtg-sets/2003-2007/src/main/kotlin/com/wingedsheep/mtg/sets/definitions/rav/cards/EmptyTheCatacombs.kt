@@ -5,10 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -28,22 +25,16 @@ val EmptyTheCatacombs = card("Empty the Catacombs") {
     typeLine = "Sorcery"
     oracleText = "Each player returns all creature cards from their graveyard to their hand."
     spell {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        zone = Zone.GRAVEYARD,
-                        player = Player.Each,
-                        filter = GameObjectFilter.Creature,
-                    ),
-                    storeAs = "graveyardCreatures",
-                ),
-                MoveCollectionEffect(
-                    from = "graveyardCreatures",
-                    destination = CardDestination.ToZone(Zone.HAND),
-                ),
-            ),
-        )
+        effect = Effects.Pipeline {
+            val graveyardCreatures = gather(
+                CardSource.FromZone(
+                    zone = Zone.GRAVEYARD,
+                    player = Player.Each,
+                    filter = GameObjectFilter.Creature,
+                )
+            )
+            toHand(graveyardCreatures)
+        }
     }
     metadata {
         rarity = Rarity.RARE

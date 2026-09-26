@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -23,14 +23,14 @@ val AdrenalineJockey = card("Adrenaline Jockey") {
         "damage to them.\nWhenever you activate an exhaust ability, put a +1/+1 counter on this creature."
 
     triggeredAbility {
-        trigger = Triggers.AnyPlayerCastsSpell
+        trigger = Triggers.anyPlayer.casts()
         interveningIf = Conditions.Not(Conditions.IsPlayersTurn(Player.TriggeringPlayer))
         effect = Effects.DealDamage(4, EffectTarget.PlayerRef(Player.TriggeringPlayer))
     }
 
     triggeredAbility {
-        trigger = Triggers.YouActivateExhaustAbility
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.activatesAbility(exhaust = true)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     metadata {

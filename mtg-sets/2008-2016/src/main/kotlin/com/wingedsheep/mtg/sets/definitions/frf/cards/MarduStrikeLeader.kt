@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * Ragavan's dash shape: `dash` is a builder property rather than a keyword constant, and setting it
  * is what adds the `KeywordAbility.Dash` the cast enumerator reads. The printed body is one
- * [Triggers.Attacks] trigger over [Effects.CreateToken]; the token's art comes from the set's
+ * `Triggers.self.attacks()` trigger over [Effects.CreateToken]; the token's art comes from the set's
  * token sheet, so no image is spelled here.
  */
 val MarduStrikeLeader = card("Mardu Strike Leader") {
@@ -31,7 +31,7 @@ val MarduStrikeLeader = card("Mardu Strike Leader") {
     dash = "{3}{B}"
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.CreateToken(
             power = 2,
             toughness = 1,

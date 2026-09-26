@@ -25,7 +25,7 @@ val RiverHeraldGuide = card("River Herald Guide") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Explore(EffectTarget.Self)
     }
 

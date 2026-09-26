@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.emn.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Hanweir Battlements
@@ -35,7 +35,7 @@ val HanweirBattlements = card("Hanweir Battlements") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{R}"), Costs.Tap)
-        val creature = target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(Keyword.HASTE, creature)
         description = "{R}, {T}: Target creature gains haste until end of turn."
     }

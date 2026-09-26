@@ -2,19 +2,16 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateTokenCopyOfTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * For the Common Good
@@ -31,22 +28,16 @@ val ForTheCommonGood = card("For the Common Good") {
     oracleText = "Create X tokens that are copies of target token you control. Then tokens you control gain indestructible until your next turn. You gain 1 life for each token you control."
 
     spell {
-        val token = target("token you control", TargetObject(
-            filter = TargetFilter(baseFilter = GameObjectFilter.Token.youControl())
-        ))
-        effect = CreateTokenCopyOfTargetEffect(
+        val token = target(TargetFilter(baseFilter = GameObjectFilter.Token.youControl()))
+        effect = Effects.CreateTokenCopyOfTarget(
             target = token,
-            count = DynamicAmount.XValue
-        ).then(
-            Patterns.Group.grantKeywordToAll(
-                keyword = Keyword.INDESTRUCTIBLE,
-                filter = GroupFilter(baseFilter = GameObjectFilter.Token.youControl()),
-                duration = Duration.UntilYourNextTurn
-            )
-        ).then(
-            Effects.GainLife(
-                DynamicAmount.Count(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Token.youControl())
-            )
+            count = DynamicAmounts.xValue()
+        ) then Patterns.Group.grantKeywordToAll(
+            keyword = Keyword.INDESTRUCTIBLE,
+            filter = GroupFilter(baseFilter = GameObjectFilter.Token.youControl()),
+            duration = Duration.UntilYourNextTurn
+        ) then Effects.GainLife(
+            DynamicAmounts.count(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Token.youControl())
         )
     }
 

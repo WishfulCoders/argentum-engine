@@ -4,14 +4,12 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Peerless Recycling
@@ -33,29 +31,21 @@ val PeerlessRecycling = card("Peerless Recycling") {
     spell {
         effect = Patterns.Mechanic.giftSpell(
             // Mode 0: No gift — return 1 target permanent card from graveyard to hand
-            Mode.withTarget(
-                effect = Effects.ReturnToHand(EffectTarget.ContextTarget(0)),
-                target = TargetObject(
-                    filter = TargetFilter(GameObjectFilter.Permanent.ownedByYou(), zone = Zone.GRAVEYARD)
-                ),
-                description = "Return target permanent card from your graveyard to your hand"
-            ),
+            mode("Return target permanent card from your graveyard to your hand") {
+                val permanent = target(TargetFilter(GameObjectFilter.Permanent.ownedByYou(), zone = Zone.GRAVEYARD))
+                effect = Effects.ReturnToHand(permanent)
+            },
             // Mode 1: Gift — opponent draws a card, return 2 target permanent cards to hand
-            Mode(
-                effect = Effects.Composite(listOf(
-                    DrawCardsEffect(1, EffectTarget.PlayerRef(Player.ChosenOpponent)),
-                    Effects.ReturnToHand(EffectTarget.ContextTarget(0)),
-                    Effects.ReturnToHand(EffectTarget.ContextTarget(1)),
+            mode("Gift a card — return two target permanent cards from your graveyard to your hand") {
+                val (firstPermanent, secondPermanent) = targets(
+                    TargetFilter(GameObjectFilter.Permanent.ownedByYou(), zone = Zone.GRAVEYARD),
+                    count = 2,
+                )
+                effect = Effects.DrawCards(1, EffectTarget.PlayerRef(Player.ChosenOpponent)) then
+                    Effects.ReturnToHand(firstPermanent) then
+                    Effects.ReturnToHand(secondPermanent) then
                     Effects.GiftGiven()
-                )),
-                targetRequirements = listOf(
-                    TargetObject(
-                        count = 2,
-                        filter = TargetFilter(GameObjectFilter.Permanent.ownedByYou(), zone = Zone.GRAVEYARD)
-                    )
-                ),
-                description = "Gift a card — return two target permanent cards from your graveyard to your hand"
-            )
+            }
         )
     }
 

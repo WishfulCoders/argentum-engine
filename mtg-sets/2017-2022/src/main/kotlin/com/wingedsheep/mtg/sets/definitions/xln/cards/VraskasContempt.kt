@@ -20,7 +20,7 @@ val VraskasContempt = card("Vraska's Contempt") {
     oracleText = "Exile target creature or planeswalker. You gain 2 life."
 
     spell {
-        val victim = target("target", Targets.CreatureOrPlaneswalker)
+        val victim = target(Targets.CreatureOrPlaneswalker)
         effect = Effects.Move(victim, Zone.EXILE) then Effects.GainLife(2)
     }
 

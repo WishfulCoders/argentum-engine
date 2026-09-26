@@ -5,12 +5,12 @@ import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /** Old source references must not sacrifice a new battlefield visit of the same card. */
 class SourceInstanceSacrificeTest : FunSpec({
@@ -20,7 +20,7 @@ class SourceInstanceSacrificeTest : FunSpec({
         power = 1
         toughness = 1
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             optional = true
             effect = Effects.SacrificeTarget(com.wingedsheep.sdk.scripting.targets.EffectTarget.Self)
         }
@@ -29,8 +29,8 @@ class SourceInstanceSacrificeTest : FunSpec({
         manaCost = "{U}"
         typeLine = "Instant"
         spell {
-            val creature = target("creature", Targets.Creature)
-            effect = Effects.Exile(creature).then(Effects.PutOntoBattlefield(creature))
+            val creature = target(TargetFilter.Creature)
+            effect = Effects.Exile(creature) then Effects.PutOntoBattlefield(creature)
         }
     }
 
@@ -69,9 +69,9 @@ class SourceInstanceSacrificeTest : FunSpec({
             power = 1
             toughness = 1
             triggeredAbility {
-                trigger = Triggers.Dies
-                effect = Effects.PutOntoBattlefield(com.wingedsheep.sdk.scripting.targets.EffectTarget.Self)
-                    .then(Effects.ModifyStats(2, 0, com.wingedsheep.sdk.scripting.targets.EffectTarget.Self))
+                trigger = Triggers.self.dies()
+                effect = Effects.PutOntoBattlefield(com.wingedsheep.sdk.scripting.targets.EffectTarget.Self) then
+                    Effects.ModifyStats(2, 0, com.wingedsheep.sdk.scripting.targets.EffectTarget.Self)
             }
         }
         val d = GameTestDriver()

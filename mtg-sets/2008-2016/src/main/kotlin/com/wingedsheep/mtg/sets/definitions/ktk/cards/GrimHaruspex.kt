@@ -1,14 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Grim Haruspex
@@ -29,16 +26,9 @@ val GrimHaruspex = card("Grim Haruspex") {
     morph = "{B}"
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Creature.youControl().copy(
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl().copy(
                     cardPredicates = GameObjectFilter.Creature.cardPredicates + CardPredicate.IsNontoken
-                ),
-                from = Zone.BATTLEFIELD,
-                to = Zone.GRAVEYARD
-            ),
-            binding = TriggerBinding.OTHER
-        )
+                )).dies()
         effect = Effects.DrawCards(1)
     }
 

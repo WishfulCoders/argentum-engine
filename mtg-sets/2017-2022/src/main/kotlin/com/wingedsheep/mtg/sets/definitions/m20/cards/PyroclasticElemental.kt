@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Pyroclastic Elemental
@@ -24,9 +23,9 @@ val PyroclasticElemental = card("Pyroclastic Elemental") {
     toughness = 4
 
     activatedAbility {
+        val player = target(Targets.Player)
         cost = Costs.Mana("{1}{R}{R}")
-        target = Targets.Player
-        effect = Effects.DealDamage(1, EffectTarget.ContextTarget(0))
+        effect = Effects.DealDamage(1, player)
         description = "{1}{R}{R}: This creature deals 1 damage to target player."
     }
 

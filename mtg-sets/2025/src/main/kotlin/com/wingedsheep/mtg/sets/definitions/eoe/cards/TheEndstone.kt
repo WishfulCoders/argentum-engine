@@ -1,16 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.divRoundedUp
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * The Endstone
@@ -31,30 +30,19 @@ val TheEndstone = card("The Endstone") {
     // The hand-zone filter excludes effects that put lands onto the battlefield from other zones
     // (e.g. fetchland search-and-put from library), which would otherwise over-trigger landfall.
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Land.youControl(),
-                from = Zone.HAND,
-                to = Zone.BATTLEFIELD,
-            ),
-            binding = TriggerBinding.OTHER,
-        )
+        trigger = Triggers.another(GameObjectFilter.Land.youControl()).enters(from = Zone.HAND)
         effect = Effects.DrawCards(1)
     }
 
     triggeredAbility {
-        trigger = Triggers.YouCastSpell
+        trigger = Triggers.you.casts()
         effect = Effects.DrawCards(1)
     }
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         effect = Effects.SetLifeTotal(
-            amount = DynamicAmount.Divide(
-                numerator = DynamicAmount.StartingLifeTotal(Player.You),
-                denominator = DynamicAmount.Fixed(2),
-                roundUp = true,
-            ),
+            amount = DynamicAmounts.startingLifeTotal(Player.You) divRoundedUp 2,
         )
     }
 

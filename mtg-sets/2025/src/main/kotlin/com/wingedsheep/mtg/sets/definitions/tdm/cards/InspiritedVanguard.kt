@@ -25,13 +25,13 @@ val InspiritedVanguard = card("Inspirited Vanguard") {
         "(Put two +1/+1 counters on it or create a 2/2 white Spirit creature token.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Endure(2)
         description = "Whenever this creature enters, it endures 2."
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.Endure(2)
         description = "Whenever this creature attacks, it endures 2."
     }

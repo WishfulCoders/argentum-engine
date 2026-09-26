@@ -1,18 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Mindmoil
@@ -38,21 +33,12 @@ val Mindmoil = card("Mindmoil") {
         "library in any order, then draw that many cards."
 
     triggeredAbility {
-        trigger = Triggers.YouCastSpell
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.HAND, Player.You),
-                    storeAs = "hand"
-                ),
-                MoveCollectionEffect(
-                    from = "hand",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
-                    order = CardOrder.ControllerChooses
-                ),
-                Effects.DrawCards(DynamicAmount.DistinctEntitiesInCollections(listOf("hand")))
-            )
-        )
+        trigger = Triggers.you.casts()
+        effect = Effects.Pipeline {
+            val hand = gather(CardSource.FromZone(Zone.HAND, Player.You))
+            toLibraryBottom(hand)
+            run(Effects.DrawCards(DynamicAmounts.distinctEntitiesIn(hand)))
+        }
     }
 
     metadata {

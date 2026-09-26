@@ -65,7 +65,7 @@ review, it is a change to decline.
   destructured. If you find yourself defining a type to hold "what the text means", stop — that type
   belongs in `mtg-sdk` and it is `add-feature` work, not Assay work.
 - **`build` goes through the SDK's companion facades** — `Effects.Destroy(...)`,
-  `KeywordAbility.flashback(...)`, `Triggers.EntersBattlefield` — for the reason cards do: the
+  `KeywordAbility.flashback(...)`, `Triggers.self.enters()` — for the reason cards do: the
   facades are the curated surface, and this is the half that would otherwise drift from how cards are
   actually written. `match` necessarily destructures concrete classes; that asymmetry is inherent to
   a bidirectional rule, which is exactly why the `build` half must not compound it.
@@ -420,7 +420,7 @@ by construction; a fold entry would be the gate agreeing with itself.
 
 The **step-trigger band** — "At the beginning of each opponent's end step, …" — is the frozen-facade
 lesson a fifth time, and it is the one to read for *where a derivation lives*. The SDK's
-`Triggers.phase(step, player, binding)` says in its own KDoc to "reach for this factory for any other
+`Triggers.<player>.beginningOf(step)` says in its own KDoc to "reach for this factory for any other
 combination", and the grammar was calling the thirteen constants that call it with all three
 arguments fixed. Three things transfer.
 

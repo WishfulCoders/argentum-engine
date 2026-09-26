@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Raccoon Rallier
@@ -26,7 +26,7 @@ val RaccoonRallier = card("Raccoon Rallier") {
 
     activatedAbility {
         cost = AbilityCost.Tap
-        val creature = target("creature you control", Targets.CreatureYouControl)
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.GrantKeyword(Keyword.HASTE, creature)
         timing = TimingRule.SorcerySpeed
     }

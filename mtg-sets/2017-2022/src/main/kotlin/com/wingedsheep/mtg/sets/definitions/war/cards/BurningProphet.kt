@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Burning Prophet
@@ -22,11 +23,8 @@ val BurningProphet = card("Burning Prophet") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
-        effect = Effects.Composite(listOf(
-            Effects.ModifyStats(1, 0, EffectTarget.Self),
-            Effects.Scry(1)
-        ))
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
+        effect = Effects.ModifyStats(1, 0, EffectTarget.Self) then Effects.Scry(1)
     }
 
     metadata {

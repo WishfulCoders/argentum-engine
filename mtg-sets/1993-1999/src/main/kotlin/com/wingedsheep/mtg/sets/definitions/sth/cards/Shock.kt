@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.sth.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Shock
@@ -22,8 +22,8 @@ val Shock = card("Shock") {
     oracleText = "Shock deals 2 damage to any target."
 
     spell {
-        val t = target("target", AnyTarget())
-        effect = DealDamageEffect(2, t)
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(2, t)
     }
 
     metadata {

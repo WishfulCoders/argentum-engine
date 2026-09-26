@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Herald of the Fair
@@ -26,8 +25,8 @@ val HeraldOfTheFair = card("Herald of the Fair") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetCreature(filter = TargetFilter.CreatureYouControl))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.CreatureYouControl)
         effect = Effects.ModifyStats(1, 1, t)
     }
 

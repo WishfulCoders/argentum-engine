@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 
 /**
  * HYDRA Troopers
@@ -22,7 +21,7 @@ import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
  *
  * Implementation notes:
  * - The "if … otherwise …" clause is *not* an intervening-if — it's a branch evaluated as the
- *   trigger resolves, so it is a [ConditionalEffect] over
+ *   trigger resolves, so it is a [Effects.If] over
  *   [Conditions.CreatureCardsInGraveyardAtLeast], not `interveningIf`. The trigger always
  *   goes on the stack and always does one of the two things.
  */
@@ -37,10 +36,10 @@ val HydraTroopers = card("HYDRA Troopers") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ConditionalEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.If(
             condition = Conditions.CreatureCardsInGraveyardAtLeast(2),
-            effect = Effects.CreateToken(
+            then = Effects.CreateToken(
                 power = 2,
                 toughness = 1,
                 colors = setOf(Color.BLACK),
@@ -49,7 +48,7 @@ val HydraTroopers = card("HYDRA Troopers") {
                 tapped = true,
                 imageUri = "https://cards.scryfall.io/normal/front/4/a/4a51b6a0-9a54-4f01-b959-0a28c15d103f.jpg?1783902804"
             ),
-            elseEffect = Patterns.Library.mill(2)
+            otherwise = Patterns.Library.mill(2)
         )
     }
 

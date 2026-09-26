@@ -47,7 +47,7 @@ val HawkeyesBow = card("Hawkeye's Bow") {
     }
 
     triggeredAbility {
-        trigger = Triggers.becomesTapped(binding = TriggerBinding.ATTACHED)
+        trigger = Triggers.attached.becomesTapped()
         effect = Effects.DealDamage(
             amount = 1,
             target = EffectTarget.PlayerRef(Player.EachOpponent),

@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.dtk.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Kolaghan Forerunners
@@ -37,7 +37,7 @@ val KolaghanForerunners = card("Kolaghan Forerunners") {
     keywords(Keyword.TRAMPLE)
 
     dynamicPower(
-        DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Creature)
+        DynamicAmounts.creaturesYouControl()
     )
 
     dash = "{2}{R}"

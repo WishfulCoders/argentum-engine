@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.triggers
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.BecomesTargetEvent
 import com.wingedsheep.engine.core.ExecutionResult
@@ -21,9 +22,6 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.EventPattern
-import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
@@ -31,6 +29,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Engine coverage for the two new axes on the becomes-target trigger:
@@ -62,7 +61,7 @@ class BecomesTargetPlayerAndAbilityAxesTest : FunSpec({
         toughness = 1
         activatedAbility {
             cost = Costs.Tap
-            val victim = target("target player", Targets.Player)
+            val victim = target(Targets.Player)
             effect = Effects.LoseLife(1, victim)
             description = "{T}: Target player loses 1 life."
         }
@@ -73,7 +72,7 @@ class BecomesTargetPlayerAndAbilityAxesTest : FunSpec({
         manaCost = "{B}"
         typeLine = "Sorcery"
         spell {
-            val victim = target("target player", Targets.Player)
+            val victim = target(Targets.Player)
             effect = Effects.LoseLife(1, victim)
         }
     }
@@ -83,9 +82,9 @@ class BecomesTargetPlayerAndAbilityAxesTest : FunSpec({
         manaCost = "{B}"
         typeLine = "Sorcery"
         spell {
-            val victim = target("target player", Targets.Player)
-            val creature = target("target creature", Targets.Creature)
-            effect = Effects.LoseLife(1, victim).then(Effects.DealDamage(1, creature))
+            val victim = target(Targets.Player)
+            val creature = target(TargetFilter.Creature)
+            effect = Effects.LoseLife(1, victim) then Effects.DealDamage(1, creature)
         }
     }
 
@@ -94,7 +93,7 @@ class BecomesTargetPlayerAndAbilityAxesTest : FunSpec({
         manaCost = "{U}"
         typeLine = "Instant"
         spell {
-            target("target spell or ability", Targets.SpellOrAbilityWithSingleTarget)
+            target(TargetFilter.SpellOrAbilityOnStack)
             effect = Effects.ChangeTarget()
         }
     }
@@ -108,7 +107,7 @@ class BecomesTargetPlayerAndAbilityAxesTest : FunSpec({
         power = 0
         toughness = 1
         triggeredAbility {
-            trigger = Triggers.BecomesTargetOfAbility(byYou = true, includePlayerTargets = true)
+            trigger = Triggers.a().becomesTarget(byYou = true, abilitiesOnly = true, includePlayerTargets = true)
             oncePerTurn = true
             effect = Effects.DrawCards(1)
         }
@@ -121,7 +120,7 @@ class BecomesTargetPlayerAndAbilityAxesTest : FunSpec({
         power = 0
         toughness = 1
         triggeredAbility {
-            trigger = Triggers.BecomesTargetOfAbility(byYou = true)
+            trigger = Triggers.a().becomesTarget(byYou = true, abilitiesOnly = true)
             effect = Effects.DrawCards(1)
         }
     }
@@ -133,10 +132,7 @@ class BecomesTargetPlayerAndAbilityAxesTest : FunSpec({
         power = 0
         toughness = 1
         triggeredAbility {
-            trigger = TriggerSpec(
-                event = EventPattern.BecomesTargetEvent(includePlayerTargets = true),
-                binding = TriggerBinding.ANY
-            )
+            trigger = Triggers.a().becomesTarget(includePlayerTargets = true)
             effect = Effects.DrawCards(1)
         }
     }
@@ -148,7 +144,7 @@ class BecomesTargetPlayerAndAbilityAxesTest : FunSpec({
         power = 0
         toughness = 1
         triggeredAbility {
-            trigger = Triggers.BecomesTarget(GameObjectFilter.Any)
+            trigger = Triggers.a().becomesTarget()
             effect = Effects.DrawCards(1)
         }
     }
@@ -160,7 +156,7 @@ class BecomesTargetPlayerAndAbilityAxesTest : FunSpec({
         power = 0
         toughness = 1
         triggeredAbility {
-            trigger = Triggers.BecomesTargetOfSpell(GameObjectFilter.Any)
+            trigger = Triggers.a().becomesTarget(spellsOnly = true)
             effect = Effects.DrawCards(1)
         }
     }
@@ -241,7 +237,7 @@ class BecomesTargetPlayerAndAbilityAxesTest : FunSpec({
             // putTriggeredAbility is the third of the four target-declaration sites; drive it
             // directly rather than through a card so the assertion is about the site, not about
             // whichever trigger happened to be convenient.
-            val result = StackResolver(driver.cardRegistry).putTriggeredAbility(
+            val result = driver.services.stackResolver.putTriggeredAbility(
                 state = driver.state,
                 ability = TriggeredAbilityOnStackComponent(
                     sourceId = source,
@@ -293,7 +289,7 @@ class BecomesTargetPlayerAndAbilityAxesTest : FunSpec({
          * That is **wrong** under the rules, not an open question: CR 115.9c counts the objects and
          * players chosen as targets when the spell or ability was put on the stack "(as modified by
          * effects that changed those targets)", so a redirected object *is* one of its targets, and
-         * by CR 603.2e a "becomes" trigger fires at the moment the named event happens — which for a
+         * by CR 603.2f a "becomes" trigger fires at the moment the named event happens — which for a
          * redirect is the moment the new object becomes a target. So ward (CR 702.21a) and every
          * other becomes-target trigger *should* fire on a Spellskite/Misdirection redirect and do
          * not.
@@ -357,7 +353,7 @@ class BecomesTargetPlayerAndAbilityAxesTest : FunSpec({
         )
 
         fun firings(driver: GameTestDriver, event: BecomesTargetEvent, observerId: EntityId) =
-            TriggerDetector(driver.cardRegistry)
+            TriggerDetector(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null), conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
                 .detectTriggers(driver.state, listOf(event))
                 .filter { it.ability.trigger is EventPattern.BecomesTargetEvent && it.sourceId == observerId }
 

@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ravenous Chupacabra
@@ -26,8 +27,8 @@ val RavenousChupacabra = card("Ravenous Chupacabra") {
     oracleText = "When this creature enters, destroy target creature an opponent controls."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val victim = target("target", Targets.CreatureOpponentControls)
+        trigger = Triggers.self.enters()
+        val victim = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.Destroy(victim)
         description = "When this creature enters, destroy target creature an opponent controls."
     }

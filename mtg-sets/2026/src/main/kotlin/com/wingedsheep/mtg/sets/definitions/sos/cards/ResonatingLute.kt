@@ -39,7 +39,7 @@ val ResonatingLute = card("Resonating Lute") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Tap,
                 effect = Effects.AddAnyColorMana(
                     amount = 2,

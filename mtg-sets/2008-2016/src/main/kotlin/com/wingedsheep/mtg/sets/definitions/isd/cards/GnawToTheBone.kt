@@ -5,13 +5,14 @@
 package com.wingedsheep.mtg.sets.definitions.isd.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -27,8 +28,8 @@ val GnawToTheBone = card("Gnaw to the Bone") {
     typeLine = "Instant"
     oracleText = "You gain 2 life for each creature card in your graveyard.\nFlashback {2}{G} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
     spell {
-        effect = GainLifeEffect(
-            DynamicAmount.Multiply(DynamicAmount.Count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Creature), 2)
+        effect = Effects.GainLife(
+            DynamicAmounts.creatureCardsInYourGraveyard() * 2
         )
     }
     keywordAbility(KeywordAbility.flashback("{2}{G}"))

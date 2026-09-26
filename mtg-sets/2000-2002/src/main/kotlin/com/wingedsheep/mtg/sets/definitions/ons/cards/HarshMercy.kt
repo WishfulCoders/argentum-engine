@@ -1,17 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.withoutSubtypeInStoredList
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.EachPlayerChoosesCreatureTypeEffect
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -28,24 +21,12 @@ val HarshMercy = card("Harsh Mercy") {
     oracleText = "Each player chooses a creature type. Destroy all creatures that aren't of a type chosen this way. They can't be regenerated."
 
     spell {
-        effect = EachPlayerChoosesCreatureTypeEffect(storeAs = "chosenTypes")
-            .then(Effects.Composite(listOf(
-                GatherCardsEffect(
-                    source = CardSource.BattlefieldMatching(filter = GameObjectFilter.Creature),
-                    storeAs = "destroyAll_gathered"
-                ),
-                FilterCollectionEffect(
-                    from = "destroyAll_gathered",
-                    filter = CollectionFilter.ExcludeSubtypesFromStored("chosenTypes"),
-                    storeMatching = "destroyAll_filtered"
-                ),
-                MoveCollectionEffect(
-                    from = "destroyAll_filtered",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD),
-                    moveType = MoveType.Destroy,
-                    noRegenerate = true
-                )
-            )))
+        effect = Effects.Pipeline {
+            val chosenTypes = eachPlayerChoosesCreatureType()
+            val creatures = gather(CardSource.BattlefieldMatching(filter = GameObjectFilter.Creature))
+            val unchosen = filter(creatures, GameObjectFilter.Any.withoutSubtypeInStoredList(chosenTypes))
+            destroy(unchosen, noRegenerate = true)
+        }
     }
 
     metadata {

@@ -4,13 +4,14 @@
 
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ForceSacrificeEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 
 /**
@@ -28,8 +29,8 @@ val MolderSlug = card("Molder Slug") {
     power = 4
     toughness = 6
     triggeredAbility {
-        trigger = Triggers.EachUpkeep
-        effect = ForceSacrificeEffect(GameObjectFilter.Artifact, 1, EffectTarget.PlayerRef(Player.TriggeringPlayer))
+        trigger = Triggers.anyPlayer.beginningOf(Step.UPKEEP)
+        effect = Effects.Sacrifice(GameObjectFilter.Artifact, 1, EffectTarget.PlayerRef(Player.TriggeringPlayer))
     }
     metadata {
         rarity = Rarity.RARE

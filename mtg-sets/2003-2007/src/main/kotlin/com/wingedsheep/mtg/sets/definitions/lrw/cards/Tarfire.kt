@@ -21,7 +21,7 @@ val Tarfire = card("Tarfire") {
     oracleText = "Tarfire deals 2 damage to any target."
 
     spell {
-        val recipient = target("any target", Targets.Any)
+        val recipient = target(Targets.Any)
         effect = Effects.DealDamage(2, recipient)
     }
 

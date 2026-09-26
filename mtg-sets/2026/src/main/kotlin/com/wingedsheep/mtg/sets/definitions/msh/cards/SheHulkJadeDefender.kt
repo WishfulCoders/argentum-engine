@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * She-Hulk, Jade Defender — Marvel Super Heroes #188 (uncommon)
@@ -44,14 +43,9 @@ val SheHulkJadeDefender = card("She-Hulk, Jade Defender") {
     activatedAbility {
         isPowerUp = true
         cost = Costs.Mana("{4}{G}{G}")
-        val victim = target(
-            "up to one target artifact or enchantment",
-            TargetPermanent(optional = true, filter = TargetFilter.ArtifactOrEnchantment)
-        )
-        effect = Effects.Composite(
-            Effects.Destroy(victim),
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
-        )
+        val victim = target(TargetFilter.ArtifactOrEnchantment, optional = true)
+        effect = Effects.Destroy(victim) then
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     metadata {

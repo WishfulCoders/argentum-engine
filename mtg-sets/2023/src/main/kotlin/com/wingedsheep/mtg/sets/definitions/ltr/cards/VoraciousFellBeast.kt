@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreatePredefinedTokenEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -40,17 +39,12 @@ val VoraciousFellBeast = card("Voracious Fell Beast") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Sacrifice(
             GameObjectFilter.Creature,
             1,
             EffectTarget.PlayerRef(Player.EachOpponent)
-        ).then(
-            CreatePredefinedTokenEffect(
-                tokenType = "Food",
-                dynamicCount = DynamicAmounts.permanentsSacrificedThisWay()
-            )
-        )
+        ) then Effects.CreateFood(DynamicAmounts.permanentsSacrificedThisWay())
     }
 
     metadata {

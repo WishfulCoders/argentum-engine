@@ -1,16 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Beastie Beatdown
@@ -35,16 +31,14 @@ val BeastieBeatdown = card("Beastie Beatdown") {
         "The creature you control deals damage equal to its power to the creature an opponent controls."
 
     spell {
-        val yours = target("creature you control", TargetCreature(filter = TargetFilter.Creature.youControl()))
-        val theirs = target("creature an opponent controls", TargetCreature(filter = TargetFilter.Creature.opponentControls()))
-        effect = Effects.Composite(
-            // Delirium — counters land first so the damage uses the buffed power.
-            ConditionalEffect(
-                condition = Conditions.Delirium(),
-                effect = AddCountersEffect(counterType = Counters.PLUS_ONE_PLUS_ONE, count = 2, target = yours),
-            ),
-            DealDamageEffect(DynamicAmounts.targetPower(0), theirs, damageSource = yours),
-        )
+        val yours = target(TargetFilter.Creature.youControl())
+        val theirs = target(TargetFilter.Creature.opponentControls())
+        // Delirium — counters land first so the damage uses the buffed power.
+        effect = Effects.If(
+            condition = Conditions.Delirium(),
+            then = Effects.AddCounters(counterType = CounterType.PLUS_ONE_PLUS_ONE, count = 2, target = yours),
+        ) then
+            Effects.DealDamage(DynamicAmounts.powerOf(yours), theirs, damageSource = yours)
     }
 
     metadata {

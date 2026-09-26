@@ -26,8 +26,8 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  * Regression: RemoveCountersExecutor's inline `CounterType.valueOf(...)` mapping
  * does not handle "-1/-1" (produces "M1_M1" which is not an enum name), so it
  * silently fell back to PLUS_ONE_PLUS_ONE and no -1/-1 counter was ever removed.
- * The fix routes every counter executor through a shared `resolveCounterType`
- * helper with explicit mappings for "+1/+1" and "-1/-1".
+ * Effects now carry a [com.wingedsheep.sdk.core.CounterType] rather than a string, so there is no
+ * per-executor parse left to get wrong.
  */
 class HeirloomAuntieRemoveCounterTest : FunSpec({
 

@@ -2,14 +2,15 @@ package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Fangkeeper's Familiar
@@ -42,20 +43,19 @@ val FangkeepersFamiliar = card("Fangkeeper's Familiar") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseOne(
             Mode.noTarget(
-                Effects.GainLife(3).then(Patterns.Library.surveil(3)),
+                Effects.GainLife(3) then Patterns.Library.surveil(3),
                 "You gain 3 life and surveil 3"
             ),
-            Mode.withTarget(
-                Effects.Destroy(EffectTarget.ContextTarget(0)),
-                Targets.Enchantment,
-                "Destroy target enchantment"
-            ),
+            mode("Destroy target enchantment") {
+                val enchantment = target(TargetFilter.Enchantment)
+                effect = Effects.Destroy(enchantment)
+            },
             Mode.withTarget(
                 Effects.CounterSpell(),
-                Targets.CreatureSpell,
+                TargetObject(filter = TargetFilter.CreatureSpellOnStack),
                 "Counter target creature spell"
             )
         )

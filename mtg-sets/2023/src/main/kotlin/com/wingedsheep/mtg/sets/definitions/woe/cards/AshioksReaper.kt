@@ -1,12 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Ashiok's Reaper
@@ -31,11 +29,7 @@ val AshioksReaper = card("Ashiok's Reaper") {
     oracleText = "Whenever an enchantment you control is put into a graveyard from the battlefield, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Enchantment.youControl(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Enchantment.youControl()).dies()
         effect = Effects.DrawCards(1)
     }
 

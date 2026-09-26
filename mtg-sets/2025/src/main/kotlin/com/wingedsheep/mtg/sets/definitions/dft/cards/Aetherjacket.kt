@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -33,7 +32,7 @@ val Aetherjacket = card("Aetherjacket") {
     keywords(Keyword.FLYING, Keyword.VIGILANCE)
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap, Costs.SacrificeSelf)
-        val t = target("target", TargetPermanent(filter = TargetFilter.Artifact))
+        val t = target(TargetFilter.Artifact)
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
         timing = TimingRule.SorcerySpeed
     }

@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Survivors' Bond
@@ -38,24 +37,18 @@ val SurvivorsBond = card("Survivors' Bond") {
         modal(chooseCount = 2, minChooseCount = 1) {
             mode("Return target Human creature card from your graveyard to your hand") {
                 val t = target(
-                    "target",
-                    TargetObject(
-                        filter = TargetFilter(
-                            GameObjectFilter.Creature.withSubtype(Subtype.HUMAN).ownedByYou(),
-                            zone = Zone.GRAVEYARD,
-                        ),
+                    TargetFilter(
+                        GameObjectFilter.Creature.withSubtype(Subtype.HUMAN).ownedByYou(),
+                        zone = Zone.GRAVEYARD,
                     ),
                 )
                 effect = Effects.ReturnToHand(t)
             }
             mode("Return target non-Human creature card from your graveyard to your hand") {
                 val t = target(
-                    "target",
-                    TargetObject(
-                        filter = TargetFilter(
-                            GameObjectFilter.Creature.notSubtype(Subtype.HUMAN).ownedByYou(),
-                            zone = Zone.GRAVEYARD,
-                        ),
+                    TargetFilter(
+                        GameObjectFilter.Creature.notSubtype(Subtype.HUMAN).ownedByYou(),
+                        zone = Zone.GRAVEYARD,
                     ),
                 )
                 effect = Effects.ReturnToHand(t)

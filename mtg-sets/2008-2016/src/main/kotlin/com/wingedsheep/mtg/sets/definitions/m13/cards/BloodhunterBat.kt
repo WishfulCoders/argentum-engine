@@ -28,8 +28,8 @@ val BloodhunterBat = card("Bloodhunter Bat") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val player = target("target player", Targets.Player)
+        trigger = Triggers.self.enters()
+        val player = target(Targets.Player)
         effect = Effects.DrainLife(2, from = player, to = EffectTarget.Controller)
         description = "When this creature enters, target player loses 2 life and you gain 2 life."
     }

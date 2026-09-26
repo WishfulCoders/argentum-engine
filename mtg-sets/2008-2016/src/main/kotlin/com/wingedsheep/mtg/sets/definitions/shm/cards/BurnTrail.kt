@@ -29,7 +29,7 @@ val BurnTrail = card("Burn Trail") {
     keywordAbility(KeywordAbility.Conspire)
 
     spell {
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(3, t)
     }
 

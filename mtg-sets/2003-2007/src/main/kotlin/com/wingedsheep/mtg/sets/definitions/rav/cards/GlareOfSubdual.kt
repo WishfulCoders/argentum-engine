@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Glare of Subdual — Ravnica: City of Guilds #207 (canonical printing; reprinted in EMA and GK1)
@@ -32,11 +31,8 @@ val GlareOfSubdual = card("Glare of Subdual") {
 
     activatedAbility {
         cost = Costs.TapPermanents(1, GameObjectFilter.Creature)
-        val t = target(
-            "target artifact or creature",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Creature)),
-        )
-        effect = TapUntapEffect(target = t, tap = true)
+        val t = target(TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Creature))
+        effect = Effects.Tap(target = t)
         description = "Tap an untapped creature you control: Tap target artifact or creature."
     }
 

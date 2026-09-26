@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Treefolk Healer
@@ -23,7 +23,7 @@ val TreefolkHealer = card("Treefolk Healer") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{W}"), Costs.Tap)
-        val t = target("target", AnyTarget())
+        val t = target(Targets.Any)
         effect = Effects.PreventNextDamage(2, t)
         description = "{2}{W}, {T}: Prevent the next 2 damage that would be dealt to any target this turn."
     }

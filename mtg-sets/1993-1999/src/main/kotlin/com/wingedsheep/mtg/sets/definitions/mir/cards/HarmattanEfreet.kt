@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -31,7 +30,7 @@ val HarmattanEfreet = card("Harmattan Efreet") {
     keywords(Keyword.FLYING)
     activatedAbility {
         cost = Costs.Mana("{1}{U}{U}")
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+        val t = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(Keyword.FLYING, t)
     }
     metadata {

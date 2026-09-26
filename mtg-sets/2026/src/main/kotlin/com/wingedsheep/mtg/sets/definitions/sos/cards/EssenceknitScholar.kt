@@ -7,7 +7,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Essenceknit Scholar
@@ -35,16 +35,15 @@ val EssenceknitScholar = card("Essenceknit Scholar") {
         "draw a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreateTokenEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
             colors = setOf(Color.BLACK, Color.GREEN),
             creatureTypes = setOf("Pest"),
             triggeredAbilities = listOf(
                 TriggeredAbility.create(
-                    trigger = Triggers.Attacks.event,
-                    binding = Triggers.Attacks.binding,
+                    trigger = Triggers.self.attacks(),
                     effect = Effects.GainLife(1)
                 )
             ),
@@ -55,7 +54,7 @@ val EssenceknitScholar = card("Essenceknit Scholar") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.ControlledCreatureDiedThisTurn
         effect = Effects.DrawCards(1)
         description = "At the beginning of your end step, if a creature died under your control " +

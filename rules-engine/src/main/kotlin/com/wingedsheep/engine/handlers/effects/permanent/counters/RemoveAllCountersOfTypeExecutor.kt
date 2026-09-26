@@ -7,7 +7,6 @@ import com.wingedsheep.engine.handlers.effects.EffectExecutor
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
-import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.scripting.effects.RemoveAllCountersOfTypeEffect
 import kotlin.reflect.KClass
 
@@ -26,8 +25,7 @@ class RemoveAllCountersOfTypeExecutor : EffectExecutor<RemoveAllCountersOfTypeEf
             ?: return EffectResult.success(state, emptyList())
         val counters = targetEntity.get<CountersComponent>()
             ?: return EffectResult.success(state, emptyList())
-        val type = CounterType.fromName(effect.counterType)
-            ?: return EffectResult.success(state, emptyList())
+        val type = effect.counterType
         val amount = counters.counters[type] ?: 0
         if (amount <= 0) return EffectResult.success(state, emptyList())
 

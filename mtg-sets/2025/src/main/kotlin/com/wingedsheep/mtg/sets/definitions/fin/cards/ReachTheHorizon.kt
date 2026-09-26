@@ -7,15 +7,9 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.SelectionRestriction
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Reach the Horizon
@@ -37,26 +31,17 @@ val ReachTheHorizon = card("Reach the Horizon") {
     val basicOrTown = GameObjectFilter.BasicLand or GameObjectFilter.Land.withSubtype("Town")
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.LIBRARY, Player.You, basicOrTown),
-                    storeAs = "searchable"
-                ),
-                SelectFromCollectionEffect(
-                    from = "searchable",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(2)),
-                    storeSelected = "found",
-                    restrictions = listOf(SelectionRestriction.OnePerCardName),
-                    prompt = "Search for up to two basic land or Town cards with different names"
-                ),
-                MoveCollectionEffect(
-                    from = "found",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped)
-                ),
-                ShuffleLibraryEffect()
+        effect = Effects.Pipeline {
+            val searchable = gather(CardSource.FromZone(Zone.LIBRARY, Player.You, basicOrTown), search = true)
+            val found = chooseUpTo(
+                2,
+                from = searchable,
+                restrictions = listOf(SelectionRestriction.OnePerCardName),
+                prompt = "Search for up to two basic land or Town cards with different names"
             )
-        )
+            move(found, CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped))
+            run(Effects.ShuffleLibrary())
+        }
     }
 
     metadata {

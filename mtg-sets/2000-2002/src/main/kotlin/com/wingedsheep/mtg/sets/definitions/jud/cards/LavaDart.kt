@@ -2,7 +2,6 @@ package com.wingedsheep.mtg.sets.definitions.jud.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
@@ -26,8 +25,8 @@ val LavaDart = card("Lava Dart") {
     oracleText = "Lava Dart deals 1 damage to any target.\nFlashback—Sacrifice a Mountain. (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
 
     spell {
-        target = Targets.Any
-        effect = Effects.DealDamage(1, EffectTarget.ContextTarget(0))
+        val anyTarget = target(Targets.Any)
+        effect = Effects.DealDamage(1, anyTarget)
     }
 
     keywordAbility(KeywordAbility.flashback("", Costs.additional.SacrificePermanent(Filters.MountainCard)))

@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
 import com.wingedsheep.sdk.core.CardType
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -14,7 +14,6 @@ import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.MoveType
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Demonic Junker — Aetherdrift #83
@@ -69,18 +68,12 @@ val DemonicJunker = card("Demonic Junker") {
     keywordAbility(KeywordAbility.Affinity(CardType.ARTIFACT))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
 
         // "for each player, destroy up to one target creature that player controls"
         // (two-player rendering: one optional slot per player — see KDoc).
-        target(
-            "up to one target creature you control",
-            TargetPermanent(filter = TargetFilter.Creature.youControl(), optional = true)
-        )
-        target(
-            "up to one target creature an opponent controls",
-            TargetPermanent(filter = TargetFilter.Creature.opponentControls(), optional = true)
-        )
+        target(TargetFilter.Creature.youControl(), optional = true)
+        target(TargetFilter.Creature.opponentControls(), optional = true)
 
         effect = Effects.Pipeline(
             descriptionOverride = "For each player, destroy up to one target creature that player " +
@@ -100,7 +93,7 @@ val DemonicJunker = card("Demonic Junker") {
             // controlled that were destroyed this way.
             val destroyedYours = exclude(destroyed, split.rest)
             ifNotEmpty(destroyedYours) {
-                run(Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self))
+                run(Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self))
             }
         }
     }

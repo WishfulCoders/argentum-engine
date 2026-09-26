@@ -44,10 +44,7 @@ val MajaBretagardProtector = card("Maja, Bretagard Protector") {
 
     // Landfall — Whenever a land you control enters, create a 1/1 white Human Warrior token.
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Land.youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

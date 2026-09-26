@@ -10,8 +10,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -27,15 +25,12 @@ val CandyTrail = card("Candy Trail") {
     typeLine = "Artifact — Food Clue"
     oracleText = "When this artifact enters, scry 2.\n{2}, {T}, Sacrifice this artifact: You gain 3 life and draw a card."
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.scry(2)
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap, Costs.SacrificeSelf)
-        effect = Effects.Composite(
-            GainLifeEffect(3),
-            DrawCardsEffect(1)
-        )
+        effect = Effects.GainLife(3) then Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.COMMON

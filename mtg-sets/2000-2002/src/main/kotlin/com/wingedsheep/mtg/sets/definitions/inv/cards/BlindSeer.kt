@@ -29,7 +29,7 @@ val BlindSeer = card("Blind Seer") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{U}")
-        val t = target("target", TargetSpellOrPermanent())
+        val t = target(TargetSpellOrPermanent())
         effect = Effects.ChooseColorThen(
             then = Effects.ChangeColorToChosen(t),
             prompt = "Choose a color"

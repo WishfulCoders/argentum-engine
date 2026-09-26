@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
@@ -12,6 +11,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sauron, the Lidless Eye
@@ -32,19 +32,17 @@ val SauronTheLidlessEye = card("Sauron, the Lidless Eye") {
     oracleText = "When Sauron enters, gain control of target creature an opponent controls until end of turn. Untap it. It gains haste until end of turn.\n{1}{B}{R}: Creatures you control get +2/+0 until end of turn. Each opponent loses 2 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("target creature an opponent controls", Targets.CreatureOpponentControls)
-        effect = Effects.Composite(
-            Effects.GainControl(creature, Duration.EndOfTurn),
-            Effects.Untap(creature),
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.GainControl(creature, Duration.EndOfTurn) then
+            Effects.Untap(creature) then
             Effects.GrantKeyword(Keyword.HASTE, creature)
-        )
     }
 
     activatedAbility {
         cost = Costs.Mana("{1}{B}{R}")
-        effect = Patterns.Group.modifyStatsForAll(2, 0, Filters.Group.creaturesYouControl)
-            .then(Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent)))
+        effect = Patterns.Group.modifyStatsForAll(2, 0, Filters.Group.creaturesYouControl) then
+            Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent))
     }
 
     metadata {

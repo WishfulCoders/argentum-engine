@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 
 /**
  * Summon: G.F. Ifrit
@@ -27,11 +26,8 @@ val SummonGfIfrit = card("Summon: G.F. Ifrit") {
     toughness = 2
 
     // "You may discard a card. If you do, draw a card."
-    val rummage = MayEffect(
-        Effects.Composite(
-            Patterns.Hand.discardCards(1),
-            Effects.DrawCards(1),
-        ),
+    val rummage = Effects.May(
+        Patterns.Hand.discardCards(1) then Effects.DrawCards(1),
     )
     val addRed = Effects.AddMana(Color.RED, 1)
 

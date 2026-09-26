@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * When this creature enters or dies, create a 1/1 black Bat creature token with flying.
  *
  * Battle cry is not a distinct engine keyword; it is modeled from its reminder text as a
- * `Triggers.Attacks` (SELF) ability that pumps every OTHER attacking creature. The mass buff
+ * `Triggers.self.attacks()` (SELF) ability that pumps every OTHER attacking creature. The mass buff
  * uses `ForEachInGroup` over the group of attacking creatures (excluding this one) so each
  * attacker receives its own +1/+0 floating effect — a `GroupRef` target on `ModifyStats` is
  * not expanded per-permanent (The Wind Crystal idiom). The filter is unrestricted by
@@ -43,19 +43,19 @@ val SanguineEvangelist = card("Sanguine Evangelist") {
 
     // Battle cry: whenever this creature attacks, each other attacking creature gets +1/+0 UEOT.
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ForEachInGroup(
             GroupFilter(
                 baseFilter = GameObjectFilter.Creature.attacking(),
                 excludeSelf = true,
             ),
-            Effects.ModifyStats(1, 0, EffectTarget.Self),
+            Effects.ModifyStats(1, 0, EffectTarget.IterationEntity),
         )
     }
 
     // When this creature enters, create a 1/1 black Bat with flying.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
@@ -68,7 +68,7 @@ val SanguineEvangelist = card("Sanguine Evangelist") {
 
     // When this creature dies, create a 1/1 black Bat with flying.
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

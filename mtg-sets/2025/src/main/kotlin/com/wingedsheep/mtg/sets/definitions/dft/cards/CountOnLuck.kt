@@ -4,18 +4,13 @@
 
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 
 /**
@@ -30,12 +25,12 @@ val CountOnLuck = card("Count on Luck") {
     typeLine = "Enchantment"
     oracleText = "At the beginning of your upkeep, exile the top card of your library. You may play that card this turn."
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.Composite(
-            GatherCardsEffect(CardSource.TopOfLibrary(DynamicAmount.Fixed(1)), storeAs = "impulseExiled"),
-            MoveCollectionEffect(from = "impulseExiled", destination = CardDestination.ToZone(Zone.EXILE)),
-            GrantMayPlayFromExileEffect("impulseExiled", MayPlayExpiry.EndOfTurn)
-        )
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.Pipeline {
+            val impulseExiled = gather(CardSource.TopOfLibrary(1))
+            exile(impulseExiled)
+            run(Effects.GrantMayPlayFromExile(impulseExiled, MayPlayExpiry.EndOfTurn))
+        }
     }
     metadata {
         rarity = Rarity.RARE

@@ -1,6 +1,6 @@
 package com.wingedsheep.sdk.dsl
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.KeywordAbility
@@ -8,9 +8,9 @@ import com.wingedsheep.sdk.scripting.RemoveCardType
 import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.conditions.AllConditions
 import com.wingedsheep.sdk.scripting.conditions.SourceCastForImpending
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Add Impending N—[cost] (CR 702.175, Duskmourn: House of Horror).
@@ -42,7 +42,7 @@ fun CardBuilder.impending(time: Int, cost: String) {
     val impendingActive = AllConditions(listOf(
         SourceCastForImpending,
         Conditions.SourceHasCounter(
-            CounterTypeFilter.Named(Counters.TIME)
+            CounterType.TIME
         )
     ))
     staticAbilities.add(
@@ -53,9 +53,8 @@ fun CardBuilder.impending(time: Int, cost: String) {
     )
     triggeredAbilities.add(
         TriggeredAbility.create(
-            trigger = Triggers.YourEndStep.event,
-            binding = Triggers.YourEndStep.binding,
-            effect = Effects.RemoveCounters(Counters.TIME, 1, EffectTarget.Self),
+            trigger = Triggers.you.beginningOf(Step.END),
+            effect = Effects.RemoveCounters(CounterType.TIME, 1, EffectTarget.Self),
             interveningIf = impendingActive,
             descriptionOverride = "At the beginning of your end step, remove a time counter from this permanent."
         )

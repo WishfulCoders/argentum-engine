@@ -11,6 +11,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 
 /**
@@ -31,7 +32,7 @@ val SlickshotShowOff = card("Slickshot Show-Off") {
     toughness = 2
     keywords(Keyword.FLYING, Keyword.HASTE)
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
         effect = Effects.ModifyStats(2, 0, EffectTarget.Self)
     }
     keywordAbility(KeywordAbility.plot("{1}{R}"))

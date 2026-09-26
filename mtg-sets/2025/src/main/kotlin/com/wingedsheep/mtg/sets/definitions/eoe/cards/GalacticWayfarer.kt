@@ -22,7 +22,7 @@ val GalacticWayfarer = card("Galactic Wayfarer") {
 
     // ETB: create a Lander token
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateLander()
     }
 

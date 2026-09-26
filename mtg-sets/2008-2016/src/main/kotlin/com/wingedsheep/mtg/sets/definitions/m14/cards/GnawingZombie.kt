@@ -27,11 +27,8 @@ val GnawingZombie = card("Gnawing Zombie") {
             Costs.Mana("{1}{B}"),
             Costs.Sacrifice(GameObjectFilter.Creature)
         )
-        val player = target("player", Targets.Player)
-        effect = Effects.Composite(
-            Effects.LoseLife(1, player),
-            Effects.GainLife(1)
-        )
+        val player = target(Targets.Player)
+        effect = Effects.LoseLife(1, player) then Effects.GainLife(1)
     }
 
     metadata {

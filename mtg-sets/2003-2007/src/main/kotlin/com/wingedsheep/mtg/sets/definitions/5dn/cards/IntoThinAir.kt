@@ -14,7 +14,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -38,7 +37,7 @@ val IntoThinAir = card("Into Thin Air") {
         )
     }
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter.Artifact))
+        val t = target(TargetFilter.Artifact)
         effect = Effects.Move(t, Zone.HAND)
     }
     metadata {

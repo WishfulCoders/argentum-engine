@@ -27,7 +27,7 @@ val MaraudingBlightPriest = card("Marauding Blight-Priest") {
     power = 3
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.YouGainLife
+        trigger = Triggers.you.gainsLife()
         effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent))
     }
     metadata {

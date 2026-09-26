@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Howler's Heavy — Aetherdrift #46
@@ -17,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  * When you cycle this card, target creature or Vehicle an opponent controls gets -3/-0 until end
  * of turn.
  *
- * The cycling trigger ([Triggers.YouCycleThis]) fires from the graveyard after the cycling ability
+ * The cycling trigger (`Triggers.self.isCycled()`) fires from the graveyard after the cycling ability
  * has already resolved, and it targets on the way to the stack — so it can be responded to, and it
  * simply fizzles if the chosen permanent leaves before resolution.
  *
@@ -38,11 +37,8 @@ val HowlersHeavy = card("Howler's Heavy") {
     keywordAbility(KeywordAbility.cycling("{1}{U}"))
 
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
-        val victim = target(
-            "target creature or Vehicle an opponent controls",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrVehicle.opponentControls()))
-        )
+        trigger = Triggers.self.isCycled()
+        val victim = target(TargetFilter(GameObjectFilter.CreatureOrVehicle.opponentControls()))
         effect = Effects.ModifyStats(-3, 0, victim)
         description = "When you cycle this card, target creature or Vehicle an opponent controls " +
             "gets -3/-0 until end of turn."

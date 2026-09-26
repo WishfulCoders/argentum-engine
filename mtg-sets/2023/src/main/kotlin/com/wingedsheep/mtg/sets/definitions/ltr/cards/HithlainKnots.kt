@@ -1,11 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Hithlain Knots
@@ -22,8 +21,8 @@ val HithlainKnots = card("Hithlain Knots") {
     oracleText = "Tap target creature. Scry 1.\nDraw a card."
 
     spell {
-        target("target creature", Targets.Creature)
-        effect = Effects.Tap(EffectTarget.ContextTarget(0)) then
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.Tap(creature) then
             Patterns.Library.scry(1) then
             Effects.DrawCards(1)
     }

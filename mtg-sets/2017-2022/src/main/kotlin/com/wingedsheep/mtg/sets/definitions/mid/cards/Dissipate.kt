@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.mid.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Dissipate
@@ -19,7 +19,7 @@ val Dissipate = card("Dissipate") {
     oracleText = "Counter target spell. If that spell is countered this way, exile it instead of putting it into its owner's graveyard."
 
     spell {
-        target = Targets.Spell
+        val spell = target(TargetFilter.SpellOnStack)
         effect = Effects.CounterSpellToExile()
     }
 

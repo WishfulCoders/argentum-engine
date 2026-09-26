@@ -10,7 +10,7 @@ import io.kotest.matchers.shouldNotBe
  * Pippin's Bravery (LTR, {G} instant) — "You may sacrifice a Food. If you do, target creature gets
  * +4/+4 until end of turn. Otherwise, that creature gets +2/+2 until end of turn."
  *
- * Modeled as an [com.wingedsheep.sdk.scripting.effects.IfYouDoEffect] over a Gather → choose-up-to-1
+ * Modeled as an [com.wingedsheep.sdk.dsl.Effects.IfYouDo] over a Gather → choose-up-to-1
  * → sacrifice pipeline. The optional selection is the "you may": choosing a Food sacrifices it and
  * grants +4/+4; declining (or controlling no Food, in which case there's nothing to choose and no
  * prompt appears) grants +2/+2.

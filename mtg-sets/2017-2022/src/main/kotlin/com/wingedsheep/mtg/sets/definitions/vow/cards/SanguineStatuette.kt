@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -19,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever you sacrifice a Blood token, you may have this artifact become a 3/3 Vampire artifact
  * creature with haste until end of turn.
  *
- * The animation trigger is [Triggers.YouSacrificeA] rather than the batch
+ * The animation trigger is `Triggers.you.sacrifices(filter)` rather than the batch
  * `YouSacrificeOneOrMore`: "whenever you sacrifice a Blood token" is per-permanent (CR 603.2c),
  * so sacrificing two Bloods to one cost gives two triggers and two chances to say yes.
  *
@@ -39,13 +38,13 @@ val SanguineStatuette = card("Sanguine Statuette") {
         "artifact creature with haste until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateBlood(1)
     }
 
     triggeredAbility {
-        trigger = Triggers.YouSacrificeA(GameObjectFilter.Artifact.withSubtype("Blood"))
-        effect = MayEffect(
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Artifact.withSubtype("Blood"))
+        effect = Effects.May(
             Effects.BecomeCreature(
                 target = EffectTarget.Self,
                 power = 3,

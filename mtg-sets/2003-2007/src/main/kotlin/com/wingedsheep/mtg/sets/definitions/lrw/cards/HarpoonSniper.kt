@@ -3,13 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Harpoon Sniper
@@ -40,11 +39,8 @@ val HarpoonSniper = card("Harpoon Sniper") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{W}"), Costs.Tap)
-        val t = target(
-            "target attacking or blocking creature",
-            TargetCreature(filter = TargetFilter.AttackingOrBlockingCreature)
-        )
-        effect = DealDamageEffect(
+        val t = target(TargetFilter.AttackingOrBlockingCreature)
+        effect = Effects.DealDamage(
             DynamicAmounts.battlefield(
                 Player.You,
                 GameObjectFilter.Permanent.withSubtype(Subtype.MERFOLK)

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.effects.DamageUtils
 import com.wingedsheep.engine.handlers.effects.ReplacementEffectUtils
 import com.wingedsheep.engine.mechanics.layers.StateProjector
@@ -17,14 +18,14 @@ import com.wingedsheep.sdk.scripting.DoubleDamage
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.ModifyDamageAmount
 import com.wingedsheep.sdk.scripting.PreventDamage
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
 /**
  * Regression tests for the projection-vs-base-state bug in replacement-effect filters
- * that check `RecipientFilter.CreatureYouControl` / `PermanentYouControl`.
+ * that check `Recipient.CreatureYouControl` / `PermanentYouControl`.
  *
  * The previous implementation read the recipient's controller from base
  * `ControllerComponent`, which misses control-changing continuous effects (e.g.,
@@ -41,14 +42,14 @@ class ProjectedControllerInReplacementsTest : FunSpec({
     val projector = StateProjector()
 
     // Inline test card with default DoubleDamage shape — defaults to
-    // recipient = RecipientFilter.CreatureYouControl, source = Any.
+    // recipient = Recipient.CreatureYouControl, source = Any.
     val TestDoubleDamageAura = card("Test Double Damage Source") {
         manaCost = "{3}{R}"
         typeLine = "Enchantment"
         oracleText = "If a source would deal damage to a creature you control, it deals double that damage instead."
         replacementEffect(
             DoubleDamage(
-                appliesTo = EventPattern.DamageEvent(recipient = RecipientFilter.CreatureYouControl)
+                appliesTo = EventPattern.DamageEvent(recipient = Recipient.CreatureYouControl)
             )
         )
     }
@@ -61,7 +62,7 @@ class ProjectedControllerInReplacementsTest : FunSpec({
         replacementEffect(
             PreventDamage(
                 amount = 2,
-                appliesTo = EventPattern.DamageEvent(recipient = RecipientFilter.CreatureYouControl)
+                appliesTo = EventPattern.DamageEvent(recipient = Recipient.CreatureYouControl)
             )
         )
     }
@@ -74,7 +75,7 @@ class ProjectedControllerInReplacementsTest : FunSpec({
         replacementEffect(
             ModifyDamageAmount(
                 modifier = 1,
-                appliesTo = EventPattern.DamageEvent(recipient = RecipientFilter.CreatureYouControl)
+                appliesTo = EventPattern.DamageEvent(recipient = Recipient.CreatureYouControl)
             )
         )
     }
@@ -118,7 +119,7 @@ class ProjectedControllerInReplacementsTest : FunSpec({
         }
 
         // Place 1 +1/+1 counter on the stolen creature. Hardened Scales' filter is
-        // RecipientFilter.CreatureYouControl. Under the previous bug, the filter compared
+        // Recipient.CreatureYouControl. Under the previous bug, the filter compared
         // the *base* controller (still the opponent) and rejected the stolen creature, so
         // no modifier applied (result: 1). Fixed code uses projection (active player),
         // and the modifier applies (result: 2).
@@ -127,7 +128,8 @@ class ProjectedControllerInReplacementsTest : FunSpec({
             targetId = theirCreature,
             counterType = CounterType.PLUS_ONE_PLUS_ONE,
             count = 1,
-            placerId = activePlayer
+            placerId = activePlayer,
+            predicateEvaluator = PredicateEvaluator(cardRegistry = null)
         )
         modified shouldBe 2
     }
@@ -151,10 +153,12 @@ class ProjectedControllerInReplacementsTest : FunSpec({
 
         // 3 damage to the stolen creature should be doubled to 6 under projection.
         val amplified = DamageUtils.applyStaticDamageAmplification(
+            driver.zones.cardRegistry,
             state = driver.state,
             targetId = theirCreature,
             amount = 3,
-            sourceId = null
+            sourceId = null,
+            predicateEvaluator = PredicateEvaluator(cardRegistry = null)
         )
         amplified shouldBe 6
     }
@@ -178,10 +182,12 @@ class ProjectedControllerInReplacementsTest : FunSpec({
 
         // 3 damage to stolen creature gets +1 → 4 under projection.
         val amplified = DamageUtils.applyStaticDamageAmplification(
+            driver.zones.cardRegistry,
             state = driver.state,
             targetId = theirCreature,
             amount = 3,
-            sourceId = null
+            sourceId = null,
+            predicateEvaluator = PredicateEvaluator(cardRegistry = null)
         )
         amplified shouldBe 4
     }
@@ -209,6 +215,7 @@ class ProjectedControllerInReplacementsTest : FunSpec({
         // — by code equivalence with DamageCalculator.estimateDamagePrevention — that
         // sibling fix as well.
         val result = DamageUtils.dealDamageToTarget(
+            driver.zones,
             state = driver.state,
             targetId = theirCreature,
             amount = 3,

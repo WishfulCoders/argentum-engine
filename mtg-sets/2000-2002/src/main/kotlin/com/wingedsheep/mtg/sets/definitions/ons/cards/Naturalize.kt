@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -21,7 +20,7 @@ val Naturalize = card("Naturalize") {
     oracleText = "Destroy target artifact or enchantment."
 
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Enchantment)))
+        val t = target(TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Enchantment))
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
 

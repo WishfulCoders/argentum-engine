@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 
 /**
  * Papercraft Decoy — Kamigawa: Neon Dynasty #253 (canonical printing)
@@ -14,7 +13,7 @@ import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
  * When this creature leaves the battlefield, you may pay {2}. If you do, draw a card.
  *
  * *Leaves*, not dies: bouncing, exiling or sacrificing it all pay off, which is what makes it a
- * sacrifice-outlet body rather than a chump blocker. [MayPayManaEffect] is the "you may pay … If
+ * sacrifice-outlet body rather than a chump blocker. [Effects.MayPay] is the "you may pay … If
  * you do" fold — the payment and the draw are one effect, so declining costs nothing.
  */
 val PapercraftDecoy = card("Papercraft Decoy") {
@@ -26,10 +25,10 @@ val PapercraftDecoy = card("Papercraft Decoy") {
     oracleText = "When this creature leaves the battlefield, you may pay {2}. If you do, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
-        effect = MayPayManaEffect(
+        trigger = Triggers.self.leaves()
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{2}"),
-            effect = Effects.DrawCards(1),
+            then = Effects.DrawCards(1),
         )
         description = "When this creature leaves the battlefield, you may pay {2}. If you do, draw a card."
     }

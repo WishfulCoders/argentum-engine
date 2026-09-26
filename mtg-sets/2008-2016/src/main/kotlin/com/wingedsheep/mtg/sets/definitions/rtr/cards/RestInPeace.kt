@@ -8,10 +8,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.RedirectZoneChange
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -37,23 +34,17 @@ val RestInPeace = card("Rest in Peace") {
 
     // When this enchantment enters, exile all graveyards.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        zone = Zone.GRAVEYARD,
-                        player = Player.Each,
-                        filter = GameObjectFilter.Any,
-                    ),
-                    storeAs = "allGraveyards",
-                ),
-                MoveCollectionEffect(
-                    from = "allGraveyards",
-                    destination = CardDestination.ToZone(Zone.EXILE),
-                ),
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val allGraveyards = gather(
+                CardSource.FromZone(
+                    zone = Zone.GRAVEYARD,
+                    player = Player.Each,
+                    filter = GameObjectFilter.Any,
+                )
             )
-        )
+            exile(allGraveyards)
+        }
     }
 
     // If a card or token would be put into a graveyard from anywhere, exile it instead.

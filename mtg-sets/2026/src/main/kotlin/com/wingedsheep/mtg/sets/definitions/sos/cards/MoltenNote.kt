@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Molten Note
@@ -34,13 +34,11 @@ val MoltenNote = card("Molten Note") {
         "Then exile it.)"
 
     spell {
-        target = Targets.Creature
-        effect = Effects.DealDamage(DynamicAmount.TotalManaSpent, EffectTarget.ContextTarget(0))
-            .then(
-                Effects.ForEachInGroup(
-                    Filters.Group.creaturesYouControl,
-                    Effects.Untap(EffectTarget.Self),
-                )
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.DealDamage(DynamicAmounts.totalManaSpent(), creature) then
+            Effects.ForEachInGroup(
+                Filters.Group.creaturesYouControl,
+                Effects.Untap(EffectTarget.IterationEntity),
             )
     }
 

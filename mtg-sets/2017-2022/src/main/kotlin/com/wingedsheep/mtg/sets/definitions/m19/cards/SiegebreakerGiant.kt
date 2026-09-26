@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Siegebreaker Giant
@@ -28,7 +28,7 @@ val SiegebreakerGiant = card("Siegebreaker Giant") {
 
     activatedAbility {
         cost = Costs.Mana("{3}{R}")
-        val creature = target("target", TargetCreature())
+        val creature = target(TargetFilter.Creature)
         effect = Effects.CantBlock(creature)
         description = "{3}{R}: Target creature can't block this turn."
     }

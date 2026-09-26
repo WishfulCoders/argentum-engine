@@ -29,10 +29,10 @@ val ChieftainEnDal = card("Chieftain en-Dal") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.attacking()),
-            Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.Self)
+            Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.IterationEntity)
         )
     }
     metadata {

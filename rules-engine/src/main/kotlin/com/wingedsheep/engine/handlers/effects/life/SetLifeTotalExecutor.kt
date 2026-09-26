@@ -21,7 +21,7 @@ import kotlin.reflect.KClass
  * the necessary amount of life. This executor emits the appropriate LifeChangedEvent.
  */
 class SetLifeTotalExecutor(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<SetLifeTotalEffect> {
 
     override val effectType: KClass<SetLifeTotalEffect> = SetLifeTotalEffect::class

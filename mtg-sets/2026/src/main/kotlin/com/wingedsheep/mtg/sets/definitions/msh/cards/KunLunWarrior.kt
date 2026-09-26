@@ -7,18 +7,15 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ChooseActionEffect
 import com.wingedsheep.sdk.scripting.effects.EffectChoice
 import com.wingedsheep.sdk.scripting.effects.FeasibilityCheck
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
 
 /**
  * K'un-Lun Warrior (MSH #140) — {1}{R} Creature — Human Warrior Hero, 2/2
  *
  * When this creature enters, you may sacrifice an artifact or discard a card. If you do, draw a card.
  *
- * The ETB is Vision of Love's optional sacrifice-or-discard, one card smaller: a [MayEffect]
+ * The ETB is Vision of Love's optional sacrifice-or-discard, one card smaller: a [Effects.May]
  * over a [ChooseActionEffect] whose branches each pay their own cost and then draw. The
  * [FeasibilityCheck]s hide an option the controller can't perform, so the draw only ever
  * follows a cost that was actually paid ("If you do").
@@ -33,13 +30,13 @@ val KunLunWarrior = card("K'un-Lun Warrior") {
         "If you do, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(
-            effect = ChooseActionEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.May(
+            effect = Effects.ChooseAction(
                 choices = listOf(
                     EffectChoice(
                         label = "Sacrifice an artifact",
-                        effect = SacrificeEffect(filter = GameObjectFilter.Artifact) then
+                        effect = Effects.SacrificeOwn(filter = GameObjectFilter.Artifact) then
                             Effects.DrawCards(1),
                         feasibilityCheck = FeasibilityCheck.ControlsPermanentMatching(
                             filter = GameObjectFilter.Artifact

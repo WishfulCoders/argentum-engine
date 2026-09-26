@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.renew
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Agent of Kotis — Tarkir: Dragonstorm #36
@@ -28,7 +28,7 @@ val AgentOfKotis = card("Agent of Kotis") {
         "on target creature. Activate only as a sorcery."
 
     renew("{3}{U}") {
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, target("creature", Targets.Creature))
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, target(TargetFilter.Creature))
     }
 
     metadata {

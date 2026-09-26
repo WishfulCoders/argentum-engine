@@ -55,7 +55,7 @@ Verified against source (file:line). These appear across the remaining FIN cards
   the cost), `chooseExactly(1)` picks one when several qualify, then `AttachTargetEquipmentToCreature` re-attaches
   it; `MoveAllLastKnownCounters` now also reads the cost-sacrifice counter map. Also fixed a CR 704.5n ordering
   bug where the leave-marker SBA would tear the re-attachment back off.
-- **Dynamic ward cost ("Ward—Pay life equal to ~")** — `KeywordAbility.wardLife(DynamicAmount)` →
+- **Dynamic ward cost ("Ward—Pay life equal to ~")** — `KeywordAbility.Ward(WardCost.DynamicLife(amount))` →
   `WardCost.DynamicLife`, resolved at ward-trigger resolution (CR 702.21b) with last-known power if the source
   has left (CR 112.7a). Implemented for Raubahn, Bull of Ala Mhigo.
   **Equip cost reduction** — `ActivatedAbility.genericCostReduction` (`ActivatedAbility.kt:58`). **`Filters.EquippedCreature`**

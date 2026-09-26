@@ -31,8 +31,8 @@ val LonghornSharpshooter = card("Longhorn Sharpshooter") {
     keywordAbility(KeywordAbility.plot("{3}{R}"))
 
     triggeredAbility {
-        trigger = Triggers.BecomesPlotted
-        val t = target("target", Targets.Any)
+        trigger = Triggers.self.becomesPlotted()
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(2, t)
     }
 

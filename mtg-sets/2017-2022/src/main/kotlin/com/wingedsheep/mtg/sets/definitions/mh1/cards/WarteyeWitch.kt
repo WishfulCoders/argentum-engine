@@ -1,12 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.mh1.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Warteye Witch
@@ -27,11 +25,7 @@ val WarteyeWitch = card("Warteye Witch") {
     oracleText = "Whenever this creature or another creature you control dies, scry 1."
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.youControl(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).dies()
         effect = Effects.Scry(1)
         description = "Whenever this creature or another creature you control dies, scry 1."
     }

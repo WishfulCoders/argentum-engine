@@ -22,7 +22,7 @@ val LothlorienLookout = card("Lothlórien Lookout") {
     oracleText = "Whenever this creature attacks, scry 1."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Library.scry(1)
     }
 

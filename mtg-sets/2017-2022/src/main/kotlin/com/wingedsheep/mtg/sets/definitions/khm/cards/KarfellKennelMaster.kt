@@ -5,10 +5,9 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Karfell Kennel-Master
@@ -30,13 +29,11 @@ val KarfellKennelMaster = card("Karfell Kennel-Master") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = TargetPermanent(count = 2, optional = true, filter = TargetFilter.Creature)
-        effect = ForEachTargetEffect(
-            listOf(
-                Effects.ModifyStats(1, 0, EffectTarget.ContextTarget(0)),
-                Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.ContextTarget(0))
-            )
+        trigger = Triggers.self.enters()
+        target = TargetObject(filter = TargetFilter.Creature, count = 2, optional = true)
+        effect = Effects.ForEachTarget(
+            Effects.ModifyStats(1, 0, EffectTarget.ContextTarget(0)),
+            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.ContextTarget(0))
         )
     }
 

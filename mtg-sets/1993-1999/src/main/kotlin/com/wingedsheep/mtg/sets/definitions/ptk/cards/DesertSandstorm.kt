@@ -21,7 +21,7 @@ val DesertSandstorm = card("Desert Sandstorm") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreatures,
-            Effects.DealDamage(1, EffectTarget.Self)
+            Effects.DealDamage(1, EffectTarget.IterationEntity)
         )
     }
 

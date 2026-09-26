@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -24,7 +23,7 @@ val OrazcaPuzzleDoor = card("Orazca Puzzle-Door") {
     oracleText = "{1}, {T}, Sacrifice this artifact: Look at the top two cards of your library. Put one of those cards into your hand and the other into your graveyard."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap, Costs.SacrificeSelf)
-        effect = Patterns.Library.lookAtTopAndKeep(count = DynamicAmount.Fixed(2), keepCount = DynamicAmount.Fixed(1))
+        effect = Patterns.Library.lookAtTopAndKeep(count = 2, keepCount = 1)
     }
     metadata {
         rarity = Rarity.COMMON

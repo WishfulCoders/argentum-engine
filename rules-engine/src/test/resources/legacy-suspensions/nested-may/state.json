@@ -238,8 +238,7 @@
                     "chosenValues": {},
                     "storedNumbers": {},
                     "storedStringLists": {},
-                    "storedSubtypeGroups": {},
-                    "iterationTarget": null
+                    "storedSubtypeGroups": {}
                 },
                 "resolutionDepth": 0
             }
@@ -364,8 +363,7 @@
                     "chosenValues": {},
                     "storedNumbers": {},
                     "storedStringLists": {},
-                    "storedSubtypeGroups": {},
-                    "iterationTarget": null
+                    "storedSubtypeGroups": {}
                 },
                 "resolutionDepth": 1
             }

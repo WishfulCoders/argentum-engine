@@ -28,7 +28,7 @@ val UndyingBeast = card("Undying Beast") {
     power = 3
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.Move(EffectTarget.Self, Zone.LIBRARY, ZonePlacement.Top)
     }
     metadata {

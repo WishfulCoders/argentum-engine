@@ -12,8 +12,8 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  *
  * Whenever this creature attacks or blocks, sacrifice a creature.
  *
- * "Attacks or blocks" is two triggered abilities sharing one effect — [Triggers.Attacks] and
- * [Triggers.Blocks] are separate events, the Elder Gargaroth shape. The bare imperative
+ * "Attacks or blocks" is two triggered abilities sharing one effect — `Triggers.self.attacks()` and
+ * `Triggers.self.blocks()` are separate events, the Elder Gargaroth shape. The bare imperative
  * "sacrifice a creature" is [Effects.SacrificeOwn]: the Titan's controller chooses, and the Titan
  * itself is a legal choice.
  */
@@ -27,12 +27,12 @@ val DaemogothTitan = card("Daemogoth Titan") {
     toughness = 10
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.SacrificeOwn(GameObjectFilter.Creature)
     }
 
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         effect = Effects.SacrificeOwn(GameObjectFilter.Creature)
     }
 

@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.scripting.predicates.ControllerPredicate
 import com.wingedsheep.sdk.scripting.values.Aggregation
 import com.wingedsheep.sdk.scripting.values.CardNumericProperty
@@ -31,7 +31,6 @@ import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityReference
 import com.wingedsheep.sdk.scripting.values.TurnTracker
 
 /**
@@ -334,12 +333,12 @@ object Amounts {
         phrase("the number of {kind} counters on {self}", name = "a count of the source's counters") {
             slot("kind", Primitives.counterKind)
             slot("self", Primitives.self)
-            build { DynamicAmounts.countersOnSelf(Primitives.counterFilter(it.value("kind"))) }
+            build { DynamicAmounts.countersOnSelf(it.value("kind")) }
             match { amount ->
                 val property = (amount as? DynamicAmount.EntityProperty) ?: return@match null
                 val counter = (property.numericProperty as? EntityNumericProperty.CounterCount)
                     ?: return@match null
-                val kind = Primitives.counterKindOf(counter.counterType) ?: return@match null
+                val kind = counter.counterType ?: return@match null
                 if (amount != DynamicAmounts.countersOnSelf(counter.counterType)) return@match null
                 bind("kind" to kind, "self" to Unit)
             }
@@ -479,9 +478,8 @@ object Amounts {
                 DynamicAmount.AggregateZone(Player.You, Zone.GRAVEYARD, aggregation = Aggregation.DISTINCT_TYPES),
             ),
             // "the number of +1/+1 counters on ~" — a tally of the source's own counters, which the SDK
-            // reads as a property of an entity rather than as a count of a zone. The kind is a slot for
-            // [Primitives.counterFilter]'s reason: `CounterTypeFilter` has dedicated cases for the
-            // stat-changing kinds and a `Named` fallback for the rest, and one leaf spells both.
+            // reads as a property of an entity rather than as a count of a zone. The kind is a slot:
+            // one leaf spells every kind the SDK names.
             counterCount,
         ) + turnTallyCounts,
     )
@@ -515,7 +513,7 @@ object Amounts {
      * **What a possessive noun phrase can read**, as the [EntityNumericProperty] half of
      * `DynamicAmount.EntityProperty`.
      *
-     * The SDK types this amount as a product — an [EntityReference] and a property of it — and
+     * The SDK types this amount as a product — an [EffectTarget.SingleEntity] and a property of it — and
      * English spells it as exactly that product: a possessive naming the object, then the noun
      * naming the characteristic. So the grammar is the product too, one table per axis, which is
      * why this is three rows rather than the twenty-one printed phrases they cross into.
@@ -560,7 +558,7 @@ object Amounts {
      */
     fun propertyOf(
         possessive: Phrase<Unit>,
-        reference: EntityReference,
+        reference: EffectTarget.SingleEntity,
         tag: String,
     ): Phrase<DynamicAmount> = oneOf(
         "a characteristic of $tag",
@@ -658,7 +656,7 @@ object Amounts {
      *
      * ### The source's own counter tally, which is last-known information half the time it is printed
      *
-     * [counterCount] reads `EntityProperty(Source, CounterCount)`, and `DynamicAmountEvaluator`
+     * [counterCount] reads `EntityProperty(Self, CounterCount)`, and `DynamicAmountEvaluator`
      * resolves that from **live** state: `counterCountOf` looks the entity up and answers 0 when it
      * is not there. So in the position Oracle most often prints this clause — "When ~ dies, put X
      * +1/+1 counters on target creature you control, where X is the number of +1/+1 counters on ~"
@@ -688,7 +686,7 @@ object Amounts {
     }
 
     /** "+1/+1 counters on it" / "+1/+1 counter on ~" — a tally of the source's own counters. */
-    private val plusOneCounters: DynamicAmount = DynamicAmounts.countersOnSelf(CounterTypeFilter.PlusOnePlusOne)
+    private val plusOneCounters: DynamicAmount = DynamicAmounts.countersOnSelf(CounterType.PLUS_ONE_PLUS_ONE)
 
     // ---------------------------------------------------------------------------------------
     // The clauses
@@ -757,7 +755,7 @@ object Amounts {
         fun scriptFor(filter: GameObjectFilter) = CardScript(
             spellEffect = Effects.ForEachInGroup(
                 GroupFilter(filter),
-                Effects.ModifyStats(amount, amount, EffectTarget.Self),
+                Effects.ModifyStats(amount, amount, EffectTarget.IterationEntity),
             )
         )
         return phrase("$prefix{filter} get -X/-X until end of turn", name = name) {
@@ -782,12 +780,8 @@ object Amounts {
      */
     private val drawAndLoseByCount: Phrase<CardScript> = run {
         fun scriptFor(amount: DynamicAmount) = CardScript(
-            spellEffect = Effects.Composite(
-                listOf(
-                    Effects.DrawCards(amount, EffectTarget.Controller),
-                    Effects.LoseLife(amount, EffectTarget.Controller),
-                )
-            )
+            spellEffect = Effects.DrawCards(amount, EffectTarget.Controller) then
+                Effects.LoseLife(amount, EffectTarget.Controller)
         )
         phrase(
             "you draw X cards and you lose X life, where X is {amount}",
@@ -957,7 +951,7 @@ object Amounts {
     ): Phrase<CardScript> {
         fun scriptFor(amount: DynamicAmount, target: com.wingedsheep.sdk.scripting.targets.TargetRequirement) =
             CardScript(
-                spellEffect = com.wingedsheep.sdk.scripting.effects.MayEffect(effect(amount)),
+                spellEffect = com.wingedsheep.sdk.dsl.Effects.May(effect(amount)),
                 targetRequirements = listOf(target),
             )
         return phrase(template, name = name) {

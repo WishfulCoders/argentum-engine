@@ -14,7 +14,7 @@ import io.kotest.matchers.shouldNotBe
 
 /**
  * Pins the backlog §2.1 guarantee that collection-gated branches work end to end:
- * a `Gate.WhenCondition(CollectionContainsMatch(...))` (here via `ConditionalEffect`)
+ * a `Gate.WhenCondition(CollectionContainsMatch(...))` (here via `Effects.If`)
  * evaluated AFTER a pipeline pause still sees the collections stored by earlier steps.
  *
  * Cache Grab (BLB) is the in-corpus shape: Mill 4 → SelectFromCollection (pauses for a

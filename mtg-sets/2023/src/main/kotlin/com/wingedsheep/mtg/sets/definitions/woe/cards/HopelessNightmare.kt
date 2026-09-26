@@ -32,15 +32,13 @@ val HopelessNightmare = card("Hopeless Nightmare") {
         "{2}{B}: Sacrifice this enchantment."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Effects.EachOpponentDiscards(1),
+        trigger = Triggers.self.enters()
+        effect = Effects.EachOpponentDiscards(1) then
             Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent))
-        )
     }
 
     triggeredAbility {
-        trigger = Triggers.PutIntoGraveyardFromBattlefield
+        trigger = Triggers.self.dies()
         effect = Patterns.Library.scry(2)
     }
 

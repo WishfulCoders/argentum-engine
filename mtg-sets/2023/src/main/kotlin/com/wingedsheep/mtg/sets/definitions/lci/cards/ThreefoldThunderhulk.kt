@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -24,7 +23,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Ability 1 — [EntersWithCounters] replacement effect (count = 3, selfOnly = true) applies the
  *   three +1/+1 counters as the Thunderhulk enters; base P/T is 0/0, so it is a 3/3 on entry.
- *   Default counter type is PlusOnePlusOne, so no counterType parameter is needed.
+ *   Default counter type is +1/+1, so no counterType parameter is needed.
  *
  * Ability 2 — The "enters or attacks" idiom is modeled as two triggered abilities sharing the
  *   same effect (the Queen's Bay Paladin / Anim Pakal split). Each creates
@@ -55,8 +54,8 @@ val ThreefoldThunderhulk = card("Threefold Thunderhulk") {
 
     // Whenever this creature enters, create tokens equal to its power.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreateTokenEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateToken(
             count = DynamicAmounts.sourcePower(),
             power = 1,
             toughness = 1,
@@ -69,8 +68,8 @@ val ThreefoldThunderhulk = card("Threefold Thunderhulk") {
 
     // Whenever this creature attacks, create tokens equal to its power.
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = CreateTokenEffect(
+        trigger = Triggers.self.attacks()
+        effect = Effects.CreateToken(
             count = DynamicAmounts.sourcePower(),
             power = 1,
             toughness = 1,
@@ -87,7 +86,7 @@ val ThreefoldThunderhulk = card("Threefold Thunderhulk") {
             Costs.Mana("{2}"),
             Costs.SacrificeAnother(GameObjectFilter.Artifact)
         )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     metadata {

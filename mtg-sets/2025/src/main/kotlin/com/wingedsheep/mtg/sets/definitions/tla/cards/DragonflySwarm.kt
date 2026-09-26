@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -11,7 +12,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Dragonfly Swarm
@@ -35,19 +36,19 @@ val DragonflySwarm = card("Dragonfly Swarm") {
 
     // Power is the number of noncreature, nonland cards in the controller's graveyard (CDA).
     dynamicPower(
-        DynamicAmount.Count(
-            player = Player.You,
-            zone = Zone.GRAVEYARD,
-            filter = GameObjectFilter.Noncreature and GameObjectFilter.Nonland
+        DynamicAmounts.count(
+            Player.You,
+            Zone.GRAVEYARD,
+            GameObjectFilter.Noncreature and GameObjectFilter.Nonland
         )
     )
     toughness = 3
 
     keywords(Keyword.FLYING)
-    keywordAbility(KeywordAbility.ward("{1}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{1}")))
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         interveningIf = Conditions.GraveyardContainsSubtype(Subtype.LESSON)
         effect = Effects.DrawCards(1)
         description = "When this creature dies, if there's a Lesson card in your graveyard, draw a card."

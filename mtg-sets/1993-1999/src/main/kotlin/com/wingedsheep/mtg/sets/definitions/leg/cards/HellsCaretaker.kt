@@ -3,11 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.leg.cards
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Hell's Caretaker
@@ -34,10 +34,7 @@ val HellsCaretaker = card("Hell's Caretaker") {
                 ActivationRestriction.DuringStep(Step.UPKEEP),
             ),
         )
-        val creatureCard = target(
-            "target creature card from your graveyard",
-            Targets.CreatureCardInYourGraveyard,
-        )
+        val creatureCard = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.PutOntoBattlefieldFromGraveyard(creatureCard)
     }
 

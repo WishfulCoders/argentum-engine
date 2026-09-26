@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
+
 /**
  * Wirewood Herald
  * {1}{G}
@@ -24,8 +25,8 @@ val WirewoodHerald = card("Wirewood Herald") {
     oracleText = "When Wirewood Herald dies, you may search your library for an Elf card, reveal that card, put it into your hand, then shuffle."
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        effect = MayEffect(
+        trigger = Triggers.self.dies()
+        effect = Effects.May(
             Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.Any.withSubtype("Elf"),
                 count = 1,

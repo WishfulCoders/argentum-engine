@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Raphael, Tough Turtle
@@ -24,8 +25,8 @@ val RaphaelToughTurtle = card("Raphael, Tough Turtle") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.OtherCreatureEnters
-        val opponent = target("target opponent", Targets.Opponent)
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
+        val opponent = target(Targets.Opponent)
         effect = Effects.DealDamage(1, opponent)
         description = "Alliance — Whenever another creature you control enters, Raphael deals 1 damage to target opponent."
     }

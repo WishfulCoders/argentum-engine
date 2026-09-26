@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeywordToOwnSpells
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Prismari, the Inspiration
@@ -37,7 +38,7 @@ val PrismariTheInspiration = card("Prismari, the Inspiration") {
         "the copies.)"
 
     keywords(Keyword.FLYING)
-    keywordAbility(KeywordAbility.wardLife(5))
+    keywordAbility(KeywordAbility.Ward(WardCost.Life(5)))
 
     staticAbility {
         ability = GrantKeywordToOwnSpells(

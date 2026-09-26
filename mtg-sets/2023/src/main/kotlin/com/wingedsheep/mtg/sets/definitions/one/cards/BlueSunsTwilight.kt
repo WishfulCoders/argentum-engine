@@ -1,16 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.one.cards
 
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Blue Sun's Twilight
@@ -26,17 +23,15 @@ val BlueSunsTwilight = card("Blue Sun's Twilight") {
     oracleText = "Gain control of target creature with mana value X or less. If X is 5 or more, create a token that's a copy of that creature."
 
     spell {
-        val t = target("creature", TargetObject(filter = TargetFilter.Creature.manaValueAtMostX()))
-        effect = Effects.GainControl(t, Duration.Permanent)
-            .then(
-                ConditionalEffect(
-                    condition = Compare(
-                        DynamicAmount.XValue,
-                        ComparisonOperator.GTE,
-                        DynamicAmount.Fixed(5)
-                    ),
-                    effect = Effects.CreateTokenCopyOfTarget(t)
-                )
+        val t = target(TargetFilter.Creature.manaValueAtMostX())
+        effect = Effects.GainControl(t, Duration.Permanent) then
+            Effects.If(
+                condition = Conditions.CompareAmounts(
+                    DynamicAmounts.xValue(),
+                    ComparisonOperator.GTE,
+                    5
+                ),
+                then = Effects.CreateTokenCopyOfTarget(t)
             )
     }
 

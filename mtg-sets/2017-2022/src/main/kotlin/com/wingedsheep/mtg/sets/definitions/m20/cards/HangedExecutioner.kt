@@ -4,10 +4,10 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Hanged Executioner
@@ -32,7 +32,7 @@ val HangedExecutioner = card("Hanged Executioner") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
@@ -44,7 +44,7 @@ val HangedExecutioner = card("Hanged Executioner") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}{W}"), Costs.ExileSelf)
-        val victim = target("target creature", Targets.Creature)
+        val victim = target(TargetFilter.Creature)
         effect = Effects.Exile(victim)
     }
 

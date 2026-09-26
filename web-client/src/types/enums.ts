@@ -212,6 +212,7 @@ export enum Keyword {
   // Spell mechanics
   STORM = 'STORM',
   FLASHBACK = 'FLASHBACK',
+  SPLIT_SECOND = 'SPLIT_SECOND',
   EVOKE = 'EVOKE',
   EXPLOIT = 'EXPLOIT',
   SNEAK = 'SNEAK',
@@ -253,6 +254,10 @@ export enum Keyword {
   DECAYED = 'DECAYED',
   // Attack-triggered self-buff (Innistrad: Midnight Hunt)
   TRAINING = 'TRAINING',
+  // Enters-triggered self-buff (Gatecrash, CR 702.100)
+  EVOLVE = 'EVOLVE',
+  // Enters with X +1/+1 counters, draws at X >= 5 (CR 702.156)
+  RAVENOUS = 'RAVENOUS',
   // Day/night transforming DFCs (Innistrad, CR 702.145)
   DAYBOUND = 'DAYBOUND',
   NIGHTBOUND = 'NIGHTBOUND',
@@ -262,6 +267,36 @@ export enum Keyword {
   EERIE = 'EERIE',
   // Instant/sorcery recast next upkeep (Rise of the Eldrazi; granted by Ojer Pakpatiq)
   REBOUND = 'REBOUND',
+  // Mirrored from Keyword.kt once KeywordClientMirrorTest started enforcing the match
+  PROTECTION_FROM_EACH_OPPONENT = 'PROTECTION_FROM_EACH_OPPONENT',
+  DEVOUR = 'DEVOUR',
+  HARMONIZE = 'HARMONIZE',
+  SOULBOND = 'SOULBOND',
+  FORETELL = 'FORETELL',
+  RENEW = 'RENEW',
+  EMBALM = 'EMBALM',
+  ANNIHILATOR = 'ANNIHILATOR',
+  BUSHIDO = 'BUSHIDO',
+  RAMPAGE = 'RAMPAGE',
+  ABSORB = 'ABSORB',
+  AFFLICT = 'AFFLICT',
+  CREW = 'CREW',
+  SADDLE = 'SADDLE',
+  MODULAR = 'MODULAR',
+  SOULSHIFT = 'SOULSHIFT',
+  FADING = 'FADING',
+  VANISHING = 'VANISHING',
+  SUSPEND = 'SUSPEND',
+  RENOWN = 'RENOWN',
+  FABRICATE = 'FABRICATE',
+  TRIBUTE = 'TRIBUTE',
+  MOBILIZE = 'MOBILIZE',
+  FIREBENDING = 'FIREBENDING',
+  VIVID = 'VIVID',
+  FATEFUL_BITE = 'FATEFUL_BITE',
+  PREPARED = 'PREPARED',
+  PARADIGM = 'PARADIGM',
+  INCREMENT = 'INCREMENT',
 }
 
 export const KeywordDisplayNames: Record<Keyword, string> = {
@@ -311,6 +346,7 @@ export const KeywordDisplayNames: Record<Keyword, string> = {
   [Keyword.EMERGE]: 'Emerge',
   [Keyword.STORM]: 'Storm',
   [Keyword.FLASHBACK]: 'Flashback',
+  [Keyword.SPLIT_SECOND]: 'Split second',
   [Keyword.EVOKE]: 'Evoke',
   [Keyword.EXPLOIT]: 'Exploit',
   [Keyword.SNEAK]: 'Sneak',
@@ -343,11 +379,42 @@ export const KeywordDisplayNames: Record<Keyword, string> = {
   [Keyword.MAX_SPEED]: 'Max speed',
   [Keyword.DECAYED]: 'Decayed',
   [Keyword.TRAINING]: 'Training',
+  [Keyword.EVOLVE]: 'Evolve',
+  [Keyword.RAVENOUS]: 'Ravenous',
   [Keyword.DAYBOUND]: 'Daybound',
   [Keyword.NIGHTBOUND]: 'Nightbound',
   [Keyword.JOB_SELECT]: 'Job select',
   [Keyword.EERIE]: 'Eerie',
   [Keyword.REBOUND]: 'Rebound',
+  [Keyword.PROTECTION_FROM_EACH_OPPONENT]: 'Protection from each opponent',
+  [Keyword.DEVOUR]: 'Devour',
+  [Keyword.HARMONIZE]: 'Harmonize',
+  [Keyword.SOULBOND]: 'Soulbond',
+  [Keyword.FORETELL]: 'Foretell',
+  [Keyword.RENEW]: 'Renew',
+  [Keyword.EMBALM]: 'Embalm',
+  [Keyword.ANNIHILATOR]: 'Annihilator',
+  [Keyword.BUSHIDO]: 'Bushido',
+  [Keyword.RAMPAGE]: 'Rampage',
+  [Keyword.ABSORB]: 'Absorb',
+  [Keyword.AFFLICT]: 'Afflict',
+  [Keyword.CREW]: 'Crew',
+  [Keyword.SOULSHIFT]: 'Soulshift',
+  [Keyword.SADDLE]: 'Saddle',
+  [Keyword.MODULAR]: 'Modular',
+  [Keyword.FADING]: 'Fading',
+  [Keyword.VANISHING]: 'Vanishing',
+  [Keyword.SUSPEND]: 'Suspend',
+  [Keyword.RENOWN]: 'Renown',
+  [Keyword.FABRICATE]: 'Fabricate',
+  [Keyword.TRIBUTE]: 'Tribute',
+  [Keyword.MOBILIZE]: 'Mobilize',
+  [Keyword.FIREBENDING]: 'Firebending',
+  [Keyword.VIVID]: 'Vivid',
+  [Keyword.FATEFUL_BITE]: 'Fateful Bite',
+  [Keyword.PREPARED]: 'Prepared',
+  [Keyword.PARADIGM]: 'Paradigm',
+  [Keyword.INCREMENT]: 'Increment',
 }
 
 /**
@@ -361,10 +428,12 @@ export enum AbilityFlag {
   CANT_BECOME_UNTAPPED = 'CANT_BECOME_UNTAPPED',
   MAY_NOT_UNTAP = 'MAY_NOT_UNTAP',
   CANT_RECEIVE_COUNTERS = 'CANT_RECEIVE_COUNTERS',
+  SURVIVES_ZERO_LOYALTY = 'SURVIVES_ZERO_LOYALTY',
   CANT_TRANSFORM = 'CANT_TRANSFORM',
   CANT_BECOME_SUSPECTED = 'CANT_BECOME_SUSPECTED',
   ASSIGNS_COMBAT_DAMAGE_AS_TOUGHNESS = 'ASSIGNS_COMBAT_DAMAGE_AS_TOUGHNESS',
   ASSIGNS_NO_COMBAT_DAMAGE = 'ASSIGNS_NO_COMBAT_DAMAGE',
+  ASSIGNS_COMBAT_DAMAGE_AS_ABSOLUTE_POWER = 'ASSIGNS_COMBAT_DAMAGE_AS_ABSOLUTE_POWER',
   MAY_ACTIVATE_ABILITIES_AS_THOUGH_HASTY = 'MAY_ACTIVATE_ABILITIES_AS_THOUGH_HASTY',
 }
 
@@ -375,10 +444,12 @@ export const AbilityFlagDisplayNames: Record<AbilityFlag, string> = {
   [AbilityFlag.CANT_BECOME_UNTAPPED]: "Can't become untapped",
   [AbilityFlag.MAY_NOT_UNTAP]: 'You may choose not to untap',
   [AbilityFlag.CANT_RECEIVE_COUNTERS]: "Can't have counters put on it",
+  [AbilityFlag.SURVIVES_ZERO_LOYALTY]: "Isn't put into its owner's graveyard for having 0 loyalty",
   [AbilityFlag.CANT_TRANSFORM]: "Can't transform",
   [AbilityFlag.CANT_BECOME_SUSPECTED]: "Can't become suspected",
   [AbilityFlag.ASSIGNS_COMBAT_DAMAGE_AS_TOUGHNESS]: 'Assigns combat damage equal to its toughness rather than its power',
   [AbilityFlag.ASSIGNS_NO_COMBAT_DAMAGE]: 'Assigns no combat damage this turn',
+  [AbilityFlag.ASSIGNS_COMBAT_DAMAGE_AS_ABSOLUTE_POWER]: 'Assigns combat damage as though its power were positive',
   // Granted by Shang-Chi / Thousand-Year Elixir to a whole board of creatures at once, so it must be
   // named here or every creature you control shows the raw enum identifier in its preview panel.
   // Deliberately not in `displayableKeywords` — a battlefield icon on every creature is noise.
@@ -523,6 +594,9 @@ export enum CounterType {
   CUBE = 'CUBE',
   TIDE = 'TIDE',
   JUDGMENT = 'JUDGMENT',
+  BLOODLINE = 'BLOODLINE',
+  INVITATION = 'INVITATION',
+  IMPOSTOR = 'IMPOSTOR',
 }
 
 export const CounterTypeDisplayNames: Record<CounterType, string> = {
@@ -630,6 +704,9 @@ export const CounterTypeDisplayNames: Record<CounterType, string> = {
   [CounterType.CUBE]: 'Cube',
   [CounterType.TIDE]: 'Tide',
   [CounterType.JUDGMENT]: 'Judgment',
+  [CounterType.BLOODLINE]: 'Bloodline',
+  [CounterType.INVITATION]: 'Invitation',
+  [CounterType.IMPOSTOR]: 'Impostor',
 }
 
 /**

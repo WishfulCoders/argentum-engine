@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 val StinkweedImp = card("Stinkweed Imp") {
     manaCost = "{2}{B}"
@@ -20,7 +21,7 @@ val StinkweedImp = card("Stinkweed Imp") {
 
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToCreature
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyCreature)
         effect = Effects.Destroy(EffectTarget.TriggeringEntity)
     }
 

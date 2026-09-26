@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.soi.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersAsCopy
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Altered Ego (Shadows over Innistrad #241 — the card's earliest printing; also reprinted in
@@ -42,7 +42,7 @@ val AlteredEgo = card("Altered Ego") {
         EntersAsCopy(
             optional = true,
             copyFilter = GameObjectFilter.Creature,
-            additionalCounters = DynamicAmount.XValue,
+            additionalCounters = DynamicAmounts.xValue(),
         )
     )
 

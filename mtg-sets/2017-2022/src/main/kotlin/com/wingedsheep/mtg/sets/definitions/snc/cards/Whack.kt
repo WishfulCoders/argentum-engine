@@ -2,7 +2,6 @@ package com.wingedsheep.mtg.sets.definitions.snc.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CostModification
@@ -10,6 +9,7 @@ import com.wingedsheep.sdk.scripting.CostReductionSource
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Whack
@@ -29,7 +29,7 @@ val Whack = card("Whack") {
     oracleText = "This spell costs {3} less to cast if it targets a white creature.\nTarget creature gets -4/-4 until end of turn."
 
     spell {
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(-4, -4, t)
     }
 

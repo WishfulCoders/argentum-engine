@@ -1,21 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
-import com.wingedsheep.sdk.scripting.effects.PayLifeEffect
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Meathook Massacre II
@@ -37,7 +32,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *    onto the permanent, so `Effects.Sacrifice(Creature, count = CastX, target = Each)` makes each
  *    player choose X of their creatures to sacrifice (APNAP order, CR 101.4).
  *
- *  - **Your creature dies** — opt-in [OptionalCostEffect] (Gate.MayPay): *you* may pay 3 life, and
+ *  - **Your creature dies** — opt-in [Effects.MayPay] (Gate.MayPay): *you* may pay 3 life, and
  *    only then is the card returned. Cost and decision default to the ability's controller (you).
  *
  *  - **An opponent's creature dies** — pay-to-prevent, the inverse reading, via [PayOrSufferEffect]
@@ -66,10 +61,10 @@ val MeathookMassacreII = card("Meathook Massacre II") {
 
     // When Meathook Massacre II enters, each player sacrifices X creatures of their choice.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Sacrifice(
             filter = GameObjectFilter.Creature,
-            count = DynamicAmount.CastX,
+            count = DynamicAmounts.castX(),
             target = EffectTarget.PlayerRef(Player.Each)
         )
     }
@@ -77,10 +72,10 @@ val MeathookMassacreII = card("Meathook Massacre II") {
     // Whenever a creature you control dies, you may pay 3 life. If you do, return that card under
     // your control with a finality counter on it.
     triggeredAbility {
-        trigger = Triggers.YourCreatureDies
-        effect = OptionalCostEffect(
-            cost = PayLifeEffect(3),
-            ifPaid = returnDeadCreatureUnderYourControl(),
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).dies()
+        effect = Effects.MayPay(
+            cost = Effects.PayLife(3),
+            then = returnDeadCreatureUnderYourControl(),
             descriptionOverride = "You may pay 3 life. If you do, return that card under your control " +
                 "with a finality counter on it."
         )
@@ -89,12 +84,8 @@ val MeathookMassacreII = card("Meathook Massacre II") {
     // Whenever a creature an opponent controls dies, they may pay 3 life. If they don't, return that
     // card under your control with a finality counter on it.
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.opponentControls(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY
-        )
-        effect = PayOrSufferEffect(
+        trigger = Triggers.a(GameObjectFilter.Creature.opponentControls()).dies()
+        effect = Effects.PayOrSuffer(
             // The dying creature's last-known controller (the opponent) decides and pays the 3 life.
             player = EffectTarget.PlayerRef(Player.TriggeringPlayer),
             cost = Costs.pay.PayLife(3),
@@ -140,16 +131,14 @@ val MeathookMassacreII = card("Meathook Massacre II") {
  * (CR 122.6). The move is a no-op for tokens or for a card that has
  * already left the graveyard, exactly as the printed rulings require.
  */
-private fun returnDeadCreatureUnderYourControl() = Effects.Composite(
-    Effects.Move(
-        target = EffectTarget.TriggeringEntity,
-        destination = Zone.BATTLEFIELD,
-        fromZone = Zone.GRAVEYARD,
-        controllerOverride = EffectTarget.Controller
-    ),
-    AddCountersEffect(
-        counterType = Counters.FINALITY,
+private fun returnDeadCreatureUnderYourControl() = Effects.Move(
+    target = EffectTarget.TriggeringEntity,
+    destination = Zone.BATTLEFIELD,
+    fromZone = Zone.GRAVEYARD,
+    controllerOverride = EffectTarget.Controller
+) then
+    Effects.AddCounters(
+        counterType = CounterType.FINALITY,
         count = 1,
         target = EffectTarget.TriggeringEntity
     )
-)

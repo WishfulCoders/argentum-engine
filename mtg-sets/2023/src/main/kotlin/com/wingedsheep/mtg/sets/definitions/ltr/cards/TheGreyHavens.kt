@@ -28,7 +28,7 @@ val TheGreyHavens = card("The Grey Havens") {
         "{T}: Add one mana of any color among legendary creature cards in your graveyard."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.scry(1)
     }
 

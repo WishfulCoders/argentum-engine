@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Groundbreaker
@@ -14,7 +15,7 @@ import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
  * Trample, haste
  * At the beginning of the end step, sacrifice this creature.
  *
- * "The end step", not "your end step" — [Triggers.EachEndStep], so a Groundbreaker that changed
+ * "The end step", not "your end step" — `Triggers.anyPlayer.beginningOf(Step.END)`, so a Groundbreaker that changed
  * controllers or entered on an opponent's turn is still sacrificed that turn.
  */
 val Groundbreaker = card("Groundbreaker") {
@@ -29,7 +30,7 @@ val Groundbreaker = card("Groundbreaker") {
     keywords(Keyword.TRAMPLE, Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.EachEndStep
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
         effect = SacrificeSelfEffect
     }
 

@@ -1,11 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Thistledown Players
@@ -24,9 +23,9 @@ val ThistledownPlayers = card("Thistledown Players") {
     oracleText = "Whenever this creature attacks, untap target nonland permanent."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val nonland = target("nonland permanent", Targets.NonlandPermanent)
-        effect = TapUntapEffect(nonland, tap = false)
+        trigger = Triggers.self.attacks()
+        val nonland = target(TargetFilter.NonlandPermanent)
+        effect = Effects.Untap(nonland)
     }
 
     metadata {

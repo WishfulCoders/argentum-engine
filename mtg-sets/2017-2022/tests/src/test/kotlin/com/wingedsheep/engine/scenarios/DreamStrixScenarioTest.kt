@@ -19,7 +19,7 @@ import io.kotest.matchers.shouldNotBe
  *
  * 1. **Spells only.** An *ability* that targets it must not fire the sacrifice. That is the whole
  *    reason the trigger is a `BecomesTargetEvent(spellsOnly = true)` rather than the plain
- *    self-bound `Triggers.BecomesTarget`, which would also match abilities.
+ *    self-bound `Triggers.self.becomesTarget()`, which would also match abilities.
  * 2. **The drawback pays you.** Pointing removal at it makes it sacrifice itself, which *is* a
  *    death — so the second trigger fires and you Learn anyway, while the removal spell is left
  *    with no legal target and is countered on resolution (CR 608.2b).

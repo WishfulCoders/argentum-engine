@@ -41,7 +41,7 @@ val BrionStoutarm = card("Brion Stoutarm") {
             Costs.Tap,
             Costs.SacrificeAnother(GameObjectFilter.Creature),
         )
-        val victim = target("target player or planeswalker", Targets.PlayerOrPlaneswalker)
+        val victim = target(Targets.PlayerOrPlaneswalker)
         effect = Effects.DealDamage(DynamicAmounts.sacrificedPower(), victim)
         description = "Brion Stoutarm deals damage equal to the sacrificed creature's power to target player or planeswalker."
     }

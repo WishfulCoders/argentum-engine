@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.WardCost
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Trapped in the Screen
@@ -36,16 +35,13 @@ val TrappedInTheScreen = card("Trapped in the Screen") {
     keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val permanent = target(
-            "artifact, creature, or enchantment an opponent controls",
-            TargetPermanent(filter = TargetFilter.ArtifactCreatureOrEnchantmentOpponentControls)
-        )
+        trigger = Triggers.self.enters()
+        val permanent = target(TargetFilter.ArtifactCreatureOrEnchantmentOpponentControls)
         effect = Effects.ExileUntilLeaves(permanent)
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 

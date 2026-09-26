@@ -29,7 +29,7 @@ val HopefulVigil = card("Hopeful Vigil") {
     typeLine = "Enchantment"
     oracleText = "When this enchantment enters, create a 2/2 white Knight creature token with vigilance.\nWhen this enchantment is put into a graveyard from the battlefield, scry 2.\n{2}{W}: Sacrifice this enchantment."
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 2,
             toughness = 2,
@@ -39,7 +39,7 @@ val HopefulVigil = card("Hopeful Vigil") {
         )
     }
     triggeredAbility {
-        trigger = Triggers.PutIntoGraveyardFromBattlefield
+        trigger = Triggers.self.dies()
         effect = Patterns.Library.scry(2)
     }
     activatedAbility {

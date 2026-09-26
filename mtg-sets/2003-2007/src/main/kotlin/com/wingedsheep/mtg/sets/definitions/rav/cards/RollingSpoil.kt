@@ -3,13 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.rav.cards
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Rolling Spoil — Ravnica: City of Guilds #179
@@ -34,16 +33,14 @@ val RollingSpoil = card("Rolling Spoil") {
         "If {B} was spent to cast this spell, all creatures get -1/-1 until end of turn."
 
     spell {
-        val land = target("land", Targets.Land)
-        effect = Effects.Move(land, Zone.GRAVEYARD, byDestruction = true)
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.ManaSpentToCastIncludes(requiredBlack = 1),
-                    effect = Effects.ForEachInGroup(
-                        GroupFilter(GameObjectFilter.Creature),
-                        Effects.ModifyStats(-1, -1, EffectTarget.Self),
-                    ),
-                )
+        val land = target(TargetFilter.Land)
+        effect = Effects.Move(land, Zone.GRAVEYARD, byDestruction = true) then
+            Effects.If(
+                condition = Conditions.ManaSpentToCastIncludes(requiredBlack = 1),
+                then = Effects.ForEachInGroup(
+                    GroupFilter(GameObjectFilter.Creature),
+                    Effects.ModifyStats(-1, -1, EffectTarget.IterationEntity),
+                ),
             )
     }
 

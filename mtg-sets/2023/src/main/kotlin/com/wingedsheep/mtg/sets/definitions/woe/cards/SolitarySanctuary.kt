@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Solitary Sanctuary
@@ -20,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * Whenever you tap an untapped creature an opponent controls, put a +1/+1 counter on target
  * creature you control.
  *
- * The payoff is [Triggers.YouTap] — tap *attribution*, not a plain "becomes tapped" observer: only
+ * The payoff is `Triggers.you.taps(filter, batch)` — tap *attribution*, not a plain "becomes tapped" observer: only
  * a tap this enchantment's controller caused fires it, so an opponent tapping their own creature
  * (attacking, crewing, paying a cost) does nothing. "Untapped" is intrinsic to the trigger: tapping
  * is a transition (CR 603.2f), so an already-tapped creature emits no tap event.
@@ -40,20 +38,17 @@ val SolitarySanctuary = card("Solitary Sanctuary") {
         "creature you control."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val victim = target(
-            "target creature an opponent controls",
-            TargetCreature(filter = TargetFilter.Creature.opponentControls())
-        )
-        effect = Effects.Tap(victim) then Effects.AddCounters(Counters.STUN, 1, victim)
+        trigger = Triggers.self.enters()
+        val victim = target(TargetFilter.Creature.opponentControls())
+        effect = Effects.Tap(victim) then Effects.AddCounters(CounterType.STUN, 1, victim)
         description = "When this enchantment enters, tap target creature an opponent controls and " +
             "put a stun counter on it."
     }
 
     triggeredAbility {
-        trigger = Triggers.YouTap(GameObjectFilter.Creature.opponentControls())
-        val ally = target("target creature you control", Targets.CreatureYouControl)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, ally)
+        trigger = Triggers.you.taps(GameObjectFilter.Creature.opponentControls())
+        val ally = target(TargetFilter.CreatureYouControl)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, ally)
         description = "Whenever you tap an untapped creature an opponent controls, put a +1/+1 " +
             "counter on target creature you control."
     }

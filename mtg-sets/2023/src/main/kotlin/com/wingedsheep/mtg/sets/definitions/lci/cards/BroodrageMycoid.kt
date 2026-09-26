@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBlock
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Broodrage Mycoid
@@ -38,7 +39,7 @@ val BroodrageMycoid = card("Broodrage Mycoid") {
         "(You descended if a permanent card was put into your graveyard from anywhere.)"
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.YouDescendedThisTurn()
         effect = Effects.CreateToken(
             power = 1,

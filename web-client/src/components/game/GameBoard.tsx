@@ -1793,6 +1793,13 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
               style={{
                 ...styles.floatingBarButton,
                 ...(passEnabled ? getPassButtonStyle() : {}),
+                // A soft top sheen over whichever mode colour is active, so the one button that
+                // matters most reads as raised rather than as a flat swatch.
+                ...(passEnabled ? {
+                  backgroundImage: 'linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 55%)',
+                  boxShadow: '0 4px 14px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.18)',
+                  borderRadius: 8,
+                } : { borderRadius: 8 }),
                 // On phones the desktop-sized button dwarfs the other
                 // controls and covers the hand — let the label size it.
                 // On desktop it stretches to the column, with 170 as the floor.

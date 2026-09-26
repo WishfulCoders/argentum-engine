@@ -50,7 +50,7 @@ val LairwatchGiant = card("Lairwatch Giant") {
     }
 
     triggeredAbility {
-        trigger = Triggers.blocks(minBlockedAttackers = 2)
+        trigger = Triggers.self.blocks(minBlockedAttackers = 2)
         effect = Effects.GrantKeyword(
             keyword = Keyword.FIRST_STRIKE,
             target = EffectTarget.Self,

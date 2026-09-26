@@ -11,6 +11,7 @@ import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Samwise the Stouthearted (LTR) — ETB target "permanent card in your graveyard that was put
@@ -42,7 +43,7 @@ class SamwiseTheStoutheartedTest : FunSpec({
         // Stage a permanent in your graveyard that arrived via battlefield this turn —
         // moving via ZoneTransitionService sets the Gap 20 marker.
         val bear = driver.putCreatureOnBattlefield(active, "Grizzly Bears")
-        val mv = com.wingedsheep.engine.handlers.effects.ZoneTransitionService.moveToZone(
+        val mv = driver.zones.moveToZone(
             state = driver.state,
             entityId = bear,
             destinationZone = Zone.GRAVEYARD
@@ -54,7 +55,7 @@ class SamwiseTheStoutheartedTest : FunSpec({
         driver.giveColorlessMana(active, 1)
         val handBefore = driver.getHandSize(active)
         val temptsBefore = driver.ringTempts(active)
-        driver.castSpell(active, samwise).isSuccess shouldBe true
+        driver.castSpell(active, samwise).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         driver.submitTargetSelection(active, listOf(bear))
@@ -75,7 +76,7 @@ class SamwiseTheStoutheartedTest : FunSpec({
         // Stage a valid graveyard card so the ETB trigger goes on the stack with a real
         // "up to one" target prompt — the player can either pick the card or decline.
         val bear = driver.putCreatureOnBattlefield(active, "Grizzly Bears")
-        val mv = com.wingedsheep.engine.handlers.effects.ZoneTransitionService.moveToZone(
+        val mv = driver.zones.moveToZone(
             state = driver.state,
             entityId = bear,
             destinationZone = Zone.GRAVEYARD
@@ -86,7 +87,7 @@ class SamwiseTheStoutheartedTest : FunSpec({
         driver.giveMana(active, Color.WHITE, 1)
         driver.giveColorlessMana(active, 1)
         val temptsBefore = driver.ringTempts(active)
-        driver.castSpell(active, samwise).isSuccess shouldBe true
+        driver.castSpell(active, samwise).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         // Decline the optional target — submit zero selections.

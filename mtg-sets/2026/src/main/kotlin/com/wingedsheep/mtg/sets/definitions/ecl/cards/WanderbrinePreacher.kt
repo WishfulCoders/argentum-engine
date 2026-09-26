@@ -22,7 +22,7 @@ val WanderbrinePreacher = card("Wanderbrine Preacher") {
     oracleText = "Whenever this creature becomes tapped, you gain 2 life."
 
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
+        trigger = Triggers.self.becomesTapped()
         effect = Effects.GainLife(2)
     }
 

@@ -77,6 +77,25 @@ class DecisionValidatorsCompletenessTest : FunSpec({
         ).shouldNotBeNull()
     }
 
+    test("separate requirements may share a target unless the later one says another target") {
+        fun decision(mustDiffer: Boolean) = ChooseTargetsDecision(
+            id = "targets",
+            playerId = player,
+            prompt = "Choose targets",
+            context = context,
+            targetRequirements = listOf(
+                TargetRequirementInfo(index = 0, description = "target creature"),
+                TargetRequirementInfo(index = 1, description = "target creature", mustDifferFromEarlier = mustDiffer),
+            ),
+            legalTargets = mapOf(0 to listOf(first, second), 1 to listOf(first, second)),
+        )
+        val sameTwice = mapOf(0 to listOf(first), 1 to listOf(first))
+
+        // Seeds of Strength: each "target" word is its own instance (CR 115.3).
+        DecisionValidators.validate(decision(false), TargetsResponse("targets", sameTwice)).shouldBeNull()
+        DecisionValidators.validate(decision(true), TargetsResponse("targets", sameTwice)).shouldNotBeNull()
+    }
+
     test("ordering response is any permutation of the objects, each exactly once") {
         val decision = OrderObjectsDecision(
             id = "order",

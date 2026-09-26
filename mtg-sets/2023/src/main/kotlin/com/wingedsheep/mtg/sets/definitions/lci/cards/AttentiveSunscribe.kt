@@ -25,7 +25,7 @@ val AttentiveSunscribe = card("Attentive Sunscribe") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
+        trigger = Triggers.self.becomesTapped()
         effect = Patterns.Library.scry(1)
     }
     metadata {

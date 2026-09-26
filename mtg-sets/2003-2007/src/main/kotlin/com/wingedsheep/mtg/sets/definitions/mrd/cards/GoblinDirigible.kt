@@ -7,8 +7,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Goblin Dirigible — Mirrodin #177 (canonical printing, only printing)
@@ -19,8 +19,8 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * At the beginning of your upkeep, you may pay {4}. If you do, untap this creature.
  *
  * The Brass Man / Colossus of Sardia shape, with a bigger toll: [AbilityFlag.DOESNT_UNTAP] takes
- * it out of the untap step, and a [Triggers.YourUpkeep] trigger offers the buy-back via
- * [MayPayManaEffect] — a mandatory trigger with an optional payment, so declining is a legal
+ * it out of the untap step, and a `Triggers.you.beginningOf(Step.UPKEEP)` trigger offers the buy-back via
+ * [Effects.MayPay] — a mandatory trigger with an optional payment, so declining is a legal
  * choice each upkeep and the Dirigible simply stays tapped. The untap is [EffectTarget.Self],
  * so the trigger does nothing if the creature has already left the battlefield.
  */
@@ -38,8 +38,8 @@ val GoblinDirigible = card("Goblin Dirigible") {
     flags(AbilityFlag.DOESNT_UNTAP)
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = MayPayManaEffect(ManaCost.parse("{4}"), Effects.Untap(EffectTarget.Self))
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.MayPay(ManaCost.parse("{4}"), Effects.Untap(EffectTarget.Self))
     }
 
     metadata {

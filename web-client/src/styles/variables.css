@@ -24,12 +24,14 @@
    * Colors - Background Surfaces
    * Numbered scale from darkest (1) to lightest (6)
    * ========================================================================= */
-  --bg-surface-1: #0a0a15;
-  --bg-surface-2: #111;
-  --bg-surface-3: #1a1a1e;
-  --bg-surface-4: #1a1a2e;
-  --bg-surface-5: #222;
-  --bg-surface-6: #333;
+  /* One cool slate family instead of neutral greys mixed with navy, so stacked panels read as
+   * layers of the same material. */
+  --bg-surface-1: #090a12;
+  --bg-surface-2: #10111a;
+  --bg-surface-3: #171922;
+  --bg-surface-4: #1a1c2b;
+  --bg-surface-5: #21232e;
+  --bg-surface-6: #2e313d;
 
   /* =========================================================================
    * Colors - Overlay Backgrounds
@@ -44,6 +46,14 @@
   --bg-panel: rgba(20, 20, 28, 0.95);
   --bg-panel-light: rgba(255, 255, 255, 0.03);
   --bg-panel-hover: rgba(255, 255, 255, 0.05);
+
+  /* Board chrome: the small floating controls pinned to the game board's corners (Fullscreen,
+   * Concede, Log, AI Insight). One quiet glass treatment so none of them outshouts the cards. */
+  --chrome-bg: rgba(20, 22, 34, 0.72);
+  --chrome-border: rgba(255, 255, 255, 0.1);
+  --chrome-text: #aeb4c2;
+  --chrome-danger-text: #f08a8a;
+  --chrome-danger-border: rgba(240, 138, 138, 0.35);
 
   /* =========================================================================
    * Colors - Text
@@ -103,6 +113,9 @@
   /* Highlight / Gold */
   --color-highlight: #fbbf24;
   --color-highlight-shadow: rgba(251, 191, 36, 0.3);
+
+  /* Keyboard focus ring */
+  --color-focus-ring: rgba(125, 160, 255, 0.85);
 
   /* Selection glow */
   --color-selection: #00ff00;
@@ -165,6 +178,16 @@
   --space-6: 24px;
   --space-7: 32px;
   --space-8: 48px;
+
+  /* =========================================================================
+   * Typography - Families
+   * Native stacks only (no webfont download). Sans for the interface, a book serif for display
+   * titles, mono for codes and search syntax.
+   * ========================================================================= */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', Inter,
+    Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
 
   /* =========================================================================
    * Typography - Font Sizes

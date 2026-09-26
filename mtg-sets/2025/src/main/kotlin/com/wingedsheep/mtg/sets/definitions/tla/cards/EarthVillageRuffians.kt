@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -27,8 +26,8 @@ val EarthVillageRuffians = card("Earth Village Ruffians") {
     power = 3
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.Dies
-        val t = target("target", TargetPermanent(filter = TargetFilter.Land.youControl()))
+        trigger = Triggers.self.dies()
+        val t = target(TargetFilter.Land.youControl())
         effect = Effects.Earthbend(2, t)
     }
     metadata {

@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Access Tunnel — Strixhaven: School of Mages #262 (canonical printing)
@@ -40,7 +41,7 @@ val AccessTunnel = card("Access Tunnel") {
     // {3}, {T}: Target creature with power 3 or less can't be blocked this turn.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap)
-        val creature = target("target", Targets.CreatureWithPowerAtMost(3))
+        val creature = target(TargetFilter.Creature.powerAtMost(3))
         effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, creature)
     }
 

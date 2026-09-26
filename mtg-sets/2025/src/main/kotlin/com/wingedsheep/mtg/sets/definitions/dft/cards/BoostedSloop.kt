@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
  * Whenever you attack, draw a card, then discard a card.
  * Crew 1
  *
- * The attack trigger is the once-per-combat group trigger ([Triggers.YouAttack]), not an
+ * The attack trigger is the once-per-combat group trigger (`Triggers.you.attacks()`), not an
  * "attacks" trigger on this permanent — per the Scryfall ruling it fires whenever you declare
  * any attacker, even when this Vehicle isn't among them (or isn't a creature at all).
  */
@@ -31,7 +31,7 @@ val BoostedSloop = card("Boosted Sloop") {
     toughness = 3
     keywords(Keyword.MENACE)
     triggeredAbility {
-        trigger = Triggers.YouAttack
+        trigger = Triggers.you.attacks()
         effect = Patterns.Hand.loot()
     }
     keywordAbility(KeywordAbility.crew(1))

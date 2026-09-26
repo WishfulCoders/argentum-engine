@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 
@@ -21,7 +21,7 @@ val HeedlessOne = card("Heedless One") {
     typeLine = "Creature — Elf Avatar"
     oracleText = "Trample\nHeedless One's power and toughness are each equal to the number of Elves on the battlefield."
 
-    dynamicStats(DynamicAmount.AggregateBattlefield(Player.Each, GameObjectFilter.Permanent.withSubtype("Elf")))
+    dynamicStats(DynamicAmounts.battlefield(Player.Each, GameObjectFilter.Permanent.withSubtype("Elf")).count())
 
     keywords(Keyword.TRAMPLE)
 

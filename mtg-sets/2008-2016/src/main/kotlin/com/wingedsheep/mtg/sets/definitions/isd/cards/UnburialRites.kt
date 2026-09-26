@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -26,7 +25,7 @@ val UnburialRites = card("Unburial Rites") {
     typeLine = "Sorcery"
     oracleText = "Return target creature card from your graveyard to the battlefield.\nFlashback {3}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
     spell {
-        val t = target("target", TargetObject(filter = TargetFilter.CreatureInYourGraveyard))
+        val t = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.Move(t, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)
     }
     keywordAbility(KeywordAbility.flashback("{3}{W}"))

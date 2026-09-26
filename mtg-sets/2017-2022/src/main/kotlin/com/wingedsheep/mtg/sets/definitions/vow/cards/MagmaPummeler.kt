@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
@@ -9,9 +10,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CounterRemovalAmount
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.PreventDamageByRemovingCounter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Magma Pummeler
@@ -56,7 +54,7 @@ val MagmaPummeler = card("Magma Pummeler") {
         "that damage and remove that many +1/+1 counters from it. When one or more counters are " +
         "removed from this creature this way, it deals that much damage to any target."
 
-    replacementEffect(EntersWithDynamicCounters(count = DynamicAmount.XValue))
+    replacementEffect(EntersWithDynamicCounters(count = DynamicAmounts.xValue()))
 
     replacementEffect(
         PreventDamageByRemovingCounter(
@@ -66,14 +64,10 @@ val MagmaPummeler = card("Magma Pummeler") {
     )
 
     triggeredAbility {
-        trigger = Triggers.countersRemovedFrom(
-            counterType = Counters.PLUS_ONE_PLUS_ONE,
-            byDamagePrevention = true,
-            binding = TriggerBinding.SELF
-        )
-        val anyTarget = target("any target", Targets.Any)
+        trigger = Triggers.self.losesCounters(CounterType.PLUS_ONE_PLUS_ONE, byDamagePrevention = true)
+        val anyTarget = target(Targets.Any)
         effect = Effects.DealDamage(
-            DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_COUNTERS_REMOVED_AMOUNT),
+            DynamicAmounts.triggerCountersRemoved(),
             anyTarget
         )
         description = "When one or more counters are removed from this creature this way, it " +

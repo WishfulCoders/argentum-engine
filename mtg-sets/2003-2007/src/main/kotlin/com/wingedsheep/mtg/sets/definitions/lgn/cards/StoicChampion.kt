@@ -22,7 +22,7 @@ val StoicChampion = card("Stoic Champion") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.AnyPlayerCycles
+        trigger = Triggers.anyPlayer.cycles()
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
     }
 

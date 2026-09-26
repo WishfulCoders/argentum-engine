@@ -4,12 +4,11 @@
 
 package com.wingedsheep.mtg.sets.definitions.znr.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -29,8 +28,8 @@ val SpitfireLagac = card("Spitfire Lagac") {
     power = 3
     toughness = 4
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(filter = GameObjectFilter.Land.youControl(), binding = TriggerBinding.ANY)
-        effect = DealDamageEffect(1, EffectTarget.PlayerRef(Player.EachOpponent))
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
+        effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent))
     }
     metadata {
         rarity = Rarity.COMMON

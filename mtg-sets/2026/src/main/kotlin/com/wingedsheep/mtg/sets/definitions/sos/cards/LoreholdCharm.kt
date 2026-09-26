@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Lorehold Charm
@@ -38,14 +37,11 @@ val LoreholdCharm = card("Lorehold Charm") {
             }
             mode("Return target artifact or creature card with mana value 2 or less from your graveyard to the battlefield") {
                 val t = target(
-                    "target artifact or creature card with mana value 2 or less from your graveyard",
-                    TargetObject(
-                        filter = TargetFilter(
-                            GameObjectFilter.Artifact.ownedByYou().manaValueAtMost(2)
-                                .or(GameObjectFilter.Creature.ownedByYou().manaValueAtMost(2)),
-                            zone = Zone.GRAVEYARD
-                        )
-                    )
+                    TargetFilter(
+                        GameObjectFilter.Artifact.ownedByYou().manaValueAtMost(2)
+                            .or(GameObjectFilter.Creature.ownedByYou().manaValueAtMost(2)),
+                        zone = Zone.GRAVEYARD
+                    ),
                 )
                 effect = Effects.PutOntoBattlefield(t)
             }

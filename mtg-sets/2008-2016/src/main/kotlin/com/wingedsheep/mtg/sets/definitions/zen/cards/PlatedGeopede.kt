@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Plated Geopede
@@ -15,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * First strike
  * Landfall — Whenever a land you control enters, this creature gets +2/+2 until end of turn.
  *
- * Landfall is [Triggers.LandYouControlEnters] — the `ZoneChangeEvent` over
+ * Landfall is `Triggers.a(GameObjectFilter.Land.youControl()).enters()` — the `ZoneChangeEvent` over
  * `GameObjectFilter.Land.youControl()` with `TriggerBinding.ANY`.
  */
 val PlatedGeopede = card("Plated Geopede") {
@@ -30,7 +31,7 @@ val PlatedGeopede = card("Plated Geopede") {
     keywords(Keyword.FIRST_STRIKE)
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
     }
 

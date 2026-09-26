@@ -22,7 +22,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  *
  * Two details carry the printed text:
  *
- *  - **"one or more other Elves"** is the batching [Triggers.OneOrMorePermanentsEnter] with
+ *  - **"one or more other Elves"** is the batching `Triggers.oneOrMore(filter).enter()` with
  *    `excludeSource = true`, so a single mass-entry makes one token, not one per Elf, and the
  *    Warmaster's own arrival never counts.
  *  - **"This ability triggers only once each turn"** is the builder's `oncePerTurn` flag, which the
@@ -42,10 +42,7 @@ val ElvishWarmaster = card("Elvish Warmaster") {
 
     // Whenever one or more other Elves you control enter, create a 1/1 green Elf Warrior token.
     triggeredAbility {
-        trigger = Triggers.OneOrMorePermanentsEnter(
-            GameObjectFilter.Permanent.withSubtype(Subtype.ELF).youControl(),
-            excludeSource = true
-        )
+        trigger = Triggers.oneOrMoreOther(GameObjectFilter.Permanent.withSubtype(Subtype.ELF).youControl()).enter()
         oncePerTurn = true
         effect = Effects.CreateToken(
             power = 1,

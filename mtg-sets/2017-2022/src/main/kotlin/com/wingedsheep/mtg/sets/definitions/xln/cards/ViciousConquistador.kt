@@ -24,7 +24,7 @@ val ViciousConquistador = card("Vicious Conquistador") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent))
     }
 

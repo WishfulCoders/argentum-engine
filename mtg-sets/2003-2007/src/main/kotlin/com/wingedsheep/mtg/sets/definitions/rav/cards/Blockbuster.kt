@@ -9,8 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -29,13 +27,11 @@ val Blockbuster = card("Blockbuster") {
     oracleText = "{1}{R}, Sacrifice this enchantment: It deals 3 damage to each tapped creature and each player."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{R}"), Costs.SacrificeSelf)
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(
-                GroupFilter(GameObjectFilter.Creature.tapped()),
-                DealDamageEffect(3, EffectTarget.Self)
-            ),
-            ForEachPlayerEffect(Player.Each, listOf(DealDamageEffect(3, EffectTarget.Controller)))
-        )
+        effect = Effects.ForEachInGroup(
+            GroupFilter(GameObjectFilter.Creature.tapped()),
+            Effects.DealDamage(3, EffectTarget.IterationEntity)
+        ) then
+            Effects.ForEachPlayer(Player.Each, Effects.DealDamage(3, EffectTarget.Controller))
     }
     metadata {
         rarity = Rarity.UNCOMMON

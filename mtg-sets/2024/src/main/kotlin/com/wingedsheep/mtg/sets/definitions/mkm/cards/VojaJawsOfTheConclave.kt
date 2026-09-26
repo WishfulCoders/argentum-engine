@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.DynamicAmounts
@@ -37,15 +37,15 @@ val VojaJawsOfTheConclave = card("Voja, Jaws of the Conclave") {
     keywordAbility(KeywordAbility.Ward(WardCost.Mana("{3}")))
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
             Effects.AddDynamicCounters(
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
                 amount = DynamicAmounts
                     .battlefield(Player.You, GameObjectFilter.Creature.withSubtype(Subtype.ELF))
                     .count(),
-                target = EffectTarget.Self,
+                target = EffectTarget.IterationEntity,
             ),
         ) then Effects.DrawCards(
             DynamicAmounts

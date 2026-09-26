@@ -1,24 +1,23 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.engine.view.ClientStateTransformer
 import com.wingedsheep.mtg.sets.definitions.dsk.cards.PossessedGoat
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Tests for Possessed Goat — specifically the additive "becomes a black Demon in addition to its
@@ -39,10 +38,10 @@ class PossessedGoatScenarioTest : FunSpec({
         oracleText = "Put three +1/+1 counters on target creature and it becomes a black Demon " +
             "in addition to its other colors and types."
         spell {
-            val target = target("target creature", Targets.Creature)
+            val target = target(TargetFilter.Creature)
             effect = CompositeEffect(
                 listOf(
-                    Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 3, target),
+                    Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 3, target),
                     Effects.AddColor(Color.BLACK, target, Duration.Permanent),
                     Effects.AddCreatureType("Demon", target, Duration.Permanent),
                 )
@@ -55,7 +54,7 @@ class PossessedGoatScenarioTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Target creature becomes a Goat."
         spell {
-            val target = target("target creature", Targets.Creature)
+            val target = target(TargetFilter.Creature)
             effect = Effects.SetCreatureSubtypes(setOf("Goat"), target, Duration.Permanent)
         }
     }
@@ -111,7 +110,7 @@ class PossessedGoatScenarioTest : FunSpec({
         val possessedArt = "/images/custom/possessed-goat.jpeg"
 
         fun displayedArt() =
-            ClientStateTransformer(driver.cardRegistry)
+            ClientStateTransformer(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
                 .transform(driver.state, viewingPlayerId = player)
                 .cards[goat]
                 ?.imageUri

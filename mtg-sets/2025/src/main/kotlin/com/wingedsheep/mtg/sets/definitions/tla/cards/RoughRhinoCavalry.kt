@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -36,10 +36,8 @@ val RoughRhinoCavalry = card("Rough Rhino Cavalry") {
     activatedAbility {
         isExhaust = true
         cost = Costs.Mana("{8}")
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self),
-            Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self),
-        )
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
     }
 
     metadata {

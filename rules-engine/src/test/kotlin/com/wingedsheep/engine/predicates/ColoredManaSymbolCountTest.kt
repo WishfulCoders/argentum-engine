@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
@@ -45,8 +45,8 @@ import io.kotest.matchers.shouldBe
  */
 class ColoredManaSymbolCountTest : FunSpec({
 
-    val predicateEvaluator = PredicateEvaluator()
-    val amountEvaluator = DynamicAmountEvaluator()
+    val predicateEvaluator = PredicateEvaluator(cardRegistry = null)
+    val amountEvaluator = predicateEvaluator.amounts
     val player = EntityId.generate()
 
     /** A battlefield permanent whose only interesting characteristic is its printed cost. */
@@ -82,11 +82,11 @@ class ColoredManaSymbolCountTest : FunSpec({
     fun GameState.matches(id: EntityId, filter: GameObjectFilter) =
         predicateEvaluator.matches(this, projectedState, id, filter, PredicateContext(controllerId = player))
 
-    // Read via EntityReference.Source so the object under test is named by sourceId alone —
+    // Read via EffectTarget.Self so the object under test is named by sourceId alone —
     // no ChosenTarget plumbing between the primitive and the assertion.
     fun GameState.pips(id: EntityId?, vararg colors: Color) = amountEvaluator.evaluate(
         this,
-        DynamicAmounts.coloredManaSymbolsOf(EntityReference.Source, *colors),
+        DynamicAmounts.coloredManaSymbolsOf(EffectTarget.Self, *colors),
         EffectContext(sourceId = id, controllerId = player)
     )
 
@@ -232,10 +232,10 @@ class ColoredManaSymbolCountTest : FunSpec({
         // rather than reading 0 forever. Namor's token count is Triggering-scoped and lives in a
         // resolution-time effect, which is fine; his *power* is a projector-safe count.
         contextScopedReferenceIn(
-            DynamicAmounts.coloredManaSymbolsOf(EntityReference.Triggering, Color.BLUE)
-        ) shouldBe "Triggering"
+            DynamicAmounts.coloredManaSymbolsOf(EffectTarget.TriggeringEntity, Color.BLUE)
+        ) shouldBe "TriggeringEntity"
         contextScopedReferenceIn(
-            DynamicAmounts.coloredManaSymbolsOf(EntityReference.Source, Color.BLUE)
+            DynamicAmounts.coloredManaSymbolsOf(EffectTarget.Self, Color.BLUE)
         ) shouldBe null
     }
 })

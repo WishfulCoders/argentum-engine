@@ -29,7 +29,7 @@ val ARealmReborn = card("A Realm Reborn") {
     oracleText = "Other permanents you control have \"{T}: Add one mana of any color.\""
     staticAbility {
         ability = GrantActivatedAbility(
-            ability = ActivatedAbility(id = AbilityId.generate(), cost = Costs.Tap, effect = Effects.AddManaOfChoice(), isManaAbility = true, timing = TimingRule.ManaAbility),
+            ability = ActivatedAbility(id = AbilityId.next(), cost = Costs.Tap, effect = Effects.AddManaOfChoice(), isManaAbility = true, timing = TimingRule.ManaAbility),
             filter = GroupFilter(GameObjectFilter.Permanent.youControl(), excludeSelf = true)
         )
     }

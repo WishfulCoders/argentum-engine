@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Festival of the Guildpact
@@ -29,8 +29,8 @@ val FestivalOfTheGuildpact = card("Festival of the Guildpact") {
     oracleText = "Prevent the next X damage that would be dealt to you this turn.\nDraw a card."
 
     spell {
-        effect = Effects.PreventNextDamage(DynamicAmount.XValue, EffectTarget.Controller)
-            .then(Effects.DrawCards(1))
+        effect = Effects.PreventNextDamage(DynamicAmounts.xValue(), EffectTarget.Controller) then
+            Effects.DrawCards(1)
     }
 
     metadata {

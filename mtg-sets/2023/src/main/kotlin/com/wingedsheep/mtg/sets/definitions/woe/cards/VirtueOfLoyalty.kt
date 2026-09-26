@@ -1,16 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Virtue of Loyalty // Ardenvale Fealty
@@ -28,17 +27,15 @@ val VirtueOfLoyalty = card("Virtue of Loyalty") {
         "control. Untap those creatures."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
-        effect = Effects.Composite(
+        trigger = Triggers.you.beginningOf(Step.END)
+        effect = Effects.ForEachInGroup(
+            GroupFilter.AllCreaturesYouControl,
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity)
+        ) then
             Effects.ForEachInGroup(
                 GroupFilter.AllCreaturesYouControl,
-                AddCountersEffect(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
-            ),
-            Effects.ForEachInGroup(
-                GroupFilter.AllCreaturesYouControl,
-                TapUntapEffect(EffectTarget.Self, tap = false)
+                Effects.Untap(EffectTarget.IterationEntity)
             )
-        )
         description = "At the beginning of your end step, put a +1/+1 counter on each creature " +
             "you control. Untap those creatures."
     }

@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -29,13 +28,8 @@ val DriverOfTheDead = card("Driver of the Dead") {
     power = 3
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.Dies
-        val t = target(
-            "target",
-            TargetObject(
-                filter = TargetFilter(GameObjectFilter.Creature.ownedByYou().manaValueAtMost(2), zone = Zone.GRAVEYARD)
-            )
-        )
+        trigger = Triggers.self.dies()
+        val t = target(TargetFilter(GameObjectFilter.Creature.ownedByYou().manaValueAtMost(2), zone = Zone.GRAVEYARD))
         effect = Effects.Move(t, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)
     }
     metadata {

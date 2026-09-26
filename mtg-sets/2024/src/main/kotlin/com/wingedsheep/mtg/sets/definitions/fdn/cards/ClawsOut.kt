@@ -40,7 +40,7 @@ val ClawsOut = card("Claws Out") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(2, 2, EffectTarget.Self)
+            Effects.ModifyStats(2, 2, EffectTarget.IterationEntity)
         )
     }
     metadata {

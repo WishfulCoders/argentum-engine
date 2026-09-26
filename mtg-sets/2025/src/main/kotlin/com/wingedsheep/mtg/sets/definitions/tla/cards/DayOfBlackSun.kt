@@ -30,13 +30,11 @@ val DayOfBlackSun = card("Day of Black Sun") {
         "Destroy those creatures."
 
     spell {
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(
-                filter = GroupFilter(GameObjectFilter.Creature.manaValueAtMostX()),
-                effect = Effects.RemoveAllAbilities(EffectTarget.Self, Duration.EndOfTurn),
-            ),
-            Effects.DestroyAll(GameObjectFilter.Creature.manaValueAtMostX()),
-        )
+        effect = Effects.ForEachInGroup(
+            filter = GroupFilter(GameObjectFilter.Creature.manaValueAtMostX()),
+            effect = Effects.RemoveAllAbilities(EffectTarget.IterationEntity, Duration.EndOfTurn),
+        ) then
+            Effects.DestroyAll(GameObjectFilter.Creature.manaValueAtMostX())
     }
 
     metadata {

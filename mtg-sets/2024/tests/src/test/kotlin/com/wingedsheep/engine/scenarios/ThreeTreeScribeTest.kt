@@ -14,9 +14,10 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.effects.MoveToZoneEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Tests for Three Tree Scribe:
@@ -36,7 +37,7 @@ class ThreeTreeScribeTest : FunSpec({
         typeLine = "Instant"
 
         spell {
-            target("creature", TargetCreature())
+            target(TargetFilter.Creature)
             effect = MoveToZoneEffect(EffectTarget.ContextTarget(0), Zone.HAND)
         }
     }
@@ -73,7 +74,7 @@ class ThreeTreeScribeTest : FunSpec({
                 targets = listOf(ChosenTarget.Permanent(scribe))
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         // Resolve the bounce — this must fire Three Tree Scribe's leaves-without-dying
         // trigger with the Scribe itself as the leaving creature.

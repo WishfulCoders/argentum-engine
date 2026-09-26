@@ -1,8 +1,8 @@
 package com.wingedsheep.engine.handlers.actions.spell
 
+import com.wingedsheep.engine.legality.LegalityKernel
 import com.wingedsheep.engine.core.GraveyardCastRiderSelection
 import com.wingedsheep.engine.handlers.ConditionEvaluator
-import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.mechanics.DisturbCasts
 import com.wingedsheep.engine.mechanics.FlashTypeGrants
 import com.wingedsheep.engine.mechanics.FlashbackGrants
@@ -11,16 +11,12 @@ import com.wingedsheep.engine.mechanics.ModalDfcCasts
 import com.wingedsheep.engine.mechanics.WarpGrants
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PredicateContext
-import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
-import com.wingedsheep.engine.state.components.battlefield.ExileEntryTurnComponent
 import com.wingedsheep.engine.state.components.battlefield.CastFromTopOfLibraryUsesThisTurnComponent
 import com.wingedsheep.engine.state.components.battlefield.GraveyardPlayPermissionUsedComponent
 import com.wingedsheep.engine.state.components.battlefield.MayCastFromGraveyardUsedThisTurnComponent
-import com.wingedsheep.engine.state.components.battlefield.LinkedExileComponent
-import com.wingedsheep.engine.state.components.battlefield.MayCastFromLinkedExileUsedThisTurnComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.CommanderComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
@@ -52,9 +48,10 @@ import com.wingedsheep.sdk.scripting.predicates.CardPredicate
  */
 class CastZoneResolver(
     private val cardRegistry: CardRegistry,
-    private val conditionEvaluator: ConditionEvaluator
+    private val conditionEvaluator: ConditionEvaluator,
+    private val legality: LegalityKernel
 ) {
-    private val predicateEvaluator = PredicateEvaluator()
+    private val predicateEvaluator = conditionEvaluator.predicates
 
     /**
      * Check if a card is on top of the player's library and the player controls
@@ -787,74 +784,14 @@ class CastZoneResolver(
     /**
      * Like [findLinkedExileGranter] but also returns the granter permanent's [EntityId].
      * Callers that need to mark the granter (e.g. for once-per-turn tracking on a
-     * successful cast) use this overload.
+     * successful cast) use this overload. The answer is the legality kernel's, the same one the
+     * enumerators and the client view read.
      */
     fun findLinkedExileGranterEntry(
         state: GameState,
         playerId: EntityId,
         cardId: EntityId
-    ): LinkedExileGranter? {
-        val cardContainer = state.getEntity(cardId) ?: return null
-        val cardComponent = cardContainer.get<CardComponent>() ?: return null
-
-        for (entityId in state.getBattlefield()) {
-            val container = state.getEntity(entityId) ?: continue
-            val controller = container.get<ControllerComponent>()?.playerId ?: continue
-            if (controller != playerId) continue
-
-            val linked = container.get<LinkedExileComponent>() ?: continue
-            if (cardId !in linked.exiledIds) continue
-
-            val entityCardComponent = container.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(entityCardComponent.cardDefinitionId) ?: continue
-            val grantAbility = cardDef.script.staticAbilities
-                .filterIsInstance<GrantMayCastFromLinkedExile>()
-                .firstOrNull() ?: continue
-
-            if (grantAbility.duringYourTurnOnly && !state.isActiveTurnFor(playerId)) continue
-
-            if (grantAbility.ownedByYou && cardComponent.ownerId != playerId) continue
-
-            if (grantAbility.oncePerTurn &&
-                container.get<MayCastFromLinkedExileUsedThisTurnComponent>() != null
-            ) continue
-
-            if (grantAbility.exiledThisTurnOnly) {
-                val turn = cardContainer.get<ExileEntryTurnComponent>()?.turnNumber
-                if (turn == null || turn != state.turnNumber) continue
-            }
-
-            val maxManaValue = grantAbility.maxManaValue
-            if (maxManaValue != null) {
-                val cap = evaluateMaxManaValue(state, entityId, playerId, maxManaValue)
-                if (cardComponent.manaCost.cmc > cap) continue
-            }
-
-            if (matchesCardFilter(cardComponent, grantAbility.filter)) {
-                return LinkedExileGranter(entityId, grantAbility)
-            }
-        }
-        return null
-    }
-
-    private fun evaluateMaxManaValue(
-        state: GameState,
-        granterId: EntityId,
-        controllerId: EntityId,
-        amount: com.wingedsheep.sdk.scripting.values.DynamicAmount
-    ): Int {
-        val context = EffectContext(
-            sourceId = granterId,
-            controllerId = controllerId,
-        )
-        return DynamicAmountEvaluator().evaluate(state, amount, context)
-    }
-
-    /** Pair returned by [findLinkedExileGranterEntry] — the granter permanent and its ability. */
-    data class LinkedExileGranter(
-        val granterId: EntityId,
-        val ability: GrantMayCastFromLinkedExile
-    )
+    ): LegalityKernel.LinkedExileGranter? = legality.linkedExileGranterFor(state, playerId, cardId)
 
     private fun findGraveyardPlayPermissionSource(
         state: GameState,
@@ -957,6 +894,9 @@ class CastZoneResolver(
                     card.manaCost.coloredSymbolCount(predicate.colors.toSet()) >= predicate.min
                 // --- Power / toughness (null base P/T — e.g. */noncreature — never matches) ---
                 is CardPredicate.PowerEquals -> power == predicate.value
+                // A card in a zone has no projection, so its base P/T is its printed P/T.
+                is CardPredicate.BasePowerEquals -> power == predicate.value
+                is CardPredicate.BaseToughnessEquals -> toughness == predicate.value
                 is CardPredicate.PowerAtMost -> power != null && power <= predicate.max
                 is CardPredicate.PowerAtLeast -> power != null && power >= predicate.min
                 is CardPredicate.ToughnessEquals -> toughness == predicate.value
@@ -1034,6 +974,7 @@ class CastZoneResolver(
                 is CardPredicate.PowerEqualsX,
                 is CardPredicate.PowerAtLeastX,
                 is CardPredicate.ToughnessAtMostX,
+                is CardPredicate.CouldEnchant,
                 is CardPredicate.PowerAtMostEntity,
                 is CardPredicate.PowerGreaterThanEntity,
                 is CardPredicate.PowerLessThanEntity,

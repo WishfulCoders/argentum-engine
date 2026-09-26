@@ -4,10 +4,10 @@
 
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.targets.TargetCreatureOrPlaneswalker
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -22,8 +22,8 @@ val RoadRage = card("Road Rage") {
     typeLine = "Instant"
     oracleText = "Road Rage deals X damage to target creature or planeswalker, where X is 2 plus the number of Mounts and Vehicles you control."
     spell {
-        val t = target("target", TargetCreatureOrPlaneswalker())
-        effect = DealDamageEffect(2, t)
+        val t = target(Targets.CreatureOrPlaneswalker)
+        effect = Effects.DealDamage(2, t)
     }
     metadata {
         rarity = Rarity.UNCOMMON

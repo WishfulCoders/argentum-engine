@@ -32,7 +32,7 @@ import kotlin.reflect.KClass
  */
 class AmassExecutor(
     private val executeEffect: (GameState, Effect, EffectContext) -> EffectResult,
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<AmassEffect> {
 
     override val effectType: KClass<AmassEffect> = AmassEffect::class

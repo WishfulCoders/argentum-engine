@@ -25,7 +25,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Nothing here targets, so the Roles land on Rats with hexproof or shroud too, and the ability can't
  * fizzle. The Rats themselves are the iteration entities, so the body attaches to
- * [EffectTarget.Self] — under a `Group` space that resolves to the current entity rather than to the
+ * [EffectTarget.IterationEntity] — under a `Group` space that resolves to the current entity rather than to the
  * Witch. [Effects.CreateRoleToken] already implements the Role state-based action (CR 303.7a /
  * 704.5z) that bins an older Role you control on the same creature, so landing this on Rats that
  * already carry a Monster or Cursed Role replaces rather than stacks.
@@ -43,12 +43,10 @@ val TwistedSewerWitch = card("Twisted Sewer-Witch") {
         "loses 1 life.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = woeRatToken().then(
-            Effects.ForEachInGroup(
-                filter = GroupFilter(GameObjectFilter.Creature.withSubtype("Rat").youControl()),
-                effect = Effects.CreateRoleToken("Wicked Role", EffectTarget.Self),
-            )
+        trigger = Triggers.self.enters()
+        effect = woeRatToken() then Effects.ForEachInGroup(
+            filter = GroupFilter(GameObjectFilter.Creature.withSubtype("Rat").youControl()),
+            effect = Effects.CreateRoleToken("Wicked Role", EffectTarget.IterationEntity),
         )
         description = "When this creature enters, create a 1/1 black Rat creature token with " +
             "\"This creature can't block.\" Then for each Rat you control, create a Wicked Role " +

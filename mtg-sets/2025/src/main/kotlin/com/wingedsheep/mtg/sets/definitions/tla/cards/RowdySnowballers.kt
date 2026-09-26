@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Rowdy Snowballers
@@ -28,15 +26,10 @@ val RowdySnowballers = card("Rowdy Snowballers") {
     oracleText = "When this creature enters, tap target creature an opponent controls and put a stun counter on it. (If a permanent with a stun counter would become untapped, remove one from it instead.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "creature an opponent controls",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Creature.opponentControls())),
-        )
-        effect = Effects.Composite(
-            Effects.Tap(t),
-            AddCountersEffect(counterType = Counters.STUN, count = 1, target = t),
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter(GameObjectFilter.Creature.opponentControls()))
+        effect = Effects.Tap(t) then
+            Effects.AddCounters(counterType = CounterType.STUN, count = 1, target = t)
     }
 
     metadata {

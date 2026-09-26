@@ -23,7 +23,7 @@ val ExplosiveImpact = card("Explosive Impact") {
     oracleText = "Explosive Impact deals 5 damage to any target."
 
     spell {
-        val t = target("any target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(5, t)
     }
 

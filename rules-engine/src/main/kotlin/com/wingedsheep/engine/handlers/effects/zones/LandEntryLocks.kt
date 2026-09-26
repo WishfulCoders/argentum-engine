@@ -1,6 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.zones
 
-import com.wingedsheep.engine.handlers.ConditionEvaluator
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
@@ -18,10 +18,8 @@ import com.wingedsheep.sdk.scripting.LandsCantEnterTheBattlefield
  */
 object LandEntryLocks {
 
-    private val conditionEvaluator = ConditionEvaluator()
-
     /** True if any permanent on the battlefield forbids lands from entering. */
-    fun landsCantEnter(state: GameState, cardRegistry: CardRegistry): Boolean {
+    fun landsCantEnter(state: GameState, cardRegistry: CardRegistry, predicateEvaluator: PredicateEvaluator): Boolean {
         for (entityId in state.getBattlefield()) {
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
             val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
@@ -32,7 +30,7 @@ object LandEntryLocks {
                         if (ability.ability !is LandsCantEnterTheBattlefield) continue
                         val controller = state.projectedState.getController(entityId) ?: continue
                         val context = EffectContext(sourceId = entityId, controllerId = controller)
-                        if (conditionEvaluator.evaluate(state, ability.condition, context)) return true
+                        if (predicateEvaluator.conditions.evaluate(state, ability.condition, context)) return true
                     }
                     else -> {}
                 }

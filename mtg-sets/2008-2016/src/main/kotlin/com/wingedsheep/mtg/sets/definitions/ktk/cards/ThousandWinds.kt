@@ -30,7 +30,7 @@ val ThousandWinds = card("Thousand Winds") {
     morph = "{5}{U}{U}"
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
+        trigger = Triggers.self.turnedFaceUp()
         effect = Patterns.Group.returnAllToHand(
             GroupFilter(
                 baseFilter = GameObjectFilter.Creature.tapped(),

@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.custom
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Momir Vig, Simic Visionary — the Vanguard avatar of the Momir Basic format
@@ -31,7 +31,7 @@ val MomirVigSimicVisionary = card("Momir Vig, Simic Visionary") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{X}"), Costs.DiscardCard)
-        effect = Effects.CreateRandomCreatureTokenWithManaValue(DynamicAmount.XValue)
+        effect = Effects.CreateRandomCreatureTokenWithManaValue(DynamicAmounts.xValue())
         timing = TimingRule.SorcerySpeed
         restrictions = listOf(ActivationRestriction.OncePerTurn)
         activateFromZone = Zone.COMMAND

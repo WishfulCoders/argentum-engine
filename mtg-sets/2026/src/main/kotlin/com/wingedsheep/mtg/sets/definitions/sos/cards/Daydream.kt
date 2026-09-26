@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Daydream
@@ -32,10 +32,10 @@ val Daydream = card("Daydream") {
         "Then exile it.)"
 
     spell {
-        val creature = target("creature you control", Targets.CreatureYouControl)
-        effect = Effects.Move(creature, Zone.EXILE)
-            .then(Effects.Move(creature, Zone.BATTLEFIELD))
-            .then(Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creature))
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.Move(creature, Zone.EXILE) then
+            Effects.Move(creature, Zone.BATTLEFIELD) then
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature)
     }
 
     keywordAbility(KeywordAbility.flashback("{2}{W}"))

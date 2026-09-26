@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Territorial Allosaurus
@@ -29,9 +28,9 @@ val TerritorialAllosaurus = card("Territorial Allosaurus") {
     keywordAbility(KeywordAbility.kicker("{2}{G}"))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = WasKicked
-        val t = target("another target creature", TargetCreature(filter = TargetFilter.OtherCreature))
+        val t = target(TargetFilter.OtherCreature)
         effect = Effects.Fight(EffectTarget.Self, t)
     }
 

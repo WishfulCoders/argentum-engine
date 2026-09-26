@@ -14,13 +14,9 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.AttachEquipmentEffect
-import com.wingedsheep.sdk.scripting.effects.BecomeArtifactEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * The Irencrag {2}
@@ -39,7 +35,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * that wipe.
  *
  * Nothing here is once-only: each resolution independently grants another equip {3} and another
- * "+3/+3", so declining is the player's lever — hence the [MayEffect].
+ * "+3/+3", so declining is the player's lever — hence the [Effects.May].
  */
 val TheIrencrag = card("The Irencrag") {
     manaCost = "{2}"
@@ -59,11 +55,11 @@ val TheIrencrag = card("The Irencrag") {
 
     // Equip {3}, granted by the transform. Mirrors the shape CardBuilder.equipAbility builds.
     val everflameEquip = ActivatedAbility(
-        id = AbilityId.generate(),
+        id = AbilityId.next(),
         cost = AbilityCost.Atom(CostAtom.Mana(ManaCost.parse("{3}"))),
-        effect = AttachEquipmentEffect(EffectTarget.BoundVariable("creature you control")),
+        effect = Effects.AttachEquipment(EffectTarget.BoundVariable("creature you control")),
         targetRequirements = listOf(
-            TargetCreature(filter = TargetFilter.CreatureYouControl, id = "creature you control")
+            TargetObject(filter = TargetFilter.CreatureYouControl, id = "creature you control")
         ),
         isEquipAbility = true,
         timing = TimingRule.SorcerySpeed,
@@ -72,12 +68,9 @@ val TheIrencrag = card("The Irencrag") {
     )
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.legendary().youControl(),
-            binding = TriggerBinding.ANY
-        )
-        effect = MayEffect(
-            BecomeArtifactEffect(
+        trigger = Triggers.a(GameObjectFilter.Creature.legendary().youControl()).enters()
+        effect = Effects.May(
+            Effects.BecomeArtifact(
                 target = EffectTarget.Self,
                 cardTypes = setOf("ARTIFACT"),
                 subtypes = setOf("Equipment"),

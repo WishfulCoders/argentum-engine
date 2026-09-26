@@ -9,7 +9,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Bumi, Unleashed — {3}{R}{G}
@@ -44,21 +44,19 @@ val BumiUnleashed = card("Bumi, Unleashed") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val land = target("target land you control", TargetObject(filter = TargetFilter.Land.youControl()))
+        trigger = Triggers.self.enters()
+        val land = target(TargetFilter.Land.youControl())
         effect = Effects.Earthbend(4, land)
         description = "When Bumi enters, earthbend 4."
     }
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(
-                GroupFilter(GameObjectFilter.Land.youControl()),
-                Effects.Untap(EffectTarget.Self),
-            ),
-            Effects.AddCombatPhaseRestrictedTo(GameObjectFilter.Creature and GameObjectFilter.Land),
-        )
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.ForEachInGroup(
+            GroupFilter(GameObjectFilter.Land.youControl()),
+            Effects.Untap(EffectTarget.IterationEntity),
+        ) then
+            Effects.AddCombatPhaseRestrictedTo(GameObjectFilter.Creature and GameObjectFilter.Land)
         description = "Whenever Bumi deals combat damage to a player, untap all lands you control. " +
             "After this phase, there is an additional combat phase. Only land creatures can attack " +
             "during that combat phase."

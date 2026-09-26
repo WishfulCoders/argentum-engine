@@ -29,7 +29,7 @@ val WebweaverChangeling = card("Webweaver Changeling") {
     keywords(Keyword.CHANGELING, Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.CreatureCardsInGraveyardAtLeast(3)
         effect = Effects.GainLife(5)
     }

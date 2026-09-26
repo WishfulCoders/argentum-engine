@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.damage
 
+import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.core.suspendForDecision
 import com.wingedsheep.engine.core.DecisionContext
 import com.wingedsheep.engine.core.DecisionPhase
@@ -11,10 +12,12 @@ import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
 import com.wingedsheep.engine.handlers.effects.DamageUtils.dealDamageToTarget
 import com.wingedsheep.engine.handlers.effects.TargetResolutionUtils.toEntityId
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.sdk.scripting.effects.DividedDamageEffect
 import kotlin.reflect.KClass
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Executor for DividedDamageEffect.
@@ -28,9 +31,9 @@ import kotlin.reflect.KClass
  * non-interactive controller) does it deal the whole total or ask for the division at resolution.
  */
 class DividedDamageExecutor(
+    private val zones: ZoneTransitionService,
     private val decisionHandler: DecisionHandler,
-    private val amountEvaluator: com.wingedsheep.engine.handlers.DynamicAmountEvaluator =
-        com.wingedsheep.engine.handlers.DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<DividedDamageEffect> {
 
     override val effectType: KClass<DividedDamageEffect> = DividedDamageEffect::class
@@ -77,8 +80,8 @@ class DividedDamageExecutor(
 
             for ((targetId, amount) in distribution) {
                 if (amount <= 0 || targetId !in stillLegal) continue
-                val result = dealDamageToTarget(currentState, targetId, amount, context.sourceId)
-                if (!result.isSuccess) {
+                val result = dealDamageToTarget(zones, currentState, targetId, amount, context.sourceId)
+                if (result.outcome !is Outcome.Done) {
                     return result
                 }
                 currentState = result.newState
@@ -99,7 +102,7 @@ class DividedDamageExecutor(
                 context
             )
             if (pause != null) return pause
-            return dealDamageToTarget(readyState, targets.first(), total, context.sourceId)
+            return dealDamageToTarget(zones, readyState, targets.first(), total, context.sourceId)
         }
         return createDistributionDecision(state, effect, context, targets, total)
     }

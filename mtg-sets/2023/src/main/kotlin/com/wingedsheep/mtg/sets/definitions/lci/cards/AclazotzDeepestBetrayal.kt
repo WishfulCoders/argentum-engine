@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -13,12 +13,9 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Aclazotz, Deepest Betrayal // Temple of the Dead (The Lost Caverns of Ixalan)
@@ -43,7 +40,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *    then makes each opponent discard via [Effects.EachOpponentDiscards]. The count is snapshotted
  *    before the discards (an opponent's own draw can't change another player's hand), so
  *    draw-before-discard is outcome-equivalent to the printed discard-then-draw order.
- *  - The Bat trigger fires per land an opponent discards ([Triggers.discards]`(EachOpponent, Land)`).
+ *  - The Bat trigger fires per land an opponent discards (`Triggers.<player>.discards(card, batch)``(EachOpponent, Land)`).
  *  - Dies-return uses the shared [Effects.ReturnSelfFromGraveyardTransformed]`(tapped = true)`.
  *  - Back land: `{T}: Add {B}` + a `{2}{B}, {T}` sorcery-speed [TransformEffect] gated on at least
  *    one player (any) having one or fewer cards in hand.
@@ -66,27 +63,25 @@ private val AclazotzDeepestBetrayalFront = card("Aclazotz, Deepest Betrayal") {
     keywords(Keyword.FLYING, Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(
-            // Draw for each opponent who can't discard (empty hand), snapshotted before the discards.
-            Effects.DrawCards(
-                DynamicAmount.CountPlayersWith(
-                    scope = Player.EachOpponent,
-                    condition = Compare(
-                        left = DynamicAmount.Count(Player.You, Zone.HAND),
-                        operator = ComparisonOperator.LTE,
-                        right = DynamicAmount.Fixed(0),
-                    ),
-                )
-            ),
-            Effects.EachOpponentDiscards(1),
-        )
+        trigger = Triggers.self.attacks()
+        // Draw for each opponent who can't discard (empty hand), snapshotted before the discards.
+        effect = Effects.DrawCards(
+            DynamicAmounts.countPlayersWith(
+                scope = Player.EachOpponent,
+                condition = Conditions.CompareAmounts(
+                    left = DynamicAmounts.cardsInYourHand(),
+                    operator = ComparisonOperator.LTE,
+                    right = 0,
+                ),
+            )
+        ) then
+            Effects.EachOpponentDiscards(1)
         description = "Whenever Aclazotz attacks, each opponent discards a card. For each " +
             "opponent who can't, you draw a card."
     }
 
     triggeredAbility {
-        trigger = Triggers.discards(player = Player.EachOpponent, cardFilter = GameObjectFilter.Land)
+        trigger = Triggers.anOpponent.discards(GameObjectFilter.Land)
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
@@ -100,7 +95,7 @@ private val AclazotzDeepestBetrayalFront = card("Aclazotz, Deepest Betrayal") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.ReturnSelfFromGraveyardTransformed(tapped = true)
         description = "When Aclazotz dies, return it to the battlefield tapped and transformed " +
             "under its owner's control."
@@ -132,22 +127,22 @@ private val TempleOfTheDead = card("Temple of the Dead") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{B}"), Costs.Tap)
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
         timing = TimingRule.SorcerySpeed
         restrictions = listOf(
             ActivationRestriction.OnlyIfCondition(
                 // At least one player (any) has one or fewer cards in hand.
                 Conditions.CompareAmounts(
-                    DynamicAmount.CountPlayersWith(
+                    DynamicAmounts.countPlayersWith(
                         scope = Player.Each,
-                        condition = Compare(
-                            left = DynamicAmount.Count(Player.You, Zone.HAND),
+                        condition = Conditions.CompareAmounts(
+                            left = DynamicAmounts.cardsInYourHand(),
                             operator = ComparisonOperator.LTE,
-                            right = DynamicAmount.Fixed(1),
+                            right = 1,
                         ),
                     ),
                     ComparisonOperator.GTE,
-                    DynamicAmount.Fixed(1),
+                    1,
                 )
             )
         )

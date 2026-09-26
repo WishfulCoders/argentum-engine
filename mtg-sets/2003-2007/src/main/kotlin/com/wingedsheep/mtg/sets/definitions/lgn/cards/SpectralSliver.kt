@@ -31,7 +31,7 @@ val SpectralSliver = card("Spectral Sliver") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Mana("{2}"),
                 effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
             ),

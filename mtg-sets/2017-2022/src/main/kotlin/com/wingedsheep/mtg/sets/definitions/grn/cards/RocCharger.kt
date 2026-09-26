@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Roc Charger
@@ -28,15 +27,8 @@ val RocCharger = card("Roc Charger") {
 
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val flyer = target(
-            "target",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.withoutKeyword(Keyword.FLYING).attacking()
-                )
-            )
-        )
+        trigger = Triggers.self.attacks()
+        val flyer = target(TargetFilter(GameObjectFilter.Creature.withoutKeyword(Keyword.FLYING).attacking()))
         effect = Effects.GrantKeyword(Keyword.FLYING, flyer)
     }
 

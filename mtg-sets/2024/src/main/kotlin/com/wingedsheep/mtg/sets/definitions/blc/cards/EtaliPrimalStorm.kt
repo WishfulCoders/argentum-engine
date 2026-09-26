@@ -1,19 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.blc.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CastAnyNumberFromCollectionWithoutPayingCostEffect
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
 
 val EtaliPrimalStorm = card("Etali, Primal Storm") {
@@ -25,30 +17,20 @@ val EtaliPrimalStorm = card("Etali, Primal Storm") {
     toughness = 6
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(
-                        count = DynamicAmount.Fixed(1),
-                        player = Player.Each
-                    ),
-                    storeAs = "exiledCards"
-                ),
-                MoveCollectionEffect(
-                    from = "exiledCards",
-                    destination = CardDestination.ToZone(Zone.EXILE)
-                ),
-                FilterCollectionEffect(
-                    from = "exiledCards",
-                    filter = CollectionFilter.MatchesFilter(GameObjectFilter.Nonland),
-                    storeMatching = "castable"
-                ),
-                // Cast any number of them for free, during this trigger's resolution (the
-                // controller can't wait until later in the turn — see the 2021-03-19 ruling).
-                CastAnyNumberFromCollectionWithoutPayingCostEffect("castable")
+        trigger = Triggers.self.attacks()
+        effect = Effects.Pipeline {
+            val exiledCards = gather(
+                CardSource.TopOfLibrary(
+                    count = 1,
+                    player = Player.Each
+                )
             )
-        )
+            exile(exiledCards)
+            val castable = filter(exiledCards, GameObjectFilter.Nonland)
+            // Cast any number of them for free, during this trigger's resolution (the
+            // controller can't wait until later in the turn — see the 2021-03-19 ruling).
+            run(Effects.CastAnyNumberFromCollectionWithoutPayingCost(castable))
+        }
     }
 
     metadata {

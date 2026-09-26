@@ -25,12 +25,11 @@ import kotlin.reflect.KClass
  * skips an unaffordable selection), this branch is only hit on genuinely degenerate input.
  */
 class PayDynamicManaCostExecutor(
-    private val cardRegistry: CardRegistry
+    private val cardRegistry: CardRegistry,
+    private val dynamicAmountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<PayDynamicManaCostEffect> {
 
     override val effectType: KClass<PayDynamicManaCostEffect> = PayDynamicManaCostEffect::class
-
-    private val dynamicAmountEvaluator = DynamicAmountEvaluator()
 
     override fun execute(
         state: GameState,
@@ -46,7 +45,7 @@ class PayDynamicManaCostExecutor(
             .resolvePlayerTarget(EffectTarget.PlayerRef(effect.payer), context, state)
             ?: context.controllerId
 
-        return payManaCostFromPool(state, playerId, dynamicManaCost(amount, effect.color), cardRegistry)
+        return payManaCostFromPool(state, playerId, dynamicManaCost(amount, effect.color), cardRegistry, predicateEvaluator = dynamicAmountEvaluator.predicates)
     }
 
     companion object {

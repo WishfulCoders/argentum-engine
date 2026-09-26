@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.mechanics.targeting
 
+import com.wingedsheep.engine.handlers.TargetFinder
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.ControllerGrants
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.GrantsControllerHexproofComponent
@@ -33,15 +35,15 @@ object ControllerHexproof {
      * abilities. Callers that need that distinction pair this with the caster
      * (see [appliesAgainst]).
      */
-    fun appliesTo(state: GameState, playerId: EntityId): Boolean {
+    fun appliesTo(state: GameState, playerId: EntityId, predicateEvaluator: PredicateEvaluator): Boolean {
         if (state.getEntity(playerId)?.has<PlayerHexproofComponent>() == true) return true
-        return ControllerGrants.grantedTo<GrantsControllerHexproofComponent>(state, playerId)
+        return ControllerGrants.grantedTo<GrantsControllerHexproofComponent>(state, playerId, predicateEvaluator = predicateEvaluator)
     }
 
     /**
      * Whether [playerId] has hexproof *against* [casterId] — hexproof never stops the player's own
      * spells and abilities (CR 702.11b), so this is false when they are the same player.
      */
-    fun appliesAgainst(state: GameState, playerId: EntityId, casterId: EntityId): Boolean =
-        playerId != casterId && appliesTo(state, playerId)
+    fun appliesAgainst(state: GameState, playerId: EntityId, casterId: EntityId, predicateEvaluator: PredicateEvaluator): Boolean =
+        playerId != casterId && appliesTo(state, playerId, predicateEvaluator = predicateEvaluator)
 }

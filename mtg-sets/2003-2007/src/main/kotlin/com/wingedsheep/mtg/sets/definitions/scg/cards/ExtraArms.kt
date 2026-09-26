@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Extra Arms
@@ -22,13 +22,13 @@ val ExtraArms = card("Extra Arms") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature\nWhenever enchanted creature attacks, it deals 2 damage to any target."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.attacks(binding = TriggerBinding.ATTACHED)
-        val any = target("any target", Targets.Any)
-        effect = DealDamageEffect(
-            amount = DynamicAmount.Fixed(2),
+        trigger = Triggers.attached.attacks()
+        val any = target(Targets.Any)
+        effect = Effects.DealDamage(
+            amount = 2,
             target = any,
             damageSource = EffectTarget.EnchantedCreature
         )

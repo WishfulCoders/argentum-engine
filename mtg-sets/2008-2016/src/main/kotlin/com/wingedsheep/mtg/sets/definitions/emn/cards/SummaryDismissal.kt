@@ -12,8 +12,8 @@ val SummaryDismissal = card("Summary Dismissal") {
     oracleText = "Exile all other spells and counter all abilities."
 
     spell {
-        effect = Effects.ExileSpellsOnStack()
-            .then(Effects.CounterAllStackObjects(spells = false, abilities = true))
+        effect = Effects.ExileSpellsOnStack() then
+            Effects.CounterAllStackObjects(spells = false, abilities = true)
     }
 
     metadata {

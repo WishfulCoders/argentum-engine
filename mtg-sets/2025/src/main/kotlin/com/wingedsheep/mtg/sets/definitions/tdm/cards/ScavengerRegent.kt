@@ -2,13 +2,15 @@ package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.dsl.unaryMinus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Scavenger Regent // Exude Toxin
@@ -24,7 +26,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *   Each non-Dragon creature gets -X/-X until end of turn.
  *   (Then shuffle this card into its owner's library.)
  *
- * Ward—Discard a card is modeled with [KeywordAbility.wardDiscard]. Exude Toxin is an Omen face
+ * Ward—Discard a card is modeled with [WardCost.Discard]. Exude Toxin is an Omen face
  * (declared via the `omen { }` DSL, so on resolution the card shuffles into its owner's library
  * per the Omen reminder text). The board-wide -X/-X is
  * [Patterns.Group.modifyStatsForAll] over every creature without the Dragon subtype, with the
@@ -39,7 +41,7 @@ val ScavengerRegent = card("Scavenger Regent") {
     oracleText = "Flying\nWard—Discard a card."
 
     keywords(Keyword.FLYING)
-    keywordAbility(KeywordAbility.wardDiscard())
+    keywordAbility(KeywordAbility.Ward(WardCost.Discard()))
 
     // Exude Toxin — Omen. Each non-Dragon creature gets -X/-X until end of turn.
     omen("Exude Toxin") {
@@ -49,8 +51,8 @@ val ScavengerRegent = card("Scavenger Regent") {
             "(Then shuffle this card into its owner's library.)"
         spell {
             effect = Patterns.Group.modifyStatsForAll(
-                power = DynamicAmount.Multiply(DynamicAmount.XValue, -1),
-                toughness = DynamicAmount.Multiply(DynamicAmount.XValue, -1),
+                power = -DynamicAmounts.xValue(),
+                toughness = -DynamicAmounts.xValue(),
                 filter = GroupFilter(GameObjectFilter.Creature.notSubtype(Subtype.DRAGON))
             )
         }

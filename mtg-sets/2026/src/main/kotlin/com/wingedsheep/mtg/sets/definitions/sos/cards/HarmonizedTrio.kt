@@ -54,14 +54,12 @@ val HarmonizedTrio = card("Harmonized Trio") {
         oracleText = "Draw three cards, then put two cards from your hand on top of your library " +
             "in any order."
         spell {
-            effect = Effects.Composite(
-                Effects.DrawCards(3),
+            effect = Effects.DrawCards(3) then
                 Effects.Pipeline {
                     val hand = gather(CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Any))
                     val putBack = chooseExactly(2, hand)
                     toLibraryTop(putBack)
-                },
-            )
+                }
         }
     }
 

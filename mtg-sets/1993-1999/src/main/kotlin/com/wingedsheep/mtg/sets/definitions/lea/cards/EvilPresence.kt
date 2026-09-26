@@ -4,10 +4,11 @@
 
 package com.wingedsheep.mtg.sets.definitions.lea.cards
 
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.SetEnchantedLandType
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -22,7 +23,7 @@ val EvilPresence = card("Evil Presence") {
     colorIdentity = "B"
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant land\nEnchanted land is a Swamp."
-    auraTarget = Targets.Land
+    auraTarget = TargetObject(filter = TargetFilter.Land)
     staticAbility {
         ability = SetEnchantedLandType("Swamp")
     }

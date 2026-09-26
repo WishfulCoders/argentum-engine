@@ -39,7 +39,7 @@ val LuxuriousLocomotive = card("Luxurious Locomotive") {
 
     // Whenever this Vehicle attacks, create a Treasure token for each creature that crewed it this turn.
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.CreateTreasure(count = DynamicAmounts.creaturesThatCrewedOrSaddledThisTurn())
     }
 

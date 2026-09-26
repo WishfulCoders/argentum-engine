@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.drk.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Word of Binding
@@ -22,7 +22,7 @@ val WordOfBinding = card("Word of Binding") {
     oracleText = "Tap X target creatures."
 
     spell {
-        target = TargetCreature(optional = true, dynamicMaxCount = DynamicAmount.XValue)
+        targets(TargetFilter.Creature, optional = true, dynamicMaxCount = DynamicAmounts.xValue())
         effect = Effects.TapEachTarget()
     }
 

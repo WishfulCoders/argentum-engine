@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
@@ -9,8 +9,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * The One Ring
@@ -47,16 +47,16 @@ val TheOneRing = card("The One Ring") {
 
     // When The One Ring enters, if you cast it, you gain protection from everything until your next turn.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.WasCast
         effect = Effects.GrantPlayerProtection()
     }
 
     // At the beginning of your upkeep, you lose 1 life for each burden counter on The One Ring.
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.LoseLife(
-            DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.BURDEN)),
+            DynamicAmounts.countersOnSelf(CounterType.BURDEN),
             EffectTarget.Controller
         )
     }
@@ -64,12 +64,8 @@ val TheOneRing = card("The One Ring") {
     // {T}: Put a burden counter on The One Ring, then draw a card for each burden counter on it.
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.Composite(
-            listOf(
-                Effects.AddCounters(Counters.BURDEN, 1, EffectTarget.Self),
-                Effects.DrawCards(DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.BURDEN)))
-            )
-        )
+        effect = Effects.AddCounters(CounterType.BURDEN, 1, EffectTarget.Self) then
+            Effects.DrawCards(DynamicAmounts.countersOnSelf(CounterType.BURDEN))
     }
 
     metadata {

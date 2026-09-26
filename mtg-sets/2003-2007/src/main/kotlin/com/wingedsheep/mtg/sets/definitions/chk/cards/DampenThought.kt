@@ -29,7 +29,7 @@ val DampenThought = card("Dampen Thought") {
     splice("{1}{U}")
 
     spell {
-        val player = target("target", Targets.Player)
+        val player = target(Targets.Player)
         effect = Patterns.Library.mill(4, player)
     }
 

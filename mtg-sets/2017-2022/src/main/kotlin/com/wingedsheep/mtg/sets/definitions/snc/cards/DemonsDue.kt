@@ -18,9 +18,9 @@ val DemonsDue = card("Demon's Due") {
     oracleText = "Scry 2, then draw two cards. You lose 2 life."
 
     spell {
-        effect = Effects.Scry(2)
-            .then(Effects.DrawCards(2))
-            .then(Effects.LoseLife(2, EffectTarget.Controller))
+        effect = Effects.Scry(2) then
+            Effects.DrawCards(2) then
+            Effects.LoseLife(2, EffectTarget.Controller)
     }
 
     metadata {

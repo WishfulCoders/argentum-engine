@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 
 /**
@@ -31,8 +31,8 @@ val BrightglassGearhulk = card("Brightglass Gearhulk") {
     keywords(Keyword.FIRST_STRIKE, Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.May(
             Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.ArtifactCreatureOrEnchantment.manaValueAtMost(1),
                 count = 2,

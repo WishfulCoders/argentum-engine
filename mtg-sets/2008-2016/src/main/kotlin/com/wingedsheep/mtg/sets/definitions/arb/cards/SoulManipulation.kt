@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Soul Manipulation
@@ -31,11 +32,11 @@ val SoulManipulation = card("Soul Manipulation") {
     spell {
         modal(chooseCount = 2, minChooseCount = 1) {
             mode("Counter target creature spell") {
-                target("target", Targets.CreatureSpell)
+                target(TargetFilter.CreatureSpellOnStack)
                 effect = Effects.CounterSpell()
             }
             mode("Return target creature card from your graveyard to your hand") {
-                val t = target("target", Targets.CreatureCardInYourGraveyard)
+                val t = target(TargetFilter.CreatureInYourGraveyard)
                 effect = Effects.ReturnToHand(t)
             }
         }

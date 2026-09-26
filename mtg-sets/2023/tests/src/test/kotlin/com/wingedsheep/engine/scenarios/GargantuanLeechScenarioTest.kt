@@ -33,7 +33,7 @@ class GargantuanLeechScenarioTest : ScenarioTestBase() {
                     .withCardInHand(1, "Gargantuan Leech")
                     .build()
 
-                val calculator = CostCalculator(cardRegistry)
+                val calculator = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator)
                 val cost = calculator.calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Gargantuan Leech"),
@@ -53,7 +53,7 @@ class GargantuanLeechScenarioTest : ScenarioTestBase() {
                     .withCardOnBattlefield(1, "Promising Vein")
                     .build()
 
-                val calculator = CostCalculator(cardRegistry)
+                val calculator = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator)
                 val cost = calculator.calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Gargantuan Leech"),
@@ -73,7 +73,7 @@ class GargantuanLeechScenarioTest : ScenarioTestBase() {
                     .withCardInGraveyard(1, "Promising Vein")
                     .build()
 
-                val calculator = CostCalculator(cardRegistry)
+                val calculator = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator)
                 val cost = calculator.calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Gargantuan Leech"),
@@ -94,7 +94,7 @@ class GargantuanLeechScenarioTest : ScenarioTestBase() {
                     .withCardInGraveyard(1, "Hidden Courtyard")
                     .build()
 
-                val calculator = CostCalculator(cardRegistry)
+                val calculator = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator)
                 val cost = calculator.calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Gargantuan Leech"),
@@ -114,7 +114,7 @@ class GargantuanLeechScenarioTest : ScenarioTestBase() {
                     .withCardOnBattlefield(2, "Promising Vein")     // opponent's Cave — must NOT count
                     .build()
 
-                val calculator = CostCalculator(cardRegistry)
+                val calculator = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator)
                 val cost = calculator.calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Gargantuan Leech"),
@@ -138,7 +138,7 @@ class GargantuanLeechScenarioTest : ScenarioTestBase() {
                 }
                 val game = builder.build()
 
-                val calculator = CostCalculator(cardRegistry)
+                val calculator = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator)
                 val cost = calculator.calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Gargantuan Leech"),

@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.avr.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Conjurer's Closet
@@ -22,11 +22,10 @@ val ConjurersCloset = card("Conjurer's Closet") {
     oracleText = "At the beginning of your end step, you may exile target creature you control, then return that card to the battlefield under your control."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
-        val creature = target("creature you control", Targets.CreatureYouControl)
-        effect = MayEffect(
-            Effects.Move(creature, Zone.EXILE)
-                .then(Effects.Move(creature, Zone.BATTLEFIELD))
+        trigger = Triggers.you.beginningOf(Step.END)
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.May(
+            Effects.Move(creature, Zone.EXILE) then Effects.Move(creature, Zone.BATTLEFIELD)
         )
     }
 

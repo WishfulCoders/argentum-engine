@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBeBlockedBy
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Duskwatch Hunter — The Hobbit #153
@@ -38,9 +38,9 @@ val DuskwatchHunter = card("Duskwatch Hunter") {
     }
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = TargetCreature()
-        effect = Effects.AddCounters("+1/+1", 1, EffectTarget.ContextTarget(0))
+        val creature = target(TargetFilter.Creature)
+        trigger = Triggers.self.enters()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature)
     }
 
     metadata {

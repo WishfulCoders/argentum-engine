@@ -30,16 +30,14 @@ val AdarkarWastes = card("Adarkar Wastes") {
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = Effects.AddMana(Color.WHITE)
-            .then(Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You)))
+        effect = Effects.AddMana(Color.WHITE) then Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You))
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = Effects.AddMana(Color.BLUE)
-            .then(Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You)))
+        effect = Effects.AddMana(Color.BLUE) then Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You))
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

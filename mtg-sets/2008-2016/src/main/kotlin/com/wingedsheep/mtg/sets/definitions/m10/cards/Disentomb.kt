@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Disentomb
@@ -24,7 +25,7 @@ val Disentomb = card("Disentomb") {
     oracleText = "Return target creature card from your graveyard to your hand."
 
     spell {
-        val t = target("target", Targets.CreatureCardInYourGraveyard)
+        val t = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.ReturnToHand(t)
     }
 

@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Celebrate the Mountain-king
@@ -27,7 +26,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  * to one", so declining is legal and the trigger still resolves.
  *
  * The exile half is the Banishing Light pair: [Effects.ExileUntilLeaves] links the exiled card to
- * this enchantment, and a [Triggers.LeavesBattlefield] trigger returns the linked pile under its
+ * this enchantment, and a `Triggers.self.leaves()` trigger returns the linked pile under its
  * owner's control. Bouncing or destroying the enchantment in response to its own enters trigger
  * gives the usual O-Ring result — the leaves trigger resolves with an empty linked pile and the
  * exile then never happens.
@@ -42,23 +41,20 @@ val CelebrateTheMountainKing = card("Celebrate the Mountain-king") {
         "discarded a nonland card, create a 1/1 white Human Soldier creature token.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val exiled = target(
-            "up to one target nonland permanent that player controls",
-            TargetPermanent(count = 1, optional = true, filter = TargetFilter.NonlandPermanentOpponentControls)
-        )
+        trigger = Triggers.self.enters()
+        val exiled = target(TargetFilter.NonlandPermanentOpponentControls, optional = true)
         effect = Effects.ExileUntilLeaves(exiled)
         description = "When this enchantment enters, for each opponent, exile up to one target " +
             "nonland permanent that player controls until this enchantment leaves the battlefield."
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Mechanic.recruit()
     }
 

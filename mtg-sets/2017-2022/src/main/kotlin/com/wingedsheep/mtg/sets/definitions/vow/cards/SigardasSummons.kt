@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.card
@@ -42,7 +42,7 @@ val SigardasSummons = card("Sigarda's Summons") {
         "4/4, have flying, and are Angels in addition to their other types."
 
     val countered = GroupFilter(
-        GameObjectFilter.Creature.youControl().withCounter(Counters.PLUS_ONE_PLUS_ONE)
+        GameObjectFilter.Creature.youControl().withCounter(CounterType.PLUS_ONE_PLUS_ONE)
     )
 
     staticAbility {

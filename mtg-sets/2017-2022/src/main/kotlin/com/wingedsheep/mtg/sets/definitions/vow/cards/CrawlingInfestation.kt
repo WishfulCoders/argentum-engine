@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Crawling Infestation — Innistrad: Crimson Vow #193
@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.effects.MayEffect
  *
  * The two abilities are one engine: the upkeep mill is the cheapest way to feed the second, but
  * the second reads "from anywhere", so a creature dying in combat or discarded feeds it just as
- * well — hence [Triggers.CardsPutIntoYourGraveyard] (the batching trigger, one Insect for a
+ * well — hence `Triggers.oneOrMore(filter).putIntoYourGraveyard()` (the batching trigger, one Insect for a
  * whole board wipe) rather than a dies trigger.
  *
  * Two riders, two different knobs, and they are not interchangeable:
@@ -40,13 +40,13 @@ val CrawlingInfestation = card("Crawling Infestation") {
         "each turn."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = MayEffect(Patterns.Library.mill(2))
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.May(Patterns.Library.mill(2))
         description = "At the beginning of your upkeep, you may mill two cards."
     }
 
     triggeredAbility {
-        trigger = Triggers.CardsPutIntoYourGraveyard(GameObjectFilter.Creature)
+        trigger = Triggers.oneOrMore(GameObjectFilter.Creature).putIntoYourGraveyard()
         triggerRestriction = Conditions.IsYourTurn
         oncePerTurn = true
         effect = Effects.CreateToken(

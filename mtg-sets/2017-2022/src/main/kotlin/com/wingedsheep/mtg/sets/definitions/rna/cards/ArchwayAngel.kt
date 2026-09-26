@@ -5,13 +5,14 @@
 package com.wingedsheep.mtg.sets.definitions.rna.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -31,12 +32,9 @@ val ArchwayAngel = card("Archway Angel") {
     toughness = 4
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = GainLifeEffect(
-            DynamicAmount.Multiply(
-                DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land.withSubtype("Gate")),
-                2
-            )
+        trigger = Triggers.self.enters()
+        effect = Effects.GainLife(
+            DynamicAmounts.battlefield(Player.You, GameObjectFilter.Land.withSubtype("Gate")).count() * 2
         )
     }
     metadata {

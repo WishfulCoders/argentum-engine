@@ -10,8 +10,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
 /**
@@ -30,7 +28,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  * artifact but still gets the buff, exactly like Miriam, Herd Whisperer's hexproof grant): a
  * [ModifyStats] +1/+1 plus two [GrantKeyword]s for vigilance and reach.
  *
- * The attack trigger reuses the Miriam per-attacker idiom: `Triggers.attacks(filter, binding = ANY)`
+ * The attack trigger reuses the Miriam per-attacker idiom: `Triggers.<subject>.attacks(requires)`
  * fires once per attacking Vehicle, evaluating the filter against each attacker with this card as
  * the predicate source. The filter's new [GameObjectFilter.crewedOrSaddledBySourceThisTurn] gate is
  * the source-relative mirror of `crewedOrSaddledSourceThisTurn` — it matches only Vehicles whose
@@ -38,7 +36,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  * that Balthier and Fran themselves crewed this turn. The intervening "if it's the first combat phase
  * of the turn" is the new [Conditions.IsFirstCombatPhaseOfTurn] loop guard (true only in the natural
  * combat phase, false in the extra phase this rider spawns). The optional {1}{R}{G} + "after this
- * phase, there is an additional combat phase" is `MayPayManaEffect` gating [Effects.AddCombatPhase].
+ * phase, there is an additional combat phase" is `Effects.MayPay` gating [Effects.AddCombatPhase].
  */
 val BalthierAndFran = card("Balthier and Fran") {
     manaCost = "{1}{R}{G}"
@@ -79,15 +77,12 @@ val BalthierAndFran = card("Balthier and Fran") {
     // phase of the turn, you may pay {1}{R}{G}. If you do, after this phase, there is an additional
     // combat phase.
     triggeredAbility {
-        trigger = Triggers.attacks(
-            filter = GameObjectFilter.Any.withAnySubtype("Vehicle").youControl()
-                .crewedOrSaddledBySourceThisTurn(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Any.withAnySubtype("Vehicle").youControl()
+                .crewedOrSaddledBySourceThisTurn()).attacks()
         interveningIf = Conditions.IsFirstCombatPhaseOfTurn
-        effect = MayPayManaEffect(
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{1}{R}{G}"),
-            effect = Effects.AddCombatPhase
+            then = Effects.AddCombatPhase
         )
         description = "Whenever a Vehicle crewed by Balthier and Fran this turn attacks, if it's " +
             "the first combat phase of the turn, you may pay {1}{R}{G}. If you do, after this " +

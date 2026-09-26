@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.player
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.handlers.DecisionHandler
 import com.wingedsheep.engine.handlers.EffectContext
@@ -34,7 +35,8 @@ import kotlin.reflect.KClass
  */
 class AnyPlayerMayPayExecutor(
     private val decisionHandler: DecisionHandler = DecisionHandler(),
-    private val executeEffect: ((GameState, Effect, EffectContext) -> EffectResult)? = null
+    private val executeEffect: ((GameState, Effect, EffectContext) -> EffectResult)? = null,
+    private val predicateEvaluator: PredicateEvaluator
 ) : EffectExecutor<AnyPlayerMayPayEffect> {
 
     override val effectType: KClass<AnyPlayerMayPayEffect> = AnyPlayerMayPayEffect::class
@@ -243,7 +245,6 @@ class AnyPlayerMayPayExecutor(
         storedCollections = context.pipeline.storedCollections,
         triggeringEntityId = context.triggeringEntityId,
         triggeringPlayerId = context.triggeringPlayerId,
-        iterationTarget = context.pipeline.iterationTarget,
         objectReferences = context.objectReferences
     )
 
@@ -273,6 +274,7 @@ class AnyPlayerMayPayExecutor(
             state,
             cost.filter.youControl(),
             PredicateContext(controllerId = playerId),
-            excludeSelfId = if (cost.excludeSelf) sourceId else null
+            excludeSelfId = if (cost.excludeSelf) sourceId else null,
+            predicateEvaluator = predicateEvaluator
         )
 }

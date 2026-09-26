@@ -1,16 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Party Dude
@@ -36,7 +33,7 @@ val PartyDude = card("Party Dude") {
 
     // Level 1: each player creates a Food token.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ForEachPlayer(Player.Each, listOf(Effects.CreateFood()))
         description = "When this Class enters, each player creates a Food token."
     }
@@ -46,11 +43,7 @@ val PartyDude = card("Party Dude") {
             // ANY binding: the artifact leaving is some *other* permanent an opponent controls,
             // not Party Dude itself. The default SELF binding would only fire on Party Dude's own
             // departure, so an opponent's sacrificed Food (an artifact) never triggered the draw.
-            trigger = Triggers.leavesBattlefield(
-                filter = GameObjectFilter.Artifact.opponentControls(),
-                to = Zone.GRAVEYARD,
-                binding = TriggerBinding.ANY
-            )
+            trigger = Triggers.a(GameObjectFilter.Artifact.opponentControls()).dies()
             effect = Effects.DrawCards(1)
             description = "Whenever an artifact an opponent controls is put into a graveyard from the battlefield, draw a card."
         }
@@ -58,11 +51,8 @@ val PartyDude = card("Party Dude") {
 
     classLevel(3, "{4}{G}") {
         triggeredAbility {
-            trigger = Triggers.CreaturesAttackYourOpponent
-            val pumped = target(
-                "up to one target attacking creature",
-                TargetCreature(optional = true, filter = TargetFilter(GameObjectFilter.Creature.attacking()))
-            )
+            trigger = Triggers.anOpponent.isAttacked()
+            val pumped = target(TargetFilter(GameObjectFilter.Creature.attacking()), optional = true)
             effect = Effects.ModifyStats(
                 DynamicAmounts.cardsInYourHand(),
                 DynamicAmounts.cardsInYourHand(),

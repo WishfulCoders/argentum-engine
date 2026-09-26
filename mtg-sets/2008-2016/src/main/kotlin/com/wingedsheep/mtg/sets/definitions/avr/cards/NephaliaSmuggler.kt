@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.avr.cards
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Nephalia Smuggler
@@ -28,14 +28,12 @@ val NephaliaSmuggler = card("Nephalia Smuggler") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}{U}"), Costs.Tap)
-        val creature = target("another target creature you control", Targets.OtherCreatureYouControl)
-        effect = Effects.Exile(creature)
-            .then(
-                Effects.Move(
-                    creature,
-                    Zone.BATTLEFIELD,
-                    controllerOverride = EffectTarget.Controller,
-                ),
+        val creature = target(TargetFilter.OtherCreatureYouControl)
+        effect = Effects.Exile(creature) then
+            Effects.Move(
+                creature,
+                Zone.BATTLEFIELD,
+                controllerOverride = EffectTarget.Controller,
             )
     }
 

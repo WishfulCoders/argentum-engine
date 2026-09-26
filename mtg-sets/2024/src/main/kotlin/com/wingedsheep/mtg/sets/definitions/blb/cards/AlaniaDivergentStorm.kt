@@ -7,11 +7,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CopyTargetSpellEffect
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Alania, Divergent Storm
@@ -31,7 +27,7 @@ val AlaniaDivergentStorm = card("Alania, Divergent Storm") {
     toughness = 5
 
     triggeredAbility {
-        trigger = Triggers.YouCastSpell
+        trigger = Triggers.you.casts()
         interveningIf = Conditions.Any(
             Conditions.YouCastFirstSpellOfTypeThisTurn(GameObjectFilter.Instant),
             Conditions.YouCastFirstSpellOfTypeThisTurn(GameObjectFilter.Sorcery),
@@ -43,11 +39,11 @@ val AlaniaDivergentStorm = card("Alania, Divergent Storm") {
                     .notNamed("Alania, Divergent Storm")
             )
         )
-        val opponent = target("opponent", Targets.Opponent)
-        effect = ReflexiveTriggerEffect(
-            action = DrawCardsEffect(DynamicAmount.Fixed(1), opponent),
+        val opponent = target(Targets.Opponent)
+        effect = Effects.ReflexiveTrigger(
+            action = Effects.DrawCards(1, opponent),
             optional = true,
-            reflexiveEffect = CopyTargetSpellEffect(EffectTarget.TriggeringEntity)
+            reflexiveEffect = Effects.CopyTargetSpell(EffectTarget.TriggeringEntity)
         )
     }
 

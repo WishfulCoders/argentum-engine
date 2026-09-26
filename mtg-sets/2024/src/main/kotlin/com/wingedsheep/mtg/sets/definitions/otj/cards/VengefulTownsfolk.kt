@@ -1,11 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Vengeful Townsfolk
@@ -15,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Whenever one or more other creatures you control die, put a +1/+1 counter on this creature.
  *
- * The trigger is a once-per-batch shape ([Triggers.OneOrMoreCreaturesYouControlDie]): a board
+ * The trigger is a once-per-batch shape (`Triggers.oneOrMore(filter).die()`): a board
  * wipe that destroys several of your creatures at once adds a single +1/+1 counter, not one per
  * creature. `excludeSelf = true` models the "other" — Vengeful Townsfolk dying alongside them
  * does not count toward its own trigger.
@@ -30,8 +31,8 @@ val VengefulTownsfolk = card("Vengeful Townsfolk") {
 
     // Whenever one or more other creatures you control die, put a +1/+1 counter on this creature.
     triggeredAbility {
-        trigger = Triggers.OneOrMoreCreaturesYouControlDie(excludeSelf = true)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.oneOrMoreOther(GameObjectFilter.Creature).die()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     metadata {

@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Close Quarters
@@ -15,8 +14,8 @@ import com.wingedsheep.sdk.scripting.TriggerBinding
  *
  * Whenever a creature you control becomes blocked, this enchantment deals 1 damage to any target.
  *
- * The Gustcloak Savior shape: the *filtered, ANY-binding* [Triggers.becomesBlocked] factory.
- * `Triggers.BecomesBlocked` is its SELF-binding sibling and is wrong here — the enchantment is
+ * The Gustcloak Savior shape: the *filtered, ANY-binding* `Triggers.<subject>.becomesBlocked()` factory.
+ * `Triggers.self.becomesBlocked()` is its SELF-binding sibling and is wrong here — the enchantment is
  * never itself the blocked creature, so a SELF binding would simply never fire.
  *
  * The trigger fires once per creature that becomes blocked (CR 509.1h), independent of how many
@@ -30,11 +29,8 @@ val CloseQuarters = card("Close Quarters") {
     oracleText = "Whenever a creature you control becomes blocked, this enchantment deals 1 damage to any target."
 
     triggeredAbility {
-        trigger = Triggers.becomesBlocked(
-            filter = GameObjectFilter.Creature.youControl(),
-            binding = TriggerBinding.ANY,
-        )
-        val t = target("target", Targets.Any)
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).becomesBlocked()
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
     }
 

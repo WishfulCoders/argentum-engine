@@ -1,7 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -11,16 +10,9 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Ignis Scientia
@@ -42,62 +34,43 @@ val IgnisScientia = card("Ignis Scientia") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            listOf(
-                // Look at the top six cards of your library.
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(count = DynamicAmount.Fixed(6), player = Player.You),
-                    storeAs = "looked"
-                ),
-                // You may put a land card from among them onto the battlefield tapped.
-                SelectFromCollectionEffect(
-                    from = "looked",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    filter = GameObjectFilter.Land,
-                    showAllCards = true,
-                    storeSelected = "toBattlefield",
-                    storeRemainder = "toBottom",
-                    prompt = "You may put a land card onto the battlefield tapped",
-                    selectedLabel = "Put onto the battlefield tapped",
-                    remainderLabel = "Put on the bottom of your library"
-                ),
-                MoveCollectionEffect(
-                    from = "toBattlefield",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD, Player.You, ZonePlacement.Tapped)
-                ),
-                // Put the rest on the bottom of your library in a random order.
-                MoveCollectionEffect(
-                    from = "toBottom",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, Player.You, ZonePlacement.Bottom),
-                    order = CardOrder.Random
-                )
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            // Look at the top six cards of your library.
+            val looked = gather(CardSource.TopOfLibrary(count = 6, player = Player.You))
+            // You may put a land card from among them onto the battlefield tapped.
+            val (toBattlefield, toBottom) = chooseUpToSplit(
+                1,
+                from = looked,
+                filter = GameObjectFilter.Land,
+                showAllCards = true,
+                prompt = "You may put a land card onto the battlefield tapped",
+                selectedLabel = "Put onto the battlefield tapped",
+                remainderLabel = "Put on the bottom of your library"
             )
-        )
+            move(toBattlefield, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You, ZonePlacement.Tapped))
+            // Put the rest on the bottom of your library in a random order.
+            toLibraryBottom(toBottom, order = CardOrder.Random)
+        }
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{G}{U}"), Costs.Tap)
-        target("target", TargetObject(filter = TargetFilter.CardInGraveyard))
-        effect = Effects.Composite(
-            listOf(
-                // Gather the targeted graveyard card so we can both exile it and test its type.
-                GatherCardsEffect(source = CardSource.ChosenTargets, storeAs = "exiled"),
-                // "If a creature card was exiled this way, create a Food token." The targeted card
-                // is always exiled, so its type (read from the gathered collection, base card type is
-                // zone-independent) determines the Food. Evaluated before the move so the collection's
-                // entity ids are still live.
-                ConditionalEffect(
-                    condition = Conditions.CollectionContainsMatch("exiled", GameObjectFilter.Creature),
-                    effect = Effects.CreateFood()
-                ),
-                // Exile target card from a graveyard.
-                MoveCollectionEffect(
-                    from = "exiled",
-                    destination = CardDestination.ToZone(Zone.EXILE)
-                )
-            )
-        )
+        target(TargetFilter.CardInGraveyard)
+        effect = Effects.Pipeline {
+            // Gather the targeted graveyard card so we can both exile it and test its type.
+            val exiled = gather(CardSource.ChosenTargets)
+            // "If a creature card was exiled this way, create a Food token." The targeted card
+            // is always exiled, so its type (read from the gathered collection, base card type is
+            // zone-independent) determines the Food. Evaluated before the move so the collection's
+            // entity ids are still live.
+            run(Effects.If(
+                condition = whenMatches(exiled, GameObjectFilter.Creature),
+                then = Effects.CreateFood()
+            ))
+            // Exile target card from a graveyard.
+            exile(exiled)
+        }
     }
 
     metadata {

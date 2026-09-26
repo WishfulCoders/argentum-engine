@@ -1,9 +1,8 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
@@ -13,18 +12,8 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Nick Fury, Agent of S.H.I.E.L.D. — Marvel Super Heroes #25 (rare)
@@ -75,46 +64,32 @@ val NickFuryAgentOfShield = card("Nick Fury, Agent of S.H.I.E.L.D.") {
     activatedAbility {
         isPowerUp = true
         cost = Costs.Mana("{W}{U}{B}{R}{G}")
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self),
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(7)),
-                storeAs = "fury_looked",
-                // "Look at", not "reveal" — stated rather than left to the default, because it is a
-                // printed distinction on this card.
-                revealed = false
-            ),
-            SelectFromCollectionEffect(
-                from = "fury_looked",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
+        effect = Effects.Pipeline {
+            run(Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self))
+            // "Look at", not "reveal" — stated rather than left to the default, because it is a
+            // printed distinction on this card.
+            val furyLooked = gather(CardSource.TopOfLibrary(7), revealed = false)
+            val (furyToBattlefield, furyToBottom) = chooseUpToSplit(
+                1,
+                from = furyLooked,
                 filter = GameObjectFilter.Any.withSubtype(Subtype.HERO.value) or
                     GameObjectFilter.Any.withSubtype(Subtype.EQUIPMENT.value) or
                     GameObjectFilter.Any.withSubtype(Subtype.VEHICLE.value),
                 showAllCards = true,
-                storeSelected = "fury_toBattlefield",
-                storeRemainder = "fury_toBottom",
                 prompt = "You may put a Hero, Equipment, or Vehicle card onto the battlefield",
                 selectedLabel = "Put onto the battlefield",
                 remainderLabel = "Put on the bottom of your library"
-            ),
-            MoveCollectionEffect(
-                from = "fury_toBattlefield",
-                destination = CardDestination.ToZone(Zone.BATTLEFIELD, Player.You),
-                storeMovedAs = "fury_entered"
-            ),
-            ConditionalEffect(
-                condition = Conditions.CollectionContainsMatch("fury_entered", Filters.DoubleFaced),
-                effect = MayEffect(
-                    ForEachInCollectionEffect("fury_entered", TransformEffect(EffectTarget.Self)),
+            )
+            val furyEntered = moveTracked(furyToBattlefield, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You))
+            run(Effects.If(
+                condition = whenMatches(furyEntered, Filters.DoubleFaced),
+                then = Effects.May(
+                    Effects.ForEachInCollection(furyEntered, Effects.Transform(EffectTarget.IterationEntity)),
                     descriptionOverride = "transform it"
                 )
-            ),
-            MoveCollectionEffect(
-                from = "fury_toBottom",
-                destination = CardDestination.ToZone(Zone.LIBRARY, Player.You, ZonePlacement.Bottom),
-                order = CardOrder.Random
-            )
-        )
+            ))
+            toLibraryBottom(furyToBottom, order = CardOrder.Random)
+        }
     }
 
     metadata {

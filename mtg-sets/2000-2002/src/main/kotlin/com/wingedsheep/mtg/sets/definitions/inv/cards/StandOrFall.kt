@@ -6,15 +6,10 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ChoosePileEffect
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Stand or Fall
@@ -40,48 +35,42 @@ val StandOrFall = card("Stand or Fall") {
     oracleText = "At the beginning of combat on your turn, for each defending player, separate all creatures that player controls into two piles and that player chooses one. Only creatures in the chosen piles can block this turn."
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        effect = ForEachPlayerEffect(
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        effect = Effects.ForEachPlayer(
             players = Player.EachOpponent,
-            effects = listOf(
+            Effects.Pipeline {
                 // 1. Gather the creatures this defending player controls.
-                GatherCardsEffect(
-                    source = CardSource.ControlledPermanents(
+                val creatures = gather(
+                    CardSource.ControlledPermanents(
                         player = Player.You,
                         filter = GameObjectFilter.Creature
-                    ),
-                    storeAs = "creatures"
-                ),
+                    )
+                )
                 // 2. You (the enchantment's controller) separate that player's creatures into two piles.
-                SelectFromCollectionEffect(
-                    from = "creatures",
-                    selection = SelectionMode.ChooseAnyNumber,
+                val (pileA, pileB) = chooseAnyNumberSplit(
+                    from = creatures,
                     chooser = Chooser.SourceController,
-                    storeSelected = "pileA",
-                    storeRemainder = "pileB",
                     selectedLabel = "Pile 1",
                     remainderLabel = "Pile 2",
                     prompt = "Separate this player's creatures into two piles. The creatures you select form Pile 1; the rest form Pile 2.",
                     useTargetingUI = true,
                     alwaysPrompt = true
-                ),
+                )
                 // 3. That player chooses which pile may block.
-                ChoosePileEffect(
-                    pileA = "pileA",
-                    pileB = "pileB",
+                val (_, cantBlock) = choosePile(
+                    pileA,
+                    pileB,
                     pileALabel = "Pile 1",
                     pileBLabel = "Pile 2",
                     chooser = Chooser.Controller,
-                    storeChosenAs = "canBlock",
-                    storeOtherAs = "cantBlock",
                     prompt = "Choose which pile of your creatures can block this turn."
-                ),
-                // 4. Only the chosen pile can block — the other pile can't block this turn.
-                ForEachInCollectionEffect(
-                    collection = "cantBlock",
-                    effect = Effects.CantBlock(EffectTarget.Self)
                 )
-            )
+                // 4. Only the chosen pile can block — the other pile can't block this turn.
+                run(Effects.ForEachInCollection(
+                    collection = cantBlock,
+                    effect = Effects.CantBlock(EffectTarget.IterationEntity)
+                ))
+            }
         )
     }
 

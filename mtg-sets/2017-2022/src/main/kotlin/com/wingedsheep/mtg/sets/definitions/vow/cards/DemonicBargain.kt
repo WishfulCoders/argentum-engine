@@ -28,17 +28,13 @@ val DemonicBargain = card("Demonic Bargain") {
         "card. Put that card into your hand, then shuffle."
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                Patterns.Library.exileTop(13),
-                Patterns.Library.searchLibrary(
-                    filter = GameObjectFilter.Any,
-                    count = 1,
-                    destination = SearchDestination.HAND,
-                    shuffleAfter = true
-                )
+        effect = Patterns.Library.exileTop(13) then
+            Patterns.Library.searchLibrary(
+                filter = GameObjectFilter.Any,
+                count = 1,
+                destination = SearchDestination.HAND,
+                shuffleAfter = true
             )
-        )
     }
 
     metadata {

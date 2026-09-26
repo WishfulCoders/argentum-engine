@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 
 
@@ -25,15 +24,13 @@ val CycleOfRenewal = card("Cycle of Renewal") {
     typeLine = "Instant — Lesson"
     oracleText = "Sacrifice a land. Search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle."
     spell {
-        effect = Effects.Composite(
-            SacrificeEffect(GameObjectFilter.Land),
+        effect = Effects.SacrificeOwn(GameObjectFilter.Land) then
             Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.BasicLand,
                 count = 2,
                 destination = SearchDestination.BATTLEFIELD,
                 entersTapped = true
             )
-        )
     }
     metadata {
         rarity = Rarity.COMMON

@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Merfolk Sovereign
@@ -46,7 +45,7 @@ val MerfolkSovereign = card("Merfolk Sovereign") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.withSubtype(Subtype.MERFOLK)))
+        val t = target(TargetFilter.Creature.withSubtype(Subtype.MERFOLK))
         effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, t)
         description = "Target Merfolk creature can't be blocked this turn."
     }

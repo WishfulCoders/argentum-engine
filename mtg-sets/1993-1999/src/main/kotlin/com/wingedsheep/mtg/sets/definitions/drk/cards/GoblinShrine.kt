@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.drk.cards
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -12,6 +11,8 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Goblin Shrine
@@ -37,7 +38,7 @@ val GoblinShrine = card("Goblin Shrine") {
     oracleText = "Enchant land\n" +
         "As long as enchanted land is a basic Mountain, Goblin creatures get +1/+0.\n" +
         "When this Aura leaves the battlefield, it deals 1 damage to each Goblin creature."
-    auraTarget = Targets.Land
+    auraTarget = TargetObject(filter = TargetFilter.Land)
 
     staticAbility {
         ability = ConditionalStaticAbility(
@@ -53,10 +54,10 @@ val GoblinShrine = card("Goblin Shrine") {
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withSubtype(Subtype.GOBLIN)),
-            Effects.DealDamage(1, EffectTarget.Self),
+            Effects.DealDamage(1, EffectTarget.IterationEntity),
         )
         description = "When this Aura leaves the battlefield, it deals 1 damage to each Goblin creature."
     }

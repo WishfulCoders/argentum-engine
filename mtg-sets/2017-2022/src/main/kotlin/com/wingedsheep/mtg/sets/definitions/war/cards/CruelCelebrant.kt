@@ -1,6 +1,5 @@
 package com.wingedsheep.mtg.sets.definitions.war.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -20,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * "This creature **or another**" is not two triggers: it is one [TriggerBinding.ANY] trigger
  * whose filter already admits the source — the same spelling [Triggers] uses for
- * `YourCreatureDies`. The only reason it goes through [Triggers.leavesBattlefield] rather than
+ * `YourCreatureDies`. The only reason it goes through `Triggers.<subject>.leaves(to, excludeTo, excludeSacrifice)` rather than
  * that constant is the permanent type: Cruel Celebrant also counts planeswalkers, so the filter
  * is [GameObjectFilter.CreatureOrPlaneswalker] narrowed with `youControl()`. Spelled out at the
  * call site rather than promoted to a `Triggers` constant — there is exactly one card in the
@@ -36,15 +35,8 @@ val CruelCelebrant = card("Cruel Celebrant") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.CreatureOrPlaneswalker.youControl(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY
-        )
-        effect = Effects.Composite(
-            Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)),
-            Effects.GainLife(1)
-        )
+        trigger = Triggers.a(GameObjectFilter.CreatureOrPlaneswalker.youControl()).dies()
+        effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(1)
     }
 
     metadata {

@@ -19,13 +19,13 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * CR 702.45a defines bushido N as a single triggered ability, "Whenever this creature blocks or
  * becomes blocked, it gets +N/+N until end of turn." The SDK has no "blocks or becomes blocked"
- * event covering both directions from the source's point of view — [Triggers.BlocksOrBecomesBlockedBy]
+ * event covering both directions from the source's point of view — `Triggers.<subject>.blocksOrBecomesBlocked(by, oncePerCombat)`
  * is about a *partner* creature — so it is written as two triggers over the two distinct events,
  * mirroring the attacks-or-blocks pair on `lci/cards/BurningSunCavalry.kt`. They are mutually
  * exclusive for any one combat: the Avenger either declares a block or is blocked, never both, so
  * the pump never doubles.
  *
- * The pump targets [EffectTarget.Self] rather than `TriggeringEntity` because [Triggers.Blocks]
+ * The pump targets [EffectTarget.Self] rather than `TriggeringEntity` because `Triggers.self.blocks()`
  * fires off a block event that does not bind the source as the triggering entity; every corpus
  * "whenever this creature blocks, it gets …" card uses `Self` (`ulg/cards/SustainerOfTheRealm.kt`).
  */
@@ -41,14 +41,14 @@ val JadeAvenger = card("Jade Avenger") {
 
     // Bushido 2, half one: "Whenever this creature blocks …"
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
         description = "Bushido 2"
     }
 
     // Bushido 2, half two: "… or becomes blocked, it gets +2/+2 until end of turn."
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
+        trigger = Triggers.self.becomesBlocked()
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
         description = "Bushido 2"
     }

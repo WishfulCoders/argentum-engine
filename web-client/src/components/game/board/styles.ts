@@ -30,7 +30,13 @@ export const styles: Record<string, React.CSSProperties> = {
     // the HUD stays near the middle (battlefieldLayout.ts, SLOT_SPLIT_MIN).
     display: 'grid',
     gridTemplateColumns: '100%',
-    backgroundColor: '#0a0a15',
+    // A faint cool pool of light behind the centre HUD, falling off to the corners, so the table
+    // has depth instead of reading as a flat void. Static gradients only — painted once, never
+    // animated, so it costs nothing per frame.
+    backgroundColor: '#090a12',
+    backgroundImage:
+      'radial-gradient(ellipse 70% 55% at 50% 50%, rgba(70, 86, 150, 0.16) 0%, rgba(70, 86, 150, 0) 70%), ' +
+      'radial-gradient(ellipse 140% 100% at 50% 50%, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.45) 100%)',
     overflow: 'hidden',
   },
   opponentArea: {
@@ -92,12 +98,12 @@ export const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     fontSize: 12,
     fontWeight: 500,
-    backgroundColor: 'rgba(40, 40, 40, 0.8)',
-    borderRadius: 4,
+    backgroundColor: 'var(--chrome-bg)',
+    borderRadius: 6,
     cursor: 'pointer',
     padding: 0,
     lineHeight: 1,
-    border: '1px solid #555',
+    border: '1px solid var(--chrome-border)',
   },
   combatButtonContainer: {
     position: 'fixed',
@@ -193,7 +199,7 @@ export const styles: Record<string, React.CSSProperties> = {
     position: 'relative',
     overflow: 'hidden',
     boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-    backgroundColor: '#1a1a2e',
+    backgroundColor: 'rgba(255, 255, 255, 0.025)',
   },
   pileImage: {
     width: '100%',
@@ -203,26 +209,30 @@ export const styles: Record<string, React.CSSProperties> = {
   emptyPile: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#1a1a2e',
-    border: '2px dashed #333',
+    backgroundColor: 'rgba(255, 255, 255, 0.025)',
+    border: '1px dashed rgba(255, 255, 255, 0.14)',
     borderRadius: 6,
+    boxSizing: 'border-box',
   },
   pileCount: {
     position: 'absolute',
     bottom: 4,
     right: 4,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: 'rgba(8, 9, 16, 0.82)',
+    border: '1px solid rgba(255, 255, 255, 0.12)',
     color: 'white',
     fontSize: 12,
     fontWeight: 700,
-    padding: '2px 6px',
-    borderRadius: 4,
+    fontVariantNumeric: 'tabular-nums',
+    padding: '1px 6px',
+    borderRadius: 999,
   },
   zoneLabel: {
-    color: '#666',
+    color: '#6b7183',
     fontSize: 10,
+    fontWeight: 600,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
   },
   graveyardOverlay: {
     position: 'fixed',
@@ -273,9 +283,9 @@ export const styles: Record<string, React.CSSProperties> = {
   exilePile: {
     position: 'relative',
     overflow: 'hidden',
-    boxShadow: '0 2px 8px rgba(124, 58, 237, 0.4)',
-    backgroundColor: '#1a1a2e',
-    border: '1px solid rgba(124, 58, 237, 0.5)',
+    boxShadow: '0 2px 10px rgba(124, 58, 237, 0.22)',
+    backgroundColor: 'rgba(124, 58, 237, 0.05)',
+    border: '1px solid rgba(124, 58, 237, 0.38)',
   },
   exileOverlay: {
     position: 'fixed',
@@ -2343,6 +2353,9 @@ const passiveCounterPalette: Record<string, CounterBadgePalette> = {
   CREDIT: { bg: 'rgba(48, 42, 18, 0.95)', border: 'rgba(226, 196, 96, 0.7)', color: '#ecd98a' },
   CUBE: { bg: 'rgba(34, 30, 52, 0.95)', border: 'rgba(168, 150, 220, 0.7)', color: '#c6b6ea' },
   JUDGMENT: { bg: 'rgba(52, 46, 24, 0.95)', border: 'rgba(232, 208, 132, 0.75)', color: '#f2e2a4', glow: 'rgba(232, 208, 132, 0.6)' },
+  BLOODLINE: { bg: 'rgba(56, 16, 22, 0.95)', border: 'rgba(210, 80, 100, 0.75)', color: '#eaa0ae', glow: 'rgba(210, 80, 100, 0.55)' },
+  INVITATION: { bg: 'rgba(50, 40, 50, 0.95)', border: 'rgba(225, 190, 225, 0.7)', color: '#efd6ef' },
+  IMPOSTOR: { bg: 'rgba(36, 30, 44, 0.95)', border: 'rgba(170, 140, 200, 0.7)', color: '#cdb8e6' },
   MINUS_ZERO_MINUS_ONE: { bg: 'rgba(60, 20, 20, 0.95)', border: 'rgba(220, 120, 120, 0.7)', color: '#e09c9c' },
 }
 

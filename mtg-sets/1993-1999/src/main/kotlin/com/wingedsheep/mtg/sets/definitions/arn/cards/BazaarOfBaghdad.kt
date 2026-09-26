@@ -17,7 +17,7 @@ val BazaarOfBaghdad = card("Bazaar of Baghdad") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.DrawCards(2).then(Effects.Discard(3))
+        effect = Effects.DrawCards(2) then Effects.Discard(3)
     }
 
     metadata {

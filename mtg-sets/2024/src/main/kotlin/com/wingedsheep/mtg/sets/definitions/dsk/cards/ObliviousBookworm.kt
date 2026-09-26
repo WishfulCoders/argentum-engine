@@ -5,9 +5,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.SuccessCriterion
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Oblivious Bookworm
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.effects.SuccessCriterion
  *   permanent entered the battlefield face down under your control this turn or you turned a
  *   permanent face up this turn.
  *
- * Modeled as: end-step trigger → MayEffect (the optional draw) → IfYouDo (gate the rider on the
+ * Modeled as: end-step trigger → Effects.May (the optional draw) → IfYouDo (gate the rider on the
  * draw actually happening) → a discard that is itself gated to run only when neither face-down
  * condition holds ("...unless..."). Per the Scryfall ruling, the unless-check is evaluated as the
  * ability resolves, so the per-turn trackers reflect everything that happened earlier this turn.
@@ -34,22 +33,22 @@ val ObliviousBookworm = card("Oblivious Bookworm") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         // The "may" already represents the optional draw ("you may draw a card"); the IfYouDo
         // gates the discard rider on the draw actually happening ("If you do, …"). Auto can't
         // infer success from a bare draw, so the criterion is explicit.
-        effect = MayEffect(
+        effect = Effects.May(
             Effects.IfYouDo(
                 action = Effects.DrawCards(1),
                 // "discard a card unless [a permanent entered face down OR you turned one face up this turn]"
-                ifYouDo = ConditionalEffect(
+                then = Effects.If(
                     condition = Conditions.Not(
                         Conditions.Any(
                             Conditions.PermanentEnteredFaceDownThisTurn,
                             Conditions.YouTurnedPermanentFaceUpThisTurn
                         )
                     ),
-                    effect = Effects.Discard(1)
+                    then = Effects.Discard(1)
                 ),
                 successCriterion = SuccessCriterion.Always
             )

@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Patterns
@@ -14,6 +15,7 @@ import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Ninja's Blades
@@ -56,16 +58,13 @@ val NinjasBlades = card("Ninja's Blades") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.DealsCombatDamageToPlayer.event,
-                binding = Triggers.DealsCombatDamageToPlayer.binding,
-                effect = Effects.Composite(
-                    Effects.DrawCards(1),
-                    Patterns.Hand.discardCards(1),
+                trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer),
+                effect = Effects.DrawCards(1) then
+                    Patterns.Hand.discardCards(1) then
                     Effects.LoseLife(
-                        DynamicAmount.StoredCardManaValue("discarded"),
+                        DynamicAmounts.manaValueOf(Patterns.Hand.discarded),
                         EffectTarget.PlayerRef(Player.TriggeringPlayer),
-                    ),
-                )
+                    )
             ),
             filter = Filters.EquippedCreature
         )

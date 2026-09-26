@@ -20,7 +20,7 @@ import kotlin.reflect.KClass
  * If no creature type has been chosen on the source, no mana is produced.
  */
 class AddAnyColorManaSpendOnChosenTypeExecutor(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<AddAnyColorManaSpendOnChosenTypeEffect> {
 
     override val effectType: KClass<AddAnyColorManaSpendOnChosenTypeEffect> =

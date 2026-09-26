@@ -17,12 +17,15 @@ import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.effects.BecomeCreatureTypeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import java.util.UUID
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Subtype
 
 /**
  * Tests for Mistform Mutant.
@@ -50,7 +53,7 @@ class MistformMutantTest : FunSpec({
                     target = EffectTarget.BoundVariable("target"),
                     excludedTypes = listOf("Wall")
                 ),
-                targetRequirement = TargetCreature(id = "target")
+                targetRequirement = TargetObject(filter = TargetFilter.Creature, id = "target")
             )
         )
     )
@@ -88,7 +91,7 @@ class MistformMutantTest : FunSpec({
                 targets = listOf(ChosenTarget.Permanent(bear))
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         // Both pass to resolve the ability
         driver.bothPass()
@@ -166,7 +169,7 @@ class MistformMutantTest : FunSpec({
                 targets = listOf(ChosenTarget.Permanent(opponentBear))
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         // Resolve the ability
         driver.bothPass()

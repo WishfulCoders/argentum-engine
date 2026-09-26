@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Riverwalk Technique
@@ -28,15 +29,14 @@ val RiverwalkTechnique = card("Riverwalk Technique") {
     spell {
         effect = ModalEffect.chooseOne(
             // Owner of target nonland permanent puts it on top or bottom of their library.
-            Mode(
-                effect = Effects.PutOnTopOrBottomOfLibrary(EffectTarget.ContextTarget(0)),
-                targetRequirements = listOf(Targets.NonlandPermanent),
-                description = "The owner of target nonland permanent puts it on their choice of the top or bottom of their library"
-            ),
+            mode("The owner of target nonland permanent puts it on their choice of the top or bottom of their library") {
+                val nonlandPermanent = target(TargetFilter.NonlandPermanent)
+                effect = Effects.PutOnTopOrBottomOfLibrary(nonlandPermanent)
+            },
             // Counter target noncreature spell.
             Mode(
                 effect = Effects.CounterSpell(),
-                targetRequirements = listOf(Targets.NoncreatureSpell),
+                targetRequirements = listOf(TargetObject(filter = TargetFilter.NoncreatureSpellOnStack)),
                 description = "Counter target noncreature spell"
             )
         )

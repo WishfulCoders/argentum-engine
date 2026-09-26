@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.effects.SearchDestination
  * When this creature enters, you may search your library for an Aura card, reveal it, put it into your hand, then shuffle.
  *
  * Modeling notes:
- *  - "**When** this creature enters" is the one-shot [Triggers.EntersBattlefield].
+ *  - "**When** this creature enters" is the one-shot `Triggers.self.enters()`.
  *  - "You **may** search" is a decline on resolution, so `optional = true` lowers the tutor into a
  *    `Gate.MayDecide` — the `Gated` wrapper Assay compiles from this line. It is not a `ChooseUpTo`
  *    "find nothing": that selection freedom is separate, and both are present.
@@ -39,7 +39,7 @@ val TotemGuideHartebeest = card("Totem-Guide Hartebeest") {
     oracleText = "When this creature enters, you may search your library for an Aura card, reveal it, put it into your hand, then shuffle."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Any.withSubtype(Subtype.AURA),

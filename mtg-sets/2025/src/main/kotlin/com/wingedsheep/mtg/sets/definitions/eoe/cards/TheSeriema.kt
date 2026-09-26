@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -41,7 +41,7 @@ val TheSeriema = card("The Seriema") {
     // When The Seriema enters, search your library for a legendary creature card, reveal it,
     // put it into your hand, then shuffle.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Creature.legendary(),
             count = 1,
@@ -55,7 +55,7 @@ val TheSeriema = card("The Seriema") {
     // Station activated ability: tap another creature → add charge counters equal to its power.
     station()
 
-    val charge7 = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 7)
+    val charge7 = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 7)
 
     // 7+ charge counters: becomes an artifact creature.
     staticAbility {

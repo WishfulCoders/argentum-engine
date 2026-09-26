@@ -38,7 +38,7 @@ val GadgetTechnician = card("Gadget Technician") {
     disguise = "{U/R}{U/R}"
 
     triggeredAbility {
-        trigger = Triggers.or(Triggers.EntersBattlefield, Triggers.TurnedFaceUp)
+        trigger = Triggers.or(Triggers.self.enters(), Triggers.self.turnedFaceUp())
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

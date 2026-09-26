@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.dsl.DynamicAmounts
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.unaryMinus
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Exotic Curse
@@ -22,11 +23,11 @@ val ExoticCurse = card("Exotic Curse") {
     oracleText = "Enchant creature\n" +
         "Domain — Enchanted creature gets -1/-1 for each basic land type among lands you control."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
-        val negDomain = DynamicAmount.Multiply(DynamicAmounts.domain(), -1)
-        ability = GrantDynamicStatsEffect(
+        val negDomain = -DynamicAmounts.domain()
+        ability = GrantDynamicStats(
             filter = GroupFilter.attachedCreature(),
             powerBonus = negDomain,
             toughnessBonus = negDomain

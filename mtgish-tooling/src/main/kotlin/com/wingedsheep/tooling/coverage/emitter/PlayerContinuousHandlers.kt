@@ -8,6 +8,7 @@ import com.wingedsheep.tooling.coverage.arg
 import com.wingedsheep.tooling.coverage.asArr
 import com.wingedsheep.tooling.coverage.call
 import com.wingedsheep.tooling.coverage.compact
+import com.wingedsheep.tooling.coverage.dot
 import com.wingedsheep.tooling.coverage.findInteger
 import com.wingedsheep.tooling.coverage.jsonContains
 import com.wingedsheep.tooling.coverage.strField
@@ -18,19 +19,19 @@ import kotlinx.serialization.json.JsonObject
  *  duration-scoped trigger/replacement creators + group rule grants. */
 internal val playerContinuousHandlers: Map<String, ActionHandler> = actionHandlers {
 
-    on("MayAction") { node, _, tvar ->  // "you may X" -> MayEffect wrapper
+    on("MayAction") { node, _, tvar ->  // "you may X" -> Effects.May wrapper
         val inner = innerAction(node) ?: return@on null
         val rendered = renderAction(inner, tvar) ?: return@on null
-        call("MayEffect", arg(rendered))
+        call("Effects.May", arg(rendered))
     }
 
     // "you may [X and Y]" — a single optional choice gating a sequence of actions (Gustcloak cycle's
-    // "you may untap it and remove it from combat"). Renders the whole sequence as one MayEffect, so a
+    // "you may untap it and remove it from combat"). Renders the whole sequence as one Effects.May, so a
     // partial render (only one arm) declines via renderEffectList rather than dropping an action.
     on("MayActions") { node, _, tvar ->
         val inner = node["args"].asArr?.filterIsInstance<JsonObject>() ?: return@on null
         val edsl = renderEffectList(inner, tvar) ?: return@on null
-        call("MayEffect", arg(edsl))
+        call("Effects.May", arg(edsl))
     }
 
     on("FlipACoin_OnLose") { _, args, tvar ->
@@ -61,7 +62,7 @@ internal val playerContinuousHandlers: Map<String, ActionHandler> = actionHandle
                 call("Effects.PreventCombatDamageToAndBy", arg(Lit(tvar)))
             // "prevent all damage attacking creatures would deal to you this turn" (Deep Wood)
             "IsAttacking" in blob && "PreventThatDamage" in blob && jsonContains(node, "_Player", "You") ->
-                call("Effects.PreventDamageFromAttackingCreatures")
+                preventDamageToYouFromAttackers()
             // "prevent all combat damage that would be dealt this turn" (Leery Fogbeast): the unrestricted
             // CombatDamageWouldBeDealt event (no source/recipient filter) + PreventThatDamage until EOT.
             jsonContains(node, "_ReplacableEventWouldDealDamage", "CombatDamageWouldBeDealt") &&
@@ -91,7 +92,7 @@ internal val playerContinuousHandlers: Map<String, ActionHandler> = actionHandle
                 "PreventThatDamage" in blob && jsonContains(node, "_Expiration", "UntilEndOfTurn") ->
                 call("Effects.PreventCombatDamageToAndBy", arg(Lit(tvar)))
             "IsAttacking" in blob && "PreventThatDamage" in blob && jsonContains(node, "_Player", "You") ->
-                call("Effects.PreventDamageFromAttackingCreatures")
+                preventDamageToYouFromAttackers()
             "CombatDamageWouldBeDealt" in blob &&
                 "CombatDamageWouldBeDealtToRecipient" !in blob &&
                 "CombatDamageWouldBeDealtByCreature" !in blob &&
@@ -108,7 +109,7 @@ internal val playerContinuousHandlers: Map<String, ActionHandler> = actionHandle
         }
         // "When it dies this turn, <actions>." — a self-scoped delayed dies trigger watching the
         // spell's bound target until end of turn (Turn Inside Out: +3/+0 then manifest dread on death;
-        // the Desperate Measures `CreateDelayedTriggerEffect(trigger = Triggers.Dies, watchedTarget =
+        // the Desperate Measures `CreateDelayedTriggerEffect(trigger = Triggers.self.dies(), watchedTarget =
         // t)` shape). Renders only when the trigger is `WhenAPermanentDies` scoped to the
         // bound `Ref_TargetPermanent`, the expiry is UntilEndOfTurn, and the body renders whole.
         whenThatPermanentDiesDelayedTrigger(node, tvar)
@@ -119,7 +120,7 @@ internal val playerContinuousHandlers: Map<String, ActionHandler> = actionHandle
 /**
  * `CreateTriggerUntil(WhenAPermanentDies(SinglePermanent(Ref_TargetPermanent)),
  * [actions], UntilEndOfTurn)` → a watched-entity delayed dies trigger on the spell's bound target:
- * `CreateDelayedTriggerEffect(effect = <body>, trigger = Triggers.Dies, watchedTarget = <tvar>,
+ * `CreateDelayedTriggerEffect(effect = <body>, trigger = Triggers.self.dies(), watchedTarget = <tvar>,
  * expiry = DelayedTriggerExpiry.EndOfTurn)`.
  *
  * This is the "Target creature gets +X/+Y until end of turn. When it dies this turn, <do something>"
@@ -154,7 +155,7 @@ internal fun EmitCtx.whenThatPermanentDiesDelayedTrigger(node: JsonObject, tvar:
     return call(
         "CreateDelayedTriggerEffect",
         arg("effect", body),
-        arg("trigger", "Triggers.Dies"),
+        arg("trigger", "Triggers.self.dies()"),
         arg("watchedTarget", Lit(tvar)),
         arg("expiry", "DelayedTriggerExpiry.EndOfTurn"),
     )
@@ -517,3 +518,17 @@ internal fun EmitCtx.renderForEachTargetPlayerBody(node: JsonObject): Dsl? {
     val list = call("listOf", *effects.map { arg(it) }.toTypedArray())
     return call("ForEachTargetEffect", arg(list))
 }
+
+/**
+ * "Prevent all damage that would be dealt to you this turn by attacking creatures" (Deep Wood): the
+ * controller-only recipient shield narrowed to attacking sources.
+ */
+private fun preventDamageToYouFromAttackers(): Dsl =
+    call(
+        "Effects.PreventDamage",
+        arg("alsoToYou", "true"),
+        arg(
+            "sources",
+            call("PreventionSourceFilter.Matching", arg(Lit("GameObjectFilter.Creature").dot("attacking")))
+        ),
+    )

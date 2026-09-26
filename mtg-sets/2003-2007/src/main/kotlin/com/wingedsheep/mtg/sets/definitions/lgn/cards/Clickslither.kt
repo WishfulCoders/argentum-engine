@@ -29,8 +29,8 @@ val Clickslither = card("Clickslither") {
 
     activatedAbility {
         cost = Costs.Sacrifice(GameObjectFilter.Permanent.withSubtype("Goblin"))
-        effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
-            .then(Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self))
+        effect = Effects.ModifyStats(2, 2, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
     }
 
     metadata {

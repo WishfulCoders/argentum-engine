@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -51,9 +50,8 @@ val ThanosTheMadTitan = card("Thanos, the Mad Titan") {
     activatedAbility {
         isPowerUp = true
         cost = Costs.Mana("{C}{W}{U}{B}{R}{G}")
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self),
-            ModalEffect(
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self) then
+            Effects.Modal(
                 modes = listOf(
                     Mode.noTarget(
                         effect = Effects.DestroyAll(
@@ -70,7 +68,6 @@ val ThanosTheMadTitan = card("Thanos, the Mad Titan") {
                 ),
                 chooseCount = 1
             )
-        )
     }
 
     metadata {

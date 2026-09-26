@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBlockCreaturesWithGreaterPower
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 
 /**
  * Spitfire Handler
@@ -29,7 +29,7 @@ val SpitfireHandler = card("Spitfire Handler") {
 
     activatedAbility {
         cost = Costs.Mana("{R}")
-        effect = ModifyStatsEffect(1, 0, EffectTarget.Self)
+        effect = Effects.ModifyStats(1, 0, EffectTarget.Self)
     }
 
     metadata {

@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.war.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Goblin Assault Team — War of the Spark #129 (canonical printing)
@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * A dies trigger that targets: the counter goes onto a creature that is *still* on the
  * battlefield, so the target is chosen as the ability goes on the stack, after the team is
- * already in the graveyard. [Triggers.Dies] binds to the source, and the surviving creature is
+ * already in the graveyard. `Triggers.self.dies()` binds to the source, and the surviving creature is
  * the ability's own target.
  */
 val GoblinAssaultTeam = card("Goblin Assault Team") {
@@ -33,9 +33,9 @@ val GoblinAssaultTeam = card("Goblin Assault Team") {
     keywords(Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val creature = target("target", Targets.CreatureYouControl)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creature)
+        trigger = Triggers.self.dies()
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature)
     }
 
     metadata {

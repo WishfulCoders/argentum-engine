@@ -18,7 +18,7 @@ val BirthdayEscape = card("Birthday Escape") {
     oracleText = "Draw a card. The Ring tempts you."
 
     spell {
-        effect = Effects.DrawCards(1).then(Effects.TheRingTemptsYou())
+        effect = Effects.DrawCards(1) then Effects.TheRingTemptsYou()
     }
 
     metadata {

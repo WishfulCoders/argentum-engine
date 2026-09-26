@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Mosstodon
@@ -31,7 +30,7 @@ val Mosstodon = card("Mosstodon") {
 
     activatedAbility {
         cost = Costs.Mana("{1}")
-        val t = target("target", TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.powerAtLeast(5))))
+        val t = target(TargetFilter(GameObjectFilter.Creature.powerAtLeast(5)))
         effect = Effects.GrantKeyword(Keyword.TRAMPLE, t)
     }
 

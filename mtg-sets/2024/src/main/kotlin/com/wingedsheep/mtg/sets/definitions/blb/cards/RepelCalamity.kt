@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Repel Calamity {1}{W}
@@ -20,10 +19,7 @@ val RepelCalamity = card("Repel Calamity") {
     oracleText = "Destroy target creature with power or toughness 4 or greater."
 
     spell {
-        val creature = target(
-            "creature with power or toughness 4 or greater",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.powerOrToughnessAtLeast(4)))
-        )
+        val creature = target(TargetFilter(GameObjectFilter.Creature.powerOrToughnessAtLeast(4)))
         effect = Effects.Destroy(creature)
     }
 

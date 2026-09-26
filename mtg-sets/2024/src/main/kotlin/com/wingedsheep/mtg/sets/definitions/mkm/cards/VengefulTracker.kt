@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * "An artifact" is the bare-article template, so it is a per-permanent trigger (CR 603.2c): an
  * opponent cracking two Clues in response to one another gets hit twice, and an effect that
  * sacrifices three artifacts at once still fires three times. "An opponent" scopes it to the
- * Tracker controller's opponents ([Triggers.OpponentSacrificesA]) — your own Clue cracks never fire
+ * Tracker controller's opponents (`Triggers.anOpponent.sacrifices(filter)`) — your own Clue cracks never fire
  * it — and in a multiplayer game two opponents sacrificing in the same batch each trigger it, each
  * firing hitting the player who actually sacrificed via [Player.TriggeringPlayer].
  */
@@ -33,7 +33,7 @@ val VengefulTracker = card("Vengeful Tracker") {
     oracleText = "Whenever an opponent sacrifices an artifact, this creature deals 2 damage to them."
 
     triggeredAbility {
-        trigger = Triggers.OpponentSacrificesA(GameObjectFilter.Artifact)
+        trigger = Triggers.anOpponent.sacrifices(GameObjectFilter.Artifact)
         effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.TriggeringPlayer))
         description = "Whenever an opponent sacrifices an artifact, this creature deals 2 damage to them."
     }

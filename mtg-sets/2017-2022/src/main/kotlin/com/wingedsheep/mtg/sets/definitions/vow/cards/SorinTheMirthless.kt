@@ -2,19 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
+import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.CardOrder
-import com.wingedsheep.sdk.scripting.effects.ConditionalOnCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Sorin the Mirthless — Innistrad: Crimson Vow #131
@@ -58,25 +53,23 @@ val SorinTheMirthless = card("Sorin the Mirthless") {
     // +1: Look at the top card of your library. You may reveal that card and put it into your hand.
     //     If you do, you lose life equal to its mana value.
     loyaltyAbility(+1) {
-        effect = Effects.Composite(
-            Patterns.Library.lookAtTopRevealMatchingToHand(
-                count = DynamicAmount.Fixed(1),
-                filter = GameObjectFilter.Any,
+        effect = Effects.Pipeline {
+            val looked = gather(CardSource.TopOfLibrary(1))
+            val (kept, rest) = chooseUpToSplit(
+                1,
+                from = looked,
                 prompt = "You may reveal the top card of your library and put it into your hand " +
                     "(you lose life equal to its mana value)",
-                // Printed ruling: a declined card stays on top of your library.
-                restDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Top),
-                restOrder = CardOrder.Preserve
-            ),
-            // "If you do" — only when a card was actually revealed and taken.
-            ConditionalOnCollectionEffect(
-                collection = "kept",
-                ifNotEmpty = Effects.LoseLife(
-                    DynamicAmount.StoredCardManaValue("kept"),
-                    EffectTarget.Controller
-                )
+                showAllCards = true
             )
-        )
+            toHand(kept, revealed = true)
+            // Printed ruling: a declined card stays on top of your library.
+            toLibraryTop(rest, order = CardOrder.Preserve)
+            // "If you do" — only when a card was actually revealed and taken.
+            ifNotEmpty(kept) {
+                run(Effects.LoseLife(DynamicAmounts.manaValueOf(kept), EffectTarget.Controller))
+            }
+        }
         description = "Look at the top card of your library. You may reveal that card and put it " +
             "into your hand. If you do, you lose life equal to its mana value."
     }
@@ -96,7 +89,7 @@ val SorinTheMirthless = card("Sorin the Mirthless") {
 
     // −7: Sorin deals 13 damage to any target. You gain 13 life.
     loyaltyAbility(-7) {
-        val victim = target("any target", Targets.Any)
+        val victim = target(Targets.Any)
         effect = Effects.DealDamage(13, victim) then Effects.GainLife(13)
         description = "Sorin deals 13 damage to any target. You gain 13 life."
     }

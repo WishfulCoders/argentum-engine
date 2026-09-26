@@ -61,7 +61,7 @@ val CastleEmbereth = card("Castle Embereth") {
         cost = Costs.Composite(Costs.Mana("{1}{R}{R}"), Costs.Tap)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(1, 0, EffectTarget.Self)
+            Effects.ModifyStats(1, 0, EffectTarget.IterationEntity)
         )
         description = "Creatures you control get +1/+0 until end of turn."
     }

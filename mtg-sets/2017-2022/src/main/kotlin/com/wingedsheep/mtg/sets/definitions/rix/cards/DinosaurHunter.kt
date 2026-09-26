@@ -6,7 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -28,11 +28,9 @@ val DinosaurHunter = card("Dinosaur Hunter") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            recipient = RecipientFilter.Matching(
+        trigger = Triggers.self.dealsDamage(Recipient.Object(
                 GameObjectFilter.Permanent.withSubtype(Subtype.DINOSAUR)
-            )
-        )
+            ))
         effect = Effects.Destroy(EffectTarget.TriggeringEntity)
     }
 

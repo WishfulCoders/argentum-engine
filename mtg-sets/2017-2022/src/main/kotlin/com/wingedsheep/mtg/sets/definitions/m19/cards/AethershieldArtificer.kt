@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Aethershield Artificer
@@ -26,13 +26,10 @@ val AethershieldArtificer = card("Aethershield Artificer") {
     oracleText = "At the beginning of combat on your turn, target artifact creature you control gets +2/+2 and gains indestructible until end of turn. (Damage and effects that say \"destroy\" don't destroy it.)"
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        val creature = target(
-            "artifact creature you control",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.ArtifactCreature.youControl()))
-        )
-        effect = Effects.ModifyStats(2, 2, creature)
-            .then(Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, creature, Duration.EndOfTurn))
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        val creature = target(TargetFilter(GameObjectFilter.ArtifactCreature.youControl()))
+        effect = Effects.ModifyStats(2, 2, creature) then
+            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, creature, Duration.EndOfTurn)
     }
 
     metadata {

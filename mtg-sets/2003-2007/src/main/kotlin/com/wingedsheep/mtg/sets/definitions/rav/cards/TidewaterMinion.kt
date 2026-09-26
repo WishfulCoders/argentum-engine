@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.rav.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Tidewater Minion
@@ -36,7 +36,7 @@ val TidewaterMinion = card("Tidewater Minion") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target permanent", Targets.Permanent)
+        val t = target(TargetFilter.Permanent)
         effect = Effects.Untap(t)
     }
 

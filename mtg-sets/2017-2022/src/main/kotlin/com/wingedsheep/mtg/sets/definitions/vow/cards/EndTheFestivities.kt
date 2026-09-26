@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -21,15 +20,13 @@ val EndTheFestivities = card("End the Festivities") {
     typeLine = "Sorcery"
     oracleText = "End the Festivities deals 1 damage to each opponent and each creature and planeswalker they control."
     spell {
-        effect = Effects.Composite(
-            // 1 damage to each opponent
-            Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent)),
+        // 1 damage to each opponent
+        effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent)) then
             // 1 damage to each creature and planeswalker those opponents control
             Effects.ForEachInGroup(
                 GroupFilter(GameObjectFilter.CreatureOrPlaneswalker.opponentControls()),
-                DealDamageEffect(1, EffectTarget.Self)
+                Effects.DealDamage(1, EffectTarget.IterationEntity)
             )
-        )
     }
     metadata {
         rarity = Rarity.COMMON

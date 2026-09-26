@@ -3,12 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.ons.cards
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Misery Charm
@@ -33,7 +30,7 @@ val MiseryCharm = card("Misery Charm") {
     spell {
         modal(chooseCount = 1) {
             mode("Destroy target Cleric") {
-                val t = target("target", TargetPermanent(filter = TargetFilter.Permanent.withSubtype("Cleric")))
+                val t = target(TargetFilter.Permanent.withSubtype("Cleric"))
                 effect = Effects.Move(
                     target = t,
                     destination = Zone.GRAVEYARD,
@@ -41,17 +38,15 @@ val MiseryCharm = card("Misery Charm") {
                 )
             }
             mode("Return target Cleric card from your graveyard to your hand") {
-                val t = target("target", TargetObject(
-                    filter = TargetFilter.CardInGraveyard.withSubtype("Cleric").ownedByYou()
-                ))
+                val t = target(TargetFilter.CardInGraveyard.withSubtype("Cleric").ownedByYou())
                 effect = Effects.Move(
                     target = t,
                     destination = Zone.HAND
                 )
             }
             mode("Target player loses 2 life") {
-                val t = target("target", TargetPlayer())
-                effect = LoseLifeEffect(2, t)
+                val t = target(Targets.Player)
+                effect = Effects.LoseLife(2, t)
             }
         }
     }

@@ -5,8 +5,9 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.targets.TargetOther
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Drooling Groodion
@@ -36,14 +37,9 @@ val DroolingGroodion = card("Drooling Groodion") {
             Costs.Mana("{2}{B}{G}"),
             Costs.Sacrifice(GameObjectFilter.Creature)
         )
-        val pumped = target("target creature", TargetCreature())
-        val weakened = target("another target creature", TargetOther(TargetCreature()))
-        effect = Effects.Composite(
-            listOf(
-                Effects.ModifyStats(2, 2, pumped),
-                Effects.ModifyStats(-2, -2, weakened)
-            )
-        )
+        val pumped = target(TargetFilter.Creature)
+        val weakened = target(TargetOther(TargetObject(filter = TargetFilter.Creature)))
+        effect = Effects.ModifyStats(2, 2, pumped) then Effects.ModifyStats(-2, -2, weakened)
         description = "Target creature gets +2/+2 until end of turn. Another target creature gets " +
             "-2/-2 until end of turn."
     }

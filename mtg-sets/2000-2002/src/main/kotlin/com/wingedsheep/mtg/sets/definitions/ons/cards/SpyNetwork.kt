@@ -1,23 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.*
-import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.FaceDownLookScope
-import com.wingedsheep.sdk.scripting.effects.LookAtFaceDownEffect
-import com.wingedsheep.sdk.scripting.effects.LookAtTargetHandEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Spy Network
@@ -34,29 +24,14 @@ val SpyNetwork = card("Spy Network") {
     oracleText = "Look at target player's hand, the top card of that player's library, and any face-down creatures they control. Look at the top four cards of your library, then put them back in any order."
 
     spell {
-        val t = target("target", TargetPlayer())
-        effect = LookAtTargetHandEffect(t)
-            .then(
-                Effects.Composite(
-                    listOf(
-                        GatherCardsEffect(
-                            source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1), Player.ContextPlayer(0)),
-                            storeAs = "target_top"
-                        ),
-                        MoveCollectionEffect(
-                            from = "target_top",
-                            destination = CardDestination.ToZone(
-                                Zone.LIBRARY,
-                                Player.ContextPlayer(0),
-                                ZonePlacement.Top
-                            ),
-                            order = CardOrder.ControllerChooses
-                        )
-                    )
-                )
-            )
-            .then(LookAtFaceDownEffect(t, FaceDownLookScope.ALL_CONTROLLED_BY_TARGET_PLAYER))
-            .then(Patterns.Library.lookAtTopAndReorder(4))
+        val t = target(Targets.Player)
+        effect = Effects.LookAtHand(t) then
+            Effects.Pipeline {
+                val targetTop = gather(CardSource.TopOfLibrary(1, t.asPlayer))
+                toLibraryTop(targetTop, t.asPlayer)
+            } then
+            Effects.LookAtFaceDown(t, FaceDownLookScope.ALL_CONTROLLED_BY_TARGET_PLAYER) then
+            Patterns.Library.lookAtTopAndReorder(4)
     }
 
     metadata {

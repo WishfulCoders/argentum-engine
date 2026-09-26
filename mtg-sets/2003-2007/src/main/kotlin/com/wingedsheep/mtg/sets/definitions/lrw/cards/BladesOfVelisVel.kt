@@ -2,11 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Blades of Velis Vel
@@ -33,12 +32,10 @@ val BladesOfVelisVel = card("Blades of Velis Vel") {
     keywords(Keyword.CHANGELING)
 
     spell {
-        target("target creature", Targets.UpToCreatures(2))
-        effect = ForEachTargetEffect(
-            listOf(
-                Effects.ModifyStats(2, 0, EffectTarget.ContextTarget(0)),
-                Effects.GrantKeyword(Keyword.CHANGELING, EffectTarget.ContextTarget(0)),
-            )
+        targets(TargetFilter.Creature, count = 2, optional = true)
+        effect = Effects.ForEachTarget(
+            Effects.ModifyStats(2, 0, EffectTarget.ContextTarget(0)),
+            Effects.GrantKeyword(Keyword.CHANGELING, EffectTarget.ContextTarget(0))
         )
     }
 

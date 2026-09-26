@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 
 /**
@@ -30,8 +29,8 @@ val CourierOfComestibles = card("Courier of Comestibles") {
     // The search is optional (ChooseUpTo 0..1); if no Food card ends up in hand
     // (declined or none found), the IfYouDont branch creates a Food token instead.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = IfYouDoEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.IfYouDo(
             action = Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.Any.withSubtype("Food"),
                 count = 1,
@@ -39,8 +38,8 @@ val CourierOfComestibles = card("Courier of Comestibles") {
                 shuffleAfter = true,
                 reveal = true
             ),
-            ifYouDo = Effects.Composite(),
-            ifYouDont = Effects.CreateFood()
+            then = Effects.Nothing,
+            otherwise = Effects.CreateFood()
         )
         description = "When this creature enters, you may search your library for a Food card, reveal it, put it into your hand, then shuffle. If you don't put a card into your hand this way, create a Food token."
     }

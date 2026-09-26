@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Vivien Reid
@@ -37,7 +35,7 @@ val VivienReid = card("Vivien Reid") {
     // defaults to the bottom in a random order.)
     loyaltyAbility(+1) {
         effect = Patterns.Library.lookAtTopRevealMatchingToHand(
-            count = DynamicAmount.Fixed(4),
+            count = 4,
             filter = GameObjectFilter.CreatureOrLand,
             prompt = "You may reveal a creature or land card to put into your hand"
         )
@@ -49,13 +47,10 @@ val VivienReid = card("Vivien Reid") {
     // included/excluded correctly).
     loyaltyAbility(-3) {
         val t = target(
-            "permanent",
-            TargetPermanent(
-                filter = TargetFilter(
-                    GameObjectFilter.ArtifactOrEnchantment or
-                        GameObjectFilter.Creature.withKeyword(Keyword.FLYING)
-                )
-            )
+            TargetFilter(
+                GameObjectFilter.ArtifactOrEnchantment or
+                    GameObjectFilter.Creature.withKeyword(Keyword.FLYING)
+            ),
         )
         effect = Effects.Destroy(t)
     }

@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Xenic Poltergeist
@@ -37,10 +36,7 @@ val XenicPoltergeist = card("Xenic Poltergeist") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target(
-            "target noncreature artifact",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Artifact.notCreature()))
-        )
+        val t = target(TargetFilter(GameObjectFilter.Artifact.notCreature()))
         effect = Effects.BecomeCreatureWithManaValueStats(
             target = t,
             addTypes = setOf("ARTIFACT"),

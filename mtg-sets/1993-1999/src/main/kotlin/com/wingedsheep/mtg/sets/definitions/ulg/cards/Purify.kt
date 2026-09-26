@@ -27,7 +27,7 @@ val Purify = card("Purify") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.ArtifactOrEnchantment),
-            Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true),
+            Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true),
             noRegenerate = false
         )
     }

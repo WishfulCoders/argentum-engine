@@ -42,7 +42,7 @@ class AegisSculptorScenarioTest : ScenarioTestBase() {
                 game.passUntilPhase(Phase.BEGINNING, Step.UPKEEP)
                 game.resolveStack()
 
-                // MayEffect: accept, then choose exactly two graveyard cards to exile.
+                // Effects.May: accept, then choose exactly two graveyard cards to exile.
                 if (game.hasPendingDecision()) {
                     game.answerYesNo(true)
                     game.resolveStack()

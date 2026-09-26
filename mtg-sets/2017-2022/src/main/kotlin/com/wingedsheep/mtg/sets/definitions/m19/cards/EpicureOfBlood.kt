@@ -23,7 +23,7 @@ val EpicureOfBlood = card("Epicure of Blood") {
     oracleText = "Whenever you gain life, each opponent loses 1 life."
 
     triggeredAbility {
-        trigger = Triggers.YouGainLife
+        trigger = Triggers.you.gainsLife()
         effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent))
     }
 

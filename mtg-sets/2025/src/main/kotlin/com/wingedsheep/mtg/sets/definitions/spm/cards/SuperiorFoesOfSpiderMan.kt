@@ -1,16 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.spm.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.SpellCastEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Superior Foes of Spider-Man
@@ -20,7 +18,7 @@ import com.wingedsheep.sdk.scripting.references.Player
  * Whenever you cast a spell with mana value 4 or greater, you may exile the top card of your
  * library. If you do, you may play that card until you exile another card with this creature.
  *
- * Modeling: a `Player.You` cast trigger gated on `manaValueAtLeast(4)` fires a `MayEffect`
+ * Modeling: a `Player.You` cast trigger gated on `manaValueAtLeast(4)` fires a `Effects.May`
  * (the "you may exile" yes/no) wrapping the standard impulse pipeline (gather top card → exile →
  * grant play-from-exile). The permission is granted with [MayPlayExpiry.UntilSourceExilesAnother],
  * which persists across turns (surviving this creature leaving play) but is revoked the moment this
@@ -41,14 +39,8 @@ val SuperiorFoesOfSpiderMan = card("Superior Foes of Spider-Man") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = SpellCastEvent(
-                spellFilter = GameObjectFilter.Any.manaValueAtLeast(4),
-                player = Player.You
-            ),
-            binding = TriggerBinding.ANY
-        )
-        effect = MayEffect(
+        trigger = Triggers.you.casts(GameObjectFilter.Any.manaValueAtLeast(4))
+        effect = Effects.May(
             Patterns.Exile.impulse(count = 1, expiry = MayPlayExpiry.UntilSourceExilesAnother)
         )
     }

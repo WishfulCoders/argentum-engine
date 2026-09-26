@@ -34,7 +34,7 @@ The Thallid engine: "At the beginning of your upkeep, put a spore counter on thi
 three spore counters from this creature: <effect>." Ordinary counters (CR 122) plus an upkeep trigger
 and a remove-N-counters activation cost.
 
-**Engine support:** ✅ `Counters.SPORE`, `Costs.RemoveCounterFromSelf(Counters.SPORE, 3)` and
+**Engine support:** ✅ `CounterType.SPORE`, `Costs.RemoveCounterFromSelf(CounterType.SPORE, 3)` and
 `Triggers.YourUpkeep`, all pre-existing. The Saproling art is registered on `FallenEmpiresSet`.
 
 Cards: Elvish Farmer, Feral Thallid, Fungal Bloom, Night Soil, Spore Flower, Thallid,
@@ -96,7 +96,7 @@ Cards: Armor Thrull, Ebon Praetor, Soul Exchange
 A counter that accrues each upkeep and whose *exact* count switches a static effect on and off, then
 resets at four or more. Needs an exact-count condition (CR 613 layer 7c) rather than a threshold.
 
-**Engine support:** ✅ `Counters.TIDE` added; the exact-count statics are
+**Engine support:** ✅ `CounterType.TIDE` added; the exact-count statics are
 `Conditions.CompareAmounts(countersOnSelf(TIDE), EQ, n)` on a conditional static, and the reset is a
 state trigger. Equality, not a threshold: three counters is +1/+1 and *not* also the -1/-1.
 

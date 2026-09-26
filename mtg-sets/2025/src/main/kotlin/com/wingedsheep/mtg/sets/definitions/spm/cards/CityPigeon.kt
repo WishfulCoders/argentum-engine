@@ -27,7 +27,7 @@ val CityPigeon = card("City Pigeon") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.CreateFood()
         description = "When this creature leaves the battlefield, create a Food token."
     }

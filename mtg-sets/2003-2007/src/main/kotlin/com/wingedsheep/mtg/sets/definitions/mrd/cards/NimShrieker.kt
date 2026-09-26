@@ -5,10 +5,9 @@ import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Nim Shrieker — Mirrodin #73
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * This creature gets +1/+0 for each artifact you control.
  *
  * The flying member of the Nim cycle, sharing [NimLasher]'s artifact-count power boost — a
- * continuously recomputed [GrantDynamicStatsEffect] on the source itself, toughness untouched.
+ * continuously recomputed [GrantDynamicStats] on the source itself, toughness untouched.
  *
  * Printed base power is 0, so with no artifacts on the battlefield the Shrieker deals no combat
  * damage at all; it needs at least one artifact before the evasion is worth anything. It is not
@@ -36,10 +35,10 @@ val NimShrieker = card("Nim Shrieker") {
     keywords(Keyword.FLYING)
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
             powerBonus = DynamicAmounts.battlefield(Player.You, GameObjectFilter.Artifact).count(),
-            toughnessBonus = DynamicAmount.Fixed(0)
+            toughnessBonus = DynamicAmounts.fixed(0)
         )
     }
 

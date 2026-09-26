@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.shm.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Merrow Grimeblotter
@@ -31,7 +31,7 @@ val MerrowGrimeblotter = card("Merrow Grimeblotter") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{U/B}"), Costs.Untap)
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(-2, 0, t)
         description = "{1}{U/B}, {Q}: Target creature gets -2/-0 until end of turn."
     }

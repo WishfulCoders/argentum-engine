@@ -10,22 +10,12 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Aang, at the Crossroads // Aang, Destined Savior
@@ -71,10 +61,8 @@ private val AangDestinedSavior = card("Aang, Destined Savior") {
 
     // At the beginning of combat on your turn, earthbend 2.
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        val t = target("target", TargetPermanent(
-            filter = TargetFilter.Land.youControl()
-        ))
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        val t = target(TargetFilter.Land.youControl())
         effect = Effects.Earthbend(2, t)
     }
 
@@ -105,45 +93,28 @@ private val AangAtTheCrossroadsFront = card("Aang, at the Crossroads") {
     // with mana value 4 or less from among them onto the battlefield. Put the rest on the bottom
     // of your library in a random order.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(5)),
-                    storeAs = "looked"
-                ),
-                SelectFromCollectionEffect(
-                    from = "looked",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    filter = GameObjectFilter.Creature.manaValueAtMost(4),
-                    storeSelected = "chosen",
-                    storeRemainder = "rest",
-                    selectedLabel = "Put onto the battlefield",
-                    remainderLabel = "Put on bottom"
-                ),
-                MoveCollectionEffect(
-                    from = "chosen",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD)
-                ),
-                MoveCollectionEffect(
-                    from = "rest",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
-                    order = CardOrder.Random
-                )
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val looked = gather(CardSource.TopOfLibrary(5))
+            val (chosen, rest) = chooseUpToSplit(
+                1,
+                from = looked,
+                filter = GameObjectFilter.Creature.manaValueAtMost(4),
+                selectedLabel = "Put onto the battlefield",
+                remainderLabel = "Put on bottom"
             )
-        )
+            move(chosen, CardDestination.ToZone(Zone.BATTLEFIELD))
+            toLibraryBottom(rest, order = CardOrder.Random)
+        }
     }
 
     // When another creature you control leaves the battlefield, transform Aang at the beginning
     // of the next upkeep.
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.youControl(),
-            binding = TriggerBinding.OTHER
-        )
-        effect = CreateDelayedTriggerEffect(
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).leaves()
+        effect = Effects.CreateDelayedTrigger(
             step = Step.UPKEEP,
-            effect = TransformEffect(EffectTarget.Self)
+            effect = Effects.Transform(EffectTarget.Self)
         )
     }
 

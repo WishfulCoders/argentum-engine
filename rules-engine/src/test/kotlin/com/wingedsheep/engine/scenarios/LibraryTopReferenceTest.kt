@@ -17,7 +17,6 @@ import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.EntityReference
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
@@ -33,12 +32,12 @@ class LibraryTopReferenceTest : FunSpec({
         val creature = d.putCreatureOnBattlefield(d.player1, "Grizzly Bears")
         val ctx = EffectContext(sourceId = null, controllerId = d.player1, targets = listOf(ChosenTarget.Player(d.player2)))
         TargetResolutionUtils.resolveTarget(EffectTarget.LibraryTop(Player.TargetPlayer), ctx, d.state) shouldBe top
-        PredicateEvaluator().matches(d.state, d.state.projectedState, creature,
-            GameObjectFilter.Creature.sharingColorWith(EntityReference.LibraryTop(Player.TargetPlayer)),
+        PredicateEvaluator(cardRegistry = null).matches(d.state, d.state.projectedState, creature,
+            GameObjectFilter.Creature.sharingColorWith(EffectTarget.LibraryTop(Player.TargetPlayer)),
             PredicateContext.fromEffectContext(ctx)) shouldBe true
         d.putCardOnTopOfLibrary(d.player2, "Lightning Bolt")
-        PredicateEvaluator().matches(d.state, d.state.projectedState, creature,
-            GameObjectFilter.Creature.sharingColorWith(EntityReference.LibraryTop(Player.TargetPlayer)),
+        PredicateEvaluator(cardRegistry = null).matches(d.state, d.state.projectedState, creature,
+            GameObjectFilter.Creature.sharingColorWith(EffectTarget.LibraryTop(Player.TargetPlayer)),
             PredicateContext.fromEffectContext(ctx)) shouldBe false
     }
 
@@ -52,7 +51,7 @@ class LibraryTopReferenceTest : FunSpec({
             staticAbility {
                 ability = ModifyStats(1, 1, GroupFilter(GameObjectFilter.Creature.youControl().copy(
                     cardPredicates = listOf(CardPredicate.IsCreature,
-                        CardPredicate.Or(listOf(CardPredicate.SharesColorWith(EntityReference.Source))))
+                        CardPredicate.Or(listOf(CardPredicate.SharesColorWith(EffectTarget.Self))))
                 )))
             }
         }
@@ -72,7 +71,7 @@ class LibraryTopReferenceTest : FunSpec({
         val ctx = EffectContext(sourceId = null, controllerId = d.player1)
         for (player in listOf(Player.TargetPlayer, Player.Each, Player.EachOpponent)) {
             TargetResolutionUtils.resolveTarget(EffectTarget.LibraryTop(player), ctx, d.state) shouldBe null
-            TargetResolutionUtils.resolveEntityReference(EntityReference.LibraryTop(player), ctx, d.state) shouldBe null
+            TargetResolutionUtils.resolveEntity(EffectTarget.LibraryTop(player), ctx, d.state) shouldBe null
         }
     }
 })

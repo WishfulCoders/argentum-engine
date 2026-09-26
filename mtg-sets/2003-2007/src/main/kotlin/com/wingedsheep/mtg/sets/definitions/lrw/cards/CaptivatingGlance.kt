@@ -2,13 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GiveControlToTargetPlayerEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Captivating Glance
@@ -48,13 +49,13 @@ val CaptivatingGlance = card("Captivating Glance") {
         "clashing player reveals the top card of their library, then puts that card on their " +
         "choice of the top or bottom. A player wins if their card had a greater mana value.)"
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         effect = Patterns.Mechanic.clash(
             ifYouWin = Effects.GainControl(EffectTarget.EnchantedCreature),
-            otherwise = GiveControlToTargetPlayerEffect(
+            otherwise = Effects.GiveControl(
                 permanent = EffectTarget.EnchantedCreature,
                 newController = EffectTarget.PlayerRef(Player.ChosenOpponent)
             )

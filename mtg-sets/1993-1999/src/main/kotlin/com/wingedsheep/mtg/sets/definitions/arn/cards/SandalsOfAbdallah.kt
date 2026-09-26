@@ -3,14 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.arn.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sandals of Abdallah
@@ -26,14 +25,12 @@ val SandalsOfAbdallah = card("Sandals of Abdallah") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.GrantKeyword(Keyword.ISLANDWALK, creature, Duration.EndOfTurn).then(
-            CreateDelayedTriggerEffect(
-                trigger = Triggers.Dies,
-                watchedTarget = creature,
-                expiry = DelayedTriggerExpiry.EndOfTurn,
-                effect = Effects.Destroy(EffectTarget.Self),
-            )
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.GrantKeyword(Keyword.ISLANDWALK, creature, Duration.EndOfTurn) then Effects.CreateDelayedTrigger(
+            trigger = Triggers.self.dies(),
+            watchedTarget = creature,
+            expiry = DelayedTriggerExpiry.EndOfTurn,
+            effect = Effects.Destroy(EffectTarget.Self),
         )
     }
 

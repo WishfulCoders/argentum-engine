@@ -1,14 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.Gate
-import com.wingedsheep.sdk.scripting.effects.GatedEffect
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -34,11 +31,11 @@ val WeddingSecurity = card("Wedding Security") {
         "a +1/+1 counter on this creature and draw a card."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = GatedEffect(
-            gate = Gate.MayPay(SacrificeEffect(filter = GameObjectFilter.Artifact.withSubtype("Blood"))),
-            then = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
-                .then(Effects.DrawCards(1))
+        trigger = Triggers.self.attacks()
+        effect = Effects.MayPay(
+            cost = Effects.SacrificeOwn(filter = GameObjectFilter.Artifact.withSubtype("Blood")),
+            then = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self) then
+                Effects.DrawCards(1)
         )
         description = "Whenever this creature attacks, you may sacrifice a Blood token. If you do, " +
             "put a +1/+1 counter on this creature and draw a card."

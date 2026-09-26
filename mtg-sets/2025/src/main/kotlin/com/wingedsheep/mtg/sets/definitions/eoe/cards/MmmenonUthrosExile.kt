@@ -1,16 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Mm'menon, Uthros Exile
@@ -32,17 +29,11 @@ val MmmenonUthrosExile = card("Mm'menon, Uthros Exile") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Artifact
-                    .youControl(),
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Artifact
+                    .youControl()).enters()
 
-        val targetCreature = target("target creature", Targets.Creature)
-        effect = Effects.AddCounters("+1/+1", 1, targetCreature)
+        val targetCreature = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, targetCreature)
         description = "Whenever an artifact you control enters, put a +1/+1 counter on target creature."
     }
 

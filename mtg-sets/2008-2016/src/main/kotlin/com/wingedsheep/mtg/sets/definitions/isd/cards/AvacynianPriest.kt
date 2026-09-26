@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -30,10 +29,7 @@ val AvacynianPriest = card("Avacynian Priest") {
     toughness = 2
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
-        val t = target(
-            "target",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.notSubtype(Subtype("Human"))))
-        )
+        val t = target(TargetFilter(GameObjectFilter.Creature.notSubtype(Subtype("Human"))))
         effect = Effects.Tap(t)
     }
     metadata {

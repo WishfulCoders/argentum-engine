@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -24,7 +23,7 @@ val Shatter = card("Shatter") {
     typeLine = "Instant"
     oracleText = "Destroy target artifact."
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter.Artifact))
+        val t = target(TargetFilter.Artifact)
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     metadata {

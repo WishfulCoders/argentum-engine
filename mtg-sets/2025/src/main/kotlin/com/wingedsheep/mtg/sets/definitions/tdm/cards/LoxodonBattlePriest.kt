@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Loxodon Battle Priest
@@ -26,12 +26,9 @@ val LoxodonBattlePriest = card("Loxodon Battle Priest") {
     oracleText = "At the beginning of combat on your turn, put a +1/+1 counter on another target creature you control."
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        val t = target(
-            "another target creature you control",
-            TargetCreature(filter = TargetFilter.OtherCreatureYouControl)
-        )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, t)
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        val t = target(TargetFilter.OtherCreatureYouControl)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, t)
     }
 
     metadata {

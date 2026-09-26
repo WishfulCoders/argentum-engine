@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -27,7 +26,7 @@ val FinalVengeance = card("Final Vengeance") {
     oracleText = "As an additional cost to cast this spell, sacrifice a creature or enchantment.\nExile target creature."
     additionalCost(Costs.additional.SacrificePermanent(GameObjectFilter.CreatureOrEnchantment))
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+        val t = target(TargetFilter.Creature)
         effect = Effects.Exile(t)
     }
     metadata {

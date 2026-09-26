@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.mechanics.targeting
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.ControllerGrants
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.GrantsControllerProtectionComponent
@@ -30,7 +31,8 @@ object PlayerProtectionRules {
         state: GameState,
         playerId: EntityId,
         sourceId: EntityId?,
-        casterId: EntityId?
+        casterId: EntityId?,
+        predicateEvaluator: PredicateEvaluator
     ): Boolean {
         // Player-level protection comes from two sources, unioned:
         //  1. A one-shot [PlayerProtectionComponent] on the player (e.g. The One Ring).
@@ -48,7 +50,7 @@ object PlayerProtectionRules {
                 // Each scope carries its own "as long as …" gate, re-evaluated here on every read
                 // because the marker was stamped once, on entry — see [ControllerGrantMarker].
                 ?.any {
-                    ControllerGrants.isActive(state, entityId, it.condition) &&
+                    ControllerGrants.isActive(state, entityId, it.condition, predicateEvaluator = predicateEvaluator) &&
                         scopeMatchesSource(state, playerId, it.scope, sourceId, casterId)
                 } == true
         }

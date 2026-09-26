@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.TargetChooser
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Mausoleum Turnkey — Ravnica: City of Guilds #94
@@ -41,14 +40,8 @@ val MausoleumTurnkey = card("Mausoleum Turnkey") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "target creature card of an opponent's choice from your graveyard",
-            TargetObject(
-                filter = TargetFilter.CreatureInYourGraveyard,
-                chooser = TargetChooser.Opponent
-            )
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.CreatureInYourGraveyard, chooser = TargetChooser.Opponent)
         effect = Effects.ReturnToHand(t)
     }
 

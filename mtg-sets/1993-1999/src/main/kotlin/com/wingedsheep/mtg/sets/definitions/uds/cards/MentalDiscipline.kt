@@ -5,9 +5,9 @@
 package com.wingedsheep.mtg.sets.definitions.uds.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -23,7 +23,7 @@ val MentalDiscipline = card("Mental Discipline") {
     oracleText = "{1}{U}, Discard a card: Draw a card."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{U}"), Costs.DiscardCard)
-        effect = DrawCardsEffect(1)
+        effect = Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.COMMON

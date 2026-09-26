@@ -65,7 +65,7 @@ class CyclingDrawReplacementTest : ScenarioTestBase() {
 
             withClue("Activation installs a Duration.NextUse draw-replacement shield") {
                 game.state.floatingEffects.count {
-                    it.effect.modification is SerializableModification.ReplaceDrawWithEffect
+                    it.effect.modification is SerializableModification.ReplaceDrawWith
                 } shouldBe 1
             }
 
@@ -95,7 +95,7 @@ class CyclingDrawReplacementTest : ScenarioTestBase() {
             }
             withClue("A Duration.NextUse shield is consumed once it applies") {
                 game.state.floatingEffects.count {
-                    it.effect.modification is SerializableModification.ReplaceDrawWithEffect
+                    it.effect.modification is SerializableModification.ReplaceDrawWith
                 } shouldBe 0
             }
         }

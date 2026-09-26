@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -7,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Magebane Lizard
@@ -27,9 +27,9 @@ val MagebaneLizard = card("Magebane Lizard") {
         "equal to the number of noncreature spells they've cast this turn."
 
     triggeredAbility {
-        trigger = Triggers.anyPlayerCasts(GameObjectFilter.Noncreature)
+        trigger = Triggers.anyPlayer.casts(GameObjectFilter.Noncreature)
         effect = Effects.DealDamage(
-            amount = DynamicAmount.SpellsCastThisTurn(Player.TriggeringPlayer, GameObjectFilter.Noncreature),
+            amount = DynamicAmounts.spellsCastThisTurn(Player.TriggeringPlayer, GameObjectFilter.Noncreature),
             target = EffectTarget.ControllerOfTriggeringEntity
         )
     }

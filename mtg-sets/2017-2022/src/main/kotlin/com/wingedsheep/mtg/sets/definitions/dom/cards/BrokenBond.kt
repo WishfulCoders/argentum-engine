@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Broken Bond
@@ -21,9 +21,8 @@ val BrokenBond = card("Broken Bond") {
     oracleText = "Destroy target artifact or enchantment. You may put a land card from your hand onto the battlefield."
 
     spell {
-        val t = target("target", Targets.ArtifactOrEnchantment)
-        effect = Effects.Destroy(t)
-            .then(Patterns.Hand.putFromHand(filter = GameObjectFilter.Land))
+        val t = target(TargetFilter.ArtifactOrEnchantment)
+        effect = Effects.Destroy(t) then Patterns.Hand.putFromHand(filter = GameObjectFilter.Land)
     }
 
     metadata {

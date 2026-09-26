@@ -3,13 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Streambed Aquitects
@@ -35,18 +33,14 @@ val StreambedAquitects = card("Streambed Aquitects") {
         "{T}: Target land becomes an Island until end of turn."
 
     activatedAbility {
-        val merfolk = target(
-            "target Merfolk creature",
-            TargetCreature(filter = TargetFilter.Creature.withSubtype(Subtype.MERFOLK))
-        )
+        val merfolk = target(TargetFilter.Creature.withSubtype(Subtype.MERFOLK))
         cost = AbilityCost.Tap
-        effect = Effects.ModifyStats(1, 1, merfolk) then
-            Effects.GrantKeyword(Keyword.ISLANDWALK, merfolk)
+        effect = Effects.ModifyStats(1, 1, merfolk) then Effects.GrantKeyword(Keyword.ISLANDWALK, merfolk)
         description = "{T}: Target Merfolk creature gets +1/+1 and gains islandwalk until end of turn."
     }
 
     activatedAbility {
-        val land = target("target land", Targets.Land)
+        val land = target(TargetFilter.Land)
         cost = AbilityCost.Tap
         effect = Effects.SetLandType(
             landType = "Island",

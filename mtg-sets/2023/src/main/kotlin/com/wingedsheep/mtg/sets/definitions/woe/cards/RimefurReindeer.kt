@@ -9,9 +9,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -29,11 +27,8 @@ val RimefurReindeer = card("Rimefur Reindeer") {
     power = 3
     toughness = 4
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Enchantment.youControl(),
-            binding = TriggerBinding.ANY
-        )
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.opponentControls()))
+        trigger = Triggers.a(GameObjectFilter.Enchantment.youControl()).enters()
+        val t = target(TargetFilter.Creature.opponentControls())
         effect = Effects.Tap(t)
     }
     metadata {

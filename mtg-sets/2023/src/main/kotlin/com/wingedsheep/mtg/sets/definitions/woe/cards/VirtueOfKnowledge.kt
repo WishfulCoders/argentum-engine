@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AdditionalETBOrLTBTriggers
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /** Virtue of Knowledge // Vantress Visions. */
 val VirtueOfKnowledge = card("Virtue of Knowledge") {
@@ -28,10 +28,7 @@ val VirtueOfKnowledge = card("Virtue of Knowledge") {
         oracleText = "Copy target activated or triggered ability you control. You may choose new " +
             "targets for the copy."
         spell {
-            val ability = target(
-                "activated or triggered ability you control",
-                Targets.ActivatedOrTriggeredAbilityYouControl,
-            )
+            val ability = target(TargetFilter.ActivatedOrTriggeredAbilityOnStack.youControl())
             effect = Effects.CopyTargetSpellOrAbility(ability)
         }
     }

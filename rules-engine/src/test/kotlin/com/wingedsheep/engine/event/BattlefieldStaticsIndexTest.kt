@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.event
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.state.components.battlefield.AttachedToComponent
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
@@ -34,7 +35,7 @@ class BattlefieldStaticsIndexTest : FunSpec({
         val driver = mirrorMatch()
         driver.putPermanentOnBattlefield(driver.activePlayer!!, "Forest")
 
-        val index = BattlefieldStaticsIndex.build(driver.state, driver.cardRegistry)
+        val index = BattlefieldStaticsIndex.build(driver.state, driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         index shouldBe BattlefieldStaticsIndex.EMPTY
         index.attachmentsOn(driver.activePlayer!!) shouldHaveSize 0
@@ -52,7 +53,7 @@ class BattlefieldStaticsIndexTest : FunSpec({
 
         driver.state.getEntity(aura)?.get<AttachedToComponent>()?.targetId shouldBe forest
 
-        val index = BattlefieldStaticsIndex.build(driver.state, driver.cardRegistry)
+        val index = BattlefieldStaticsIndex.build(driver.state, driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         index.attachmentsOn(forest) shouldContain aura
         index.attachmentsOn(aura) shouldHaveSize 0
@@ -63,7 +64,7 @@ class BattlefieldStaticsIndexTest : FunSpec({
         val player = driver.activePlayer!!
         val nowhereToRun = driver.putPermanentOnBattlefield(player, "Nowhere to Run")
 
-        val index = BattlefieldStaticsIndex.build(driver.state, driver.cardRegistry)
+        val index = BattlefieldStaticsIndex.build(driver.state, driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         index.wardSuppressors shouldHaveSize 1
         val suppressor = index.wardSuppressors.single()

@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Explosive Growth
@@ -27,11 +26,11 @@ val ExplosiveGrowth = card("Explosive Growth") {
     keywordAbility(KeywordAbility.kicker("{5}"))
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = ConditionalEffect(
+        val t = target(TargetFilter.Creature)
+        effect = Effects.If(
             condition = WasKicked,
-            effect = Effects.ModifyStats(5, 5, t),
-            elseEffect = Effects.ModifyStats(2, 2, t)
+            then = Effects.ModifyStats(5, 5, t),
+            otherwise = Effects.ModifyStats(2, 2, t)
         )
     }
 

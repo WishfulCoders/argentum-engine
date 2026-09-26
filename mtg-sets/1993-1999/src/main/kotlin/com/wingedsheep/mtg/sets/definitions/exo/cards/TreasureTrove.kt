@@ -5,9 +5,9 @@
 package com.wingedsheep.mtg.sets.definitions.exo.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -23,7 +23,7 @@ val TreasureTrove = card("Treasure Trove") {
     oracleText = "{2}{U}{U}: Draw a card."
     activatedAbility {
         cost = Costs.Mana("{2}{U}{U}")
-        effect = DrawCardsEffect(1)
+        effect = Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.UNCOMMON

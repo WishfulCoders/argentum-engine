@@ -1,16 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.spm.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Shriek, Treblemaker
@@ -22,12 +20,12 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * creature can't block this turn.
  * Sonic Blast — Whenever a creature an opponent controls dies, Shriek deals 1 damage to that player.
  *
- *  - **First-main discard** — a [Triggers.FirstMainPhase] trigger whose optional discard is the
+ *  - **First-main discard** — a `Triggers.you.beginningOf(Step.PRECOMBAT_MAIN)` trigger whose optional discard is the
  *    action of a "When you do" [ReflexiveTriggerEffect]. The reflexive ability targets a creature
  *    (chosen as it goes on the stack) and only fires if a card is actually discarded, matching the
  *    reflexive-discard pattern (cf. Inti, Passenger Ferry). [Effects.CantBlock] defaults to an
  *    end-of-turn duration ("this turn").
- *  - **Sonic Blast** — an ability word (flavor only). A [Triggers.leavesBattlefield]-to-graveyard
+ *  - **Sonic Blast** — an ability word (flavor only). A `Triggers.<subject>.leaves(to, excludeTo, excludeSacrifice)`-to-graveyard
  *    ("dies") trigger filtered to opponent-controlled creatures; [Player.TriggeringPlayer] resolves
  *    to the dying creature's controller, so Shriek deals 1 to "that player". `damageSource` defaults
  *    to the ability's source (Shriek).
@@ -45,22 +43,18 @@ val ShriekTreblemaker = card("Shriek, Treblemaker") {
     // "At the beginning of your first main phase, you may discard a card. When you do, target
     // creature can't block this turn."
     triggeredAbility {
-        trigger = Triggers.FirstMainPhase
-        effect = ReflexiveTriggerEffect(
+        trigger = Triggers.you.beginningOf(Step.PRECOMBAT_MAIN)
+        effect = Effects.ReflexiveTrigger(
             action = Effects.Discard(1),
-            optional = true,
-            reflexiveEffect = Effects.CantBlock(EffectTarget.ContextTarget(0)),
-            reflexiveTargetRequirements = listOf(Targets.Creature)
-        )
+            optional = true) {
+            val creature = target(TargetFilter.Creature)
+            effect = Effects.CantBlock(creature)
+        }
     }
 
     // "Sonic Blast — Whenever a creature an opponent controls dies, Shriek deals 1 damage to that player."
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.opponentControls(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.opponentControls()).dies()
         effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.TriggeringPlayer))
     }
 

@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Late to Dinner — Modern Horizons 2 #19
@@ -26,7 +27,7 @@ val LateToDinner = card("Late to Dinner") {
     oracleText = "Return target creature card from your graveyard to the battlefield. Create a Food token. (It's an artifact with \"{2}, {T}, Sacrifice this token: You gain 3 life.\")"
 
     spell {
-        val creature = target("target creature card from your graveyard", Targets.CreatureCardInYourGraveyard)
+        val creature = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.PutOntoBattlefieldFromGraveyard(creature) then Effects.CreateFood()
     }
 

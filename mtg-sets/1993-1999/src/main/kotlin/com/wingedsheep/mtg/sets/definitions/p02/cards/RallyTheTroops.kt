@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * The Portal "combat trick" timing pair: [com.wingedsheep.sdk.dsl.SpellBuilder.castOnlyDuring] plus
  * `castOnlyIf(YouWereAttackedThisStep)`. "All creatures you control" is [Effects.ForEachInGroup]
- * with the untap aimed at [EffectTarget.Self] — the current iteration entity.
+ * with the untap aimed at [EffectTarget.IterationEntity] — the current iteration entity.
  */
 val RallyTheTroops = card("Rally the Troops") {
     manaCost = "{W}"
@@ -33,7 +33,7 @@ val RallyTheTroops = card("Rally the Troops") {
         castOnlyIf(YouWereAttackedThisStep)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.Untap(EffectTarget.Self)
+            Effects.Untap(EffectTarget.IterationEntity)
         )
     }
 

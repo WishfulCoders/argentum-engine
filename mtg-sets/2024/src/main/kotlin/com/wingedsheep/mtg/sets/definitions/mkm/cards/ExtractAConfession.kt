@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.collectEvidence
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -42,13 +41,13 @@ val ExtractAConfession = card("Extract a Confession") {
     collectEvidence(6)
 
     spell {
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.WasEvidenceCollected,
-            effect = Effects.Sacrifice(
+            then = Effects.Sacrifice(
                 GameObjectFilter.Creature.hasGreatestPower(),
                 target = EffectTarget.PlayerRef(Player.EachOpponent)
             ),
-            elseEffect = Effects.Sacrifice(
+            otherwise = Effects.Sacrifice(
                 GameObjectFilter.Creature,
                 target = EffectTarget.PlayerRef(Player.EachOpponent)
             )

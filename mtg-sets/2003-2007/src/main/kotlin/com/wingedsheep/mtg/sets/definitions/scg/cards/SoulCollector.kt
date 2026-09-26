@@ -1,7 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -29,7 +28,7 @@ val SoulCollector = card("Soul Collector") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.CreatureDealtDamageByThisDies
+        trigger = Triggers.self.damagedCreatureDies()
         effect = Effects.PutOntoBattlefieldUnderYourControl(EffectTarget.TriggeringEntity)
     }
 

@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Prowler, Clawed Thief
@@ -26,10 +25,7 @@ val ProwlerClawedThief = card("Prowler, Clawed Thief") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.withSubtype("Villain").youControl(),
-            binding = TriggerBinding.OTHER,
-        )
+        trigger = Triggers.another(GameObjectFilter.Creature.withSubtype("Villain").youControl()).enters()
         effect = Effects.Connive()
         description = "Whenever another Villain you control enters, Prowler connives."
     }

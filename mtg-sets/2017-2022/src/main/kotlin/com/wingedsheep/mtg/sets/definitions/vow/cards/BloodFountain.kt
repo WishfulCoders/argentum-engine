@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
@@ -30,7 +29,7 @@ val BloodFountain = card("Blood Fountain") {
         "graveyard to your hand."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateBlood(1)
     }
 
@@ -41,8 +40,8 @@ val BloodFountain = card("Blood Fountain") {
             optional = true,
             filter = TargetFilter.CreatureInYourGraveyard
         )
-        effect = ForEachTargetEffect(
-            effects = listOf(Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND))
+        effect = Effects.ForEachTarget(
+            Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND)
         )
     }
 

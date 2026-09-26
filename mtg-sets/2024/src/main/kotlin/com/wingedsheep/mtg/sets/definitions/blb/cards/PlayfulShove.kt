@@ -20,9 +20,8 @@ val PlayfulShove = card("Playful Shove") {
     oracleText = "Playful Shove deals 1 damage to any target.\nDraw a card."
 
     spell {
-        val t = target("any target", Targets.Any)
-        effect = Effects.DealDamage(1, t)
-            .then(Effects.DrawCards(1))
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(1, t) then Effects.DrawCards(1)
     }
 
     metadata {

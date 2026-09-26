@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Hearth Kami
@@ -31,10 +30,7 @@ val HearthKami = card("Hearth Kami") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{X}"), Costs.SacrificeSelf)
-        val t = target(
-            "target",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Artifact.manaValueEqualsX()))
-        )
+        val t = target(TargetFilter(GameObjectFilter.Artifact.manaValueEqualsX()))
         effect = Effects.Destroy(t)
     }
 

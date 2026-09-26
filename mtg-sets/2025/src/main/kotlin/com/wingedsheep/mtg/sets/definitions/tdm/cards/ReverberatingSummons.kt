@@ -9,6 +9,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Reverberating Summons
@@ -27,7 +28,7 @@ val ReverberatingSummons = card("Reverberating Summons") {
         "{1}{R}, Discard your hand, Sacrifice this enchantment: Draw two cards."
 
     triggeredAbility {
-        trigger = Triggers.EachCombat
+        trigger = Triggers.anyPlayer.beginningOf(Step.BEGIN_COMBAT)
         interveningIf = Conditions.YouCastSpellsThisTurn(atLeast = 2)
         // Additive: no removeTypes, so the permanent stays an Enchantment while also becoming a creature.
         effect = Effects.BecomeCreature(

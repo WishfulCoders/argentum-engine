@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -24,10 +23,7 @@ val MentalNote = card("Mental Note") {
     typeLine = "Instant"
     oracleText = "Mill two cards.\nDraw a card."
     spell {
-        effect = Effects.Composite(
-            Patterns.Library.mill(2),
-            DrawCardsEffect(1)
-        )
+        effect = Patterns.Library.mill(2) then Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.COMMON

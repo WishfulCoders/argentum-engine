@@ -27,7 +27,7 @@ val ZephyrSpirit = card("Zephyr Spirit") {
     toughness = 6
 
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         effect = Effects.ReturnToHand(EffectTarget.Self)
     }
 

@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  * Whenever you cast a Spirit or Arcane spell, you may draw a card.
  *
  * The blue half of the CHK "Whenever you cast a Spirit or Arcane spell" cycle: the shared
- * [Triggers.youCastSpell] over a homogeneous OR of the two subtype filters, binding `ANY`.
+ * `Triggers.you.casts(spell, requires)` over a homogeneous OR of the two subtype filters, binding `ANY`.
  *
  * The printed "you may" is the builder's `optional = true`, which lowers to a `Gate.MayDecide`
  * around the draw. The "may" matters here rather than being flavour: the trigger goes on the
@@ -35,9 +35,7 @@ val SireOfTheStorm = card("Sire of the Storm") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.Any.withAnySubtype("Spirit", "Arcane")
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withAnySubtype("Spirit", "Arcane"))
         effect = Effects.DrawCards(1)
         optional = true
         description = "Whenever you cast a Spirit or Arcane spell, you may draw a card."

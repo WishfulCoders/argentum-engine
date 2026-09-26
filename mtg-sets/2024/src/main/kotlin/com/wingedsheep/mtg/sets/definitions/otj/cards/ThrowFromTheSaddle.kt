@@ -1,18 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Throw from the Saddle
@@ -36,24 +32,22 @@ val ThrowFromTheSaddle = card("Throw from the Saddle") {
         "creature you don't control."
 
     spell {
-        val mine = target("creature you control", Targets.CreatureYouControl)
-        val theirs = target("creature you don't control", Targets.CreatureOpponentControls)
+        val mine = target(TargetFilter.CreatureYouControl)
+        val theirs = target(TargetFilter.CreatureOpponentControls)
 
-        val boost = ConditionalEffect(
-            condition = Conditions.TargetMatchesFilter(
-                GameObjectFilter.Creature.withSubtype(Subtype("Mount")), targetIndex = 0
-            ),
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, mine),
-            elseEffect = Effects.ModifyStats(1, 1, mine)
+        val boost = Effects.If(
+            condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.withSubtype(Subtype("Mount")), mine),
+            then = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, mine),
+            otherwise = Effects.ModifyStats(1, 1, mine)
         )
 
-        val damage = DealDamageEffect(
-            amount = DynamicAmount.EntityProperty(EntityReference.Target(0), EntityNumericProperty.Power),
+        val damage = Effects.DealDamage(
+            amount = DynamicAmounts.powerOf(mine),
             target = theirs,
             damageSource = mine
         )
 
-        effect = boost.then(damage)
+        effect = boost then damage
     }
 
     metadata {

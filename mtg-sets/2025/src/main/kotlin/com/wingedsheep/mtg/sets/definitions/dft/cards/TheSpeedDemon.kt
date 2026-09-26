@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -8,7 +9,7 @@ import com.wingedsheep.sdk.dsl.startYourEngines
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * The Speed Demon — Aetherdrift #105
@@ -41,11 +42,9 @@ val TheSpeedDemon = card("The Speed Demon") {
     startYourEngines()
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
-        effect = Effects.Composite(
-            Effects.DrawCards(DynamicAmount.Speed(Player.You)),
-            Effects.LoseLife(DynamicAmount.Speed(Player.You), EffectTarget.Controller),
-        )
+        trigger = Triggers.you.beginningOf(Step.END)
+        effect = Effects.DrawCards(DynamicAmounts.speed(Player.You)) then
+            Effects.LoseLife(DynamicAmounts.speed(Player.You), EffectTarget.Controller)
         description = "At the beginning of your end step, you draw X cards and lose X life, " +
             "where X is your speed."
     }

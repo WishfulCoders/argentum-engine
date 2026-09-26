@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Mirkwood Spider
@@ -28,11 +27,8 @@ val MirkwoodSpider = card("Mirkwood Spider") {
     keywords(Keyword.DEATHTOUCH)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val legendary = target(
-            "target legendary creature you control",
-            TargetCreature(filter = TargetFilter.CreatureYouControl.legendary())
-        )
+        trigger = Triggers.self.attacks()
+        val legendary = target(TargetFilter.CreatureYouControl.legendary())
         effect = Effects.GrantKeyword(Keyword.DEATHTOUCH, legendary)
     }
 

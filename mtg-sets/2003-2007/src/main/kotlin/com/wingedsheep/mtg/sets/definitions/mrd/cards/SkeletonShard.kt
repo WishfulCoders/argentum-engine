@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Skeleton Shard — Mirrodin #242 (canonical printing; Planechase 2009 is a later reprint)
@@ -36,20 +35,14 @@ val SkeletonShard = card("Skeleton Shard") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap)
-        val card = target(
-            "target artifact creature card from your graveyard",
-            TargetObject(filter = ArtifactCreatureInYourGraveyard),
-        )
+        val card = target(ArtifactCreatureInYourGraveyard)
         effect = Effects.ReturnToHand(card)
         description = "{3}, {T}: Return target artifact creature card from your graveyard to your hand."
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{B}"), Costs.Tap)
-        val card = target(
-            "target artifact creature card from your graveyard",
-            TargetObject(filter = ArtifactCreatureInYourGraveyard),
-        )
+        val card = target(ArtifactCreatureInYourGraveyard)
         effect = Effects.ReturnToHand(card)
         description = "{B}, {T}: Return target artifact creature card from your graveyard to your hand."
     }

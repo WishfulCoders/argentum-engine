@@ -5,20 +5,10 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.RevealHandEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Dai Li Indoctrination — {1}{B} Sorcery — Lesson
@@ -45,34 +35,24 @@ val DaiLiIndoctrination = card("Dai Li Indoctrination") {
     spell {
         modal(chooseCount = 1) {
             mode("Target opponent reveals their hand. You choose a nonland permanent card from it. That player discards that card") {
-                val opponent = target("target opponent", TargetOpponent())
-                effect = Effects.Composite(
-                    listOf(
-                        RevealHandEffect(opponent),
-                        GatherCardsEffect(
-                            source = CardSource.FromZone(Zone.HAND, Player.ContextPlayer(0)),
-                            storeAs = "opponentHand"
-                        ),
-                        SelectFromCollectionEffect(
-                            from = "opponentHand",
-                            selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                            chooser = Chooser.Controller,
-                            filter = GameObjectFilter.NonlandPermanent,
-                            storeSelected = "toDiscard",
-                            prompt = "Choose a nonland permanent card to discard",
-                            alwaysPrompt = true,
-                            showAllCards = true
-                        ),
-                        MoveCollectionEffect(
-                            from = "toDiscard",
-                            destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
-                            moveType = MoveType.Discard
-                        )
+                val opponent = target(Targets.Opponent)
+                effect = Effects.Pipeline {
+                    run(Effects.RevealHand(opponent))
+                    val opponentHand = gather(CardSource.FromZone(Zone.HAND, opponent.asPlayer))
+                    val toDiscard = chooseExactly(
+                        1,
+                        from = opponentHand,
+                        chooser = Chooser.Controller,
+                        filter = GameObjectFilter.NonlandPermanent,
+                        prompt = "Choose a nonland permanent card to discard",
+                        alwaysPrompt = true,
+                        showAllCards = true
                     )
-                )
+                    discard(toDiscard, opponent.asPlayer)
+                }
             }
             mode("Earthbend 2") {
-                val land = target("target land you control", TargetObject(filter = TargetFilter.Land.youControl()))
+                val land = target(TargetFilter.Land.youControl())
                 effect = Effects.Earthbend(2, land)
             }
         }

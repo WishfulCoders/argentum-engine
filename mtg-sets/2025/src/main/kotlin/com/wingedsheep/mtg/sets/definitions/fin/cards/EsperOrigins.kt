@@ -15,7 +15,6 @@ import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Esper Origins // Summon: Esper Maduin — Final Fantasy #185
@@ -58,7 +57,7 @@ private val SummonEsperMaduin = card("Summon: Esper Maduin") {
     // is revealed but stays on top of the library in place (CardOrder.Preserve, top placement).
     sagaChapter(1) {
         effect = Patterns.Library.revealTopPutAllMatchingToHand(
-            count = DynamicAmount.Fixed(1),
+            count = 1,
             filter = GameObjectFilter.Permanent,
             restDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Top),
             restOrder = CardOrder.Preserve,
@@ -103,13 +102,10 @@ private val EsperOriginsFront = card("Esper Origins") {
         "Flashback {3}{G} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
 
     spell {
-        effect = Effects.Composite(
-            Effects.Surveil(2),
-            Effects.GainLife(2),
-        )
+        effect = Effects.Surveil(2) then Effects.GainLife(2)
         // If cast from a graveyard, this resolution puts the card onto the battlefield transformed
         // (as Summon: Esper Maduin) with a finality counter, instead of going to the graveyard.
-        returnTransformedFromGraveyard(CounterType.FINALITY)
+        returnTransformedFromGraveyard(listOf(CounterType.FINALITY))
     }
 
     keywordAbility(KeywordAbility.flashback("{3}{G}"))

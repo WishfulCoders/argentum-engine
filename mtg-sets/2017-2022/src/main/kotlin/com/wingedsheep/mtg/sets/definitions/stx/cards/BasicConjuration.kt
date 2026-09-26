@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Basic Conjuration — Strixhaven: School of Mages #120 (canonical printing)
@@ -27,7 +26,7 @@ val BasicConjuration = card("Basic Conjuration") {
 
     spell {
         effect = Patterns.Library.lookAtTopRevealMatchingToHand(
-            count = DynamicAmount.Fixed(6),
+            count = 6,
             filter = GameObjectFilter.Creature,
             prompt = "You may reveal a creature card from among them and put it into your hand"
         ) then Effects.GainLife(3)

@@ -26,7 +26,7 @@ val BarkKnuckleBoxer = card("Bark-Knuckle Boxer") {
         "(You expend 4 as you spend your fourth total mana to cast spells during a turn.)"
 
     triggeredAbility {
-        trigger = Triggers.Expend(4)
+        trigger = Triggers.you.expends(4)
         effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self)
     }
 

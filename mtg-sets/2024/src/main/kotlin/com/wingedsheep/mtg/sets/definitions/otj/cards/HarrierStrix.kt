@@ -4,10 +4,10 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Harrier Strix
@@ -29,8 +29,8 @@ val HarrierStrix = card("Harrier Strix") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val permanent = target("permanent to tap", Targets.Permanent)
+        trigger = Triggers.self.enters()
+        val permanent = target(TargetFilter.Permanent)
         effect = Effects.Tap(permanent)
     }
 

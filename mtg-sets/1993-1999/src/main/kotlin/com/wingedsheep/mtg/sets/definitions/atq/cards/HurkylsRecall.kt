@@ -28,7 +28,7 @@ val HurkylsRecall = card("Hurkyl's Recall") {
     oracleText = "Return all artifacts target player owns to their hand."
 
     spell {
-        target("target player", Targets.Player)
+        target(Targets.Player)
         effect = Patterns.Group.returnAllToHand(
             GroupFilter(GameObjectFilter.Artifact.ownedByTargetPlayer())
         )

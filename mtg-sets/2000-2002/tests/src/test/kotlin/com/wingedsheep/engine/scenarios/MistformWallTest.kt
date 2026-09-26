@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.ChooseOptionDecision
 import com.wingedsheep.engine.core.OptionChosenResponse
-import com.wingedsheep.engine.core.TurnManager
 import com.wingedsheep.engine.mechanics.layers.StateProjector
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
@@ -14,7 +13,6 @@ import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.model.CreatureStats
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.dsl.Costs
-import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.effects.BecomeCreatureTypeEffect
@@ -25,6 +23,7 @@ import com.wingedsheep.sdk.dsl.Conditions
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import java.util.UUID
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Tests for Mistform Wall.
@@ -127,7 +126,7 @@ class MistformWallTest : FunSpec({
                 abilityId = mistformWallAbilityId
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         // Resolve the ability
         driver.bothPass()
@@ -218,7 +217,7 @@ class MistformWallTest : FunSpec({
         projected.getSubtypes(wall) shouldBe setOf("Goblin")
     }
 
-    val turnManager = TurnManager(cardRegistry = com.wingedsheep.engine.registry.CardRegistry())
+    val turnManager = com.wingedsheep.engine.core.EngineServices(com.wingedsheep.engine.registry.CardRegistry()).turnManager
 
     test("not a valid attacker while still a Wall (has defender)") {
         val driver = createDriver()
@@ -313,7 +312,7 @@ class MistformWallTest : FunSpec({
 
         // Attack with the former Wall
         val attackResult = driver.declareAttackers(activePlayer, listOf(wall), opponent)
-        attackResult.isSuccess shouldBe true
+        attackResult.outcome shouldBe Outcome.Done
         driver.bothPass()
 
         // No blocks

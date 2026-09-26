@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.core.Step
 
 
 /**
@@ -22,7 +23,7 @@ val ThinkTank = card("Think Tank") {
     typeLine = "Enchantment"
     oracleText = "At the beginning of your upkeep, surveil 1. (Look at the top card of your library. You may put that card into your graveyard.)"
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Patterns.Library.surveil(1)
     }
     metadata {

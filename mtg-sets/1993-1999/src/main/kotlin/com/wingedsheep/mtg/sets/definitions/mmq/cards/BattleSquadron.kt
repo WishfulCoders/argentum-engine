@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.mmq.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Battle Squadron
@@ -21,7 +21,7 @@ val BattleSquadron = card("Battle Squadron") {
         "Battle Squadron's power and toughness are each equal to the number of creatures you control."
     power = 0
     toughness = 0
-    dynamicStats(DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Creature))
+    dynamicStats(DynamicAmounts.creaturesYouControl())
 
     keywords(Keyword.FLYING)
 

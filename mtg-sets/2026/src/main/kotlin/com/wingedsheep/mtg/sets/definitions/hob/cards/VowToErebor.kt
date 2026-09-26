@@ -3,14 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.hob.cards
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Vow to Erebor — The Hobbit #31
@@ -37,16 +35,12 @@ val VowToErebor = card("Vow to Erebor") {
         "If it's a Dwarf, you may attach an Equipment you control to it."
 
     spell {
-        target = Targets.CreatureYouControl
-        effect = Effects.Composite(
-            Effects.Untap(EffectTarget.ContextTarget(0)),
-            Effects.ModifyStats(2, 2, EffectTarget.ContextTarget(0), Duration.EndOfTurn),
-            ConditionalEffect(
-                condition = Conditions.TargetMatchesFilter(
-                    GameObjectFilter.Creature.withSubtype(Subtype.DWARF),
-                    targetIndex = 0
-                ),
-                effect = Effects.Pipeline {
+        val creatureYouControl = target(TargetFilter.CreatureYouControl)
+        effect = Effects.Untap(creatureYouControl) then
+            Effects.ModifyStats(2, 2, creatureYouControl, Duration.EndOfTurn) then
+            Effects.If(
+                condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.withSubtype(Subtype.DWARF), creatureYouControl),
+                then = Effects.Pipeline {
                     val equipment = gather(
                         filter = GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT),
                         player = Player.You,
@@ -61,13 +55,12 @@ val VowToErebor = card("Vow to Erebor") {
                     )
                     run(
                         Effects.AttachTargetEquipmentToCreature(
-                            equipmentTarget = EffectTarget.PipelineTarget(chosen.key),
-                            creatureTarget = EffectTarget.ContextTarget(0)
+                            equipmentTarget = chosen.asTarget,
+                            creatureTarget = creatureYouControl
                         )
                     )
                 }
             )
-        )
     }
 
     metadata {

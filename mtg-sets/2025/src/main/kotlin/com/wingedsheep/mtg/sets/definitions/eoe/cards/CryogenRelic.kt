@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 
@@ -23,13 +23,13 @@ val CryogenRelic = card("Cryogen Relic") {
 
     // ETB trigger: draw a card
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1)
     }
 
     // Leaves battlefield trigger: draw a card
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.DrawCards(1)
     }
 
@@ -40,15 +40,10 @@ val CryogenRelic = card("Cryogen Relic") {
             Costs.SacrificeSelf
         )
         val target = target(
-            "target tapped creature",
-            com.wingedsheep.sdk.scripting.targets.TargetPermanent(
-                filter = com.wingedsheep.sdk.scripting.filters.unified.TargetFilter(
-                    GameObjectFilter.Creature.tapped()
-                ),
-                optional = true
-            )
+            com.wingedsheep.sdk.scripting.filters.unified.TargetFilter(GameObjectFilter.Creature.tapped()),
+            optional = true,
         )
-        effect = Effects.AddCounters("STUN", 1, target)
+        effect = Effects.AddCounters(CounterType.STUN, 1, target)
     }
 
     metadata {

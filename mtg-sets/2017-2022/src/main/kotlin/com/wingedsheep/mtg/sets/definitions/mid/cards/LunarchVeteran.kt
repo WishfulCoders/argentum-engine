@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.RedirectZoneChange
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Lunarch Veteran // Luminous Phantom (Innistrad: Midnight Hunt #27 — the card's earliest
@@ -32,7 +31,7 @@ import com.wingedsheep.sdk.scripting.TriggerBinding
  *    cast-from-graveyard enumerator offers the back face for the disturb cost, and the spell goes
  *    on the stack back face up (CR 712.8c), so the Phantom's triggers and flying are what the
  *    resolving permanent has.
- *  - The two life triggers are mirror images: [Triggers.OtherCreatureEnters] on the front and
+ *  - The two life triggers are mirror images: `Triggers.another(GameObjectFilter.Creature.youControl()).enters()` on the front and
  *    `leavesBattlefield(Creature.youControl(), binding = OTHER)` on the back. Both are OTHER-bound,
  *    so neither face's own arrival or departure feeds itself.
  *  - "Would be put into a graveyard from anywhere, exile it instead" is the reusable
@@ -50,7 +49,7 @@ private val LunarchVeteranFront = card("Lunarch Veteran") {
         "Disturb {1}{W} (You may cast this card from your graveyard transformed for its disturb cost.)"
 
     triggeredAbility {
-        trigger = Triggers.OtherCreatureEnters
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
         effect = Effects.GainLife(1)
         description = "Whenever another creature you control enters, you gain 1 life."
     }
@@ -97,10 +96,7 @@ private val LuminousPhantom = card("Luminous Phantom") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.youControl(),
-            binding = TriggerBinding.OTHER,
-        )
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).leaves()
         effect = Effects.GainLife(1)
         description = "Whenever another creature you control leaves the battlefield, you gain 1 life."
     }

@@ -2,14 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Mad Auntie
@@ -38,13 +37,8 @@ val MadAuntie = card("Mad Auntie") {
     activatedAbility {
         cost = Costs.Tap
         // Any Goblin permanent except this Mad Auntie itself — a different Mad Auntie is a legal target.
-        val t = target(
-            "target",
-            TargetPermanent(
-                filter = TargetFilter(GameObjectFilter.Permanent.withSubtype(Subtype.GOBLIN), excludeSelf = true)
-            )
-        )
-        effect = RegenerateEffect(t)
+        val t = target(TargetFilter(GameObjectFilter.Permanent.withSubtype(Subtype.GOBLIN), excludeSelf = true))
+        effect = Effects.Regenerate(t)
     }
 
     metadata {

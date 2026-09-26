@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
@@ -9,11 +10,8 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.effects.MoveType
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Steal the Show
@@ -43,9 +41,9 @@ val StealTheShow = card("Steal the Show") {
     spell {
         modal(chooseCount = 2, minChooseCount = 1) {
             mode("Target player discards any number of cards, then draws that many cards") {
-                val player = target("target player", Targets.Player)
+                val player = target(Targets.Player)
                 effect = Effects.Pipeline {
-                    val hand = gather(CardSource.FromZone(Zone.HAND, Player.ContextPlayer(0)))
+                    val hand = gather(CardSource.FromZone(Zone.HAND, player.asPlayer))
                     val discarded = chooseAnyNumber(
                         from = hand,
                         chooser = Chooser.TargetPlayer,
@@ -53,21 +51,21 @@ val StealTheShow = card("Steal the Show") {
                     )
                     move(
                         discarded,
-                        CardDestination.ToZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
+                        CardDestination.ToZone(Zone.GRAVEYARD, player.asPlayer),
                         moveType = MoveType.Discard
                     )
                     run(
-                        DrawCardsEffect(
-                            DynamicAmount.VariableReference("${discarded.key}_count"),
-                            EffectTarget.ContextTarget(0)
+                        Effects.DrawCards(
+                            discarded.count,
+                            player
                         )
                     )
                 }
             }
             mode("Steal the Show deals damage equal to the number of instant and sorcery cards in your graveyard to target creature or planeswalker") {
-                val tgt = target("target creature or planeswalker", Targets.CreatureOrPlaneswalker)
+                val tgt = target(Targets.CreatureOrPlaneswalker)
                 effect = Effects.DealDamage(
-                    DynamicAmount.Count(
+                    DynamicAmounts.count(
                         Player.You,
                         Zone.GRAVEYARD,
                         GameObjectFilter.InstantOrSorcery

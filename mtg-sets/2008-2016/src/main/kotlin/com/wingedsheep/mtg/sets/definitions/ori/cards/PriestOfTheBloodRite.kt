@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Priest of the Blood Rite
@@ -29,7 +30,7 @@ val PriestOfTheBloodRite = card("Priest of the Blood Rite") {
         "At the beginning of your upkeep, you lose 2 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 5,
             toughness = 5,
@@ -42,7 +43,7 @@ val PriestOfTheBloodRite = card("Priest of the Blood Rite") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.LoseLife(2, EffectTarget.Controller)
         description = "At the beginning of your upkeep, you lose 2 life."
     }

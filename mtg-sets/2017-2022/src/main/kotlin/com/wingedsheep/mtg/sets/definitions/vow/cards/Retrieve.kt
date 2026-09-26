@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Retrieve
@@ -30,26 +29,12 @@ val Retrieve = card("Retrieve") {
 
     spell {
         selfExile()
-        val creature = target(
-            "creature",
-            TargetObject(optional = true, filter = TargetFilter.CreatureInYourGraveyard)
-        )
+        val creature = target(TargetFilter.CreatureInYourGraveyard, optional = true)
         val noncreature = target(
-            "noncreature permanent",
-            TargetObject(
-                optional = true,
-                filter = TargetFilter(
-                    GameObjectFilter.NoncreaturePermanent.ownedByYou(),
-                    zone = Zone.GRAVEYARD
-                )
-            )
+            TargetFilter(GameObjectFilter.NoncreaturePermanent.ownedByYou(), zone = Zone.GRAVEYARD),
+            optional = true,
         )
-        effect = Effects.Composite(
-            listOf(
-                Effects.ReturnToHand(creature),
-                Effects.ReturnToHand(noncreature)
-            )
-        )
+        effect = Effects.ReturnToHand(creature) then Effects.ReturnToHand(noncreature)
     }
 
     metadata {

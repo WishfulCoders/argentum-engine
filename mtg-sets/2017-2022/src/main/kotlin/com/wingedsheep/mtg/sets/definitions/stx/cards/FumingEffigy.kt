@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Fuming Effigy — Strixhaven: School of Mages #103 (canonical printing)
@@ -14,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever one or more cards leave your graveyard, this creature deals 1 damage to each opponent.
  *
  * "One or more … leave" is CR 603.2c batch wording, so the trigger is the batching
- * [Triggers.CardsLeaveYourGraveyard] with its default any-card filter: a mass reanimation or a
+ * `Triggers.oneOrMore(filter).leaveYourGraveyard()` with its default any-card filter: a mass reanimation or a
  * graveyard-exiling sweep fires it exactly once. The damage is a single [Effects.DealDamage]
  * aimed at [Player.EachOpponent].
  */
@@ -28,7 +29,7 @@ val FumingEffigy = card("Fuming Effigy") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.CardsLeaveYourGraveyard()
+        trigger = Triggers.oneOrMore(GameObjectFilter.Any).leaveYourGraveyard()
         effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent))
     }
 

@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Agonizing Syphon
@@ -20,9 +19,8 @@ val AgonizingSyphon = card("Agonizing Syphon") {
     oracleText = "Agonizing Syphon deals 3 damage to any target and you gain 3 life."
 
     spell {
-        target = Targets.Any
-        effect = Effects.DealDamage(3, EffectTarget.ContextTarget(0))
-            .then(Effects.GainLife(3))
+        val anyTarget = target(Targets.Any)
+        effect = Effects.DealDamage(3, anyTarget) then Effects.GainLife(3)
     }
 
     metadata {

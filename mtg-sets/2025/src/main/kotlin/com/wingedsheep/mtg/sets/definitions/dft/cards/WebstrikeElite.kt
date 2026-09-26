@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Webstrike Elite — Aetherdrift #186
@@ -41,14 +40,8 @@ val WebstrikeElite = card("Webstrike Elite") {
     keywordAbility(KeywordAbility.cycling("{X}{G}{G}"))
 
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
-        val t = target(
-            "up to one target artifact or enchantment with mana value X",
-            TargetPermanent(
-                optional = true,
-                filter = TargetFilter(GameObjectFilter.ArtifactOrEnchantment.manaValueEqualsX())
-            )
-        )
+        trigger = Triggers.self.isCycled()
+        val t = target(TargetFilter(GameObjectFilter.ArtifactOrEnchantment.manaValueEqualsX()), optional = true)
         effect = Effects.Destroy(t)
         description = "When you cycle this card, destroy up to one target artifact or " +
             "enchantment with mana value X."

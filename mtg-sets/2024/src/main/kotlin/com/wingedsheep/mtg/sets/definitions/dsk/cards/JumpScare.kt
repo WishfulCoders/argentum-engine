@@ -2,11 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Jump Scare
@@ -30,15 +29,11 @@ val JumpScare = card("Jump Scare") {
         "Horror enchantment creature in addition to its other types."
 
     spell {
-        target = Targets.Creature
-        effect = Effects.Composite(
-            listOf(
-                Effects.ModifyStats(2, 2, target = EffectTarget.ContextTarget(0), duration = Duration.EndOfTurn),
-                Effects.GrantKeyword(Keyword.FLYING, target = EffectTarget.ContextTarget(0), duration = Duration.EndOfTurn),
-                Effects.AddCreatureType("Horror", target = EffectTarget.ContextTarget(0), duration = Duration.EndOfTurn),
-                Effects.AddCardType("ENCHANTMENT", target = EffectTarget.ContextTarget(0), duration = Duration.EndOfTurn)
-            )
-        )
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 2, target = creature, duration = Duration.EndOfTurn) then
+            Effects.GrantKeyword(Keyword.FLYING, target = creature, duration = Duration.EndOfTurn) then
+            Effects.AddCreatureType("Horror", target = creature, duration = Duration.EndOfTurn) then
+            Effects.AddCardType("ENCHANTMENT", target = creature, duration = Duration.EndOfTurn)
     }
 
     metadata {

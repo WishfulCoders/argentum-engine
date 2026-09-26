@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 
 /**
  * Raucous Audience
@@ -17,7 +16,7 @@ import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
  * {T}: Add {G}. If you control a creature with power 4 or greater, add {G}{G} instead.
  *
  * A mana ability whose output is gated on a state test evaluated at resolution: if you control a
- * creature with power 4 or greater it produces {G}{G}, otherwise {G}. Modeled as a [ConditionalEffect]
+ * creature with power 4 or greater it produces {G}{G}, otherwise {G}. Modeled as a [Effects.If]
  * over the projected battlefield ([GameObjectFilter.Creature.powerAtLeast]) so power-modifying effects
  * are honored.
  */
@@ -31,10 +30,10 @@ val RaucousAudience = card("Raucous Audience") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.YouControl(GameObjectFilter.Creature.powerAtLeast(4)),
-            effect = Effects.AddMana(Color.GREEN, 2),
-            elseEffect = Effects.AddMana(Color.GREEN),
+            then = Effects.AddMana(Color.GREEN, 2),
+            otherwise = Effects.AddMana(Color.GREEN),
         )
         manaAbility = true
         timing = TimingRule.ManaAbility

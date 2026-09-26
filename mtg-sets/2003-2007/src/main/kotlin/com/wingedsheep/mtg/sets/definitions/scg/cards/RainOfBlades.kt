@@ -2,7 +2,6 @@ package com.wingedsheep.mtg.sets.definitions.scg.cards
 
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.dsl.Effects
@@ -22,7 +21,7 @@ val RainOfBlades = card("Rain of Blades") {
     spell {
         effect = Effects.ForEachInGroup(
             filter = GroupFilter.AttackingCreatures,
-            effect = DealDamageEffect(1, EffectTarget.Self)
+            effect = Effects.DealDamage(1, EffectTarget.IterationEntity)
         )
     }
 

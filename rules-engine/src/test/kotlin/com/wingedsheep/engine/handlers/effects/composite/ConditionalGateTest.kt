@@ -2,7 +2,6 @@ package com.wingedsheep.engine.handlers.effects.composite
 
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.Gate
 import com.wingedsheep.sdk.scripting.effects.GatedEffect
 import com.wingedsheep.sdk.scripting.effects.PayManaCostEffect
@@ -15,7 +14,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 
 /**
  * Pins the recognition boundary of [asConditional] — the matcher engine paths use to recognize the
- * lowered `ConditionalEffect` (a [GatedEffect] over a [Gate.WhenCondition]) after the wrapper became
+ * lowered `Effects.If` (a [GatedEffect] over a [Gate.WhenCondition]) after the wrapper became
  * a facade. Stack-time branch resolution, repeat-activation analysis, and limited card rating all
  * key off it, so it must match exactly the WhenCondition shape and nothing else.
  */
@@ -25,8 +24,8 @@ class ConditionalGateTest : FunSpec({
     val elseEffect = Effects.DrawCards(2)
     val condition = Conditions.IsYourTurn
 
-    test("the ConditionalEffect facade lowers to a Gate.WhenCondition") {
-        val lowered = ConditionalEffect(condition, thenEffect, elseEffect)
+    test("the Effects.If facade lowers to a Gate.WhenCondition") {
+        val lowered = Effects.If(condition, thenEffect, elseEffect)
         lowered.shouldBeInstanceOf<GatedEffect>()
         val gate = lowered.gate
         gate.shouldBeInstanceOf<Gate.WhenCondition>()
@@ -35,8 +34,8 @@ class ConditionalGateTest : FunSpec({
         lowered.otherwise shouldBe elseEffect
     }
 
-    test("asConditional matches the lowered ConditionalEffect, exposing both branches") {
-        val match = ConditionalEffect(condition, thenEffect, elseEffect).asConditional()
+    test("asConditional matches the lowered Effects.If, exposing both branches") {
+        val match = Effects.If(condition, thenEffect, elseEffect).asConditional()
         match.shouldNotBeNull()
         match.condition shouldBe condition
         match.then shouldBe thenEffect
@@ -44,7 +43,7 @@ class ConditionalGateTest : FunSpec({
     }
 
     test("asConditional matches a one-branch conditional, with a null otherwise") {
-        val match = ConditionalEffect(condition, thenEffect).asConditional()
+        val match = Effects.If(condition, thenEffect).asConditional()
         match.shouldNotBeNull()
         match.then shouldBe thenEffect
         match.otherwise.shouldBeNull()

@@ -3,11 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.lgn.cards
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 /**
  * Withered Wretch
  * {B}{B}
@@ -25,7 +25,7 @@ val WitheredWretch = card("Withered Wretch") {
 
     activatedAbility {
         cost = Costs.Mana(ManaCost.parse("{1}"))
-        val t = target("target card in a graveyard", Targets.CardInGraveyard)
+        val t = target(TargetFilter.CardInGraveyard)
         effect = Effects.Move(t, Zone.EXILE)
     }
 

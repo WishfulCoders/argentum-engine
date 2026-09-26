@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.PreventLifeGain
+import com.wingedsheep.sdk.core.Step
 
 val SulfuricVortex = card("Sulfuric Vortex") {
     manaCost = "{1}{R}{R}"
@@ -16,7 +17,7 @@ val SulfuricVortex = card("Sulfuric Vortex") {
     oracleText = "At the beginning of each player's upkeep, Sulfuric Vortex deals 2 damage to that player.\nIf a player would gain life, that player gains no life instead."
 
     triggeredAbility {
-        trigger = Triggers.EachUpkeep
+        trigger = Triggers.anyPlayer.beginningOf(Step.UPKEEP)
         effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.TriggeringPlayer))
     }
 

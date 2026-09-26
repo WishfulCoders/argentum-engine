@@ -8,11 +8,8 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -31,18 +28,12 @@ val ReverentHowl = card("Reverent Howl") {
     spell {
         modal(chooseCount = 1) {
             mode("Target player draws two cards and loses 2 life") {
-                val t = target("target", TargetPlayer())
-                effect = Effects.Composite(
-                    DrawCardsEffect(2, t),
-                    LoseLifeEffect(2, t)
-                )
+                val t = target(Targets.Player)
+                effect = Effects.DrawCards(2, t) then Effects.LoseLife(2, t)
             }
             mode("Target creature gets +2/+2 and gains lifelink until end of turn") {
-                val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-                effect = Effects.Composite(
-                    Effects.ModifyStats(2, 2, t),
-                    Effects.GrantKeyword(Keyword.LIFELINK, t)
-                )
+                val t = target(TargetFilter.Creature)
+                effect = Effects.ModifyStats(2, 2, t) then Effects.GrantKeyword(Keyword.LIFELINK, t)
             }
         }
     }

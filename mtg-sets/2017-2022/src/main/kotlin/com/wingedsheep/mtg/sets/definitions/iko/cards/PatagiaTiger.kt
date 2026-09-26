@@ -7,8 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Patagia Tiger
@@ -32,11 +30,9 @@ val PatagiaTiger = card("Patagia Tiger") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = TargetObject(
-            filter = TargetFilter(GameObjectFilter.Permanent.youControl().withSubtype("Human"))
-        )
-        effect = Effects.ModifyStats(2, 2, EffectTarget.ContextTarget(0))
+        val target = target(TargetFilter(GameObjectFilter.Permanent.youControl().withSubtype("Human")))
+        trigger = Triggers.self.enters()
+        effect = Effects.ModifyStats(2, 2, target)
     }
 
     metadata {

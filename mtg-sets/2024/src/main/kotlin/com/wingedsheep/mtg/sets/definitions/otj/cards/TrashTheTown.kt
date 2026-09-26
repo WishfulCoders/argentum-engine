@@ -1,16 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.GrantTriggeredAbilityEffect
-import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Trash the Town {G}
@@ -43,34 +42,30 @@ val TrashTheTown = card("Trash the Town") {
         "combat damage to a player, draw two cards.\""
 
     spell {
-        effect = ModalEffect(
+        effect = Effects.Modal(
             modes = listOf(
-                Mode(
-                    effect = Effects.AddCounters("+1/+1", 2, EffectTarget.ContextTarget(0)),
-                    targetRequirements = listOf(Targets.Creature),
-                    description = "+ {2} — Put two +1/+1 counters on target creature.",
+                mode("+ {2} — Put two +1/+1 counters on target creature.") {
+                    val creature = target(TargetFilter.Creature)
                     additionalManaCost = "{2}"
-                ),
-                Mode(
-                    effect = Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.ContextTarget(0)),
-                    targetRequirements = listOf(Targets.Creature),
-                    description = "+ {1} — Target creature gains trample until end of turn.",
+                    effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, creature)
+                },
+                mode("+ {1} — Target creature gains trample until end of turn.") {
+                    val creature = target(TargetFilter.Creature)
                     additionalManaCost = "{1}"
-                ),
-                Mode(
-                    effect = GrantTriggeredAbilityEffect(
+                    effect = Effects.GrantKeyword(Keyword.TRAMPLE, creature)
+                },
+                mode("+ {1} — Until end of turn, target creature gains \"Whenever " +
+                    "this creature deals combat damage to a player, draw two cards.\"") {
+                    val creature = target(TargetFilter.Creature)
+                    additionalManaCost = "{1}"
+                    effect = Effects.GrantTriggeredAbility(
                         ability = TriggeredAbility.create(
-                            trigger = Triggers.DealsCombatDamageToPlayer.event,
-                            binding = Triggers.DealsCombatDamageToPlayer.binding,
+                            trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer),
                             effect = Effects.DrawCards(2)
                         ),
-                        target = EffectTarget.ContextTarget(0)
-                    ),
-                    targetRequirements = listOf(Targets.Creature),
-                    description = "+ {1} — Until end of turn, target creature gains \"Whenever " +
-                        "this creature deals combat damage to a player, draw two cards.\"",
-                    additionalManaCost = "{1}"
-                )
+                        target = creature
+                    )
+                }
             ),
             chooseCount = 3,
             minChooseCount = 1

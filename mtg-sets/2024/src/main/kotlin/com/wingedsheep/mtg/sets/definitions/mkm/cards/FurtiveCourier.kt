@@ -44,7 +44,7 @@ val FurtiveCourier = card("Furtive Courier") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Hand.loot()
     }
 

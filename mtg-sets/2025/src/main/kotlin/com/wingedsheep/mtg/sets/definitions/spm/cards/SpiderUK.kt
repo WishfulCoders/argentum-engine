@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.webSlinging
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Spider-UK — Marvel's Spider-Man #17
@@ -32,7 +33,7 @@ val SpiderUK = card("Spider-UK") {
     webSlinging("{2}{W}")
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.CreaturesEnteredThisTurn(atLeast = 2)
         effect = Effects.DrawCards(1) then Effects.GainLife(2)
         description = "At the beginning of your end step, if two or more creatures entered the " +

@@ -39,7 +39,7 @@ val DidactEcho = card("Didact Echo") {
         "Descend 4 — This creature has flying as long as there are four or more permanent cards in your graveyard."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1)
     }
 

@@ -1,5 +1,6 @@
 package com.wingedsheep.sdk.scripting
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.text.TextReplacer
@@ -107,7 +108,7 @@ data class IsAllCreatureTypes(
  * replacing their own (CR 205.1b) while keeping every non-creature subtype.
  *
  * The type half of the "copy some characteristics of another object" family: [source] is an
- * ordinary [com.wingedsheep.sdk.scripting.values.EntityReference], so the same static reads a card
+ * ordinary [com.wingedsheep.sdk.scripting.targets.EffectTarget.SingleEntity], so the same static reads a card
  * exiled with this permanent (`LinkedExiledCard()` — Duplicant), the source itself, or any other
  * reference the evaluator can resolve. Pair it with
  * [SetBasePowerToughnessDynamicStatic] fed `DynamicAmount.EntityProperty(source, Power/Toughness)`
@@ -130,7 +131,7 @@ data class IsAllCreatureTypes(
 @SerialName("HasCreatureTypesOf")
 @Serializable
 data class HasCreatureTypesOf(
-    val source: com.wingedsheep.sdk.scripting.values.EntityReference,
+    val source: com.wingedsheep.sdk.scripting.targets.EffectTarget.SingleEntity,
     val retainedTypes: Set<String> = emptySet(),
     val filter: GroupFilter = GroupFilter.source()
 ) : StaticAbility {
@@ -248,6 +249,26 @@ data class GrantChosenColor(
 }
 
 /**
+ * "All instances of color words in the text of spells and permanents are changed to the chosen
+ * color word." (Swirl the Mists)
+ *
+ * A global Layer 3 text-changing effect (CR 613.1c, CR 612). The chosen color is read from the
+ * source's `CastChoicesComponent`, so pair it with `EntersWithChoice(ChoiceType.COLOR)`. While the
+ * source is on the battlefield, every color word in the rules text of every spell and permanent —
+ * protection colors, color-word filters ("nonblack", "target red creature"), color-keyed amounts —
+ * reads as the chosen color. It changes *words*, not objects: mana symbols, card names and an
+ * object's actual colors are untouched (CR 612.2). It covers spells as they're cast (targets are
+ * chosen against the changed text) and permanents that enter later. Until a color is chosen it
+ * changes nothing.
+ */
+@SerialName("ChangeAllColorWordsToChosenColor")
+@Serializable
+data object ChangeAllColorWordsToChosenColor : StaticAbility {
+    override val description: String =
+        "All instances of color words in the text of spells and permanents are changed to the chosen color word"
+}
+
+/**
  * Adds a creature type to all creatures that have a specific counter type.
  * Used for Aurification: "Each creature with a gold counter on it is a Wall."
  *
@@ -258,10 +279,10 @@ data class GrantChosenColor(
 @Serializable
 data class AddCreatureTypeByCounter(
     val creatureType: String,
-    val counterType: String
+    val counterType: CounterType
 ) : StaticAbility {
     override val description: String =
-        "Each creature with a $counterType counter on it is a $creatureType in addition to its other creature types"
+        "Each creature with a ${counterType.printed} counter on it is a $creatureType in addition to its other creature types"
     override fun applyTextReplacement(replacer: TextReplacer): StaticAbility {
         val newCreatureType = replacer.replaceCreatureType(creatureType)
         return if (newCreatureType != creatureType) copy(creatureType = newCreatureType) else this
@@ -282,10 +303,10 @@ data class AddCreatureTypeByCounter(
 @Serializable
 data class AddLandTypeByCounter(
     val landType: String,
-    val counterType: String
+    val counterType: CounterType
 ) : StaticAbility {
     override val description: String =
-        "Each land with a $counterType counter on it is ${
+        "Each land with a ${counterType.printed} counter on it is ${
             if (landType.first().lowercaseChar() in "aeiou") "an" else "a"
         } $landType in addition to its other types"
 }

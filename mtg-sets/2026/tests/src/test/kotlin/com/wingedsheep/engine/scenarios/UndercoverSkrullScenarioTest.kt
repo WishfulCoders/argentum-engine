@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.engine.view.ClientStateTransformer
@@ -28,7 +29,7 @@ class UndercoverSkrullScenarioTest : FunSpec({
     }
 
     fun GameTestDriver.badges(id: com.wingedsheep.sdk.model.EntityId) =
-        ClientStateTransformer(cardRegistry).transform(state, player1)
+        ClientStateTransformer(cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)).transform(state, player1)
             .cards.getValue(id).activeEffects.map { it.effectId }
 
     test("the all-creature-types grant is badged once its condition is met") {

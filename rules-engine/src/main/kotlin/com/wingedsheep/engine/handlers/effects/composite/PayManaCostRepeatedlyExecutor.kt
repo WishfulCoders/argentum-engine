@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.composite
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.DecisionPhase
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.core.PayManaCostRepeatedlyContinuation
@@ -41,7 +42,8 @@ import kotlin.reflect.KClass
  */
 class PayManaCostRepeatedlyExecutor(
     private val cardRegistry: CardRegistry,
-    private val decisionHandler: DecisionHandler = DecisionHandler()
+    private val decisionHandler: DecisionHandler = DecisionHandler(),
+    private val predicateEvaluator: PredicateEvaluator
 ) : EffectExecutor<PayManaCostRepeatedlyEffect> {
 
     override val effectType: KClass<PayManaCostRepeatedlyEffect> = PayManaCostRepeatedlyEffect::class
@@ -52,14 +54,14 @@ class PayManaCostRepeatedlyExecutor(
         context: EffectContext
     ): EffectResult {
         val playerId = context.controllerId
-        val cap = affordableRepetitions(state, playerId, effect.cost, effect.maxTimes, cardRegistry)
+        val cap = affordableRepetitions(state, playerId, effect.cost, effect.maxTimes, cardRegistry, predicateEvaluator = predicateEvaluator)
 
         if (cap <= 0) {
             return EffectResult.error(state, "Cannot pay ${effect.cost} even once")
         }
 
         if (cap == 1) {
-            val paid = payManaCostFromPool(state, playerId, effect.cost, cardRegistry)
+            val paid = payManaCostFromPool(state, playerId, effect.cost, cardRegistry, predicateEvaluator = predicateEvaluator)
             if (paid.error != null) return paid
             return paid.copy(updatedStoredNumbers = paid.updatedStoredNumbers + (effect.storeCountAs to 1))
         }
@@ -115,9 +117,10 @@ class PayManaCostRepeatedlyExecutor(
             player: EntityId,
             cost: ManaCost,
             maxTimes: Int?,
-            cardRegistry: CardRegistry
+            cardRegistry: CardRegistry,
+            predicateEvaluator: PredicateEvaluator
         ): Int {
-            val solver = ManaSolver(cardRegistry)
+            val solver = ManaSolver(cardRegistry, predicateEvaluator = predicateEvaluator)
             // Hoisted once and threaded through every probe: nothing about the battlefield changes
             // between them, and the walk is O(bound) solver runs otherwise.
             val sources = solver.findAvailableManaSources(state, player)
@@ -125,7 +128,7 @@ class PayManaCostRepeatedlyExecutor(
             if (bound <= 0) return 0
             var paid = 0
             while (paid < bound &&
-                canAutoPayManaCost(state, player, cost * (paid + 1), cardRegistry, sources)
+                canAutoPayManaCost(state, player, cost * (paid + 1), cardRegistry, sources, predicateEvaluator = predicateEvaluator)
             ) {
                 paid++
             }

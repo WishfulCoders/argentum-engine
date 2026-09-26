@@ -1,21 +1,19 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
-import com.wingedsheep.sdk.scripting.effects.Gate
-import com.wingedsheep.sdk.scripting.effects.GatedEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Lost in the Maze — Murders at Karlov Manor #64
@@ -69,24 +67,18 @@ val LostInTheMaze = card("Lost in the Maze") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = TargetCreature(optional = true, dynamicMaxCount = DynamicAmount.CastX)
-        effect = Effects.TapEachTarget()
-            .then(
-                ForEachTargetEffect(
-                    listOf(
-                        GatedEffect(
-                            gate = Gate.WhenCondition(
-                                Conditions.TargetMatchesFilter(
-                                    GameObjectFilter.Creature.opponentControls()
-                                )
-                            ),
-                            then = Effects.AddCounters(
-                                Counters.STUN,
-                                1,
-                                EffectTarget.ContextTarget(0)
-                            )
-                        )
+        trigger = Triggers.self.enters()
+        target = TargetObject(filter = TargetFilter.Creature, optional = true, dynamicMaxCount = DynamicAmounts.castX())
+        effect = Effects.TapEachTarget() then
+            Effects.ForEachTarget(
+                Effects.If(
+                    condition = Conditions.TargetMatchesFilter(
+                            GameObjectFilter.Creature.opponentControls()
+                        ),
+                    then = Effects.AddCounters(
+                        CounterType.STUN,
+                        1,
+                        EffectTarget.ContextTarget(0)
                     )
                 )
             )

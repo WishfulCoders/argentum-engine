@@ -8,9 +8,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -25,12 +23,10 @@ val PlungeIntoWinter = card("Plunge into Winter") {
     typeLine = "Instant"
     oracleText = "Tap up to one target creature. Scry 1, then draw a card."
     spell {
-        val t = target("target", TargetCreature(optional = true, filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.Tap(t),
-            Patterns.Library.scry(1),
-            DrawCardsEffect(1)
-        )
+        val t = target(TargetFilter.Creature, optional = true)
+        effect = Effects.Tap(t) then
+            Patterns.Library.scry(1) then
+            Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.COMMON

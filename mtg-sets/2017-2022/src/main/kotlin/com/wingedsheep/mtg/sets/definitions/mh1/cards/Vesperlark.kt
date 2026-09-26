@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Vesperlark
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  * When this creature leaves the battlefield, return target creature card with power 1 or less from your graveyard to the battlefield.
  * Evoke {1}{W} (You may cast this spell for its evoke cost. If you do, it's sacrificed when it enters.)
  *
- * The trigger is a plain leaves-the-battlefield ([Triggers.LeavesBattlefield], SELF, any
+ * The trigger is a plain leaves-the-battlefield (`Triggers.self.leaves()`, SELF, any
  * destination) — evoke's sacrifice is one of the ways it fires, which is the card's whole point.
  */
 val Vesperlark = card("Vesperlark") {
@@ -36,11 +35,8 @@ val Vesperlark = card("Vesperlark") {
     evoke = "{1}{W}"
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
-        val t = target(
-            "target",
-            TargetObject(filter = TargetFilter.CreatureInYourGraveyard.powerAtMost(1))
-        )
+        trigger = Triggers.self.leaves()
+        val t = target(TargetFilter.CreatureInYourGraveyard.powerAtMost(1))
         effect = Effects.Move(t, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)
         description = "When this creature leaves the battlefield, return target creature card with " +
             "power 1 or less from your graveyard to the battlefield."

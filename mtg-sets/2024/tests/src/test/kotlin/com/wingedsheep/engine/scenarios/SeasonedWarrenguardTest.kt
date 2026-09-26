@@ -8,13 +8,13 @@ import com.wingedsheep.mtg.sets.definitions.blb.cards.SeasonedWarrenguard
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Seasoned Warrenguard (BLB): "Whenever this creature attacks while you control a token,
@@ -22,7 +22,7 @@ import io.kotest.matchers.shouldBe
  *
  * Regression guard (printed ruling): the token check happens ONLY when the trigger fires
  * (attack declaration). If the token leaves before the ability resolves, the pump still
- * applies. The old implementation re-checked at resolution via a ConditionalEffect.
+ * applies. The old implementation re-checked at resolution via a Effects.If.
  */
 class SeasonedWarrenguardTest : FunSpec({
 
@@ -44,7 +44,7 @@ class SeasonedWarrenguardTest : FunSpec({
         manaCost = "{B}"
         typeLine = "Instant"
         spell {
-            val t = target("target creature to destroy", Targets.Creature)
+            val t = target(TargetFilter.Creature)
             effect = Effects.Destroy(t)
         }
     }

@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Waterfall Aerialist — Strixhaven: School of Mages #61 (canonical printing)
@@ -13,7 +14,7 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
  * Ward {2} (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {2}.)
  *
  * Two keywords and nothing else: a plain [Keyword.FLYING] marker plus `Ward {2}` as
- * [KeywordAbility.ward] (CR 702.21a) — the bare `Keyword.WARD` marker is derived from that ability
+ * [WardCost.Mana] (CR 702.21a) — the bare `Keyword.WARD` marker is derived from that ability
  * by the builder, so it is not restated.
  */
 val WaterfallAerialist = card("Waterfall Aerialist") {
@@ -27,7 +28,7 @@ val WaterfallAerialist = card("Waterfall Aerialist") {
     toughness = 1
 
     keywords(Keyword.FLYING)
-    keywordAbility(KeywordAbility.ward("{2}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
 
     metadata {
         rarity = Rarity.COMMON

@@ -19,7 +19,8 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.targets.*
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Identifies the type of source that is doing the targeting.
@@ -42,15 +43,14 @@ enum class TargetingSourceType {
  * and returns a list of valid target EntityIds.
  */
 class TargetFinder(
+    private val predicateEvaluator: PredicateEvaluator
 ) {
-    private val predicateEvaluator = PredicateEvaluator()
-
     /**
      * Build the per-candidate [PredicateContext] for filter evaluation, folding in any
      * pipeline-derived fields (storedCollections, chosenValues, xValue, …) carried by
      * [pipelineContext]. Keeps the always-present `controllerId`/`sourceId`/`ownerId` from
      * the call site while letting resolution-time filters see the resolving effect's pipeline
-     * state — needed for "power <= the amassed Army's power" (EntityReference.AmassedArmy).
+     * state — needed for "power <= the amassed Army's power" (EffectTarget.AmassedArmy).
      */
     private fun targetingContext(
         controllerId: EntityId,
@@ -95,14 +95,14 @@ class TargetFinder(
          * Pipeline-derived predicate context (storedCollections, chosenValues, xValue, …) from the
          * resolving effect. Threaded so a target filter can compare candidates against a
          * resolution-time pipeline value — e.g. "power <= the amassed Army's power" reads
-         * [EntityReference.AmassedArmy] out of `pipelineContext.storedCollections`. Null for
+         * [EffectTarget.AmassedArmy] out of `pipelineContext.storedCollections`. Null for
          * cast-time targeting where no pipeline state exists yet.
          */
         pipelineContext: PredicateContext? = null
     ): List<EntityId> {
         return when (requirement) {
-            is TargetPlayer -> findPlayerTargets(state, requirement, controllerId, sourceId)
-            is TargetOpponent -> findOpponentTargets(state, requirement, controllerId, sourceId)
+            is TargetPlayer -> findPlayerTargets(state, requirement, controllerId, sourceId, ignoreTargetingRestrictions)
+            is TargetOpponent -> findOpponentTargets(state, requirement, controllerId, sourceId, ignoreTargetingRestrictions)
             is AnyTarget -> {
                 val candidates = findAnyTargets(state, controllerId, sourceId, targetingSourceType)
                 if (requirement.filter == GameObjectFilter.Any) candidates else {
@@ -137,12 +137,14 @@ class TargetFinder(
         state: GameState,
         requirement: TargetPlayer,
         controllerId: EntityId,
-        sourceId: EntityId?
+        sourceId: EntityId?,
+        ignoreTargetingRestrictions: Boolean = false
     ): List<EntityId> {
         return state.turnOrder.filter { playerId ->
-            state.hasEntity(playerId) && !playerHasShroud(state, playerId) &&
-                !playerHasHexproofAgainst(state, playerId, controllerId) &&
-                PlayerTargetRestriction.isSatisfied(state, requirement.restriction, playerId, controllerId, sourceId)
+            state.hasEntity(playerId) &&
+                (ignoreTargetingRestrictions ||
+                    (!playerHasShroud(state, playerId) && !playerHasHexproofAgainst(state, playerId, controllerId))) &&
+                PlayerTargetRestriction.isSatisfied(state, requirement.restriction, playerId, controllerId, sourceId, predicateEvaluator = predicateEvaluator)
         }
     }
 
@@ -150,11 +152,12 @@ class TargetFinder(
         state: GameState,
         requirement: TargetOpponent,
         controllerId: EntityId,
-        sourceId: EntityId?
+        sourceId: EntityId?,
+        ignoreTargetingRestrictions: Boolean = false
     ): List<EntityId> {
-        return state.turnOrder.filter { it != controllerId && state.hasEntity(it) && !playerHasShroud(state, it) &&
-            !playerHasHexproof(state, it) &&
-            PlayerTargetRestriction.isSatisfied(state, requirement.restriction, it, controllerId, sourceId) }
+        return state.turnOrder.filter { it != controllerId && state.hasEntity(it) &&
+            (ignoreTargetingRestrictions || (!playerHasShroud(state, it) && !playerHasHexproof(state, it))) &&
+            PlayerTargetRestriction.isSatisfied(state, requirement.restriction, it, controllerId, sourceId, predicateEvaluator = predicateEvaluator) }
     }
 
     /**
@@ -184,7 +187,7 @@ class TargetFinder(
         // For ABILITY source type, always blocked. For ANY (unknown), conservatively block since
         // we don't know the source type. Read through ControllerGrants so a gated form of the
         // ability switches off with its condition instead of sticking on.
-        return ControllerGrants.isActiveOn<CantBeTargetedByOpponentAbilitiesComponent>(state, entityId)
+        return ControllerGrants.isActiveOn<CantBeTargetedByOpponentAbilitiesComponent>(state, entityId, predicateEvaluator = predicateEvaluator)
     }
 
     private fun findOpponentOrPlaneswalkerTargets(
@@ -384,7 +387,7 @@ class TargetFinder(
             !playerHasHexproofAgainst(state, it, controllerId) })
 
         // Add all creatures
-        targets.addAll(findPermanentTargets(state, TargetCreature(), controllerId, sourceId, targetingSourceType = targetingSourceType, pipelineContext = pipelineContext))
+        targets.addAll(findPermanentTargets(state, TargetObject(filter = TargetFilter.Creature), controllerId, sourceId, targetingSourceType = targetingSourceType, pipelineContext = pipelineContext))
 
         return targets
     }
@@ -599,7 +602,7 @@ class TargetFinder(
      * or Gilded Light's "You gain shroud until end of turn").
      */
     private fun playerHasShroud(state: GameState, playerId: EntityId): Boolean =
-        ControllerShroud.appliesTo(state, playerId)
+        ControllerShroud.appliesTo(state, playerId, predicateEvaluator = predicateEvaluator)
 
     /**
      * Check if a player has hexproof (from a permanent like Shalai, Voice of Plenty).
@@ -607,7 +610,7 @@ class TargetFinder(
      * target themselves.
      */
     private fun playerHasHexproof(state: GameState, playerId: EntityId): Boolean =
-        ControllerHexproof.appliesTo(state, playerId)
+        ControllerHexproof.appliesTo(state, playerId, predicateEvaluator = predicateEvaluator)
 
     /**
      * Check if a player has hexproof against a specific controller.

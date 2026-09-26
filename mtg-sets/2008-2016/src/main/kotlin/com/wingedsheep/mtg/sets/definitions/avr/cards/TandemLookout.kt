@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
 /**
@@ -26,7 +26,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  * nobody at all while unpaired (CR 702.95b/e).
  *
  * The trigger is [DamageType.Any], not combat only — the printed line says "deals damage", so a
- * partner that pings an opponent with an activated ability draws too. [RecipientFilter.Opponent]
+ * partner that pings an opponent with an activated ability draws too. [Recipient.Opponent]
  * resolves against the *host* creature's controller, which is the same player for both halves of a
  * soulbond pair (CR 702.95a requires you control both), so either half firing draws for you.
  *
@@ -50,8 +50,7 @@ val TandemLookout = card("Tandem Lookout") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.dealsDamage(recipient = RecipientFilter.Opponent).event,
-                binding = Triggers.dealsDamage(recipient = RecipientFilter.Opponent).binding,
+                trigger = Triggers.self.dealsDamage(Recipient.Opponent),
                 effect = Effects.DrawCards(1),
                 descriptionOverride = "Whenever this creature deals damage to an opponent, draw a card"
             ),

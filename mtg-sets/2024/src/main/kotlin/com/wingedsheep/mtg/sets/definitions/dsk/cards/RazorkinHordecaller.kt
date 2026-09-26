@@ -28,7 +28,7 @@ val RazorkinHordecaller = card("Razorkin Hordecaller") {
 
     // Whenever you attack, create a 1/1 red Gremlin creature token.
     triggeredAbility {
-        trigger = Triggers.YouAttack
+        trigger = Triggers.you.attacks()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

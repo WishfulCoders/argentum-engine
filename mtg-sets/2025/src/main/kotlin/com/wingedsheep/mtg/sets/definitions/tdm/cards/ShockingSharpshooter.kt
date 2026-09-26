@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Shocking Sharpshooter — Tarkir: Dragonstorm #121
@@ -34,8 +35,8 @@ val ShockingSharpshooter = card("Shocking Sharpshooter") {
     keywords(Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.OtherCreatureEnters
-        val t = target("target", Targets.Opponent)
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
+        val t = target(Targets.Opponent)
         effect = Effects.DealDamage(1, t)
     }
 

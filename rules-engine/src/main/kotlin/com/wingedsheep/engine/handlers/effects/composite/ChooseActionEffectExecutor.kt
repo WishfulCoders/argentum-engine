@@ -25,12 +25,11 @@ import kotlin.reflect.KClass
  * If zero remain, nothing happens.
  */
 class ChooseActionEffectExecutor(
-    private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult
+    private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult,
+    private val predicateEvaluator: PredicateEvaluator
 ) : EffectExecutor<ChooseActionEffect> {
 
     override val effectType: KClass<ChooseActionEffect> = ChooseActionEffect::class
-
-    private val predicateEvaluator = PredicateEvaluator()
 
     override fun execute(
         state: GameState,
@@ -105,7 +104,7 @@ internal fun checkFeasibility(
     state: GameState,
     playerId: com.wingedsheep.sdk.model.EntityId,
     check: FeasibilityCheck?,
-    predicateEvaluator: PredicateEvaluator = PredicateEvaluator()
+    predicateEvaluator: PredicateEvaluator
 ): Boolean {
     if (check == null) return true
 
@@ -114,7 +113,8 @@ internal fun checkFeasibility(
             val matching = BattlefieldFilterUtils.findMatchingOnBattlefield(
                 state,
                 check.filter.youControl(),
-                PredicateContext(controllerId = playerId)
+                PredicateContext(controllerId = playerId),
+                predicateEvaluator = predicateEvaluator
             )
             matching.size >= check.count
         }

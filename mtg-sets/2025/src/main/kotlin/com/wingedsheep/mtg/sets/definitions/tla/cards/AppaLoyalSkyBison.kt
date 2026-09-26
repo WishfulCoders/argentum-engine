@@ -2,16 +2,15 @@ package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetOther
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Appa, Loyal Sky Bison — {4}{W}{W} Legendary Creature — Bison Ally — 4/4
@@ -41,28 +40,27 @@ val AppaLoyalSkyBison = card("Appa, Loyal Sky Bison") {
     keywords(Keyword.FLYING)
 
     val choice = ModalEffect.chooseOne(
-        Mode(
-            effect = Effects.GrantKeyword(Keyword.FLYING, EffectTarget.ContextTarget(0)),
-            targetRequirements = listOf(Targets.CreatureYouControl),
-            description = "Target creature you control gains flying until end of turn"
-        ),
+        mode("Target creature you control gains flying until end of turn") {
+            val creatureYouControl = target(TargetFilter.CreatureYouControl)
+            effect = Effects.GrantKeyword(Keyword.FLYING, creatureYouControl)
+        },
         Mode(
             effect = Effects.Airbend(),
             targetRequirements = listOf(
-                TargetOther(baseRequirement = TargetPermanent(filter = TargetFilter.NonlandPermanent.youControl()))
+                TargetOther(baseRequirement = TargetObject(filter = TargetFilter.NonlandPermanent.youControl()))
             ),
             description = "Airbend another target nonland permanent you control"
         )
     )
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = choice
         description = "Whenever Appa enters or attacks, choose one — Target creature you control gains flying until end of turn; or airbend another target nonland permanent you control."
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = choice
         description = "Whenever Appa enters or attacks, choose one — Target creature you control gains flying until end of turn; or airbend another target nonland permanent you control."
     }

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
@@ -10,6 +10,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GrantKeyword
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Beast, Erudite Aerialist — Marvel Super Heroes #206
@@ -43,14 +44,14 @@ val BeastEruditeAerialist = card("Beast, Erudite Aerialist") {
         ability = ConditionalStaticAbility(
             ability = GrantKeyword(Keyword.FLYING, Filters.Self),
             condition = Conditions.SourceReceivedCounterThisTurn(
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
                 placedByYou = true,
             ),
         )
     }
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         effect = Effects.DrawCards(1)
         description = "Whenever Beast deals combat damage to a player, draw a card."
     }

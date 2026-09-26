@@ -3,8 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.sos.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
-import com.wingedsheep.sdk.scripting.effects.GrantPlayWithoutPayingCostEffect
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -35,17 +33,13 @@ val ImprovisationCapstone = card("Improvisation Capstone") {
         "your first main phases.)"
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                Effects.ExileLibraryUntilManaValue(
-                    players = Player.You,
-                    threshold = 4,
-                    storeAs = "exiled",
-                ),
-                GrantMayPlayFromExileEffect("exiled"),
-                GrantPlayWithoutPayingCostEffect("exiled"),
-            ),
-        )
+        effect = Effects.Pipeline {
+            val exiled = runStoringCollection {
+                Effects.ExileLibraryUntilManaValue(players = Player.You, threshold = 4, storeAs = it)
+            }
+            run(Effects.GrantMayPlayFromExile(exiled))
+            run(Effects.GrantPlayWithoutPayingCost(exiled))
+        }
         paradigm()
     }
 

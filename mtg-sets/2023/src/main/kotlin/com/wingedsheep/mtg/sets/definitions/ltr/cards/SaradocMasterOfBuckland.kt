@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -35,10 +34,7 @@ val SaradocMasterOfBuckland = card("Saradoc, Master of Buckland") {
         "end of turn."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.nontoken().powerAtMost(2).youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.nontoken().powerAtMost(2).youControl()).enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
@@ -54,8 +50,8 @@ val SaradocMasterOfBuckland = card("Saradoc, Master of Buckland") {
             filter = GameObjectFilter.Creature.withSubtype("Halfling").youControl(),
             excludeSelf = true
         )
-        effect = Effects.ModifyStats(2, 0, EffectTarget.Self)
-            .then(Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self))
+        effect = Effects.ModifyStats(2, 0, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self)
     }
 
     metadata {

@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Kami of Fire's Roar
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * The Kamigawa "Whenever you cast a Spirit or Arcane spell" trigger is a `SpellCastEvent` watching
  * *your* casts with an OR over the two subtypes — `withAnySubtype` builds the single
  * `CardPredicate.Or` the grammar expects, rather than the `anyOf` branch list that the `or` infix
- * on `GameObjectFilter` would produce. `Triggers.youCastSpell` supplies `Player.You` and
+ * on `GameObjectFilter` would produce. `Triggers.you.casts(spell, requires)` supplies `Player.You` and
  * `TriggerBinding.ANY`, so Kami of Fire's Roar also triggers off its own cast.
  *
  * "Can't block this turn" is `Effects.CantBlock`, whose default `Duration.EndOfTurn` already says
@@ -32,10 +31,8 @@ val KamiOfFiresRoar = card("Kami of Fire's Roar") {
     power = 2
     toughness = 3
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.Any.withAnySubtype("Spirit", "Arcane")
-        )
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withAnySubtype("Spirit", "Arcane"))
+        val t = target(TargetFilter.Creature)
         effect = Effects.CantBlock(t)
     }
     metadata {

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.stx.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Menace (This creature can't be blocked except by two or more creatures.)
  * Whenever you gain life, put a +1/+1 counter on this creature.
  *
- * The Ajani's Pridemate shape: [Triggers.YouGainLife] fires once per life-gain event (CR 603.2c —
+ * The Ajani's Pridemate shape: `Triggers.you.gainsLife()` fires once per life-gain event (CR 603.2c —
  * gaining 4 life at once is one trigger), and the payoff is [Effects.AddCounters] on
  * [EffectTarget.Self].
  */
@@ -32,8 +32,8 @@ val BloodResearcher = card("Blood Researcher") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.YouGainLife
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.gainsLife()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     metadata {

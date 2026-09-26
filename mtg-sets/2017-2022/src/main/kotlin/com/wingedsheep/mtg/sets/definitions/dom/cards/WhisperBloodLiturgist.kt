@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.dom.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Whisper, Blood Liturgist
@@ -27,7 +27,7 @@ val WhisperBloodLiturgist = card("Whisper, Blood Liturgist") {
             Costs.Tap,
             Costs.SacrificeMultiple(2, GameObjectFilter.Creature)
         )
-        val creature = target("creature card in your graveyard", Targets.CreatureCardInYourGraveyard)
+        val creature = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.PutOntoBattlefieldFromGraveyard(creature)
     }
 

@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Miner's Guidewing — {W}
@@ -26,8 +25,8 @@ val MinersGuidewing = card("Miner's Guidewing") {
     keywords(Keyword.FLYING, Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val t = target("target creature you control", TargetCreature(filter = TargetFilter.CreatureYouControl))
+        trigger = Triggers.self.dies()
+        val t = target(TargetFilter.CreatureYouControl)
         effect = Effects.Explore(t)
     }
 

@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.ala.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Bloodpyre Elemental
@@ -30,7 +30,7 @@ val BloodpyreElemental = card("Bloodpyre Elemental") {
 
     activatedAbility {
         cost = Costs.SacrificeSelf
-        val creature = target("target", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.DealDamage(4, creature)
         timing = TimingRule.SorcerySpeed
     }

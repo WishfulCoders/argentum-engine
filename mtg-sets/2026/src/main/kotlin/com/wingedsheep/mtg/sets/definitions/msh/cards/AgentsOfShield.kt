@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.events.AttackPredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -15,7 +14,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn.
  *
- * ANY-bound [Triggers.attacks] with [AttackPredicate.Alone] over "creature you control"; "that
+ * ANY-bound `Triggers.<subject>.attacks(requires)` with [AttackPredicate.Alone] over "creature you control"; "that
  * creature" is the lone attacker, i.e. [EffectTarget.TriggeringEntity] — so the buff lands on
  * whichever creature attacked alone, including Agents of S.H.I.E.L.D. itself.
  */
@@ -28,11 +27,7 @@ val AgentsOfShield = card("Agents of S.H.I.E.L.D.") {
     oracleText = "Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.attacks(
-            filter = GameObjectFilter.Creature.youControl(),
-            requires = setOf(AttackPredicate.Alone),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).attacks(setOf(AttackPredicate.Alone))
         effect = Effects.ModifyStats(1, 1, EffectTarget.TriggeringEntity)
         description = "Whenever a creature you control attacks alone, that creature gets +1/+1 " +
             "until end of turn."

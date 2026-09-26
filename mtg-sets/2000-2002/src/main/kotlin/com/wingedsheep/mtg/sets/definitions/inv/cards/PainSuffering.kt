@@ -5,8 +5,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardLayout
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Pain // Suffering (INV 294) — split-layout spell (CR 709).
@@ -29,7 +28,7 @@ val PainSuffering = card("Pain // Suffering") {
         oracleText = "Target player discards a card."
 
         spell {
-            val targetPlayer = target("target player", TargetPlayer())
+            val targetPlayer = target(Targets.Player)
             effect = Effects.Discard(1, targetPlayer)
         }
     }
@@ -40,8 +39,8 @@ val PainSuffering = card("Pain // Suffering") {
         oracleText = "Destroy target land."
 
         spell {
-            target("target land", Targets.Land)
-            effect = Effects.Destroy(EffectTarget.ContextTarget(0))
+            val land = target(TargetFilter.Land)
+            effect = Effects.Destroy(land)
         }
     }
 

@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -8,7 +9,6 @@ import com.wingedsheep.sdk.scripting.ChoiceType
 import com.wingedsheep.sdk.scripting.EntersWithChoice
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * An Unexpected Party // At the Door — The Hobbit #29
@@ -55,7 +55,7 @@ val AnUnexpectedParty = card("An Unexpected Party") {
             "(Then exile this card. You may cast the enchantment later from exile.)"
         spell {
             effect = Effects.CreateToken(
-                count = DynamicAmount.XValue,
+                count = DynamicAmounts.xValue(),
                 power = 2,
                 toughness = 2,
                 colors = setOf(Color.RED),

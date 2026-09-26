@@ -20,7 +20,7 @@ val CommonCrook = card("Common Crook") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateTreasure()
     }
     metadata {

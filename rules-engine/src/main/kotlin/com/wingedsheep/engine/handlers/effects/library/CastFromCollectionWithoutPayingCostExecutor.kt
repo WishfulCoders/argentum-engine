@@ -57,7 +57,7 @@ import kotlin.reflect.KClass
 class CastFromCollectionWithoutPayingCostExecutor(
     private val castSpellHandlerProvider: () -> CastSpellHandler,
     private val cardRegistry: CardRegistry,
-    private val targetFinder: TargetFinder = TargetFinder(),
+    private val targetFinder: TargetFinder
 ) : EffectExecutor<CastFromCollectionWithoutPayingCostEffect> {
 
     override val effectType: KClass<CastFromCollectionWithoutPayingCostEffect> =
@@ -159,7 +159,7 @@ class CastFromCollectionWithoutPayingCostExecutor(
         }
 
         // The cast initiated (synchronously or pausing for X / further input). Publish the cast
-        // card so an enclosing IfYouDoEffect can gate a follow-up on "if you do" (Kaervek).
+        // card so an enclosing Effects.IfYouDo can gate a follow-up on "if you do" (Kaervek).
         val castCollections = storeCastTo?.let { mapOf(it to listOf(cardId)) } ?: emptyMap()
 
         if (castResult.pendingDecision != null) {
@@ -168,17 +168,15 @@ class CastFromCollectionWithoutPayingCostExecutor(
                 castResult.events,
             ).copy(
                 updatedCollections = castCollections,
-                triggersAlreadyProcessed = castResult.triggersAlreadyProcessed,
             )
         }
 
         // CastSpellHandler already detected + stacked this cast's triggers; propagate the flag so a
-        // resuming caller (e.g. the gated MayEffect resumer -> SubmitDecisionHandler) doesn't re-scan
+        // resuming caller (e.g. the gated Effects.May resumer -> SubmitDecisionHandler) doesn't re-scan
         // the SpellCastEvent and double-fire "whenever you cast a spell" triggers.
         return EffectResult.success(castResult.state, castResult.events)
             .copy(
                 updatedCollections = castCollections,
-                triggersAlreadyProcessed = castResult.triggersAlreadyProcessed,
             )
     }
 
@@ -297,7 +295,7 @@ class CastFromCollectionWithoutPayingCostExecutor(
             val isModalSpell = script?.spellEffect is ModalEffect
             val targetRequirements = buildList {
                 addAll(script?.targetRequirements.orEmpty())
-                script?.auraTarget?.let { add(it) }
+                script?.castAuraTarget?.let { add(it) }
             }
             if (isModalSpell || targetRequirements.isEmpty()) {
                 return TargetPrep.NotNeeded
@@ -315,6 +313,7 @@ class CastFromCollectionWithoutPayingCostExecutor(
                 TargetRequirementInfo(
                     index = index,
                     description = requirement.description,
+                    mustDifferFromEarlier = requirement is com.wingedsheep.sdk.scripting.targets.TargetOther,
                     minTargets = requirement.effectiveMinCount,
                     maxTargets = requirement.count,
                 )

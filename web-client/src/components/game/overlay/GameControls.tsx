@@ -37,9 +37,9 @@ export function ConcedeButton() {
           style={{
             padding: responsive.isMobile ? '6px 10px' : '8px 14px',
             fontSize: responsive.fontSize.small,
-            backgroundColor: '#cc0000',
+            background: 'var(--gradient-danger)',
             color: 'white',
-            border: 'none',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
             borderRadius: 6,
             cursor: 'pointer',
             fontWeight: 600,
@@ -59,9 +59,9 @@ export function ConcedeButton() {
           style={{
             padding: responsive.isMobile ? '6px 10px' : '8px 14px',
             fontSize: responsive.fontSize.small,
-            backgroundColor: '#222',
-            color: '#aaa',
-            border: '1px solid #333',
+            backgroundColor: 'var(--chrome-bg)',
+            color: 'var(--chrome-text)',
+            border: '1px solid var(--chrome-border)',
             borderRadius: 6,
             cursor: 'pointer',
           }}
@@ -79,9 +79,9 @@ export function ConcedeButton() {
         style={{
           padding: responsive.isMobile ? '6px 10px' : '8px 14px',
           fontSize: responsive.fontSize.small,
-          backgroundColor: 'transparent',
-          color: '#cc0000',
-          border: '1px solid #cc0000',
+          backgroundColor: 'var(--chrome-bg)',
+          color: 'var(--chrome-danger-text)',
+          border: '1px solid var(--chrome-danger-border)',
           borderRadius: 6,
           cursor: 'pointer',
         }}
@@ -117,9 +117,9 @@ export function StandaloneConcedeButton() {
           style={{
             padding: '8px 14px',
             fontSize: 13,
-            backgroundColor: '#cc0000',
+            background: 'var(--gradient-danger)',
             color: 'white',
-            border: 'none',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
             borderRadius: 6,
             cursor: 'pointer',
             fontWeight: 600,
@@ -132,9 +132,9 @@ export function StandaloneConcedeButton() {
           style={{
             padding: '8px 14px',
             fontSize: 13,
-            backgroundColor: '#222',
-            color: '#aaa',
-            border: '1px solid #333',
+            backgroundColor: 'var(--chrome-bg)',
+            color: 'var(--chrome-text)',
+            border: '1px solid var(--chrome-border)',
             borderRadius: 6,
             cursor: 'pointer',
           }}
@@ -152,9 +152,9 @@ export function StandaloneConcedeButton() {
         style={{
           padding: '8px 14px',
           fontSize: 13,
-          backgroundColor: 'transparent',
-          color: '#cc0000',
-          border: '1px solid #cc0000',
+          backgroundColor: 'var(--chrome-bg)',
+          color: 'var(--chrome-danger-text)',
+          border: '1px solid var(--chrome-danger-border)',
           borderRadius: 6,
           cursor: 'pointer',
         }}
@@ -298,9 +298,9 @@ export function FullscreenButton() {
         zIndex: 100,
         padding: responsive.isMobile ? '6px 10px' : '8px 14px',
         fontSize: responsive.fontSize.small,
-        backgroundColor: 'transparent',
-        color: '#888',
-        border: '1px solid #444',
+        backgroundColor: 'var(--chrome-bg)',
+        color: 'var(--chrome-text)',
+        border: '1px solid var(--chrome-border)',
         borderRadius: 6,
         cursor: 'pointer',
         display: 'flex',

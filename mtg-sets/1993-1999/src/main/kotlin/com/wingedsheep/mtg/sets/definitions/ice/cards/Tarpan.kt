@@ -13,7 +13,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * When this creature dies, you gain 1 life.
  *
- * [Triggers.Dies] is the SELF-bound battlefield-to-graveyard `ZoneChangeEvent`, so the trigger
+ * `Triggers.self.dies()` is the SELF-bound battlefield-to-graveyard `ZoneChangeEvent`, so the trigger
  * needs no last-known-information reads of its own — the payoff is a plain [Effects.GainLife]
  * onto the controller, which is that facade's default target.
  */
@@ -26,7 +26,7 @@ val Tarpan = card("Tarpan") {
     oracleText = "When this creature dies, you gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.GainLife(1)
     }
 

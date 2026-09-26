@@ -24,7 +24,7 @@ val MetalFatigue = card("Metal Fatigue") {
     typeLine = "Instant"
     oracleText = "Tap all artifacts."
     spell {
-        effect = Effects.ForEachInGroup(GroupFilter(GameObjectFilter.Artifact), Effects.Tap(EffectTarget.Self))
+        effect = Effects.ForEachInGroup(GroupFilter(GameObjectFilter.Artifact), Effects.Tap(EffectTarget.IterationEntity))
     }
     metadata {
         rarity = Rarity.COMMON

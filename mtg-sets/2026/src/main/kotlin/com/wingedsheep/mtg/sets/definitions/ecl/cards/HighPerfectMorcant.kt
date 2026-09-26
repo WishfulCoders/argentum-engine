@@ -1,19 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.core.Subtype
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * High Perfect Morcant
@@ -41,16 +37,10 @@ val HighPerfectMorcant = card("High Perfect Morcant") {
     triggeredAbility {
         // "this or another Elf you control enters" — ANY binding with an Elf-you-control filter
         // fires for both High Perfect Morcant itself and any other Elf you control.
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Creature.withSubtype(Subtype.ELF).youControl(),
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.withSubtype(Subtype.ELF).youControl()).enters()
         // Each opponent blights 1: ForEachPlayerEffect rebinds Player.You to the
         // iterating opponent, so the stock blight pipeline picks one of THEIR creatures.
-        effect = ForEachPlayerEffect(
+        effect = Effects.ForEachPlayer(
             players = Player.EachOpponent,
             effects = Patterns.Mechanic.blight(1).effects
         )

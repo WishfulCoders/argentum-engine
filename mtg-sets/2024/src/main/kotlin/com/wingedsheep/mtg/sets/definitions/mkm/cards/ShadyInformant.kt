@@ -35,8 +35,8 @@ val ShadyInformant = card("Shady Informant") {
     disguise = "{2}{B/R}{B/R}"
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val anyTarget = target("any target", Targets.Any)
+        trigger = Triggers.self.dies()
+        val anyTarget = target(Targets.Any)
         effect = Effects.DealDamage(2, anyTarget)
         description = "When this creature dies, it deals 2 damage to any target."
     }

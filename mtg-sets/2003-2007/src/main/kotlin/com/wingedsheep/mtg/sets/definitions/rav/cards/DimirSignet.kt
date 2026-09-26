@@ -25,7 +25,7 @@ val DimirSignet = card("Dimir Signet") {
     oracleText = "{1}, {T}: Add {U}{B}."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
-        effect = Effects.Composite(Effects.AddMana(Color.BLUE, 1), Effects.AddMana(Color.BLACK, 1))
+        effect = Effects.AddMana(Color.BLUE, 1) then Effects.AddMana(Color.BLACK, 1)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

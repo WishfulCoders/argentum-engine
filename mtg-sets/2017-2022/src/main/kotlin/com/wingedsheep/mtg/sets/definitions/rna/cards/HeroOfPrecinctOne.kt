@@ -24,7 +24,7 @@ val HeroOfPrecinctOne = card("Hero of Precinct One") {
     oracleText = "Whenever you cast a multicolored spell, create a 1/1 white Human creature token."
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(spellFilter = GameObjectFilter.Multicolored)
+        trigger = Triggers.you.casts(GameObjectFilter.Multicolored)
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

@@ -7,12 +7,10 @@ import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.identity.FaceDownComponent
 import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.CounterType
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.AbilityId
@@ -24,6 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Feature tests for [ExtraOnceOnlyActivations] — the permission that lifts the "Activate this
@@ -59,7 +58,7 @@ class ExtraOnceOnlyActivationsScenarioTest : ScenarioTestBase() {
         activatedAbility {
             isPowerUp = true
             cost = Costs.Mana("{R}")
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         }
     }
 
@@ -73,7 +72,7 @@ class ExtraOnceOnlyActivationsScenarioTest : ScenarioTestBase() {
         activatedAbility {
             isExhaust = true
             cost = Costs.Mana("{R}")
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         }
     }
 
@@ -87,7 +86,7 @@ class ExtraOnceOnlyActivationsScenarioTest : ScenarioTestBase() {
         activatedAbility {
             cost = Costs.Mana("{R}")
             restrictions = listOf(ActivationRestriction.Once)
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         }
     }
 
@@ -172,7 +171,7 @@ class ExtraOnceOnlyActivationsScenarioTest : ScenarioTestBase() {
         typeLine = "Sorcery"
         oracleText = "Return target creature to its owner's hand."
         spell {
-            val t = target("target creature", Targets.Creature)
+            val t = target(TargetFilter.Creature)
             effect = Effects.ReturnToHand(t)
         }
     }

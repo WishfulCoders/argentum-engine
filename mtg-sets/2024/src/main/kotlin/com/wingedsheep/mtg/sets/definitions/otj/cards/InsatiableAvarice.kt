@@ -4,12 +4,11 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Insatiable Avarice {B}
@@ -38,7 +37,7 @@ val InsatiableAvarice = card("Insatiable Avarice") {
         "+ {B}{B} — Target player draws three cards and loses 3 life."
 
     spell {
-        effect = ModalEffect(
+        effect = Effects.Modal(
             modes = listOf(
                 Mode(
                     effect = Patterns.Library.searchLibrary(
@@ -50,15 +49,11 @@ val InsatiableAvarice = card("Insatiable Avarice") {
                     description = "+ {2} — Search your library for a card, then shuffle and put that card on top.",
                     additionalManaCost = "{2}"
                 ),
-                Mode(
-                    effect = Effects.Composite(
-                        Effects.DrawCards(3, EffectTarget.ContextTarget(0)),
-                        Effects.LoseLife(3, EffectTarget.ContextTarget(0))
-                    ),
-                    targetRequirements = listOf(Targets.Player),
-                    description = "+ {B}{B} — Target player draws three cards and loses 3 life.",
+                mode("+ {B}{B} — Target player draws three cards and loses 3 life.") {
+                    val player = target(Targets.Player)
                     additionalManaCost = "{B}{B}"
-                )
+                    effect = Effects.DrawCards(3, player) then Effects.LoseLife(3, player)
+                }
             ),
             chooseCount = 2,
             minChooseCount = 1

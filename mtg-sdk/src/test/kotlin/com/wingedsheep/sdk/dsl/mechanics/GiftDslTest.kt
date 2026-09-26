@@ -15,8 +15,6 @@ import com.wingedsheep.sdk.scripting.effects.GiftGivenEffect
 import com.wingedsheep.sdk.scripting.effects.TakeExtraTurnEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.serialization.CardValidationError
-import com.wingedsheep.sdk.serialization.CardValidator
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
@@ -28,7 +26,8 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  *
  * The rules enumerate the whole `[something]` list (CR 702.174d–i) but only two kinds have a card
  * today, so the four unused mappings are pinned here rather than left to the first card that needs
- * one. Also covers the derived enters-ability's shape (CR 702.174b) and the permanent-only guard.
+ * one. Also covers the derived enters-ability's shape (CR 702.174b); the permanent-only guard is
+ * `CardValidatorTest`'s.
  */
 class GiftDslTest : DescribeSpec({
 
@@ -132,29 +131,6 @@ class GiftDslTest : DescribeSpec({
                 toughness = 1
             }
             unordered.giftAbilityText() shouldContain "When this permanent enters"
-        }
-    }
-
-    describe("the keyword is permanent-only") {
-
-        it("is rejected on an instant, which has no enters trigger to fire (CR 702.174b)") {
-            val instant = card("Test Gift Instant") {
-                typeLine = "Instant"
-                gift(GiftKind.CARD)
-            }
-            val errors = CardValidator.validate(instant)
-                .filterIsInstance<CardValidationError.GiftKeywordOnNonPermanent>()
-            errors shouldHaveSize 1
-            errors.single().message shouldContain "giftSpell"
-        }
-
-        it("accepts a permanent") {
-            CardValidator.validate(
-                card("Test Gift Enchantment") {
-                    typeLine = "Enchantment"
-                    gift(GiftKind.FOOD)
-                }
-            ).filterIsInstance<CardValidationError.GiftKeywordOnNonPermanent>() shouldHaveSize 0
         }
     }
 })

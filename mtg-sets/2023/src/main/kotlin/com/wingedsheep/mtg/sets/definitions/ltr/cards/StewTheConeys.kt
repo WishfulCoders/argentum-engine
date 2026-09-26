@@ -1,12 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Stew the Coneys
@@ -24,10 +22,10 @@ val StewTheConeys = card("Stew the Coneys") {
         "Create a Food token. (It's an artifact with \"{2}, {T}, Sacrifice this token: You gain 3 life.\")"
 
     spell {
-        val myCreature = target("creature you control", Targets.CreatureYouControl)
-        val theirCreature = target("creature you don't control", Targets.CreatureOpponentControls)
+        val myCreature = target(TargetFilter.CreatureYouControl)
+        val theirCreature = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.DealDamage(
-            amount = DynamicAmount.EntityProperty(EntityReference.Target(0), EntityNumericProperty.Power),
+            amount = DynamicAmounts.powerOf(myCreature),
             target = theirCreature,
             damageSource = myCreature
         ) then Effects.CreateFood()

@@ -2,12 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.targets.TargetOther
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Arm the Cathars
@@ -30,18 +29,18 @@ val ArmTheCathars = card("Arm the Cathars") {
         "vigilance until end of turn."
 
     spell {
-        val primary = target("target creature", Targets.Creature)
+        val primary = target(TargetFilter.Creature)
         // Two distinct optional slots — the names must differ, because target bindings are keyed by
         // name (EffectContext.buildNamedTargets). Reusing one name would make both BoundVariables
         // resolve to the same (last-bound) target, so the middle creature would get no bonus.
-        val second = target("up to one other target creature (+2/+2)", TargetOther(TargetCreature(optional = true)))
-        val third = target("up to one other target creature (+1/+1)", TargetOther(TargetCreature(optional = true)))
-        effect = Effects.ModifyStats(3, 3, primary)
-            .then(Effects.GrantKeyword(Keyword.VIGILANCE, primary))
-            .then(Effects.ModifyStats(2, 2, second))
-            .then(Effects.GrantKeyword(Keyword.VIGILANCE, second))
-            .then(Effects.ModifyStats(1, 1, third))
-            .then(Effects.GrantKeyword(Keyword.VIGILANCE, third))
+        val second = target(TargetOther(TargetObject(filter = TargetFilter.Creature, optional = true)))
+        val third = target(TargetOther(TargetObject(filter = TargetFilter.Creature, optional = true)))
+        effect = Effects.ModifyStats(3, 3, primary) then
+            Effects.GrantKeyword(Keyword.VIGILANCE, primary) then
+            Effects.ModifyStats(2, 2, second) then
+            Effects.GrantKeyword(Keyword.VIGILANCE, second) then
+            Effects.ModifyStats(1, 1, third) then
+            Effects.GrantKeyword(Keyword.VIGILANCE, third)
     }
 
     metadata {

@@ -1,18 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.AddCountersToCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Aerith Gainsborough
@@ -46,27 +43,26 @@ val AerithGainsborough = card("Aerith Gainsborough") {
 
     // Whenever you gain life, put a +1/+1 counter on Aerith.
     triggeredAbility {
-        trigger = Triggers.YouGainLife
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.gainsLife()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     // When Aerith dies, put X +1/+1 counters on each legendary creature you control,
     // where X is the number of +1/+1 counters Aerith had as it last existed on the battlefield.
     triggeredAbility {
-        trigger = Triggers.Dies
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.BattlefieldMatching(
+        trigger = Triggers.self.dies()
+        effect = Effects.Pipeline {
+            val legendaryCreatures = gather(
+                CardSource.BattlefieldMatching(
                     filter = GameObjectFilter.Creature.youControl().legendary()
-                ),
-                storeAs = "legendaryCreatures"
-            ),
-            AddCountersToCollectionEffect(
-                collectionName = "legendaryCreatures",
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
-                amount = DynamicAmount.ContextProperty(ContextPropertyKey.LAST_KNOWN_PLUS_ONE_COUNTER_COUNT)
+                )
             )
-        )
+            run(Effects.AddCountersToCollection(
+                collection = legendaryCreatures,
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
+                amount = DynamicAmounts.lastKnownPlusOneCounters()
+            ))
+        }
     }
 
     metadata {

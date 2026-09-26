@@ -10,10 +10,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -30,11 +28,11 @@ val BlastingStation = card("Blasting Station") {
     oracleText = "{T}, Sacrifice a creature: This artifact deals 1 damage to any target.\nWhenever a creature enters, you may untap this artifact."
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.Sacrifice(GameObjectFilter.Creature))
-        val t = target("target", AnyTarget())
-        effect = DealDamageEffect(1, t)
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(1, t)
     }
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(filter = GameObjectFilter.Creature, binding = TriggerBinding.ANY)
+        trigger = Triggers.a(GameObjectFilter.Creature).enters()
         optional = true
         effect = Effects.Untap(EffectTarget.Self)
     }

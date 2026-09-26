@@ -6,15 +6,9 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
+import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Conch Horn
@@ -34,23 +28,12 @@ val ConchHorn = card("Conch Horn") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap, Costs.SacrificeSelf)
-        effect = Effects.Composite(
-            Effects.DrawCards(2),
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Any),
-                storeAs = "hand"
-            ),
-            SelectFromCollectionEffect(
-                from = "hand",
-                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                storeSelected = "toTop",
-                selectedLabel = "Put on top of your library"
-            ),
-            MoveCollectionEffect(
-                from = "toTop",
-                destination = CardDestination.ToZone(Zone.LIBRARY, Player.You, ZonePlacement.Top)
-            )
-        )
+        effect = Effects.Pipeline {
+            run(Effects.DrawCards(2))
+            val hand = gather(CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Any))
+            val toTop = chooseExactly(1, from = hand, selectedLabel = "Put on top of your library")
+            toLibraryTop(toTop, order = CardOrder.Preserve)
+        }
         description = "{1}, {T}, Sacrifice this artifact: Draw two cards, then put a card from your hand on top of your library."
     }
 

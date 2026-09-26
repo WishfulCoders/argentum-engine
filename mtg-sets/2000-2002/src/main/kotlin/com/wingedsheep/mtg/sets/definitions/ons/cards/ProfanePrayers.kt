@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.core.Subtype
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Profane Prayers
@@ -22,11 +21,11 @@ val ProfanePrayers = card("Profane Prayers") {
     oracleText = "Profane Prayers deals X damage to any target and you gain X life, where X is the number of Clerics on the battlefield."
 
     spell {
-        val t = target("target", AnyTarget())
-        effect = DealDamageEffect(
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(
             DynamicAmounts.creaturesWithSubtype(Subtype("Cleric")),
             t
-        ) then GainLifeEffect(
+        ) then Effects.GainLife(
             DynamicAmounts.creaturesWithSubtype(Subtype("Cleric"))
         )
     }

@@ -29,10 +29,7 @@ val RecklessLackey = card("Reckless Lackey") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{R}"), Costs.SacrificeSelf)
-        effect = Effects.Composite(
-            Effects.DrawCards(1),
-            Effects.CreateTreasure(1)
-        )
+        effect = Effects.DrawCards(1) then Effects.CreateTreasure(1)
     }
 
     metadata {

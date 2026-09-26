@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Goblin Tunneler — Rise of the Eldrazi #148
@@ -29,7 +30,7 @@ val GoblinTunneler = card("Goblin Tunneler") {
 
     activatedAbility {
         cost = Costs.Tap
-        val creature = target("target creature", Targets.CreatureWithPowerAtMost(2))
+        val creature = target(TargetFilter.Creature.powerAtMost(2))
         effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, creature)
     }
 

@@ -4,9 +4,9 @@
 
 package com.wingedsheep.mtg.sets.definitions.dst.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -21,7 +21,7 @@ val Nourish = card("Nourish") {
     typeLine = "Instant"
     oracleText = "You gain 6 life."
     spell {
-        effect = GainLifeEffect(6)
+        effect = Effects.GainLife(6)
     }
     metadata {
         rarity = Rarity.COMMON

@@ -10,7 +10,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Namor the Sub-Mariner — Marvel Super Heroes #69
@@ -37,7 +37,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  *  - `CardPredicate.ColoredManaSymbolsAtLeast(listOf(BLUE))` — the trigger's "one or more" gate,
  *    reached here through `GameObjectFilter.coloredManaSymbolsAtLeast`.
  *  - `EntityNumericProperty.ColoredManaSymbolCount(listOf(BLUE))` read off
- *    `EntityReference.Triggering` — the "that many" token count.
+ *    `EffectTarget.TriggeringEntity` — the "that many" token count.
  *
  * Both follow CR 107.4e/f: a hybrid symbol *is* all of its component colours, so `{U/R}` and
  * `{2/U}` each count as one blue symbol, and a Phyrexian `{U/P}` is blue. `{X}`, generic and `{C}`
@@ -66,11 +66,9 @@ val NamorTheSubMariner = card("Namor the Sub-Mariner") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.Noncreature.coloredManaSymbolsAtLeast(Color.BLUE)
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature.coloredManaSymbolsAtLeast(Color.BLUE))
         effect = Effects.CreateToken(
-            count = DynamicAmounts.coloredManaSymbolsOf(EntityReference.Triggering, Color.BLUE),
+            count = DynamicAmounts.coloredManaSymbolsOf(EffectTarget.TriggeringEntity, Color.BLUE),
             power = 1,
             toughness = 1,
             colors = setOf(Color.BLUE),

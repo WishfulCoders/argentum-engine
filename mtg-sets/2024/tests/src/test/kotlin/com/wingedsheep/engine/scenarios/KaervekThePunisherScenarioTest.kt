@@ -16,7 +16,7 @@ import io.kotest.matchers.shouldBe
  *   it. You may cast the copy. If you do, you lose 2 life.
  *
  * Exercises the new `Effects.CastFromCollection(payManaCost)` path (the copy is cast paying its
- * normal mana cost, unlike Shiko's free cast) and the `IfYouDoEffect(..., CollectionNonEmpty)`
+ * normal mana cost, unlike Shiko's free cast) and the `Effects.IfYouDo(..., CollectionNonEmpty)`
  * gate on the 2-life loss.
  */
 class KaervekThePunisherScenarioTest : ScenarioTestBase() {

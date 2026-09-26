@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.FlipCoinEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -29,11 +28,11 @@ val YdwenEfreet = card("Ydwen Efreet") {
     oracleText = "Whenever this creature blocks, flip a coin. If you lose the flip, remove this creature from combat and it can't block this turn. Creatures it was blocking that had become blocked by only this creature this combat become unblocked."
 
     triggeredAbility {
-        trigger = Triggers.Blocks
-        effect = FlipCoinEffect(
+        trigger = Triggers.self.blocks()
+        effect = Effects.FlipCoin(
             lostEffect = Effects
-                .RemoveFromCombat(EffectTarget.Self, unblockSoleBlockedAttackers = true)
-                .then(Effects.CantBlock(EffectTarget.Self)),
+                .RemoveFromCombat(EffectTarget.Self, unblockSoleBlockedAttackers = true) then
+                Effects.CantBlock(EffectTarget.Self),
         )
     }
 

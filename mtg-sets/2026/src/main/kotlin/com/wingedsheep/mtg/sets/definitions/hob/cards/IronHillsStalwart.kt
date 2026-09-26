@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Iron Hills Stalwart
@@ -37,20 +36,9 @@ val IronHillsStalwart = card("Iron Hills Stalwart") {
     keywords(Keyword.REACH, Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val equipment = target(
-            "Equipment you control",
-            TargetPermanent(
-                filter = TargetFilter(GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl())
-            )
-        )
-        val creature = target(
-            "creature you control",
-            TargetPermanent(
-                filter = TargetFilter(GameObjectFilter.Creature.youControl()),
-                optional = true
-            )
-        )
+        trigger = Triggers.self.enters()
+        val equipment = target(TargetFilter(GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl()))
+        val creature = target(TargetFilter(GameObjectFilter.Creature.youControl()), optional = true)
         effect = Effects.AttachTargetEquipmentToCreature(equipment, creature)
     }
 

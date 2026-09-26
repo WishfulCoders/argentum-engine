@@ -37,7 +37,7 @@ val IcatianSkirmishers = card("Icatian Skirmishers") {
     keywords(Keyword.FIRST_STRIKE, Keyword.BANDING)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Group.grantKeywordToAll(
             Keyword.FIRST_STRIKE,
             GroupFilter(GameObjectFilter.Creature.inSameBandAsSource(), excludeSelf = true)

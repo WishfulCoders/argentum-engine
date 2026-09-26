@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.mh2.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Sanctum Weaver — Modern Horizons 2 #171
@@ -35,7 +35,7 @@ val SanctumWeaver = card("Sanctum Weaver") {
     activatedAbility {
         cost = Costs.Tap
         effect = Effects.AddAnyColorMana(
-            DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Enchantment)
+            DynamicAmounts.battlefield(Player.You, GameObjectFilter.Enchantment).count()
         )
         manaAbility = true
     }

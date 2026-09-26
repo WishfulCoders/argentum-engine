@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  *
  * When this creature dies, it deals 2 damage to target creature or planeswalker an opponent controls.
  *
- * A plain [Triggers.Dies] — no `triggerZone`, which would replace the default `{BATTLEFIELD}` and
+ * A plain `Triggers.self.dies()` — no `triggerZone`, which would replace the default `{BATTLEFIELD}` and
  * leave the trigger unindexed.
  *
  * "Creature or planeswalker **an opponent controls**" carries a controller predicate, so it is a
@@ -35,11 +35,8 @@ val CarelessCelebrant = card("Careless Celebrant") {
     oracleText = "When this creature dies, it deals 2 damage to target creature or planeswalker an opponent controls."
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val victim = target(
-            "target",
-            TargetObject(filter = TargetFilter(GameObjectFilter.CreatureOrPlaneswalker.opponentControls())),
-        )
+        trigger = Triggers.self.dies()
+        val victim = target(TargetFilter(GameObjectFilter.CreatureOrPlaneswalker.opponentControls()))
         effect = Effects.DealDamage(2, victim)
         description = "When this creature dies, it deals 2 damage to target creature or " +
             "planeswalker an opponent controls."

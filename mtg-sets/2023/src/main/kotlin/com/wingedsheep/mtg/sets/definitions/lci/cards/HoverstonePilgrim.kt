@@ -14,7 +14,6 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.WardCost
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -37,7 +36,7 @@ val HoverstonePilgrim = card("Hoverstone Pilgrim") {
     keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
     activatedAbility {
         cost = Costs.Mana("{2}")
-        val t = target("target", TargetObject(filter = TargetFilter.CardInGraveyard))
+        val t = target(TargetFilter.CardInGraveyard)
         effect = Effects.Move(t, Zone.LIBRARY, ZonePlacement.Bottom)
     }
     metadata {

@@ -46,13 +46,11 @@ val EssenceOfAntiquity = card("Essence of Antiquity") {
     disguise = "{2}{W}"
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
+        trigger = Triggers.self.turnedFaceUp()
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.Composite(
-                Effects.GrantKeyword(Keyword.HEXPROOF, EffectTarget.Self),
-                Effects.Untap(EffectTarget.Self),
-            ),
+            Effects.GrantKeyword(Keyword.HEXPROOF, EffectTarget.IterationEntity) then
+                Effects.Untap(EffectTarget.IterationEntity),
         )
         description = "When this creature is turned face up, creatures you control gain hexproof " +
             "until end of turn. Untap them."

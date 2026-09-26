@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.TypeLine
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
@@ -33,6 +32,9 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import java.util.UUID
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * The connive keyword action as a *primitive* (CR 701.50): a named, replaceable, observable action
@@ -92,7 +94,7 @@ class ConniveReplacementTest : FunSpec({
             ActivatedAbility(
                 id = lootAbilityId,
                 cost = AbilityCost.Tap,
-                effect = Effects.ConniveTargeting(Targets.CreatureYouControl)
+                effect = Effects.ConniveTargeting(TargetObject(filter = TargetFilter.CreatureYouControl))
             )
         )
     )
@@ -123,8 +125,8 @@ class ConniveReplacementTest : FunSpec({
             triggeredAbilities = listOf(
                 TriggeredAbility(
                     id = AbilityId(UUID.randomUUID().toString()),
-                    trigger = Triggers.WheneverCreatureYouControlConnives.event,
-                    binding = Triggers.WheneverCreatureYouControlConnives.binding,
+                    trigger = Triggers.a(GameObjectFilter.Creature.youControl()).connives().event,
+                    binding = Triggers.a(GameObjectFilter.Creature.youControl()).connives().binding,
                     effect = Effects.GainLife(7)
                 )
             )
@@ -163,7 +165,7 @@ class ConniveReplacementTest : FunSpec({
         driver.removeSummoningSickness(creature)
         driver.submit(
             ActivateAbility(playerId = player, sourceId = creature, abilityId = abilityId)
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
         return creature to handCard
     }
@@ -262,7 +264,7 @@ class ConniveReplacementTest : FunSpec({
         driver.removeSummoningSickness(creature)
         driver.submit(
             ActivateAbility(playerId = player, sourceId = creature, abilityId = conniveAbilityId)
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         withClue("the draw was impossible — empty library") {

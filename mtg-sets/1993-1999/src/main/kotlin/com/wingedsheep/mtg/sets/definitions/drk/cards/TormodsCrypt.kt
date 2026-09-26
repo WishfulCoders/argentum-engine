@@ -6,10 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 
 /** Tormod's Crypt — sacrifice it to exile target player's graveyard. */
@@ -20,17 +17,11 @@ val TormodsCrypt = card("Tormod's Crypt") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.SacrificeSelf)
-        target("target player", Targets.Player)
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
-                storeAs = "crypt_graveyard",
-            ),
-            MoveCollectionEffect(
-                from = "crypt_graveyard",
-                destination = CardDestination.ToZone(Zone.EXILE, Player.ContextPlayer(0)),
-            ),
-        )
+        val player = target(Targets.Player)
+        effect = Effects.Pipeline {
+            val cryptGraveyard = gather(CardSource.FromZone(Zone.GRAVEYARD, player.asPlayer))
+            exile(cryptGraveyard, player.asPlayer)
+        }
     }
 
     metadata {

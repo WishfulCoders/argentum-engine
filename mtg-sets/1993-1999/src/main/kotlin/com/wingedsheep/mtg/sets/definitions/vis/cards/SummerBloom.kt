@@ -4,9 +4,9 @@
 
 package com.wingedsheep.mtg.sets.definitions.vis.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.PlayAdditionalLandsEffect
 
 
 /**
@@ -20,7 +20,7 @@ val SummerBloom = card("Summer Bloom") {
     colorIdentity = "G"
     typeLine = "Sorcery"
     spell {
-        effect = PlayAdditionalLandsEffect(3)
+        effect = Effects.PlayAdditionalLands(3)
     }
     metadata {
         rarity = Rarity.UNCOMMON

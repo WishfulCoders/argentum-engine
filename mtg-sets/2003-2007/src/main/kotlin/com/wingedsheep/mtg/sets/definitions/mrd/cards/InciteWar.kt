@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Incite War
@@ -35,10 +35,10 @@ val InciteWar = card("Incite War") {
             additionalManaCostPerExtraMode = "{2}",
         ) {
             mode("Creatures target player controls attack this turn if able") {
-                target("player whose creatures must attack", TargetPlayer())
+                target(Targets.Player)
                 effect = Effects.ForEachInGroup(
                     GroupFilter(GameObjectFilter.Creature.targetPlayerControls()),
-                    Effects.MarkMustAttackThisTurn(EffectTarget.Self),
+                    Effects.MarkMustAttackThisTurn(EffectTarget.IterationEntity),
                 )
             }
             mode("Creatures you control gain first strike until end of turn") {

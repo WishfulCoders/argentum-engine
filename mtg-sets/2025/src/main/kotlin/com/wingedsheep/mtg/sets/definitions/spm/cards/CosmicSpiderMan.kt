@@ -9,6 +9,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Cosmic Spider-Man
@@ -27,16 +28,14 @@ val CosmicSpiderMan = card("Cosmic Spider-Man") {
     toughness = 5
     keywords(Keyword.FLYING, Keyword.FIRST_STRIKE, Keyword.TRAMPLE, Keyword.LIFELINK, Keyword.HASTE)
     triggeredAbility {
-        trigger = Triggers.BeginCombat
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withSubtype(Subtype.SPIDER).youControl(), excludeSelf = true),
-            Effects.Composite(
-                Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.HASTE, EffectTarget.Self)
-            )
+            Effects.GrantKeyword(Keyword.FLYING, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.HASTE, EffectTarget.IterationEntity)
         )
     }
     metadata {

@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
@@ -13,7 +13,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Rat King, Verminister
@@ -36,27 +36,24 @@ val RatKingVerminister = card("Rat King, Verminister") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.YouHadPermanentLeaveBattlefieldThisTurn
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
             colors = setOf(Color.BLACK),
             creatureTypes = setOf("Rat")
-        ).then(Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self))
+        ) then Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Disappear — At the beginning of your end step, if a permanent left the battlefield under your control this turn, create a 1/1 black Rat creature token and put a +1/+1 counter on Rat King."
     }
 
     activatedAbility {
-        target(
-            "target creature card in your graveyard",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Creature.ownedByYou(), zone = Zone.GRAVEYARD))
-        )
+        val creatureCardInYourGraveyard = target(TargetFilter(GameObjectFilter.Creature.ownedByYou(), zone = Zone.GRAVEYARD))
         cost = Costs.Composite(
             Costs.Tap,
             Costs.SacrificeMultiple(3, GameObjectFilter.Creature.withSubtype(Subtype("Rat")))
         )
-        effect = Effects.ReturnSameNamedFromGraveyard()
+        effect = Effects.ReturnSameNamedFromGraveyard(target = creatureCardInYourGraveyard)
         description = "{T}, Sacrifice three Rats: Return target creature card and all other cards with the same name as that card from your graveyard to the battlefield tapped."
     }
 

@@ -8,15 +8,10 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.SelectionRestriction
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Omenpath Journey — {3}{G} Enchantment (The Big Score, mythic).
@@ -47,52 +42,36 @@ val OmenpathJourney = card("Omenpath Journey") {
         "and put it onto the battlefield tapped."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.Land),
-                    storeAs = "searchable"
-                ),
-                SelectFromCollectionEffect(
-                    from = "searchable",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(5)),
-                    storeSelected = "found",
-                    restrictions = listOf(SelectionRestriction.OnePerCardName),
-                    prompt = "Search for up to five land cards with different names to exile"
-                ),
-                MoveCollectionEffect(
-                    from = "found",
-                    destination = CardDestination.ToZone(Zone.EXILE),
-                    linkToSource = true
-                ),
-                ShuffleLibraryEffect()
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val searchable = gather(
+                CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.Land),
+                search = true
             )
-        )
+            val found = chooseUpTo(
+                5,
+                from = searchable,
+                restrictions = listOf(SelectionRestriction.OnePerCardName),
+                prompt = "Search for up to five land cards with different names to exile"
+            )
+            exile(found, linkToSource = true)
+            run(Effects.ShuffleLibrary())
+        }
     }
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromLinkedExile(),
-                    storeAs = "exiled"
-                ),
-                SelectFromCollectionEffect(
-                    from = "exiled",
-                    selection = SelectionMode.Random(DynamicAmount.Fixed(1)),
-                    storeSelected = "chosen"
-                ),
-                MoveCollectionEffect(
-                    from = "chosen",
-                    destination = CardDestination.ToZone(
-                        Zone.BATTLEFIELD,
-                        placement = ZonePlacement.Tapped
-                    )
+        trigger = Triggers.you.beginningOf(Step.END)
+        effect = Effects.Pipeline {
+            val exiled = gather(CardSource.FromLinkedExile())
+            val chosen = chooseRandom(1, from = exiled)
+            move(
+                chosen,
+                CardDestination.ToZone(
+                    Zone.BATTLEFIELD,
+                    placement = ZonePlacement.Tapped
                 )
             )
-        )
+        }
     }
 
     metadata {

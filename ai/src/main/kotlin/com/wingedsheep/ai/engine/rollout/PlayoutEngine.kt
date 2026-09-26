@@ -62,8 +62,9 @@ class PlayoutEngine(
     private val settings: RolloutSettings = RolloutSettings.DEFAULT,
     private val winProbabilityScale: Double = WinProbability.SCALE,
 ) : Playouts {
-    private val processor = ActionProcessor(EngineServices(cardRegistry), computeUndo = false)
-    private val enumerator = LegalActionEnumerator.create(cardRegistry)
+    private val services = EngineServices(cardRegistry)
+    private val processor = ActionProcessor(services, computeUndo = false)
+    private val enumerator = services.legalActionEnumerator
 
     /**
      * Play [start] forward and return the win probability it reached, from [playerId]'s side.

@@ -27,13 +27,14 @@ import kotlin.reflect.KClass
  * printed behaviour, and the reason this card is famously hard to use.
  */
 class SwapBlockingAssignmentsExecutor(
-    private val cardRegistry: CardRegistry
+    private val cardRegistry: CardRegistry,
+    private val predicateEvaluator: com.wingedsheep.engine.handlers.PredicateEvaluator
 ) : EffectExecutor<SwapBlockingAssignmentsEffect> {
 
     override val effectType: KClass<SwapBlockingAssignmentsEffect> =
         SwapBlockingAssignmentsEffect::class
 
-    private val evasionRules = defaultBlockEvasionRules()
+    private val evasionRules = defaultBlockEvasionRules(predicateEvaluator)
 
     override fun execute(
         state: GameState,

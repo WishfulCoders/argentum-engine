@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.ChooseOptionDecision
 import com.wingedsheep.engine.core.OptionChosenResponse
@@ -75,7 +76,7 @@ class MistformWarchiefTest : FunSpec({
         registry.register(TestCards.all)
         registry.register(MistformWarchief)
 
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         val driver = createDriver()
         driver.initMirrorMatch(
@@ -101,7 +102,7 @@ class MistformWarchiefTest : FunSpec({
         registry.register(TestCards.all)
         registry.register(MistformWarchief)
 
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         val driver = createDriver()
         driver.initMirrorMatch(
@@ -134,7 +135,7 @@ class MistformWarchiefTest : FunSpec({
         registry.register(MistformWarchief)
         registry.register(DaruWarchief)
 
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         val driver = GameTestDriver()
         driver.registerCards(TestCards.all)
@@ -183,7 +184,7 @@ class MistformWarchiefTest : FunSpec({
         registry.register(TestCards.all)
         registry.register(MistformWarchief)
 
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         val driver = createDriver()
         driver.initMirrorMatch(

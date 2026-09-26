@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Wreck Remover — Aetherdrift #247
@@ -38,29 +37,17 @@ val WreckRemover = card("Wreck Remover") {
         "Cycling {2} ({2}, Discard this card: Draw a card.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "up to one target card in a graveyard",
-            TargetObject(optional = true, filter = TargetFilter.CardInGraveyard)
-        )
-        effect = Effects.Composite(
-            Effects.Move(t, Zone.EXILE),
-            Effects.GainLife(1)
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.CardInGraveyard, optional = true)
+        effect = Effects.Move(t, Zone.EXILE) then Effects.GainLife(1)
         description = "Whenever this creature enters or attacks, exile up to one target card from " +
             "a graveyard. You gain 1 life."
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val t = target(
-            "up to one target card in a graveyard",
-            TargetObject(optional = true, filter = TargetFilter.CardInGraveyard)
-        )
-        effect = Effects.Composite(
-            Effects.Move(t, Zone.EXILE),
-            Effects.GainLife(1)
-        )
+        trigger = Triggers.self.attacks()
+        val t = target(TargetFilter.CardInGraveyard, optional = true)
+        effect = Effects.Move(t, Zone.EXILE) then Effects.GainLife(1)
         description = "Whenever this creature enters or attacks, exile up to one target card from " +
             "a graveyard. You gain 1 life."
     }

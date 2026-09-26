@@ -1,18 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.PayManaCostEffect
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Icewrought Sentry
@@ -29,7 +25,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * The attack ability is a "When you do" reflexive (CR 603.12): no target is chosen when the attack
  * trigger goes on the stack — only once the {1}{U} is actually paid ([ReflexiveTriggerEffect]).
  *
- * The pump is [Triggers.YouTap] — tap *attribution*, so only a tap this creature's controller caused
+ * The pump is `Triggers.you.taps(filter, batch)` — tap *attribution*, so only a tap this creature's controller caused
  * fires it (not an opponent tapping their own creature to attack or crew). Its own reflexive tap is
  * one, so attacking and paying pumps it before damage; so does any other tapper you control, which
  * is why the trigger is a separate ability rather than a rider on the reflexive effect. Per-tap, not
@@ -50,21 +46,19 @@ val IcewroughtSentry = card("Icewrought Sentry") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = ReflexiveTriggerEffect(
-            action = PayManaCostEffect(ManaCost.parse("{1}{U}")),
-            optional = true,
-            reflexiveEffect = Effects.Tap(EffectTarget.ContextTarget(0)),
-            reflexiveTargetRequirements = listOf(
-                TargetCreature(filter = TargetFilter.Creature.opponentControls())
-            )
-        )
+        trigger = Triggers.self.attacks()
+        effect = Effects.ReflexiveTrigger(
+            action = Effects.PayMana("{1}{U}"),
+            optional = true) {
+            val creature = target(TargetFilter.Creature.opponentControls())
+            effect = Effects.Tap(creature)
+        }
         description = "Whenever this creature attacks, you may pay {1}{U}. When you do, tap target " +
             "creature an opponent controls."
     }
 
     triggeredAbility {
-        trigger = Triggers.YouTap(GameObjectFilter.Creature.opponentControls())
+        trigger = Triggers.you.taps(GameObjectFilter.Creature.opponentControls())
         effect = Effects.ModifyStats(2, 1, EffectTarget.Self, Duration.EndOfTurn)
         description = "Whenever you tap an untapped creature an opponent controls, this creature " +
             "gets +2/+1 until end of turn."

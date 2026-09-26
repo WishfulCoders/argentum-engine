@@ -9,8 +9,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CREATED_TOKENS
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -36,8 +34,8 @@ val GeistOfSaintTraft = card("Geist of Saint Traft") {
     keywords(Keyword.HEXPROOF)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = CreateTokenEffect(
+        trigger = Triggers.self.attacks()
+        effect = Effects.CreateToken(
             power = 4,
             toughness = 4,
             colors = setOf(Color.WHITE),
@@ -45,13 +43,11 @@ val GeistOfSaintTraft = card("Geist of Saint Traft") {
             keywords = setOf(Keyword.FLYING),
             tapped = true,
             attacking = true,
-        ).then(
-            CreateDelayedTriggerEffect(
-                step = Step.END_COMBAT,
-                effect = Effects.Move(
-                    target = EffectTarget.PipelineTarget(CREATED_TOKENS, 0),
-                    destination = Zone.EXILE,
-                ),
+        ) then Effects.CreateDelayedTrigger(
+            step = Step.END_COMBAT,
+            effect = Effects.Move(
+                target = EffectTarget.PipelineTarget(CREATED_TOKENS, 0),
+                destination = Zone.EXILE,
             ),
         )
     }

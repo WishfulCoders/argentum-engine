@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.lgn.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Primal Whisperer
@@ -24,13 +25,13 @@ val PrimalWhisperer = card("Primal Whisperer") {
     toughness = 2
     oracleText = "This creature gets +2/+2 for each face-down creature on the battlefield.\nMorph {3}{G} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)"
 
-    val faceDownCount = DynamicAmount.AggregateBattlefield(Player.Each, GameObjectFilter.Creature.faceDown())
+    val faceDownCount = DynamicAmounts.battlefield(Player.Each, GameObjectFilter.Creature.faceDown()).count()
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
-            powerBonus = DynamicAmount.Multiply(faceDownCount, 2),
-            toughnessBonus = DynamicAmount.Multiply(faceDownCount, 2)
+            powerBonus = faceDownCount * 2,
+            toughnessBonus = faceDownCount * 2
         )
     }
 

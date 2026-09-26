@@ -30,7 +30,7 @@ val WatcherOfTheRoost = card("Watcher of the Roost") {
     morphCost = Costs.pay.RevealCard(filter = GameObjectFilter.Any.withColor(Color.WHITE))
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
+        trigger = Triggers.self.turnedFaceUp()
         effect = Effects.GainLife(2)
     }
 

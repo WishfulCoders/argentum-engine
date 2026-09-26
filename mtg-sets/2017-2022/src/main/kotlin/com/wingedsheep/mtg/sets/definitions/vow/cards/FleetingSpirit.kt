@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -50,13 +49,11 @@ val FleetingSpirit = card("Fleeting Spirit") {
     // Discard a card: Exile this creature. Return it at the beginning of the next end step.
     activatedAbility {
         cost = Costs.DiscardCard
-        effect = Effects.Composite(
-            Effects.Move(EffectTarget.Self, Zone.EXILE),
-            CreateDelayedTriggerEffect(
+        effect = Effects.Move(EffectTarget.Self, Zone.EXILE) then
+            Effects.CreateDelayedTrigger(
                 step = Step.END,
                 effect = Effects.Move(EffectTarget.Self, Zone.BATTLEFIELD)
             )
-        )
         description = "Discard a card: Exile this creature. Return it to the battlefield under its " +
             "owner's control at the beginning of the next end step."
     }

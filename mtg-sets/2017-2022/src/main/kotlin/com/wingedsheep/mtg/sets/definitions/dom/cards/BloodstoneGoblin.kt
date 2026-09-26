@@ -25,9 +25,9 @@ val BloodstoneGoblin = card("Bloodstone Goblin") {
     oracleText = "Whenever you cast a spell, if that spell was kicked, Bloodstone Goblin gets +1/+1 and gains menace until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(requires = setOf(SpellCastPredicate.WasKicked))
-        effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
-            .then(Effects.GrantKeyword(Keyword.MENACE, EffectTarget.Self))
+        trigger = Triggers.you.casts(requires = setOf(SpellCastPredicate.WasKicked))
+        effect = Effects.ModifyStats(1, 1, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.MENACE, EffectTarget.Self)
     }
 
     metadata {

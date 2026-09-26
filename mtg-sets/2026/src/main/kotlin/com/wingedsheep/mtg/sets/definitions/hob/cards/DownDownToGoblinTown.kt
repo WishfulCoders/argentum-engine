@@ -9,10 +9,8 @@ import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Effect
 import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.RevealHandEffect
-import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Down, Down to Goblin-town
@@ -51,21 +49,20 @@ val DownDownToGoblinTown = card("Down, Down to Goblin-town") {
     // I — Target opponent reveals their hand. You choose a nonland card from it. That player
     //     discards that card.
     sagaChapter(1) {
-        val opponent = target("target opponent to strip a card from", TargetOpponent())
+        val opponent = target(Targets.Opponent)
         effect = Effects.Pipeline {
-            run(RevealHandEffect(opponent))
-            val hand = gather(CardSource.FromZone(Zone.HAND, Player.ContextPlayer(0)), name = "opponentHand")
+            run(Effects.RevealHand(opponent))
+            val hand = gather(CardSource.FromZone(Zone.HAND, opponent.asPlayer))
             val chosen = chooseExactly(
                 1, from = hand,
                 filter = GameObjectFilter.Nonland,
                 prompt = "Choose a nonland card to discard",
                 alwaysPrompt = true,
-                showAllCards = true,
-                name = "toDiscard"
+                showAllCards = true
             )
             move(
                 chosen,
-                CardDestination.ToZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
+                CardDestination.ToZone(Zone.GRAVEYARD, opponent.asPlayer),
                 moveType = MoveType.Discard
             )
         }
@@ -78,11 +75,11 @@ val DownDownToGoblinTown = card("Down, Down to Goblin-town") {
 
     // III, IV — Target opponent loses 1 life and you gain 1 life.
     sagaChapter(3) {
-        val opponent = target("target opponent to lose 1 life", TargetOpponent())
+        val opponent = target(Targets.Opponent)
         effect = goblinTownDrain(opponent)
     }
     sagaChapter(4) {
-        val opponent = target("target opponent to lose 1 life", TargetOpponent())
+        val opponent = target(Targets.Opponent)
         effect = goblinTownDrain(opponent)
     }
 
@@ -96,4 +93,4 @@ val DownDownToGoblinTown = card("Down, Down to Goblin-town") {
 
 /** The chapter III / IV ability: the named opponent loses 1 life, then you gain 1 life. */
 private fun goblinTownDrain(opponent: EffectTarget): Effect =
-    Effects.LoseLife(1, opponent).then(Effects.GainLife(1))
+    Effects.LoseLife(1, opponent) then Effects.GainLife(1)

@@ -2,13 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.SuppressHexproofForGroup
 import com.wingedsheep.sdk.scripting.SuppressWardForGroup
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Nowhere to Run
@@ -34,8 +34,8 @@ val NowhereToRun = card("Nowhere to Run") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target creature", Targets.CreatureOpponentControls)
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.ModifyStats(-3, -3, t)
         description = "When this enchantment enters, target creature an opponent controls gets -3/-3 until end of turn."
     }

@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.teamwork
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Helicarrier Strike — Marvel Super Heroes #15
@@ -37,15 +36,12 @@ val HelicarrierStrike = card("Helicarrier Strike") {
     teamwork(2)
 
     spell {
-        val creature = target(
-            "target attacking or blocking creature",
-            TargetObject(filter = TargetFilter.AttackingOrBlockingCreature),
-        )
+        val creature = target(TargetFilter.AttackingOrBlockingCreature)
         effect = Effects.DealDamage(
-            DynamicAmount.Conditional(
+            DynamicAmounts.conditional(
                 condition = Conditions.TeamworkWasPaid,
-                ifTrue = DynamicAmount.Fixed(4),
-                ifFalse = DynamicAmount.Fixed(2),
+                ifTrue = 4,
+                ifFalse = 2,
             ),
             creature,
         )

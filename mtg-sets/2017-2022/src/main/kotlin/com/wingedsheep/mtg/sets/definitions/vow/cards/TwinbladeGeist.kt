@@ -2,7 +2,6 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.disturb
 import com.wingedsheep.sdk.model.CardDefinition
@@ -10,6 +9,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.RedirectZoneChange
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Twinblade Geist // Twinblade Invocation (Innistrad: Crimson Vow #40 — the card's earliest
@@ -78,7 +79,7 @@ private val TwinbladeInvocation = card("Twinblade Invocation") {
         "Enchanted creature has double strike.\n" +
         "If Twinblade Invocation would be put into a graveyard from anywhere, exile it instead."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = GrantKeyword(Keyword.DOUBLE_STRIKE)

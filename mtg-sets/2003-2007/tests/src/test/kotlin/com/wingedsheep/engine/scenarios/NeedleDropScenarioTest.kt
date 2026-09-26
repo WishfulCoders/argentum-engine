@@ -1,7 +1,5 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.handlers.PredicateEvaluator
-import com.wingedsheep.engine.handlers.TargetFinder
 import com.wingedsheep.engine.handlers.effects.DamageUtils
 import com.wingedsheep.engine.legalactions.utils.TargetEnumerationUtils
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
@@ -37,14 +35,14 @@ class NeedleDropScenarioTest : ScenarioTestBase() {
         .build()
 
     private fun TestGame.damage(id: EntityId, amount: Int = 1) {
-        state = DamageUtils.dealDamageToTarget(state, id, amount, null).state
+        state = DamageUtils.dealDamageToTarget(zones, state, id, amount, null).state
     }
 
     private fun TestGame.checkTargets(expected: List<EntityId> = emptyList()) {
         val source = findCardsInHand(1, "Needle Drop").single()
-        TargetFinder().findLegalTargets(state, requirement, player1Id, source)
+        services.targetFinder.findLegalTargets(state, requirement, player1Id, source)
             .shouldContainExactlyInAnyOrder(expected)
-        TargetEnumerationUtils(PredicateEvaluator()).findValidTargets(state, player1Id, requirement, source)
+        TargetEnumerationUtils(services.predicateEvaluator).findValidTargets(state, player1Id, requirement, source)
             .shouldContainExactlyInAnyOrder(expected)
     }
 

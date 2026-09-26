@@ -1,4 +1,5 @@
 package com.wingedsheep.engine.scenarios
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 
 import com.wingedsheep.engine.core.*
@@ -16,7 +17,6 @@ import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
 import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -48,7 +48,7 @@ class OmenTest : FunSpec({
             CompositeEffect(
                 listOf(
                     Patterns.Library.lookAtTopAndReorder(3),
-                    MayEffect(ShuffleLibraryEffect()),
+                    Effects.May(ShuffleLibraryEffect()),
                     DrawCardsEffect(1)
                 )
             )
@@ -91,7 +91,7 @@ class OmenTest : FunSpec({
 
         // Cast Omen
         val castResult = driver.castSpell(activePlayer, omen)
-        castResult.isSuccess shouldBe true
+        castResult.outcome shouldBe Outcome.Done
 
         // Let the spell resolve
         driver.bothPass()

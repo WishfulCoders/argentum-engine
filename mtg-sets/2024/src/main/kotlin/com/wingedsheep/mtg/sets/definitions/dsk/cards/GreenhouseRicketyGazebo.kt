@@ -1,6 +1,5 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -12,14 +11,8 @@ import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantActivatedAbility
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Greenhouse // Rickety Gazebo (DSK 181) — split-layout Room (CR 709.5).
@@ -38,7 +31,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * door is unlocked (CR 709.5). It grants every land its controller controls a granted mana ability
  * via [GrantActivatedAbility]; the engine surfaces and pays with that grant through the Room-face-
  * aware static-ability projection (see RoomFaceStatics) — both as a clickable mana ability and to
- * the auto-payer. Rickety Gazebo's [Triggers.OnDoorUnlocked] trigger mills four and returns up to
+ * the auto-payer. Rickety Gazebo's `Triggers.self.doorUnlocked()` trigger mills four and returns up to
  * two permanent cards from among them (the Cache Grab gather→mill→select→return pipeline, here with
  * up to two picks).
  */
@@ -54,7 +47,7 @@ val GreenhouseRicketyGazebo = card("Greenhouse // Rickety Gazebo") {
         staticAbility {
             ability = GrantActivatedAbility(
                 ability = ActivatedAbility(
-                    id = AbilityId.generate(),
+                    id = AbilityId.next(),
                     cost = Costs.Tap,
                     effect = Effects.AddManaOfChoice(),
                     isManaAbility = true,
@@ -72,35 +65,23 @@ val GreenhouseRicketyGazebo = card("Greenhouse // Rickety Gazebo") {
             "cards from among them to your hand."
 
         triggeredAbility {
-            trigger = Triggers.OnDoorUnlocked
-            effect = Effects.Composite(
-                listOf(
-                    // Mill four: gather the top four, move them to the graveyard.
-                    GatherCardsEffect(
-                        source = CardSource.TopOfLibrary(DynamicAmount.Fixed(4)),
-                        storeAs = "milled"
-                    ),
-                    MoveCollectionEffect(
-                        from = "milled",
-                        destination = CardDestination.ToZone(Zone.GRAVEYARD)
-                    ),
-                    // Return up to two permanent cards from among the milled cards to your hand.
-                    SelectFromCollectionEffect(
-                        from = "milled",
-                        selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(2)),
-                        filter = GameObjectFilter.Permanent,
-                        storeSelected = "selected",
-                        showAllCards = true,
-                        prompt = "Return up to two permanent cards to your hand",
-                        selectedLabel = "Return to hand",
-                        remainderLabel = "Leave in graveyard"
-                    ),
-                    MoveCollectionEffect(
-                        from = "selected",
-                        destination = CardDestination.ToZone(Zone.HAND)
-                    )
+            trigger = Triggers.self.doorUnlocked()
+            effect = Effects.Pipeline {
+                // Mill four: gather the top four, move them to the graveyard.
+                val milled = gather(CardSource.TopOfLibrary(4))
+                toGraveyard(milled)
+                // Return up to two permanent cards from among the milled cards to your hand.
+                val selected = chooseUpTo(
+                    2,
+                    from = milled,
+                    filter = GameObjectFilter.Permanent,
+                    showAllCards = true,
+                    prompt = "Return up to two permanent cards to your hand",
+                    selectedLabel = "Return to hand",
+                    remainderLabel = "Leave in graveyard"
                 )
-            )
+                toHand(selected)
+            }
             description = "When you unlock this door, mill four cards, then return up to two " +
                 "permanent cards from among them to your hand."
         }

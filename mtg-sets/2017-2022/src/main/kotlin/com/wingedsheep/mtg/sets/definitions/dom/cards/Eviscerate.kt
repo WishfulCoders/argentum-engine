@@ -3,8 +3,8 @@ package com.wingedsheep.mtg.sets.definitions.dom.cards
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Eviscerate
@@ -19,7 +19,7 @@ val Eviscerate = card("Eviscerate") {
     oracleText = "Destroy target creature."
 
     spell {
-        val t = target("target", TargetCreature())
+        val t = target(TargetFilter.Creature)
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
 

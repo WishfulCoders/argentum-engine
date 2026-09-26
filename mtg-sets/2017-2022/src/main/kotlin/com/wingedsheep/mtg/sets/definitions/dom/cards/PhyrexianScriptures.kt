@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Phyrexian Scriptures
@@ -29,11 +29,9 @@ val PhyrexianScriptures = card("Phyrexian Scriptures") {
         "III — Exile all opponents' graveyards."
 
     sagaChapter(1) {
-        val creature = target("creature", Targets.UpToCreatures(1))
-        effect = Effects.Composite(listOf(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creature),
+        val creature = target(TargetFilter.Creature, optional = true)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature) then
             Effects.AddCardType("ARTIFACT", creature)
-        ))
     }
 
     sagaChapter(2) {

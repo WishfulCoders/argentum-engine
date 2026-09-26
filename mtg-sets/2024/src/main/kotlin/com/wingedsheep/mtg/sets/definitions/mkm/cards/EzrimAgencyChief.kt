@@ -56,7 +56,7 @@ val EzrimAgencyChief = card("Ezrim, Agency Chief") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Investigate(2)
         description = "When Ezrim enters, investigate twice."
     }

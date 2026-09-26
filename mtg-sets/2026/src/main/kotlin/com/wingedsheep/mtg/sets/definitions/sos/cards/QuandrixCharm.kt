@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Quandrix Charm
@@ -31,15 +31,15 @@ val QuandrixCharm = card("Quandrix Charm") {
     spell {
         modal(chooseCount = 1) {
             mode("Counter target spell unless its controller pays {2}") {
-                target = Targets.Spell
+                val spell = target(TargetFilter.SpellOnStack)
                 effect = Effects.CounterUnlessPays("{2}")
             }
             mode("Destroy target enchantment") {
-                val t = target("target enchantment", Targets.Enchantment)
+                val t = target(TargetFilter.Enchantment)
                 effect = Effects.Destroy(t)
             }
             mode("Target creature has base power and toughness 5/5 until end of turn") {
-                val t = target("target creature", Targets.Creature)
+                val t = target(TargetFilter.Creature)
                 effect = Effects.SetBasePowerAndToughness(5, 5, t)
             }
         }

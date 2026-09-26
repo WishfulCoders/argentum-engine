@@ -4,11 +4,11 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Evolution Charm
@@ -38,11 +38,11 @@ val EvolutionCharm = card("Evolution Charm") {
                 )
             }
             mode("Return target creature card from your graveyard to your hand") {
-                val t = target("target", Targets.CreatureCardInYourGraveyard)
+                val t = target(TargetFilter.CreatureInYourGraveyard)
                 effect = Effects.Move(t, Zone.HAND)
             }
             mode("Target creature gains flying until end of turn") {
-                val t = target("target", Targets.Creature)
+                val t = target(TargetFilter.Creature)
                 effect = Effects.GrantKeyword(Keyword.FLYING, t)
             }
         }

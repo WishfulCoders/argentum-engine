@@ -14,6 +14,7 @@ import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.AdditionalCostPayment
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Scenario coverage for Gap 17 (`SacrificedPermanentWasLegendary`) via Nasty End:
@@ -24,7 +25,7 @@ import io.kotest.matchers.shouldBe
  * The legendary status is read from the `EntitySnapshot.supertypes` set captured by
  * `captureEntitySnapshots` at cost-payment time — the supertype field is freshly added
  * for Gap 17 (previous snapshots only carried subtypes). The condition data-only path runs
- * inside `ConditionalEffect`'s `Gate.WhenCondition`, lowered from the SDK facade
+ * inside `Effects.If`'s `Gate.WhenCondition`, lowered from the SDK facade
  * `Conditions.SacrificedWasLegendary`.
  */
 class NastyEndTest : FunSpec({
@@ -65,7 +66,7 @@ class NastyEndTest : FunSpec({
                 additionalCostPayment = AdditionalCostPayment(sacrificedPermanents = listOf(fodder))
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         driver.bothPass()
         while (driver.state.stack.isNotEmpty()) driver.bothPass()
 
@@ -94,7 +95,7 @@ class NastyEndTest : FunSpec({
                 additionalCostPayment = AdditionalCostPayment(sacrificedPermanents = listOf(fodder))
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         driver.bothPass()
         while (driver.state.stack.isNotEmpty()) driver.bothPass()
 

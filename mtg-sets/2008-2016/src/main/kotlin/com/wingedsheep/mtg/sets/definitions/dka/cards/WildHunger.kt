@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -26,11 +25,8 @@ val WildHunger = card("Wild Hunger") {
     typeLine = "Instant"
     oracleText = "Target creature gets +3/+1 and gains trample until end of turn.\nFlashback {3}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.ModifyStats(3, 1, t),
-            Effects.GrantKeyword(Keyword.TRAMPLE, t)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(3, 1, t) then Effects.GrantKeyword(Keyword.TRAMPLE, t)
     }
     keywordAbility(KeywordAbility.flashback("{3}{R}"))
     metadata {

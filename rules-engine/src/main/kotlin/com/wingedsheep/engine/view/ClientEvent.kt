@@ -1,6 +1,6 @@
 package com.wingedsheep.engine.view
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.engine.core.*
 import kotlinx.serialization.SerialName
@@ -1155,14 +1155,14 @@ object ClientEventTransformer {
             is CountersAddedEvent -> ClientEvent.CounterAdded(
                 permanentId = event.entityId,
                 permanentName = event.entityName,
-                counterType = event.counterType,
+                counterType = event.counterType.printed,
                 count = event.amount
             )
 
             is CountersRemovedEvent -> ClientEvent.CounterRemoved(
                 permanentId = event.entityId,
                 permanentName = event.entityName,
-                counterType = event.counterType,
+                counterType = event.counterType.printed,
                 count = event.amount
             )
 
@@ -1243,7 +1243,7 @@ object ClientEventTransformer {
             is LoyaltyChangedEvent -> ClientEvent.CounterAdded(
                 permanentId = event.entityId,
                 permanentName = event.entityName,
-                counterType = Counters.LOYALTY,
+                counterType = CounterType.LOYALTY.printed,
                 count = event.change
             )
 
@@ -1398,6 +1398,7 @@ is PermanentsSacrificedEvent -> {
             is DamageAssignedEvent,
             is PhaseChangedEvent,
             is StepChangedEvent,
+            is TurnEndedByEffectEvent,
             is PriorityChangedEvent,
             is ManaSpentEvent,
             is LandTappedForManaEvent,
@@ -1456,6 +1457,9 @@ is PermanentsSacrificedEvent -> {
             is ManifestedDreadEvent,
             is LibrarySearchedEvent,
             is TurnedFaceDownEvent,
+            // The flip shows in state — the new name and a 180° `imageRotation` — so no
+            // separate client event.
+            is FlippedEvent,
             is CreatureTypeChangedEvent,
             is BecomesTargetEvent,
             is SpellCopiedEvent,

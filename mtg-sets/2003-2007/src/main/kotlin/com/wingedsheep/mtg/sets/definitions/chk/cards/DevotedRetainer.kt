@@ -22,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * is written as two triggers over the two distinct events. They are mutually exclusive in any one
  * combat — the Retainer either declares a block or is blocked, never both — so the pump never doubles.
  *
- * The pump targets [EffectTarget.Self] rather than `TriggeringEntity` because [Triggers.Blocks] fires
+ * The pump targets [EffectTarget.Self] rather than `TriggeringEntity` because `Triggers.self.blocks()` fires
  * off a block event that does not bind the source as the triggering entity.
  */
 val DevotedRetainer = card("Devoted Retainer") {
@@ -37,14 +37,14 @@ val DevotedRetainer = card("Devoted Retainer") {
 
     // Bushido 1, half one: "Whenever this creature blocks …"
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
         description = "Bushido 1"
     }
 
     // Bushido 1, half two: "… or becomes blocked, it gets +1/+1 until end of turn."
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
+        trigger = Triggers.self.becomesBlocked()
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
         description = "Bushido 1"
     }

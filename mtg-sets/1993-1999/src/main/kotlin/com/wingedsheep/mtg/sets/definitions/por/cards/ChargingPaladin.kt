@@ -26,7 +26,7 @@ val ChargingPaladin = card("Charging Paladin") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ModifyStats(0, 3, EffectTarget.Self)
     }
     metadata {

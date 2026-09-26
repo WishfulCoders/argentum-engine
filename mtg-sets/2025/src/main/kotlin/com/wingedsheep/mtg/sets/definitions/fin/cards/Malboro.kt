@@ -37,7 +37,7 @@ val Malboro = card("Malboro") {
         "put it into your hand, then shuffle.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ForEachPlayer(
             Player.EachOpponent,
             listOf(

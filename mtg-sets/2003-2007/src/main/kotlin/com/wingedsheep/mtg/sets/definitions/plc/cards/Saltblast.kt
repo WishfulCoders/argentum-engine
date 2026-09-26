@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Saltblast
@@ -24,10 +23,7 @@ val Saltblast = card("Saltblast") {
     oracleText = "Destroy target nonwhite permanent."
 
     spell {
-        val t = target(
-            "target",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Permanent.notColor(Color.WHITE)))
-        )
+        val t = target(TargetFilter(GameObjectFilter.Permanent.notColor(Color.WHITE)))
         effect = Effects.Destroy(t)
     }
 

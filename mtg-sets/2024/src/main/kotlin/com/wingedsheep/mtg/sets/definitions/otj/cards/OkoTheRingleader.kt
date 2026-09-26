@@ -9,11 +9,10 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Oko, the Ringleader
@@ -29,16 +28,16 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * -5: For each other nonland permanent you control, create a token that's a copy of that permanent.
  *
  * Implementation:
- * - Combat-begin trigger ([Triggers.BeginCombat], already scoped to your turn): Oko becomes a copy
+ * - Combat-begin trigger (`Triggers.you.beginningOf(Step.BEGIN_COMBAT)`, already scoped to your turn): Oko becomes a copy
  *   of up to one target creature you control via [Effects.EachPermanentBecomesCopyOfTarget]
  *   (`affected = Self`), plus [Effects.GrantHexproof] on Self for the "except he has hexproof"
  *   clause — the same compose Fleeting Reflection uses. The target is optional ("up to one"), so
  *   omitting it makes the copy a no-op and Oko simply gains hexproof.
- * - +1: draw two, then a [ConditionalEffect] on [Conditions.YouCommittedCrimeThisTurn] discards one
+ * - +1: draw two, then a [Effects.If] on [Conditions.YouCommittedCrimeThisTurn] discards one
  *   (crime) or two (no crime).
  * - -1: create a 3/3 green Elk token.
  * - -5: [Effects.ForEachInGroup] over other nonland permanents you control, creating a token copy
- *   of each (`EffectTarget.Self` = the iterated permanent inside the group body).
+ *   of each (`EffectTarget.IterationEntity` = the iterated permanent inside the group body).
  */
 private const val ELK_TOKEN_IMAGE =
     "https://cards.scryfall.io/normal/front/1/6/1632f3fa-4615-46ee-9768-22bbd9d142d6.jpg?1712316649"
@@ -57,33 +56,24 @@ val OkoTheRingleader = card("Oko, the Ringleader") {
         "that permanent."
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        target(
-            "creature you control",
-            TargetCreature(filter = TargetFilter.CreatureYouControl, optional = true),
-        )
-        effect = Effects.Composite(
-            listOf(
-                Effects.EachPermanentBecomesCopyOfTarget(
-                    target = EffectTarget.ContextTarget(0),
-                    duration = Duration.EndOfTurn,
-                    affected = EffectTarget.Self,
-                ),
-                Effects.GrantHexproof(EffectTarget.Self, Duration.EndOfTurn),
-            )
-        )
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        val creatureYouControl = target(TargetFilter.CreatureYouControl, optional = true)
+        effect = Effects.EachPermanentBecomesCopyOfTarget(
+            target = creatureYouControl,
+            duration = Duration.EndOfTurn,
+            affected = EffectTarget.Self,
+        ) then
+            Effects.GrantHexproof(EffectTarget.Self, Duration.EndOfTurn)
         description = "At the beginning of combat on your turn, Oko becomes a copy of up to one " +
             "target creature you control until end of turn, except he has hexproof."
     }
 
     // +1: Draw two cards. If you've committed a crime this turn, discard a card. Otherwise, discard two.
     loyaltyAbility(+1) {
-        effect = Effects.DrawCards(2).then(
-            ConditionalEffect(
-                condition = Conditions.YouCommittedCrimeThisTurn,
-                effect = Patterns.Hand.discardCards(1),
-                elseEffect = Patterns.Hand.discardCards(2),
-            )
+        effect = Effects.DrawCards(2) then Effects.If(
+            condition = Conditions.YouCommittedCrimeThisTurn,
+            then = Patterns.Hand.discardCards(1),
+            otherwise = Patterns.Hand.discardCards(2),
         )
     }
 
@@ -105,7 +95,7 @@ val OkoTheRingleader = card("Oko, the Ringleader") {
                 GameObjectFilter.NonlandPermanent.youControl(),
                 excludeSelf = true,
             ),
-            effect = Effects.CreateTokenCopyOfTarget(target = EffectTarget.Self),
+            effect = Effects.CreateTokenCopyOfTarget(target = EffectTarget.IterationEntity),
         )
     }
 

@@ -59,7 +59,7 @@ val MidgarCityOfMako = card("Midgar, City of Mako") {
                     )
                     sacrifice(chosen)
                 },
-                ifYouDo = Effects.DrawCards(2)
+                then = Effects.DrawCards(2)
             )
         }
     }

@@ -1,6 +1,7 @@
 package com.wingedsheep.engine.mechanics.targeting
 
-import com.wingedsheep.engine.handlers.ConditionEvaluator
+import com.wingedsheep.engine.handlers.PredicateEvaluator
+import com.wingedsheep.engine.handlers.TargetFinder
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.sdk.model.EntityId
@@ -21,8 +22,6 @@ import com.wingedsheep.sdk.scripting.references.Player
  */
 object PlayerTargetRestriction {
 
-    private val conditionEvaluator = ConditionEvaluator()
-
     /**
      * True if [candidatePlayerId] satisfies [restriction] (or there is no restriction).
      *
@@ -35,7 +34,8 @@ object PlayerTargetRestriction {
         restriction: Condition?,
         candidatePlayerId: EntityId,
         controllerId: EntityId,
-        sourceId: EntityId? = null
+        sourceId: EntityId? = null,
+        predicateEvaluator: PredicateEvaluator
     ): Boolean {
         if (restriction == null) return true
         val context = EffectContext(
@@ -43,6 +43,6 @@ object PlayerTargetRestriction {
             controllerId = controllerId,
             candidatePlayerId = candidatePlayerId
         )
-        return conditionEvaluator.evaluate(state, restriction, context)
+        return predicateEvaluator.conditions.evaluate(state, restriction, context)
     }
 }

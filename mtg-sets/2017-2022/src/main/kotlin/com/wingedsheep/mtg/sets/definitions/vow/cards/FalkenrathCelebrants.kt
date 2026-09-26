@@ -28,7 +28,7 @@ val FalkenrathCelebrants = card("Falkenrath Celebrants") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateBlood(2)
     }
 

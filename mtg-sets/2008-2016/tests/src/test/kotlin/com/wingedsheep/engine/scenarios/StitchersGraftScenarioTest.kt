@@ -15,7 +15,7 @@ import io.kotest.matchers.shouldBe
  * untap during its controller's next untap step. Whenever this Equipment becomes unattached from a
  * permanent, sacrifice that permanent. Equip {2}."
  *
- * The card exists to exercise [com.wingedsheep.sdk.dsl.Triggers.becomesUnattached], so the tests
+ * The card exists to exercise `Triggers.<subject>.becomesUnattached(from, controller)`, so the tests
  * walk the unattach paths the 2016-07-13 ruling enumerates: re-equipping elsewhere, the Equipment
  * leaving the battlefield, and the host leaving the battlefield (where the trigger fires but has
  * nothing left to sacrifice). The CR 704.5n state-based unattach shares the same chokepoint.

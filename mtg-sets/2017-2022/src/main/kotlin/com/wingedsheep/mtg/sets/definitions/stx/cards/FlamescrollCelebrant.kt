@@ -36,7 +36,7 @@ val FlamescrollCelebrant = card("Flamescroll Celebrant") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.OpponentActivatesAbility
+        trigger = Triggers.anOpponent.activatesAbility()
         effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.TriggeringPlayer))
     }
 
@@ -53,10 +53,8 @@ val FlamescrollCelebrant = card("Flamescroll Celebrant") {
         imageUri = "https://cards.scryfall.io/normal/back/0/d/0dba25e3-2b4f-45d4-965f-3834bcb359ee.jpg?1739656768"
         spell {
             selfExile()
-            effect = Effects.Composite(
-                Effects.CantCastSpells(EffectTarget.PlayerRef(Player.EachOpponent)),
-                Effects.CantActivateLoyaltyAbilities(EffectTarget.PlayerRef(Player.EachOpponent)),
-            )
+            effect = Effects.CantCastSpells(EffectTarget.PlayerRef(Player.EachOpponent)) then
+                Effects.CantActivateLoyaltyAbilities(EffectTarget.PlayerRef(Player.EachOpponent))
         }
     }
 

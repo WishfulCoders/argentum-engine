@@ -12,7 +12,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     },
                     "destination": "Graveyard",
                     "byDestruction": true
@@ -29,7 +29,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "target creature"
+                "id": "t0"
             }
         ]
     },
@@ -53,7 +53,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Castle Ardenvale:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -63,7 +63,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Castle Ardenvale:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -124,7 +124,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Castle Embereth:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -134,7 +134,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Castle Embereth:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -166,7 +166,7 @@
                             "type": "Fixed",
                             "amount": 0
                         },
-                        "target": "Self"
+                        "target": "IterationEntity"
                     }
                 },
                 "descriptionOverride": "Creatures you control get +1/+0 until end of turn."
@@ -205,7 +205,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Castle Vantress:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -215,7 +215,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Castle Vantress:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -273,7 +273,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Charming Prince:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -305,8 +305,8 @@
                                     {
                                         "type": "MoveToZone",
                                         "target": {
-                                            "type": "ContextTarget",
-                                            "index": 0
+                                            "type": "BoundVariable",
+                                            "name": "t0"
                                         },
                                         "destination": "Exile"
                                     },
@@ -316,8 +316,8 @@
                                         "effect": {
                                             "type": "MoveToZone",
                                             "target": {
-                                                "type": "ContextTarget",
-                                                "index": 0
+                                                "type": "BoundVariable",
+                                                "name": "t0"
                                             },
                                             "destination": "Battlefield"
                                         }
@@ -330,7 +330,8 @@
                                     "filter": {
                                         "baseFilter": "creature own:you",
                                         "excludeSelf": true
-                                    }
+                                    },
+                                    "id": "t0"
                                 }
                             ],
                             "description": "Exile another target creature you own. Return it to the battlefield under your control at the beginning of the next end step."
@@ -367,7 +368,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Faerie Formation:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -434,7 +435,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Fierce Witchstalker:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -483,7 +484,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Gingerbrute:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -507,7 +508,7 @@
                 "descriptionOverride": "This creature can't be blocked this turn except by creatures with haste."
             },
             {
-                "id": "ability_2",
+                "id": "Gingerbrute:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -550,7 +551,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Glass Casket:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -559,7 +560,7 @@
                     "type": "ExileUntilLeaves",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirement": {
@@ -567,11 +568,11 @@
                     "filter": {
                         "baseFilter": "creature mv<=3 ctrl:opponent"
                     },
-                    "id": "target"
+                    "id": "t0"
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Glass Casket:2",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield"
@@ -619,7 +620,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Heraldic Banner:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddManaOfChoice",
@@ -674,7 +675,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Jousting Dummy:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -720,11 +721,14 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Keeper of Fables:1",
                 "trigger": {
                     "type": "DealsDamageEvent",
                     "damageType": "DamageCombat",
-                    "recipient": "AnyPlayer",
+                    "recipient": {
+                        "type": "RecipientPlayer",
+                        "player": "Any"
+                    },
                     "sourceFilter": {
                         "cardPredicates": [
                             "IsCreature",
@@ -777,7 +781,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Linden, the Steadfast Queen:1",
                 "trigger": {
                     "type": "AttackEvent",
                     "filter": "creature white ctrl:you"
@@ -819,7 +823,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Locthwain Gargoyle:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -1080,7 +1084,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature or planeswalker"
+                        "name": "t0"
                     }
                 },
                 {
@@ -1090,8 +1094,8 @@
                         "condition": {
                             "type": "EntityMatches",
                             "entity": {
-                                "type": "ContextTarget",
-                                "index": 0
+                                "type": "BoundVariable",
+                                "name": "t0"
                             },
                             "filter": {
                                 "cardPredicates": [
@@ -1114,7 +1118,7 @@
         "targetRequirements": [
             {
                 "type": "TargetCreatureOrPlaneswalker",
-                "id": "target creature or planeswalker"
+                "id": "t0"
             }
         ]
     },
@@ -1144,7 +1148,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "creature you control"
+                        "name": "t0"
                     },
                     "destination": "Hand"
                 },
@@ -1152,7 +1156,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "creature an opponent controls"
+                        "name": "t1"
                     },
                     "destination": "Hand"
                 }
@@ -1164,14 +1168,14 @@
                 "filter": {
                     "baseFilter": "creature ctrl:you"
                 },
-                "id": "creature you control"
+                "id": "t0"
             },
             {
                 "type": "TargetObject",
                 "filter": {
                     "baseFilter": "creature ctrl:opponent"
                 },
-                "id": "creature an opponent controls"
+                "id": "t1"
             }
         ]
     },
@@ -1213,14 +1217,14 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature or planeswalker"
+                        "name": "t0"
                     }
                 },
                 {
                     "type": "MarkExileOnDeath",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature or planeswalker"
+                        "name": "t0"
                     }
                 }
             ]
@@ -1228,7 +1232,7 @@
         "targetRequirements": [
             {
                 "type": "TargetCreatureOrPlaneswalker",
-                "id": "target creature or planeswalker"
+                "id": "t0"
             }
         ]
     },
@@ -1259,7 +1263,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Shimmer Dragon:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -1333,7 +1337,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Signpost Scarecrow:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -1372,7 +1376,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Syr Alin, the Lion's Claw:1",
                 "trigger": "AttackEvent",
                 "effect": {
                     "type": "ForEach",
@@ -1393,7 +1397,7 @@
                             "type": "Fixed",
                             "amount": 1
                         },
-                        "target": "Self"
+                        "target": "IterationEntity"
                     }
                 }
             }
@@ -1568,7 +1572,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "The Circle of Loyalty:1",
                 "trigger": {
                     "type": "SpellCastEvent",
                     "spellFilter": {
@@ -1596,7 +1600,7 @@
         ],
         "activatedAbilities": [
             {
-                "id": "ability_2",
+                "id": "The Circle of Loyalty:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -1715,7 +1719,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Weaselback Redcap:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -1766,7 +1770,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Wildborn Preserver:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": {
@@ -1794,7 +1798,7 @@
                         "optional": false,
                         "reflexiveEffect": {
                             "type": "AddDynamicCounters",
-                            "counterType": "+1/+1",
+                            "counterType": "PLUS_ONE_PLUS_ONE",
                             "amount": "XValue",
                             "target": "Self"
                         },
@@ -1824,7 +1828,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Wishclaw Talisman:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -1840,7 +1844,7 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomRemoveCounters",
-                                "counterType": "wish",
+                                "counterType": "WISH",
                                 "self": true
                             }
                         }
@@ -1850,40 +1854,36 @@
                     "type": "Composite",
                     "effects": [
                         {
-                            "type": "Composite",
-                            "effects": [
-                                {
-                                    "type": "GatherCards",
-                                    "source": {
-                                        "type": "FromZone",
-                                        "zone": "Library"
-                                    },
-                                    "storeAs": "searchable"
-                                },
-                                {
-                                    "type": "SelectFromCollection",
-                                    "from": "searchable",
-                                    "selection": {
-                                        "type": "ChooseUpTo",
-                                        "count": {
-                                            "type": "Fixed",
-                                            "amount": 1
-                                        }
-                                    },
-                                    "storeSelected": "found"
-                                },
-                                {
-                                    "type": "MoveCollection",
-                                    "from": "found",
-                                    "destination": {
-                                        "type": "ToZone",
-                                        "zone": "Hand"
-                                    }
-                                },
-                                "ShuffleLibrary",
-                                "EmitLibrarySearchedEvent"
-                            ]
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "FromZone",
+                                "zone": "Library"
+                            },
+                            "storeAs": "searchable",
+                            "search": true
                         },
+                        {
+                            "type": "SelectFromCollection",
+                            "from": "searchable",
+                            "selection": {
+                                "type": "ChooseUpTo",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeSelected": "found"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "found",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Hand"
+                            }
+                        },
+                        "ShuffleLibrary",
+                        "EmitLibrarySearchedEvent",
                         {
                             "type": "ChooseOpponentForSource",
                             "prompt": "Choose an opponent to gain control of Wishclaw Talisman"
@@ -1906,10 +1906,7 @@
         "replacementEffects": [
             {
                 "type": "EntersWithCounters",
-                "counterType": {
-                    "type": "Named",
-                    "name": "wish"
-                },
+                "counterType": "WISH",
                 "count": 3,
                 "selfOnly": true
             }

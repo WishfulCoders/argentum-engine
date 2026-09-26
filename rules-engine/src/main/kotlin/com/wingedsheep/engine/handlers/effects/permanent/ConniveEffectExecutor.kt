@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.permanent
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
@@ -41,11 +42,12 @@ import kotlin.reflect.KClass
  * was conniving when the action began, not to whatever `Self`/`TriggeringEntity` would resolve to
  * after the pause.
  *
- * @param recurse registry entry point for delegating the Composite (wired via
- *   `PermanentExecutors.initializeRecursion`).
+ * @param recurse registry entry point for delegating the Composite (handed to [PermanentExecutors]
+ *   by the registry at construction).
  */
 class ConniveEffectExecutor(
-    private val recurse: (GameState, Effect, EffectContext) -> EffectResult
+    private val recurse: (GameState, Effect, EffectContext) -> EffectResult,
+    private val predicateEvaluator: PredicateEvaluator
 ) : EffectExecutor<ConniveEffect> {
 
     override val effectType: KClass<ConniveEffect> = ConniveEffect::class
@@ -66,7 +68,8 @@ class ConniveEffectExecutor(
 
         if (!effect.replacementsApplied) {
             val prefixEffects = KeywordActionReplacements.collectPrefixes(
-                state, connivingId, ReplaceableKeywordAction.CONNIVE
+                state, connivingId, ReplaceableKeywordAction.CONNIVE,
+                predicateEvaluator = predicateEvaluator
             )
             if (prefixEffects.isNotEmpty()) {
                 val composite = CompositeEffect(

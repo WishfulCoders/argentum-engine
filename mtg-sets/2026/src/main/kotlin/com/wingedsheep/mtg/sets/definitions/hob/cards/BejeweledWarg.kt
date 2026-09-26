@@ -1,17 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Bejeweled Warg — The Hobbit #117
@@ -50,13 +50,12 @@ val BejeweledWarg = card("Bejeweled Warg") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         effect = ModalEffect.chooseOne(
-            Mode.withTarget(
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0)),
-                TargetPermanent(filter = TargetFilter.PermanentYouControl.withSubtype(Subtype.WOLF)),
-                "Put a +1/+1 counter on target Wolf you control"
-            ),
+            mode("Put a +1/+1 counter on target Wolf you control") {
+                val permanentYouControl = target(TargetFilter.PermanentYouControl.withSubtype(Subtype.WOLF))
+                effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, permanentYouControl)
+            },
             Mode.noTarget(
                 Effects.CreateTreasure(1),
                 "Create a Treasure token"

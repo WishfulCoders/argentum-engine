@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Mechanized Ninja Cavalry
@@ -23,8 +23,8 @@ val MechanizedNinjaCavalry = card("Mechanized Ninja Cavalry") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreateTokenEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
             colors = setOf(),

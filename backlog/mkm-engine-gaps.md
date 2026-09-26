@@ -119,7 +119,7 @@ and four need *separate* features first — see below.
 non-mana half (a `{0}` mana cost plus an `AdditionalCost` list, the same two halves
 `SelfAlternativeCost` has), so **Conspiracy Unraveler** works and any future "you may <non-mana cost>
 rather than pay the mana cost for spells you cast" composes. Axebane Ferox is likewise done —
-`KeywordAbility.wardCollectEvidence(4)` exists.
+`KeywordAbility.Ward(WardCost.CollectEvidence(4))` exists.
 
 **Still blocked on other features:** Urgent Necropsy and Incinerator of the Guilty (a *dynamic* N —
 "collect evidence X" where X is the targets' total mana value / a chosen X; the atom takes a fixed

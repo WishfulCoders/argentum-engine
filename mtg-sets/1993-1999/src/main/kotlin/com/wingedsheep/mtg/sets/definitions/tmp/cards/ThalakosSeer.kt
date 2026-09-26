@@ -26,7 +26,7 @@ val ThalakosSeer = card("Thalakos Seer") {
     keywords(Keyword.SHADOW)
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.DrawCards(1)
     }
 

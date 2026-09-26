@@ -24,8 +24,8 @@ val GlintwingInvoker = card("Glintwing Invoker") {
 
     activatedAbility {
         cost = Costs.Mana("{7}{U}")
-        effect = Effects.ModifyStats(3, 3, EffectTarget.Self)
-            .then(Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self))
+        effect = Effects.ModifyStats(3, 3, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
     }
 
     metadata {

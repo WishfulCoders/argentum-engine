@@ -4,15 +4,12 @@ import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -37,10 +34,10 @@ class MoveCountersTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Move $amount +1/+1 counters from target creature onto another target creature."
         spell {
-            val source = target("source", TargetCreature())
-            val dest = target("destination", TargetCreature(filter = TargetFilter.OtherCreature))
+            val source = target(TargetFilter.Creature)
+            val dest = target(TargetFilter.OtherCreature)
             effect = Effects.MoveCounters(
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
                 amount = DynamicAmount.Fixed(amount),
                 source = source,
                 destination = dest,

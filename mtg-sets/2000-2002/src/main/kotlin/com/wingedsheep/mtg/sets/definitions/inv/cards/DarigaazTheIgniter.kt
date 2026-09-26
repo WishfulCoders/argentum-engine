@@ -9,11 +9,10 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
-import com.wingedsheep.sdk.scripting.effects.RevealHandEffect
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Darigaaz, the Igniter
@@ -44,26 +43,22 @@ val DarigaazTheIgniter = card("Darigaaz, the Igniter") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = MayPayManaEffect(
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{2}{R}"),
-            effect = Effects.ChooseColorThen(
-                then = Effects.Composite(
-                    listOf(
-                        RevealHandEffect(EffectTarget.PlayerRef(Player.TriggeringPlayer)),
-                        Effects.DealDamage(
-                            amount = DynamicAmounts.zone(
-                                player = Player.TriggeringPlayer,
-                                zone = Zone.HAND,
-                                filter = GameObjectFilter(
-                                    cardPredicates = listOf(CardPredicate.HasChosenColor),
-                                ),
-                            ).count(),
-                            target = EffectTarget.PlayerRef(Player.TriggeringPlayer),
-                            damageSource = EffectTarget.Self,
-                        ),
+            then = Effects.ChooseColorThen(
+                then = Effects.RevealHand(EffectTarget.PlayerRef(Player.TriggeringPlayer)) then
+                    Effects.DealDamage(
+                        amount = DynamicAmounts.zone(
+                            player = Player.TriggeringPlayer,
+                            zone = Zone.HAND,
+                            filter = GameObjectFilter(
+                                cardPredicates = listOf(CardPredicate.HasChosenColor),
+                            ),
+                        ).count(),
+                        target = EffectTarget.PlayerRef(Player.TriggeringPlayer),
+                        damageSource = EffectTarget.Self,
                     ),
-                ),
                 prompt = "Choose a color",
             ),
         )

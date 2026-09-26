@@ -5,15 +5,14 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -33,17 +32,15 @@ val MoonshakerCavalry = card("Moonshaker Cavalry") {
     toughness = 6
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.Composite(
-                Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self),
+            Effects.GrantKeyword(Keyword.FLYING, EffectTarget.IterationEntity) then
                 Effects.ModifyStats(
-                    DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Creature),
-                    DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Creature),
-                    EffectTarget.Self
+                    DynamicAmounts.creaturesYouControl(),
+                    DynamicAmounts.creaturesYouControl(),
+                    EffectTarget.IterationEntity
                 )
-            )
         )
     }
     metadata {

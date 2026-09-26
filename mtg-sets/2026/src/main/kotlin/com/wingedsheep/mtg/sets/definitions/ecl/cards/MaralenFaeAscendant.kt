@@ -2,23 +2,16 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantMayCastFromLinkedExile
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.values.Aggregation
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.dsl.Triggers
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Maralen, Fae Ascendant
@@ -53,27 +46,12 @@ val MaralenFaeAscendant = card("Maralen, Fae Ascendant") {
         .withAnyOfSubtypes(listOf(Subtype("Elf"), Subtype("Faerie")))
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = elfOrFaerieYouControl,
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.ANY
-        )
-        val opponent = target("opponent", TargetOpponent())
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(2), Player.ContextPlayer(0)),
-                    storeAs = "exiled"
-                ),
-                MoveCollectionEffect(
-                    from = "exiled",
-                    destination = CardDestination.ToZone(Zone.EXILE),
-                    linkToSource = true
-                )
-            )
-        )
+        trigger = Triggers.a(elfOrFaerieYouControl).enters()
+        val opponent = target(Targets.Opponent)
+        effect = Effects.Pipeline {
+            val exiled = gather(CardSource.TopOfLibrary(2, opponent.asPlayer))
+            exile(exiled, linkToSource = true)
+        }
     }
 
     staticAbility {
@@ -82,11 +60,10 @@ val MaralenFaeAscendant = card("Maralen, Fae Ascendant") {
             withoutPayingManaCost = true,
             oncePerTurn = true,
             exiledThisTurnOnly = true,
-            maxManaValue = DynamicAmount.AggregateBattlefield(
-                player = Player.You,
-                filter = elfOrFaerieYouControl,
-                aggregation = Aggregation.COUNT
-            )
+            maxManaValue = DynamicAmounts.battlefield(
+                Player.You,
+                elfOrFaerieYouControl
+            ).count()
         )
     }
 

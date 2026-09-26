@@ -2,8 +2,8 @@ package com.wingedsheep.mtg.sets.definitions.dmu.cards
 
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Territorial Maro
@@ -19,8 +19,8 @@ val TerritorialMaro = card("Territorial Maro") {
     oracleText = "Domain — Territorial Maro's power and toughness are each equal to twice the number of basic land types among lands you control."
 
     // Twice the domain count, in both halves of the printed `*`/`*`.
-    dynamicPower(DynamicAmount.Multiply(DynamicAmounts.domain(), 2))
-    dynamicToughness(DynamicAmount.Multiply(DynamicAmounts.domain(), 2))
+    dynamicPower(DynamicAmounts.domain() * 2)
+    dynamicToughness(DynamicAmounts.domain() * 2)
 
     metadata {
         rarity = Rarity.UNCOMMON

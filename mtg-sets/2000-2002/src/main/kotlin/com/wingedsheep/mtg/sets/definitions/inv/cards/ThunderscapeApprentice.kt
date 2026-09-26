@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Thunderscape Apprentice
@@ -26,13 +26,13 @@ val ThunderscapeApprentice = card("Thunderscape Apprentice") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{B}"), Costs.Tap)
-        val t = target("target", TargetPlayer())
+        val t = target(Targets.Player)
         effect = Effects.LoseLife(1, t)
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{G}"), Costs.Tap)
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(power = 1, toughness = 1, target = t)
     }
 

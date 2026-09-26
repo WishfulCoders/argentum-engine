@@ -21,7 +21,7 @@ val PathfindingAxejaw = card("Pathfinding Axejaw") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Explore(EffectTarget.Self)
     }
 

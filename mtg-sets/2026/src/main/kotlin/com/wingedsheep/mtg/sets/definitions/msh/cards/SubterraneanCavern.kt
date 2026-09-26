@@ -29,7 +29,7 @@ val SubterraneanCavern = card("Subterranean Cavern") {
     replacementEffect(EntersTapped())
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(1)
     }
 

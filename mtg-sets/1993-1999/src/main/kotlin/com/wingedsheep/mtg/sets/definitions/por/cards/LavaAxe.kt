@@ -4,10 +4,10 @@
 
 package com.wingedsheep.mtg.sets.definitions.por.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.targets.TargetPlayerOrPlaneswalker
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -22,8 +22,8 @@ val LavaAxe = card("Lava Axe") {
     typeLine = "Sorcery"
     oracleText = "Lava Axe deals 5 damage to target player or planeswalker."
     spell {
-        val t = target("target", TargetPlayerOrPlaneswalker())
-        effect = DealDamageEffect(5, t)
+        val t = target(Targets.PlayerOrPlaneswalker)
+        effect = Effects.DealDamage(5, t)
     }
     metadata {
         rarity = Rarity.COMMON

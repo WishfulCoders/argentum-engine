@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Dispersing Orb
@@ -24,7 +24,7 @@ val DispersingOrb = card("Dispersing Orb") {
             Costs.Mana("{3}{U}"),
             Costs.Sacrifice(GameObjectFilter.Permanent)
         )
-        val t = target("target", Targets.Permanent)
+        val t = target(TargetFilter.Permanent)
         effect = Effects.ReturnToHand(t)
     }
 

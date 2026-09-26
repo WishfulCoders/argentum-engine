@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.rna.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ragefire — Ravnica Allegiance #270
@@ -18,7 +18,7 @@ val Ragefire = card("Ragefire") {
     oracleText = "Ragefire deals 3 damage to target creature."
 
     spell {
-        val creature = target("target", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.DealDamage(3, creature)
     }
 

@@ -38,7 +38,7 @@ class ExploreCompositionScenarioTest : ScenarioTestBase() {
         oracleText = "When this creature enters, it explores."
 
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             effect = Patterns.Mechanic.explore()
         }
     }

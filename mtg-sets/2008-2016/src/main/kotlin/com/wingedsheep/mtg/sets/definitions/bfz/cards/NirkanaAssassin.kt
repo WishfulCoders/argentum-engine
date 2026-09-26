@@ -24,7 +24,7 @@ val NirkanaAssassin = card("Nirkana Assassin") {
         "it deals to a creature is enough to destroy it.)"
 
     triggeredAbility {
-        trigger = Triggers.YouGainLife
+        trigger = Triggers.you.gainsLife()
         effect = Effects.GrantKeyword(Keyword.DEATHTOUCH, EffectTarget.Self)
     }
 

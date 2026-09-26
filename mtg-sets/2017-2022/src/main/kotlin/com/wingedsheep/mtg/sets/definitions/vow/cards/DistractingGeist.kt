@@ -6,13 +6,14 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.disturb
+import com.wingedsheep.sdk.dsl.grantedTriggeredAbility
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.RedirectZoneChange
-import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Distracting Geist // Clever Distraction (Innistrad: Crimson Vow #9 — the card's earliest
@@ -34,7 +35,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Thunder Lasso, Web-Shooters). The back face prints the front face's ability in quotation marks,
  * so it is a [GrantTriggeredAbility] rebuilding that same ability — the granted ability carries its
  * own `targetRequirement`, and `Effects.Tap` reads it back as `ContextTarget(0)`. It keeps
- * `Triggers.Attacks`' SELF binding: "this creature" inside the quotes is whatever creature has the
+ * `Triggers.self.attacks()`' SELF binding: "this creature" inside the quotes is whatever creature has the
  * ability, i.e. the enchanted creature, and `GrantTriggeredAbility` defaults its filter to the
  * attached creature. Disturb is CR 702.146; the disturb cast puts the card on the stack back face
  * up (CR 712.8c) as an Aura spell, and the exile-instead clause is [RedirectZoneChange] with
@@ -50,8 +51,8 @@ private val DistractingGeistFront = card("Distracting Geist") {
         "Disturb {4}{W} (You may cast this card from your graveyard transformed for its disturb cost.)"
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val tapped = target("creature defending player controls", Targets.CreatureOpponentControls)
+        trigger = Triggers.self.attacks()
+        val tapped = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.Tap(tapped)
     }
 
@@ -83,16 +84,15 @@ private val CleverDistraction = card("Clever Distraction") {
         "player controls.\"\n" +
         "If Clever Distraction would be put into a graveyard from anywhere, exile it instead."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = GrantTriggeredAbility(
-            ability = TriggeredAbility.create(
-                trigger = Triggers.Attacks.event,
-                binding = Triggers.Attacks.binding,
-                effect = Effects.Tap(EffectTarget.ContextTarget(0)),
-                targetRequirement = Targets.CreatureOpponentControls,
-            )
+            ability = grantedTriggeredAbility {
+                trigger = Triggers.self.attacks()
+                val creatureOpponentControls = target(TargetFilter.CreatureOpponentControls)
+                effect = Effects.Tap(creatureOpponentControls)
+            }
         )
     }
 

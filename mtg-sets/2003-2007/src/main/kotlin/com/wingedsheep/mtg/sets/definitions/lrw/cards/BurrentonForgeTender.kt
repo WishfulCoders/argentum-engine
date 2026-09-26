@@ -8,6 +8,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.ProtectionScope
+import com.wingedsheep.sdk.scripting.effects.PreventionDirection
+import com.wingedsheep.sdk.scripting.effects.PreventionSourceFilter
 
 /**
  * Burrenton Forge-Tender
@@ -19,11 +21,11 @@ import com.wingedsheep.sdk.scripting.ProtectionScope
  *
  * Modelling notes:
  * - The prevention has **no recipient clause** — it stops the chosen source's damage to anything,
- *   not just to its controller. That is what `PreventAllDamageFromChosenSourceMatching` expresses
- *   (`direction = FromTarget`), the same shield Mourner's Shield installs.
+ *   not just to its controller. That is `direction = FromTarget` over a chosen source, the same
+ *   shield Mourner's Shield installs.
  * - **The ability doesn't target** (2017-11-17 ruling): the source is chosen as the ability
  *   resolves, and the ability can be activated with no red source on the board at all. A
- *   `ChosenSourceMatching` eligibility filter is a choice restriction, not a target requirement, so
+ *   `Chosen` eligibility filter is a choice restriction, not a target requirement, so
  *   that falls out for free.
  * - `nextInstanceOnly` stays false — this is an all-damage-for-the-turn shield, not a Circle of
  *   Protection's single instance.
@@ -41,8 +43,9 @@ val BurrentonForgeTender = card("Burrenton Forge-Tender") {
 
     activatedAbility {
         cost = Costs.SacrificeSelf
-        effect = Effects.PreventAllDamageFromChosenSourceMatching(
-            GameObjectFilter.Any.withColor(Color.RED)
+        effect = Effects.PreventDamage(
+            direction = PreventionDirection.FromTarget,
+            sources = PreventionSourceFilter.Chosen(GameObjectFilter.Any.withColor(Color.RED))
         )
         description = "Sacrifice this creature: Prevent all damage a red source of your choice " +
             "would deal this turn."

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.permanent.abilities
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.event.GrantedActivatedAbility
 import com.wingedsheep.engine.handlers.EffectContext
@@ -15,7 +16,9 @@ import kotlin.reflect.KClass
  *
  * Adds GrantedActivatedAbility entries for each matching creature.
  */
-class GrantActivatedAbilityToGroupExecutor : EffectExecutor<GrantActivatedAbilityToGroupEffect> {
+class GrantActivatedAbilityToGroupExecutor(
+    private val predicateEvaluator: PredicateEvaluator
+) : EffectExecutor<GrantActivatedAbilityToGroupEffect> {
 
     override val effectType: KClass<GrantActivatedAbilityToGroupEffect> = GrantActivatedAbilityToGroupEffect::class
 
@@ -26,7 +29,7 @@ class GrantActivatedAbilityToGroupExecutor : EffectExecutor<GrantActivatedAbilit
     ): EffectResult {
         val filter = effect.filter
         val excludeSelfId = if (filter.excludeSelf) context.sourceId else null
-        val matched = BattlefieldFilterUtils.findMatchingOnBattlefield(state, filter.baseFilter, context, excludeSelfId)
+        val matched = BattlefieldFilterUtils.findMatchingOnBattlefield(state, filter.baseFilter, context, excludeSelfId, predicateEvaluator = predicateEvaluator)
 
         if (matched.isEmpty()) {
             return EffectResult.success(state)

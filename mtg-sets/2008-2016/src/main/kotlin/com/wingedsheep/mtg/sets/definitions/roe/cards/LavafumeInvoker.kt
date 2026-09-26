@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *    timing restriction — so it is repeatable and usable at instant speed.
  *  - "Creatures you control" is a **group**, not a target: [Effects.ForEachInGroup] over
  *    [GroupFilter.AllCreaturesYouControl] applies the pump once per member, with
- *    [EffectTarget.Self] naming the current iteration entity. That is Assay's `ForEach` over an
+ *    [EffectTarget.IterationEntity] naming the current iteration entity. That is Assay's `ForEach` over an
  *    `IterationSpace.Group` filtered on `IsCreature` + `ControlledByYou`.
  *  - The toughness modifier is written as an explicit `0` because the printed line is `+3/+0`, and
  *    the group is snapshotted on resolution — creatures that arrive later this turn are not pumped.
@@ -38,7 +38,7 @@ val LavafumeInvoker = card("Lavafume Invoker") {
         cost = Costs.Mana("{8}")
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreaturesYouControl,
-            Effects.ModifyStats(3, 0, EffectTarget.Self)
+            Effects.ModifyStats(3, 0, EffectTarget.IterationEntity)
         )
     }
 

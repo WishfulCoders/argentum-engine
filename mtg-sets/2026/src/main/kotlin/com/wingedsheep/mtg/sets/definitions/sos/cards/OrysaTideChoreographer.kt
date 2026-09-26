@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -13,9 +14,6 @@ import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.Aggregation
-import com.wingedsheep.sdk.scripting.values.CardNumericProperty
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Orysa, Tide Choreographer
@@ -47,21 +45,19 @@ val OrysaTideChoreographer = card("Orysa, Tide Choreographer") {
             modification = CostModification.ReduceGenericBy(CostReductionSource.Fixed(3)),
             gating = CostGating.OnlyIf(
                 Conditions.CompareAmounts(
-                    DynamicAmount.AggregateBattlefield(
-                        player = Player.You,
-                        filter = GameObjectFilter.Creature,
-                        aggregation = Aggregation.SUM,
-                        property = CardNumericProperty.TOUGHNESS,
-                    ),
+                    DynamicAmounts.battlefield(
+                        Player.You,
+                        GameObjectFilter.Creature,
+                    ).sumToughness(),
                     ComparisonOperator.GTE,
-                    DynamicAmount.Fixed(10),
+                    10,
                 ),
             ),
         )
     }
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(2)
         description = "When Orysa enters, draw two cards."
     }

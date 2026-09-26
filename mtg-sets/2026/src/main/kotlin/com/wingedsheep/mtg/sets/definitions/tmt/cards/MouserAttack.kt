@@ -2,11 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Mouser Attack!
@@ -26,7 +25,7 @@ val MouserAttack = card("Mouser Attack!") {
     spell {
         modal(chooseCount = 1) {
             mode("Create a 1/1 colorless Robot artifact creature token") {
-                effect = CreateTokenEffect(
+                effect = Effects.CreateToken(
                     power = 1,
                     toughness = 1,
                     colors = setOf(),
@@ -36,9 +35,9 @@ val MouserAttack = card("Mouser Attack!") {
                 )
             }
             mode("Target creature gets +3/+0 and gains first strike until end of turn") {
-                val creature = target("target creature", Targets.Creature)
-                effect = Effects.ModifyStats(3, 0, creature)
-                    .then(Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature, Duration.EndOfTurn))
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.ModifyStats(3, 0, creature) then
+                    Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature, Duration.EndOfTurn)
             }
         }
     }

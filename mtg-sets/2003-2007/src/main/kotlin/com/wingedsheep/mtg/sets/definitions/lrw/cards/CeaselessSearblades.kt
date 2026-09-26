@@ -44,10 +44,7 @@ val CeaselessSearblades = card("Ceaseless Searblades") {
     oracleText = "Whenever you activate an ability of an Elemental, this creature gets +1/+0 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.activatesAbilityOf(
-            GameObjectFilter.Permanent.withSubtype(Subtype.ELEMENTAL).onBattlefield(),
-            includeManaAbilities = true
-        )
+        trigger = Triggers.you.activatesAbility(of = GameObjectFilter.Permanent.withSubtype(Subtype.ELEMENTAL).onBattlefield(), includeManaAbilities = true)
         effect = Effects.ModifyStats(1, 0, EffectTarget.Self)
         description = "Whenever you activate an ability of an Elemental, this creature gets +1/+0 until end of turn."
     }

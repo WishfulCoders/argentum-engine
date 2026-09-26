@@ -11,6 +11,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Riders of the Mark
@@ -42,16 +43,14 @@ val RidersOfTheMark = card("Riders of the Mark") {
     keywords(Keyword.TRAMPLE, Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.SourceAttackedThisTurn
-        effect = Effects.ReturnToHand(EffectTarget.Self).then(
-            Effects.CreateToken(
-                count = DynamicAmounts.sourceToughness(),
-                power = 1,
-                toughness = 1,
-                colors = setOf(Color.WHITE),
-                creatureTypes = setOf("Human", "Soldier")
-            )
+        effect = Effects.ReturnToHand(EffectTarget.Self) then Effects.CreateToken(
+            count = DynamicAmounts.sourceToughness(),
+            power = 1,
+            toughness = 1,
+            colors = setOf(Color.WHITE),
+            creatureTypes = setOf("Human", "Soldier")
         )
     }
 

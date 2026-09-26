@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.scripting.CostGating
 import com.wingedsheep.sdk.scripting.CostModification
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
@@ -59,8 +58,8 @@ val MacabreReconstruction = card("Macabre Reconstruction") {
             optional = true,
             filter = TargetFilter.CreatureInYourGraveyard,
         )
-        effect = ForEachTargetEffect(
-            effects = listOf(Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND)),
+        effect = Effects.ForEachTarget(
+            Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND),
         )
     }
 

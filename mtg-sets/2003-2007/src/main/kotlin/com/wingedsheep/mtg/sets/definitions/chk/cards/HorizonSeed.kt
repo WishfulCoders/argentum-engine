@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.chk.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Horizon Seed
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * The Kamigawa "Whenever you cast a Spirit or Arcane spell" trigger is a `SpellCastEvent` watching
  * *your* casts with an OR over the two subtypes — `withAnySubtype` builds the single
  * `CardPredicate.Or` the grammar expects, rather than the `anyOf` branch list that the `or` infix
- * on `GameObjectFilter` would produce. `Triggers.youCastSpell` supplies `Player.You` and
+ * on `GameObjectFilter` would produce. `Triggers.you.casts(spell, requires)` supplies `Player.You` and
  * `TriggerBinding.ANY`, so Horizon Seed also triggers off its own cast.
  *
  * Regeneration has no `Effects.` facade — `RegenerateEffect` is the corpus spelling (Reknit,
@@ -32,11 +31,9 @@ val HorizonSeed = card("Horizon Seed") {
     power = 2
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.Any.withAnySubtype("Spirit", "Arcane")
-        )
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = RegenerateEffect(t)
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withAnySubtype("Spirit", "Arcane"))
+        val t = target(TargetFilter.Creature)
+        effect = Effects.Regenerate(t)
     }
     metadata {
         rarity = Rarity.UNCOMMON

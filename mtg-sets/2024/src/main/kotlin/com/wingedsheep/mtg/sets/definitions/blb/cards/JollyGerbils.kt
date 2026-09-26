@@ -22,7 +22,7 @@ val JollyGerbils = card("Jolly Gerbils") {
     oracleText = "Whenever you give a gift, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.YouGiveAGift
+        trigger = Triggers.you.givesAGift()
         effect = Effects.DrawCards(1)
     }
 

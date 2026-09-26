@@ -64,6 +64,16 @@ enum class AbilityFlag(val displayName: String) {
     // ── Sacrifice restriction flags ─────────────────────────────
     CANT_BE_SACRIFICED("Can't be sacrificed"),
 
+    // ── State-based action exemptions ───────────────────────────
+    /**
+     * "Planeswalkers you control aren't put into their owners' graveyards for having 0 loyalty"
+     * (Sanctum Lurker). Exempts the permanent from the 0-loyalty state-based action (CR 704.5i),
+     * which `PlaneswalkerLoyaltyCheck` skips for it. Only that one SBA — the planeswalker still dies
+     * to destruction, sacrifice, or the legend rule, and a planeswalker that stops having the flag
+     * while at 0 loyalty is put into the graveyard the next time state-based actions are checked.
+     */
+    SURVIVES_ZERO_LOYALTY("Isn't put into its owner's graveyard for having 0 loyalty"),
+
     // ── Aura / control restriction flags ────────────────────────
     /**
      * Auras can't be put onto this permanent (CR 303.4). Enforced at Aura-cast target legality
@@ -117,6 +127,19 @@ enum class AbilityFlag(val displayName: String) {
      * "this turn".
      */
     ASSIGNS_NO_COMBAT_DAMAGE("Assigns no combat damage this turn"),
+
+    /**
+     * "If this creature's power is negative, it assigns combat damage as though its power were
+     * positive" (Loot, the Anomaly). A creature normally assigns combat damage equal to its power
+     * and assigns none at all when that is 0 or less (CR 510.1a); with this flag a negative power
+     * is read as its absolute value instead, so a -2/4 assigns 2. Only the amount *assigned* is
+     * rewritten — the creature's power itself stays negative for every other purpose.
+     *
+     * Read at the single assignment chokepoint, `CombatDamageUtils.getAssignedCombatDamage`, so it
+     * covers first strike, trample and ordered blockers alike. A projected flag, so "loses all
+     * abilities" removes it.
+     */
+    ASSIGNS_COMBAT_DAMAGE_AS_ABSOLUTE_POWER("Assigns combat damage as though its power were positive"),
 
     // ── Summoning-sickness flags ────────────────────────────────
     /**

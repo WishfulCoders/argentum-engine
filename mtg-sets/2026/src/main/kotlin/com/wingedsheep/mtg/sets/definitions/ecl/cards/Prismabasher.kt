@@ -6,10 +6,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Prismabasher
@@ -40,22 +38,17 @@ val Prismabasher = card("Prismabasher") {
     keywords(Keyword.TRAMPLE, Keyword.VIVID)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target(
-            "up to X target creatures you control",
-            TargetCreature(
-                optional = true,
-                filter = TargetFilter.CreatureYouControl,
-                dynamicMaxCount = DynamicAmounts.colorsAmongPermanents()
-            )
+        trigger = Triggers.self.enters()
+        targets(
+            TargetFilter.CreatureYouControl,
+            optional = true,
+            dynamicMaxCount = DynamicAmounts.colorsAmongPermanents(),
         )
-        effect = ForEachTargetEffect(
-            listOf(
-                Effects.ModifyStats(
-                    power = DynamicAmounts.colorsAmongPermanents(),
-                    toughness = DynamicAmounts.colorsAmongPermanents(),
-                    target = EffectTarget.ContextTarget(0)
-                )
+        effect = Effects.ForEachTarget(
+            Effects.ModifyStats(
+                power = DynamicAmounts.colorsAmongPermanents(),
+                toughness = DynamicAmounts.colorsAmongPermanents(),
+                target = EffectTarget.ContextTarget(0)
             )
         )
     }

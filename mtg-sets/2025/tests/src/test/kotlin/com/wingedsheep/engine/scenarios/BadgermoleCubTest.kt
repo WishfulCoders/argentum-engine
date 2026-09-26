@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.ColorChosenResponse
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
@@ -20,6 +21,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Tests for Badgermole Cub ({1}{G}, 2/2 Badger Mole).
@@ -95,7 +97,7 @@ class BadgermoleCubTest : FunSpec({
         // Mana sources must be activatable — summoning-sick creatures without haste are skipped.
         driver.removeSummoningSickness(elf)
 
-        val solver = ManaSolver(createRegistry())
+        val solver = ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         // 1 from Elf + 1 bonus from Cub = 2 green available
         solver.canPay(driver.state, activePlayer, ManaCost.parse("{G}{G}")) shouldBe true
         solver.canPay(driver.state, activePlayer, ManaCost.parse("{G}{G}{G}")) shouldBe false
@@ -163,7 +165,7 @@ class BadgermoleCubTest : FunSpec({
         val result = driver.submit(
             ActivateAbility(playerId = activePlayer, sourceId = elf, abilityId = manaAbilityId)
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         val activePool = driver.state.getEntity(activePlayer)?.get<ManaPoolComponent>()!!
         val opponentPool = driver.state.getEntity(opponent)?.get<ManaPoolComponent>()!!

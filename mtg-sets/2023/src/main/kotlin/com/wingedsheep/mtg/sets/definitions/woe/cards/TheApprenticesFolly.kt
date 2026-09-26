@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * The Apprentice's Folly
@@ -32,11 +31,8 @@ val TheApprenticesFolly = card("The Apprentice's Folly") {
 
     fun copyChapter(chapter: Int) = sagaChapter(chapter) {
         val creature = target(
-            "target nontoken creature you control that doesn't have the same name as a token you control",
-            TargetCreature(
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.youControl().nontoken().nameNotSharedWithControlledToken()
-                ),
+            TargetFilter(
+                GameObjectFilter.Creature.youControl().nontoken().nameNotSharedWithControlledToken()
             ),
         )
         effect = Effects.CreateTokenCopyOfTarget(

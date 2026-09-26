@@ -22,7 +22,7 @@ val MoltenVortex = card("Molten Vortex") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{R}"), Costs.Discard(Filters.Land))
-        val t = target("any target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(2, t)
     }
 

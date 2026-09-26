@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.permanent.counters
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.suspendForDecision
 import com.wingedsheep.engine.core.DecisionContext
 import com.wingedsheep.engine.core.DecisionPhase
@@ -27,7 +28,9 @@ import kotlin.reflect.KClass
  * control" — the recipients are the tapped opponent creatures at resolution (including any just
  * tapped by the same spell), and `minPerTarget = 0` lets the controller pile all three on one.
  */
-class DistributeCountersAmongFilteredExecutor : EffectExecutor<DistributeCountersAmongFilteredEffect> {
+class DistributeCountersAmongFilteredExecutor(
+    private val predicateEvaluator: PredicateEvaluator
+) : EffectExecutor<DistributeCountersAmongFilteredEffect> {
 
     override val effectType: KClass<DistributeCountersAmongFilteredEffect> =
         DistributeCountersAmongFilteredEffect::class
@@ -41,7 +44,7 @@ class DistributeCountersAmongFilteredExecutor : EffectExecutor<DistributeCounter
             return EffectResult.success(state, emptyList())
         }
 
-        val eligible = BattlefieldFilterUtils.findMatchingOnBattlefield(state, effect.filter, context)
+        val eligible = BattlefieldFilterUtils.findMatchingOnBattlefield(state, effect.filter, context, predicateEvaluator = predicateEvaluator)
         if (eligible.isEmpty()) {
             return EffectResult.success(state, emptyList())
         }
@@ -54,7 +57,7 @@ class DistributeCountersAmongFilteredExecutor : EffectExecutor<DistributeCounter
         val decision = { decisionId: String -> DistributeDecision(
             id = decisionId,
             playerId = context.controllerId,
-            prompt = "Distribute ${effect.totalCounters} ${effect.counterType} " +
+            prompt = "Distribute ${effect.totalCounters} ${effect.counterType.printed} " +
                 "counter${if (effect.totalCounters != 1) "s" else ""} among ${effect.filter.description}s",
             context = DecisionContext(
                 sourceId = sourceId,

@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Override — Mirrodin #45
@@ -27,7 +27,7 @@ val Override = card("Override") {
     oracleText = "Counter target spell unless its controller pays {1} for each artifact you control."
 
     spell {
-        target = Targets.Spell
+        val spell = target(TargetFilter.SpellOnStack)
         effect = Effects.CounterUnlessDynamicPays(
             DynamicAmounts.battlefield(Player.You, GameObjectFilter.Artifact).count()
         )

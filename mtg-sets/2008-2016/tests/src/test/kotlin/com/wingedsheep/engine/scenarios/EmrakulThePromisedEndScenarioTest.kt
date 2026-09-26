@@ -45,7 +45,7 @@ class EmrakulThePromisedEndScenarioTest : ScenarioTestBase() {
                     .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
                     .build()
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Emrakul, the Promised End"),
                     game.player1Id,
@@ -72,7 +72,7 @@ class EmrakulThePromisedEndScenarioTest : ScenarioTestBase() {
                     .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
                     .build()
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Emrakul, the Promised End"),
                     game.player1Id,
@@ -98,7 +98,7 @@ class EmrakulThePromisedEndScenarioTest : ScenarioTestBase() {
                     .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
                     .build()
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Emrakul, the Promised End"),
                     game.player1Id,
@@ -122,7 +122,7 @@ class EmrakulThePromisedEndScenarioTest : ScenarioTestBase() {
                     .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
                     .build()
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Emrakul, the Promised End"),
                     game.player1Id,

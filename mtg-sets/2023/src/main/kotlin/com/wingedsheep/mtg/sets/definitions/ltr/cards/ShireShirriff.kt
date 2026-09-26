@@ -2,14 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Shire Shirriff
@@ -34,18 +31,18 @@ val ShireShirriff = card("Shire Shirriff") {
     // ETB: you may sacrifice a token. When you do, exile target creature an opponent controls
     // until this creature leaves the battlefield.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ReflexiveTriggerEffect(
-            action = SacrificeEffect(filter = GameObjectFilter.Token),
-            optional = true,
-            reflexiveEffect = Effects.ExileUntilLeaves(EffectTarget.ContextTarget(0)),
-            reflexiveTargetRequirements = listOf(Targets.CreatureOpponentControls)
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.ReflexiveTrigger(
+            action = Effects.SacrificeOwn(filter = GameObjectFilter.Token),
+            optional = true) {
+            val creatureOpponentControls = target(TargetFilter.CreatureOpponentControls)
+            effect = Effects.ExileUntilLeaves(creatureOpponentControls)
+        }
     }
 
     // When this creature leaves the battlefield, return the exiled card.
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 

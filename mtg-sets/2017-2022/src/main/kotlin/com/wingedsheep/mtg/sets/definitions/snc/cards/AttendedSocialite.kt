@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Attended Socialite
@@ -14,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Alliance — Whenever another creature you control enters, this creature gets +1/+1 until end of turn.
  *
  * "Alliance" is a pure ability word — no rules meaning — so the trigger is the plain
- * [Triggers.OtherCreatureEnters] (OTHER binding over creatures you control), with the ability word
+ * `Triggers.another(GameObjectFilter.Creature.youControl()).enters()` (OTHER binding over creatures you control), with the ability word
  * carried only in the printed text and the [description].
  */
 val AttendedSocialite = card("Attended Socialite") {
@@ -26,7 +27,7 @@ val AttendedSocialite = card("Attended Socialite") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.OtherCreatureEnters
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
         description = "Alliance — Whenever another creature you control enters, this creature gets +1/+1 until end of turn."
     }

@@ -6,8 +6,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Devouring Sugarmaw // Have for Dinner
@@ -47,9 +47,9 @@ val DevouringSugarmaw = card("Devouring Sugarmaw") {
     keywords(Keyword.MENACE, Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         optional = true
-        effect = SacrificeEffect(GameObjectFilter.ArtifactEnchantmentOrToken)
+        effect = Effects.SacrificeOwn(GameObjectFilter.ArtifactEnchantmentOrToken)
         elseEffect = Effects.Tap(EffectTarget.Self)
     }
 
@@ -59,10 +59,7 @@ val DevouringSugarmaw = card("Devouring Sugarmaw") {
         oracleText = "Create a 1/1 white Human creature token and a Food token. " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            effect = Effects.Composite(
-                woeHumanToken(),
-                Effects.CreateFood()
-            )
+            effect = woeHumanToken() then Effects.CreateFood()
         }
     }
 

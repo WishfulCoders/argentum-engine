@@ -2,11 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.unaryMinus
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Necropolis Fiend
@@ -29,8 +30,8 @@ val NecropolisFiend = card("Necropolis Fiend") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{X}"), Costs.Tap, Costs.ExileXFromGraveyard())
-        val creature = target("creature", Targets.Creature)
-        val negX = DynamicAmount.Multiply(DynamicAmount.XValue, -1)
+        val creature = target(TargetFilter.Creature)
+        val negX = -DynamicAmounts.xValue()
         effect = Effects.ModifyStats(negX, negX, creature)
     }
 

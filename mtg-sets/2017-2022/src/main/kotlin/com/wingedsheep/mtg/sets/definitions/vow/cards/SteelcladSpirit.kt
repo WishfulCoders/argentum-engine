@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Steelclad Spirit
@@ -34,10 +33,7 @@ val SteelcladSpirit = card("Steelclad Spirit") {
     keywords(Keyword.DEFENDER)
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Enchantment.youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Enchantment.youControl()).enters()
         effect = Effects.CanAttackDespiteDefenderThisTurn()
         description = "Whenever an enchantment you control enters, this creature can attack this " +
             "turn as though it didn't have defender."

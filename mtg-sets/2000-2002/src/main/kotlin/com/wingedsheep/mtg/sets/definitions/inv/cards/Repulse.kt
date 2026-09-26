@@ -3,8 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.inv.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Repulse
@@ -20,9 +19,8 @@ val Repulse = card("Repulse") {
     oracleText = "Return target creature to its owner's hand.\nDraw a card."
 
     spell {
-        target = TargetCreature()
-        effect = Effects.ReturnToHand(EffectTarget.ContextTarget(0))
-            .then(Effects.DrawCards(1))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ReturnToHand(creature) then Effects.DrawCards(1)
     }
 
     metadata {

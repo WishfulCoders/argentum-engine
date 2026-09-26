@@ -66,7 +66,7 @@ class SaddleEnumerator : ActionEnumerator {
                 )
                 val creatureName = creatureContainer.get<CardComponent>()?.name ?: "Unknown"
                 val canAttack = canAttackCache.getOrPut(creatureId) {
-                    AttackAvailability.canAttack(state, projected, creatureId, playerId, context.cardRegistry)
+                    AttackAvailability.canAttack(state, projected, creatureId, playerId, context.cardRegistry, context.predicateEvaluator)
                 }
                 validSaddleCreatures.add(
                     TapForPowerCreatureData(creatureId, creatureName, power, canAttack)

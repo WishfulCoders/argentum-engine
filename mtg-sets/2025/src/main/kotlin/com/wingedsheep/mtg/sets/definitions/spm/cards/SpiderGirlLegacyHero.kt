@@ -22,7 +22,7 @@ import com.wingedsheep.sdk.scripting.GrantKeyword
  * The conditional flying is a time-restricted static keyword grant to self
  * ([ConditionalStaticAbility] over [GrantKeyword] on [Filters.Self], gated by
  * [Conditions.IsYourTurn]) — same shape as Shocker, Unshakable's "during your turn, first strike".
- * The leaves-the-battlefield trigger reuses the broader [Triggers.LeavesBattlefield] (fires on
+ * The leaves-the-battlefield trigger reuses the broader `Triggers.self.leaves()` (fires on
  * death, exile, or bounce) and the shared [Effects.CreateToken] for the 1/1 GW Human Citizen token
  * (cf. News Helicopter's identical token).
  */
@@ -43,7 +43,7 @@ val SpiderGirlLegacyHero = card("Spider-Girl, Legacy Hero") {
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

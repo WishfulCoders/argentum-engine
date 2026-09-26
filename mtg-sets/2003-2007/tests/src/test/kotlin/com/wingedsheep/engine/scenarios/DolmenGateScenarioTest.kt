@@ -26,7 +26,7 @@ import io.kotest.matchers.shouldBe
  *  - **direction** — a shield that also covered damage dealt *by* the attacker would be Fog Bank,
  *    not Dolmen Gate.
  *
- * Nothing in the corpus had previously combined `RecipientFilter.Matching` with a *state*
+ * Nothing in the corpus had previously combined `Recipient.Object` with a *state*
  * predicate, so each axis gets its own assertion rather than one "the attacker lived".
  */
 class DolmenGateScenarioTest : FunSpec({

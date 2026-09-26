@@ -23,7 +23,7 @@ val SlashingTiger = card("Slashing Tiger") {
     oracleText = "Whenever this creature becomes blocked, it gets +2/+2 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
+        trigger = Triggers.self.becomesBlocked()
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
     }
 

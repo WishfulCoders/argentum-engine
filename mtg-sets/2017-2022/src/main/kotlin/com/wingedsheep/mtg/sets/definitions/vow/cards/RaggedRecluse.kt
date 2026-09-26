@@ -6,9 +6,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Ragged Recluse // Odious Witch (Innistrad: Crimson Vow #127 — the card's earliest printing)
@@ -48,9 +48,9 @@ private val RaggedRecluseFront = card("Ragged Recluse") {
         "transform this creature."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.YouDiscardedACardThisTurn
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
         description = "At the beginning of your end step, if you discarded a card this turn, " +
             "transform this creature."
     }
@@ -74,11 +74,8 @@ private val OdiousWitch = card("Odious Witch") {
     oracleText = "Whenever this creature attacks, defending player loses 1 life and you gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(
-            Effects.LoseLife(1, EffectTarget.PlayerRef(Player.DefendingPlayer)),
-            Effects.GainLife(1),
-        )
+        trigger = Triggers.self.attacks()
+        effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.DefendingPlayer)) then Effects.GainLife(1)
         description = "Whenever this creature attacks, defending player loses 1 life and you gain 1 life."
     }
 

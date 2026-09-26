@@ -5,10 +5,10 @@
 package com.wingedsheep.mtg.sets.definitions.nem.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -24,8 +24,8 @@ val SealOfFire = card("Seal of Fire") {
     oracleText = "Sacrifice this enchantment: It deals 2 damage to any target."
     activatedAbility {
         cost = Costs.SacrificeSelf
-        val t = target("target", AnyTarget())
-        effect = DealDamageEffect(2, t)
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(2, t)
     }
     metadata {
         rarity = Rarity.COMMON

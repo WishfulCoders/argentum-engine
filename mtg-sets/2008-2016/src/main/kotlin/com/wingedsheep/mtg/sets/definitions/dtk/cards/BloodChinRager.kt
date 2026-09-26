@@ -31,7 +31,7 @@ val BloodChinRager = card("Blood-Chin Rager") {
     oracleText = "Whenever this creature attacks, Warrior creatures you control gain menace until end of turn. (They can't be blocked except by two or more creatures.)"
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Group.grantKeywordToAll(
             keyword = Keyword.MENACE,
             filter = GroupFilter.AllCreaturesYouControl.withSubtype("Warrior")

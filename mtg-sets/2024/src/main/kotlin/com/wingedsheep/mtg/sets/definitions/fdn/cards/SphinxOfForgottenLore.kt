@@ -6,8 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Sphinx of Forgotten Lore
@@ -41,11 +39,9 @@ val SphinxOfForgottenLore = card("Sphinx of Forgotten Lore") {
     keywords(Keyword.FLASH, Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        target = TargetObject(
-            filter = TargetFilter.InstantOrSorceryInGraveyard.ownedByYou()
-        )
-        effect = Effects.GrantFlashback(EffectTarget.ContextTarget(0))
+        val target = target(TargetFilter.InstantOrSorceryInGraveyard.ownedByYou())
+        trigger = Triggers.self.attacks()
+        effect = Effects.GrantFlashback(target)
         description = "Whenever this creature attacks, target instant or sorcery card in your " +
             "graveyard gains flashback until end of turn. The flashback cost is equal to that " +
             "card's mana cost."

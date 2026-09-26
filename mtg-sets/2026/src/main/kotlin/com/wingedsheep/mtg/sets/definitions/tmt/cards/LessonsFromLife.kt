@@ -21,8 +21,8 @@ val LessonsFromLife = card("Lessons from Life") {
     oracleText = "Draw three cards. You may put a land card from your hand onto the battlefield tapped."
 
     spell {
-        effect = Effects.DrawCards(3)
-            .then(Patterns.Hand.putFromHand(filter = GameObjectFilter.Land, entersTapped = true))
+        effect = Effects.DrawCards(3) then
+            Patterns.Hand.putFromHand(filter = GameObjectFilter.Land, entersTapped = true)
     }
 
     metadata {

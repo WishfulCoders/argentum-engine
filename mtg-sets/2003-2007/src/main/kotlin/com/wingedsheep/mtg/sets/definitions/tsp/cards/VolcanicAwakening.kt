@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Volcanic Awakening
@@ -26,7 +25,7 @@ val VolcanicAwakening = card("Volcanic Awakening") {
         "Storm (When you cast this spell, copy it for each spell cast before it this turn. You may choose new targets for the copies.)"
 
     spell {
-        val t = target("target", TargetObject(filter = TargetFilter.Land))
+        val t = target(TargetFilter.Land)
         effect = Effects.Destroy(t)
     }
 

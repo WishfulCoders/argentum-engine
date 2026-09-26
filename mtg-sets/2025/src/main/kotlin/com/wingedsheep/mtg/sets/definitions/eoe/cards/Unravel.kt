@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
+import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Unravel
@@ -27,15 +26,15 @@ val Unravel = card("Unravel") {
     oracleText = "Counter target spell. If the amount of mana spent to cast that spell was less than its mana value, you draw a card."
 
     spell {
-        target = Targets.Spell
-        effect = ConditionalEffect(
-            condition = Compare(
-                left = DynamicAmounts.targetManaSpent(),
+        val spell = target(TargetFilter.SpellOnStack)
+        effect = Effects.If(
+            condition = Conditions.CompareAmounts(
+                left = DynamicAmounts.manaSpentToCast(spell),
                 operator = ComparisonOperator.LT,
-                right = DynamicAmounts.targetManaValue()
+                right = DynamicAmounts.manaValueOf(spell)
             ),
-            effect = Effects.CounterSpell().then(Effects.DrawCards(1)),
-            elseEffect = Effects.CounterSpell()
+            then = Effects.CounterSpell() then Effects.DrawCards(1),
+            otherwise = Effects.CounterSpell()
         )
     }
 

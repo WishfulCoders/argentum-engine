@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -26,8 +25,8 @@ val CorrosiveOoze = card("Corrosive Ooze") {
     oracleText = "Whenever Corrosive Ooze blocks or becomes blocked by an equipped creature, destroy all Equipment attached to that creature at end of combat."
 
     triggeredAbility {
-        trigger = Triggers.BlocksOrBecomesBlockedBy(GameObjectFilter.Creature.equipped())
-        effect = CreateDelayedTriggerEffect(
+        trigger = Triggers.self.blocksOrBecomesBlocked(GameObjectFilter.Creature.equipped())
+        effect = Effects.CreateDelayedTrigger(
             step = Step.END_COMBAT,
             effect = Effects.DestroyAllEquipmentOnTarget(EffectTarget.TriggeringEntity)
         )

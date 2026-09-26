@@ -1,20 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.isd.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ChoosePileEffect
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -71,52 +63,39 @@ val LilianaOfTheVeil = card("Liliana of the Veil") {
 
     // −2: Target player sacrifices a creature.
     loyaltyAbility(-2) {
-        val player = target("target player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Effects.Sacrifice(GameObjectFilter.Creature, count = 1, target = player)
     }
 
     // −6: Separate all permanents target player controls into two piles. That player sacrifices
     //     all permanents in the pile of their choice.
     loyaltyAbility(-6) {
-        target("target player", Targets.Player)
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.ControlledPermanents(Player.ContextPlayer(0)),
-                    storeAs = "their_permanents"
-                ),
-                SelectFromCollectionEffect(
-                    from = "their_permanents",
-                    selection = SelectionMode.ChooseAnyNumber,
-                    chooser = Chooser.Controller,
-                    storeSelected = "pileA",
-                    storeRemainder = "pileB",
-                    selectedLabel = "Pile 1",
-                    remainderLabel = "Pile 2",
-                    prompt = "Separate their permanents into two piles. The permanents you " +
-                        "select form Pile 1; the rest form Pile 2.",
-                    useTargetingUI = true,
-                    alwaysPrompt = true
-                ),
-                ChoosePileEffect(
-                    pileA = "pileA",
-                    pileB = "pileB",
-                    pileALabel = "Pile 1",
-                    pileBLabel = "Pile 2",
-                    chooser = Chooser.TargetPlayer,
-                    storeChosenAs = "sacrificedPile",
-                    storeOtherAs = "keptPile",
-                    prompt = "Choose a pile. You sacrifice all permanents in the pile you choose."
-                ),
-                MoveCollectionEffect(
-                    from = "sacrificedPile",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD),
-                    moveType = MoveType.Sacrifice
-                )
-            ),
+        val player = target(Targets.Player)
+        effect = Effects.Pipeline(
             descriptionOverride = "Separate all permanents target player controls into two piles. " +
                 "That player sacrifices all permanents in the pile of their choice."
-        )
+        ) {
+            val theirPermanents = gather(CardSource.ControlledPermanents(player.asPlayer))
+            val (pileA, pileB) = chooseAnyNumberSplit(
+                from = theirPermanents,
+                chooser = Chooser.Controller,
+                selectedLabel = "Pile 1",
+                remainderLabel = "Pile 2",
+                prompt = "Separate their permanents into two piles. The permanents you " +
+                    "select form Pile 1; the rest form Pile 2.",
+                useTargetingUI = true,
+                alwaysPrompt = true
+            )
+            val (sacrificedPile, _) = choosePile(
+                pileA,
+                pileB,
+                pileALabel = "Pile 1",
+                pileBLabel = "Pile 2",
+                chooser = Chooser.TargetPlayer,
+                prompt = "Choose a pile. You sacrifice all permanents in the pile you choose."
+            )
+            sacrifice(sacrificedPile)
+        }
     }
 
     metadata {

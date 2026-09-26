@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.state.components.stack.ActivatedAbilityOnStackComponent
 import com.wingedsheep.engine.support.GameTestDriver
@@ -16,6 +17,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Type-aware self-noun rendering. A [TransformEffect]/`Grant*` effect targeting
@@ -62,11 +64,11 @@ class SelfNounRenderingTest : FunSpec({
             .let { driver.cardRegistry.requireCard(it.cardDefinitionId) }
             .activatedAbilities.first().id
         driver.submit(ActivateAbility(playerId = player, sourceId = source, abilityId = abilityId))
-            .isSuccess shouldBe true
+            .outcome shouldBe Outcome.Done
         val stackId = driver.state.stack.first {
             driver.state.getEntity(it)?.has<ActivatedAbilityOnStackComponent>() == true
         }
-        return ClientStateTransformer(driver.cardRegistry)
+        return ClientStateTransformer(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .transform(driver.state, player).cards[stackId]!!.oracleText
     }
 

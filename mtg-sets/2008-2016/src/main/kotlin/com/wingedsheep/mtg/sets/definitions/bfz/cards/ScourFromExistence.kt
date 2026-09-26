@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.bfz.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Scour from Existence
@@ -18,7 +18,7 @@ val ScourFromExistence = card("Scour from Existence") {
     oracleText = "Exile target permanent."
 
     spell {
-        val permanent = target("target permanent", Targets.Permanent)
+        val permanent = target(TargetFilter.Permanent)
         effect = Effects.Exile(permanent)
     }
 

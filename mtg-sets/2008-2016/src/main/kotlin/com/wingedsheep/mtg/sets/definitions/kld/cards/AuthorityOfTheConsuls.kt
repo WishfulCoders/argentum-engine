@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.PermanentsEnterTapped
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Authority of the Consuls
@@ -45,10 +44,7 @@ val AuthorityOfTheConsuls = card("Authority of the Consuls") {
 
     // Whenever a creature an opponent controls enters, you gain 1 life.
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.opponentControls(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.opponentControls()).enters()
         effect = Effects.GainLife(1)
     }
 

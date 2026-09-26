@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * 4/4
  * Landfall — Whenever a land you control enters, this creature gets +4/+4 and gains trample until end of turn. (It can deal excess combat damage to the player or planeswalker it's attacking.)
  *
- * Landfall is the standard [Triggers.entersBattlefield] over `GameObjectFilter.Land.youControl()`
+ * Landfall is the standard `Triggers.a(filter).enters()` over `GameObjectFilter.Land.youControl()`
  * with [TriggerBinding.ANY]; the effect is a [Effects.Composite] of an until-end-of-turn
  * [Effects.ModifyStats] and [Effects.GrantKeyword](TRAMPLE), both on [EffectTarget.Self].
  */
@@ -29,14 +29,9 @@ val BalothWoodcrasher = card("Baloth Woodcrasher") {
     oracleText = "Landfall — Whenever a land you control enters, this creature gets +4/+4 and gains trample until end of turn. (It can deal excess combat damage to the player or planeswalker it's attacking.)"
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Land.youControl(),
-            binding = TriggerBinding.ANY
-        )
-        effect = Effects.Composite(
-            Effects.ModifyStats(4, 4, EffectTarget.Self),
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
+        effect = Effects.ModifyStats(4, 4, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
-        )
     }
 
     metadata {

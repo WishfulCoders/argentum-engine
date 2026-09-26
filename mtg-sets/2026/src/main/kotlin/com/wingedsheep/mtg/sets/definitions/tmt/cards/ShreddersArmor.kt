@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.tmt.cards
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -12,7 +11,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Shredder's Armor
@@ -36,8 +35,8 @@ val ShreddersArmor = card("Shredder's Armor") {
     }
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("target creature you control", Targets.CreatureYouControl)
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.AttachEquipment(creature)
     }
 
@@ -49,7 +48,7 @@ val ShreddersArmor = card("Shredder's Armor") {
                 )
             )
         )
-        val creature = target("target creature you control", Targets.CreatureYouControl)
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.AttachEquipment(creature)
         timing = TimingRule.SorcerySpeed
         restrictions = listOf(ActivationRestriction.OncePerTurn)

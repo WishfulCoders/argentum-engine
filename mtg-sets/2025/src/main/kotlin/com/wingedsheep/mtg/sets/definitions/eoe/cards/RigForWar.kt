@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.eoe.cards
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.scripting.Duration
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Rig for War
@@ -20,10 +20,10 @@ val RigForWar = card("Rig for War") {
     oracleText = "Target creature gets +3/+0 and gains first strike and reach until end of turn."
 
     spell {
-        val target = target("target creature", Targets.Creature)
-        effect = Effects.ModifyStats(3, 0, target)
-            .then(Effects.GrantKeyword(Keyword.FIRST_STRIKE, target, Duration.EndOfTurn))
-            .then(Effects.GrantKeyword(Keyword.REACH, target, Duration.EndOfTurn))
+        val target = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(3, 0, target) then
+            Effects.GrantKeyword(Keyword.FIRST_STRIKE, target, Duration.EndOfTurn) then
+            Effects.GrantKeyword(Keyword.REACH, target, Duration.EndOfTurn)
     }
 
     metadata {

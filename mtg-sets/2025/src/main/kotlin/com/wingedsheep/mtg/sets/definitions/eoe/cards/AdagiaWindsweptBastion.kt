@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Supertype
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.station
 
@@ -46,17 +45,14 @@ val AdagiaWindsweptBastion = card("Adagia, Windswept Bastion") {
     station()
 
     // 12+ charge counters: {3}{W}, {T}: Create a legendary token copy of target artifact or enchantment you control
-    val charge12 = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 12)
+    val charge12 = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 12)
 
     activatedAbility {
         cost = Costs.Composite(
             Costs.Mana("{3}{W}"),
             Costs.Tap
         )
-        val targetPermanent = target(
-            "target artifact or enchantment you control",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.ArtifactOrEnchantment.youControl()))
-        )
+        val targetPermanent = target(TargetFilter(GameObjectFilter.ArtifactOrEnchantment.youControl()))
         effect = Effects.CreateTokenCopyOfTarget(
             target = targetPermanent,
             addedSupertypes = setOf(Supertype.LEGENDARY)

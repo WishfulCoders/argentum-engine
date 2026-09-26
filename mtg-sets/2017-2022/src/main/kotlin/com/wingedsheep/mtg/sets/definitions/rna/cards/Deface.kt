@@ -2,12 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.rna.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Deface — Ravnica Allegiance #98
@@ -28,14 +26,11 @@ val Deface = card("Deface") {
     spell {
         modal {
             mode("Destroy target artifact") {
-                val artifact = target("target", Targets.Artifact)
+                val artifact = target(TargetFilter.Artifact)
                 effect = Effects.Destroy(artifact)
             }
             mode("Destroy target creature with defender") {
-                val wall = target(
-                    "target",
-                    TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.withKeyword(Keyword.DEFENDER)))
-                )
+                val wall = target(TargetFilter(GameObjectFilter.Creature.withKeyword(Keyword.DEFENDER)))
                 effect = Effects.Destroy(wall)
             }
         }

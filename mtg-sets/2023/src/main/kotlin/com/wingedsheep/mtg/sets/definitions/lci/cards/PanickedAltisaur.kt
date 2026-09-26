@@ -6,9 +6,9 @@ package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -31,7 +31,7 @@ val PanickedAltisaur = card("Panicked Altisaur") {
     keywords(Keyword.REACH)
     activatedAbility {
         cost = Costs.Tap
-        effect = DealDamageEffect(2, EffectTarget.PlayerRef(Player.EachOpponent))
+        effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.EachOpponent))
     }
     metadata {
         rarity = Rarity.COMMON

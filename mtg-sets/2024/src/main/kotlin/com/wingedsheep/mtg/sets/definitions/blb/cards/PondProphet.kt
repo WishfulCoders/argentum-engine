@@ -22,7 +22,7 @@ val PondProphet = card("Pond Prophet") {
     oracleText = "When this creature enters, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1)
     }
 

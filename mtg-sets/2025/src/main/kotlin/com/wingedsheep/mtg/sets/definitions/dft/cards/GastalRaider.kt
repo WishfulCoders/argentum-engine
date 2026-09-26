@@ -11,18 +11,9 @@ import com.wingedsheep.sdk.dsl.startYourEngines
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.RevealHandEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Gastal Raider — Aetherdrift #86
@@ -56,31 +47,25 @@ val GastalRaider = card("Gastal Raider") {
     startYourEngines()
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val opponent = target("target opponent", Targets.Opponent)
-        effect = Effects.Composite(
-            RevealHandEffect(opponent),
-            GatherCardsEffect(
-                source = CardSource.FromZone(
+        trigger = Triggers.self.enters()
+        val opponent = target(Targets.Opponent)
+        effect = Effects.Pipeline {
+            run(Effects.RevealHand(opponent))
+            val revealedInstantsAndSorceries = gather(
+                CardSource.FromZone(
                     Zone.HAND,
-                    Player.ContextPlayer(0),
+                    opponent.asPlayer,
                     GameObjectFilter.InstantOrSorcery
-                ),
-                storeAs = "revealedInstantsAndSorceries"
-            ),
-            SelectFromCollectionEffect(
-                from = "revealedInstantsAndSorceries",
-                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                chooser = Chooser.Controller,
-                storeSelected = "toDiscard",
-                prompt = "Choose an instant or sorcery card to discard"
-            ),
-            MoveCollectionEffect(
-                from = "toDiscard",
-                destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
-                moveType = MoveType.Discard
+                )
             )
-        )
+            val toDiscard = chooseExactly(
+                1,
+                from = revealedInstantsAndSorceries,
+                chooser = Chooser.Controller,
+                prompt = "Choose an instant or sorcery card to discard"
+            )
+            discard(toDiscard, opponent.asPlayer)
+        }
         description = "When this creature enters, target opponent reveals their hand. You choose " +
             "an instant or sorcery card from it. That player discards that card."
     }

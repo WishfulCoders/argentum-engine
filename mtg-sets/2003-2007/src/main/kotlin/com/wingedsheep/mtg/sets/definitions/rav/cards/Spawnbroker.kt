@@ -1,12 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 val Spawnbroker = card("Spawnbroker") {
     manaCost = "{2}{U}"
@@ -17,16 +15,11 @@ val Spawnbroker = card("Spawnbroker") {
     oracleText = "When this creature enters, you may exchange control of target creature you control and target creature with power less than or equal to that creature's power an opponent controls."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         description = "You may exchange control of the two targeted creatures."
-        val yours = target("creature you control", Targets.CreatureYouControl)
-        val theirs = target(
-            "opponent's creature with power no greater than your chosen creature",
-            TargetCreature(filter = Targets.Unified.creature {
-                opponentControls().powerAtMostEntity(EntityReference.Target(0))
-            })
-        )
+        val yours = target(TargetFilter.CreatureYouControl)
+        val theirs = target(TargetFilter.Creature.opponentControls().powerAtMostEntity(yours))
         effect = Effects.ExchangeControl(yours, theirs)
     }
 

@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 
@@ -25,10 +24,7 @@ val BerserkMurlodont = card("Berserk Murlodont") {
     oracleText = "Whenever a Beast becomes blocked, it gets +1/+1 until end of turn for each creature blocking it."
 
     triggeredAbility {
-        trigger = Triggers.becomesBlocked(
-            filter = GameObjectFilter.Permanent.withSubtype("Beast"),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Permanent.withSubtype("Beast")).becomesBlocked()
         effect = Effects.ModifyStats(
             DynamicAmounts.numberOfBlockers(),
             DynamicAmounts.numberOfBlockers(),

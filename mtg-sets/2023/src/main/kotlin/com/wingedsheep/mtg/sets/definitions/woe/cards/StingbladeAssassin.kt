@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -32,11 +31,8 @@ val StingbladeAssassin = card("Stingblade Assassin") {
     toughness = 1
     keywords(Keyword.FLASH, Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "target",
-            TargetCreature(filter = TargetFilter.Creature.wasDealtDamageThisTurn().opponentControls())
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature.wasDealtDamageThisTurn().opponentControls())
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     metadata {

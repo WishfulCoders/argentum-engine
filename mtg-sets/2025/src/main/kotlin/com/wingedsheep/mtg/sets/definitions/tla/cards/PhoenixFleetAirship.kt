@@ -10,6 +10,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantCardType
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Phoenix Fleet Airship
@@ -41,7 +42,7 @@ val PhoenixFleetAirship = card("Phoenix Fleet Airship") {
 
     // Intervening-if on the per-player "permanents sacrificed this turn" counter.
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.YouSacrificedPermanentsThisTurn()
         effect = Effects.CreateTokenCopyOfSelf()
     }

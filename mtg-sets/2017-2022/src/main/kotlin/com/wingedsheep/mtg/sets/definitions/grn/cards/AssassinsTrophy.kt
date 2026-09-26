@@ -2,13 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.grn.cards
 
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Assassin's Trophy
@@ -30,7 +29,7 @@ import com.wingedsheep.sdk.scripting.references.Player
  * Two printed rulings fall out of the ordering rather than needing a gate of their own:
  * the fetch is *not* conditional on the destruction actually happening, so an indestructible
  * target still hands its controller the basic land; and because the spell fizzles wholesale on an
- * illegal target, no player searches in that case. The [MayEffect] wrapper carries the third —
+ * illegal target, no player searches in that case. The [Effects.May] wrapper carries the third —
  * declining the search skips the shuffle with it, since `shuffleAfter` lives inside the search
  * pipeline that never runs.
  */
@@ -42,12 +41,12 @@ val AssassinsTrophy = card("Assassin's Trophy") {
         "library for a basic land card, put it onto the battlefield, then shuffle."
 
     spell {
-        val permanent = target("target permanent an opponent controls", Targets.PermanentOpponentControls)
+        val permanent = target(TargetFilter.PermanentOpponentControls)
         effect = Effects.Destroy(permanent) then
             Effects.ForEachPlayer(
                 Player.ControllerOf("the destroyed permanent"),
                 listOf(
-                    MayEffect(
+                    Effects.May(
                         Patterns.Library.searchLibrary(
                             filter = GameObjectFilter.BasicLand,
                             count = 1,

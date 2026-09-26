@@ -1,11 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.war.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Tyrant's Scorn — War of the Spark #225 (canonical printing)
@@ -30,11 +28,11 @@ val TyrantsScorn = card("Tyrant's Scorn") {
     spell {
         modal {
             mode("Destroy target creature with mana value 3 or less.") {
-                val creature = target("target", TargetCreature(filter = TargetFilter.Creature.manaValueAtMost(3)))
+                val creature = target(TargetFilter.Creature.manaValueAtMost(3))
                 effect = Effects.Destroy(creature)
             }
             mode("Return target creature to its owner's hand.") {
-                val creature = target("target", Targets.Creature)
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.ReturnToHand(creature)
             }
         }

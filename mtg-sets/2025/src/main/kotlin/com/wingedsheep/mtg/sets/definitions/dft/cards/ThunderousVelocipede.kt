@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
+import com.wingedsheep.sdk.core.CounterType
 
 /**
  * Thunderous Velocipede
@@ -48,7 +48,7 @@ val ThunderousVelocipede = card("Thunderous Velocipede") {
 
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.PlusOnePlusOne,
+            counterType = CounterType.PLUS_ONE_PLUS_ONE,
             count = 1,
             otherOnly = true,
             appliesTo = EventPattern.ZoneChangeEvent(
@@ -60,7 +60,7 @@ val ThunderousVelocipede = card("Thunderous Velocipede") {
 
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.PlusOnePlusOne,
+            counterType = CounterType.PLUS_ONE_PLUS_ONE,
             count = 3,
             otherOnly = true,
             appliesTo = EventPattern.ZoneChangeEvent(

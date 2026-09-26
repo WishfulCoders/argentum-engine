@@ -6,11 +6,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.ninjutsu
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Ink-Eyes, Servant of Oni
@@ -38,14 +36,14 @@ val InkEyesServantOfOni = card("Ink-Eyes, Servant of Oni") {
     ninjutsu("{3}{B}{B}")
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        val t = target("target", TargetObject(filter = TargetFilter.CreatureInGraveyard.ownedByOpponent()))
-        effect = MayEffect(Effects.PutOntoBattlefieldUnderYourControl(t))
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        val t = target(TargetFilter.CreatureInGraveyard.ownedByOpponent())
+        effect = Effects.May(Effects.PutOntoBattlefieldUnderYourControl(t))
     }
 
     activatedAbility {
         cost = Costs.Mana("{1}{B}")
-        effect = RegenerateEffect(EffectTarget.Self)
+        effect = Effects.Regenerate(EffectTarget.Self)
     }
 
     metadata {

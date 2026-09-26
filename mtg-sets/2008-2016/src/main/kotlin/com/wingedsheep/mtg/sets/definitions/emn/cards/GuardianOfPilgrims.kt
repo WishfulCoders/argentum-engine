@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -27,8 +26,8 @@ val GuardianOfPilgrims = card("Guardian of Pilgrims") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(1, 1, t)
     }
     metadata {

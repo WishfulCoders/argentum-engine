@@ -10,12 +10,8 @@ import com.wingedsheep.sdk.dsl.toSolve
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Case of the Burning Masks — Murders at Karlov Manor #113
@@ -50,9 +46,9 @@ val CaseOfTheBurningMasks = card("Case of the Burning Masks") {
         "them. You may play that card this turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = TargetCreature(filter = TargetFilter.Creature.opponentControls())
-        effect = Effects.DealDamage(3, EffectTarget.ContextTarget(0))
+        val creature = target(TargetFilter.Creature.opponentControls())
+        trigger = Triggers.self.enters()
+        effect = Effects.DealDamage(3, creature)
     }
 
     toSolve(Conditions.SourcesYouControlledDealtDamageThisTurn(3))
@@ -60,7 +56,7 @@ val CaseOfTheBurningMasks = card("Case of the Burning Masks") {
     solvedActivatedAbility {
         cost = Costs.SacrificeSelf
         effect = Effects.Pipeline {
-            val exiled = gather(CardSource.TopOfLibrary(DynamicAmount.Fixed(3)))
+            val exiled = gather(CardSource.TopOfLibrary(3))
             exile(exiled)
             val chosen = chooseExactly(
                 count = 1,
@@ -69,7 +65,7 @@ val CaseOfTheBurningMasks = card("Case of the Burning Masks") {
                 prompt = "Choose a card you may play this turn",
                 showAllCards = true
             )
-            run(GrantMayPlayFromExileEffect(chosen.key, MayPlayExpiry.EndOfTurn))
+            run(Effects.GrantMayPlayFromExile(chosen, MayPlayExpiry.EndOfTurn))
         }
         description = "Sacrifice this Case: Exile the top three cards of your library. Choose one " +
             "of them. You may play that card this turn."

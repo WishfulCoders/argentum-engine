@@ -42,7 +42,7 @@ class CounterTokenProvenanceScenarioTest : ScenarioTestBase() {
 
         replacementEffect(
             com.wingedsheep.sdk.scripting.EntersWithCounters(
-                counterType = com.wingedsheep.sdk.scripting.events.CounterTypeFilter.PlusOnePlusOne,
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
                 count = 3,
                 selfOnly = true
             )
@@ -82,7 +82,7 @@ class CounterTokenProvenanceScenarioTest : ScenarioTestBase() {
                 exile(chosen)
                 run(
                     Effects.AddDynamicCounters(
-                        counterType = "+1/+1",
+                        counterType = CounterType.PLUS_ONE_PLUS_ONE,
                         amount = DynamicAmount.VariableReference("${chosen.key}_count"),
                         target = EffectTarget.Self
                     )

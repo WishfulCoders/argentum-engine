@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Archon of Justice
@@ -15,7 +16,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Flying
  * When this creature dies, exile target permanent.
  *
- * [Triggers.Dies] plus a mandatory [Effects.Exile] on a [Targets.Permanent] — any permanent,
+ * `Triggers.self.dies()` plus a mandatory [Effects.Exile] on a [Targets.Permanent] — any permanent,
  * including one you control and including lands.
  */
 val ArchonOfJustice = card("Archon of Justice") {
@@ -29,8 +30,8 @@ val ArchonOfJustice = card("Archon of Justice") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val t = target("target permanent", Targets.Permanent)
+        trigger = Triggers.self.dies()
+        val t = target(TargetFilter.Permanent)
         effect = Effects.Exile(t)
     }
 

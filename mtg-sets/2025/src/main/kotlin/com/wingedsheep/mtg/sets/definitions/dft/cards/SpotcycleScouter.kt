@@ -27,7 +27,7 @@ val SpotcycleScouter = card("Spotcycle Scouter") {
     power = 3
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.scry(2)
     }
     keywordAbility(KeywordAbility.crew(1))

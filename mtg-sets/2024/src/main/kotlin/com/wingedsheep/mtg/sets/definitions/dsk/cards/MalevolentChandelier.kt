@@ -13,7 +13,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -34,7 +33,7 @@ val MalevolentChandelier = card("Malevolent Chandelier") {
     keywords(Keyword.FLYING)
     activatedAbility {
         cost = Costs.Mana("{2}")
-        val t = target("target", TargetObject(filter = TargetFilter.CardInGraveyard))
+        val t = target(TargetFilter.CardInGraveyard)
         effect = Effects.Move(t, Zone.LIBRARY, ZonePlacement.Bottom)
         timing = TimingRule.SorcerySpeed
     }

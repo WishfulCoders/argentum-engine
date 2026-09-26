@@ -26,10 +26,10 @@ val VeteranGuardmouse = card("Veteran Guardmouse") {
     oracleText = "Valiant — Whenever this creature becomes the target of a spell or ability you control for the first time each turn, it gets +1/+0 and gains first strike until end of turn. Scry 1."
 
     triggeredAbility {
-        trigger = Triggers.Valiant
-        effect = Effects.ModifyStats(1, 0, EffectTarget.Self)
-            .then(Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.Self))
-            .then(Patterns.Library.scry(1))
+        trigger = Triggers.self.becomesTarget(byYou = true, firstTimeEachTurn = true)
+        effect = Effects.ModifyStats(1, 0, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.Self) then
+            Patterns.Library.scry(1)
     }
 
     metadata {

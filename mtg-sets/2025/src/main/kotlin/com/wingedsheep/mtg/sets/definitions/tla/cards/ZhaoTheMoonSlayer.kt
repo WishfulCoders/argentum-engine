@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
@@ -30,7 +30,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * - "Nonbasic lands enter tapped" is a global [PermanentsEnterTapped] runtime replacement (the
  *   group counterpart of the self-only `EntersTapped`): every nonbasic land — either player's —
  *   is marked tapped as it enters. Unconditional while Zhao is on the battlefield.
- * - The {7} ability accumulates generic [Counters.CONQUEROR] counters on Zhao (as War Balloon
+ * - The {7} ability accumulates generic [CounterType.CONQUEROR] counters on Zhao (as War Balloon
  *   accumulates fire counters), read only by the conditional static below.
  * - "Nonbasic lands are Mountains" is a [SetLandTypesForGroup] over all nonbasic lands, gated by
  *   [Conditions.SourceCounterCountAtLeast] so it applies only while Zhao has a conqueror counter.
@@ -65,12 +65,12 @@ val ZhaoTheMoonSlayer = card("Zhao, the Moon Slayer") {
     // {7}: Put a conqueror counter on Zhao.
     activatedAbility {
         cost = Costs.Mana("{7}")
-        effect = Effects.AddCounters(Counters.CONQUEROR, 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.CONQUEROR, 1, EffectTarget.Self)
     }
 
     // As long as Zhao has a conqueror counter on him, nonbasic lands are Mountains.
     staticAbility {
-        condition = Conditions.SourceCounterCountAtLeast(Counters.CONQUEROR, 1)
+        condition = Conditions.SourceCounterCountAtLeast(CounterType.CONQUEROR, 1)
         ability = SetLandTypesForGroup(
             filter = GroupFilter(GameObjectFilter.NonbasicLand),
             landTypes = setOf("Mountain"),

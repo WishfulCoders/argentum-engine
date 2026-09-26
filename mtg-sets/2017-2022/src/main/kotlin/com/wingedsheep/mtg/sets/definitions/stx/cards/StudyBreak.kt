@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Study Break — Strixhaven: School of Mages #34 (canonical printing)
@@ -29,7 +30,7 @@ val StudyBreak = card("Study Break") {
         "hand, or discard a card to draw a card.)"
 
     spell {
-        target("up to two target creatures", Targets.UpToCreatures(2))
+        targets(TargetFilter.Creature, count = 2, optional = true)
         effect = Effects.TapEachTarget() then Patterns.Mechanic.learn()
     }
 

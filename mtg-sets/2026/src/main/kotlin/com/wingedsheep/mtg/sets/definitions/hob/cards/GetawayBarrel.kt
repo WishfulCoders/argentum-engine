@@ -9,13 +9,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Getaway Barrel — The Hobbit #98
@@ -41,32 +35,13 @@ val GetawayBarrel = card("Getaway Barrel") {
         "battlefield. Put the rest on the bottom of your library in a random order."
 
     triggeredAbility {
-        trigger = Triggers.PutIntoGraveyardFromBattlefield
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(13), Player.You),
-                    storeAs = "barrel_revealed",
-                    revealed = true
-                ),
-                SelectFromCollectionEffect(
-                    from = "barrel_revealed",
-                    selection = SelectionMode.Random(DynamicAmount.Fixed(1)),
-                    filter = GameObjectFilter.Creature,
-                    storeSelected = "barrel_toBattlefield",
-                    storeRemainder = "barrel_toBottom"
-                ),
-                MoveCollectionEffect(
-                    from = "barrel_toBattlefield",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD, Player.You)
-                ),
-                MoveCollectionEffect(
-                    from = "barrel_toBottom",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, Player.You, ZonePlacement.Bottom),
-                    order = CardOrder.Random
-                )
-            )
-        )
+        trigger = Triggers.self.dies()
+        effect = Effects.Pipeline {
+            val revealed = gather(CardSource.TopOfLibrary(13, Player.You), revealed = true)
+            val (creature, rest) = chooseRandomSplit(1, from = revealed, filter = GameObjectFilter.Creature)
+            move(creature, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You))
+            toLibraryBottom(rest, order = CardOrder.Random)
+        }
         description = "When this artifact is put into a graveyard from the battlefield, reveal the " +
             "top thirteen cards of your library. Put a random creature card from among them onto " +
             "the battlefield. Put the rest on the bottom of your library in a random order."

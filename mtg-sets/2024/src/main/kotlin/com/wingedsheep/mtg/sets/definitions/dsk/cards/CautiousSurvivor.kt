@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Cautious Survivor
@@ -23,7 +24,7 @@ val CautiousSurvivor = card("Cautious Survivor") {
 
     // Survival — At the beginning of your second main phase, if this creature is tapped, you gain 2 life.
     triggeredAbility {
-        trigger = Triggers.YourPostcombatMain
+        trigger = Triggers.you.beginningOf(Step.POSTCOMBAT_MAIN)
         interveningIf = Conditions.SourceIsTapped
         effect = Effects.GainLife(2)
     }

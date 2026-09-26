@@ -7,7 +7,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Mardu Skullhunter
@@ -29,9 +29,9 @@ val MarduSkullhunter = card("Mardu Skullhunter") {
     replacementEffect(EntersTapped())
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouAttackedThisTurn
-        val t = target("target opponent", TargetOpponent())
+        val t = target(Targets.Opponent)
         effect = Patterns.Hand.discardCards(1, t)
     }
 

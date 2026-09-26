@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -23,7 +22,7 @@ val Putrefy = card("Putrefy") {
     typeLine = "Instant"
     oracleText = "Destroy target artifact or creature. It can't be regenerated."
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter.CreatureOrArtifact))
+        val t = target(TargetFilter.CreatureOrArtifact)
         effect = Effects.Destroy(t, noRegenerate = true)
     }
     metadata {

@@ -5,9 +5,9 @@
 package com.wingedsheep.mtg.sets.definitions.ody.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -26,7 +26,7 @@ val DedicatedMartyr = card("Dedicated Martyr") {
     toughness = 1
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{W}"), Costs.SacrificeSelf)
-        effect = GainLifeEffect(3)
+        effect = Effects.GainLife(3)
     }
     metadata {
         rarity = Rarity.COMMON

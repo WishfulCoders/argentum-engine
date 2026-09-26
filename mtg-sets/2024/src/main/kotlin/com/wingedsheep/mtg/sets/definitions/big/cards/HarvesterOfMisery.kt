@@ -4,13 +4,13 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Harvester of Misery
@@ -36,17 +36,17 @@ val HarvesterOfMisery = card("Harvester of Misery") {
 
     // When this enters, all OTHER creatures get -2/-2 until end of turn.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature, excludeSelf = true),
-            Effects.ModifyStats(-2, -2, EffectTarget.Self)
+            Effects.ModifyStats(-2, -2, EffectTarget.IterationEntity)
         )
     }
 
     // {1}{B}, Discard this card (from hand): Target creature gets -2/-2 until end of turn.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{B}"), Costs.DiscardSelf)
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(-2, -2, t)
         activateFromZone = Zone.HAND
     }

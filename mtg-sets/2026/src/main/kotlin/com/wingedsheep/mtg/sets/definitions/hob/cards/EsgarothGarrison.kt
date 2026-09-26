@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Esgaroth Garrison
@@ -32,11 +31,11 @@ val EsgarothGarrison = card("Esgaroth Garrison") {
     toughness = 5
 
     dynamicPower(
-        DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Creature)
+        DynamicAmounts.creaturesYouControl()
     )
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Mechanic.recruit()
     }
 

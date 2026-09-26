@@ -23,7 +23,7 @@ val GerminatingWurm = card("Germinating Wurm") {
     toughness = 5
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(2)
     }
 

@@ -6,13 +6,13 @@ package com.wingedsheep.mtg.sets.definitions.usg.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -27,7 +27,7 @@ val TolarianAcademy = card("Tolarian Academy") {
     oracleText = "{T}: Add {U} for each artifact you control."
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.AddMana(Color.BLUE, DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Artifact))
+        effect = Effects.AddMana(Color.BLUE, DynamicAmounts.battlefield(Player.You, GameObjectFilter.Artifact).count())
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

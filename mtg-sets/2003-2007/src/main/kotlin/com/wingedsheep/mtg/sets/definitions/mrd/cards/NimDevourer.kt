@@ -9,11 +9,10 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Nim Devourer — Mirrodin #70
@@ -24,7 +23,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Activate only during your upkeep.
  *
  * The power boost is the shared Nim continuous effect ([NimShrieker], [NimLasher]) — a
- * [GrantDynamicStatsEffect] scoped to the source, recomputed from the live artifact count.
+ * [GrantDynamicStats] scoped to the source, recomputed from the live artifact count.
  * The Devourer is not itself an artifact, so it never counts toward its own bonus.
  *
  * The recursion is an *activated ability that functions from the graveyard*
@@ -57,21 +56,17 @@ val NimDevourer = card("Nim Devourer") {
         "Activate only during your upkeep."
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
             powerBonus = DynamicAmounts.battlefield(Player.You, GameObjectFilter.Artifact).count(),
-            toughnessBonus = DynamicAmount.Fixed(0)
+            toughnessBonus = DynamicAmounts.fixed(0)
         )
     }
 
     activatedAbility {
         cost = Costs.Mana("{B}{B}")
-        effect = Effects.Composite(
-            listOf(
-                Effects.PutOntoBattlefieldFromGraveyard(EffectTarget.Self),
-                Effects.SacrificeOwn(GameObjectFilter.Creature)
-            )
-        )
+        effect = Effects.PutOntoBattlefieldFromGraveyard(EffectTarget.Self) then
+            Effects.SacrificeOwn(GameObjectFilter.Creature)
         activateFromZone = Zone.GRAVEYARD
         restrictions = listOf(
             ActivationRestriction.All(

@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Dragonscale Boon
@@ -19,9 +19,8 @@ val DragonscaleBoon = card("Dragonscale Boon") {
     oracleText = "Put two +1/+1 counters on target creature and untap it."
 
     spell {
-        val t = target("target", TargetCreature())
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, t)
-            .then(Effects.Untap(t))
+        val t = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, t) then Effects.Untap(t)
     }
 
     metadata {

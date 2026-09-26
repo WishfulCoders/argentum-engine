@@ -33,8 +33,6 @@ import com.wingedsheep.sdk.scripting.MayPlayCardsFromExile
  */
 internal object StaticMayPlayGrants {
 
-    private val predicateEvaluator = PredicateEvaluator()
-
     /**
      * Every static grant that authorizes [playerId] to play [cardId] from exile right now.
      *
@@ -48,6 +46,7 @@ internal object StaticMayPlayGrants {
         cardId: EntityId,
         playerId: EntityId,
         cardRegistry: CardRegistry,
+        predicateEvaluator: PredicateEvaluator
     ): List<MayPlayPermission> {
         // The grant only covers cards in exile — a stash-countered card that has since been played or
         // moved on is no longer playable this way.

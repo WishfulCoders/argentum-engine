@@ -7,9 +7,9 @@ import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Belltower Sphinx (RAV) — "Whenever a source deals damage to this creature, that source's
@@ -29,7 +29,7 @@ class BelltowerSphinxScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Bolt Test deals 3 damage to target creature."
         spell {
-            val t = target("target creature", TargetCreature())
+            val t = target(TargetFilter.Creature)
             effect = Effects.DealDamage(3, t)
         }
     }
@@ -40,7 +40,7 @@ class BelltowerSphinxScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Quake Test deals 7 damage to target creature."
         spell {
-            val t = target("target creature", TargetCreature())
+            val t = target(TargetFilter.Creature)
             effect = Effects.DealDamage(7, t)
         }
     }

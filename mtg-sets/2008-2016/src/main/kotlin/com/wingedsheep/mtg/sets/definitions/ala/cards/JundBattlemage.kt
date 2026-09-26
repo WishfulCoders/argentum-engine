@@ -33,7 +33,7 @@ val JundBattlemage = card("Jund Battlemage") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{B}"), Costs.Tap)
-        val t = target("target", Targets.Player)
+        val t = target(Targets.Player)
         effect = Effects.LoseLife(1, t)
     }
 

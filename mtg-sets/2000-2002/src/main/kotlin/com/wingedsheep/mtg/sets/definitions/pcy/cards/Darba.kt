@@ -5,11 +5,12 @@
 package com.wingedsheep.mtg.sets.definitions.pcy.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
+import com.wingedsheep.sdk.core.Step
 
 
 /**
@@ -27,8 +28,8 @@ val Darba = card("Darba") {
     power = 5
     toughness = 4
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = PayOrSufferEffect(cost = Costs.pay.Mana("{G}{G}"), suffer = SacrificeSelfEffect)
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.PayOrSuffer(cost = Costs.pay.Mana("{G}{G}"), suffer = SacrificeSelfEffect)
     }
     metadata {
         rarity = Rarity.UNCOMMON

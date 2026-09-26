@@ -8,7 +8,7 @@ import io.kotest.matchers.shouldBe
 /**
  * Rangers of Ithilien — "When this creature enters, gain control of up to one target creature with
  * lesser power for as long as you control this creature." Exercises the new strict
- * `powerLessThanEntity(Source)` target filter (3/3 Rangers can take a 2/2 but not a 3/3+).
+ * `powerLessThanEntity(Self)` target filter (3/3 Rangers can take a 2/2 but not a 3/3+).
  */
 class RangersOfIthilienScenarioTest : ScenarioTestBase() {
 

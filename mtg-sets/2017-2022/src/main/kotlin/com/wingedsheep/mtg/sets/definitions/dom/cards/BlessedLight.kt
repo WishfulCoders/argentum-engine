@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Blessed Light
@@ -18,7 +18,7 @@ val BlessedLight = card("Blessed Light") {
     oracleText = "Exile target creature or enchantment."
 
     spell {
-        val t = target("target", Targets.CreatureOrEnchantment)
+        val t = target(TargetFilter.CreatureOrEnchantment)
         effect = Effects.Exile(t)
     }
 

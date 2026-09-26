@@ -24,7 +24,7 @@ val ZooEscapees = card("Zoo Escapees") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.CreateMutagenToken()
         description = "When this creature leaves the battlefield, create a Mutagen token."
     }

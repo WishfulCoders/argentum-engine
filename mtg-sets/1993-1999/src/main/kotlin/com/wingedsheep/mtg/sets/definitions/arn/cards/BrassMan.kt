@@ -6,8 +6,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Brass Man
@@ -27,8 +27,8 @@ val BrassMan = card("Brass Man") {
     flags(AbilityFlag.DOESNT_UNTAP)
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = MayPayManaEffect(ManaCost.parse("{1}"), Effects.Untap(EffectTarget.Self))
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.MayPay(ManaCost.parse("{1}"), Effects.Untap(EffectTarget.Self))
     }
 
     metadata {

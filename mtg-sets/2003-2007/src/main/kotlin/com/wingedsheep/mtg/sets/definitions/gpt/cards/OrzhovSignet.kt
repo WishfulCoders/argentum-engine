@@ -21,7 +21,7 @@ val OrzhovSignet = card("Orzhov Signet") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
-        effect = Effects.Composite(Effects.AddMana(Color.WHITE, 1), Effects.AddMana(Color.BLACK, 1))
+        effect = Effects.AddMana(Color.WHITE, 1) then Effects.AddMana(Color.BLACK, 1)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

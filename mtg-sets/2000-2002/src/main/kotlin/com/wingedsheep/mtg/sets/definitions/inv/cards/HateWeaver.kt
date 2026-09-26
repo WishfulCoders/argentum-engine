@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Hate Weaver
@@ -26,10 +25,7 @@ val HateWeaver = card("Hate Weaver") {
 
     activatedAbility {
         cost = Costs.Mana("{2}")
-        val t = target(
-            "target",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.withAnyColor(Color.BLUE, Color.RED)))
-        )
+        val t = target(TargetFilter(GameObjectFilter.Creature.withAnyColor(Color.BLUE, Color.RED)))
         effect = Effects.ModifyStats(power = 1, toughness = 0, target = t)
         description = "{2}: Target blue or red creature gets +1/+0 until end of turn."
     }

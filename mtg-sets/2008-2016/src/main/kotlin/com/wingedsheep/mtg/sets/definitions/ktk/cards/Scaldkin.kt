@@ -2,11 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Scaldkin
@@ -32,9 +31,9 @@ val Scaldkin = card("Scaldkin") {
             Costs.Mana("{2}{R}"),
             Costs.SacrificeSelf
         )
-        val t = target("any target", AnyTarget())
-        effect = DealDamageEffect(
-            amount = DynamicAmount.Fixed(2),
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(
+            amount = 2,
             target = t
         )
     }

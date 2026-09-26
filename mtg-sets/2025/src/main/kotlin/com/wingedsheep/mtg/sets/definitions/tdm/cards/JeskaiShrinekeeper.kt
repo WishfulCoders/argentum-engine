@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Jeskai Shrinekeeper — Tarkir: Dragonstorm #197
@@ -14,7 +15,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Whenever this creature deals combat damage to a player, you gain 1 life and draw a card.
  *
  * Composes the two combat-damage payoffs with [Effects.Composite] over [Effects.GainLife] and
- * [Effects.DrawCards], both controller-scoped. The trigger reuses [Triggers.DealsCombatDamageToPlayer].
+ * [Effects.DrawCards], both controller-scoped. The trigger reuses `Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)`.
  */
 val JeskaiShrinekeeper = card("Jeskai Shrinekeeper") {
     manaCost = "{2}{U}{R}{W}"
@@ -28,11 +29,8 @@ val JeskaiShrinekeeper = card("Jeskai Shrinekeeper") {
     keywords(Keyword.FLYING, Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = Effects.Composite(
-            Effects.GainLife(1),
-            Effects.DrawCards(1)
-        )
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.GainLife(1) then Effects.DrawCards(1)
     }
 
     metadata {

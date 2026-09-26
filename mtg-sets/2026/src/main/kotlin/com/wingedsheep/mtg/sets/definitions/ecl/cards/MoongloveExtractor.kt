@@ -23,9 +23,8 @@ val MoongloveExtractor = card("Moonglove Extractor") {
     oracleText = "Whenever this creature attacks, you draw a card and lose 1 life."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.DrawCards(1)
-            .then(Effects.LoseLife(1, EffectTarget.Controller))
+        trigger = Triggers.self.attacks()
+        effect = Effects.DrawCards(1) then Effects.LoseLife(1, EffectTarget.Controller)
     }
 
     metadata {

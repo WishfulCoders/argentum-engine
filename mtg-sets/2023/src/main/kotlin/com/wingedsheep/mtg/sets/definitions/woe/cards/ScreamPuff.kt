@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Scream Puff
@@ -14,7 +15,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Deathtouch
  * Whenever this creature deals combat damage to a player, create a Food token.
  *
- * Straight composition: the [Keyword.DEATHTOUCH] keyword plus a [Triggers.DealsCombatDamageToPlayer]
+ * Straight composition: the [Keyword.DEATHTOUCH] keyword plus a `Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)`
  * (SELF-bound) trigger that creates a Food token via [Effects.CreateFood]. Food is the shared
  * Wilds of Eldraine artifact token ("{2}, {T}, Sacrifice this token: You gain 3 life.").
  */
@@ -31,7 +32,7 @@ val ScreamPuff = card("Scream Puff") {
     keywords(Keyword.DEATHTOUCH)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         effect = Effects.CreateFood()
         description = "Whenever this creature deals combat damage to a player, create a Food token."
     }

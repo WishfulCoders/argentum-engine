@@ -3,12 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Entangling Trap
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
  * untap during its controller's next untap step. (This ability triggers after the clash ends.)
  *
  * The clash *payoff* that acts either way — the sibling of Sylvan Echoes, which only acts on a win.
- * The tap is unconditional, so the trigger is [Triggers.WheneverYouClash] and the win rides inside
+ * The tap is unconditional, so the trigger is `Triggers.you.clashes()` and the win rides inside
  * the effect as [Conditions.YouWonTheClash] rather than on the trigger: losing still puts the
  * ability on the stack and still taps a creature. Per its ruling that also holds when an opponent's
  * spell started the clash — you clashed, so it triggers, and you can still have won.
@@ -38,11 +37,10 @@ val EntanglingTrap = card("Entangling Trap") {
         "(This ability triggers after the clash ends.)"
 
     triggeredAbility {
-        trigger = Triggers.WheneverYouClash
-        val creature = target("target creature an opponent controls", Targets.CreatureOpponentControls)
-        effect = Effects.Composite(
-            Effects.Tap(creature),
-            ConditionalEffect(
+        trigger = Triggers.you.clashes()
+        val creature = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.Tap(creature) then
+            Effects.If(
                 Conditions.YouWonTheClash,
                 Effects.GrantKeyword(
                     AbilityFlag.DOESNT_UNTAP,
@@ -50,7 +48,6 @@ val EntanglingTrap = card("Entangling Trap") {
                     Duration.UntilAfterAffectedControllersNextUntap
                 )
             )
-        )
         description = "tap target creature an opponent controls. If you won, that creature " +
             "doesn't untap during its controller's next untap step."
     }

@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.dsl.Effects
@@ -23,7 +22,7 @@ import com.wingedsheep.sdk.dsl.Patterns
  * untap each creature you control.
  *
  * The "when you next attack this turn" clause is a one-shot event-based delayed triggered
- * ability (`CreateDelayedTriggerEffect(trigger = Triggers.YouAttack, fireOnce = true)`): it
+ * ability (`CreateDelayedTriggerEffect(trigger = Triggers.you.attacks(), fireOnce = true)`): it
  * fires the first time you declare attackers this turn — refreshing your team for the bonus
  * combat — then removes itself, so a second attack the same turn (e.g. in yet another combat)
  * won't untap again. See item 15 of `backlog/tdm-engine-gaps.md`.
@@ -50,23 +49,19 @@ val AllOutAssault = card("All-Out Assault") {
     }
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.IsYourMainPhase
-        effect = Effects.Composite(
-            listOf(
-                // "there is an additional combat phase after this phase followed by an
-                // additional main phase"
-                Effects.AddCombatPhase,
-                Effects.AddMainPhase,
-                // "When you next attack this turn, untap each creature you control."
-                CreateDelayedTriggerEffect(
-                    trigger = Triggers.YouAttack,
-                    fireOnce = true,
-                    effect = Patterns.Group.untapGroup(GroupFilter.AllCreaturesYouControl),
-                    expiry = DelayedTriggerExpiry.EndOfTurn
-                )
+        // "there is an additional combat phase after this phase followed by an
+        // additional main phase"
+        effect = Effects.AddCombatPhase then
+            Effects.AddMainPhase then
+            // "When you next attack this turn, untap each creature you control."
+            Effects.CreateDelayedTrigger(
+                trigger = Triggers.you.attacks(),
+                fireOnce = true,
+                effect = Patterns.Group.untapGroup(GroupFilter.AllCreaturesYouControl),
+                expiry = DelayedTriggerExpiry.EndOfTurn
             )
-        )
         description = "When this enchantment enters, if it's your main phase, there is an " +
             "additional combat phase after this phase followed by an additional main phase. " +
             "When you next attack this turn, untap each creature you control."

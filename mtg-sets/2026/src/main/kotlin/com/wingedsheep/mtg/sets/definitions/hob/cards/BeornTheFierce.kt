@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
@@ -11,12 +11,10 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Beorn the Fierce — The Hobbit #119
@@ -38,7 +36,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  *  - The Bear subtype is [Duration.Permanent], not end-of-turn: the text has no duration, so the
  *    creature stays a Bear (CR 205.1b). It is [Effects.AddSubtype] rather than any "becomes"
  *    primitive that *sets* subtypes — "in addition to its other types" is purely additive.
- *  - The draw check is a plain [ConditionalEffect] evaluated after the type change, and the count is
+ *  - The draw check is a plain [Effects.If] evaluated after the type change, and the count is
  *    a projected battlefield read, so the creature that just became a Bear is already counted.
  */
 val BeornTheFierce = card("Beorn the Fierce") {
@@ -67,30 +65,23 @@ val BeornTheFierce = card("Beorn the Fierce") {
     }
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        target(
-            "up to one target creature you control",
-            TargetCreature(optional = true, filter = TargetFilter.Creature.youControl())
-        )
-        effect = Effects.Composite(
-            ForEachTargetEffect(
-                listOf(
-                    Effects.AddCounters(Counters.TRAMPLE, 1, EffectTarget.ContextTarget(0)),
-                    Effects.AddSubtype(
-                        Subtype.BEAR.value,
-                        EffectTarget.ContextTarget(0),
-                        Duration.Permanent
-                    )
-                )
-            ),
-            ConditionalEffect(
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        target(TargetFilter.Creature.youControl(), optional = true)
+        effect = Effects.ForEachTarget(
+            Effects.AddCounters(CounterType.TRAMPLE, 1, EffectTarget.ContextTarget(0)),
+            Effects.AddSubtype(
+                Subtype.BEAR.value,
+                EffectTarget.ContextTarget(0),
+                Duration.Permanent
+            )
+        ) then
+            Effects.If(
                 condition = Conditions.YouControlAtLeast(
                     3,
                     GameObjectFilter.Creature.withSubtype(Subtype.BEAR)
                 ),
-                effect = Effects.DrawCards(2)
+                then = Effects.DrawCards(2)
             )
-        )
         description = "At the beginning of combat on your turn, put a trample counter on up to one " +
             "target creature you control. It becomes a Bear in addition to its other types. Then " +
             "if you control three or more Bears, draw two cards."

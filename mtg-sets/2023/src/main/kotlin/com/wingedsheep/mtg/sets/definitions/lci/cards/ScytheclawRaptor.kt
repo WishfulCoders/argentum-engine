@@ -24,7 +24,7 @@ val ScytheclawRaptor = card("Scytheclaw Raptor") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.AnyPlayerCastsSpell
+        trigger = Triggers.anyPlayer.casts()
         // "if it's not their turn" — "their" is the casting (triggering) player, so this is a
         // turn check relative to the triggering player, not Scytheclaw's controller.
         interveningIf = Conditions.Not(Conditions.IsPlayersTurn(Player.TriggeringPlayer))

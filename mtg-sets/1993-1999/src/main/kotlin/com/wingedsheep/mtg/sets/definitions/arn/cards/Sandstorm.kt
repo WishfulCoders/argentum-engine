@@ -2,7 +2,6 @@ package com.wingedsheep.mtg.sets.definitions.arn.cards
 
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.Effects
@@ -20,7 +19,7 @@ val Sandstorm = card("Sandstorm") {
     oracleText = "Sandstorm deals 1 damage to each attacking creature."
 
     spell {
-        effect = Effects.ForEachInGroup(GroupFilter.AttackingCreatures, DealDamageEffect(1, EffectTarget.Self))
+        effect = Effects.ForEachInGroup(GroupFilter.AttackingCreatures, Effects.DealDamage(1, EffectTarget.IterationEntity))
     }
 
     metadata {

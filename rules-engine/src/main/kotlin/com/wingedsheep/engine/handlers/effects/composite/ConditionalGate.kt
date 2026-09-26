@@ -7,13 +7,13 @@ import com.wingedsheep.sdk.scripting.effects.GatedEffect
 
 /**
  * The "if <condition>, <then>. Otherwise, <otherwise>." shape — the lowered form of the former
- * `ConditionalEffect` wrapper: a [GatedEffect] whose gate is a [Gate.WhenCondition].
+ * `Effects.If` wrapper: a [GatedEffect] whose gate is a [Gate.WhenCondition].
  *
- * Engine paths that used to special-case `is ConditionalEffect` (stack-time branch resolution for
+ * Engine paths that used to special-case `is Effects.If` (stack-time branch resolution for
  * opponent views, repeat-activation stacking analysis, limited card rating) key off this matcher
  * instead, so they still recognize the conditional branch after the type was lowered to the frame —
  * and they ignore the decision-driven [Gate.MayPay] / [Gate.MayDecide] gates, which never matched
- * the old `is ConditionalEffect` check either.
+ * the old `is Effects.If` check either.
  *
  * @property condition The state test the gate evaluates.
  * @property then Branch that runs iff [condition] holds.

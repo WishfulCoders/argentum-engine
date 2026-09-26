@@ -68,11 +68,11 @@ fun GameState.activeMayPlayFor(
     cardId: EntityId,
     playerId: EntityId,
     conditionEvaluator: ConditionEvaluator,
-    cardRegistry: CardRegistry,
+    cardRegistry: CardRegistry
 ): List<MayPlayPermission> = (
     mayPlayPermissions.filter { permission ->
         permission.controllerId == playerId && cardId in permission.cardIds
-    } + StaticMayPlayGrants.forCard(this, cardId, playerId, cardRegistry)
+    } + StaticMayPlayGrants.forCard(this, cardId, playerId, cardRegistry, predicateEvaluator = conditionEvaluator.predicates)
     ).filter { permission -> permission.gateOpen(this, cardId, conditionEvaluator) }
 
 /**
@@ -82,7 +82,7 @@ fun GameState.hasMayPlayFor(
     cardId: EntityId,
     playerId: EntityId,
     conditionEvaluator: ConditionEvaluator,
-    cardRegistry: CardRegistry,
+    cardRegistry: CardRegistry
 ): Boolean = activeMayPlayFor(cardId, playerId, conditionEvaluator, cardRegistry).isNotEmpty()
 
 /**
@@ -99,7 +99,7 @@ fun GameState.hasMayPlayFor(
 fun MayPlayPermission.gateOpen(
     state: GameState,
     cardId: EntityId,
-    conditionEvaluator: ConditionEvaluator,
+    conditionEvaluator: ConditionEvaluator
 ): Boolean {
     val condition = condition ?: return true
     val context = EffectContext(

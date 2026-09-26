@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -28,10 +27,7 @@ val HaplessResearcher = card("Hapless Researcher") {
     toughness = 1
     activatedAbility {
         cost = Costs.SacrificeSelf
-        effect = Effects.Composite(
-            DrawCardsEffect(1),
-            Patterns.Hand.discardCards(1)
-        )
+        effect = Effects.DrawCards(1) then Patterns.Hand.discardCards(1)
     }
     metadata {
         rarity = Rarity.COMMON

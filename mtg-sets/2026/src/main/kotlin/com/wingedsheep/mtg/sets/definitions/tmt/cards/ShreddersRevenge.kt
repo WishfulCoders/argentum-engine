@@ -23,13 +23,12 @@ val ShreddersRevenge = card("Shredder's Revenge") {
     spell {
         modal(chooseCount = 1) {
             mode("Target player discards two cards") {
-                val player = target("target player", Targets.Player)
+                val player = target(Targets.Player)
                 effect = Effects.Discard(2, player)
             }
             mode("Target player draws two cards and loses 2 life") {
-                val player = target("target player", Targets.Player)
-                effect = Effects.DrawCards(2, player)
-                    .then(Effects.LoseLife(2, player))
+                val player = target(Targets.Player)
+                effect = Effects.DrawCards(2, player) then Effects.LoseLife(2, player)
             }
         }
     }

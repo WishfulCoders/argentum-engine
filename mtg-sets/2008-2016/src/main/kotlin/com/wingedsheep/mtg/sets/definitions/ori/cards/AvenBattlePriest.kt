@@ -27,7 +27,7 @@ val AvenBattlePriest = card("Aven Battle Priest") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(3)
     }
 

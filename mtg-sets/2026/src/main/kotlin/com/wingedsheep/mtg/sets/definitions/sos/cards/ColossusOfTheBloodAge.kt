@@ -4,14 +4,13 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.effects.MoveType
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Colossus of the Blood Age — Secrets of Strixhaven #181
@@ -36,17 +35,14 @@ val ColossusOfTheBloodAge = card("Colossus of the Blood Age") {
         "When this creature dies, discard any number of cards, then draw that many cards plus one."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         // No explicit damageSource: the engine attributes the damage to the ability's source
         // (Colossus itself) by default, matching the "it deals damage" self-source convention.
-        effect = Effects.Composite(
-            Effects.DealDamage(3, EffectTarget.PlayerRef(Player.EachOpponent)),
-            Effects.GainLife(3)
-        )
+        effect = Effects.DealDamage(3, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(3)
     }
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.Pipeline {
             val hand = gather(CardSource.FromZone(Zone.HAND, Player.You))
             val discarded = chooseAnyNumber(
@@ -59,11 +55,8 @@ val ColossusOfTheBloodAge = card("Colossus of the Blood Age") {
                 moveType = MoveType.Discard
             )
             run(
-                DrawCardsEffect(
-                    DynamicAmount.Add(
-                        DynamicAmount.VariableReference("${discarded.key}_count"),
-                        DynamicAmount.Fixed(1)
-                    ),
+                Effects.DrawCards(
+                    discarded.count + 1,
                     EffectTarget.Controller
                 )
             )

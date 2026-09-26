@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Spin Out
@@ -21,10 +20,7 @@ val SpinOut = card("Spin Out") {
     oracleText = "Destroy target creature or Vehicle."
 
     spell {
-        val t = target(
-            "creature or Vehicle",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrVehicle)),
-        )
+        val t = target(TargetFilter(GameObjectFilter.CreatureOrVehicle))
         effect = Effects.Destroy(t)
     }
 

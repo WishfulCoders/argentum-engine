@@ -9,6 +9,7 @@ import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.model.Deck
+import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.TriggeredAbility
@@ -40,6 +41,7 @@ class AttacksFirstTimeEachTurnScenarioTest : FunSpec({
         oracleText = "Whenever this creature attacks for the first time each turn, draw a card.",
         script = CardScript.creature(
             TriggeredAbility.create(
+                id = AbilityId("AttacksFirstTimeEachTurnScenarioTest_1"),
                 trigger = EventPattern.AttackEvent(
                     requires = setOf(AttackPredicate.FirstTimeEachTurn)
                 ),

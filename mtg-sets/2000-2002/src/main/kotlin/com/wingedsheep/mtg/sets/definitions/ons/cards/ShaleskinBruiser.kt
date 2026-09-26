@@ -1,11 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.minus
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
@@ -29,16 +31,10 @@ val ShaleskinBruiser = card("Shaleskin Bruiser") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ModifyStats(
-            power = DynamicAmount.Multiply(
-                DynamicAmount.Subtract(
-                    DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Creature.withSubtype("Beast").attacking()),
-                    DynamicAmount.Fixed(1)
-                ),
-                3
-            ),
-            toughness = DynamicAmount.Fixed(0),
+            power = (DynamicAmounts.battlefield(Player.You, GameObjectFilter.Creature.withSubtype("Beast").attacking()).count() - 1) * 3,
+            toughness = DynamicAmounts.fixed(0),
             target = EffectTarget.Self
         )
     }

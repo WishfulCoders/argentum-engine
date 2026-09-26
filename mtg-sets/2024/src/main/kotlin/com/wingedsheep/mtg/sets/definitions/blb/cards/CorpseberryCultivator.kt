@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Corpseberry Cultivator
@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Whenever you forage, put a +1/+1 counter on this creature.
  *
- * Two printed abilities, and the second one is a real trigger on `Triggers.WheneverYouForage`
+ * Two printed abilities, and the second one is a real trigger on `Triggers.you.forages()`
  * (CR 701.59a) rather than a counter folded into this card's own forage — so a forage from *any*
  * source grows it, which is what the card says and what a Food-heavy board actually does.
  */
@@ -34,8 +34,8 @@ val CorpseberryCultivator = card("Corpseberry Cultivator") {
 
     // At the beginning of combat on your turn, you may forage.
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        effect = MayEffect(
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        effect = Effects.May(
             effect = Patterns.Mechanic.forage(),
             descriptionOverride = "You may forage",
             hint = "Exile three cards from your graveyard or sacrifice a Food"
@@ -46,8 +46,8 @@ val CorpseberryCultivator = card("Corpseberry Cultivator") {
     // every other forage on the board — a forage paid as an ability cost (Camellia, the Seedmiser)
     // or a cast-time additional cost (Feed the Cycle) counts.
     triggeredAbility {
-        trigger = Triggers.WheneverYouForage
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.forages()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     metadata {

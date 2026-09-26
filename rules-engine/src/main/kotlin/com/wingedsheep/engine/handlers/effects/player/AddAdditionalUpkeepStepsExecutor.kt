@@ -20,7 +20,7 @@ import kotlin.reflect.KClass
  * step is the upkeep step (untap and draw skipped, CR 500.10).
  */
 class AddAdditionalUpkeepStepsExecutor(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<AddAdditionalUpkeepStepsEffect> {
 
     override val effectType: KClass<AddAdditionalUpkeepStepsEffect> =

@@ -2,15 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.ChoiceType
 import com.wingedsheep.sdk.scripting.EntersWithChoice
-import com.wingedsheep.sdk.scripting.effects.GainControlEffect
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Callous Oppressor
@@ -35,10 +34,8 @@ val CallousOppressor = card("Callous Oppressor") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", TargetCreature(
-            filter = TargetFilter(GameObjectFilter.Creature.notOfSourceChosenType())
-        ))
-        effect = GainControlEffect(t, Duration.WhileSourceTapped())
+        val t = target(TargetFilter(GameObjectFilter.Creature.notOfSourceChosenType()))
+        effect = Effects.GainControl(t, Duration.WhileSourceTapped())
     }
 
     metadata {

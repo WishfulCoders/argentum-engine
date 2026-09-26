@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Titanic Growth
@@ -22,7 +21,7 @@ val TitanicGrowth = card("Titanic Growth") {
     oracleText = "Target creature gets +4/+4 until end of turn."
 
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(4, 4, t)
     }
 

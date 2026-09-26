@@ -29,14 +29,14 @@ val TollsOfWar = card("Tolls of War") {
 
     // When this enchantment enters, create a Clue token.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateClue()
     }
 
     // Whenever you sacrifice a permanent during your turn, create a 1/1 white Ally
     // creature token. This ability triggers only once each turn.
     triggeredAbility {
-        trigger = Triggers.YouSacrificeA(GameObjectFilter.Permanent)
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Permanent)
         triggerRestriction = Conditions.IsYourTurn
         oncePerTurn = true
         effect = Effects.CreateToken(

@@ -4,7 +4,6 @@ import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.CounterType
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.DynamicAmounts
@@ -16,7 +15,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.SpellCostTarget
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
@@ -24,7 +22,7 @@ import io.kotest.matchers.shouldBe
 /**
  * Engine tests for [CostReductionSource.Dynamic] — "spells you cast cost {X} less to cast, where X
  * is `<DynamicAmount>`", evaluated with the permanent that carries the modifier as the amount's
- * `EntityReference.Source`.
+ * `EffectTarget.Self`.
  *
  * Named for the primitive rather than a card because the point of the shape is that the amount is
  * read from the permanent carrying the modifier, not aggregated over a board. The cases below are
@@ -106,7 +104,7 @@ class DynamicCostReductionTest : ScenarioTestBase() {
                 target = SpellCostTarget.YouCast(GameObjectFilter.Any),
                 modification = CostModification.ReduceGenericBy(
                     CostReductionSource.Dynamic(
-                        DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.CHARGE))
+                        DynamicAmounts.countersOnSelf(CounterType.CHARGE)
                     )
                 ),
             )
@@ -180,7 +178,7 @@ class DynamicCostReductionTest : ScenarioTestBase() {
     }
 
     private fun costOfPricedSpell(game: TestGame, playerNumber: Int) =
-        CostCalculator(cardRegistry).calculateEffectiveCost(
+        CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
             game.state,
             cardRegistry.requireCard("Test Priced Spell"),
             if (playerNumber == 1) game.player1Id else game.player2Id,
@@ -377,7 +375,7 @@ class DynamicCostReductionTest : ScenarioTestBase() {
                     .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
                     .build()
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Test Self Discounter"),
                     game.player1Id,

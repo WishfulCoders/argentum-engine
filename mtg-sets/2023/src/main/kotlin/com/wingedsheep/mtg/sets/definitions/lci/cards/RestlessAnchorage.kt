@@ -11,10 +11,7 @@ import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddManaEffect
-import com.wingedsheep.sdk.scripting.effects.BecomeCreatureEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Restless Anchorage — LCI #280
@@ -44,24 +41,24 @@ val RestlessAnchorage = card("Restless Anchorage") {
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddManaEffect(Color.WHITE)
+        effect = Effects.AddMana(Color.WHITE)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddManaEffect(Color.BLUE)
+        effect = Effects.AddMana(Color.BLUE)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
 
     activatedAbility {
         cost = Costs.Mana("{1}{W}{U}")
-        effect = BecomeCreatureEffect(
+        effect = Effects.BecomeCreature(
             target = EffectTarget.Self,
-            power = DynamicAmount.Fixed(2),
-            toughness = DynamicAmount.Fixed(3),
+            power = 2,
+            toughness = 3,
             keywords = setOf(Keyword.FLYING),
             creatureTypes = setOf("Bird"),
             colors = setOf(Color.WHITE.name, Color.BLUE.name),
@@ -70,7 +67,7 @@ val RestlessAnchorage = card("Restless Anchorage") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.CreateMapToken()
     }
 

@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.khm.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Weigh Down
@@ -29,7 +29,7 @@ val WeighDown = card("Weigh Down") {
     )
 
     spell {
-        val victim = target("target creature", Targets.Creature)
+        val victim = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(-3, -3, victim)
     }
 

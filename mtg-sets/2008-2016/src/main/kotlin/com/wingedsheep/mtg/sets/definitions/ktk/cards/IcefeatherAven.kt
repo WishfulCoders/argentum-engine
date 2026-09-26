@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Icefeather Aven
@@ -30,9 +29,9 @@ val IcefeatherAven = card("Icefeather Aven") {
     morph = "{1}{G}{U}"
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
+        trigger = Triggers.self.turnedFaceUp()
         optional = true
-        val t = target("another creature", TargetCreature(filter = TargetFilter.OtherCreature))
+        val t = target(TargetFilter.OtherCreature)
         effect = Effects.ReturnToHand(t)
     }
 

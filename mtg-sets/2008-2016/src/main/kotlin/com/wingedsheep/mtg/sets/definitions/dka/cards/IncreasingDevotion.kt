@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.dka.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Increasing Devotion
@@ -28,10 +28,10 @@ val IncreasingDevotion = card("Increasing Devotion") {
 
     spell {
         effect = Effects.CreateToken(
-            count = DynamicAmount.Conditional(
+            count = DynamicAmounts.conditional(
                 condition = Conditions.WasCastFromGraveyard,
-                ifTrue = DynamicAmount.Fixed(10),
-                ifFalse = DynamicAmount.Fixed(5),
+                ifTrue = 10,
+                ifFalse = 5,
             ),
             power = 1,
             toughness = 1,

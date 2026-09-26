@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.DonorCards
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.HasAllActivatedAbilitiesOfCards
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Thranduil, the Elvenking
@@ -59,14 +58,8 @@ val ThranduilTheElvenking = card("Thranduil, the Elvenking") {
 
     // "Whenever another legendary Elf you control enters, draw two cards, then discard a card."
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Any.legendary().withSubtype(Subtype.ELF).youControl(),
-            binding = TriggerBinding.OTHER,
-        )
-        effect = Effects.Composite(
-            Effects.DrawCards(2),
-            Patterns.Hand.discardCards(1)
-        )
+        trigger = Triggers.another(GameObjectFilter.Any.legendary().withSubtype(Subtype.ELF).youControl()).enters()
+        effect = Effects.DrawCards(2) then Patterns.Hand.discardCards(1)
     }
 
     metadata {

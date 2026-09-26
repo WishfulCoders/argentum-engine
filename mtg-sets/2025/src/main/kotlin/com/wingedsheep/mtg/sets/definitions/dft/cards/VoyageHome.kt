@@ -12,8 +12,6 @@ import com.wingedsheep.sdk.scripting.CostReductionSource
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -37,10 +35,7 @@ val VoyageHome = card("Voyage Home") {
         )
     }
     spell {
-        effect = Effects.Composite(
-            DrawCardsEffect(3),
-            GainLifeEffect(3)
-        )
+        effect = Effects.DrawCards(3) then Effects.GainLife(3)
     }
     metadata {
         rarity = Rarity.UNCOMMON

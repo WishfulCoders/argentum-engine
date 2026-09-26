@@ -30,7 +30,7 @@ val ElvishHarbinger = card("Elvish Harbinger") {
         "then shuffle and put that card on top.\n{T}: Add one mana of any color."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Any.withSubtype(Subtype.ELF),

@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Chelonian Tackle
@@ -28,16 +27,9 @@ val ChelonianTackle = card("Chelonian Tackle") {
         "one target creature an opponent controls. (Each deals damage equal to its power to the other.)"
 
     spell {
-        val yourCreature = target(
-            "creature you control",
-            TargetCreature(filter = TargetFilter.CreatureYouControl)
-        )
-        val opponentCreature = target(
-            "creature an opponent controls",
-            TargetCreature(optional = true, filter = TargetFilter.CreatureOpponentControls)
-        )
-        effect = Effects.ModifyStats(0, 10, yourCreature)
-            .then(Effects.Fight(yourCreature, opponentCreature))
+        val yourCreature = target(TargetFilter.CreatureYouControl)
+        val opponentCreature = target(TargetFilter.CreatureOpponentControls, optional = true)
+        effect = Effects.ModifyStats(0, 10, yourCreature) then Effects.Fight(yourCreature, opponentCreature)
     }
 
     metadata {

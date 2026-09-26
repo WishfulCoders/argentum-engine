@@ -25,7 +25,7 @@ val OasisGardener = card("Oasis Gardener") {
     oracleText = "When this creature enters, you gain 2 life.\n{T}: Add one mana of any color."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(2)
         description = "you gain 2 life."
     }

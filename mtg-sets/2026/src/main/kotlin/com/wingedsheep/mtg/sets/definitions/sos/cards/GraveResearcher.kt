@@ -2,17 +2,15 @@ package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Grave Researcher // Reanimate — Secrets of Strixhaven #85
@@ -28,7 +26,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * Prepare (Secrets of Strixhaven): like Joined Researchers, this creature does NOT enter prepared
  * — it has no PREPARED keyword. The upkeep trigger surveils 1 and *then*, as a single resolution,
  * makes the creature become prepared ([Effects.BecomePrepared]) when three or more creature cards
- * are in your graveyard. The "then if" rider is a [ConditionalEffect] sequenced after the surveil,
+ * are in your graveyard. The "then if" rider is a [Effects.If] sequenced after the surveil,
  * not a [interveningIf] — surveil happens unconditionally, the graveyard is checked afterward.
  *
  * Reanimate (back face): a {B} sorcery prepare spell that puts a creature card from any graveyard
@@ -46,12 +44,10 @@ val GraveResearcher = card("Grave Researcher") {
         "you may cast a copy of its spell. Doing so unprepares it.)"
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Patterns.Library.surveil(1).then(
-            ConditionalEffect(
-                condition = Conditions.CreatureCardsInGraveyardAtLeast(3),
-                effect = Effects.BecomePrepared(),
-            )
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Patterns.Library.surveil(1) then Effects.If(
+            condition = Conditions.CreatureCardsInGraveyardAtLeast(3),
+            then = Effects.BecomePrepared(),
         )
         description = "At the beginning of your upkeep, surveil 1. Then if there are three or more " +
             "creature cards in your graveyard, this creature becomes prepared."
@@ -64,17 +60,12 @@ val GraveResearcher = card("Grave Researcher") {
         oracleText = "Put target creature card from a graveyard onto the battlefield under your " +
             "control. You lose life equal to that card's mana value."
         spell {
-            target = Targets.CreatureCardInGraveyard
-            effect = Effects.Composite(
-                Effects.Move(EffectTarget.ContextTarget(0), Zone.BATTLEFIELD),
+            val creatureCardInGraveyard = target(TargetFilter.CreatureInGraveyard)
+            effect = Effects.Move(creatureCardInGraveyard, Zone.BATTLEFIELD) then
                 Effects.LoseLife(
-                    DynamicAmount.EntityProperty(
-                        EntityReference.Target(0),
-                        EntityNumericProperty.ManaValue,
-                    ),
+                    DynamicAmounts.manaValueOf(creatureCardInGraveyard),
                     EffectTarget.Controller,
-                ),
-            )
+                )
         }
     }
 

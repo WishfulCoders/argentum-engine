@@ -31,7 +31,7 @@ val EaglesOfTheNorth = card("Eagles of the North") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Group.pumpAndGrantToAll(
             1, 0, Keyword.FIRST_STRIKE, GroupFilter.AllCreaturesYouControl
         )

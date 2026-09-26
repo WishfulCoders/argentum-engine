@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Deeproot Waters
@@ -24,7 +25,7 @@ val DeeprootWaters = card("Deeproot Waters") {
         "your opponents control.)"
 
     triggeredAbility {
-        trigger = Triggers.YouCastSubtype(Subtype.MERFOLK)
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withSubtype(Subtype.MERFOLK))
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

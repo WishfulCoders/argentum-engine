@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.model.Rarity
  * When this creature dies, create a Treasure token. (It's an artifact with "{T}, Sacrifice this
  * token: Add one mana of any color.")
  *
- * [Triggers.Dies] is the battlefield → graveyard zone change bound to the source itself, so the
+ * `Triggers.self.dies()` is the battlefield → graveyard zone change bound to the source itself, so the
  * ability reads last-known information about the Cobra — nothing here needs the dead permanent's
  * characteristics, only the fact that it left. The Treasure is the predefined token
  * ([Effects.CreateTreasure]) rather than a hand-rolled artifact token, so it shares the corpus's
@@ -32,7 +32,7 @@ val JewelEyedCobra = card("Jewel-Eyed Cobra") {
     keywords(Keyword.DEATHTOUCH)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateTreasure()
     }
 

@@ -6,8 +6,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Season of the Witch
@@ -43,8 +43,8 @@ val SeasonOfTheWitch = card("Season of the Witch") {
         "attack this turn, except for creatures that couldn't attack."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = PayOrSufferEffect(
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.PayOrSuffer(
             cost = Costs.pay.PayLife(2),
             suffer = SacrificeSelfEffect,
         )
@@ -52,7 +52,7 @@ val SeasonOfTheWitch = card("Season of the Witch") {
     }
 
     triggeredAbility {
-        trigger = Triggers.EachEndStep
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
         effect = Effects.DestroyAll(
             GameObjectFilter.Creature
                 .untapped()

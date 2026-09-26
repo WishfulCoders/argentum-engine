@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Triggers
@@ -11,6 +11,7 @@ import com.wingedsheep.sdk.scripting.GrantSubtype
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Astrologian's Planisphere
@@ -26,8 +27,8 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * The granted ability lives on the equipped creature ([GrantTriggeredAbility] over the
  * attached-creature filter), so "you" resolves to the creature's controller and "this creature"
  * ([EffectTarget.Self]) is the bearer. The single printed ability has two trigger conditions, so
- * it is modeled as two granted triggered abilities: [Triggers.YouCastNoncreature] and
- * [Triggers.NthCardDrawn]`(3)` (CR 121.2 — "draw your third card each turn"), each adding a
+ * it is modeled as two granted triggered abilities: `Triggers.you.casts(GameObjectFilter.Noncreature)` and
+ * `Triggers.<player>.drawsNth(n)``(3)` (CR 121.2 — "draw your third card each turn"), each adding a
  * +1/+1 counter to the equipped creature.
  */
 val AstrologiansPlanisphere = card("Astrologian's Planisphere") {
@@ -46,9 +47,8 @@ val AstrologiansPlanisphere = card("Astrologian's Planisphere") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.YouCastNoncreature.event,
-                binding = Triggers.YouCastNoncreature.binding,
-                effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+                trigger = Triggers.you.casts(GameObjectFilter.Noncreature),
+                effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
             ),
             filter = Filters.EquippedCreature
         )
@@ -56,9 +56,8 @@ val AstrologiansPlanisphere = card("Astrologian's Planisphere") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.NthCardDrawn(3).event,
-                binding = Triggers.NthCardDrawn(3).binding,
-                effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+                trigger = Triggers.you.drawsNth(3),
+                effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
             ),
             filter = Filters.EquippedCreature
         )

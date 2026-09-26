@@ -8,11 +8,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.GrantTriggeredAbilityEffect
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Herd Heirloom — Tarkir: Dragonstorm #144
@@ -45,23 +43,17 @@ val HerdHeirloom = card("Herd Heirloom") {
     // {T}: temporary trample + draw-on-combat-damage grant to a power-4+ creature you control.
     activatedAbility {
         cost = Costs.Tap
-        val creature = target(
-            "creature",
-            TargetCreature(filter = TargetFilter.CreatureYouControl.powerAtLeast(4))
-        )
-        effect = Effects.Composite(listOf(
-            Effects.GrantKeyword(Keyword.TRAMPLE, creature, Duration.EndOfTurn),
-            GrantTriggeredAbilityEffect(
+        val creature = target(TargetFilter.CreatureYouControl.powerAtLeast(4))
+        effect = Effects.GrantKeyword(Keyword.TRAMPLE, creature, Duration.EndOfTurn) then
+            Effects.GrantTriggeredAbility(
                 ability = TriggeredAbility.create(
-                    trigger = Triggers.DealsCombatDamageToPlayer.event,
-                    binding = Triggers.DealsCombatDamageToPlayer.binding,
+                    trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer),
                     effect = Effects.DrawCards(1),
                     descriptionOverride = "Whenever this creature deals combat damage to a player, draw a card."
                 ),
                 target = creature,
                 duration = Duration.EndOfTurn
             )
-        ))
     }
 
     metadata {

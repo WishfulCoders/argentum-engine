@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardOrder
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Fathom Trawl
@@ -36,7 +36,7 @@ val FathomTrawl = card("Fathom Trawl") {
         effect = Patterns.Library.revealUntilMatchToHand(
             filter = GameObjectFilter.Nonland,
             restOrder = CardOrder.ControllerChooses,
-            count = DynamicAmount.Fixed(3)
+            count = DynamicAmounts.fixed(3)
         )
     }
 

@@ -20,6 +20,7 @@ import com.wingedsheep.engine.state.components.battlefield.AttachmentsComponent
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.battlefield.DamageComponent
 import com.wingedsheep.engine.state.components.battlefield.DamageDealtToCreaturesThisTurnComponent
+import com.wingedsheep.sdk.scripting.predicates.StatePredicate
 import com.wingedsheep.engine.state.components.battlefield.HasDealtCombatDamageToPlayerComponent
 import com.wingedsheep.engine.state.components.battlefield.HasBecomeTappedComponent
 import com.wingedsheep.engine.state.components.battlefield.HasDealtDamageComponent
@@ -63,9 +64,8 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.RedirectZoneChange
-import com.wingedsheep.sdk.scripting.RedirectZoneChangeWithEffect
+import com.wingedsheep.sdk.scripting.RedirectZoneChangeWith
 import com.wingedsheep.sdk.scripting.ZoneChangeCause
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.predicates.ControllerPredicate
 import com.wingedsheep.sdk.scripting.predicates.evaluateWith
@@ -111,21 +111,6 @@ data class ZoneChangeRedirectResult(
  */
 object ZoneMovementUtils {
 
-    private val predicateEvaluator = PredicateEvaluator()
-
-    /**
-     * Token executor used by [applyReplacementAdditionalEffect] for a replacement's
-     * "…instead. When you do, create a token" rider (Head of the Hunt).
-     *
-     * Wired by [com.wingedsheep.engine.core.EngineServices] so the rider mints through the same
-     * executor an ability would, with the card and token-art registries attached — mirroring
-     * `ZoneTransitionService.cardRegistry`. The default stand-in keeps this object usable
-     * unwired (unit tests, gym rollouts); tokens then fall back to the engine-wide generic art
-     * for their creature type.
-     */
-    var tokenExecutor: com.wingedsheep.engine.handlers.effects.token.CreateTokenExecutor =
-        com.wingedsheep.engine.handlers.effects.token.CreateTokenExecutor()
-
     /**
      * Destinations that the commander zone-change replacement can intercept (CR 903.9).
      * Battlefield, stack, and command itself are intentionally excluded — commanders enter
@@ -159,7 +144,7 @@ object ZoneMovementUtils {
             c.with(sagaComponent)
                 .with(current.withAdded(CounterType.LORE, 1))
         }
-        return newState to listOf(CountersAddedEvent(entityId, "LORE", 1, cardComponent.name))
+        return newState to listOf(CountersAddedEvent(entityId, CounterType.LORE, 1, cardComponent.name))
     }
 
     /**
@@ -199,14 +184,15 @@ object ZoneMovementUtils {
         state: GameState,
         entityId: EntityId,
         controllerId: EntityId,
-        cardRegistry: CardRegistry
+        cardRegistry: CardRegistry,
+        predicateEvaluator: PredicateEvaluator
     ): Pair<GameState, List<EngineGameEvent>> {
         val container = state.getEntity(entityId) ?: return state to emptyList()
         if (container.has<FaceDownComponent>()) return state to emptyList()
         val cardComponent = container.get<CardComponent>() ?: return state to emptyList()
         val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId)
-        val (filter, amount) = when {
-            cardComponent.isPlaneswalker -> CounterTypeFilter.Loyalty to cardDef?.startingLoyalty
+        val (counterType, amount) = when {
+            cardComponent.isPlaneswalker -> CounterType.LOYALTY to cardDef?.startingLoyalty
             cardComponent.isBattle ->
                 com.wingedsheep.engine.mechanics.battle.Battles.DEFENSE_COUNTER to cardDef?.startingDefense
             else -> return state to emptyList()
@@ -214,7 +200,8 @@ object ZoneMovementUtils {
         if (amount == null) return state to emptyList()
 
         return EntersWithReplacements.placeEntryCounters(
-            state, entityId, filter, amount, controllerId, cardComponent.name
+            state, entityId, counterType, amount, controllerId, cardComponent.name,
+            predicateEvaluator = predicateEvaluator
         )
     }
 
@@ -497,6 +484,7 @@ object ZoneMovementUtils {
             .without<com.wingedsheep.engine.state.components.battlefield.EnteredWithValueComponent>()
             // Likewise the accumulating "dealt damage to these players/planeswalkers this
             // game" memory (The Fallen): what comes back is a new object (CR 400.7).
+            // ZoneTransitionService re-attaches it off the battlefield as last-known info.
             .without<com.wingedsheep.engine.state.components.battlefield.DealtDamageToThisGameComponent>()
             // A permanent that leaves and returns is a new object (CR 400.7) that has never become
             // tapped, so its "first time tapped this turn" window starts over.
@@ -542,6 +530,7 @@ object ZoneMovementUtils {
             .without<CraftedFromExiledComponent>()
             // Combat
             .without<AttackingComponent>()
+            .without<com.wingedsheep.engine.state.components.combat.BeingAttackedComponent>()
             .without<BlockingComponent>()
             .without<BlockedComponent>()
             .without<DamageAssignmentComponent>()
@@ -559,7 +548,12 @@ object ZoneMovementUtils {
      * @param canRegenerate If false, regeneration shields are not checked (e.g. Wrath of God)
      * @return The execution result with updated state and events
      */
-    fun destroyPermanent(state: GameState, entityId: EntityId, canRegenerate: Boolean = true): EffectResult {
+    fun destroyPermanent(
+        zones: ZoneTransitionService,
+        state: GameState,
+        entityId: EntityId,
+        canRegenerate: Boolean = true
+    ): EffectResult {
         val container = state.getEntity(entityId)
             ?: return EffectResult.error(state, "Entity not found: $entityId")
 
@@ -603,7 +597,7 @@ object ZoneMovementUtils {
         }
 
         // Delegate to ZoneTransitionService
-        val result = ZoneTransitionService.moveToZone(state, entityId, Zone.GRAVEYARD)
+        val result = zones.moveToZone(state, entityId, Zone.GRAVEYARD)
         return EffectResult.success(result.state, result.events)
     }
 
@@ -616,14 +610,14 @@ object ZoneMovementUtils {
      * @param targetZone The destination zone type
      * @return The execution result with updated state and events
      */
-    fun moveCardToZone(state: GameState, entityId: EntityId, targetZone: Zone): EffectResult {
+    fun moveCardToZone(zones: ZoneTransitionService, state: GameState, entityId: EntityId, targetZone: Zone): EffectResult {
         val container = state.getEntity(entityId)
             ?: return EffectResult.error(state, "Entity not found")
 
         container.get<CardComponent>()
             ?: return EffectResult.error(state, "Not a card")
 
-        val result = ZoneTransitionService.moveToZone(state, entityId, targetZone)
+        val result = zones.moveToZone(state, entityId, targetZone)
         return EffectResult.success(result.state, result.events)
     }
 
@@ -683,10 +677,11 @@ object ZoneMovementUtils {
         entityId: EntityId,
         container: ComponentContainer,
         fromZone: Zone?,
-        toZone: Zone
+        toZone: Zone,
+        predicateEvaluator: PredicateEvaluator
     ): ManaCost? =
         if (fromZone == Zone.HAND && toZone == Zone.GRAVEYARD) {
-            MadnessGrants.effectiveMadnessCost(state, entityId, container)
+            MadnessGrants.effectiveMadnessCost(state, entityId, container, predicateEvaluator = predicateEvaluator)
         } else {
             null
         }
@@ -711,7 +706,8 @@ object ZoneMovementUtils {
         entityId: EntityId,
         fromZone: Zone?,
         toZone: Zone,
-        battlefieldSourceState: GameState = state
+        battlefieldSourceState: GameState = state,
+        predicateEvaluator: PredicateEvaluator
     ): ZoneChangeRedirectResult {
         val container = state.getEntity(entityId) ?: return ZoneChangeRedirectResult(toZone)
 
@@ -743,7 +739,7 @@ object ZoneMovementUtils {
         // exiles it instead of putting it into their graveyard." Card-intrinsic like the
         // self-redirect above (it functions from hand), and unqualified by cause: it applies to an
         // opponent's Mind Rot, a cycling cost, and the cleanup-step hand-size discard alike.
-        if (madnessDiscardExile(state, entityId, container, fromZone, toZone) != null) {
+        if (madnessDiscardExile(state, entityId, container, fromZone, toZone, predicateEvaluator = predicateEvaluator) != null) {
             return ZoneChangeRedirectResult(Zone.EXILE)
         }
 
@@ -806,7 +802,7 @@ object ZoneMovementUtils {
                         if (event.from != null && event.from != fromZone) continue
 
                         // Check filter against the entity being moved
-                        if (!matchesZoneChangeFilter(state, entityId, container, event.filter, sourceControllerId)) continue
+                        if (!matchesZoneChangeFilter(state, entityId, container, event.filter, sourceControllerId, battlefieldSourceState, permanentId)) continue
 
                         // Honour any cause qualifier (e.g. "only when discarded by an opponent's
                         // spell or ability") the same way the self-replacement path above does.
@@ -818,7 +814,7 @@ object ZoneMovementUtils {
                         val linkSource = if (effect.linkToSource && effect.newDestination == Zone.EXILE) permanentId else null
                         return ZoneChangeRedirectResult(effect.newDestination, linkSourceId = linkSource)
                     }
-                    is RedirectZoneChangeWithEffect -> {
+                    is RedirectZoneChangeWith -> {
                         // selfOnly: only applies when the entity being moved IS this permanent
                         if (effect.selfOnly && permanentId != entityId) continue
 
@@ -827,7 +823,7 @@ object ZoneMovementUtils {
 
                         if (event.to != null && event.to != toZone) continue
                         if (event.from != null && event.from != fromZone) continue
-                        if (!effect.selfOnly && !matchesZoneChangeFilter(state, entityId, container, event.filter, sourceControllerId)) continue
+                        if (!effect.selfOnly && !matchesZoneChangeFilter(state, entityId, container, event.filter, sourceControllerId, battlefieldSourceState, permanentId)) continue
 
                         // Match found — redirect AND return additional effect. When the replacement
                         // links its exiled cards to the source (The Darkness Crystal), carry the
@@ -872,16 +868,35 @@ object ZoneMovementUtils {
      * Check if an entity matches a GameObjectFilter for zone change replacement effects.
      * Uses base state (not projected) since the entity may be leaving the battlefield.
      */
+    /**
+     * @param sourceState The state the replacement's source permanent is read from — the
+     *   [checkZoneChangeRedirect] `battlefieldSourceState`, so a source leaving in the same SBA
+     *   batch still answers source-relative predicates as it stood when the batch began.
+     * @param sourceId The permanent hosting the replacement; null for granted (sourceless)
+     *   replacements, where source-relative predicates never match.
+     */
     private fun matchesZoneChangeFilter(
         state: GameState,
         entityId: EntityId,
         container: ComponentContainer,
         filter: GameObjectFilter,
-        sourceControllerId: EntityId
+        sourceControllerId: EntityId,
+        sourceState: GameState = state,
+        sourceId: EntityId? = null
     ): Boolean {
         if (filter == GameObjectFilter.Any) return true
 
         val cardComponent = container.get<CardComponent>() ?: return false
+
+        // "A creature dealt damage by this creature this turn" (Frostwielder, Kumano) — read off the
+        // source's per-turn damaged-creature record. The record is dropped when the source leaves
+        // the battlefield, which is the rulings' "must be on the battlefield" requirement.
+        if (StatePredicate.WasDealtDamageBySourceThisTurn in filter.statePredicates) {
+            val damaged = sourceId?.let {
+                sourceState.getEntity(it)?.get<DamageDealtToCreaturesThisTurnComponent>()?.creatureIds
+            }
+            if (damaged == null || entityId !in damaged) return false
+        }
 
         // Check card predicates
         for (predicate in filter.cardPredicates) {
@@ -930,7 +945,7 @@ object ZoneMovementUtils {
     }
 
     /**
-     * Apply the additional effect from a RedirectZoneChangeWithEffect replacement.
+     * Apply the additional effect from a RedirectZoneChangeWith replacement.
      * Supports TakeExtraTurnEffect (Ugin's Nexus), AddCountersEffect (Darigaaz Reincarnated),
      * and GainLifeEffect (The Darkness Crystal — "instead exile it and you gain 2 life").
      *
@@ -952,6 +967,7 @@ object ZoneMovementUtils {
      *   fine — nothing here requires the source to still be there.
      */
     fun applyReplacementAdditionalEffect(
+        zones: ZoneTransitionService,
         state: GameState,
         effect: com.wingedsheep.sdk.scripting.effects.Effect,
         controllerId: EntityId?,
@@ -972,17 +988,7 @@ object ZoneMovementUtils {
             return newState to emptyList()
         }
         if (effect is com.wingedsheep.sdk.scripting.effects.AddCountersEffect && entityId != null) {
-            val counterType = try {
-                com.wingedsheep.sdk.core.CounterType.valueOf(
-                    effect.counterType.uppercase()
-                        .replace(' ', '_')
-                        .replace('+', 'P')
-                        .replace('-', 'M')
-                        .replace("/", "_")
-                )
-            } catch (_: IllegalArgumentException) {
-                com.wingedsheep.sdk.core.CounterType.PLUS_ONE_PLUS_ONE
-            }
+            val counterType = effect.counterType
             val current = state.getEntity(entityId)?.get<CountersComponent>() ?: CountersComponent()
             val newState = state.updateEntity(entityId) { container ->
                 container.with(current.withAdded(counterType, effect.count))
@@ -995,7 +1001,7 @@ object ZoneMovementUtils {
             val cid = controllerId ?: return state to emptyList()
             val amount = (effect.amount as? com.wingedsheep.sdk.scripting.values.DynamicAmount.Fixed)?.amount
                 ?: return state to emptyList()
-            val (newState, event) = DamageUtils.gainLife(state, cid, amount)
+            val (newState, event) = DamageUtils.gainLife(state, cid, amount, predicateEvaluator = zones.predicateEvaluator)
             return newState to listOfNotNull(event)
         }
         if (effect is com.wingedsheep.sdk.scripting.effects.CreateTokenEffect) {
@@ -1005,7 +1011,7 @@ object ZoneMovementUtils {
             // replacement's controller — the rider's "you" — so a token minted while an opponent's
             // creature is redirected still lands on the shield controller's side.
             val cid = controllerId ?: return state to emptyList()
-            val result = tokenExecutor.execute(
+            val result = zones.riderTokenExecutor.execute(
                 state,
                 effect,
                 com.wingedsheep.engine.handlers.EffectContext(sourceId = sourceId, controllerId = cid)
@@ -1168,14 +1174,14 @@ object ZoneMovementUtils {
      * @param targetZone The destination zone type
      * @return The execution result with updated state and events
      */
-    fun movePermanentToZone(state: GameState, entityId: EntityId, targetZone: Zone): EffectResult {
+    fun movePermanentToZone(zones: ZoneTransitionService, state: GameState, entityId: EntityId, targetZone: Zone): EffectResult {
         val container = state.getEntity(entityId)
             ?: return EffectResult.error(state, "Entity not found")
 
         container.get<CardComponent>()
             ?: return EffectResult.error(state, "Not a card")
 
-        val result = ZoneTransitionService.moveToZone(state, entityId, targetZone)
+        val result = zones.moveToZone(state, entityId, targetZone)
         return EffectResult.success(result.state, result.events)
     }
 }

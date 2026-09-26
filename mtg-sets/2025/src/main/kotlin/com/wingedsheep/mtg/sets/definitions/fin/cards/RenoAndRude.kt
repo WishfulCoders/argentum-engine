@@ -1,22 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Reno and Rude
@@ -33,7 +26,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Resolution-time chain over existing pipeline primitives:
  *   1. exile the top card of the *damaged* player's library ([Player.TriggeringPlayer]
  *      is the player dealt combat damage; the card stays owned by them in exile),
- *   2. an [OptionalCostEffect] models "you may sacrifice another creature or artifact.
+ *   2. an [Effects.MayPay] models "you may sacrifice another creature or artifact.
  *      If you do, ...": the sacrifice is the optional cost (`excludeSource` makes it
  *      "another"), and only paying it grants the play permission,
  *   3. the reward is a [GrantMayPlayFromExileEffect] with `withAnyManaType` for
@@ -53,34 +46,28 @@ val RenoAndRude = card("Reno and Rude") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(
-                        DynamicAmount.Fixed(1),
-                        player = Player.TriggeringPlayer,
-                    ),
-                    storeAs = "exiled",
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.Pipeline {
+            val exiled = gather(
+                CardSource.TopOfLibrary(
+                    1,
+                    player = Player.TriggeringPlayer,
+                )
+            )
+            exile(exiled, Player.TriggeringPlayer)
+            run(Effects.MayPay(
+                cost = Effects.SacrificeOwn(
+                    filter = GameObjectFilter.CreatureOrArtifact,
+                    count = 1,
+                    excludeSource = true,
                 ),
-                MoveCollectionEffect(
-                    from = "exiled",
-                    destination = CardDestination.ToZone(Zone.EXILE, player = Player.TriggeringPlayer),
+                then = Effects.GrantMayPlayFromExile(
+                    from = exiled,
+                    expiry = MayPlayExpiry.EndOfTurn,
+                    withAnyManaType = true,
                 ),
-                OptionalCostEffect(
-                    cost = SacrificeEffect(
-                        filter = GameObjectFilter.CreatureOrArtifact,
-                        count = 1,
-                        excludeSource = true,
-                    ),
-                    ifPaid = GrantMayPlayFromExileEffect(
-                        from = "exiled",
-                        expiry = MayPlayExpiry.EndOfTurn,
-                        withAnyManaType = true,
-                    ),
-                ),
-            ),
-        )
+            ))
+        }
     }
 
     metadata {

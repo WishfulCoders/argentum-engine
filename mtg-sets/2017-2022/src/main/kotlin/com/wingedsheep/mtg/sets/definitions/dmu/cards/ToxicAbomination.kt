@@ -22,7 +22,7 @@ val ToxicAbomination = card("Toxic Abomination") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.LoseLife(2, EffectTarget.Controller)
     }
 

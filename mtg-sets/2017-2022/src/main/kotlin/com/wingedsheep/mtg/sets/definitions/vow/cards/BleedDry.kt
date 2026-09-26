@@ -3,9 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MarkExileOnDeathEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Bleed Dry
@@ -19,11 +17,8 @@ val BleedDry = card("Bleed Dry") {
     typeLine = "Instant"
     oracleText = "Target creature gets -13/-13 until end of turn. If that creature would die this turn, exile it instead."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.ModifyStats(-13, -13, t),
-            MarkExileOnDeathEffect(t)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(-13, -13, t) then Effects.MarkExileOnDeath(t)
     }
     metadata {
         rarity = Rarity.COMMON

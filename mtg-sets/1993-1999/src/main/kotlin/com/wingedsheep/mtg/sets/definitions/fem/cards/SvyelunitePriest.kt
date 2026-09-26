@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Svyelunite Priest
@@ -34,7 +33,7 @@ val SvyelunitePriest = card("Svyelunite Priest") {
                 ActivationRestriction.DuringStep(Step.UPKEEP)
             )
         )
-        val t = target("target creature", TargetCreature(filter = TargetFilter.Creature))
+        val t = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(Keyword.SHROUD, t)
     }
 

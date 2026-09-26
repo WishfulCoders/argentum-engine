@@ -14,7 +14,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Jazal Goldmane:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -42,7 +42,7 @@
                             "player": "Each",
                             "filter": "creature attacking"
                         },
-                        "target": "Self"
+                        "target": "IterationEntity"
                     }
                 }
             }
@@ -69,7 +69,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Myriad Landscape:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddColorlessMana",
@@ -82,7 +82,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Myriad Landscape:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -107,7 +107,8 @@
                                 "zone": "Library",
                                 "filter": "basicland"
                             },
-                            "storeAs": "searchable"
+                            "storeAs": "searchable",
+                            "search": true
                         },
                         {
                             "type": "SelectFromCollection",
@@ -158,7 +159,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Unstable Obelisk:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddColorlessMana",
@@ -171,7 +172,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Unstable Obelisk:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -189,8 +190,8 @@
                 "effect": {
                     "type": "MoveToZone",
                     "target": {
-                        "type": "ContextTarget",
-                        "index": 0
+                        "type": "BoundVariable",
+                        "name": "t0"
                     },
                     "destination": "Graveyard",
                     "byDestruction": true
@@ -200,7 +201,8 @@
                         "type": "TargetObject",
                         "filter": {
                             "baseFilter": "permanent"
-                        }
+                        },
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{7}, {T}, Sacrifice this artifact: Destroy target permanent."

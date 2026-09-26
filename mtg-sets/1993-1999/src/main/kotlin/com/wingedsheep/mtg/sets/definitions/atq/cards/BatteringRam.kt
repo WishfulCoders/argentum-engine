@@ -9,8 +9,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -22,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * At the beginning of combat on your turn, this creature gains banding until end of combat.
  * Whenever this creature becomes blocked by a Wall, destroy that Wall at end of combat.
  *
- * The banding half composes from existing primitives: a [Triggers.BeginCombat] trigger granting
+ * The banding half composes from existing primitives: a `Triggers.you.beginningOf(Step.BEGIN_COMBAT)` trigger granting
  * [Keyword.BANDING] to itself for [Duration.EndOfCombat]. The Wall half uses the blocker-filtered
  * `becomesBlocked(filter = Wall, binding = SELF)` trigger — for SELF binding the filter applies to
  * the **blocker**, firing once per blocking Wall with the Wall as `TriggeringEntity` — then a
@@ -40,17 +38,14 @@ val BatteringRam = card("Battering Ram") {
         "Whenever this creature becomes blocked by a Wall, destroy that Wall at end of combat."
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
         effect = Effects.GrantKeyword(Keyword.BANDING, EffectTarget.Self, Duration.EndOfCombat)
         description = "At the beginning of combat on your turn, this creature gains banding until end of combat."
     }
 
     triggeredAbility {
-        trigger = Triggers.becomesBlocked(
-            filter = GameObjectFilter.Creature.withSubtype(Subtype.WALL),
-            binding = TriggerBinding.SELF,
-        )
-        effect = CreateDelayedTriggerEffect(
+        trigger = Triggers.self.matching(GameObjectFilter.Creature.withSubtype(Subtype.WALL)).becomesBlocked()
+        effect = Effects.CreateDelayedTrigger(
             step = Step.END_COMBAT,
             effect = Effects.Destroy(EffectTarget.TriggeringEntity),
         )

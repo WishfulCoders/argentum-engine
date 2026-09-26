@@ -10,6 +10,7 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Garland, Knight of Cornelia // Chaos, the Endless — Final Fantasy #221
@@ -45,7 +46,7 @@ private val ChaosTheEndless = card("Chaos, the Endless") {
 
     // When Chaos dies, put it on the bottom of its owner's library.
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.PutOnBottomOfLibrary(EffectTarget.Self)
     }
 
@@ -70,7 +71,7 @@ private val GarlandKnightOfCorneliaFront = card("Garland, Knight of Cornelia") {
 
     // Whenever you cast a noncreature spell, surveil 1.
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
         effect = Effects.Surveil(1)
     }
 

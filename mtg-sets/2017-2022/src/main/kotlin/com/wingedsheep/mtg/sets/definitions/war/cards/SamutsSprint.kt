@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Samut's Sprint
@@ -22,14 +22,10 @@ val SamutsSprint = card("Samut's Sprint") {
     oracleText = "Target creature gets +2/+1 and gains haste until end of turn. Scry 1."
 
     spell {
-        val t = target("target", TargetCreature())
-        effect = Effects.Composite(
-            Effects.Composite(
-                Effects.ModifyStats(2, 1, t),
-                Effects.GrantKeyword(Keyword.HASTE, t)
-            ),
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 1, t) then
+            Effects.GrantKeyword(Keyword.HASTE, t) then
             Effects.Scry(1)
-        )
     }
 
     metadata {

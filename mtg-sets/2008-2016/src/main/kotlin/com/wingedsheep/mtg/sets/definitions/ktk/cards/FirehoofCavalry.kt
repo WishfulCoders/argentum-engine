@@ -24,10 +24,8 @@ val FirehoofCavalry = card("Firehoof Cavalry") {
 
     activatedAbility {
         cost = Costs.Mana("{3}{R}")
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 0, EffectTarget.Self),
+        effect = Effects.ModifyStats(2, 0, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
-        )
     }
 
     metadata {

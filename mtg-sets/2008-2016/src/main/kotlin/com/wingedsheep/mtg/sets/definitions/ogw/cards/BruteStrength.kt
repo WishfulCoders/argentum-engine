@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.ogw.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Brute Strength
@@ -19,11 +19,8 @@ val BruteStrength = card("Brute Strength") {
     oracleText = "Target creature gets +3/+1 and gains trample until end of turn. (It can deal excess combat damage to the player or planeswalker it's attacking.)"
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(3, 1, creature),
-            Effects.GrantKeyword(Keyword.TRAMPLE, creature)
-        )
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(3, 1, creature) then Effects.GrantKeyword(Keyword.TRAMPLE, creature)
     }
 
     metadata {

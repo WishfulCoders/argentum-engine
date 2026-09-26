@@ -1,17 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Aragorn and Arwen, Wed
@@ -35,30 +34,26 @@ val AragornAndArwenWed = card("Aragorn and Arwen, Wed") {
 
     keywords(Keyword.VIGILANCE)
 
-    val effectBody = Effects.Composite(
-        listOf(
-            Effects.ForEachInGroup(
-                filter = GroupFilter(GameObjectFilter.Creature.youControl(), excludeSelf = true),
-                effect = AddCountersEffect(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
-            ),
-            Effects.GainLife(
-                DynamicAmount.AggregateBattlefield(
-                    player = Player.You,
-                    filter = GameObjectFilter.Creature,
-                    excludeSelf = true
-                ),
-                EffectTarget.Controller
-            )
+    val effectBody = Effects.ForEachInGroup(
+        filter = GroupFilter(GameObjectFilter.Creature.youControl(), excludeSelf = true),
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity)
+    ) then
+        Effects.GainLife(
+            DynamicAmounts.battlefield(
+                Player.You,
+                GameObjectFilter.Creature,
+                excludeSelf = true
+            ).count(),
+            EffectTarget.Controller
         )
-    )
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = effectBody
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = effectBody
     }
 

@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.PlayAdditionalLandsEffect
 
 /**
  * Beanstalk Wurm // Plant Beans
@@ -33,7 +33,7 @@ val BeanstalkWurm = card("Beanstalk Wurm") {
         oracleText = "You may play an additional land this turn. " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            effect = PlayAdditionalLandsEffect(count = 1)
+            effect = Effects.PlayAdditionalLands(count = 1)
         }
     }
 

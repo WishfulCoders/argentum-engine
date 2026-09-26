@@ -7,10 +7,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Mistway Spy — Murders at Karlov Manor #65
@@ -34,10 +32,10 @@ import com.wingedsheep.sdk.scripting.events.RecipientFilter
  * a first-strike creature that also deals regular damage triggers it twice. Hence the granted trigger
  * is `dealsDamage(Combat, AnyPlayer, Creature.youControl(), binding = ANY)` — the SDK's documented
  * shape for "whenever a creature you control deals combat damage to a player" — rather than the
- * SELF-bound [Triggers.DealsCombatDamageToPlayer], which would only ever see the Spy's own damage.
+ * SELF-bound `Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)`, which would only ever see the Spy's own damage.
  *
  * Turning face up is a special action (CR 701.34c), not entering the battlefield, so this hangs off
- * [Triggers.TurnedFaceUp]. Face down the Spy is a colorless 2/2 with ward {2} and no flying, no
+ * `Triggers.self.turnedFaceUp()`. Face down the Spy is a colorless 2/2 with ward {2} and no flying, no
  * Detective type, and no trigger at all.
  */
 val MistwaySpy = card("Mistway Spy") {
@@ -56,17 +54,11 @@ val MistwaySpy = card("Mistway Spy") {
     disguise = "{1}{U}"
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
+        trigger = Triggers.self.turnedFaceUp()
         effect = Effects.CreateGlobalTriggeredAbility(
             duration = Duration.EndOfTurn,
             ability = TriggeredAbility.create(
-                trigger = Triggers.dealsDamage(
-                    damageType = DamageType.Combat,
-                    recipient = RecipientFilter.AnyPlayer,
-                    sourceFilter = GameObjectFilter.Creature.youControl(),
-                    binding = TriggerBinding.ANY
-                ).event,
-                binding = TriggerBinding.ANY,
+                trigger = Triggers.a(GameObjectFilter.Creature.youControl()).dealsCombatDamage(Recipient.AnyPlayer),
                 effect = Effects.Investigate()
             ),
             descriptionOverride = "Whenever a creature you control deals combat damage to a player, " +

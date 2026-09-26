@@ -21,14 +21,9 @@ val VaultPlunderer = card("Vault Plunderer") {
     oracleText = "When this creature enters, target player draws a card and loses 1 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", Targets.Player)
-        effect = Effects.Composite(
-            listOf(
-                Effects.DrawCards(1, t),
-                Effects.LoseLife(1, t),
-            )
-        )
+        trigger = Triggers.self.enters()
+        val t = target(Targets.Player)
+        effect = Effects.DrawCards(1, t) then Effects.LoseLife(1, t)
     }
 
     metadata {

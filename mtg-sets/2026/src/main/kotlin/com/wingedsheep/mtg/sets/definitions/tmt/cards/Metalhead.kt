@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Metalhead
@@ -33,11 +32,8 @@ val Metalhead = card("Metalhead") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val perm = target(
-            "other artifact or creature",
-            TargetPermanent(optional = true, filter = TargetFilter.CreatureOrArtifact.other())
-        )
+        trigger = Triggers.self.enters()
+        val perm = target(TargetFilter.CreatureOrArtifact.other(), optional = true)
         effect = Effects.ReturnToHand(perm)
     }
 
@@ -46,9 +42,9 @@ val Metalhead = card("Metalhead") {
             Costs.Mana("{R}"),
             Costs.SacrificeAnother(GameObjectFilter.Artifact)
         )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
-            .then(Effects.GrantKeyword(Keyword.MENACE, EffectTarget.Self, Duration.EndOfTurn))
-            .then(Effects.GrantKeyword(Keyword.HASTE, EffectTarget.Self, Duration.EndOfTurn))
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.MENACE, EffectTarget.Self, Duration.EndOfTurn) then
+            Effects.GrantKeyword(Keyword.HASTE, EffectTarget.Self, Duration.EndOfTurn)
     }
 
     metadata {

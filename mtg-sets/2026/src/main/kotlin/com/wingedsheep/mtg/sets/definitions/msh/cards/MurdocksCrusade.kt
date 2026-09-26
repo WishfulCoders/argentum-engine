@@ -6,8 +6,6 @@ import com.wingedsheep.sdk.dsl.teamwork
 import com.wingedsheep.sdk.dsl.teamworkModal
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Murdock's Crusade — Marvel Super Heroes #24
@@ -45,17 +43,11 @@ val MurdocksCrusade = card("Murdock's Crusade") {
     spell {
         teamworkModal {
             mode("Street Justice — Exile target creature with toughness 4 or greater") {
-                val creature = target(
-                    "target creature with toughness 4 or greater",
-                    TargetCreature(filter = TargetFilter.Creature.toughnessAtLeast(4)),
-                )
+                val creature = target(TargetFilter.Creature.toughnessAtLeast(4))
                 effect = Effects.Exile(creature)
             }
             mode("Legal Justice — Exile target enchantment with mana value 4 or greater") {
-                val enchantment = target(
-                    "target enchantment with mana value 4 or greater",
-                    TargetPermanent(filter = TargetFilter.Enchantment.manaValueAtLeast(4)),
-                )
+                val enchantment = target(TargetFilter.Enchantment.manaValueAtLeast(4))
                 effect = Effects.Exile(enchantment)
             }
         }

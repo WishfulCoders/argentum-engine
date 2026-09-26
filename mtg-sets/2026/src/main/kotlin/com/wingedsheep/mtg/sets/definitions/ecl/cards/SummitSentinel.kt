@@ -21,7 +21,7 @@ val SummitSentinel = card("Summit Sentinel") {
     oracleText = "When this creature dies, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.DrawCards(1)
     }
 

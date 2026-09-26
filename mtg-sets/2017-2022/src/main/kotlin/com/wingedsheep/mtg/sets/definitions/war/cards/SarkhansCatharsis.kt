@@ -21,7 +21,7 @@ val SarkhansCatharsis = card("Sarkhan's Catharsis") {
     oracleText = "Sarkhan's Catharsis deals 5 damage to target player or planeswalker."
 
     spell {
-        val victim = target("target", Targets.PlayerOrPlaneswalker)
+        val victim = target(Targets.PlayerOrPlaneswalker)
         effect = Effects.DealDamage(5, victim)
     }
 

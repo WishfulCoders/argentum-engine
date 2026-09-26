@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 
 /**
  * Investigator's Journal
@@ -40,7 +39,7 @@ val InvestigatorsJournal = card("Investigator's Journal") {
 
     replacementEffect(
         EntersWithDynamicCounters(
-            counterType = CounterTypeFilter.Named(Counters.SUSPECT),
+            counterType = CounterType.SUSPECT,
             count = DynamicAmounts.greatestControlledBySinglePlayer(GameObjectFilter.Creature),
         )
     )
@@ -49,7 +48,7 @@ val InvestigatorsJournal = card("Investigator's Journal") {
         cost = Costs.Composite(
             Costs.Mana("{2}"),
             Costs.Tap,
-            Costs.RemoveCounterFromSelf(Counters.SUSPECT),
+            Costs.RemoveCounterFromSelf(CounterType.SUSPECT),
         )
         effect = Effects.DrawCards(1)
         description = "{2}, {T}, Remove a suspect counter from this artifact: Draw a card."

@@ -6,8 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Call Damage Control — Marvel Super Heroes #162
@@ -46,28 +44,20 @@ val CallDamageControl = card("Call Damage Control") {
     spell {
         modal(chooseCount = 2, minChooseCount = 0) {
             mode("Return target artifact card from your graveyard to your hand") {
-                target = TargetObject(
-                    filter = TargetFilter.ArtifactInYourGraveyard
-                )
-                effect = Effects.ReturnToHand(EffectTarget.ContextTarget(0))
+                val target = target(TargetFilter.ArtifactInYourGraveyard)
+                effect = Effects.ReturnToHand(target)
             }
             mode("Return target creature card from your graveyard to your hand") {
-                target = TargetObject(
-                    filter = TargetFilter(GameObjectFilter.Creature.ownedByYou(), zone = Zone.GRAVEYARD)
-                )
-                effect = Effects.ReturnToHand(EffectTarget.ContextTarget(0))
+                val target = target(TargetFilter(GameObjectFilter.Creature.ownedByYou(), zone = Zone.GRAVEYARD))
+                effect = Effects.ReturnToHand(target)
             }
             mode("Return target enchantment card from your graveyard to your hand") {
-                target = TargetObject(
-                    filter = TargetFilter(GameObjectFilter.Enchantment.ownedByYou(), zone = Zone.GRAVEYARD)
-                )
-                effect = Effects.ReturnToHand(EffectTarget.ContextTarget(0))
+                val target = target(TargetFilter(GameObjectFilter.Enchantment.ownedByYou(), zone = Zone.GRAVEYARD))
+                effect = Effects.ReturnToHand(target)
             }
             mode("Return target land card from your graveyard to your hand") {
-                target = TargetObject(
-                    filter = TargetFilter(GameObjectFilter.Land.ownedByYou(), zone = Zone.GRAVEYARD)
-                )
-                effect = Effects.ReturnToHand(EffectTarget.ContextTarget(0))
+                val target = target(TargetFilter(GameObjectFilter.Land.ownedByYou(), zone = Zone.GRAVEYARD))
+                effect = Effects.ReturnToHand(target)
             }
         }
     }

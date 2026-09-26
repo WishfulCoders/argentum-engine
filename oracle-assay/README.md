@@ -47,7 +47,7 @@ extended until Assay read each whole (**+3 whole cards**, 9,228 → 9,231, diffe
 51). It is the smallest band here by card count and the one whose finding travels furthest, because
 its construct **is not on a line**. CR 607 makes "Exile a card from a graveyard." *linked* to a later
 ability that says "the exiled card", the SDK carries that fact twice — on the read
-(`EntityReference.LinkedExiledCard`) and on the move (`MoveCollectionEffect.linkToSource`) — and
+(`EffectTarget.LinkedExiledCard`) and on the move (`MoveCollectionEffect.linkToSource`) — and
 only the read is printed. Every previous derivation of that shape reads one field off another inside
 one line; this one cannot, so it moved out to the **fold**
 (`CardFragment.deriveExileLinkage`, called by both the differential's merge and `CardCompiler`).
@@ -174,7 +174,7 @@ See [the card's mana value](#the-cards-mana-value).
 Before it came **Bloomburrow's second pass** — the set read again after the
 [Bloomburrow band](#the-bloomburrow-band) left it at 60 of 280, and the first band aimed at a set
 that already has one. It is **rows in six existing families and no new machinery**, which is what a
-second pass on a set is supposed to cost: `Triggers.Expend(n)` as the first trigger prefix whose
+second pass on a set is supposed to cost: `Triggers.you.expends(n)` as the first trigger prefix whose
 event carries a *number*, the two life-change trigger specs, the five life-state conditions
 Bloomburrow's Bats check, and the two "each opponent" clauses that pay them off. The set went
 **69 → 83 cards** and the corpus **8,364 → 8,516** — the disproportion is the point: "each opponent
@@ -183,7 +183,7 @@ sentences, so a set-shaped pick paid corpus-wide. It found **four card bugs**, t
 shape (a bare tribal noun typed as `IsCreature`), and it declined the set's largest family on
 purpose: gift's printed line means two different models depending on whether the card is a permanent
 or a spell, and the line grammar cannot see a type line. It also closed the two **forage** findings
-the same section had been carrying — a missing `ForagedEvent` (now `Triggers.WheneverYouForage`,
+the same section had been carrying — a missing `ForagedEvent` (now `Triggers.you.forages()`,
 emitted from the cost resolver *and* from a marker inside the effect form) and a genuine rules bug
 in Treetop Sentries, which spelled its printed "If you do" as CR 603.12's reflexive trigger. See
 [Bloomburrow's second pass](#bloomburrows-second-pass).
@@ -274,7 +274,7 @@ See [the trigger join](#the-trigger-join).
 
 Before it came the **step-trigger band** — "At the beginning of **each opponent's end
 step**, …" (**+3 whole cards**, and the "At the beginning …" decline family from 197 cards to 20).
-`dsl.Triggers.phase(step, player, binding)` is the SDK's one language for a step trigger and the
+`dsl.Triggers.<player>.beginningOf(step)` is the SDK's one language for a step trigger and the
 grammar was calling its frozen constants — thirteen whole-prefix rules, one per printed sentence — so
 [`Phases`](src/main/kotlin/com/wingedsheep/assay/grammar/Phases.kt) makes it the product it already
 was: a step noun, a whose-turn layer that is `Player.possessive` rather than a table copied here, and
@@ -687,7 +687,7 @@ in the sentence says which. What says it is a **different line**: "if it shares 
 **the exiled card**", "for each card type they share with **cards exiled with this creature**".
 
 The SDK carries the fact twice, which is this module's own signal for a derivation: on the read side
-(`EntityReference.LinkedExiledCard`, `CostReductionSource.SharedCardTypesWithLinkedExile`) and on the
+(`EffectTarget.LinkedExiledCard`, `CostReductionSource.SharedCardTypesWithLinkedExile`) and on the
 move that fills the pile (`MoveCollectionEffect.linkToSource`). Every previous derivation of that
 shape — `Activated.producesMana` for CR 605.1a, `Recursion.functionsIn` for CR 113.6m — reads one
 field off another *within a line*. This one cannot: the exile line has no evidence and the payoff
@@ -861,7 +861,7 @@ literal.
 **What the differential found: eight card bugs, five of them one shape.** The new sacrifice prefix
 made "Whenever you sacrifice a *Blood token* / *artifact* / *permanent* / *another creature*"
 comparable for the first time, and five cards had it modelled as the **batch**
-`Triggers.YouSacrificeOneOrMore` — Gluttonous Guest, Fleshtaker, Biotech Specialist, Tolls of War,
+`Triggers.you.sacrifices(filter, batch = true)` — Gluttonous Guest, Fleshtaker, Biotech Specialist, Tolls of War,
 Sandbender Scavengers, plus Unlucky Cabbage Merchant and Lightless Evangel that the same grep found
 outside the compared set. CR 603.2c makes the singular wording per-permanent: sacrificing two Blood
 tokens to one cost is two triggers and two life, and the batch spec paid once. The other three:
@@ -965,10 +965,9 @@ arrives in every context already wired. That is the opposite trade from a prefix
 worked examples now sit either side of it.
 
 **Two leaves, and both of them own a spelling no rule above them can see.** `Primitives.counterKind`
-reads the noun and is gated on `CounterType.fromName` — the SDK's own answer to "is this a counter",
-the same function `StatePredicate.HasCounter` parses with — because the model field is a bare
-`String` and an ungated leaf would read *any* word as a kind and round-trip a counter Magic does not
-have. That is `creatureSubtype`'s argument, and the "Elves" → `Elve` failure it exists to prevent.
+reads the noun and is gated on `CounterType.KNOWN` — the SDK's own answer to "is this a counter" —
+because `CounterType` is open and an ungated leaf would read *any* word as a kind and round-trip a
+counter Magic does not have. That is `creatureSubtype`'s argument, and the "Elves" → `Elve` failure it exists to prevent.
 
 The second leaf is the **indefinite article**, and it is inside the leaf for `statModifiers`' reason:
 English picks "a" or "an" from the sound of the next word, so two rules — one per article — would
@@ -1177,7 +1176,7 @@ corpus 8,364 → **8,516**, against 27 added lines in `Triggers`, 17 in `Conditi
 `Steps`.
 
 **A trigger event with a number in it.** Expend is Bloomburrow's own keyword action — "you spend
-your Nth total mana to cast spells this turn" — and `dsl.Triggers.Expend(n)` is the whole spec, with
+your Nth total mana to cast spells this turn" — and `dsl.Triggers.you.expends(n)` is the whole spec, with
 the watched player frozen at `Player.You` because that is the only subject Oracle prints. So it is
 the first prefix in [`Triggers`](src/main/kotlin/com/wingedsheep/assay/grammar/Triggers.kt) that is a
 `slottedTriggerRule` over a **number** rather than over a noun phrase, and the leaf is
@@ -1247,7 +1246,7 @@ was a fold.
 The gap: Corpseberry Cultivator prints "Whenever you forage, put a +1/+1 counter on this creature."
 and the card folded that counter into its *own* forage's `afterEffect`, so a forage from any other
 source did not grow it — there was no forage event in `EventPattern` to trigger off. There is now
-(`Triggers.WheneverYouForage`), and the shape it took is the transferable part: a keyword action that
+(`Triggers.you.forages()`), and the shape it took is the transferable part: a keyword action that
 is sometimes a **cost** and sometimes an **effect** cannot be observed from one place. The three cost
 contexts share `ForageCostResolver.pay`, so the event is emitted there — as one wrapper over that
 function's four exits rather than a line in each, so a mode added later cannot forget it. The effect
@@ -1261,14 +1260,14 @@ resolver. Wiring a new event into the trigger path means **two** `when` branches
 `TriggerMatcher` and `TriggerContext` — miss any one and the trigger compiles, ships and never fires.
 
 The fold: the two cards printing "you may forage. If you do, …" held it two different ways — Bushy
-Bodyguard as `MayEffect(forage(afterEffect = …))`, Treetop Sentries as
+Bodyguard as `Effects.May(forage(afterEffect = …))`, Treetop Sentries as
 `ReflexiveTriggerEffect(forage(), optional = true, …)`. The printed text settles it and the corpus
 agrees without being asked: **"If you do" is one resolution and "When you do" is CR 603.12's
 reflexive trigger**, a second stack object with its own priority window. Across 87
-`ReflexiveTriggerEffect` cards and 312 `MayEffect` cards, *zero* `MayEffect` card prints "When you
+`ReflexiveTriggerEffect` cards and 312 `Effects.May` cards, *zero* `Effects.May` card prints "When you
 do" — so Treetop Sentries was not a style divergence but a rules bug, giving opponents a response
 window the printed card does not create, and rendering its own prompt as "… When you do, draw a
-card". It is a `MayEffect` now, leaving Curious Forager ("**When** you do, return target permanent
+card". It is a `Effects.May` now, leaving Curious Forager ("**When** you do, return target permanent
 card…") as the set's sole and correct reflexive trigger. Two cards elsewhere in the corpus carry the
 same contradiction and are named in the PR rather than fixed here.
 
@@ -1320,7 +1319,7 @@ two-member shape over (player, zone, direction).
 **What it found.** Fifteen bugs in hand-written cards and one in `mtg-sdk`, every one surfaced by the
 differential on the day a line stopped declining:
 
-- **`Triggers.LandYouControlEnters` was `TriggerBinding.OTHER`** — one facade, 29 cards. No landfall
+- **`Triggers.a(GameObjectFilter.Land.youControl()).enters()` was `TriggerBinding.OTHER`** — one facade, 29 cards. No landfall
   ability prints "another"; the distinction is invisible on a creature and load-bearing on a *land*
   with a landfall trigger, which under `OTHER` would silently not see itself enter.
 - **Five more bare-noun-is-permanents cards** — Kargan Dragonrider, Corsair Captain, Lathliss,
@@ -2398,7 +2397,7 @@ a *granted* ability, not a prefix). MISMATCH, AMBIGUOUS and redundant readings s
 differential's 15 divergences and 3,412 compared cards are unchanged, so nothing here changed what an
 already-readable card means.
 
-**The frozen arguments.** `dsl.Triggers.phase(step, player, binding)` is the SDK's one language for
+**The frozen arguments.** `dsl.Triggers.<player>.beginningOf(step)` is the SDK's one language for
 "at the beginning of a step" — its own KDoc says to "reach for this factory for any other combination
 of (step, player, binding)" — and `YourUpkeep`, `EachEndStep`, `BeginCombat` and the rest are calls to
 it with all three fixed. [`Triggers`](src/main/kotlin/com/wingedsheep/assay/grammar/Triggers.kt) was
@@ -2448,7 +2447,7 @@ an approximation: the binding is what re-scopes "you" to the attached permanent'
 The thirteen new spellings are each opponent's end step and draw step, each player's draw step and
 first main phase, the chosen player's upkeep, enchanted player's upkeep, combat on each opponent's
 turn, the two attached frames, and four second spellings that parse without printing — "the end step"
-(pre-2015 templating for `Player.Each`; Skizzik's golden reads it as `Triggers.EachEndStep`), "each of
+(pre-2015 templating for `Player.Each`; Skizzik's golden reads it as `Triggers.anyPlayer.beginningOf(Step.END)`), "each of
 your postcombat main phases", "each of your upkeeps" and "precombat main phase".
 
 The 179 that remain are four groups, and only the first is a band:
@@ -3279,9 +3278,8 @@ the fix only widens what already worked.
 
 **What it named next.** Six of those 18 non-+1/+1 lines still decline, and on nothing this band owns:
 `oil`, `study`, `echo`, `void`, `scream` and `isolation` are counter kinds `CounterType` does not name,
-so `Primitives.counterKind`'s gate rejects the word. That gate is the right place for it —
-`CounterTypeFilter.Named` fails open to +1/+1 — so the fix is SDK vocabulary, one justified enum entry
-per kind, and six cards behind it.
+so `Primitives.counterKind`'s gate rejects the word. That gate is the right place for it, so the fix
+is SDK vocabulary, one justified `CounterType` constant per kind, and six cards behind it.
 
 ## The chosen count
 
@@ -3806,7 +3804,7 @@ already spell. The other 136 are one construct:
 | a chosen target ("its", "that creature's", "that card's", "that spell's") | | | |
 | the triggering object ("its") | | | |
 
-`DynamicAmount.EntityProperty` is an `EntityReference` × an `EntityNumericProperty`, and English
+`DynamicAmount.EntityProperty` is an `EffectTarget.SingleEntity` × an `EntityNumericProperty`, and English
 spells it as exactly that product: a possessive naming the object, then the noun naming the
 characteristic. So the grammar is the product too — two tables, one rule — which is three rows and a
 possessive vocabulary rather than the twenty-one printed phrases they cross into. The rows are
@@ -3861,9 +3859,9 @@ of a line that has otherwise parsed.
 **Tribute to Hunger.** "Target opponent sacrifices a creature of their choice. You gain life equal to
 **that creature's** toughness." The line declares exactly one target and it is the *opponent*; the
 noun the possessive names is the creature they sacrificed, which the SDK spells
-`EntityReference.Sacrificed`. The reading round-tripped byte-perfectly and meant a player's toughness.
+`EffectTarget.SacrificedAsCost`. The reading round-tripped byte-perfectly and meant a player's toughness.
 
-`renumbered`'s existing dangling-anaphor guard could not see it: `EntityReference.Target(0)` is an
+`renumbered`'s existing dangling-anaphor guard could not see it: `EffectTarget.ContextTarget(0)` is an
 **ordinal into the line's requirements**, not a slot name, so `Slots.references` walks straight past
 it. The target reading therefore needs a guard of its own, and it is the same guard one axis over —
 the line must declare exactly one target, and that requirement must be one that can never resolve to
@@ -4113,7 +4111,7 @@ to read it" is a gate the card work cannot pass by accident.
 
 ### "Becomes tapped" is four rows the tap/untap pair had never been given
 
-`Triggers.BecomesTapped`, `BecomesUntapped` and the `becomesTapped(binding, filter, …)` factory have
+`Triggers.self.becomesTapped()`, `BecomesUntapped` and the `becomesTapped(binding, filter, …)` factory have
 been in `mtg-sdk` for as long as the tap-event atom has, and 26 hand-written cards use them. The
 grammar had no rule for any of it. So this half is not a modelling problem at all — it is the shape
 this file keeps finding, a family the SDK factored correctly and the parser had simply never been
@@ -4209,7 +4207,7 @@ them "tap or untap" — died on the word after "tap", where the grammar was expe
 There is no "tap or untap" effect in `mtg-sdk` and there should not be one: `TapUntapEffect` carries
 the direction as a `Boolean`, and a choice between two fixed actions is what `ModalEffect` already
 means. The corpus had converged on that reading before the grammar reached it — Granite Witness,
-Sewer-veillance Cam, Elite Interceptor and Inverted Iceberg all write `MayEffect` over a two-`Mode`
+Sewer-veillance Cam, Elite Interceptor and Inverted Iceberg all write `Effects.May` over a two-`Mode`
 `ModalEffect` with `countsAsModalSpell = false`, and two of them say in their KDoc that they are
 copying the third. So the row is a sixth entry in an existing table, spelling the idiom the cards
 already agreed on.
@@ -4438,7 +4436,7 @@ wrong — the same class the gate exists to catch, reintroduced by the fix for i
 
 The last one to fall was the one the gate had been *waiting* on, and it is the only divergence so far
 whose fix was in the engine rather than in a card or in a rule. Lavaborn Muse carried its
-intervening-if twice — once as the trigger's condition and once as a `ConditionalEffect` around the
+intervening-if twice — once as the trigger's condition and once as a `Effects.If` around the
 effect — because the engine checked the condition only at trigger detection, so a card that wanted CR
 603.4's second check had to hand-write it. That second copy is a condition the printed line does not
 spell, which is what made it a divergence rather than only a rules bug, and the grammar was right
@@ -4532,7 +4530,7 @@ Found the way all five were, by running it on a card class it had never reached.
     are mana abilities as much as "Add {G}" is, and reading only the two symbol effects had made
     Blood Celebrant, Goblin Clearcutter and Wirewood Channeler instant-speed abilities that use the
     stack. Chromatic Sphere remains, because its mana step is inside a composite.
-  - **"You may" on a triggered ability (~10).** `optional = true` versus a `MayEffect` wrapping the
+  - **"You may" on a triggered ability (~10).** `optional = true` versus a `Effects.May` wrapping the
     effect. *Since resolved by removing the flag from the SDK — see the closed finding below.*
   - **A mass effect written as a pipeline (~19).** `ForEachInGroup` versus a `Patterns.Group` recipe
     for the same sweep, and the already-documented `DealDamage(n, PlayerRef(Each))` versus
@@ -4543,7 +4541,7 @@ Found the way all five were, by running it on a card class it had never reached.
     shows on the group sweeps whose filter omits `IsCreature`.
   - **`TargetCreatureOrPlaneswalker` versus the general filtered target (3).** The standing finding
     below, recurring in three new sentence shapes, still not folded and for the same reason.
-  - **A `Gate.MayPay` cost's atom (6), a `GrantDynamicStatsEffect` holding a fixed bonus (3), a
+  - **A `Gate.MayPay` cost's atom (6), a `GrantDynamicStats` holding a fixed bonus (3), a
     `descriptionOverride` (several), an explicit `fromZone` on a move that does not need one (2), and
     `ForceSacrificeEffect` versus `SacrificeEffect` for a bare "sacrifice a permanent" (1).** Each is
     one concept with two spellings and neither is broken; the grammar emits the one whose model says
@@ -4551,7 +4549,7 @@ Found the way all five were, by running it on a card class it had never reached.
   - **Phage the Untouchable, on its own.** The band taught `Triggers` to read an intervening-if the
     way CR 603.4 defines it — a condition printed between the event and the effect is checked twice.
     At the time the engine checked it only once, so a card that wanted both checks had to carry the
-    condition *and* a `ConditionalEffect`, and Phage carried only the condition. The CR 603.4 split
+    condition *and* a `Effects.If`, and Phage carried only the condition. The CR 603.4 split
     settled it in the grammar's favour: `interveningIf` is now both checks, the compensating gates
     are deleted, and Phage was never wrong — the engine was.
 - **Two more bugs of the Meteor Golem class, from the Portal band.** **Recollect** prints "Return
@@ -4684,7 +4682,7 @@ Found the way all five were, by running it on a card class it had never reached.
   so nothing is broken; it is one card and one type away from the corpus having a single spelling.
 - **Closed, by deleting the field: a trigger's "you may" said itself twice.** `TriggeredAbility`
   carried an `optional: Boolean` beside its effect, and 106 cards used it where 214 wrapped the
-  effect in a `MayEffect` — one sentence, two SDK spellings, bridged here by a `liftTriggerConsent`
+  effect in a `Effects.May` — one sentence, two SDK spellings, bridged here by a `liftTriggerConsent`
   fold. The fold's own justification was the argument for removing the flag: it cited
   `TriggerProcessor.putOnStack` *building* `GatedEffect(Gate.MayDecide, then, otherwise)` from the
   flag on every game, which is a lowering, not an equivalence someone asserted. So the flag went and

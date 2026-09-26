@@ -34,7 +34,7 @@ val HexingSquelcher = card("Hexing Squelcher") {
     cantBeCountered = true
 
     keywords(Keyword.WARD)
-    keywordAbility(KeywordAbility.wardLife(2))
+    keywordAbility(KeywordAbility.Ward(WardCost.Life(2)))
 
     // Spells you control can't be countered.
     staticAbility {

@@ -4,13 +4,11 @@
 
 package com.wingedsheep.mtg.sets.definitions.apc.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -25,11 +23,8 @@ val DeathGrasp = card("Death Grasp") {
     typeLine = "Sorcery"
     oracleText = "Death Grasp deals X damage to any target. You gain X life."
     spell {
-        val t = target("target", AnyTarget())
-        effect = Effects.Composite(
-            DealDamageEffect(DynamicAmount.XValue, t),
-            GainLifeEffect(DynamicAmount.XValue)
-        )
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(DynamicAmounts.xValue(), t) then Effects.GainLife(DynamicAmounts.xValue())
     }
     metadata {
         rarity = Rarity.RARE

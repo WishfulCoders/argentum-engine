@@ -28,7 +28,7 @@ val StormFleetSpy = card("Storm Fleet Spy") {
     oracleText = "Raid — When this creature enters, if you attacked this turn, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouAttackedThisTurn
         effect = Effects.DrawCards(1)
     }

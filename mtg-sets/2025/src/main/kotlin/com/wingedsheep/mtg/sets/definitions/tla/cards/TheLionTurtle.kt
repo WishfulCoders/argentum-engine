@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -15,7 +16,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * The Lion-Turtle
@@ -45,7 +45,7 @@ val TheLionTurtle = card("The Lion-Turtle") {
     keywords(Keyword.VIGILANCE, Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(3)
     }
 
@@ -72,11 +72,11 @@ val TheLionTurtle = card("The Lion-Turtle") {
 }
 
 private fun threeOrMoreLessonsInGraveyard() = Conditions.CompareAmounts(
-    DynamicAmount.Count(
+    DynamicAmounts.count(
         Player.You,
         Zone.GRAVEYARD,
         GameObjectFilter.Any.withSubtype(Subtype.LESSON)
     ),
     ComparisonOperator.GTE,
-    DynamicAmount.Fixed(3)
+    3
 )

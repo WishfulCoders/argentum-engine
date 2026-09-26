@@ -1,22 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedActivatedAbility
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
-import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Rakish Crew — Outlaws of Thunder Junction #99
@@ -42,19 +37,19 @@ val RakishCrew = card("Rakish Crew") {
         "(Assassins, Mercenaries, Pirates, Rogues, and Warlocks are outlaws.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreateTokenEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
             colors = setOf(Color.RED),
             creatureTypes = setOf("Mercenary"),
             activatedAbilities = listOf(
-                ActivatedAbility(
-                    cost = AbilityCost.Tap,
-                    effect = Effects.ModifyStats(1, 0, EffectTarget.ContextTarget(0)),
-                    targetRequirements = listOf(Targets.CreatureYouControl),
+                grantedActivatedAbility {
+                    cost = AbilityCost.Tap
+                    val creatureYouControl = target(TargetFilter.CreatureYouControl)
+                    effect = Effects.ModifyStats(1, 0, creatureYouControl)
                     timing = TimingRule.SorcerySpeed
-                )
+                }
             ),
             imageUri = "https://cards.scryfall.io/normal/front/5/f/5f04607f-eed2-462e-897f-82e41e5f7049.jpg?1712316319"
         )
@@ -63,17 +58,9 @@ val RakishCrew = card("Rakish Crew") {
     }
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = Filters.OutlawCreature.youControl(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY
-        )
-        effect = Effects.Composite(
-            listOf(
-                LoseLifeEffect(1, EffectTarget.PlayerRef(Player.EachOpponent)),
-                GainLifeEffect(1, EffectTarget.Controller),
-            )
-        )
+        trigger = Triggers.a(Filters.OutlawCreature.youControl()).dies()
+        effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)) then
+            Effects.GainLife(1, EffectTarget.Controller)
         description = "Whenever an outlaw you control dies, each opponent loses 1 life and you gain 1 life."
     }
 

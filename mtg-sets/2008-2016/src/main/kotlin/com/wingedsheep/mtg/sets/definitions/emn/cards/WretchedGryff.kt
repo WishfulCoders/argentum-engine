@@ -39,7 +39,7 @@ val WretchedGryff = card("Wretched Gryff") {
     emerge("{5}{U}")
 
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
+        trigger = Triggers.self.isCast()
         effect = Effects.DrawCards(1)
         description = "When you cast this spell, draw a card."
     }

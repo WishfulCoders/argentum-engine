@@ -11,7 +11,7 @@ import com.wingedsheep.sdk.scripting.LoseAllAbilities
 import com.wingedsheep.sdk.scripting.TransformPermanent
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Imprisoned in the Moon
@@ -80,8 +80,7 @@ val ImprisonedInTheMoon = card("Imprisoned in the Moon") {
         "land with \"{T}: Add {C}\" and loses all other card types and abilities."
 
     // Enchant creature, land, or planeswalker
-    auraTarget = TargetPermanent(
-        filter = TargetFilter(
+    auraTarget = TargetObject(filter = TargetFilter(
             GameObjectFilter(
                 cardPredicates = listOf(
                     CardPredicate.Or(
@@ -93,8 +92,7 @@ val ImprisonedInTheMoon = card("Imprisoned in the Moon") {
                     )
                 )
             )
-        )
-    )
+        ))
 
     // "is a colorless land" — Layer 4 (type) + Layer 5 (color). Subtypes deliberately left
     // unchanged (see ruling on Plains keeping its land type).

@@ -1,16 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Lethal Vapors
@@ -26,17 +23,13 @@ val LethalVapors = card("Lethal Vapors") {
     oracleText = "Whenever a creature enters, destroy it.\n{0}: Destroy Lethal Vapors. You skip your next turn. Any player may activate this ability."
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            ZoneChangeEvent(filter = GameObjectFilter.Creature, to = Zone.BATTLEFIELD),
-            TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature).enters()
         effect = Effects.Destroy(EffectTarget.TriggeringEntity)
     }
 
     activatedAbility {
         cost = Costs.Free
-        effect = Effects.Destroy(EffectTarget.Self)
-            .then(Effects.SkipNextTurn(EffectTarget.Controller))
+        effect = Effects.Destroy(EffectTarget.Self) then Effects.SkipNextTurn(EffectTarget.Controller)
         restrictions = listOf(ActivationRestriction.AnyPlayerMay)
     }
 

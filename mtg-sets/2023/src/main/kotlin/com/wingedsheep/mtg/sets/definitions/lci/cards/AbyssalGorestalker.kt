@@ -35,7 +35,7 @@ val AbyssalGorestalker = card("Abyssal Gorestalker") {
     oracleText = "When this creature enters, each player sacrifices two creatures of their choice."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Sacrifice(
             GameObjectFilter.Creature,
             count = 2,

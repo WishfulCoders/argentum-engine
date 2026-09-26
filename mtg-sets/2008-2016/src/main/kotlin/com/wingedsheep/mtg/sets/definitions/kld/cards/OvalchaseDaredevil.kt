@@ -33,10 +33,7 @@ val OvalchaseDaredevil = card("Ovalchase Daredevil") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Artifact.youControl()).enters()
         triggerZone = Zone.GRAVEYARD
         optional = true
         effect = Effects.Move(EffectTarget.Self, Zone.HAND, fromZone = Zone.GRAVEYARD)

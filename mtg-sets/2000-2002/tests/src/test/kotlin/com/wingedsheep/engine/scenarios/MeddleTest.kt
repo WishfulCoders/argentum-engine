@@ -13,10 +13,11 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.effects.ChangeSpellTargetEffect
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Tests for Meddle (ONS)
@@ -33,7 +34,7 @@ class MeddleTest : FunSpec({
         oracleText = "If target spell has only one target and that target is a creature, change that spell's target to another creature.",
         script = CardScript.spell(
             effect = ChangeSpellTargetEffect(),
-            TargetSpell()
+            TargetObject(filter = TargetFilter.SpellOnStack)
         )
     )
 

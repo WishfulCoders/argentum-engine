@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Ready to Rumble
@@ -24,11 +23,11 @@ val ReadyToRumble = card("Ready to Rumble") {
     spell {
         modal(chooseCount = 1) {
             mode("Ready to Rumble deals 5 damage to target creature or planeswalker") {
-                val t = target("target", Targets.CreatureOrPlaneswalker)
+                val t = target(Targets.CreatureOrPlaneswalker)
                 effect = Effects.DealDamage(5, t)
             }
             mode("Destroy target artifact") {
-                val t = target("target", TargetObject(filter = TargetFilter.Artifact))
+                val t = target(TargetFilter.Artifact)
                 effect = Effects.Destroy(t)
             }
         }

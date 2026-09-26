@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * You Cannot Pass!
@@ -27,12 +26,7 @@ val YouCannotPass = card("You Cannot Pass!") {
     oracleText = "Destroy target creature that blocked or was blocked by a legendary creature this turn."
 
     spell {
-        val t = target(
-            "target creature that blocked or was blocked by a legendary creature this turn",
-            TargetCreature(
-                filter = TargetFilter(GameObjectFilter.Creature.blockedOrWasBlockedByLegendaryThisTurn())
-            )
-        )
+        val t = target(TargetFilter(GameObjectFilter.Creature.blockedOrWasBlockedByLegendaryThisTurn()))
         effect = Effects.Destroy(t)
     }
 

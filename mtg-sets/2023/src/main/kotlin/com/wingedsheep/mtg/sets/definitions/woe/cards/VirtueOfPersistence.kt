@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Virtue of Persistence // Locthwain Scorn
@@ -41,11 +40,8 @@ val VirtueOfPersistence = card("Virtue of Persistence") {
         "the battlefield under your control."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        val creatureCard = target(
-            "target creature card in a graveyard",
-            TargetObject(filter = TargetFilter.CreatureInGraveyard),
-        )
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        val creatureCard = target(TargetFilter.CreatureInGraveyard)
         effect = Effects.PutOntoBattlefieldUnderYourControl(creatureCard)
         description = "At the beginning of your upkeep, put target creature card from a graveyard " +
             "onto the battlefield under your control."
@@ -57,7 +53,7 @@ val VirtueOfPersistence = card("Virtue of Persistence") {
         oracleText = "Target creature gets -3/-3 until end of turn. You gain 2 life. " +
             "(Then exile this card. You may cast the enchantment later from exile.)"
         spell {
-            val victim = target("target creature", Targets.Creature)
+            val victim = target(TargetFilter.Creature)
             effect = Effects.ModifyStats(-3, -3, victim) then Effects.GainLife(2)
         }
     }

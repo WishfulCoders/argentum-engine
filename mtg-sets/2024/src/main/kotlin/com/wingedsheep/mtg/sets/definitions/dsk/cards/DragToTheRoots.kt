@@ -2,13 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CostGating
 import com.wingedsheep.sdk.scripting.CostModification
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Drag to the Roots
@@ -39,7 +39,7 @@ val DragToTheRoots = card("Drag to the Roots") {
     }
 
     spell {
-        val permanent = target("target nonland permanent", Targets.NonlandPermanent)
+        val permanent = target(TargetFilter.NonlandPermanent)
         effect = Effects.Destroy(permanent)
     }
 

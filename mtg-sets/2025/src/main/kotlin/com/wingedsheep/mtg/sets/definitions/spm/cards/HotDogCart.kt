@@ -16,7 +16,7 @@ val HotDogCart = card("Hot Dog Cart") {
         "{T}: Add one mana of any color."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateFood()
         description = "When this artifact enters, create a Food token."
     }

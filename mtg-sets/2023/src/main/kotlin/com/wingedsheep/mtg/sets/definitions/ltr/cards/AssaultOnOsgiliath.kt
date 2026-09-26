@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Assault on Osgiliath
@@ -26,16 +25,14 @@ val AssaultOnOsgiliath = card("Assault on Osgiliath") {
         "an Army, create a 0/0 black Orc Army creature token first.)"
 
     spell {
-        effect = Effects.Amass(DynamicAmount.XValue, "Orc")
-            .then(
-                Effects.ForEachInGroup(
-                    filter = GroupFilter(
-                        com.wingedsheep.sdk.scripting.GameObjectFilter.Creature
-                            .withAnySubtype("Goblin", "Orc").youControl()
-                    ),
-                    effect = GrantKeywordEffect(Keyword.DOUBLE_STRIKE.name, EffectTarget.Self, Duration.EndOfTurn)
-                        .then(GrantKeywordEffect(Keyword.HASTE.name, EffectTarget.Self, Duration.EndOfTurn))
-                )
+        effect = Effects.Amass(DynamicAmounts.xValue(), "Orc") then
+            Effects.ForEachInGroup(
+                filter = GroupFilter(
+                    com.wingedsheep.sdk.scripting.GameObjectFilter.Creature
+                        .withAnySubtype("Goblin", "Orc").youControl()
+                ),
+                effect = Effects.GrantKeyword(Keyword.DOUBLE_STRIKE, EffectTarget.IterationEntity, Duration.EndOfTurn) then
+                    Effects.GrantKeyword(Keyword.HASTE, EffectTarget.IterationEntity, Duration.EndOfTurn)
             )
     }
 

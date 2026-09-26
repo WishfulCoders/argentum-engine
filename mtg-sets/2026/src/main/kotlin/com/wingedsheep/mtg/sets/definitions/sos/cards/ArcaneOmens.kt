@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Arcane Omens
@@ -25,7 +25,7 @@ val ArcaneOmens = card("Arcane Omens") {
         "mana spent to cast this spell."
 
     spell {
-        val player = target("target player", TargetPlayer())
+        val player = target(Targets.Player)
         effect = Effects.Discard(DynamicAmounts.colorsOfManaSpent(), player)
     }
 

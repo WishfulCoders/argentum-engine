@@ -24,7 +24,7 @@ val ClachanFestival = card("Clachan Festival") {
 
     // When this enchantment enters, create two 1/1 green and white Kithkin creature tokens.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

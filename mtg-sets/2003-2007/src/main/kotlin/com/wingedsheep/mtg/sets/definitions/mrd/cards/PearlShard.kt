@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Pearl Shard — Mirrodin #225 (canonical printing)
@@ -29,14 +29,14 @@ val PearlShard = card("Pearl Shard") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap)
-        val recipient = target("any target", AnyTarget())
+        val recipient = target(Targets.Any)
         effect = Effects.PreventNextDamage(2, recipient)
         description = "{3}, {T}: Prevent the next 2 damage that would be dealt to any target this turn."
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{W}"), Costs.Tap)
-        val recipient = target("any target", AnyTarget())
+        val recipient = target(Targets.Any)
         effect = Effects.PreventNextDamage(2, recipient)
         description = "{W}, {T}: Prevent the next 2 damage that would be dealt to any target this turn."
     }

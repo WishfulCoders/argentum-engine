@@ -2,10 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.avr.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.PreventDamageEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Leap of Faith
@@ -14,9 +13,8 @@ import com.wingedsheep.sdk.scripting.effects.PreventDamageEffect
  *
  * Target creature gains flying until end of turn. Prevent all damage that would be dealt to that creature this turn.
  *
- * "That creature" is the same target both halves act on. No `Effects.*` facade spells the plain
- * "prevent all damage that would be dealt to target this turn" shield — every parameter is
- * [PreventDamageEffect]'s own default except the recipient (Djeru's Resolve).
+ * "That creature" is the same target both halves act on. The shield is [Effects.PreventDamage] with
+ * every parameter at its default except the recipient (Djeru's Resolve).
  */
 val LeapOfFaith = card("Leap of Faith") {
     manaCost = "{2}{W}"
@@ -26,11 +24,8 @@ val LeapOfFaith = card("Leap of Faith") {
         "creature this turn."
 
     spell {
-        val creature = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.FLYING, creature),
-            PreventDamageEffect(target = creature)
-        )
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.GrantKeyword(Keyword.FLYING, creature) then Effects.PreventDamage(target = creature)
     }
 
     metadata {

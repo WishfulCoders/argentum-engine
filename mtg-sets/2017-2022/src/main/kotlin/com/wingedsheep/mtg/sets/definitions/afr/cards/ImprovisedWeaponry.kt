@@ -18,11 +18,8 @@ val ImprovisedWeaponry = card("Improvised Weaponry") {
     oracleText = "Improvised Weaponry deals 2 damage to any target. Create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")"
 
     spell {
-        val t = target("any target", Targets.Any)
-        effect = Effects.Composite(
-            Effects.DealDamage(2, t),
-            Effects.CreateTreasure(1)
-        )
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(2, t) then Effects.CreateTreasure(1)
     }
 
     metadata {

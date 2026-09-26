@@ -27,7 +27,7 @@ val DragonTrainer = card("Dragon Trainer") {
     power = 1
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 4,
             toughness = 4,

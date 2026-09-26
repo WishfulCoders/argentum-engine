@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -24,10 +23,10 @@ val DecodeTransmissions = card("Decode Transmissions") {
         "Void — If a nonland permanent left the battlefield this turn or a spell was warped this turn, instead you draw two cards and each opponent loses 2 life."
 
     spell {
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.Void,
-            effect = Effects.DrawCards(2) then Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent)),
-            elseEffect = Effects.DrawCards(2) then Effects.LoseLife(2, EffectTarget.Controller)
+            then = Effects.DrawCards(2) then Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent)),
+            otherwise = Effects.DrawCards(2) then Effects.LoseLife(2, EffectTarget.Controller)
         )
     }
 

@@ -6,10 +6,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Savage Punch
@@ -26,18 +24,13 @@ val SavagePunch = card("Savage Punch") {
     oracleText = "Target creature you control fights target creature you don't control.\nFerocious — The creature you control gets +2/+2 until end of turn before it fights if you control a creature with power 4 or greater."
 
     spell {
-        val yourCreature = target("creature you control", TargetCreature(
-            filter = TargetFilter(GameObjectFilter.Creature.youControl())
-        ))
-        val theirCreature = target("creature you don't control", TargetCreature(
-            filter = TargetFilter(GameObjectFilter.Creature.opponentControls())
-        ))
+        val yourCreature = target(TargetFilter(GameObjectFilter.Creature.youControl()))
+        val theirCreature = target(TargetFilter(GameObjectFilter.Creature.opponentControls()))
         // Ferocious: +2/+2 to your creature before fight if you control a creature with power 4+
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Exists(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature.powerAtLeast(4)),
-            effect = Effects.ModifyStats(2, 2, yourCreature)
-                .then(Effects.Fight(yourCreature, theirCreature)),
-            elseEffect = Effects.Fight(yourCreature, theirCreature)
+            then = Effects.ModifyStats(2, 2, yourCreature) then Effects.Fight(yourCreature, theirCreature),
+            otherwise = Effects.Fight(yourCreature, theirCreature)
         )
     }
 

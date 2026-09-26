@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -29,8 +28,8 @@ val TowerGeist = card("Tower Geist") {
     toughness = 2
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Patterns.Library.lookAtTopAndKeep(count = DynamicAmount.Fixed(2), keepCount = DynamicAmount.Fixed(1))
+        trigger = Triggers.self.enters()
+        effect = Patterns.Library.lookAtTopAndKeep(count = 2, keepCount = 1)
     }
     metadata {
         rarity = Rarity.UNCOMMON

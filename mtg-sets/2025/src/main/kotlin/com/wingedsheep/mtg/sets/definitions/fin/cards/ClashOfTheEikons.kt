@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Clash of the Eikons
@@ -23,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  * A choose-one-or-more modal spell ([modal] with `chooseCount = 3, minChooseCount = 1`), each mode
  * carrying its own independent targets. Adding a lore counter advances the targeted Saga normally
  * (its chapter ability triggers, per CR 714); removing one never triggers a chapter. Both reuse the
- * generic [Effects.AddCounters] / [Effects.RemoveCounters] over the [Counters.LORE] type.
+ * generic [Effects.AddCounters] / [Effects.RemoveCounters] over the [CounterType.LORE] type.
  */
 val ClashOfTheEikons = card("Clash of the Eikons") {
     manaCost = "{G}"
@@ -38,29 +36,17 @@ val ClashOfTheEikons = card("Clash of the Eikons") {
     spell {
         modal(chooseCount = 3, minChooseCount = 1) {
             mode("Target creature you control fights target creature an opponent controls") {
-                val yourCreature = target(
-                    "creature you control",
-                    TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.youControl()))
-                )
-                val theirCreature = target(
-                    "creature an opponent controls",
-                    TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.opponentControls()))
-                )
+                val yourCreature = target(TargetFilter(GameObjectFilter.Creature.youControl()))
+                val theirCreature = target(TargetFilter(GameObjectFilter.Creature.opponentControls()))
                 effect = Effects.Fight(yourCreature, theirCreature)
             }
             mode("Remove a lore counter from target Saga you control") {
-                val saga = target(
-                    "Saga you control",
-                    TargetPermanent(filter = TargetFilter(GameObjectFilter.Enchantment.withSubtype(Subtype.SAGA).youControl()))
-                )
-                effect = Effects.RemoveCounters(Counters.LORE, 1, saga)
+                val saga = target(TargetFilter(GameObjectFilter.Enchantment.withSubtype(Subtype.SAGA).youControl()))
+                effect = Effects.RemoveCounters(CounterType.LORE, 1, saga)
             }
             mode("Put a lore counter on target Saga you control") {
-                val saga = target(
-                    "Saga you control",
-                    TargetPermanent(filter = TargetFilter(GameObjectFilter.Enchantment.withSubtype(Subtype.SAGA).youControl()))
-                )
-                effect = Effects.AddCounters(Counters.LORE, 1, saga)
+                val saga = target(TargetFilter(GameObjectFilter.Enchantment.withSubtype(Subtype.SAGA).youControl()))
+                effect = Effects.AddCounters(CounterType.LORE, 1, saga)
             }
         }
     }

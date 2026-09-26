@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.khm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Guardian Gladewalker
@@ -32,9 +32,9 @@ val GuardianGladewalker = card("Guardian Gladewalker") {
     keywords(Keyword.CHANGELING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val recipient = target("target creature", Targets.Creature)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, recipient)
+        trigger = Triggers.self.enters()
+        val recipient = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, recipient)
     }
 
     metadata {

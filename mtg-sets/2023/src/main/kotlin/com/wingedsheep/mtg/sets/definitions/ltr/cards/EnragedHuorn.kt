@@ -26,7 +26,7 @@ val EnragedHuorn = card("Enraged Huorn") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.TheRingTemptsYou()
     }
 

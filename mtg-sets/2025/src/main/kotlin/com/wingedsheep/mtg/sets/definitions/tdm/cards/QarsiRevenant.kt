@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.renew
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 /**
  * Qarsi Revenant — Tarkir: Dragonstorm #86
  * {1}{B}{B} · Creature — Vampire · 3/3
@@ -32,12 +32,10 @@ val QarsiRevenant = card("Qarsi Revenant") {
     keywords(Keyword.FLYING, Keyword.DEATHTOUCH, Keyword.LIFELINK)
 
     renew("{2}{B}") {
-        val creature = target("creature", Targets.Creature)
-        effect = Effects.Composite(listOf(
-            Effects.AddCounters(Counters.FLYING, 1, creature),
-            Effects.AddCounters(Counters.DEATHTOUCH, 1, creature),
-            Effects.AddCounters(Counters.LIFELINK, 1, creature)
-        ))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(CounterType.FLYING, 1, creature) then
+            Effects.AddCounters(CounterType.DEATHTOUCH, 1, creature) then
+            Effects.AddCounters(CounterType.LIFELINK, 1, creature)
     }
 
     metadata {

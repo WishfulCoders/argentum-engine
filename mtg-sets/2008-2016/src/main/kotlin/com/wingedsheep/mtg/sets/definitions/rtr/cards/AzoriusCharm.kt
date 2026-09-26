@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Azorius Charm
@@ -22,8 +21,8 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * Canonical printing: Return to Ravnica, the card's earliest real printing.
  *
  * A plain choose-one `modal(chooseCount = 1)`. The mass grant is [Effects.ForEachInGroup] over
- * [GroupFilter.AllCreaturesYouControl] with [EffectTarget.Self] as the per-iteration subject —
- * the group iteration's "self", not the spell. Only the third mode targets, so only it
+ * [GroupFilter.AllCreaturesYouControl] with [EffectTarget.IterationEntity] as the per-iteration subject —
+ * the creature being visited, not the spell. Only the third mode targets, so only it
  * declares one; a mode's targets are chosen when the mode is (CR 601.2c).
  */
 val AzoriusCharm = card("Azorius Charm") {
@@ -40,17 +39,14 @@ val AzoriusCharm = card("Azorius Charm") {
             mode("Creatures you control gain lifelink until end of turn") {
                 effect = Effects.ForEachInGroup(
                     GroupFilter.AllCreaturesYouControl,
-                    Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self),
+                    Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.IterationEntity),
                 )
             }
             mode("Draw a card") {
                 effect = Effects.DrawCards(1)
             }
             mode("Put target attacking or blocking creature on top of its owner's library") {
-                val t = target(
-                    "target attacking or blocking creature",
-                    TargetCreature(filter = TargetFilter.AttackingOrBlockingCreature)
-                )
+                val t = target(TargetFilter.AttackingOrBlockingCreature)
                 effect = Effects.PutOnTopOfLibrary(t)
             }
         }

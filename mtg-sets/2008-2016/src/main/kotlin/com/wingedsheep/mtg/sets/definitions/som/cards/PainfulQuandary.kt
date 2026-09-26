@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -16,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Whenever an opponent casts a spell, that player loses 5 life unless they discard a card.
  *
- * Modeled as an [Triggers.OpponentCastsSpell] triggered ability whose payoff is a
+ * Modeled as an `Triggers.anOpponent.casts()` triggered ability whose payoff is a
  * [PayOrSufferEffect]: the affected player is the caster ([Player.TriggeringPlayer]), who may
  * pay the "cost" of discarding a card ([Costs.pay.Discard]) to avoid the suffer — losing 5 life.
  * Both the paying player and the life-loss target are the triggering player, so the punisher
@@ -29,8 +28,8 @@ val PainfulQuandary = card("Painful Quandary") {
     oracleText = "Whenever an opponent casts a spell, that player loses 5 life unless they discard a card."
 
     triggeredAbility {
-        trigger = Triggers.OpponentCastsSpell
-        effect = PayOrSufferEffect(
+        trigger = Triggers.anOpponent.casts()
+        effect = Effects.PayOrSuffer(
             cost = Costs.pay.Discard(count = 1),
             suffer = Effects.LoseLife(5, target = EffectTarget.PlayerRef(Player.TriggeringPlayer)),
             player = EffectTarget.PlayerRef(Player.TriggeringPlayer)

@@ -2,23 +2,18 @@ package com.wingedsheep.mtg.sets.definitions.mh3.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Ugin's Labyrinth — Modern Horizons 3 #233
@@ -58,27 +53,17 @@ val UginsLabyrinth = card("Ugin's Labyrinth") {
         "{T}: Return the exiled card to its owner's hand."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.HAND, Player.You, imprintFilter),
-                    storeAs = "labyrinthEligible"
-                ),
-                SelectFromCollectionEffect(
-                    from = "labyrinthEligible",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    storeSelected = "labyrinthPicked",
-                    prompt = "Exile a colorless card with mana value 7 or greater?",
-                    selectedLabel = "Exile"
-                ),
-                MoveCollectionEffect(
-                    from = "labyrinthPicked",
-                    destination = CardDestination.ToZone(Zone.EXILE),
-                    linkToSource = true
-                )
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val labyrinthEligible = gather(CardSource.FromZone(Zone.HAND, Player.You, imprintFilter))
+            val labyrinthPicked = chooseUpTo(
+                1,
+                from = labyrinthEligible,
+                prompt = "Exile a colorless card with mana value 7 or greater?",
+                selectedLabel = "Exile"
             )
-        )
+            exile(labyrinthPicked, linkToSource = true)
+        }
         description = "Imprint — When this land enters, you may exile a colorless card with " +
             "mana value 7 or greater from your hand."
     }
@@ -86,12 +71,9 @@ val UginsLabyrinth = card("Ugin's Labyrinth") {
     activatedAbility {
         cost = Costs.Tap
         effect = Effects.AddColorlessMana(
-            DynamicAmount.Add(
-                DynamicAmount.Fixed(1),
-                DynamicAmount.Min(
-                    DynamicAmount.ContextProperty(ContextPropertyKey.LINKED_EXILE_CARD_COUNT),
-                    DynamicAmount.Fixed(1)
-                )
+            1 + DynamicAmounts.min(
+                DynamicAmounts.linkedExileCardCount(),
+                DynamicAmounts.fixed(1)
             )
         )
         manaAbility = true

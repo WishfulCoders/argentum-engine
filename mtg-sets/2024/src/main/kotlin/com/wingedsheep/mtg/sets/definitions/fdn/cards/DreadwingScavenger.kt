@@ -23,7 +23,7 @@ import com.wingedsheep.sdk.scripting.ModifyStats
  * cards in your graveyard.
  *
  * "Enters or attacks" is modeled as the established pair of triggered abilities (one on
- * [Triggers.EntersBattlefield], one on [Triggers.Attacks]), each running the [Patterns.Hand.loot]
+ * `Triggers.self.enters()`, one on `Triggers.self.attacks()`), each running the [Patterns.Hand.loot]
  * draw-then-discard. The threshold buff is two [ConditionalStaticAbility]s gated on
  * [Conditions.CardsInGraveyardAtLeast] — one stat buff, one keyword grant — so it turns on and
  * off continuously with the graveyard count.
@@ -42,12 +42,12 @@ val DreadwingScavenger = card("Dreadwing Scavenger") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Hand.loot(draw = 1, discard = 1)
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Hand.loot(draw = 1, discard = 1)
     }
 

@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Despark — War of the Spark #190 (canonical printing)
@@ -25,7 +24,7 @@ val Despark = card("Despark") {
     oracleText = "Exile target permanent with mana value 4 or greater."
 
     spell {
-        val permanent = target("target", TargetPermanent(filter = TargetFilter.Permanent.manaValueAtLeast(4)))
+        val permanent = target(TargetFilter.Permanent.manaValueAtLeast(4))
         effect = Effects.Exile(permanent)
     }
 

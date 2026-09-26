@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -24,7 +23,7 @@ val BreathOfLife = card("Breath of Life") {
     typeLine = "Sorcery"
     oracleText = "Return target creature card from your graveyard to the battlefield."
     spell {
-        val t = target("target", TargetObject(filter = TargetFilter.CreatureInYourGraveyard))
+        val t = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.Move(t, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)
     }
     metadata {

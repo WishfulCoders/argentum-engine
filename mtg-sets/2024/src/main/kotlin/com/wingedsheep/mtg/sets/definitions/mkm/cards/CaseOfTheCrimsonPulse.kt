@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.solvedTriggeredAbility
 import com.wingedsheep.sdk.dsl.toSolve
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Case of the Crimson Pulse — Murders at Karlov Manor #114
@@ -35,22 +36,16 @@ val CaseOfTheCrimsonPulse = card("Case of the Crimson Pulse") {
         "Solved — At the beginning of your upkeep, discard your hand, then draw two cards."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Effects.Discard(1),
-            Effects.DrawCards(2)
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.Discard(1) then Effects.DrawCards(2)
         description = "When this Case enters, discard a card, then draw two cards."
     }
 
     toSolve(Conditions.CardsInHandAtMost(0))
 
     solvedTriggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.Composite(
-            Patterns.Hand.discardHand(),
-            Effects.DrawCards(2)
-        )
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Patterns.Hand.discardHand() then Effects.DrawCards(2)
         description = "Solved — At the beginning of your upkeep, discard your hand, then draw two cards."
     }
 

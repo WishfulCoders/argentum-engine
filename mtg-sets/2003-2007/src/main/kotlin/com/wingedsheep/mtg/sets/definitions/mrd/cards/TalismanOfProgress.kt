@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -35,19 +34,13 @@ val TalismanOfProgress = card("Talisman of Progress") {
     }
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.Composite(
-            Effects.AddMana(Color.WHITE),
-            DealDamageEffect(1, EffectTarget.PlayerRef(Player.You))
-        )
+        effect = Effects.AddMana(Color.WHITE) then Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You))
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.Composite(
-            Effects.AddMana(Color.BLUE),
-            DealDamageEffect(1, EffectTarget.PlayerRef(Player.You))
-        )
+        effect = Effects.AddMana(Color.BLUE) then Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You))
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

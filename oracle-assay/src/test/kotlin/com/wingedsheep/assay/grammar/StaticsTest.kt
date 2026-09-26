@@ -3,6 +3,7 @@ package com.wingedsheep.assay.grammar
 import com.wingedsheep.assay.syntax.ParseOutcome
 import com.wingedsheep.assay.syntax.parseLine
 import com.wingedsheep.assay.syntax.printLine
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.CardScript
@@ -21,7 +22,7 @@ import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -48,7 +49,7 @@ class StaticsTest : StringSpec({
     "the enchant line is the aura's attachment restriction" {
         fragment("Enchant creature") shouldBe CardFragment(
             script = CardScript(
-                auraTarget = TargetPermanent(
+                auraTarget = TargetObject(
                     filter = TargetFilter(GameObjectFilter.Creature),
                     id = Targets.SLOT,
                 )
@@ -274,7 +275,7 @@ class StaticsTest : StringSpec({
                     GroupFilter.source(),
                 ),
                 condition = com.wingedsheep.sdk.scripting.conditions
-                    .PutCounterKindOnCreatureThisTurn("+1/+1"),
+                    .PutCounterKindOnCreatureThisTurn(CounterType.PLUS_ONE_PLUS_ONE),
             )
         )
         roundTrips("~ has trample as long as you've put one or more +1/+1 counters on a creature this turn.")

@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MustBeBlockedEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -44,21 +43,19 @@ val AnzragTheQuakeMole = card("Anzrag, the Quake-Mole") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(
-                GroupFilter(GameObjectFilter.Creature.youControl()),
-                Effects.Untap(EffectTarget.Self),
-            ),
-            Effects.AddCombatPhase,
-        )
+        trigger = Triggers.self.becomesBlocked()
+        effect = Effects.ForEachInGroup(
+            GroupFilter(GameObjectFilter.Creature.youControl()),
+            Effects.Untap(EffectTarget.IterationEntity),
+        ) then
+            Effects.AddCombatPhase
         description = "Whenever Anzrag becomes blocked, untap each creature you control. After " +
             "this phase, there is an additional combat phase."
     }
 
     activatedAbility {
         cost = Costs.Mana("{3}{R}{R}{G}{G}")
-        effect = MustBeBlockedEffect(EffectTarget.Self, allCreatures = false)
+        effect = Effects.MustBeBlocked(EffectTarget.Self, allCreatures = false)
         description = "Anzrag must be blocked each combat this turn if able."
     }
 

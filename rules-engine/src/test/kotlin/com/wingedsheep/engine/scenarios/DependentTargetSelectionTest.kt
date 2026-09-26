@@ -1,15 +1,17 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.TargetFinder
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.DependentTargetSelection
 import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 class DependentTargetSelectionTest : FunSpec({
     val cards = TestCards.all
@@ -43,13 +45,13 @@ class DependentTargetSelectionTest : FunSpec({
         d.putCreatureOnBattlefield(d.player1, "Hill Giant")
         val partner = d.putCreatureOnBattlefield(d.player2, "Llanowar Elves")
         val requirements = listOf(
-            TargetCreature(filter = TargetFilter.CreatureYouControl),
-            TargetCreature(filter = TargetFilter(com.wingedsheep.sdk.scripting.GameObjectFilter.Creature.opponentControls().sharingColorWith(EntityReference.Target(0)))),
+            TargetObject(filter = TargetFilter.CreatureYouControl),
+            TargetObject(filter = TargetFilter(com.wingedsheep.sdk.scripting.GameObjectFilter.Creature.opponentControls().sharingColorWith(EffectTarget.ContextTarget(0)))),
         )
         val context = PredicateContext(controllerId = d.player1)
         DependentTargetSelection.isRequired(requirements) shouldBe true
-        DependentTargetSelection.legalNext(d.state, requirements, emptyList(), context) shouldBe listOf(green)
-        DependentTargetSelection.legalNext(d.state, requirements, listOf(green), context) shouldBe listOf(partner)
+        DependentTargetSelection.legalNext(d.state, requirements, emptyList(), context, targetFinder = TargetFinder(PredicateEvaluator(cardRegistry = null))) shouldBe listOf(green)
+        DependentTargetSelection.legalNext(d.state, requirements, listOf(green), context, targetFinder = TargetFinder(PredicateEvaluator(cardRegistry = null))) shouldBe listOf(partner)
     }
 
     test("lookahead checks all remaining slots rather than only the next slot") {
@@ -58,13 +60,13 @@ class DependentTargetSelectionTest : FunSpec({
         val large = d.putCreatureOnBattlefield(d.player1, "Hill Giant")
         val middle = d.putCreatureOnBattlefield(d.player2, "Grizzly Bears")
         val requirements = listOf(
-            TargetCreature(filter = TargetFilter.CreatureYouControl),
-            TargetCreature(filter = TargetFilter.CreatureOpponentControls.powerLessThanEntity(EntityReference.Target(0))),
-            TargetCreature(filter = TargetFilter.CreatureYouControl.powerLessThanEntity(EntityReference.Target(1))),
+            TargetObject(filter = TargetFilter.CreatureYouControl),
+            TargetObject(filter = TargetFilter.CreatureOpponentControls.powerLessThanEntity(EffectTarget.ContextTarget(0))),
+            TargetObject(filter = TargetFilter.CreatureYouControl.powerLessThanEntity(EffectTarget.ContextTarget(1))),
         )
         val context = PredicateContext(controllerId = d.player1)
-        DependentTargetSelection.legalNext(d.state, requirements, emptyList(), context) shouldBe listOf(large)
-        DependentTargetSelection.legalNext(d.state, requirements, listOf(large), context) shouldBe listOf(middle)
-        DependentTargetSelection.legalNext(d.state, requirements, listOf(large, middle), context) shouldBe listOf(small)
+        DependentTargetSelection.legalNext(d.state, requirements, emptyList(), context, targetFinder = TargetFinder(PredicateEvaluator(cardRegistry = null))) shouldBe listOf(large)
+        DependentTargetSelection.legalNext(d.state, requirements, listOf(large), context, targetFinder = TargetFinder(PredicateEvaluator(cardRegistry = null))) shouldBe listOf(middle)
+        DependentTargetSelection.legalNext(d.state, requirements, listOf(large, middle), context, targetFinder = TargetFinder(PredicateEvaluator(cardRegistry = null))) shouldBe listOf(small)
     }
 })

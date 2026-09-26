@@ -32,7 +32,7 @@ val VenomsacLagac = card("Venomsac Lagac") {
     toughness = 1
     keywords(Keyword.DEATHTOUCH)
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         triggerRestriction = Conditions.SourceIsSaddled
         effect = Effects.ModifyStats(0, 3, EffectTarget.Self)
     }

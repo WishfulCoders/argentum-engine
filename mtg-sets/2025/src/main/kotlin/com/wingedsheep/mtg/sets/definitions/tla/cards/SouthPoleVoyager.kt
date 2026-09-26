@@ -1,17 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.core.Subtype
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.IncrementAbilityResolutionCountEffect
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * South Pole Voyager
@@ -31,22 +27,14 @@ val SouthPoleVoyager = card("South Pole Voyager") {
     oracleText = "Whenever this creature or another Ally you control enters, you gain 1 life. If this is the second time this ability has resolved this turn, draw a card."
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Creature
+        trigger = Triggers.a(GameObjectFilter.Creature
                     .withSubtype(Subtype("Ally"))
-                    .youControl(),
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.ANY
-        )
-        effect = Effects.GainLife(1)
-            .then(IncrementAbilityResolutionCountEffect)
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.SourceAbilityResolvedNTimes(2),
-                    effect = Effects.DrawCards(1)
-                )
+                    .youControl()).enters()
+        effect = Effects.GainLife(1) then
+            IncrementAbilityResolutionCountEffect then
+            Effects.If(
+                condition = Conditions.SourceAbilityResolvedNTimes(2),
+                then = Effects.DrawCards(1)
             )
     }
 

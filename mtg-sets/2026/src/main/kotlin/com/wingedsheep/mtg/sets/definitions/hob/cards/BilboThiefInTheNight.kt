@@ -80,7 +80,7 @@ val BilboThiefInTheNight = card("Bilbo, Thief in the Night") {
     // graveyard. If an instant or sorcery spell cast this way would be put into your graveyard,
     // exile it instead."
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.GrantStaticAbility(
             ability = MayCastFromGraveyard(
                 filter = GameObjectFilter.Artifact or GameObjectFilter.InstantOrSorcery,

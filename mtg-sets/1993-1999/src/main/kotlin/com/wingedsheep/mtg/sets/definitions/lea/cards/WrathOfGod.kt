@@ -26,7 +26,7 @@ val WrathOfGod = card("Wrath of God") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature),
-            Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true),
+            Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true),
             noRegenerate = true
         )
     }

@@ -2,7 +2,6 @@ package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -14,6 +13,8 @@ import com.wingedsheep.sdk.scripting.SetName
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.TransformPermanent
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Honest Work
@@ -35,13 +36,13 @@ val HonestWork = card("Honest Work") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature an opponent controls\nWhen this Aura enters, tap enchanted creature and remove all counters from it.\nEnchanted creature loses all abilities and is a Citizen with base power and toughness 1/1 and \"{T}: Add {C}\" named Humble Merchant. (It loses all other creature types and names.)"
 
-    auraTarget = Targets.CreatureOpponentControls
+    auraTarget = TargetObject(filter = TargetFilter.CreatureOpponentControls)
 
     // "When this Aura enters, tap enchanted creature and remove all counters from it."
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Tap(EffectTarget.EnchantedCreature)
-            .then(Effects.RemoveAllCounters(EffectTarget.EnchantedCreature))
+        trigger = Triggers.self.enters()
+        effect = Effects.Tap(EffectTarget.EnchantedCreature) then
+            Effects.RemoveAllCounters(EffectTarget.EnchantedCreature)
     }
 
     // "is a Citizen ..." — keep the Creature type, replace all creature subtypes with just Citizen

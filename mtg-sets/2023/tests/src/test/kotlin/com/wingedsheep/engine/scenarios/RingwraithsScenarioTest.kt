@@ -8,7 +8,7 @@ import io.kotest.matchers.shouldBe
 /**
  * Ringwraiths — "When this creature enters, target creature an opponent controls gets -3/-3 until
  * end of turn. If that creature is legendary, its controller loses 3 life." Exercises the
- * legendary-conditional rider (ConditionalEffect + TargetMatchesFilter(legendary) + controller life
+ * legendary-conditional rider (Effects.If + TargetMatchesFilter(legendary) + controller life
  * loss). The graveyard-return half is covered by the engine-landed graveyard-trigger framework.
  */
 class RingwraithsScenarioTest : ScenarioTestBase() {

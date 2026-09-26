@@ -9,6 +9,7 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Death Frenzy
@@ -23,19 +24,14 @@ val DeathFrenzy = card("Death Frenzy") {
     oracleText = "All creatures get -2/-2 until end of turn. Whenever a creature dies this turn, you gain 1 life."
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                Patterns.Group.modifyStatsForAll(-2, -2, GroupFilter.AllCreatures),
-                Effects.CreateGlobalTriggeredAbility(
-                    duration = Duration.EndOfTurn,
-                    ability = TriggeredAbility.create(
-                        trigger = Triggers.AnyCreatureDies.event,
-                        binding = Triggers.AnyCreatureDies.binding,
-                        effect = Effects.GainLife(1, EffectTarget.Controller)
-                    )
+        effect = Patterns.Group.modifyStatsForAll(-2, -2, GroupFilter.AllCreatures) then
+            Effects.CreateGlobalTriggeredAbility(
+                duration = Duration.EndOfTurn,
+                ability = TriggeredAbility.create(
+                    trigger = Triggers.a(GameObjectFilter.Creature).dies(),
+                    effect = Effects.GainLife(1, EffectTarget.Controller)
                 )
             )
-        )
     }
 
     metadata {

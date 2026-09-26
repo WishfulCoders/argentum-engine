@@ -25,9 +25,7 @@ val DaruSpiritualist = card("Daru Spiritualist") {
     oracleText = "Whenever a Cleric creature you control becomes the target of a spell or ability, it gets +0/+2 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.BecomesTarget(
-            GameObjectFilter.Creature.withSubtype(Subtype.CLERIC).youControl()
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.withSubtype(Subtype.CLERIC).youControl()).becomesTarget()
         effect = Effects.ModifyStats(0, 2, EffectTarget.TriggeringEntity)
     }
 

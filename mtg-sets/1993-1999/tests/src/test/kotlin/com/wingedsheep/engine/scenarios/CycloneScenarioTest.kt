@@ -15,7 +15,7 @@ import io.kotest.matchers.shouldBe
  *  player."
  *
  * Exercises the colored dynamic mana cost ({G} per wind counter via
- * `Effects.PayDynamicMana(color = GREEN)`) gated by `OptionalCostEffect`: pay → damage to each
+ * `Effects.PayDynamicMana(color = GREEN)`) gated by `Effects.MayPay`: pay → damage to each
  * creature and player; decline / can't pay → sacrifice.
  */
 class CycloneScenarioTest : ScenarioTestBase() {

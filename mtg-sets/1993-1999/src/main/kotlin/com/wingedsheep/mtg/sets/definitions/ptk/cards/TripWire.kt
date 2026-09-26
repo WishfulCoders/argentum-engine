@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Trip Wire
@@ -23,12 +22,7 @@ val TripWire = card("Trip Wire") {
     oracleText = "Destroy target creature with horsemanship."
 
     spell {
-        val t = target(
-            "target",
-            TargetCreature(
-                filter = TargetFilter(GameObjectFilter.Creature.withKeyword(Keyword.HORSEMANSHIP))
-            )
-        )
+        val t = target(TargetFilter(GameObjectFilter.Creature.withKeyword(Keyword.HORSEMANSHIP)))
         effect = Effects.Destroy(t)
     }
 

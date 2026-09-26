@@ -66,24 +66,16 @@ val TishanasTidebinder = card("Tishana's Tidebinder") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
 
-        target(
-            "up to one target activated or triggered ability",
-            TargetObject(
-                filter = TargetFilter.ActivatedOrTriggeredAbilityOnStack,
-                optional = true
-            )
-        )
+        target(TargetFilter.ActivatedOrTriggeredAbilityOnStack, optional = true)
 
         // Strip first (source still readable off the stack entity), then counter.
-        effect = Effects.Composite(
-            Effects.RemoveAbilitiesFromSourceOfTargetedAbility(
-                duration = Duration.WhileSourceOnBattlefield("this creature"),
-                sourceCardTypes = setOf(CardType.ARTIFACT, CardType.CREATURE, CardType.PLANESWALKER)
-            ),
+        effect = Effects.RemoveAbilitiesFromSourceOfTargetedAbility(
+            duration = Duration.WhileSourceOnBattlefield("this creature"),
+            sourceCardTypes = setOf(CardType.ARTIFACT, CardType.CREATURE, CardType.PLANESWALKER)
+        ) then
             Effects.CounterAbility()
-        )
         description = "When this creature enters, counter up to one target activated or triggered " +
             "ability. If an ability of an artifact, creature, or planeswalker is countered this " +
             "way, that permanent loses all abilities for as long as this creature remains on the " +

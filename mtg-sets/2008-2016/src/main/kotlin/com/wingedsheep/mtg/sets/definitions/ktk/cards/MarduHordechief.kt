@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.ktk.cards
 import com.wingedsheep.sdk.dsl.Conditions
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Mardu Hordechief
@@ -25,9 +25,9 @@ val MarduHordechief = card("Mardu Hordechief") {
     oracleText = "Raid — When Mardu Hordechief enters, if you attacked this turn, create a 1/1 white Warrior creature token."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouAttackedThisTurn
-        effect = CreateTokenEffect(
+        effect = Effects.CreateToken(
             count = 1,
             power = 1,
             toughness = 1,

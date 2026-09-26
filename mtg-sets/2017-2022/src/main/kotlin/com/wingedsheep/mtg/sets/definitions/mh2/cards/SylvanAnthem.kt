@@ -46,10 +46,7 @@ val SylvanAnthem = card("Sylvan Anthem") {
 
     // Whenever a green creature you control enters, scry 1.
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.withColor(Color.GREEN).youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.withColor(Color.GREEN).youControl()).enters()
         effect = Patterns.Library.scry(1)
     }
 

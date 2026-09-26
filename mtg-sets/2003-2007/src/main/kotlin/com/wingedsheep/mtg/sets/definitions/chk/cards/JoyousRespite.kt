@@ -4,12 +4,12 @@
 
 package com.wingedsheep.mtg.sets.definitions.chk.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -24,7 +24,7 @@ val JoyousRespite = card("Joyous Respite") {
     typeLine = "Sorcery — Arcane"
     oracleText = "You gain 1 life for each land you control."
     spell {
-        effect = GainLifeEffect(DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land))
+        effect = Effects.GainLife(DynamicAmounts.landsYouControl())
     }
     metadata {
         rarity = Rarity.COMMON

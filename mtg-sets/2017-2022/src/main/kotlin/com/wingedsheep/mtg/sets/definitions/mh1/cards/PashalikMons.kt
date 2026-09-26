@@ -1,7 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.mh1.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
@@ -9,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Pashalik Mons
@@ -33,12 +31,8 @@ val PashalikMons = card("Pashalik Mons") {
         "{3}{R}, Sacrifice a Goblin: Create two 1/1 red Goblin creature tokens."
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Permanent.withSubtype("Goblin").youControl(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY
-        )
-        val t = target("target", Targets.Any)
+        trigger = Triggers.a(GameObjectFilter.Permanent.withSubtype("Goblin").youControl()).dies()
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
         description = "Whenever Pashalik Mons or another Goblin you control dies, Pashalik Mons deals 1 damage to any target."
     }

@@ -4,12 +4,12 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sandstone Bridge
@@ -27,12 +27,10 @@ val SandstoneBridge = card("Sandstone Bridge") {
     replacementEffect(EntersTapped())
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(power = 1, toughness = 1, target = t),
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(power = 1, toughness = 1, target = t) then
             Effects.GrantKeyword(Keyword.VIGILANCE, target = t)
-        )
     }
 
     activatedAbility {

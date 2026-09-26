@@ -27,7 +27,7 @@ val CareeningMineCart = card("Careening Mine Cart") {
     power = 3
     toughness = 3
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.CreateTreasure()
     }
     keywordAbility(KeywordAbility.crew(1))

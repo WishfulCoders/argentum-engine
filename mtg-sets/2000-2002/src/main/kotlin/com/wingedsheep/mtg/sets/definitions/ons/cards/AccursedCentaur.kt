@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
 
 /**
  * Accursed Centaur
@@ -22,8 +22,8 @@ val AccursedCentaur = card("Accursed Centaur") {
     oracleText = "When Accursed Centaur enters the battlefield, sacrifice a creature."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = SacrificeEffect(GameObjectFilter.Creature)
+        trigger = Triggers.self.enters()
+        effect = Effects.SacrificeOwn(GameObjectFilter.Creature)
     }
 
     metadata {

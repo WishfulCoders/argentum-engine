@@ -2,14 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.MarkExileOnDeathEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Betrayer's Bargain
@@ -39,27 +38,25 @@ val BetrayersBargain = card("Betrayer's Bargain") {
         "pay {2}.\nBetrayer's Bargain deals 5 damage to target creature. If that creature would die " +
         "this turn, exile it instead."
 
-    val creature = EffectTarget.ContextTarget(0)
-    val body = MarkExileOnDeathEffect(creature).then(Effects.DealDamage(5, creature))
+    fun dealFiveExilingOnDeath(creature: EffectTarget) =
+        Effects.MarkExileOnDeath(creature) then Effects.DealDamage(5, creature)
 
     spell {
         effect = ModalEffect.chooseOne(
             // Sacrifice a creature or enchantment
-            Mode(
-                effect = body,
-                targetRequirements = listOf(Targets.Creature),
-                description = "Sacrifice a creature or enchantment — deal 5 damage to target creature",
+            mode("Sacrifice a creature or enchantment — deal 5 damage to target creature") {
+                val creature = target(TargetFilter.Creature)
                 additionalCosts = listOf(
                     Costs.additional.SacrificePermanent(filter = GameObjectFilter.CreatureOrEnchantment)
                 )
-            ),
+                effect = dealFiveExilingOnDeath(creature)
+            },
             // Pay {2}
-            Mode(
-                effect = body,
-                targetRequirements = listOf(Targets.Creature),
-                description = "Pay {2} — deal 5 damage to target creature",
+            mode("Pay {2} — deal 5 damage to target creature") {
+                val creature = target(TargetFilter.Creature)
                 additionalManaCost = "{2}"
-            ),
+                effect = dealFiveExilingOnDeath(creature)
+            },
             countsAsModalSpell = false
         )
     }

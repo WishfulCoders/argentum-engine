@@ -98,6 +98,14 @@ export interface BoardViewSliceState {
    */
   collapsedSeats: readonly EntityId[]
   /**
+   * Battlefield stacks the player ungrouped with the ⤢ toggle, as a set of member card ids (a
+   * stack is expanded when any member is in it). Kept here rather than in the stack's local
+   * state because an ungrouped stack is N full cards wide, not one card plus peeks — the
+   * battlefield sizing solver has to know, or the row wraps onto a line it never budgeted and
+   * spills over its neighbour row.
+   */
+  expandedStackCardIds: ReadonlySet<EntityId>
+  /**
    * The local player dismissed the defeat overlay with "Keep watching" and stayed at the
    * table. Only records that choice — the spectator *layout* is derived from the roster by
    * [isViewerEliminated], so it is already correct while the overlay is still up and for a
@@ -151,6 +159,8 @@ export interface BoardViewSliceActions {
   toggleOverviewMode: () => void
   /** Fold/unfold one opponent's overview cell (MTGO-style per-board collapse). */
   toggleSeatCollapsed: (playerId: EntityId) => void
+  /** Ungroup (⤢) or regroup (⤡) one battlefield stack, given all of its member ids. */
+  setStackExpanded: (cardIds: readonly EntityId[], expanded: boolean) => void
   /**
    * "Keep watching" after being eliminated from a multiplayer game: dismisses the defeat
    * overlay and enters the spectator layout (overview on, dead bottom half collapsed).
@@ -195,6 +205,7 @@ export const createBoardViewSlice: SliceCreator<BoardViewSlice> = (set, get) => 
   followAction: loadFollowAction(),
   overviewMode: false,
   collapsedSeats: [],
+  expandedStackCardIds: new Set<EntityId>(),
   eliminatedSpectating: false,
   eliminatedBottomSeatId: null,
   spectatorBottomSeatId: null,
@@ -251,6 +262,15 @@ export const createBoardViewSlice: SliceCreator<BoardViewSlice> = (set, get) => 
     })
   },
 
+  setStackExpanded: (cardIds, expanded) => {
+    const next = new Set(get().expandedStackCardIds)
+    for (const id of cardIds) {
+      if (expanded) next.add(id)
+      else next.delete(id)
+    }
+    set({ expandedStackCardIds: next })
+  },
+
   enterEliminatedSpectate: () =>
     set({ eliminatedSpectating: true, overviewMode: true, viewPinned: false, gameOverState: null }),
 
@@ -283,6 +303,7 @@ export const createBoardViewSlice: SliceCreator<BoardViewSlice> = (set, get) => 
       viewPinned: false,
       overviewMode: false,
       collapsedSeats: [],
+      expandedStackCardIds: new Set<EntityId>(),
       eliminatedSpectating: false,
       eliminatedBottomSeatId: null,
       spectatorBottomSeatId: null,

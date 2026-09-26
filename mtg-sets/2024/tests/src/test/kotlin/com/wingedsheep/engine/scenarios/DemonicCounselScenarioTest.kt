@@ -19,6 +19,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Demonic Counsel (DSK #92) — {1}{B} Sorcery.
@@ -27,7 +28,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  *  Delirium — If there are four or more card types among cards in your graveyard, instead search
  *  your library for any card, put it into your hand, then shuffle."
  *
- * Exercises a [Conditions.Delirium]-gated [ConditionalEffect] choosing between a Demon-only tutor
+ * Exercises a [Conditions.Delirium]-gated [Effects.If] choosing between a Demon-only tutor
  * (default) and an unrestricted tutor (Delirium active).
  */
 class DemonicCounselScenarioTest : FunSpec({
@@ -63,7 +64,7 @@ class DemonicCounselScenarioTest : FunSpec({
         val spell = driver.putCardInHand(activePlayer, "Demonic Counsel")
         driver.giveMana(activePlayer, Color.BLACK, 2)
 
-        driver.castSpell(activePlayer, spell).isSuccess shouldBe true
+        driver.castSpell(activePlayer, spell).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         driver.isPaused shouldBe true
@@ -96,7 +97,7 @@ class DemonicCounselScenarioTest : FunSpec({
         val spell = driver.putCardInHand(activePlayer, "Demonic Counsel")
         driver.giveMana(activePlayer, Color.BLACK, 2)
 
-        driver.castSpell(activePlayer, spell).isSuccess shouldBe true
+        driver.castSpell(activePlayer, spell).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         driver.isPaused shouldBe true
@@ -121,7 +122,7 @@ class DemonicCounselScenarioTest : FunSpec({
         val spell = driver.putCardInHand(activePlayer, "Demonic Counsel")
         driver.giveMana(activePlayer, Color.BLACK, 2)
 
-        driver.castSpell(activePlayer, spell).isSuccess shouldBe true
+        driver.castSpell(activePlayer, spell).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         val decision = driver.pendingDecision.shouldBeInstanceOf<SelectCardsDecision>()

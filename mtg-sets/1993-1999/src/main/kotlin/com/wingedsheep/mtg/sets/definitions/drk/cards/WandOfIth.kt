@@ -2,27 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.drk.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalOnCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Wand of Ith
@@ -58,61 +45,35 @@ val WandOfIth = card("Wand of Ith") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap)
-        val victim = target("target player", TargetPlayer())
+        val victim = target(Targets.Player)
         restrictions = listOf(ActivationRestriction.OnlyDuringYourTurn)
 
-        val payer = EffectTarget.ContextTarget(0)
-        val discardRevealedLand = MoveCollectionEffect(
-            from = "ithLand",
-            destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
-            moveType = MoveType.Discard,
-        )
-        val discardRevealedNonland = MoveCollectionEffect(
-            from = "ithNonland",
-            destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
-            moveType = MoveType.Discard,
-        )
+        val payer = victim
 
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.HAND, Player.ContextPlayer(0)),
-                storeAs = "ithCandidates",
-            ),
-            SelectFromCollectionEffect(
-                from = "ithCandidates",
-                selection = SelectionMode.Random(DynamicAmount.Fixed(1)),
-                storeSelected = "ithRevealed",
-            ),
-            RevealCollectionEffect(from = "ithRevealed"),
-            FilterCollectionEffect(
-                from = "ithRevealed",
-                filter = CollectionFilter.MatchesFilter(GameObjectFilter.Land),
-                storeMatching = "ithLand",
-                storeNonMatching = "ithNonland",
-            ),
+        effect = Effects.Pipeline {
+            val hand = gather(CardSource.FromZone(Zone.HAND, victim.asPlayer))
+            val revealed = chooseRandom(1, from = hand)
+            reveal(revealed)
+            val (land, nonland) = filterSplit(revealed, GameObjectFilter.Land)
             // Each ransom is gated on its own pile being non-empty. PayOrSuffer prompts
             // unconditionally — it does not ask whether its suffer effect would do anything — so
             // without these gates the player is asked to pay for *both* branches every activation,
             // one of which is always empty.
-            ConditionalOnCollectionEffect(
-                collection = "ithLand",
-                ifNotEmpty = PayOrSufferEffect(
+            ifNotEmpty(land) {
+                run(Effects.PayOrSuffer(
                     cost = Costs.pay.PayLife(1),
-                    suffer = discardRevealedLand,
+                    suffer = Effects.Pipeline { discard(land, victim.asPlayer) },
                     player = payer,
-                ),
-            ),
-            ConditionalOnCollectionEffect(
-                collection = "ithNonland",
-                ifNotEmpty = PayOrSufferEffect(
-                    cost = Costs.pay.PayDynamicLife(
-                        DynamicAmount.ManaValueSumOfCollection("ithNonland")
-                    ),
-                    suffer = discardRevealedNonland,
+                ))
+            }
+            ifNotEmpty(nonland) {
+                run(Effects.PayOrSuffer(
+                    cost = Costs.pay.PayDynamicLife(DynamicAmounts.manaValueSumOf(nonland)),
+                    suffer = Effects.Pipeline { discard(nonland, victim.asPlayer) },
                     player = payer,
-                ),
-            ),
-        )
+                ))
+            }
+        }
         description = "{3}, {T}: Target player reveals a card at random from their hand. If it's " +
             "a land card, that player discards it unless they pay 1 life. If it isn't a land " +
             "card, the player discards it unless they pay life equal to its mana value."

@@ -8,7 +8,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Glint Weaver — Murders at Karlov Manor #162
@@ -45,14 +46,12 @@ val GlintWeaver = card("Glint Weaver") {
     keywords(Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = TargetCreature(count = 3, minCount = 1)
-        effect = Effects.Composite(
-            Effects.DistributeCountersAmongTargets(totalCounters = 3),
+        trigger = Triggers.self.enters()
+        target = TargetObject(filter = TargetFilter.Creature, count = 3, minCount = 1)
+        effect = Effects.DistributeCountersAmongTargets(totalCounters = 3) then
             Effects.GainLife(
                 DynamicAmounts.battlefield(Player.You, GameObjectFilter.Creature).maxToughness()
             )
-        )
         description = "When this creature enters, distribute three +1/+1 counters among one, two, " +
             "or three target creatures, then you gain life equal to the greatest toughness among " +
             "creatures you control."

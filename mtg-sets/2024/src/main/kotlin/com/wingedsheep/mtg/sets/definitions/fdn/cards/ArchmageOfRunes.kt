@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.SpellCostTarget
  *
  * The cost reduction is a [ModifySpellCost] static (`YouCast` filtered to instants and
  * sorceries, `ReduceGeneric(1)`). The card-draw payoff reuses the shared
- * [Triggers.YouCastInstantOrSorcery] spell-cast trigger.
+ * `Triggers.you.casts(GameObjectFilter.InstantOrSorcery)` spell-cast trigger.
  */
 val ArchmageOfRunes = card("Archmage of Runes") {
     manaCost = "{3}{U}{U}"
@@ -39,7 +39,7 @@ val ArchmageOfRunes = card("Archmage of Runes") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YouCastInstantOrSorcery
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
         effect = Effects.DrawCards(1)
         description = "Whenever you cast an instant or sorcery spell, draw a card."
     }

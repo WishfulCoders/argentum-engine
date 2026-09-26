@@ -1,14 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Hobbit's Sting
@@ -25,13 +25,11 @@ val HobbitsSting = card("Hobbit's Sting") {
     oracleText = "Hobbit's Sting deals X damage to target creature, where X is the number of creatures you control plus the number of Foods you control."
 
     spell {
-        target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.DealDamage(
-            DynamicAmount.Add(
-                DynamicAmount.Count(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature),
-                DynamicAmount.Count(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Any.withSubtype("Food"))
-            ),
-            EffectTarget.ContextTarget(0)
+            DynamicAmounts.count(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature) +
+                DynamicAmounts.count(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Any.withSubtype("Food")),
+            creature
         )
     }
 

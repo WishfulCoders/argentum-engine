@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Cycling {3} ({3}, Discard this card: Draw a card.)
  *
  * "Each creature" is [Effects.ForEachInGroup] over an unrestricted creature [GroupFilter], with the
- * body pointed at [EffectTarget.Self] — the iterated permanent, not the spell's source.
+ * body pointed at [EffectTarget.IterationEntity] — the iterated permanent, not the spell's source.
  */
 val SwelteringSuns = card("Sweltering Suns") {
     manaCost = "{1}{R}{R}"
@@ -28,7 +28,7 @@ val SwelteringSuns = card("Sweltering Suns") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature),
-            Effects.DealDamage(3, EffectTarget.Self)
+            Effects.DealDamage(3, EffectTarget.IterationEntity)
         )
     }
 

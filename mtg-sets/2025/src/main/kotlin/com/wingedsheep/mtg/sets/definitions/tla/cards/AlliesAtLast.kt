@@ -1,23 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Allies at Last
@@ -32,7 +24,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * [EffectTarget.ContextTarget] index 0 across the per-attacker loop) and up to two creatures you
  * control. At resolution we gather the chosen targets, filter to the creatures you control
  * (excludes the victim), then have each deal damage equal to its own power — read per-iteration via
- * [EntityReference.IterationEntity] — to the opponent's creature.
+ * [EffectTarget.IterationEntity] — to the opponent's creature.
  */
 val AlliesAtLast = card("Allies at Last") {
     manaCost = "{2}{G}"
@@ -46,41 +38,24 @@ val AlliesAtLast = card("Allies at Last") {
 
     spell {
         // Declared first so the victim is a stable target across the per-creature loop.
-        target("creature an opponent controls", Targets.CreatureOpponentControls)
-        target(
-            "up to two creatures you control",
-            TargetCreature(
-                count = 2,
-                minCount = 0,
-                filter = TargetFilter(GameObjectFilter.Creature.youControl()),
-            ),
-        )
+        val creatureOpponentControls = target(TargetFilter.CreatureOpponentControls)
+        targets(TargetFilter(GameObjectFilter.Creature.youControl()), count = 2, minCount = 0)
 
-        effect = Effects.Composite(
+        effect = Effects.Pipeline {
             // Gather every chosen target, then keep only the creatures you control (the victim is
             // an opponent's creature, so it drops out).
-            GatherCardsEffect(
-                source = CardSource.ChosenTargets,
-                storeAs = "allTargets",
-            ),
-            FilterCollectionEffect(
-                from = "allTargets",
-                filter = CollectionFilter.MatchesFilter(GameObjectFilter.Creature.youControl()),
-                storeMatching = "allies",
-            ),
+            val allTargets = gather(CardSource.ChosenTargets)
+            val allies = filter(allTargets, GameObjectFilter.Creature.youControl())
             // Each chosen creature deals damage equal to its power to the opponent's creature.
-            ForEachInCollectionEffect(
-                collection = "allies",
+            run(Effects.ForEachInCollection(
+                collection = allies,
                 effect = Effects.DealDamage(
-                    amount = DynamicAmount.EntityProperty(
-                        EntityReference.IterationEntity,
-                        EntityNumericProperty.Power,
-                    ),
-                    target = EffectTarget.ContextTarget(0),
-                    damageSource = EffectTarget.Self,
+                    amount = DynamicAmounts.powerOf(EffectTarget.IterationEntity),
+                    target = creatureOpponentControls,
+                    damageSource = EffectTarget.IterationEntity,
                 ),
-            ),
-        )
+            ))
+        }
     }
 
     metadata {

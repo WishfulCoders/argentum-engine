@@ -12,7 +12,7 @@ import com.wingedsheep.sdk.model.Rarity
  * 1/4
  * Whenever you scry or surveil, draw a card. (Draw after you scry or surveil.)
  *
- * Uses the unified [Triggers.WheneverYouScryOrSurveil] trigger so a single scry or surveil
+ * Uses the unified `Triggers.you.scriesOrSurveils()` trigger so a single scry or surveil
  * event fires the ability once (the engine collapses simultaneous scry+surveil into one event).
  */
 val MatoyaArchonElder = card("Matoya, Archon Elder") {
@@ -24,7 +24,7 @@ val MatoyaArchonElder = card("Matoya, Archon Elder") {
     oracleText = "Whenever you scry or surveil, draw a card. (Draw after you scry or surveil.)"
 
     triggeredAbility {
-        trigger = Triggers.WheneverYouScryOrSurveil
+        trigger = Triggers.you.scriesOrSurveils()
         effect = Effects.DrawCards(1)
     }
 

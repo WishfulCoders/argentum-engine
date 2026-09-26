@@ -33,13 +33,13 @@ val MichelangeloMutantBff = card("Michelangelo, Mutant BFF") {
     }
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateMutagenToken()
         description = "Whenever Michelangelo enters, create a Mutagen token."
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.CreateMutagenToken()
         description = "Whenever Michelangelo attacks, create a Mutagen token."
     }

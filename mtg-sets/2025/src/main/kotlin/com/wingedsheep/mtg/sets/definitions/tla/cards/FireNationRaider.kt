@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Raid — When this creature enters, if you attacked this turn, create a Clue token. (It's an
  * artifact with "{2}, Sacrifice this token: Draw a card.")
  *
- * Raid is modeled as an intervening-if on a [Triggers.EntersBattlefield] triggered ability via
+ * Raid is modeled as an intervening-if on a `Triggers.self.enters()` triggered ability via
  * [Conditions.YouAttackedThisTurn] (checked both when the trigger would go on the stack and again
  * on resolution, CR 603.4). The reward is the predefined Clue token via [Effects.CreateClue].
  */
@@ -29,7 +29,7 @@ val FireNationRaider = card("Fire Nation Raider") {
         "(It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouAttackedThisTurn
         effect = Effects.CreateClue()
         description = "Raid — When this creature enters, if you attacked this turn, create a Clue token."

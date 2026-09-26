@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Hedron Scrabbler
@@ -13,7 +14,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * 1/1
  * Landfall — Whenever a land you control enters, this creature gets +1/+1 until end of turn.
  *
- * Landfall is [Triggers.LandYouControlEnters] — the `ZoneChangeEvent` over
+ * Landfall is `Triggers.a(GameObjectFilter.Land.youControl()).enters()` — the `ZoneChangeEvent` over
  * `GameObjectFilter.Land.youControl()` with `TriggerBinding.ANY`.
  */
 val HedronScrabbler = card("Hedron Scrabbler") {
@@ -24,7 +25,7 @@ val HedronScrabbler = card("Hedron Scrabbler") {
     oracleText = "Landfall — Whenever a land you control enters, this creature gets +1/+1 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }
 

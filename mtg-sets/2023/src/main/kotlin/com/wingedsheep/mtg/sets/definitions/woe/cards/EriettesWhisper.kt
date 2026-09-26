@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Eriette's Whisper
@@ -30,15 +29,9 @@ val EriettesWhisper = card("Eriette's Whisper") {
         "opponent loses 1 life.)"
 
     spell {
-        val opponent = target("opponent", Targets.Opponent)
-        val creature = target(
-            "creature",
-            TargetCreature(optional = true, filter = TargetFilter.CreatureYouControl)
-        )
-        effect = Effects.Composite(
-            Effects.Discard(2, opponent),
-            Effects.CreateRoleToken("Wicked Role", creature)
-        )
+        val opponent = target(Targets.Opponent)
+        val creature = target(TargetFilter.CreatureYouControl, optional = true)
+        effect = Effects.Discard(2, opponent) then Effects.CreateRoleToken("Wicked Role", creature)
     }
 
     metadata {

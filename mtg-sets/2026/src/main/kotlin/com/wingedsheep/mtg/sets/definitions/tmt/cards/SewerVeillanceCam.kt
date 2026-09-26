@@ -3,15 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.tmt.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sewer-veillance Cam
@@ -31,12 +28,12 @@ val SewerVeillanceCam = card("Sewer-veillance Cam") {
     keywords(Keyword.FLASH)
 
     // "you may tap or untap target creature" — a 2-mode modal (tap / untap) over the
-    // declared target, made optional with MayEffect (Wingnut's countsAsModalSpell=false idiom).
-    fun tapOrUntapTarget(target: EffectTarget) = MayEffect(
-        ModalEffect(
+    // declared target, made optional with Effects.May (Wingnut's countsAsModalSpell=false idiom).
+    fun tapOrUntapTarget(target: EffectTarget) = Effects.May(
+        Effects.Modal(
             modes = listOf(
-                Mode.noTarget(TapUntapEffect(target, tap = true), "Tap that creature"),
-                Mode.noTarget(TapUntapEffect(target, tap = false), "Untap that creature")
+                Mode.noTarget(Effects.Tap(target), "Tap that creature"),
+                Mode.noTarget(Effects.Untap(target), "Untap that creature")
             ),
             chooseCount = 1,
             countsAsModalSpell = false
@@ -44,15 +41,15 @@ val SewerVeillanceCam = card("Sewer-veillance Cam") {
     )
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("target creature", Targets.Creature)
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature)
         effect = tapOrUntapTarget(creature)
         description = "When this artifact enters, you may tap or untap target creature."
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
-        val creature = target("target creature", Targets.Creature)
+        trigger = Triggers.self.leaves()
+        val creature = target(TargetFilter.Creature)
         effect = tapOrUntapTarget(creature)
         description = "When this artifact leaves the battlefield, you may tap or untap target creature."
     }

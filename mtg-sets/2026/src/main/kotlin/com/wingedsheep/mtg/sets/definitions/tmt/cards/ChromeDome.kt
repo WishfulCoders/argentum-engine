@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Chrome Dome
@@ -42,10 +41,7 @@ val ChromeDome = card("Chrome Dome") {
     }
 
     activatedAbility {
-        val artifact = target(
-            "another target artifact you control",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Artifact.youControl(), excludeSelf = true))
-        )
+        val artifact = target(TargetFilter(GameObjectFilter.Artifact.youControl(), excludeSelf = true))
         cost = Costs.Mana("{5}")
         effect = Effects.CreateTokenCopyOfTarget(
             target = artifact,

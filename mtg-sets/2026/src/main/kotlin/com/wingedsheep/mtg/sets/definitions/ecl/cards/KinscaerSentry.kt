@@ -9,15 +9,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -42,29 +35,21 @@ val KinscaerSentry = card("Kinscaer Sentry") {
     keywords(Keyword.FIRST_STRIKE, Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(listOf(
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Creature),
-                storeAs = "handCreatures"
-            ),
-            FilterCollectionEffect(
-                from = "handCreatures",
-                filter = CollectionFilter.ManaValueAtMost(DynamicAmounts.attackingCreaturesYouControl()),
-                storeMatching = "eligible"
-            ),
-            SelectFromCollectionEffect(
-                from = "eligible",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "chosen",
+        trigger = Triggers.self.attacks()
+        effect = Effects.Pipeline {
+            val handCreatures = gather(CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Creature))
+            val eligible = filter(
+                handCreatures,
+                GameObjectFilter.Any.manaValueAtMostDynamic(DynamicAmounts.attackingCreaturesYouControl())
+            )
+            val chosen = chooseUpTo(
+                1,
+                from = eligible,
                 prompt = "Put a creature card onto the battlefield tapped and attacking",
                 selectedLabel = "Put onto the battlefield tapped and attacking"
-            ),
-            MoveCollectionEffect(
-                from = "chosen",
-                destination = CardDestination.ToZone(Zone.BATTLEFIELD, Player.You, ZonePlacement.TappedAndAttacking)
             )
-        ))
+            move(chosen, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You, ZonePlacement.TappedAndAttacking))
+        }
     }
 
     metadata {

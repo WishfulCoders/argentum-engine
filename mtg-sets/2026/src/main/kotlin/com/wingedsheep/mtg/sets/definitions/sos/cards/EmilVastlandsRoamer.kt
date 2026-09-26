@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
@@ -49,7 +49,7 @@ val EmilVastlandsRoamer = card("Emil, Vastlands Roamer") {
         ability = GrantKeyword(
             keyword = Keyword.TRAMPLE,
             filter = GroupFilter(
-                GameObjectFilter.Creature.youControl().withCounter(Counters.PLUS_ONE_PLUS_ONE),
+                GameObjectFilter.Creature.youControl().withCounter(CounterType.PLUS_ONE_PLUS_ONE),
             ),
         )
     }
@@ -62,12 +62,10 @@ val EmilVastlandsRoamer = card("Emil, Vastlands Roamer") {
             colors = setOf(Color.GREEN, Color.BLUE),
             creatureTypes = setOf(Subtype.FRACTAL.value),
             imageUri = "https://cards.scryfall.io/normal/front/8/b/8b5f1fdb-04df-4224-acb4-7819c37565f5.jpg?1782723480"
-        ).then(
-            Effects.AddCountersToCollection(
-                CREATED_TOKENS,
-                Counters.PLUS_ONE_PLUS_ONE,
-                amount = DynamicAmounts.battlefield(Player.You, GameObjectFilter.Land).distinctNames(),
-            ),
+        ) then Effects.AddCountersToCollection(
+            CREATED_TOKENS,
+            CounterType.PLUS_ONE_PLUS_ONE,
+            amount = DynamicAmounts.battlefield(Player.You, GameObjectFilter.Land).distinctNames(),
         )
     }
 

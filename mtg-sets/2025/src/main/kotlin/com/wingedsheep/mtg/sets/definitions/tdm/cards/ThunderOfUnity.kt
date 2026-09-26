@@ -4,8 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
+import com.wingedsheep.sdk.scripting.effects.Effect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
@@ -62,14 +61,10 @@ val ThunderOfUnity = card("Thunder of Unity") {
  * "Whenever a creature you control enters this turn, each opponent loses 1 life and you gain 1
  * life." A fresh instance is installed by each of chapters II and III.
  */
-private fun thunderOfUnityDelayedTrigger(): CreateDelayedTriggerEffect =
-    CreateDelayedTriggerEffect(
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.youControl(),
-            binding = TriggerBinding.ANY
-        ),
+private fun thunderOfUnityDelayedTrigger(): Effect =
+    Effects.CreateDelayedTrigger(
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).enters(),
         fireOnce = false,
         expiry = DelayedTriggerExpiry.EndOfTurn,
-        effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)) then
-            Effects.GainLife(1)
+        effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(1)
     )

@@ -21,7 +21,7 @@ import io.kotest.matchers.shouldNotBe
  * The interesting half is that the payoff has to *remove a printed keyword* and have attack
  * legality notice — a defender that merely gains vigilance is still stuck at home. These tests
  * drive real draws through free instants (so the only variable is the draw count, per
- * [com.wingedsheep.sdk.dsl.Triggers.NthCardDrawn] / CR 121.2), then assert both the projected
+ * `Triggers.<player>.drawsNth(n)` / CR 121.2), then assert both the projected
  * keywords and that the Analyst can actually be declared as an attacker.
  */
 class JadedAnalystScenarioTest : ScenarioTestBase() {

@@ -4,13 +4,11 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Kraven's Last Hunt — Marvel's Spider-Man (SPM #105)
@@ -46,28 +44,29 @@ val KravensLastHunt = card("Kraven's Last Hunt") {
     // I — Mill five cards. When you do, this Saga deals damage equal to the greatest power
     //     among creature cards in your graveyard to target creature.
     sagaChapter(1) {
-        effect = ReflexiveTriggerEffect(
+        effect = Effects.ReflexiveTrigger(
             action = Patterns.Library.mill(5),
             optional = false,
-            reflexiveEffect = Effects.DealDamage(
-                DynamicAmounts.zone(Player.You, Zone.GRAVEYARD, GameObjectFilter.Creature).maxPower(),
-                EffectTarget.ContextTarget(0)
-            ),
-            reflexiveTargetRequirements = listOf(Targets.Creature),
             descriptionOverride = "Mill five cards. When you do, this Saga deals damage equal to " +
                 "the greatest power among creature cards in your graveyard to target creature."
-        )
+        ) {
+            val creature = target(TargetFilter.Creature)
+            effect = Effects.DealDamage(
+                DynamicAmounts.zone(Player.You, Zone.GRAVEYARD, GameObjectFilter.Creature).maxPower(),
+                creature
+            )
+        }
     }
 
     // II — Target creature you control gets +2/+2 until end of turn.
     sagaChapter(2) {
-        val creature = target("target creature you control", Targets.CreatureYouControl)
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.ModifyStats(2, 2, creature)
     }
 
     // III — Return target creature card from your graveyard to your hand.
     sagaChapter(3) {
-        val creatureCard = target("target creature card from your graveyard", Targets.CreatureCardInYourGraveyard)
+        val creatureCard = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.ReturnToHand(creatureCard)
     }
 

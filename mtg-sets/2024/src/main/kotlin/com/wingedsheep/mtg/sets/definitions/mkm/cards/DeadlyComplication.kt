@@ -1,13 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Deadly Complication — Murders at Karlov Manor #195
@@ -31,7 +29,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * that stops being suspected between cast and resolution becomes an illegal target and that mode
  * simply does nothing (the other mode, if chosen, still resolves).
  *
- * "You may have it become no longer suspected" is a genuine choice at resolution, hence [MayEffect]
+ * "You may have it become no longer suspected" is a genuine choice at resolution, hence [Effects.May]
  * wrapping [Effects.NoLongerSuspected] rather than an automatic strip — keeping the suspect is
  * sometimes correct, since menace on an evasive attacker can be worth more than the ability to
  * block. [Effects.NoLongerSuspected] (CR 701.60c) removes status, menace, and "can't block" together.
@@ -48,22 +46,15 @@ val DeadlyComplication = card("Deadly Complication") {
     spell {
         modal(chooseCount = 2, minChooseCount = 1) {
             mode("Destroy target creature") {
-                val victim = target("target creature", TargetCreature())
+                val victim = target(TargetFilter.Creature)
                 effect = Effects.Destroy(victim)
             }
             mode("Put a +1/+1 counter on target suspected creature you control") {
-                val suspect = target(
-                    "target suspected creature you control",
-                    TargetCreature(
-                        filter = TargetFilter(GameObjectFilter.Creature.youControl().suspected())
-                    )
-                )
-                effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, suspect)
-                    .then(
-                        MayEffect(
-                            Effects.NoLongerSuspected(suspect),
-                            descriptionOverride = "Have it become no longer suspected?"
-                        )
+                val suspect = target(TargetFilter(GameObjectFilter.Creature.youControl().suspected()))
+                effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, suspect) then
+                    Effects.May(
+                        Effects.NoLongerSuspected(suspect),
+                        descriptionOverride = "Have it become no longer suspected?"
                     )
             }
         }

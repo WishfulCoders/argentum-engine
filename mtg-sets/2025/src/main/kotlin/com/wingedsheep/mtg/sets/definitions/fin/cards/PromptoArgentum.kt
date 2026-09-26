@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Prompto Argentum
@@ -35,7 +36,7 @@ val PromptoArgentum = card("Prompto Argentum") {
     keywords(Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
         interveningIf = Conditions.TriggeringSpellManaSpentAtLeast(4)
         effect = Effects.CreateTreasure()
         description = "Selfie Shot — Whenever you cast a noncreature spell, if at least four mana " +

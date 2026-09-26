@@ -25,7 +25,7 @@ val KinjallisDawnrunner = card("Kinjalli's Dawnrunner") {
     keywords(Keyword.DOUBLE_STRIKE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Explore(EffectTarget.Self)
     }
 

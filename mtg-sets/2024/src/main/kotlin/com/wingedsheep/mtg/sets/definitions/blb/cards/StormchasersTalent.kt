@@ -7,7 +7,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Stormchaser's Talent {U}
@@ -33,7 +33,7 @@ val StormchasersTalent = card("Stormchaser's Talent") {
 
     // Level 1: ETB — create a 1/1 blue and red Otter with prowess
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
@@ -46,11 +46,8 @@ val StormchasersTalent = card("Stormchaser's Talent") {
     // Level 2: When this becomes level 2, return target instant or sorcery from YOUR graveyard to hand
     classLevel(2, "{3}{U}") {
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
-            val card = target(
-                "instant or sorcery card in your graveyard",
-                TargetObject(filter = TargetFilter.InstantOrSorceryInYourGraveyard)
-            )
+            trigger = Triggers.self.enters()
+            val card = target(TargetFilter.InstantOrSorceryInYourGraveyard)
             effect = Effects.ReturnToHand(card)
         }
     }
@@ -58,7 +55,7 @@ val StormchasersTalent = card("Stormchaser's Talent") {
     // Level 3: Whenever you cast an instant or sorcery, create a 1/1 blue and red Otter with prowess
     classLevel(3, "{5}{U}") {
         triggeredAbility {
-            trigger = Triggers.YouCastInstantOrSorcery
+            trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
             effect = Effects.CreateToken(
                 power = 1,
                 toughness = 1,

@@ -19,7 +19,7 @@ import io.kotest.matchers.shouldBe
  *
  *  - **"this creature or another" is the ANY binding**, not a second SELF-bound trigger. The
  *    Celebrant's own death has to drain — a `SELF`/`ANY` mix-up shows up nowhere else.
- *  - **"or planeswalker" is why the filter is not `Triggers.YourCreatureDies`.** A planeswalker
+ *  - **"or planeswalker" is why the filter is not `Triggers.a(GameObjectFilter.Creature.youControl()).dies()`.** A planeswalker
  *    going to the graveyard has to drain too.
  *  - **`youControl()` is load-bearing**: an opponent's creature dying must do nothing.
  */

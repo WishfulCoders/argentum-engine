@@ -1,13 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Heal the Scars
@@ -17,7 +14,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * Regenerate target creature. You gain life equal to that creature's toughness.
  *
  * Both clauses read the same target, so the life gain is an
- * [DynamicAmount.EntityProperty] on [EntityReference.Target] rather than a fixed number — it is
+ * [DynamicAmount.EntityProperty] on [EffectTarget.ContextTarget] rather than a fixed number — it is
  * measured on resolution, after the regeneration shield goes up, so a pumped or shrunken creature
  * pays out its current toughness. There is no `Effects.Regenerate` facade; [RegenerateEffect] is
  * the shipped spelling (see Reknit).
@@ -29,13 +26,11 @@ val HealTheScars = card("Heal the Scars") {
     oracleText = "Regenerate target creature. You gain life equal to that creature's toughness."
 
     spell {
-        val t = target("target creature", Targets.Creature)
-        effect = Effects.Composite(
-            RegenerateEffect(t),
+        val t = target(TargetFilter.Creature)
+        effect = Effects.Regenerate(t) then
             Effects.GainLife(
-                DynamicAmount.EntityProperty(EntityReference.Target(0), EntityNumericProperty.Toughness)
+                DynamicAmounts.toughnessOf(t)
             )
-        )
     }
 
     metadata {

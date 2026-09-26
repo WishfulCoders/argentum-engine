@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Rimekin Recluse
@@ -23,14 +22,8 @@ val RimekinRecluse = card("Rimekin Recluse") {
     oracleText = "When this creature enters, return up to one other target creature to its owner's hand."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target(
-            "other creature",
-            TargetCreature(
-                optional = true,
-                filter = TargetFilter.OtherCreature
-            )
-        )
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.OtherCreature, optional = true)
         effect = Effects.ReturnToHand(creature)
     }
 

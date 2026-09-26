@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
 
 /**
@@ -36,8 +35,8 @@ val ArchwayCommons = card("Archway Commons") {
 
     // When this land enters, sacrifice it unless you pay {1}.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = PayOrSufferEffect(cost = Costs.pay.Mana("{1}"), suffer = SacrificeSelfEffect)
+        trigger = Triggers.self.enters()
+        effect = Effects.PayOrSuffer(cost = Costs.pay.Mana("{1}"), suffer = SacrificeSelfEffect)
     }
 
     // {T}: Add one mana of any color.

@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBeBlocked
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.events.AttackPredicate
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
@@ -47,12 +46,8 @@ val BilbosRing = card("Bilbo's Ring") {
 
     // Whenever equipped creature attacks alone, you draw a card and you lose 1 life.
     triggeredAbility {
-        trigger = Triggers.attacks(
-            binding = TriggerBinding.ATTACHED,
-            requires = setOf(AttackPredicate.Alone)
-        )
-        effect = Effects.DrawCards(1)
-            .then(Effects.LoseLife(1, EffectTarget.PlayerRef(Player.You)))
+        trigger = Triggers.attached.attacks(setOf(AttackPredicate.Alone))
+        effect = Effects.DrawCards(1) then Effects.LoseLife(1, EffectTarget.PlayerRef(Player.You))
     }
 
     // Equip Halfling {1}: Attach to target Halfling you control. Equip only as a sorcery.

@@ -10,11 +10,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddColorlessManaEffect
-import com.wingedsheep.sdk.scripting.effects.AddManaEffect
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Rockface Village
@@ -31,22 +28,22 @@ val RockfaceVillage = card("Rockface Village") {
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddColorlessManaEffect(1)
+        effect = Effects.AddColorlessMana(1)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddManaEffect(Color.RED, restriction = ManaRestriction.CreatureSpellsOnly)
+        effect = Effects.AddMana(Color.RED, restriction = ManaRestriction.CreatureSpellsOnly)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{R}"), Costs.Tap)
-        val t = target("target", TargetCreature(
-            filter = TargetFilter(
+        val t = target(
+            TargetFilter(
                 GameObjectFilter.Creature
                     .youControl()
                     .withAnyOfSubtypes(
@@ -57,10 +54,9 @@ val RockfaceVillage = card("Rockface Village") {
                             Subtype("Raccoon")
                         )
                     )
-            )
-        ))
-        effect = Effects.ModifyStats(1, 0, t)
-            .then(Effects.GrantKeyword(Keyword.HASTE, t))
+            ),
+        )
+        effect = Effects.ModifyStats(1, 0, t) then Effects.GrantKeyword(Keyword.HASTE, t)
         timing = TimingRule.SorcerySpeed
     }
 

@@ -37,13 +37,11 @@ val ImodanesRecruiter = card("Imodane's Recruiter") {
     oracleText = "When this creature enters, creatures you control get +1/+0 and gain haste until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.Composite(
-                Effects.ModifyStats(1, 0, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.HASTE, EffectTarget.Self)
-            )
+            Effects.ModifyStats(1, 0, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.HASTE, EffectTarget.IterationEntity)
         )
     }
 

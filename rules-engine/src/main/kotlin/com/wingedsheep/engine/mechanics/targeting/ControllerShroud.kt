@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.mechanics.targeting
 
+import com.wingedsheep.engine.handlers.TargetFinder
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.ControllerGrants
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.GrantsControllerShroudComponent
@@ -25,8 +27,8 @@ object ControllerShroud {
      * Whether [playerId] has shroud — either directly ([PlayerShroudComponent], from a
      * resolution-time effect like Gilded Light) or from a permanent they control that grants it.
      */
-    fun appliesTo(state: GameState, playerId: EntityId): Boolean {
+    fun appliesTo(state: GameState, playerId: EntityId, predicateEvaluator: PredicateEvaluator): Boolean {
         if (state.getEntity(playerId)?.has<PlayerShroudComponent>() == true) return true
-        return ControllerGrants.grantedTo<GrantsControllerShroudComponent>(state, playerId)
+        return ControllerGrants.grantedTo<GrantsControllerShroudComponent>(state, playerId, predicateEvaluator = predicateEvaluator)
     }
 }

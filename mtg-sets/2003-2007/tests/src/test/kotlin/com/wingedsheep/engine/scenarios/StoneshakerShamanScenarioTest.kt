@@ -18,7 +18,7 @@ import io.kotest.matchers.shouldBe
  *  choice."
  *
  * Two things are easy to get wrong here and both are tested. The trigger is
- * [com.wingedsheep.sdk.dsl.Triggers.EachEndStep], not `YourEndStep`, so it fires on the Shaman's
+ * `Triggers.anyPlayer.beginningOf(Step.END)`, not `YourEndStep`, so it fires on the Shaman's
  * controller's own turn too — this card is symmetric. And the sacrificing player is
  * `Player.TriggeringPlayer` (whoever's end step it is), not the Shaman's controller, which the
  * second test pins by putting the Shaman under the *non-active* player's control.

@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sedraxis Alchemist
@@ -32,9 +33,9 @@ val SedraxisAlchemist = card("Sedraxis Alchemist") {
     oracleText = "When this creature enters, if you control a blue permanent, return target nonland permanent to its owner's hand."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouControl(GameObjectFilter.Permanent.withColor(Color.BLUE))
-        val bounced = target("target", Targets.NonlandPermanent)
+        val bounced = target(TargetFilter.NonlandPermanent)
         effect = Effects.ReturnToHand(bounced)
     }
 

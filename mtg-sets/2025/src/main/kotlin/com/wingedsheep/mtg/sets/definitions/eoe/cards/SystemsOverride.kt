@@ -1,18 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Systems Override
@@ -27,26 +24,18 @@ val SystemsOverride = card("Systems Override") {
     oracleText = "Gain control of target artifact or creature until end of turn. Untap that permanent. It gains haste until end of turn. If it's a Spacecraft, put ten charge counters on it. If you do, remove ten charge counters from it at the beginning of the next end step."
 
     spell {
-        val target = target("target artifact or creature", Targets.CreatureOrArtifact)
-        effect = Effects.Composite(
-            listOf(
-                Effects.GainControl(target, Duration.EndOfTurn),
-                Effects.Untap(target),
-                Effects.GrantKeyword(Keyword.HASTE, target),
-                ConditionalEffect(
-                    condition = Conditions.TargetMatchesFilter(GameObjectFilter.Any.withSubtype("Spacecraft")),
-                    effect = Effects.Composite(
-                        listOf(
-                            AddCountersEffect(Counters.CHARGE, 10, target),
-                            CreateDelayedTriggerEffect(
-                                step = Step.END,
-                                effect = Effects.RemoveCounters(Counters.CHARGE, 10, target)
-                            )
-                        )
+        val target = target(TargetFilter.CreatureOrArtifact)
+        effect = Effects.GainControl(target, Duration.EndOfTurn) then
+            Effects.Untap(target) then
+            Effects.GrantKeyword(Keyword.HASTE, target) then
+            Effects.If(
+                condition = Conditions.TargetMatchesFilter(GameObjectFilter.Any.withSubtype("Spacecraft"), target),
+                then = Effects.AddCounters(CounterType.CHARGE, 10, target) then
+                    Effects.CreateDelayedTrigger(
+                        step = Step.END,
+                        effect = Effects.RemoveCounters(CounterType.CHARGE, 10, target)
                     )
-                )
             )
-        )
     }
 
     metadata {

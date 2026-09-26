@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.m11.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Aether Adept — Magic 2011 #41
@@ -12,7 +12,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * When this creature enters, return target creature to its owner's hand.
  *
- * The Man-o'-War shape: a SELF-bound [Triggers.EntersBattlefield] over [Effects.ReturnToHand]. The
+ * The Man-o'-War shape: a SELF-bound `Triggers.self.enters()` over [Effects.ReturnToHand]. The
  * trigger is neither optional nor "up to", so it must pick a creature when one is on the
  * battlefield — including the Adept itself when it is the only legal target.
  */
@@ -25,8 +25,8 @@ val AetherAdept = card("Aether Adept") {
     oracleText = "When this creature enters, return target creature to its owner's hand."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("target creature", Targets.Creature)
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ReturnToHand(creature)
     }
 

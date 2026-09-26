@@ -11,7 +11,7 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.ProtectionScope
 import com.wingedsheep.sdk.scripting.SpellCostTarget
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Emrakul, the Promised End
@@ -34,7 +34,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetOpponent
  *   `PROTECTION_FROM_CARDTYPE_INSTANT`. Per the rulings this only bites while Emrakul is on the
  *   battlefield — a spell that targets it on the stack (Syncopate) is unaffected, which falls out of
  *   the enforcement sites all gating on battlefield membership.
- * - The cast trigger is [Triggers.WhenYouCastThisSpell] (CR 603.2 — it resolves *before* Emrakul and
+ * - The cast trigger is `Triggers.self.isCast()` (CR 603.2 — it resolves *before* Emrakul and
  *   still resolves if Emrakul is countered), targeting an opponent once and feeding both halves:
  *   [Effects.HijackNextTurn] takes over that player's next turn, and [Effects.TakeExtraTurn] hands
  *   them the turn after it. The extra turn is modelled the engine's usual way — every other player
@@ -65,12 +65,9 @@ val EmrakulThePromisedEnd = card("Emrakul, the Promised End") {
     keywordAbility(KeywordAbility.Protection(ProtectionScope.CardType("Instant")))
 
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
-        val opponent = target("target opponent", TargetOpponent())
-        effect = Effects.Composite(
-            Effects.HijackNextTurn(opponent),
-            Effects.TakeExtraTurn(target = opponent)
-        )
+        trigger = Triggers.self.isCast()
+        val opponent = target(Targets.Opponent)
+        effect = Effects.HijackNextTurn(opponent) then Effects.TakeExtraTurn(target = opponent)
         description = "When you cast this spell, you gain control of target opponent during that " +
             "player's next turn. After that turn, that player takes an extra turn."
     }

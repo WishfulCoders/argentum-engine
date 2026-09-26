@@ -7,10 +7,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Baxter Stockman
@@ -33,8 +32,8 @@ val BaxterStockman = card("Baxter Stockman") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreateTokenEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
             colors = setOf(),
@@ -45,23 +44,20 @@ val BaxterStockman = card("Baxter Stockman") {
     }
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
         val creature = target(
-            "artifact creature you control",
-            TargetPermanent(
-                filter = TargetFilter(
-                    GameObjectFilter(
-                        cardPredicates = listOf(
-                            CardPredicate.IsCreature,
-                            CardPredicate.IsArtifact,
-                        )
-                    ).youControl()
-                )
-            )
+            TargetFilter(
+                GameObjectFilter(
+                    cardPredicates = listOf(
+                        CardPredicate.IsCreature,
+                        CardPredicate.IsArtifact,
+                    )
+                ).youControl()
+            ),
         )
-        effect = Effects.ModifyStats(3, 0, creature)
-            .then(Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature, Duration.EndOfTurn))
-            .then(Effects.GrantKeyword(Keyword.VIGILANCE, creature, Duration.EndOfTurn))
+        effect = Effects.ModifyStats(3, 0, creature) then
+            Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature, Duration.EndOfTurn) then
+            Effects.GrantKeyword(Keyword.VIGILANCE, creature, Duration.EndOfTurn)
     }
 
     metadata {

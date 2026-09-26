@@ -4,11 +4,9 @@ import com.wingedsheep.engine.core.ExecutionResult
 import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.core.ManaSpentEvent
 import com.wingedsheep.engine.core.PaymentStrategy
-import com.wingedsheep.engine.core.tap
+import com.wingedsheep.engine.core.tapForMana
 import com.wingedsheep.engine.core.TurnFaceUp
 import com.wingedsheep.engine.core.TurnFaceUpEvent
-import com.wingedsheep.engine.event.TriggerDetector
-import com.wingedsheep.engine.event.TriggerProcessor
 import com.wingedsheep.engine.handlers.CostHandler
 import com.wingedsheep.engine.core.EngineServices
 import com.wingedsheep.engine.handlers.actions.ActionHandler
@@ -53,8 +51,6 @@ class TurnFaceUpHandler(
     private val manaSolver: ManaSolver,
     private val costHandler: CostHandler,
     private val costCalculator: CostCalculator,
-    private val triggerDetector: TriggerDetector,
-    private val triggerProcessor: TriggerProcessor,
     private val effectExecutorRegistry: com.wingedsheep.engine.handlers.effects.EffectExecutorRegistry,
     private val manaAbilitySideEffectExecutor: com.wingedsheep.engine.mechanics.mana.ManaAbilitySideEffectExecutor,
     private val costPaymentService: CostPaymentService,
@@ -372,9 +368,9 @@ class TurnFaceUpHandler(
 
                     is PaymentStrategy.Explicit -> {
                         for (sourceId in action.paymentStrategy.manaAbilitiesToActivate) {
-                            val (tappedState, tapEvent) = tap(currentState, sourceId)
+                            val (tappedState, tapEvents) = tapForMana(currentState, sourceId, action.playerId)
                             currentState = tappedState
-                            tapEvent?.let(events::add)
+                            events.addAll(tapEvents)
                         }
                     }
                 }
@@ -390,7 +386,7 @@ class TurnFaceUpHandler(
             else -> {
                 val flip: com.wingedsheep.sdk.scripting.effects.Effect =
                     faceUpEffect
-                        ?.let { Effects.Composite(TurnFaceUpEffect(EffectTarget.Self), it) }
+                        ?.let { TurnFaceUpEffect(EffectTarget.Self) then it }
                         ?: TurnFaceUpEffect(EffectTarget.Self)
                 return when (
                     val result = costPaymentService.pay(
@@ -457,24 +453,6 @@ class TurnFaceUpHandler(
             container.with(TurnedPermanentFaceUpThisTurnComponent(existing.count + 1))
         }
 
-        // Detect and process "when turned face up" triggers
-        val triggers = triggerDetector.detectTriggers(currentState, events)
-        if (triggers.isNotEmpty()) {
-            val triggerResult = triggerProcessor.processTriggers(currentState, triggers)
-
-            if (triggerResult.isPaused) {
-                return ExecutionResult.propagatePause(
-                    triggerResult.state.withPriority(action.playerId),
-                    events + triggerResult.events
-                )
-            }
-
-            return ExecutionResult.success(
-                triggerResult.newState.withPriority(action.playerId),
-                events + triggerResult.events
-            )
-        }
-
         // Player retains priority after turning face up.
         // Must call withPriority to clear priorityPassedBy — otherwise the opponent's
         // earlier pass is treated as still valid, causing both players to appear "passed"
@@ -489,11 +467,9 @@ class TurnFaceUpHandler(
                 services.manaSolver,
                 services.costHandler,
                 services.costCalculator,
-                services.triggerDetector,
-                services.triggerProcessor,
                 services.effectExecutorRegistry,
                 services.manaAbilitySideEffectExecutor,
-                CostPaymentService(services)
+                services.costPaymentService
             )
         }
     }

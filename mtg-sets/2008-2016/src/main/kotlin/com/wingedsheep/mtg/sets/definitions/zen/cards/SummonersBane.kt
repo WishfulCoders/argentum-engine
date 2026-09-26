@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.zen.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Summoner's Bane
@@ -22,17 +22,15 @@ val SummonersBane = card("Summoner's Bane") {
     oracleText = "Counter target creature spell. Create a 2/2 blue Illusion creature token."
 
     spell {
-        target("creature spell", Targets.CreatureSpell)
-        effect = Effects.Composite(
-            Effects.CounterSpell(),
+        target(TargetFilter.CreatureSpellOnStack)
+        effect = Effects.CounterSpell() then
             Effects.CreateToken(
                 power = 2,
                 toughness = 2,
                 colors = setOf(Color.BLUE),
                 creatureTypes = setOf("Illusion"),
                 imageUri = "https://cards.scryfall.io/normal/front/5/d/5dcbf662-7263-414a-b64b-ccf9aab20faa.jpg?1783942179"
-            ),
-        )
+            )
     }
 
     metadata {

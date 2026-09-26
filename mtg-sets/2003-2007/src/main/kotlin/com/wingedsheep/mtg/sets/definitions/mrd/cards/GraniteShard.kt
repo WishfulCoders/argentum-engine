@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Granite Shard — Mirrodin #182 (canonical printing, only printing)
@@ -30,14 +30,14 @@ val GraniteShard = card("Granite Shard") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap)
-        val victim = target("any target", AnyTarget())
+        val victim = target(Targets.Any)
         effect = Effects.DealDamage(1, victim)
         description = "{3}, {T}: This artifact deals 1 damage to any target."
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{R}"), Costs.Tap)
-        val victim = target("any target", AnyTarget())
+        val victim = target(Targets.Any)
         effect = Effects.DealDamage(1, victim)
         description = "{R}, {T}: This artifact deals 1 damage to any target."
     }

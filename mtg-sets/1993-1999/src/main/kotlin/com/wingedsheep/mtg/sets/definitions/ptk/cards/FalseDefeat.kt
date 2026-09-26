@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * False Defeat
@@ -21,7 +20,7 @@ val FalseDefeat = card("False Defeat") {
     oracleText = "Return target creature card from your graveyard to the battlefield."
 
     spell {
-        val creature = target("target", TargetObject(filter = TargetFilter.CreatureInYourGraveyard))
+        val creature = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.Move(creature, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)
     }
 

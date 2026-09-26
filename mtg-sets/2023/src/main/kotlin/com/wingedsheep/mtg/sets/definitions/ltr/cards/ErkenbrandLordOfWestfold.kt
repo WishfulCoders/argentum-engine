@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
 /**
@@ -25,10 +24,7 @@ val ErkenbrandLordOfWestfold = card("Erkenbrand, Lord of Westfold") {
     oracleText = "Whenever Erkenbrand or another Human you control enters, creatures you control get +1/+0 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Permanent.youControl().withSubtype("Human"),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Permanent.youControl().withSubtype("Human")).enters()
         effect = Patterns.Group.modifyStatsForAll(
             1, 0,
             GroupFilter(GameObjectFilter.Creature.youControl())

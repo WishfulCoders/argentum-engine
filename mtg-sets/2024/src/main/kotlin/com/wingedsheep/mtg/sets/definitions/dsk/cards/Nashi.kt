@@ -1,26 +1,19 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Counters
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Nashi, Searcher in the Dark
@@ -53,45 +46,32 @@ val Nashi = card("Nashi, Searcher in the Dark") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        val damageDealt = DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_DAMAGE_AMOUNT)
-        effect = Effects.Composite(
-            listOf(
-                // You mill that many cards.
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(count = damageDealt, player = Player.You),
-                    storeAs = "milled",
-                ),
-                MoveCollectionEffect(
-                    from = "milled",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.You),
-                ),
-                // You may put any number of legendary and/or enchantment cards from among them into your hand.
-                SelectFromCollectionEffect(
-                    from = "milled",
-                    selection = SelectionMode.ChooseAnyNumber,
-                    filter = GameObjectFilter(
-                        cardPredicates = listOf(
-                            CardPredicate.Or(listOf(CardPredicate.IsLegendary, CardPredicate.IsEnchantment)),
-                        ),
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        val damageDealt = DynamicAmounts.triggerDamageAmount()
+        effect = Effects.Pipeline {
+            // You mill that many cards.
+            val milled = gather(CardSource.TopOfLibrary(count = damageDealt, player = Player.You))
+            toGraveyard(milled)
+            // You may put any number of legendary and/or enchantment cards from among them into your hand.
+            val toHandCards = chooseAnyNumber(
+                from = milled,
+                filter = GameObjectFilter(
+                    cardPredicates = listOf(
+                        CardPredicate.Or(listOf(CardPredicate.IsLegendary, CardPredicate.IsEnchantment)),
                     ),
-                    storeSelected = "toHand",
-                    showAllCards = true,
-                    prompt = "Put any number of legendary and/or enchantment cards into your hand",
-                    selectedLabel = "Put in hand",
-                    remainderLabel = "Leave in graveyard",
                 ),
-                MoveCollectionEffect(
-                    from = "toHand",
-                    destination = CardDestination.ToZone(Zone.HAND, Player.You),
-                ),
-                // If you put no cards into your hand this way, put a +1/+1 counter on Nashi.
-                ConditionalEffect(
-                    condition = Conditions.Not(Conditions.CollectionContainsMatch("toHand")),
-                    effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
-                ),
-            ),
-        )
+                showAllCards = true,
+                prompt = "Put any number of legendary and/or enchantment cards into your hand",
+                selectedLabel = "Put in hand",
+                remainderLabel = "Leave in graveyard"
+            )
+            toHand(toHandCards)
+            // If you put no cards into your hand this way, put a +1/+1 counter on Nashi.
+            run(Effects.If(
+                condition = Conditions.Not(whenMatches(toHandCards)),
+                then = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
+            ))
+        }
     }
 
     metadata {

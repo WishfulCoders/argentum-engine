@@ -40,10 +40,7 @@ val DrogskolCavalry = card("Drogskol Cavalry") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Permanent.withSubtype(Subtype.SPIRIT).youControl(),
-            binding = TriggerBinding.OTHER,
-        )
+        trigger = Triggers.another(GameObjectFilter.Permanent.withSubtype(Subtype.SPIRIT).youControl()).enters()
         effect = Effects.GainLife(2)
     }
 

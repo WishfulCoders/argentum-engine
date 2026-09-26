@@ -33,10 +33,7 @@ val SuddenSetback = card("Sudden Setback") {
         "top or bottom of their library."
 
     spell {
-        val t = target(
-            "target spell or nonland permanent",
-            TargetSpellOrPermanent(permanentFilter = GameObjectFilter.NonlandPermanent)
-        )
+        val t = target(TargetSpellOrPermanent(permanentFilter = GameObjectFilter.NonlandPermanent))
         effect = Effects.PutOnTopOrBottomOfLibrary(t)
     }
 

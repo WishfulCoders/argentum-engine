@@ -1,14 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Diplomatic Relations
@@ -23,21 +19,14 @@ val DiplomaticRelations = card("Diplomatic Relations") {
     oracleText = "Target creature you control gets +1/+0 and gains vigilance until end of turn. It deals damage equal to its power to target creature an opponent controls."
 
     spell {
-        val myCreature = target("creature you control", Targets.CreatureYouControl)
-        val theirCreature = target(
-            "up to one creature an opponent controls",
-            TargetCreature(optional = true, filter = TargetFilter.CreatureOpponentControls)
-        )
-        effect = Effects.Composite(
-            listOf(
-                Effects.ModifyStats(1, 0, myCreature),
-                Effects.DealDamage(
-                    amount = DynamicAmount.EntityProperty(EntityReference.Target(0), EntityNumericProperty.Power),
-                    target = theirCreature,
-                    damageSource = myCreature
-                )
+        val myCreature = target(TargetFilter.CreatureYouControl)
+        val theirCreature = target(TargetFilter.CreatureOpponentControls, optional = true)
+        effect = Effects.ModifyStats(1, 0, myCreature) then
+            Effects.DealDamage(
+                amount = DynamicAmounts.powerOf(myCreature),
+                target = theirCreature,
+                damageSource = myCreature
             )
-        )
     }
 
     metadata {

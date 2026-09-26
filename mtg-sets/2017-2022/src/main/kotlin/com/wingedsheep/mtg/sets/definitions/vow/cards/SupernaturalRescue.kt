@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -11,7 +10,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.ControllerPredicate
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Supernatural Rescue
@@ -29,7 +28,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * creature with it — the reading a Spirit land or a Spirit enchanted to be noncreature would
  * separate, and the one Assay's bare-subtype rule takes.
  *
- * The tap is a **cast** trigger ([Triggers.WhenYouCastThisSpell]), not an ETB one — it goes on the
+ * The tap is a **cast** trigger (`Triggers.self.isCast()`), not an ETB one — it goes on the
  * stack above the Aura and resolves first, so the creatures are tapped even if the Aura itself is
  * countered or its enchant target has gone away.
  *
@@ -50,21 +49,18 @@ val SupernaturalRescue = card("Supernatural Rescue") {
         GameObjectFilter.Permanent.withSubtype(Subtype.SPIRIT)
     )
 
-    auraTarget = Targets.CreatureYouControl
+    auraTarget = TargetObject(filter = TargetFilter.CreatureYouControl)
 
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
-        target(
-            "up to two target creatures you don't control",
-            TargetCreature(
-                optional = true,
-                count = 2,
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.withControllerPredicate(
-                        ControllerPredicate.Not(ControllerPredicate.ControlledByYou)
-                    )
+        trigger = Triggers.self.isCast()
+        targets(
+            TargetFilter(
+                GameObjectFilter.Creature.withControllerPredicate(
+                    ControllerPredicate.Not(ControllerPredicate.ControlledByYou)
                 )
-            )
+            ),
+            count = 2,
+            optional = true,
         )
         effect = Effects.TapEachTarget()
         description = "When you cast this spell, tap up to two target creatures you don't control."

@@ -10,9 +10,7 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Volatile Arsonist // Dire-Strain Anarchist (Innistrad: Crimson Vow)
@@ -49,18 +47,13 @@ private val VolatileArsonistFront = card("Volatile Arsonist") {
     keywords(Keyword.MENACE, Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val creature = target("up to one target creature", TargetCreature(optional = true))
-        val player = target("up to one target player", TargetPlayer(optional = true))
-        val planeswalker = target(
-            "up to one target planeswalker",
-            TargetPermanent(optional = true, filter = TargetFilter.Planeswalker),
-        )
-        effect = Effects.Composite(
-            Effects.DealDamage(1, creature, damageSource = EffectTarget.Self),
-            Effects.DealDamage(1, player, damageSource = EffectTarget.Self),
-            Effects.DealDamage(1, planeswalker, damageSource = EffectTarget.Self),
-        )
+        trigger = Triggers.self.attacks()
+        val creature = target(TargetFilter.Creature, optional = true)
+        val player = target(Targets.Player, optional = true)
+        val planeswalker = target(TargetFilter.Planeswalker, optional = true)
+        effect = Effects.DealDamage(1, creature, damageSource = EffectTarget.Self) then
+            Effects.DealDamage(1, player, damageSource = EffectTarget.Self) then
+            Effects.DealDamage(1, planeswalker, damageSource = EffectTarget.Self)
         description = "This creature deals 1 damage to each of up to one target creature, up to one " +
             "target player, and/or up to one target planeswalker."
     }
@@ -89,18 +82,13 @@ private val DireStrainAnarchist = card("Dire-Strain Anarchist") {
     keywords(Keyword.MENACE, Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val creature = target("up to one target creature", TargetCreature(optional = true))
-        val player = target("up to one target player", TargetPlayer(optional = true))
-        val planeswalker = target(
-            "up to one target planeswalker",
-            TargetPermanent(optional = true, filter = TargetFilter.Planeswalker),
-        )
-        effect = Effects.Composite(
-            Effects.DealDamage(2, creature, damageSource = EffectTarget.Self),
-            Effects.DealDamage(2, player, damageSource = EffectTarget.Self),
-            Effects.DealDamage(2, planeswalker, damageSource = EffectTarget.Self),
-        )
+        trigger = Triggers.self.attacks()
+        val creature = target(TargetFilter.Creature, optional = true)
+        val player = target(Targets.Player, optional = true)
+        val planeswalker = target(TargetFilter.Planeswalker, optional = true)
+        effect = Effects.DealDamage(2, creature, damageSource = EffectTarget.Self) then
+            Effects.DealDamage(2, player, damageSource = EffectTarget.Self) then
+            Effects.DealDamage(2, planeswalker, damageSource = EffectTarget.Self)
         description = "This creature deals 2 damage to each of up to one target creature, up to one " +
             "target player, and/or up to one target planeswalker."
     }

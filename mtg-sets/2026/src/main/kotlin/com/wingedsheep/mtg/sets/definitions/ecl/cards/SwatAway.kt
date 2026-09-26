@@ -27,10 +27,7 @@ val SwatAway = card("Swat Away") {
         "The owner of target spell or creature puts it on their choice of the top or bottom of their library."
 
     spell {
-        val t = target(
-            "target spell or creature",
-            TargetSpellOrPermanent(permanentFilter = GameObjectFilter.Creature)
-        )
+        val t = target(TargetSpellOrPermanent(permanentFilter = GameObjectFilter.Creature))
         effect = Effects.PutOnTopOrBottomOfLibrary(t)
     }
 

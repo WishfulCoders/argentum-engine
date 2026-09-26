@@ -9,13 +9,9 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.core.Zone
 
 /**
@@ -48,25 +44,16 @@ val SummonTitan = card("Summon: Titan") {
     sagaChapter(1) { effect = Patterns.Library.mill(5) }
 
     sagaChapter(2) {
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Land),
-                storeAs = "graveyard_lands",
-            ),
-            MoveCollectionEffect(
-                from = "graveyard_lands",
-                destination = CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped),
-            ),
-        )
+        effect = Effects.Pipeline {
+            val graveyardLands = gather(CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Land))
+            move(graveyardLands, CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped))
+        }
     }
 
     sagaChapter(3) {
-        val ally = target("creature", TargetObject(filter = TargetFilter.OtherCreatureYouControl))
+        val ally = target(TargetFilter.OtherCreatureYouControl)
         val lands = DynamicAmounts.battlefield(Player.You, GameObjectFilter.Land).count()
-        effect = Effects.Composite(
-            Effects.ModifyStats(lands, lands, ally),
-            Effects.GrantKeyword(Keyword.TRAMPLE, ally),
-        )
+        effect = Effects.ModifyStats(lands, lands, ally) then Effects.GrantKeyword(Keyword.TRAMPLE, ally)
     }
 
     metadata {

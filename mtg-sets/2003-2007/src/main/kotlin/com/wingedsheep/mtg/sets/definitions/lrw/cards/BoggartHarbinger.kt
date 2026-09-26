@@ -31,7 +31,7 @@ val BoggartHarbinger = card("Boggart Harbinger") {
         "then shuffle and put that card on top."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Any.withSubtype(Subtype.GOBLIN),

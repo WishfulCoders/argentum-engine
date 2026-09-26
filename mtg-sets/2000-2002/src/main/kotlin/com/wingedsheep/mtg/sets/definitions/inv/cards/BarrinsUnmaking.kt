@@ -1,12 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.conditions.TargetSharesMostCommonColor
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Barrin's Unmaking (INV 46)
@@ -16,7 +14,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * common color among all permanents or a color tied for most common.
  *
  * Reuses [TargetSharesMostCommonColor] (shared with Tsabo's Assassin) gating a
- * [Effects.ReturnToHand] via [ConditionalEffect]. The condition is evaluated at resolution against
+ * [Effects.ReturnToHand] via [Effects.If]. The condition is evaluated at resolution against
  * the board's current color distribution (CR 608.2); if the target permanent doesn't share the
  * most-common color it stays put.
  */
@@ -28,10 +26,10 @@ val BarrinsUnmaking = card("Barrin's Unmaking") {
         "with the most common color among all permanents or a color tied for most common."
 
     spell {
-        target("target permanent", Targets.Permanent)
-        effect = ConditionalEffect(
+        val permanent = target(TargetFilter.Permanent)
+        effect = Effects.If(
             condition = TargetSharesMostCommonColor(),
-            effect = Effects.ReturnToHand(EffectTarget.ContextTarget(0))
+            then = Effects.ReturnToHand(permanent)
         )
     }
 

@@ -1,21 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Shadow Urchin
@@ -39,28 +34,24 @@ val ShadowUrchin = card("Shadow Urchin") {
         "from the top of your library. Until your next end step, you may play those cards."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Mechanic.blight(1)
     }
 
     triggeredAbility {
-        trigger = Triggers.YourCreatureDies
-        triggerRestriction = Compare(
-            DynamicAmount.ContextProperty(ContextPropertyKey.LAST_KNOWN_TOTAL_COUNTER_COUNT),
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).dies()
+        triggerRestriction = Conditions.CompareAmounts(
+            DynamicAmounts.lastKnownCounterCount(),
             ComparisonOperator.GTE,
-            DynamicAmount.Fixed(1)
+            1
         )
-        effect = Effects.Composite(listOf(
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.ContextProperty(ContextPropertyKey.LAST_KNOWN_TOTAL_COUNTER_COUNT)),
-                storeAs = "exiledCards"
-            ),
-            MoveCollectionEffect(
-                from = "exiledCards",
-                destination = CardDestination.ToZone(Zone.EXILE)
-            ),
-            GrantMayPlayFromExileEffect("exiledCards", MayPlayExpiry.UntilNextEndStep)
-        ))
+        effect = Effects.Pipeline {
+            val exiledCards = gather(
+                CardSource.TopOfLibrary(DynamicAmounts.lastKnownCounterCount())
+            )
+            exile(exiledCards)
+            run(Effects.GrantMayPlayFromExile(exiledCards, MayPlayExpiry.UntilNextEndStep))
+        }
     }
 
     metadata {

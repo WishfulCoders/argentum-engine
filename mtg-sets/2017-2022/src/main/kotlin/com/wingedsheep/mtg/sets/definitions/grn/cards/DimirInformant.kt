@@ -21,7 +21,7 @@ val DimirInformant = card("Dimir Informant") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.surveil(2)
     }
 

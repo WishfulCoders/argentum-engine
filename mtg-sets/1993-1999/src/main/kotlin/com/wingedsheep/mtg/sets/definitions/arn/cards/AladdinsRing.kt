@@ -19,7 +19,7 @@ val AladdinsRing = card("Aladdin's Ring") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{8}"), Costs.Tap)
-        val t = target("any target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(4, t)
     }
 

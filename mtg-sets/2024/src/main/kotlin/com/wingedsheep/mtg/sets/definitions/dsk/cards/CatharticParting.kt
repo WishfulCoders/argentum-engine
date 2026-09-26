@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Cathartic Parting
@@ -30,23 +29,17 @@ val CatharticParting = card("Cathartic Parting") {
         "your library."
 
     spell {
-        val permanent = target(
-            "permanent",
-            TargetObject(filter = TargetFilter(GameObjectFilter.ArtifactOrEnchantment.opponentControls()))
-        )
+        val permanent = target(TargetFilter(GameObjectFilter.ArtifactOrEnchantment.opponentControls()))
         val (g0, g1, g2, g3) = targets(
-            "graveyard card",
-            TargetObject(
-                count = 4,
-                optional = true,
-                filter = TargetFilter(GameObjectFilter.Any.ownedByYou(), zone = Zone.GRAVEYARD)
-            )
+            TargetFilter(GameObjectFilter.Any.ownedByYou(), zone = Zone.GRAVEYARD),
+            count = 4,
+            optional = true,
         )
-        effect = Effects.ShuffleIntoLibrary(permanent)
-            .then(Effects.ShuffleIntoLibrary(g0))
-            .then(Effects.ShuffleIntoLibrary(g1))
-            .then(Effects.ShuffleIntoLibrary(g2))
-            .then(Effects.ShuffleIntoLibrary(g3))
+        effect = Effects.ShuffleIntoLibrary(permanent) then
+            Effects.ShuffleIntoLibrary(g0) then
+            Effects.ShuffleIntoLibrary(g1) then
+            Effects.ShuffleIntoLibrary(g2) then
+            Effects.ShuffleIntoLibrary(g3)
     }
 
     metadata {

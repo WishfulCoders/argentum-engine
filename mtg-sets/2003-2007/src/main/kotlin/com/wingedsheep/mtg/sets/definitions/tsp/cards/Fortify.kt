@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -28,13 +27,13 @@ val Fortify = card("Fortify") {
             mode("Creatures you control get +2/+0 until end of turn") {
                 effect = Effects.ForEachInGroup(
                     GroupFilter(GameObjectFilter.Creature.youControl()),
-                    ModifyStatsEffect(2, 0, EffectTarget.Self),
+                    Effects.ModifyStats(2, 0, EffectTarget.IterationEntity),
                 )
             }
             mode("Creatures you control get +0/+2 until end of turn") {
                 effect = Effects.ForEachInGroup(
                     GroupFilter(GameObjectFilter.Creature.youControl()),
-                    ModifyStatsEffect(0, 2, EffectTarget.Self),
+                    Effects.ModifyStats(0, 2, EffectTarget.IterationEntity),
                 )
             }
         }

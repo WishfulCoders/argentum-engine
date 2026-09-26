@@ -69,7 +69,7 @@ class OutOfAirScenarioTest : ScenarioTestBase() {
                 val casterId = EntityId.generate()
                 val (spellId, container) = stackSpell(casterId, CardType.CREATURE, "Grizzly Bears")
                 val state = stateWith(casterId, spellId, container)
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     state, cardRegistry.requireCard("Out of Air"), casterId, chosenTargets = emptyList(),
                 )
                 cost.toString() shouldBe ManaCost.parse("{2}{U}{U}").toString()
@@ -79,7 +79,7 @@ class OutOfAirScenarioTest : ScenarioTestBase() {
                 val casterId = EntityId.generate()
                 val (spellId, container) = stackSpell(casterId, CardType.CREATURE, "Grizzly Bears")
                 val state = stateWith(casterId, spellId, container)
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     state, cardRegistry.requireCard("Out of Air"), casterId, chosenTargets = listOf(spellId),
                 )
                 cost.toString() shouldBe ManaCost.parse("{U}{U}").toString()
@@ -89,7 +89,7 @@ class OutOfAirScenarioTest : ScenarioTestBase() {
                 val casterId = EntityId.generate()
                 val (spellId, container) = stackSpell(casterId, CardType.INSTANT, "Shock")
                 val state = stateWith(casterId, spellId, container)
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     state, cardRegistry.requireCard("Out of Air"), casterId, chosenTargets = listOf(spellId),
                 )
                 cost.toString() shouldBe ManaCost.parse("{2}{U}{U}").toString()

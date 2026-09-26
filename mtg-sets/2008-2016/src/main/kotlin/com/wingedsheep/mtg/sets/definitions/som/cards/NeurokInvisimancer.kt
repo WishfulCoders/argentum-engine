@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.som.cards
 
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Neurok Invisimancer
@@ -31,8 +31,8 @@ val NeurokInvisimancer = card("Neurok Invisimancer") {
     flags(AbilityFlag.CANT_BE_BLOCKED)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", Targets.Creature)
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, t)
     }
 

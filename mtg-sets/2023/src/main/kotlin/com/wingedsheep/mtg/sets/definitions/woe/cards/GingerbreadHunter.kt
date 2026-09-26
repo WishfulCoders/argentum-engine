@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Gingerbread Hunter // Puny Snack
@@ -33,7 +33,7 @@ val GingerbreadHunter = card("Gingerbread Hunter") {
     toughness = 5
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateFood()
     }
 
@@ -43,7 +43,7 @@ val GingerbreadHunter = card("Gingerbread Hunter") {
         oracleText = "Target creature gets -2/-2 until end of turn. " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            val t = target("target", Targets.Creature)
+            val t = target(TargetFilter.Creature)
             effect = Effects.ModifyStats(-2, -2, t)
         }
     }

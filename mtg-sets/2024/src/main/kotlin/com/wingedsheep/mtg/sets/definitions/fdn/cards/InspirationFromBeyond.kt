@@ -34,13 +34,11 @@ val InspirationFromBeyond = card("Inspiration from Beyond") {
         effect = Patterns.Library.mill(3) then Effects.Pipeline {
             val spells = gather(
                 CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.InstantOrSorcery),
-                name = "graveyardSpells",
             )
             val returned = chooseExactly(
                 1,
                 from = spells,
                 prompt = "Return an instant or sorcery card to your hand",
-                name = "returned",
             )
             toHand(returned)
         }

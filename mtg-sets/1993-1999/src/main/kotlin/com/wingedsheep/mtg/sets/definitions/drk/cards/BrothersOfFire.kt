@@ -5,8 +5,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Brothers of Fire
@@ -25,9 +25,8 @@ val BrothersOfFire = card("Brothers of Fire") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{R}{R}")
-        val target = target("target", AnyTarget())
-        effect = Effects.DealDamage(1, target)
-            .then(Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You)))
+        val target = target(Targets.Any)
+        effect = Effects.DealDamage(1, target) then Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You))
     }
 
     metadata {

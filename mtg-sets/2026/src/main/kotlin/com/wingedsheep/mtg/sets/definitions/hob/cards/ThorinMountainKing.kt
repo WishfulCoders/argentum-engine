@@ -3,25 +3,15 @@ package com.wingedsheep.mtg.sets.definitions.hob.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.CollectionContainsMatch
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Thorin, Mountain-king
@@ -52,10 +42,10 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  *    `optional = false` (nothing here is a "may"). Its damage is dealt *by the equipped creature*,
  *    not by Thorin, so the payoff is a one-iteration [ForEachInCollectionEffect] over the creature
  *    collection: `EffectTarget.Self` makes the creature the damage source (lifelink, deathtouch and
- *    "dealt damage by a creature" reactions all see the creature) and `EntityReference.IterationEntity`
+ *    "dealt damage by a creature" reactions all see the creature) and `EffectTarget.IterationEntity`
  *    reads *its* power, at reflexive-resolution time. The collection reaches the reflexive because
  *    the executor carries the action's pipeline onto the reflexive event.
- *  - **The "one or more" guard** is the [ConditionalEffect] wrapping the whole reflexive: both the
+ *  - **The "one or more" guard** is the [Effects.If] wrapping the whole reflexive: both the
  *    Equipment collection and the creature collection must be non-empty. Without it, choosing zero
  *    Equipment (legal — "any number" allows none) or losing the creature target would still fire the
  *    damage half, which the printed trigger condition forbids.
@@ -80,17 +70,12 @@ val ThorinMountainKing = card("Thorin, Mountain-king") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         // Declared first so its ContextTarget index stays stable ahead of the unbounded slot.
-        val equippedCreature = target("target creature you control", Targets.CreatureYouControl)
-        target(
-            "any number of target Equipment you control",
-            TargetPermanent(
-                unlimited = true,
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl()
-                )
-            )
+        val equippedCreature = target(TargetFilter.CreatureYouControl)
+        targets(
+            TargetFilter(baseFilter = GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl()),
+            unlimited = true,
         )
 
         effect = Effects.Pipeline {
@@ -103,38 +88,34 @@ val ThorinMountainKing = card("Thorin, Mountain-king") {
             val creature = exclude(chosen, equipment)
 
             run(
-                ConditionalEffect(
+                Effects.If(
                     condition = Conditions.All(
-                        CollectionContainsMatch(equipment.key),
-                        CollectionContainsMatch(creature.key)
+                        whenMatches(equipment),
+                        whenMatches(creature)
                     ),
-                    effect = ReflexiveTriggerEffect(
+                    then = Effects.ReflexiveTrigger(
                         optional = false,
-                        action = ForEachInCollectionEffect(
-                            collection = equipment.key,
+                        action = Effects.ForEachInCollection(
+                            collection = equipment,
                             effect = Effects.AttachTargetEquipmentToCreature(
-                                equipmentTarget = EffectTarget.Self,
+                                equipmentTarget = EffectTarget.IterationEntity,
                                 creatureTarget = equippedCreature
                             )
-                        ),
-                        reflexiveEffect = ForEachInCollectionEffect(
-                            collection = creature.key,
-                            effect = DealDamageEffect(
-                                amount = DynamicAmount.EntityProperty(
-                                    EntityReference.IterationEntity,
-                                    EntityNumericProperty.Power
-                                ),
-                                target = EffectTarget.ContextTarget(0),
-                                damageSource = EffectTarget.Self
-                            )
-                        ),
-                        reflexiveTargetRequirements = listOf(
-                            TargetCreature(optional = true)
                         ),
                         descriptionOverride = "Attach the chosen Equipment to that creature. When " +
                             "one or more Equipment become attached to it this way, it deals damage " +
                             "equal to its power to up to one target creature."
-                    )
+                    ) {
+                        val creature2 = target(TargetFilter.Creature, optional = true)
+                        effect = Effects.ForEachInCollection(
+                            collection = creature,
+                            effect = Effects.DealDamage(
+                                amount = DynamicAmounts.powerOf(EffectTarget.IterationEntity),
+                                target = creature2,
+                                damageSource = EffectTarget.IterationEntity
+                            )
+                        )
+                    }
                 )
             )
         }

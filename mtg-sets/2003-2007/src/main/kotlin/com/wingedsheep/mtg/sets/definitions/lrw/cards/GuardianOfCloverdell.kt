@@ -27,7 +27,7 @@ val GuardianOfCloverdell = card("Guardian of Cloverdell") {
         "{G}, Sacrifice a Kithkin: You gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

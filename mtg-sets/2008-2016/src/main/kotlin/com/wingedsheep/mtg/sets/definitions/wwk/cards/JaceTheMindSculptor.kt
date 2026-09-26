@@ -10,7 +10,7 @@ import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Jace, the Mind Sculptor
@@ -51,12 +51,12 @@ val JaceTheMindSculptor = card("Jace, the Mind Sculptor") {
         "into their library."
 
     loyaltyAbility(+2) {
-        target("target player", Targets.Player)
+        val player2 = target(Targets.Player)
         effect = Effects.Pipeline {
             val top = gather(
                 CardSource.TopOfLibrary(
-                    count = DynamicAmount.Fixed(1),
-                    player = Player.ContextPlayer(0)
+                    count = 1,
+                    player = player2.asPlayer
                 )
             )
             val toBottom = chooseUpTo(
@@ -65,13 +65,12 @@ val JaceTheMindSculptor = card("Jace, the Mind Sculptor") {
                 prompt = "Put that card on the bottom of that player's library?",
                 selectedLabel = "Put on the bottom of that player's library"
             )
-            toLibraryBottom(toBottom, player = Player.ContextPlayer(0))
+            toLibraryBottom(toBottom, player = player2.asPlayer)
         }
     }
 
     loyaltyAbility(0) {
-        effect = Effects.Composite(
-            Effects.DrawCards(3),
+        effect = Effects.DrawCards(3) then
             Effects.Pipeline {
                 val hand = gather(CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Any))
                 val putBack = chooseExactly(
@@ -81,27 +80,26 @@ val JaceTheMindSculptor = card("Jace, the Mind Sculptor") {
                 )
                 toLibraryTop(putBack)
             }
-        )
     }
 
     loyaltyAbility(-1) {
-        val creature = target("creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ReturnToHand(creature)
     }
 
     loyaltyAbility(-12) {
-        target("target player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Effects.Pipeline {
             val library = gather(
-                CardSource.FromZone(Zone.LIBRARY, Player.ContextPlayer(0), GameObjectFilter.Any)
+                CardSource.FromZone(Zone.LIBRARY, player.asPlayer, GameObjectFilter.Any)
             )
-            exile(library, owner = Player.ContextPlayer(0))
+            exile(library, owner = player.asPlayer)
             val hand = gather(
-                CardSource.FromZone(Zone.HAND, Player.ContextPlayer(0), GameObjectFilter.Any)
+                CardSource.FromZone(Zone.HAND, player.asPlayer, GameObjectFilter.Any)
             )
             move(
                 hand,
-                CardDestination.ToZone(Zone.LIBRARY, Player.ContextPlayer(0), ZonePlacement.Shuffled)
+                CardDestination.ToZone(Zone.LIBRARY, player.asPlayer, ZonePlacement.Shuffled)
             )
         }
     }

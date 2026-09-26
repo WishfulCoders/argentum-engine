@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Vigilance
  * Whenever Wylie Duke becomes tapped, you gain 1 life and draw a card.
  *
- * The "becomes tapped" trigger ([Triggers.BecomesTapped]) fires on any way Wylie Duke becomes
+ * The "becomes tapped" trigger (`Triggers.self.becomesTapped()`) fires on any way Wylie Duke becomes
  * tapped — tapped for mana/ability cost, tapped by an opponent's effect, etc. Because Wylie Duke
  * has vigilance, attacking does NOT tap it, so attacking alone won't trigger this.
  */
@@ -28,11 +28,8 @@ val WylieDukeAtiinHero = card("Wylie Duke, Atiin Hero") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
-        effect = Effects.Composite(
-            Effects.GainLife(1),
-            Effects.DrawCards(1)
-        )
+        trigger = Triggers.self.becomesTapped()
+        effect = Effects.GainLife(1) then Effects.DrawCards(1)
     }
 
     metadata {

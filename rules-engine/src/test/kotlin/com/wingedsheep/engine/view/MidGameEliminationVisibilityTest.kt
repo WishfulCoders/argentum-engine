@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.view
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActionProcessor
 import com.wingedsheep.engine.core.Concede
 import com.wingedsheep.engine.core.GameConfig
@@ -53,7 +54,7 @@ class MidGameEliminationVisibilityTest : FunSpec({
         val afterConcede = processor.process(state, Concede(players[1])).result.state
         afterConcede.gameOver shouldBe false
 
-        val transformer = ClientStateTransformer(registry)
+        val transformer = ClientStateTransformer(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val view = transformer.transform(afterConcede, players[0])
         view.players.first { it.playerId == players[1] }.hasLost shouldBe true
         view.players.first { it.playerId == players[0] }.hasLost shouldBe false
@@ -69,7 +70,7 @@ class MidGameEliminationVisibilityTest : FunSpec({
         afterConcede.gameOver shouldBe true
         afterConcede.winnerId shouldBe players[0]
 
-        val transformer = ClientStateTransformer(registry)
+        val transformer = ClientStateTransformer(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val view = transformer.transform(afterConcede, players[0])
         view.players.first { it.playerId == players[1] }.hasLost shouldBe true
         view.players.first { it.playerId == players[0] }.hasLost shouldBe false

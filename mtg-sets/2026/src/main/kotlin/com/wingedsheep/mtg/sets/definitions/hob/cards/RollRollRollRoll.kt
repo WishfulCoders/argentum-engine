@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.SagaChapterBuilder
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Roll-Roll-Roll-Roll
@@ -52,12 +51,6 @@ val RollRollRollRoll = card("Roll-Roll-Roll-Roll") {
 
 /** The chapter ability shared by all four chapters: blink up to one of your creatures or lands. */
 private fun SagaChapterBuilder.blinkOneOfYours() {
-    val permanent = target(
-        "up to one target creature or land you control",
-        TargetPermanent(
-            optional = true,
-            filter = TargetFilter.CreatureOrLandPermanent.youControl()
-        )
-    )
+    val permanent = target(TargetFilter.CreatureOrLandPermanent.youControl(), optional = true)
     effect = Patterns.Exile.exileUntilEndStep(permanent)
 }

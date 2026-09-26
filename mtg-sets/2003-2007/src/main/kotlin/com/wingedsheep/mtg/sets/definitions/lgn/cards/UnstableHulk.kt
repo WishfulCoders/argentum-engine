@@ -24,10 +24,10 @@ val UnstableHulk = card("Unstable Hulk") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        effect = Effects.ModifyStats(6, 6, EffectTarget.Self)
-            .then(Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self))
-            .then(Effects.SkipNextTurn(EffectTarget.Controller))
+        trigger = Triggers.self.turnedFaceUp()
+        effect = Effects.ModifyStats(6, 6, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self) then
+            Effects.SkipNextTurn(EffectTarget.Controller)
     }
 
     morph = "{3}{R}{R}"

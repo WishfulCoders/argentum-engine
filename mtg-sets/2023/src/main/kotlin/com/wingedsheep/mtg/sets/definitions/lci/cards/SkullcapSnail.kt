@@ -27,8 +27,8 @@ val SkullcapSnail = card("Skullcap Snail") {
     oracleText = "When this creature enters, target opponent exiles a card from their hand."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val opponent = target("target opponent", Targets.Opponent)
+        trigger = Triggers.self.enters()
+        val opponent = target(Targets.Opponent)
         effect = Patterns.Hand.exileFromHand(1, opponent)
     }
 

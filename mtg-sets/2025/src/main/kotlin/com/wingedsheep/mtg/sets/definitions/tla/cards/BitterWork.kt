@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Bitter Work
@@ -31,7 +30,7 @@ val BitterWork = card("Bitter Work") {
         "Exhaust — {4}: Earthbend 4. Activate only during your turn. (Target land you control becomes a 0/0 creature with haste that's still a land. Put four +1/+1 counters on it. When it dies or is exiled, return it to the battlefield tapped. Activate each exhaust ability only once.)"
 
     triggeredAbility {
-        trigger = Triggers.YouAttackWithFilter(GameObjectFilter.Creature.powerAtLeast(4))
+        trigger = Triggers.you.attacks(GameObjectFilter.Creature.powerAtLeast(4))
         effect = Effects.DrawCards(1)
         description = "Whenever you attack a player with one or more creatures with power 4 or greater, draw a card."
     }
@@ -40,7 +39,7 @@ val BitterWork = card("Bitter Work") {
         isExhaust = true
         cost = Costs.Mana("{4}")
         restrictions = listOf(ActivationRestriction.OnlyDuringYourTurn)
-        val land = target("target land you control", TargetObject(filter = TargetFilter.Land.youControl()))
+        val land = target(TargetFilter.Land.youControl())
         effect = Effects.Earthbend(4, land)
     }
 

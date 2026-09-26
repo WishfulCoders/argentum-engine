@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Kithkin Daggerdare
@@ -23,7 +23,7 @@ val KithkinDaggerdare = card("Kithkin Daggerdare") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{G}"), Costs.Tap)
-        val attacker = target("target attacking creature", Targets.AttackingCreature)
+        val attacker = target(TargetFilter.AttackingCreature)
         effect = Effects.ModifyStats(2, 2, attacker)
         description = "{G}, {T}: Target attacking creature gets +2/+2 until end of turn."
     }

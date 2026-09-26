@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Reckless Rage — Rivals of Ixalan #110 (canonical printing)
@@ -32,8 +33,8 @@ val RecklessRage = card("Reckless Rage") {
         "to target creature you control."
 
     spell {
-        val theirs = target("target creature you don't control", Targets.CreatureOpponentControls)
-        val yours = target("target creature you control", Targets.CreatureYouControl)
+        val theirs = target(TargetFilter.CreatureOpponentControls)
+        val yours = target(TargetFilter.CreatureYouControl)
         effect = Effects.DealDamage(4, theirs) then Effects.DealDamage(2, yours)
     }
 

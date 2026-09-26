@@ -2,11 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Trolls of Tel-Jilad — Mirrodin #136
@@ -35,11 +34,8 @@ val TrollsOfTelJilad = card("Trolls of Tel-Jilad") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{G}")
-        val greenCreature = target(
-            "target green creature",
-            TargetCreature(filter = TargetFilter.Creature.withColor(Color.GREEN))
-        )
-        effect = RegenerateEffect(greenCreature)
+        val greenCreature = target(TargetFilter.Creature.withColor(Color.GREEN))
+        effect = Effects.Regenerate(greenCreature)
         description = "{1}{G}: Regenerate target green creature."
     }
 

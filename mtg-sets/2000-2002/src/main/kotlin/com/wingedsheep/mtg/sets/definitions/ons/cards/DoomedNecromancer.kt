@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 /**
  * Doomed Necromancer
  * {2}{B}
@@ -25,7 +25,7 @@ val DoomedNecromancer = card("Doomed Necromancer") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{B}"), Costs.Tap, Costs.SacrificeSelf)
-        val t = target("target", Targets.CreatureCardInYourGraveyard)
+        val t = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.Move(t, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)
     }
 

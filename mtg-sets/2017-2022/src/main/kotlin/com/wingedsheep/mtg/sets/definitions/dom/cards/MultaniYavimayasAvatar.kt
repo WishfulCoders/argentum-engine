@@ -3,12 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.dom.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -33,10 +34,8 @@ val MultaniYavimayasAvatar = card("Multani, Yavimaya's Avatar") {
     keywords(Keyword.REACH, Keyword.TRAMPLE)
 
     dynamicStats(
-        DynamicAmount.Add(
-            DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land),
-            DynamicAmount.Count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Land)
-        )
+        DynamicAmounts.landsYouControl() +
+            DynamicAmounts.count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Land)
     )
 
     activatedAbility {

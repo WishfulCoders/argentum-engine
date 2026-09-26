@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -31,13 +30,11 @@ val CelestialArmor = card("Celestial Armor") {
     oracleText = "Flash (You may cast this spell any time you could cast an instant.)\nWhen this Equipment enters, attach it to target creature you control. That creature gains hexproof and indestructible until end of turn.\nEquipped creature gets +2/+0 and has flying.\nEquip {3}{W} ({3}{W}: Attach to target creature you control. Equip only as a sorcery.)"
     keywords(Keyword.FLASH)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.youControl()))
-        effect = Effects.Composite(
-            Effects.AttachEquipment(t),
-            Effects.GrantKeyword(Keyword.HEXPROOF, t),
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature.youControl())
+        effect = Effects.AttachEquipment(t) then
+            Effects.GrantKeyword(Keyword.HEXPROOF, t) then
             Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t)
-        )
     }
     staticAbility {
         ability = ModifyStats(2, 0)

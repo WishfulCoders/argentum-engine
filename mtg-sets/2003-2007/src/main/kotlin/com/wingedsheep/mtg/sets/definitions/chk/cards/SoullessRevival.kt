@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.splice
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Soulless Revival
@@ -30,7 +29,7 @@ val SoullessRevival = card("Soulless Revival") {
     splice("{1}{B}")
 
     spell {
-        val t = target("target", TargetObject(filter = TargetFilter.CreatureInYourGraveyard))
+        val t = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.Move(t, Zone.HAND)
     }
 

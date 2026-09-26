@@ -1,17 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.AddCountersToCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Aerith Rescue Mission
@@ -66,20 +61,19 @@ val AerithRescueMission = card("Aerith Rescue Mission") {
             mode(
                 "Take 59 Flights of Stairs — Tap up to three target creatures. Put a stun counter on one of them."
             ) {
-                target("creatures", TargetCreature(count = 3, optional = true))
-                effect = Effects.Composite(
-                    Effects.TapEachTarget(),
-                    GatherCardsEffect(source = CardSource.ChosenTargets, storeAs = "aerithTapped"),
-                    SelectFromCollectionEffect(
-                        from = "aerithTapped",
-                        selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
+                targets(TargetFilter.Creature, count = 3, optional = true)
+                effect = Effects.Pipeline {
+                    run(Effects.TapEachTarget())
+                    val aerithTapped = gather(CardSource.ChosenTargets)
+                    val aerithStunned = chooseExactly(
+                        1,
+                        from = aerithTapped,
                         chooser = Chooser.Controller,
-                        storeSelected = "aerithStunned",
                         prompt = "Put a stun counter on one of the tapped creatures",
-                        useTargetingUI = true,
-                    ),
-                    AddCountersToCollectionEffect("aerithStunned", Counters.STUN, 1),
-                )
+                        useTargetingUI = true
+                    )
+                    run(Effects.AddCountersToCollection(aerithStunned, CounterType.STUN, 1))
+                }
             }
         }
     }

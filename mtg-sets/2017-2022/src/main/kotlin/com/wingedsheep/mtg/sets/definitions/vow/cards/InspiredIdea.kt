@@ -36,7 +36,7 @@ val InspiredIdea = card("Inspired Idea") {
     spell {
         // Printed (brackets present): draw three, then reduce your maximum hand size by three
         // for the rest of the game.
-        effect = Effects.DrawCards(3).then(Effects.ReduceMaximumHandSize(3))
+        effect = Effects.DrawCards(3) then Effects.ReduceMaximumHandSize(3)
 
         // Cleaved (brackets removed): draw three, no downside.
         cleaveEffect = Effects.DrawCards(3)

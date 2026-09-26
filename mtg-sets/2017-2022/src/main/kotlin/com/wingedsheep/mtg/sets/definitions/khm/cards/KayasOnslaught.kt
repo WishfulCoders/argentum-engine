@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.khm.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Kaya's Onslaught
@@ -25,11 +25,9 @@ val KayasOnslaught = card("Kaya's Onslaught") {
         "Foretell {W} (During your turn, you may pay {2} and exile this card from your hand face down. Cast it on a later turn for its foretell cost.)"
 
     spell {
-        val recipient = target("target creature", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 1, recipient),
+        val recipient = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(1, 1, recipient) then
             Effects.GrantKeyword(Keyword.DOUBLE_STRIKE, recipient)
-        )
     }
 
     keywordAbility(KeywordAbility.foretell("{W}"))

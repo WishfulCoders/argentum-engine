@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Trample
  * Whenever you gain life, put a +1/+1 counter on Tigra.
  *
- * [Triggers.YouGainLife] fires once per life-gain event, however much life that event gained,
+ * `Triggers.you.gainsLife()` fires once per life-gain event, however much life that event gained,
  * so the counter accrues per instance rather than per point of life.
  */
 val TigraFelineFury = card("Tigra, Feline Fury") {
@@ -33,8 +33,8 @@ val TigraFelineFury = card("Tigra, Feline Fury") {
     keywords(Keyword.FLASH, Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.YouGainLife
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.gainsLife()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Whenever you gain life, put a +1/+1 counter on Tigra."
     }
 

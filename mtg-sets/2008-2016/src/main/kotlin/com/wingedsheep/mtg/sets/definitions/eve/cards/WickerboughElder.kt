@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.eve.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Wickerbough Elder
@@ -34,19 +32,19 @@ val WickerboughElder = card("Wickerbough Elder") {
 
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.MinusOneMinusOne,
+            counterType = CounterType.MINUS_ONE_MINUS_ONE,
             count = 1,
             selfOnly = true
         )
     )
 
     activatedAbility {
+        val artifactOrEnchantment = target(TargetFilter.ArtifactOrEnchantment)
         cost = Costs.Composite(
             Costs.Mana("{G}"),
-            Costs.RemoveCounterFromSelf(Counters.MINUS_ONE_MINUS_ONE)
+            Costs.RemoveCounterFromSelf(CounterType.MINUS_ONE_MINUS_ONE)
         )
-        target = Targets.ArtifactOrEnchantment
-        effect = Effects.Destroy(EffectTarget.ContextTarget(0))
+        effect = Effects.Destroy(artifactOrEnchantment)
     }
 
     metadata {

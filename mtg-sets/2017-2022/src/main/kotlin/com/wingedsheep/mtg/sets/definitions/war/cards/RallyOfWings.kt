@@ -21,16 +21,14 @@ val RallyOfWings = card("Rally of Wings") {
     oracleText = "Untap all creatures you control. Creatures you control with flying get +2/+2 until end of turn."
 
     spell {
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(
-                GroupFilter(GameObjectFilter.Creature.youControl()),
-                Effects.Untap(EffectTarget.Self)
-            ),
+        effect = Effects.ForEachInGroup(
+            GroupFilter(GameObjectFilter.Creature.youControl()),
+            Effects.Untap(EffectTarget.IterationEntity)
+        ) then
             Effects.ForEachInGroup(
                 GroupFilter(GameObjectFilter.Creature.withKeyword(Keyword.FLYING).youControl()),
-                Effects.ModifyStats(2, 2, EffectTarget.Self)
+                Effects.ModifyStats(2, 2, EffectTarget.IterationEntity)
             )
-        )
     }
 
     metadata {

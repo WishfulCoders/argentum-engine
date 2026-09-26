@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.chk.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Soratami Rainshaper
@@ -38,7 +38,7 @@ val SoratamiRainshaper = card("Soratami Rainshaper") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.ReturnToHand(GameObjectFilter.Land))
-        val t = target("target", Targets.CreatureYouControl)
+        val t = target(TargetFilter.CreatureYouControl)
         effect = Effects.GrantKeyword(Keyword.SHROUD, t)
     }
 

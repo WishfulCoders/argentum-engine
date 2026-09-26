@@ -1,14 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.DividedDamageEffect
 import com.wingedsheep.sdk.scripting.targets.AnyTarget
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Fight with Fire
@@ -31,13 +28,13 @@ val FightWithFire = card("Fight with Fire") {
 
     spell {
         // Unkicked: 5 damage to target creature
-        target = TargetCreature()
-        effect = DealDamageEffect(5, EffectTarget.ContextTarget(0))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.DealDamage(5, creature)
 
         // Kicked: 10 damage divided among any number of targets (up to 10)
         kickerTarget = AnyTarget(count = 10, minCount = 1)
-        kickerEffect = DividedDamageEffect(
-            totalDamage = 10,
+        kickerEffect = Effects.DividedDamage(
+            total = 10,
             minTargets = 1,
             maxTargets = 10
         )

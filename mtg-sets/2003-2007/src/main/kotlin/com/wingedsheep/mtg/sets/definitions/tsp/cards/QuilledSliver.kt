@@ -31,7 +31,7 @@ val QuilledSliver = card("Quilled Sliver") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Tap,
                 effect = Effects.DealDamage(1, EffectTarget.BoundVariable("target")),
                 targetRequirements = listOf(

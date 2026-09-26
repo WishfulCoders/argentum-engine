@@ -31,7 +31,7 @@ import io.kotest.matchers.shouldBe
  */
 class DeckListClientViewTest : ScenarioTestBase() {
 
-    private val transformer = ClientStateTransformer(cardRegistry)
+    private val transformer = ClientStateTransformer(cardRegistry, predicateEvaluator = services.predicateEvaluator)
     private val p1 = EntityId.of("player-1")
     private val p2 = EntityId.of("player-2")
 

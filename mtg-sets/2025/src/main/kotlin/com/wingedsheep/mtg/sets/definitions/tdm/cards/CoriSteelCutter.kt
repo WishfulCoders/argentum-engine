@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.effects.CREATED_TOKENS
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -51,11 +50,9 @@ val CoriSteelCutter = card("Cori-Steel Cutter") {
             creatureTypes = setOf("Monk"),
             keywords = setOf(Keyword.PROWESS),
             imageUri = "https://cards.scryfall.io/normal/front/6/3/633d2d10-def7-426f-8496-ed6b45684299.jpg?1742421122"
-        ).then(
-            MayEffect(
-                effect = Effects.AttachEquipment(EffectTarget.PipelineTarget(CREATED_TOKENS, 0)),
-                descriptionOverride = "You may attach this Equipment to it"
-            )
+        ) then Effects.May(
+            effect = Effects.AttachEquipment(EffectTarget.PipelineTarget(CREATED_TOKENS, 0)),
+            descriptionOverride = "You may attach this Equipment to it"
         )
     }
 

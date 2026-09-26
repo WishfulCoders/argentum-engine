@@ -6,10 +6,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.effects.GainControlEffect
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
 
 /**
  * Insurrection
@@ -25,11 +22,9 @@ val Insurrection = card("Insurrection") {
     oracleText = "Untap all creatures and gain control of them until end of turn. They gain haste until end of turn."
 
     spell {
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(GroupFilter.AllCreatures, GainControlEffect(EffectTarget.Self, Duration.EndOfTurn)),
-            Effects.ForEachInGroup(GroupFilter.AllCreatures, TapUntapEffect(EffectTarget.Self, tap = false)),
-            Effects.ForEachInGroup(GroupFilter.AllCreatures, GrantKeywordEffect(Keyword.HASTE, EffectTarget.Self, Duration.EndOfTurn))
-        )
+        effect = Effects.ForEachInGroup(GroupFilter.AllCreatures, Effects.GainControl(EffectTarget.IterationEntity, Duration.EndOfTurn)) then
+            Effects.ForEachInGroup(GroupFilter.AllCreatures, Effects.Untap(EffectTarget.IterationEntity)) then
+            Effects.ForEachInGroup(GroupFilter.AllCreatures, Effects.GrantKeyword(Keyword.HASTE, EffectTarget.IterationEntity, Duration.EndOfTurn))
     }
 
     metadata {

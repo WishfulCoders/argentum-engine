@@ -32,7 +32,7 @@ val TarPitcher = card("Tar Pitcher") {
             Costs.Tap,
             Costs.Sacrifice(GameObjectFilter.Permanent.withSubtype(Subtype.GOBLIN))
         )
-        val recipient = target("any target", Targets.Any)
+        val recipient = target(Targets.Any)
         effect = Effects.DealDamage(2, recipient)
         description = "{T}, Sacrifice a Goblin: This creature deals 2 damage to any target."
     }

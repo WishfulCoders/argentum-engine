@@ -42,7 +42,7 @@ internal fun BridgeBuilder.structuralEnvelopes() {
     // "you may [do X]. Do this only once each turn." — a once-per-turn triggered ability whose body the
     // once-each-turn tag also frames as a "you may". The capability is the nested actions (the emitter
     // renders Irreverent Gremlin's MustCost(discard) + If(CostWasPaid)[draw] rummage as
-    // MayEffect(IfYouDoEffect(...)) with oncePerTurn = true; other bodies scaffold).
+    // Effects.May(Effects.IfYouDo(...)) with oncePerTurn = true; other bodies scaffold).
     envelope("TriggerMayOnceEachTurn", "envelope: optional once-each-turn triggered ability (capability is the nested actions)")
     envelope("Activated", "envelope: activated ability")
     envelope("ActivatedWithModifiers", "envelope: activated ability")
@@ -63,7 +63,7 @@ internal fun BridgeBuilder.structuralEnvelopes() {
     // renders the self-or-other-creature ETB shape as a single ANY-binding entersBattlefield trigger.
     envelope("Or", "envelope: trigger disjunction ('whenever A or B')")
     // A resolution-time intervening-if (`If[cond, [then]]` inside a spell/ability ActionList) realises as
-    // a `ConditionalEffect` -> `GatedEffect(gate = WhenCondition)` (SerialName "Gated") in our trees, the
+    // a `Effects.If` -> `GatedEffect(gate = WhenCondition)` (SerialName "Gated") in our trees, the
     // same compiled shape as a "you may" gate; so the conditional envelope composes the Gated capability
     // (Foolish Fate's "if you gained life this turn …", Burrog Barrage's "+1/+0 if you've cast …").
     envelope("If", "conditional envelope", composes = listOf("Gated"))

@@ -3,7 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.snc.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Antagonize
@@ -18,7 +18,7 @@ val Antagonize = card("Antagonize") {
     oracleText = "Target creature gets +4/+3 until end of turn."
 
     spell {
-        val creature = target("target creature to get +4/+3", TargetCreature())
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(4, 3, creature)
     }
 

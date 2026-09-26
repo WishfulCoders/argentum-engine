@@ -26,7 +26,7 @@ val GempalmStrider = card("Gempalm Strider") {
     keywordAbility(KeywordAbility.cycling("{2}{G}{G}"))
 
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
+        trigger = Triggers.self.isCycled()
         effect = Patterns.Group.modifyStatsForAll(2, 2, GroupFilter.allCreaturesWithSubtype("Elf"))
     }
 

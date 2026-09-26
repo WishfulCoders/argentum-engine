@@ -3,20 +3,18 @@ package com.wingedsheep.mtg.sets.definitions.spm.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedActivatedAbility
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.AbilityId
-import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantActivatedAbility
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Friendly Neighborhood
@@ -42,10 +40,10 @@ val FriendlyNeighborhood = card("Friendly Neighborhood") {
         "Enchanted land has \"{1}, {T}: Target creature gets +1/+1 until end of turn for each " +
         "creature you control. Activate only as a sorcery.\""
 
-    auraTarget = Targets.Land
+    auraTarget = TargetObject(filter = TargetFilter.Land)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
@@ -57,17 +55,16 @@ val FriendlyNeighborhood = card("Friendly Neighborhood") {
 
     staticAbility {
         ability = GrantActivatedAbility(
-            ability = ActivatedAbility(
-                id = AbilityId.generate(),
-                cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap),
+            ability = grantedActivatedAbility {
+                cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.ModifyStats(
-                    power = DynamicAmount.Count(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature),
-                    toughness = DynamicAmount.Count(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature),
-                    target = EffectTarget.ContextTarget(0)
-                ),
-                targetRequirements = listOf(TargetCreature()),
+                    power = DynamicAmounts.count(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature),
+                    toughness = DynamicAmounts.count(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature),
+                    target = creature
+                )
                 timing = TimingRule.SorcerySpeed
-            )
+            }
         )
     }
 

@@ -8,11 +8,11 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.EntityId
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 class ForcedTargetEnumerationTest : FunSpec({
 
@@ -25,7 +25,7 @@ class ForcedTargetEnumerationTest : FunSpec({
         toughness = 1
         activatedAbility {
             cost = Costs.Free
-            target("creature", TargetCreature(optional = optional))
+            target(TargetFilter.Creature, optional = optional)
             effect = Effects.GainLife(1)
         }
     }

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.mechanics.mana
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
@@ -145,7 +146,7 @@ class SmartTapTest : FunSpec({
         driver.putLandOnBattlefield(playerId, "Breeding Pool")
 
         // Create solver with the driver's registry
-        val solver = ManaSolver(createRegistry())
+        val solver = ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         // Solve for {G}
         val cost = ManaCost.parse("{G}")
@@ -172,7 +173,7 @@ class SmartTapTest : FunSpec({
         driver.putLandOnBattlefield(playerId, "Forest")
         driver.putLandOnBattlefield(playerId, "Kessig Wolf Run")
 
-        val solver = ManaSolver(createRegistry())
+        val solver = ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         // Solve for {1} - both can produce this
         val cost = ManaCost.parse("{1}")
@@ -200,7 +201,7 @@ class SmartTapTest : FunSpec({
         val ragavanId = driver.putCreatureOnBattlefield(playerId, "Test Hasty Prospector")
 
         // Ragavan has haste so can attack immediately - verify this is detected
-        val solver = ManaSolver(createRegistry())
+        val solver = ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         // Solve for {1} - both can produce mana
         val cost = ManaCost.parse("{1}")
@@ -227,7 +228,7 @@ class SmartTapTest : FunSpec({
         driver.putLandOnBattlefield(playerId, "Forest")
         driver.putLandOnBattlefield(playerId, "Mana Confluence")
 
-        val solver = ManaSolver(createRegistry())
+        val solver = ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         // Solve for {1}
         val cost = ManaCost.parse("{1}")
@@ -255,7 +256,7 @@ class SmartTapTest : FunSpec({
         driver.putLandOnBattlefield(playerId, "Breeding Pool")
         driver.putLandOnBattlefield(playerId, "Kessig Wolf Run")
 
-        val solver = ManaSolver(createRegistry())
+        val solver = ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         // Solve for {2}{G}
         val cost = ManaCost.parse("{2}{G}")
@@ -284,7 +285,7 @@ class SmartTapTest : FunSpec({
         driver.putLandOnBattlefield(playerId, "Forest")
         driver.putCreatureOnBattlefield(playerId, "Llanowar Elves")
 
-        val solver = ManaSolver(createRegistry())
+        val solver = ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         // Solve for {G}{G} - need 2 green sources
         val cost = ManaCost.parse("{G}{G}")
@@ -310,7 +311,7 @@ class SmartTapTest : FunSpec({
         // Remove summoning sickness
         driver.removeSummoningSickness(elvesId)
 
-        val solver = ManaSolver(createRegistry())
+        val solver = ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         // Solve for {G}{G} - need 2 green sources
         val cost = ManaCost.parse("{G}{G}")
@@ -350,7 +351,7 @@ class SmartTapTest : FunSpec({
         driver.putCardInHand(playerId, "Wrath of God")
         // When casting a {1} spell, prefer tapping Forest to preserve white for Wrath
 
-        val solver = ManaSolver(createRegistry())
+        val solver = ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val cost = ManaCost.parse("{1}")
         val solution = solver.solve(driver.state, playerId, cost)
 
@@ -381,7 +382,7 @@ class SmartTapTest : FunSpec({
         // Hand has Lightning Bolt (needs only 1 red)
         // Casting a {2} spell can tap 2 mountains, keeping 1 for the hand card
 
-        val solver = ManaSolver(createRegistry())
+        val solver = ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val cost = ManaCost.parse("{2}")
         val solution = solver.solve(driver.state, playerId, cost)
 
@@ -410,7 +411,7 @@ class SmartTapTest : FunSpec({
         // Hand has Grizzly Bears (needs {G})
         // Casting a {G} spell must tap the only Forest, even though hand needs it
 
-        val solver = ManaSolver(createRegistry())
+        val solver = ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val cost = ManaCost.parse("{G}")
         val solution = solver.solve(driver.state, playerId, cost)
 

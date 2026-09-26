@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.lgn.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 
 /**
  * Skirk Marauder
@@ -23,9 +23,9 @@ val SkirkMarauder = card("Skirk Marauder") {
     oracleText = "Morph {2}{R} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)\nWhen Skirk Marauder is turned face up, it deals 2 damage to any target."
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        val t = target("target", Targets.Any)
-        effect = DealDamageEffect(2, t)
+        trigger = Triggers.self.turnedFaceUp()
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(2, t)
     }
 
     morph = "{2}{R}"

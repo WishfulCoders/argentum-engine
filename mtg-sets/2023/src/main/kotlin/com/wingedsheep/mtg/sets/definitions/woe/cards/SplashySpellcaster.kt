@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Splashy Spellcaster
@@ -35,11 +35,8 @@ val SplashySpellcaster = card("Splashy Spellcaster") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.YouCastInstantOrSorcery
-        val t = target(
-            "up to one other target creature you control",
-            TargetCreature(filter = TargetFilter.OtherCreatureYouControl, optional = true)
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
+        val t = target(TargetFilter.OtherCreatureYouControl, optional = true)
         effect = Effects.CreateRoleToken("Sorcerer Role", t)
     }
 

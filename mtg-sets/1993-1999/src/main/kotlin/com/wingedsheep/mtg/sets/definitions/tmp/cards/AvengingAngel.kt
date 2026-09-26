@@ -27,7 +27,7 @@ val AvengingAngel = card("Avenging Angel") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         optional = true
         effect = Effects.PutOnTopOfLibrary(EffectTarget.Self)
     }

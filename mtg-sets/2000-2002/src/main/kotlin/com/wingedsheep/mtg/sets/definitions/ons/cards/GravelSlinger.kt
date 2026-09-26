@@ -1,11 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Gravel Slinger
@@ -25,8 +24,8 @@ val GravelSlinger = card("Gravel Slinger") {
 
     activatedAbility {
         cost = AbilityCost.Tap
-        val t = target("target", TargetPermanent(filter = TargetFilter.AttackingOrBlockingCreature))
-        effect = DealDamageEffect(1, t)
+        val t = target(TargetFilter.AttackingOrBlockingCreature)
+        effect = Effects.DealDamage(1, t)
     }
 
     morph = "{1}{W}"

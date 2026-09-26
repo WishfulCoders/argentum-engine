@@ -1,17 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.DynamicAmount.AggregateBattlefield
 
 /**
  * Pillage the Bog
@@ -29,11 +27,8 @@ val PillageTheBog = card("Pillage the Bog") {
 
     spell {
         effect = Patterns.Library.lookAtTopAndKeep(
-            count = DynamicAmount.Multiply(
-                AggregateBattlefield(Player.You, GameObjectFilter.Land),
-                2
-            ),
-            keepCount = DynamicAmount.Fixed(1),
+            count = DynamicAmounts.landsYouControl() * 2,
+            keepCount = DynamicAmounts.fixed(1),
             keepDestination = CardDestination.ToZone(Zone.HAND),
             restDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
             restOrder = CardOrder.Random

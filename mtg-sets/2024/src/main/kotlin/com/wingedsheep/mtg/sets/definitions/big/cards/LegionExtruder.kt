@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Legion Extruder
@@ -26,8 +25,8 @@ val LegionExtruder = card("Legion Extruder") {
 
     // ETB: deals 2 damage to any target (creature, player, or planeswalker).
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", Targets.Any)
+        trigger = Triggers.self.enters()
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(2, t)
     }
 
@@ -40,7 +39,7 @@ val LegionExtruder = card("Legion Extruder") {
         )
         // artifactToken flag isn't exposed on the Effects.CreateToken facade, so the raw
         // CreateTokenEffect constructor is used (allowed by FacadeBoundaryTest).
-        effect = CreateTokenEffect(
+        effect = Effects.CreateToken(
             power = 3,
             toughness = 3,
             colors = setOf(),

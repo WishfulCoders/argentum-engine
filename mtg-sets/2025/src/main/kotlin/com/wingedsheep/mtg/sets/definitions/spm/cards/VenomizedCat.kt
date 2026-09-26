@@ -23,7 +23,7 @@ val VenomizedCat = card("Venomized Cat") {
     toughness = 3
     keywords(Keyword.DEATHTOUCH)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.mill(2)
     }
     metadata {

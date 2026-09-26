@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Westfold Rider
@@ -25,7 +25,7 @@ val WestfoldRider = card("Westfold Rider") {
 
     activatedAbility {
         cost = Costs.SacrificeSelf
-        val target = target("artifact or enchantment", Targets.ArtifactOrEnchantment)
+        val target = target(TargetFilter.ArtifactOrEnchantment)
         effect = Effects.Destroy(target)
         timing = TimingRule.SorcerySpeed
     }

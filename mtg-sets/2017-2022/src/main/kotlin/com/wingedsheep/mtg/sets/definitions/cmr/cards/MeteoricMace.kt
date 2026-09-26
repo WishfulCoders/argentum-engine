@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.scripting.ModifyStats
  * Modeling notes:
  *  - Cascade (CR 702.85a) is itself a "when you cast this spell" triggered ability, so it is
  *    modelled the way Quandrix, the Proof models its own half: the [Keyword.CASCADE] keyword for
- *    the printed line plus a [Triggers.WhenYouCastThisSpell] trigger feeding [Effects.Cascade],
+ *    the printed line plus a `Triggers.self.isCast()` trigger feeding [Effects.Cascade],
  *    which reads the triggering spell's mana value to set the "costs less" threshold. It fires on
  *    a noncreature permanent spell exactly as it does on a creature spell — cascade cares about
  *    the cast, not the card type.
@@ -53,7 +53,7 @@ val MeteoricMace = card("Meteoric Mace") {
 
     // Cascade — the cast trigger the keyword abbreviates.
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
+        trigger = Triggers.self.isCast()
         effect = Effects.Cascade
         description = "Cascade"
     }

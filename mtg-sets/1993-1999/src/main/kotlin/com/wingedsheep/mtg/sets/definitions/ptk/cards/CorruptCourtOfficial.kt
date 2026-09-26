@@ -26,8 +26,8 @@ val CorruptCourtOfficial = card("Corrupt Court Official") {
     oracleText = "When this creature enters, target opponent discards a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val opponent = target("target opponent", Targets.Opponent)
+        trigger = Triggers.self.enters()
+        val opponent = target(Targets.Opponent)
         effect = Patterns.Hand.discardCards(1, opponent)
     }
 

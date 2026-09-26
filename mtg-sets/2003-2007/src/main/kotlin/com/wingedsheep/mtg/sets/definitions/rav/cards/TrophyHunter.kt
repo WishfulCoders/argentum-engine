@@ -1,15 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Trophy Hunter
@@ -38,15 +38,13 @@ val TrophyHunter = card("Trophy Hunter") {
     // ability's own source, which is Effects.DealDamage's default.
     activatedAbility {
         cost = Costs.Mana("{1}{G}")
-        val t = target("target", Targets.CreatureWithKeyword(Keyword.FLYING))
+        val t = target(TargetFilter.Creature.withKeyword(Keyword.FLYING))
         effect = Effects.DealDamage(1, t)
     }
 
     triggeredAbility {
-        trigger = Triggers.creatureDealtDamageByThisDies(
-            GameObjectFilter.Creature.withKeyword(Keyword.FLYING)
-        )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.self.damagedCreatureDies(GameObjectFilter.Creature.withKeyword(Keyword.FLYING))
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     metadata {

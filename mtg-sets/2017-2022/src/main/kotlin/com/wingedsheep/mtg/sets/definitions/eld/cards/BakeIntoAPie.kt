@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.eld.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Bake into a Pie
@@ -20,11 +20,8 @@ val BakeIntoAPie = card("Bake into a Pie") {
         "\"{2}, {T}, Sacrifice this token: You gain 3 life.\")"
 
     spell {
-        val target = target("target creature", Targets.Creature)
-        effect = Effects.Composite(listOf(
-            Effects.Destroy(target),
-            Effects.CreateFood()
-        ))
+        val target = target(TargetFilter.Creature)
+        effect = Effects.Destroy(target) then Effects.CreateFood()
     }
 
     metadata {

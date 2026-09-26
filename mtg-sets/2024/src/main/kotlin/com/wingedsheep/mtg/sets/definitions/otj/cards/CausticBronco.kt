@@ -1,21 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Caustic Bronco
@@ -51,31 +45,22 @@ val CausticBronco = card("Caustic Bronco") {
     keywordAbility(KeywordAbility.saddle(3))
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1), Player.You),
-                    storeAs = "revealed"
+        trigger = Triggers.self.attacks()
+        effect = Effects.Pipeline {
+            val revealed = gather(CardSource.TopOfLibrary(1, Player.You))
+            toHand(revealed, revealed = true)
+            run(Effects.If(
+                condition = Conditions.SourceIsSaddled,
+                then = Effects.LoseLife(
+                    DynamicAmounts.manaValueOf(revealed),
+                    EffectTarget.PlayerRef(Player.EachOpponent)
                 ),
-                MoveCollectionEffect(
-                    from = "revealed",
-                    destination = CardDestination.ToZone(Zone.HAND, Player.You),
-                    revealed = true
-                ),
-                ConditionalEffect(
-                    condition = Conditions.SourceIsSaddled,
-                    effect = LoseLifeEffect(
-                        DynamicAmount.StoredCardManaValue("revealed"),
-                        EffectTarget.PlayerRef(Player.EachOpponent)
-                    ),
-                    elseEffect = LoseLifeEffect(
-                        DynamicAmount.StoredCardManaValue("revealed"),
-                        EffectTarget.Controller
-                    )
+                otherwise = Effects.LoseLife(
+                    DynamicAmounts.manaValueOf(revealed),
+                    EffectTarget.Controller
                 )
-            )
-        )
+            ))
+        }
     }
 
     metadata {

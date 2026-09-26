@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Sage's Knowledge
@@ -22,12 +21,7 @@ val SagesKnowledge = card("Sage's Knowledge") {
     oracleText = "Return target sorcery card from your graveyard to your hand."
 
     spell {
-        val sorcery = target(
-            "target",
-            TargetObject(
-                filter = TargetFilter(GameObjectFilter.Sorcery.ownedByYou(), zone = Zone.GRAVEYARD)
-            )
-        )
+        val sorcery = target(TargetFilter(GameObjectFilter.Sorcery.ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.ReturnToHand(sorcery)
     }
 

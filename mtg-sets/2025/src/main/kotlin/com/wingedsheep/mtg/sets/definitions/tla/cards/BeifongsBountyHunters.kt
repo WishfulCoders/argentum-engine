@@ -1,17 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Beifong's Bounty Hunters
@@ -28,7 +24,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * graveyard from the battlefield (ANY binding). The "nonland" restriction keeps
  * earthbent lands — which are creatures but still lands — from re-triggering when
  * they die. X reads the dying creature's power via last-known information
- * (`EntityReference.Triggering`). Earthbend is a keyword *action* composed from
+ * (`EffectTarget.TriggeringEntity`). Earthbend is a keyword *action* composed from
  * existing primitives via [Effects.Earthbend] (animate land + haste + counters +
  * return-tapped self-triggers), targeting a land you control.
  */
@@ -43,14 +39,10 @@ val BeifongsBountyHunters = card("Beifong's Bounty Hunters") {
         "on it. When it dies or is exiled, return it to the battlefield tapped.)"
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = (GameObjectFilter.Creature and GameObjectFilter.Nonland).youControl(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY,
-        )
-        val land = target("target land you control", TargetObject(filter = TargetFilter.Land.youControl()))
+        trigger = Triggers.a((GameObjectFilter.Creature and GameObjectFilter.Nonland).youControl()).dies()
+        val land = target(TargetFilter.Land.youControl())
         effect = Effects.Earthbend(
-            DynamicAmount.EntityProperty(EntityReference.Triggering, EntityNumericProperty.Power),
+            DynamicAmounts.triggeringPower(),
             land,
         )
         description = "Whenever a nonland creature you control dies, earthbend X, where X is that creature's power."

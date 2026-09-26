@@ -38,7 +38,7 @@ val GollumSchemingGuide = card("Gollum, Scheming Guide") {
         "from combat. Otherwise, you draw a card and Gollum can't be blocked this turn."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Library.lookAtTopAndReorder(count = 2) then
             Effects.OpponentGuessesTopCardKind(
                 onGuessedRight = Effects.RemoveFromCombat(EffectTarget.Self),

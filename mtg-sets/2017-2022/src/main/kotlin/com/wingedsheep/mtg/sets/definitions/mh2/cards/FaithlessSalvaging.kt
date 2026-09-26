@@ -33,10 +33,7 @@ val FaithlessSalvaging = card("Faithless Salvaging") {
     keywords(Keyword.REBOUND)
 
     spell {
-        effect = Effects.Composite(
-            Patterns.Hand.discardCards(1),
-            Effects.DrawCards(1)
-        )
+        effect = Patterns.Hand.discardCards(1) then Effects.DrawCards(1)
     }
 
     metadata {

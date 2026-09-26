@@ -13,7 +13,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Sorcery
  *
  * The mass-pump shape: one [Effects.ForEachInGroup] over the creatures you control, whose
- * per-member body is a [Effects.ModifyStats] on `EffectTarget.Self` — the iterated member, not the
+ * per-member body is a [Effects.ModifyStats] on `EffectTarget.IterationEntity` — the iterated member, not the
  * spell's controller. The +2/+0 lasts until end of turn, which is `ModifyStats`' default duration.
  */
 val DesperateCharge = card("Desperate Charge") {
@@ -25,7 +25,7 @@ val DesperateCharge = card("Desperate Charge") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(2, 0, EffectTarget.Self)
+            Effects.ModifyStats(2, 0, EffectTarget.IterationEntity)
         )
     }
 

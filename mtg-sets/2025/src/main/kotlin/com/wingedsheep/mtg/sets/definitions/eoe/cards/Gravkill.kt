@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -22,7 +21,7 @@ val Gravkill = card("Gravkill") {
     oracleText = "Exile target creature or Spacecraft."
 
     spell {
-        val target = target("target", TargetPermanent(filter = TargetFilter(GameObjectFilter.Creature or GameObjectFilter.Permanent.withSubtype("Spacecraft"))))
+        val target = target(TargetFilter(GameObjectFilter.Creature or GameObjectFilter.Permanent.withSubtype("Spacecraft")))
         effect = Effects.Move(target, Zone.EXILE)
     }
 

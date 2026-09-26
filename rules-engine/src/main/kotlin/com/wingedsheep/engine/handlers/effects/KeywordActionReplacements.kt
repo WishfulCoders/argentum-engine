@@ -31,8 +31,6 @@ enum class ReplaceableKeywordAction {
  */
 object KeywordActionReplacements {
 
-    private val predicateEvaluator = PredicateEvaluator()
-
     /**
      * The ordered prefix effects of every [ModifyKeywordAction] on the battlefield that applies to
      * [subjectId] performing [action]. The replacement's `appliesTo` filter is matched against the
@@ -47,7 +45,8 @@ object KeywordActionReplacements {
     fun collectPrefixes(
         state: GameState,
         subjectId: EntityId,
-        action: ReplaceableKeywordAction
+        action: ReplaceableKeywordAction,
+        predicateEvaluator: PredicateEvaluator
     ): List<Effect> {
         val prefixes = mutableListOf<Effect>()
         for (permanentId in state.getBattlefield()) {

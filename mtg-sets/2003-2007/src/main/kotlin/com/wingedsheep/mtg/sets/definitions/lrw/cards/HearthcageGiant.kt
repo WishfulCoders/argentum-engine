@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Hearthcage Giant
@@ -31,7 +30,7 @@ val HearthcageGiant = card("Hearthcage Giant") {
         "Sacrifice an Elemental: Target Giant creature gets +3/+1 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 3,
             toughness = 1,
@@ -45,10 +44,7 @@ val HearthcageGiant = card("Hearthcage Giant") {
 
     activatedAbility {
         cost = Costs.Sacrifice(GameObjectFilter.Permanent.withSubtype(Subtype.ELEMENTAL))
-        val giant = target(
-            "target Giant creature",
-            TargetCreature(filter = TargetFilter.Creature.withSubtype(Subtype.GIANT))
-        )
+        val giant = target(TargetFilter.Creature.withSubtype(Subtype.GIANT))
         effect = Effects.ModifyStats(3, 1, giant)
         description = "Sacrifice an Elemental: Target Giant creature gets +3/+1 until end of turn."
     }

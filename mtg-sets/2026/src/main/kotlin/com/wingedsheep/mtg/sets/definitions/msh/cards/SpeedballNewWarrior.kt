@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Modeling notes:
  *  - The trigger watches *every* seat (`Player.Each`), not just yours:
- *    [Triggers.anyPlayerCasts] with [SpellCastPredicate.TargetsSource] fires whenever any player's
+ *    `Triggers.anyPlayer.casts(spell, requires)` with [SpellCastPredicate.TargetsSource] fires whenever any player's
  *    just-cast spell chose Speedball as one of its targets. `youCastSpellTargetingSource()` would
  *    have been the Legolas, Master Archer shape — wrong here, since the removal spell that makes
  *    this card interesting is the opponent's.
@@ -44,7 +44,7 @@ val SpeedballNewWarrior = card("Speedball, New Warrior") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.anyPlayerCasts(requires = setOf(SpellCastPredicate.TargetsSource))
+        trigger = Triggers.anyPlayer.casts(requires = setOf(SpellCastPredicate.TargetsSource))
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self) then
             Effects.ChangeTriggeringObjectTargets(RetargetChooser.Controller)
         description = "Whenever a player casts a spell that targets Speedball, he gets +2/+2 " +

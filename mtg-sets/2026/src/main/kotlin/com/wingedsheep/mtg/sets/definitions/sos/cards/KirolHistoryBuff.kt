@@ -1,15 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Kirol, History Buff // Pack a Punch — Secrets of Strixhaven #198
@@ -23,7 +24,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Prepare (Secrets of Strixhaven): Kirol does NOT enter prepared (no PREPARED keyword). He becomes
  * prepared only via his trigger — whenever one or more cards leave his controller's graveyard — through
- * [Effects.BecomePrepared] + the batched [Triggers.CardsLeaveYourGraveyard] trigger. Becoming prepared
+ * [Effects.BecomePrepared] + the batched `Triggers.oneOrMore(filter).leaveYourGraveyard()` trigger. Becoming prepared
  * creates a copy of "Pack a Punch" in exile that its controller may cast for {1}{R}{W}; casting that
  * copy unprepares him. A creature already prepared does not re-prepare, so the trigger is a no-op while
  * he is already prepared. Modeled via [CardLayout.PREPARE] + the `prepare(name) { }` DSL. Pack a Punch
@@ -40,7 +41,7 @@ val KirolHistoryBuff = card("Kirol, History Buff") {
 
     // Whenever one or more cards leave your graveyard, Kirol becomes prepared.
     triggeredAbility {
-        trigger = Triggers.CardsLeaveYourGraveyard()
+        trigger = Triggers.oneOrMore(GameObjectFilter.Any).leaveYourGraveyard()
         effect = Effects.BecomePrepared(EffectTarget.Self)
     }
 
@@ -50,12 +51,10 @@ val KirolHistoryBuff = card("Kirol, History Buff") {
         typeLine = "Sorcery"
         oracleText = "Mill a card. Put two +1/+1 counters on target creature. It gains trample until end of turn."
         spell {
-            target = Targets.Creature
-            effect = Effects.Composite(
-                Patterns.Library.mill(1),
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.ContextTarget(0)),
-                Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.ContextTarget(0), Duration.EndOfTurn),
-            )
+            val creature = target(TargetFilter.Creature)
+            effect = Patterns.Library.mill(1) then
+                Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, creature) then
+                Effects.GrantKeyword(Keyword.TRAMPLE, creature, Duration.EndOfTurn)
         }
     }
 

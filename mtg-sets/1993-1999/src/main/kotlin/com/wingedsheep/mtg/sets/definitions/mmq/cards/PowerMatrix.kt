@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Power Matrix
@@ -23,13 +23,11 @@ val PowerMatrix = card("Power Matrix") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", TargetCreature())
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 1, t),
-            Effects.GrantKeyword(Keyword.FLYING, t),
-            Effects.GrantKeyword(Keyword.FIRST_STRIKE, t),
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(1, 1, t) then
+            Effects.GrantKeyword(Keyword.FLYING, t) then
+            Effects.GrantKeyword(Keyword.FIRST_STRIKE, t) then
             Effects.GrantKeyword(Keyword.TRAMPLE, t)
-        )
     }
 
     metadata {

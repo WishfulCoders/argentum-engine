@@ -5,13 +5,13 @@
 package com.wingedsheep.mtg.sets.definitions.pls.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -29,9 +29,9 @@ val PygmyKavu = card("Pygmy Kavu") {
     power = 1
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = DrawCardsEffect(
-            DynamicAmount.AggregateBattlefield(Player.EachOpponent, GameObjectFilter.Creature.withColor(Color.BLACK))
+        trigger = Triggers.self.enters()
+        effect = Effects.DrawCards(
+            DynamicAmounts.battlefield(Player.EachOpponent, GameObjectFilter.Creature.withColor(Color.BLACK)).count()
         )
     }
     metadata {

@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.roe.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Cadaver Imp
@@ -27,9 +27,9 @@ val CadaverImp = card("Cadaver Imp") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
-        val card = target("target creature card in your graveyard", Targets.CreatureCardInYourGraveyard)
+        val card = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.ReturnToHand(card)
         description = "When this creature enters, you may return target creature card from your " +
             "graveyard to your hand."

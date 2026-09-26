@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.model.CreatureStats
 import com.wingedsheep.sdk.model.Deck
+import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.TriggerBinding
@@ -41,6 +42,7 @@ class ExileUnlessExileTest : FunSpec({
         creatureStats = CreatureStats(3, 2),
         script = CardScript.creature(
             TriggeredAbility.create(
+                id = AbilityId("ExileUnlessExileTest_1"),
                 trigger = EventPattern.ZoneChangeEvent(to = Zone.BATTLEFIELD),
                 binding = TriggerBinding.SELF,
                 effect = PayOrSufferEffect(
@@ -64,6 +66,7 @@ class ExileUnlessExileTest : FunSpec({
         creatureStats = CreatureStats(2, 1),
         script = CardScript.creature(
             TriggeredAbility.create(
+                id = AbilityId("ExileUnlessExileTest_2"),
                 trigger = EventPattern.ZoneChangeEvent(to = Zone.BATTLEFIELD),
                 binding = TriggerBinding.SELF,
                 effect = PayOrSufferEffect(

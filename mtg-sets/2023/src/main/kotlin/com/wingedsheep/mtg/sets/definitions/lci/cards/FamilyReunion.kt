@@ -31,7 +31,7 @@ val FamilyReunion = card("Family Reunion") {
             mode("Creatures you control get +1/+1 until end of turn") {
                 effect = Effects.ForEachInGroup(
                     GroupFilter(GameObjectFilter.Creature.youControl()),
-                    Effects.ModifyStats(1, 1, EffectTarget.Self)
+                    Effects.ModifyStats(1, 1, EffectTarget.IterationEntity)
                 )
             }
             mode(
@@ -39,7 +39,7 @@ val FamilyReunion = card("Family Reunion") {
             ) {
                 effect = Effects.ForEachInGroup(
                     GroupFilter(GameObjectFilter.Creature.youControl()),
-                    Effects.GrantKeyword(Keyword.HEXPROOF, EffectTarget.Self)
+                    Effects.GrantKeyword(Keyword.HEXPROOF, EffectTarget.IterationEntity)
                 )
             }
         }

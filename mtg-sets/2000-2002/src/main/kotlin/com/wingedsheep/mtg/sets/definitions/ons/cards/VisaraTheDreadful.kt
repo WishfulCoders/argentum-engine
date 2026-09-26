@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Visara the Dreadful
@@ -28,7 +27,7 @@ val VisaraTheDreadful = card("Visara the Dreadful") {
 
     activatedAbility {
         cost = AbilityCost.Tap
-        val t = target("target", TargetCreature())
+        val t = target(TargetFilter.Creature)
         effect = Effects.Destroy(t, noRegenerate = true)
     }
 

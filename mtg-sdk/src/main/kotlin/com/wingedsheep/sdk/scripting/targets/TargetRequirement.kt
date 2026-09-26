@@ -7,6 +7,8 @@ import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.text.TextReplaceable
 import com.wingedsheep.sdk.scripting.text.TextReplacer
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.util.numberToWord
+import com.wingedsheep.sdk.scripting.util.pluralNounPhrase
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -141,7 +143,7 @@ data class TargetPlayer(
         ?: when {
             unlimited -> "any number of target players"
             count == 1 -> "target player"
-            else -> "target $count players"
+            else -> "${numberToWord(count)} target players"
         }
 
     override fun applyTextReplacement(replacer: TextReplacer): TargetRequirement {
@@ -180,66 +182,6 @@ data class TargetOpponent(
 }
 
 // =============================================================================
-// Creature Targeting (factory function — returns TargetObject)
-// =============================================================================
-
-/**
- * Target creature (any creature on the battlefield).
- * Factory function that returns a TargetObject with appropriate defaults.
- */
-fun TargetCreature(
-    count: Int = 1,
-    minCount: Int = count,
-    optional: Boolean = false,
-    unlimited: Boolean = false,
-    filter: TargetFilter = TargetFilter.Creature,
-    id: String? = null,
-    dynamicMaxCount: DynamicAmount? = null,
-    sameController: Boolean = false,
-    differentControllers: Boolean = false,
-    sameCreatureType: Boolean = false,
-    chooser: TargetChooser = TargetChooser.Controller
-): TargetObject = TargetObject(
-    count = count,
-    minCount = minCount,
-    optional = optional,
-    unlimited = unlimited,
-    filter = filter,
-    id = id,
-    dynamicMaxCount = dynamicMaxCount,
-    sameController = sameController,
-    differentControllers = differentControllers,
-    sameCreatureType = sameCreatureType,
-    chooser = chooser
-)
-
-// =============================================================================
-// Permanent Targeting (factory function — returns TargetObject)
-// =============================================================================
-
-/**
- * Target permanent (any permanent on the battlefield).
- * Factory function that returns a TargetObject with appropriate defaults.
- */
-fun TargetPermanent(
-    count: Int = 1,
-    optional: Boolean = false,
-    unlimited: Boolean = false,
-    filter: TargetFilter = TargetFilter.Permanent,
-    id: String? = null,
-    dynamicMaxCount: DynamicAmount? = null,
-    sameCardType: Boolean = false
-): TargetObject = TargetObject(
-    count = count,
-    optional = optional,
-    unlimited = unlimited,
-    filter = filter,
-    id = id,
-    dynamicMaxCount = dynamicMaxCount,
-    sameCardType = sameCardType
-)
-
-// =============================================================================
 // Combined Targeting
 // =============================================================================
 
@@ -265,7 +207,13 @@ data class AnyTarget(
 
     override val description: String = descriptionOverride
         ?: buildString {
-            append(if (count == 1) "any target" else "$count targets")
+            append(
+                when {
+                    count == 1 -> "any target"
+                    minCount < count -> "${countRange(maxOf(minCount, 1), count)} targets"
+                    else -> "${numberToWord(count)} targets"
+                }
+            )
             if (filter != GameObjectFilter.Any) append(" that ${filter.description}")
             if (chooser == TargetChooser.Opponent) append(" of an opponent's choice")
         }
@@ -442,24 +390,6 @@ data class TargetSpellOrPermanent(
 // =============================================================================
 
 // =============================================================================
-// Spell Targeting (factory function — returns TargetObject)
-// =============================================================================
-
-/**
- * Target spell on the stack.
- * Factory function that returns a TargetObject with appropriate defaults.
- */
-fun TargetSpell(
-    count: Int = 1,
-    optional: Boolean = false,
-    filter: TargetFilter = TargetFilter.SpellOnStack,
-    id: String? = null,
-    unlimited: Boolean = false
-): TargetObject = TargetObject(
-    count = count, optional = optional, filter = filter, id = id, unlimited = unlimited
-)
-
-// =============================================================================
 // Generic Object Targeting
 // =============================================================================
 
@@ -504,12 +434,13 @@ data class TargetObject(
      */
     val sameOwner: Boolean = false,
     /**
-     * When true and more than one target is chosen for this requirement, the chosen permanent
-     * targets must all share at least one creature type with one another — "two target creatures
-     * you control that share a creature type" (Secret Tunnel). Enforced cross-target by
-     * `TargetValidator` using each permanent's *projected* creature subtypes (so granted/changed
-     * types via continuous effects count); a no-op for single-target requirements and for
-     * non-permanent targets. Defaults to false.
+     * When true and more than one target is chosen for this requirement, the chosen targets must
+     * all share at least one creature type with one another — "two target creatures you control
+     * that share a creature type" (Secret Tunnel), "two target creature cards that share a creature
+     * type" (Unbury). Enforced cross-target by `TargetValidator`: a permanent reads its *projected*
+     * creature subtypes (so granted/changed types via continuous effects count), a card in another
+     * zone its printed creature types (a changeling card has all of them, CR 702.73a). A no-op for
+     * single-target requirements. Defaults to false.
      */
     val sameCreatureType: Boolean = false,
     /**
@@ -557,6 +488,19 @@ data class TargetObject(
      */
     val differentControllers: Boolean = false,
     /**
+     * When true, the chosen targets must be **at most one of each card type** — "up to one target
+     * nonland card of each card type from your graveyard" (Uldaros Theorix). It is one instance of
+     * the word "target", so a card can be chosen only once (CR 115.3) and counts toward exactly
+     * one of its card types: the set is legal when each chosen card can be paired with a
+     * *different* card type it has (CR 205.2a — supertypes and subtypes don't count). An artifact
+     * creature may therefore fill either the artifact or the creature slot, and an artifact
+     * creature plus a creature is legal (artifact + creature), while two plain creatures are not.
+     * Pair with `unlimited = true` — the pairing rule itself bounds the count. Enforced
+     * cross-target by `TargetValidator` (authoritative) and the interactive `DecisionValidators`;
+     * card types are read from projected state on the battlefield and from the card elsewhere.
+     */
+    val onePerCardType: Boolean = false,
+    /**
      * Who picks which legal object this requirement lands on. See [TargetChooser] — the target
      * stays the *controller's* target either way (legality, respondability and CR 115 all still
      * run relative to the controller); only the selection decision is routed elsewhere.
@@ -566,38 +510,36 @@ data class TargetObject(
      */
     override val chooser: TargetChooser = TargetChooser.Controller
 ) : TargetRequirement {
+    /**
+     * Derived from the requirement's shape and [filter] alone — never from [id], which is only the
+     * binding key effects read the chosen target through. This string is the targeting prompt the
+     * client shows, so it has to say what is actually legal ("target artifact or tapped creature"),
+     * not whatever name the author bound the handle under.
+     */
     override val description: String = run {
-        val base = if (id != null) {
-            buildString {
-                // The author-supplied id is often the complete phrase already (e.g. Elrond,
-                // Master of Healing's "up to X target creatures"). Only add the quantifier when
-                // the id doesn't already begin with it, so we don't render "up to up to …".
-                val quantifier = when {
-                    unlimited -> "any number of "
-                    optional -> "up to "
-                    minCount < count -> "$minCount to "
-                    else -> ""
-                }
-                if (quantifier.isNotEmpty() && !id.startsWith(quantifier)) append(quantifier)
-                append(id)
-            }
-        } else {
-            buildString {
-                if (unlimited) {
-                    append("any number of target ")
-                    append("${filter.description}s")
-                } else {
-                    if (optional) append("up to ")
-                    else if (minCount < count) append("$minCount to ")
-                    append("target ")
-                    append(if (count == 1) filter.description else "$count ${filter.description}s")
-                }
-            }
+        val noun = filter.targetPhrase()
+        val plural = filter.targetPhrase(plural = true)
+        // "another target creature" — the source is excluded; several read "other target creatures"
+        val other = filter.excludeSelf
+        val perOpponent = differentControllers &&
+            dynamicMaxCount == DynamicAmount.PlayerCount(com.wingedsheep.sdk.scripting.references.Player.EachOpponent)
+        val target = if (other) "other target" else "target"
+        val base = when {
+            onePerCardType -> "up to one $target $noun of each card type"
+            unlimited -> "any number of $target $plural"
+            // "for each opponent, up to one target creature that player controls"
+            perOpponent -> "up to one $target ${noun.removeSuffix(" an opponent controls")} per opponent"
+            dynamicMaxCount != null -> "up to ${dynamicMaxCount.description} $target $plural"
+            optional && count == 1 -> "up to one $target $noun"
+            optional || minCount == 0 -> "up to ${numberToWord(count)} $target $plural"
+            minCount < count -> "${countRange(minCount, count)} $target $plural"
+            count == 1 -> if (other) "another target $noun" else "target $noun"
+            else -> "${numberToWord(count)} $target $plural"
         }
         val qualified = when {
             sameController -> "$base controlled by the same player"
-            differentControllers -> "$base controlled by different players"
-            sameOwner -> "$base from a single graveyard"
+            differentControllers && !perOpponent -> "$base controlled by different players"
+            sameOwner -> "${base.replace(" in a graveyard", "")} from a single graveyard"
             sameCreatureType -> "$base that share a creature type"
             sameCardType -> "$base that share a card type"
             else -> base
@@ -641,7 +583,15 @@ data class TargetOther(
     val excludeAttachedCreature: Boolean = false,
     override val id: String? = null
 ) : TargetRequirement {
-    override val description: String = baseRequirement.description
+    /** "another target creature", "any other target", "up to one other target creature". */
+    override val description: String = baseRequirement.description.let { base ->
+        when {
+            base.contains("other target") || base.contains("another target") -> base
+            base.startsWith("target ") -> "another " + base
+            base.startsWith("any target") -> base.replaceFirst("any target", "any other target")
+            else -> base.replaceFirst(" target ", " other target ")
+        }
+    }
     // Every count-shaping field is delegated, not just `count`: this wrapper only adds a
     // distinctness rule, so dropping any of them silently reshapes how many targets the wrapped
     // requirement accepts — an "any number of other target …" requirement would collapse to a
@@ -689,6 +639,24 @@ fun TargetRequirement.withCount(newCount: Int): TargetRequirement {
 }
 
 /**
+ * A copy of this requirement that may be left unchosen — "up to one target …". Used by the DSL's
+ * `target(requirement, optional = true)`.
+ */
+fun TargetRequirement.withOptional(): TargetRequirement = when (this) {
+    is TargetPlayer -> copy(optional = true)
+    is TargetOpponent -> copy(optional = true)
+    is AnyTarget -> copy(optional = true)
+    is TargetCreatureOrPlayer -> copy(optional = true)
+    is TargetPermanentOrPlayer -> copy(optional = true)
+    is TargetOpponentOrPlaneswalker -> copy(optional = true)
+    is TargetPlayerOrPlaneswalker -> copy(optional = true)
+    is TargetCreatureOrPlaneswalker -> copy(optional = true)
+    is TargetSpellOrPermanent -> copy(optional = true)
+    is TargetObject -> copy(optional = true)
+    is TargetOther -> copy(baseRequirement = baseRequirement.withOptional())
+}
+
+/**
  * Create a copy of this TargetRequirement with the given id set.
  * Used by the DSL to stamp an id onto requirements passed to target(name, requirement).
  */
@@ -704,4 +672,14 @@ fun TargetRequirement.withId(name: String): TargetRequirement = when (this) {
     is TargetSpellOrPermanent -> copy(id = name)
     is TargetObject -> copy(id = name)
     is TargetOther -> copy(id = name)
+}
+
+/** "one or two", "one, two, or three" — the oracle wording for a bounded target count range. */
+private fun countRange(min: Int, max: Int): String {
+    val words = (min..max).map(::numberToWord)
+    return when (words.size) {
+        2 -> "${words[0]} or ${words[1]}"
+        in 3..4 -> words.dropLast(1).joinToString(", ") + ", or " + words.last()
+        else -> "$min to $max"
+    }
 }

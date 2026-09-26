@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Flying
  * When this creature dies, draw a card.
  *
- * [Triggers.Dies] already carries the battlefield → graveyard zone change; the ability keeps the
+ * `Triggers.self.dies()` already carries the battlefield → graveyard zone change; the ability keeps the
  * default battlefield `activeZones`, because a dies trigger is indexed from where the creature
  * *was*, not from where the card ends up. The draw's controller is the default, so it is left
  * unwritten.
@@ -32,7 +32,7 @@ val PalaceFamiliar = card("Palace Familiar") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.DrawCards(1)
     }
 

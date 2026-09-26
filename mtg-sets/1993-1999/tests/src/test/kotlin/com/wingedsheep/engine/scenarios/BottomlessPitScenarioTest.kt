@@ -14,7 +14,7 @@ import io.kotest.matchers.shouldBe
  *
  * "At the beginning of each player's upkeep, that player discards a card at random."
  *
- * Pins the each-player upkeep scope (`Triggers.EachUpkeep`) drafted by mtgish-tooling: the trigger
+ * Pins the each-player upkeep scope (`Triggers.anyPlayer.beginningOf(Step.UPKEEP)`) drafted by mtgish-tooling: the trigger
  * fires on EVERY player's upkeep — its controller's AND its opponent's — and the discarding player
  * is the player whose upkeep it is. The discard is at random, so no decision is required.
  */

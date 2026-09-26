@@ -27,7 +27,7 @@ val MalakirFamiliar = card("Malakir Familiar") {
     keywords(Keyword.FLYING, Keyword.DEATHTOUCH)
 
     triggeredAbility {
-        trigger = Triggers.YouGainLife
+        trigger = Triggers.you.gainsLife()
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }
 

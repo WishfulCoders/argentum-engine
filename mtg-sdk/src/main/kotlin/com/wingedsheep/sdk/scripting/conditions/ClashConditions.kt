@@ -20,7 +20,7 @@ import kotlinx.serialization.Serializable
  * reach the trigger as trigger context, captured from the `ClashedEvent` that fired it.
  *
  * "You" is the ability's controller because the event is emitted once per *clashing player* and
- * [com.wingedsheep.sdk.dsl.Triggers.WheneverYouClash] matches only the one about its own
+ * `Triggers.you.clashes()` matches only the one about its own
  * controller. Per the Entangling Trap / Sylvan Echoes rulings that stays right when an opponent's
  * spell started the clash: you still clashed, and you can still have won.
  *
@@ -28,7 +28,7 @@ import kotlinx.serialization.Serializable
  * continuous effect could re-derive, so it reads `false` under projection. False for any trigger
  * that wasn't fired by a clash, and false on a tie or a draw from an empty library (nobody wins).
  *
- * Use [com.wingedsheep.sdk.dsl.Triggers.WheneverYouClashAndWin] instead when the *whole* ability is
+ * Use `Triggers.you.clashes(true)` instead when the *whole* ability is
  * conditional on winning ("Whenever you clash and win, …"): that filters the trigger itself and
  * never puts an ability on the stack. This condition is for the cards that do something either way
  * and only *part* of it depends on winning — Entangling Trap taps a creature regardless and merely

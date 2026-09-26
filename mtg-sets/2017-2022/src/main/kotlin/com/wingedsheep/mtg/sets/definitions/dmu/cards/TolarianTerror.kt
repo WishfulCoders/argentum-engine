@@ -9,6 +9,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Tolarian Terror
@@ -41,7 +42,7 @@ val TolarianTerror = card("Tolarian Terror") {
 
     // Ward {2}
     keywords(Keyword.WARD)
-    keywordAbility(KeywordAbility.ward("{2}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
 
     metadata {
         rarity = Rarity.COMMON

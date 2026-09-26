@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.PreventDamage
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Shield of the Realm
@@ -23,7 +23,7 @@ val ShieldOfTheRealm = card("Shield of the Realm") {
         PreventDamage(
             amount = 2,
             appliesTo = EventPattern.DamageEvent(
-                recipient = RecipientFilter.EquippedCreature
+                recipient = Recipient.EquippedCreature
             )
         )
     )

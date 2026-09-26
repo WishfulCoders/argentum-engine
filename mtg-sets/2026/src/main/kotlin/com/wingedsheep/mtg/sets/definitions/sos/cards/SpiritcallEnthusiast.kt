@@ -5,9 +5,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Spiritcall Enthusiast // Scrollboost — Secrets of Strixhaven #33
@@ -37,7 +37,7 @@ val SpiritcallEnthusiast = card("Spiritcall Enthusiast") {
 
     // Whenever one or more tokens you control enter, this creature becomes prepared.
     triggeredAbility {
-        trigger = Triggers.OneOrMorePermanentsEnter(GameObjectFilter.Token)
+        trigger = Triggers.oneOrMore(GameObjectFilter.Token).enter()
         effect = Effects.BecomePrepared(EffectTarget.Self)
     }
 
@@ -47,10 +47,10 @@ val SpiritcallEnthusiast = card("Spiritcall Enthusiast") {
         typeLine = "Sorcery"
         oracleText = "One or two target creatures each get +2/+2 until end of turn."
         spell {
-            effect = ForEachTargetEffect(
-                listOf(Effects.ModifyStats(2, 2, EffectTarget.ContextTarget(0)))
+            effect = Effects.ForEachTarget(
+                Effects.ModifyStats(2, 2, EffectTarget.ContextTarget(0))
             )
-            target = TargetCreature(count = 2, minCount = 1)
+            target = TargetObject(filter = TargetFilter.Creature, count = 2, minCount = 1)
         }
     }
 

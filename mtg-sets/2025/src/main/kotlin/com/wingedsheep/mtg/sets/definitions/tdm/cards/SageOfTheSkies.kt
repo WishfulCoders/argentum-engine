@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * (The copy becomes a token.)
  * Flying, lifelink
  *
- * The cast trigger fires from the stack via [Triggers.WhenYouCastThisSpell]. The intervening
+ * The cast trigger fires from the stack via `Triggers.self.isCast()`. The intervening
  * "if" (CR 603.4) is `Conditions.YouCastSpellsThisTurn(atLeast = 2)`: the spell itself is already
  * counted when its own cast trigger is checked, so "two or more" means "you've cast another spell
  * this turn". `Effects.CopyTargetSpell(TriggeringEntity)` copies the triggering spell (the same
@@ -37,7 +37,7 @@ val SageOfTheSkies = card("Sage of the Skies") {
     keywords(Keyword.FLYING, Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
+        trigger = Triggers.self.isCast()
         interveningIf = Conditions.YouCastSpellsThisTurn(atLeast = 2)
         effect = Effects.CopyTargetSpell(target = EffectTarget.TriggeringEntity)
         description = "When you cast this spell, if you've cast another spell this turn, copy this spell."

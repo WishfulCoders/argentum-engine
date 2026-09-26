@@ -12,7 +12,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target nonland permanent"
+                        "name": "t0"
                     },
                     "destination": "Hand"
                 },
@@ -80,7 +80,7 @@
                 "filter": {
                     "baseFilter": "nonland permanent"
                 },
-                "id": "target nonland permanent"
+                "id": "t0"
             }
         ]
     },
@@ -139,7 +139,7 @@
                 "filter": {
                     "baseFilter": "creature ctrl:you"
                 },
-                "id": "any number of target creatures you control"
+                "id": "t0"
             }
         ]
     },
@@ -171,7 +171,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Mindwrack Demon:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -203,7 +203,7 @@
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Mindwrack Demon:2",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP"
@@ -277,11 +277,11 @@
                         "type": "BattlefieldMatching",
                         "filter": "land"
                     },
-                    "storeAs": "lands"
+                    "storeAs": "gathered1"
                 },
                 {
                     "type": "SelectFromCollection",
-                    "from": "lands",
+                    "from": "gathered1",
                     "selection": {
                         "type": "ChooseUpTo",
                         "count": {
@@ -289,18 +289,18 @@
                             "amount": 2
                         }
                     },
-                    "storeSelected": "toUntap",
+                    "storeSelected": "selected2",
                     "prompt": "Choose up to two lands to untap"
                 },
                 {
                     "type": "ForEach",
                     "space": {
                         "type": "IterationSpace.Collection",
-                        "collection": "toUntap"
+                        "collection": "selected2"
                     },
                     "body": {
                         "type": "TapUntap",
-                        "target": "Self",
+                        "target": "IterationEntity",
                         "tap": false
                     }
                 },
@@ -367,7 +367,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Tooth Collector:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -384,7 +384,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature an opponent controls"
+                        "name": "t0"
                     }
                 },
                 "targetRequirement": {
@@ -392,11 +392,11 @@
                     "filter": {
                         "baseFilter": "creature ctrl:opponent"
                     },
-                    "id": "target creature an opponent controls"
+                    "id": "t0"
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Tooth Collector:2",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP",
@@ -415,7 +415,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature that player controls"
+                        "name": "t1"
                     }
                 },
                 "targetRequirement": {
@@ -423,7 +423,7 @@
                     "filter": {
                         "baseFilter": "creature ctrl:triggering-player"
                     },
-                    "id": "target creature that player controls"
+                    "id": "t1"
                 },
                 "interveningIf": {
                     "type": "Compare",
@@ -469,7 +469,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Topplegeist:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -478,7 +478,7 @@
                     "type": "TapUntap",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature an opponent controls"
+                        "name": "t0"
                     }
                 },
                 "targetRequirement": {
@@ -486,11 +486,11 @@
                     "filter": {
                         "baseFilter": "creature ctrl:opponent"
                     },
-                    "id": "target creature an opponent controls"
+                    "id": "t0"
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Topplegeist:2",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP",
@@ -501,7 +501,7 @@
                     "type": "TapUntap",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature that player controls"
+                        "name": "t1"
                     }
                 },
                 "targetRequirement": {
@@ -509,7 +509,7 @@
                     "filter": {
                         "baseFilter": "creature ctrl:triggering-player"
                     },
-                    "id": "target creature that player controls"
+                    "id": "t1"
                 },
                 "interveningIf": {
                     "type": "Compare",

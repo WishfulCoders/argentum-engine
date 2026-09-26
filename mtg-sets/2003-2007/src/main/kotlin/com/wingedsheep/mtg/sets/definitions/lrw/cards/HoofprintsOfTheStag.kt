@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -9,8 +9,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -21,16 +19,14 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * {2}{W}, Remove four hoofprint counters from this enchantment: Create a 4/4 white Elemental
  * creature token with flying. Activate only during your turn.
  *
- * `hoofprint` is a new passive counter type — no inherent rule, purely this card's own tally — so
- * it needs its `CounterType` enum entry alongside the `Counters` constant. Without the enum entry
- * every counter read silently falls back to counting **+1/+1** counters (`resolveCounterType`
- * catches the `valueOf` failure and defaults), which fails open rather than loudly.
+ * `hoofprint` is a passive counter type — no inherent rule, purely this card's own tally — named by
+ * [CounterType.HOOFPRINT].
  *
  * Two details the wording forces:
  *
  * - The draw trigger fires **per card drawn** (2007-10-01 ruling), which is what
- *   [Triggers.YouDraw] already does — a "draw three cards" spell gives three separate triggers,
- *   each with its own "you may". [MayEffect] is that optionality; declining one doesn't decline
+ *   `Triggers.you.draws()` already does — a "draw three cards" spell gives three separate triggers,
+ *   each with its own "you may". [Effects.May] is that optionality; declining one doesn't decline
  *   the rest.
  * - "Activate only during your turn" is a timing restriction on the ability, not sorcery speed:
  *   [ActivationRestriction.OnlyDuringYourTurn] permits activation during your own upkeep or in
@@ -49,10 +45,10 @@ val HoofprintsOfTheStag = card("Hoofprints of the Stag") {
         "creature token with flying. Activate only during your turn."
 
     triggeredAbility {
-        trigger = Triggers.YouDraw
-        effect = MayEffect(
-            AddCountersEffect(
-                counterType = Counters.HOOFPRINT,
+        trigger = Triggers.you.draws()
+        effect = Effects.May(
+            Effects.AddCounters(
+                counterType = CounterType.HOOFPRINT,
                 count = 1,
                 target = EffectTarget.Self
             )
@@ -63,7 +59,7 @@ val HoofprintsOfTheStag = card("Hoofprints of the Stag") {
     activatedAbility {
         cost = Costs.Composite(
             Costs.Mana("{2}{W}"),
-            Costs.RemoveCounterFromSelf(Counters.HOOFPRINT, 4)
+            Costs.RemoveCounterFromSelf(CounterType.HOOFPRINT, 4)
         )
         restrictions = listOf(ActivationRestriction.OnlyDuringYourTurn)
         effect = Effects.CreateToken(

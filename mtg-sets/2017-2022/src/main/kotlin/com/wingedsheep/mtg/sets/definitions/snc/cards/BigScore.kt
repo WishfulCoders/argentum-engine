@@ -21,12 +21,7 @@ val BigScore = card("Big Score") {
     additionalCost(Costs.additional.DiscardCards())
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                Effects.DrawCards(2),
-                Effects.CreateTreasure(count = 2)
-            )
-        )
+        effect = Effects.DrawCards(2) then Effects.CreateTreasure(count = 2)
     }
 
     metadata {

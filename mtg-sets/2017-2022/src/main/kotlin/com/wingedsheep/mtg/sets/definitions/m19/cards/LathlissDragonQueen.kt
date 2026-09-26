@@ -13,7 +13,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -38,10 +37,7 @@ val LathlissDragonQueen = card("Lathliss, Dragon Queen") {
     triggeredAbility {
         // Both nouns are bare tribal ones — "Dragon", "Dragons" — so they name the subtype and not
         // the card type, and a noncreature Dragon permanent is one of them. Found by the differential.
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Permanent.withSubtype(Subtype.DRAGON).nontoken().youControl(),
-            binding = TriggerBinding.OTHER
-        )
+        trigger = Triggers.another(GameObjectFilter.Permanent.withSubtype(Subtype.DRAGON).nontoken().youControl()).enters()
         effect = Effects.CreateToken(
             power = 5,
             toughness = 5,
@@ -54,7 +50,7 @@ val LathlissDragonQueen = card("Lathliss, Dragon Queen") {
         cost = Costs.Mana("{1}{R}")
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Permanent.withSubtype(Subtype.DRAGON).youControl()),
-            Effects.ModifyStats(1, 0, EffectTarget.Self)
+            Effects.ModifyStats(1, 0, EffectTarget.IterationEntity)
         )
     }
     metadata {

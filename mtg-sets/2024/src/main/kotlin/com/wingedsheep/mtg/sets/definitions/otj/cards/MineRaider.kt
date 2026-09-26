@@ -38,7 +38,7 @@ val MineRaider = card("Mine Raider") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouControlAtLeast(
             2,
             GameObjectFilter.Creature.withAnyOfSubtypes(Subtype.OUTLAW_TYPES),

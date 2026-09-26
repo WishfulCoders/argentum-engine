@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.mid.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
@@ -8,7 +9,6 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 val MemoryDeluge = card("Memory Deluge") {
     manaCost = "{2}{U}{U}"
@@ -18,8 +18,8 @@ val MemoryDeluge = card("Memory Deluge") {
 
     spell {
         effect = Patterns.Library.lookAtTopAndKeep(
-            count = DynamicAmount.TotalManaSpent,
-            keepCount = DynamicAmount.Fixed(2),
+            count = DynamicAmounts.totalManaSpent(),
+            keepCount = DynamicAmounts.fixed(2),
             keepDestination = CardDestination.ToZone(Zone.HAND),
             restDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
             restOrder = CardOrder.Random

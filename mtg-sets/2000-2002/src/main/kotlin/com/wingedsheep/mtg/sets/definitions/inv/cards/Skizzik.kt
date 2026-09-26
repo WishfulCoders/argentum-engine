@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Skizzik
@@ -31,7 +32,7 @@ val Skizzik = card("Skizzik") {
     keywordAbility(KeywordAbility.kicker("{R}"))
 
     triggeredAbility {
-        trigger = Triggers.EachEndStep
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
         interveningIf = Conditions.Not(Conditions.WasKicked)
         effect = SacrificeSelfEffect
     }

@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.scripting.CanAttackDespiteDefender
 import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
+import com.wingedsheep.sdk.core.CounterType
 
 /**
  * Prison Barricade
@@ -40,7 +40,7 @@ val PrisonBarricade = card("Prison Barricade") {
 
     // "Enters with a counter" is a replacement effect (rule 614.1c), not an ETB trigger
     replacementEffect(EntersWithCounters(
-        counterType = CounterTypeFilter.PlusOnePlusOne,
+        counterType = CounterType.PLUS_ONE_PLUS_ONE,
         count = 1,
         selfOnly = true,
         condition = WasKicked
@@ -48,7 +48,7 @@ val PrisonBarricade = card("Prison Barricade") {
 
     staticAbility {
         ability = CanAttackDespiteDefender(
-            condition = Conditions.SourceHasCounter(CounterTypeFilter.Any)
+            condition = Conditions.SourceHasCounter(null)
         )
     }
 

@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
@@ -9,7 +10,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Flow State
@@ -36,14 +36,14 @@ val FlowState = card("Flow State") {
 
     spell {
         effect = Patterns.Library.lookAtTopAndKeep(
-            count = DynamicAmount.Fixed(3),
-            keepCount = DynamicAmount.Conditional(
+            count = DynamicAmounts.fixed(3),
+            keepCount = DynamicAmounts.conditional(
                 condition = Conditions.All(
                     Conditions.GraveyardContains(Filters.Instant),
                     Conditions.GraveyardContains(Filters.Sorcery)
                 ),
-                ifTrue = DynamicAmount.Fixed(2),
-                ifFalse = DynamicAmount.Fixed(1)
+                ifTrue = 2,
+                ifFalse = 1
             ),
             keepDestination = CardDestination.ToZone(Zone.HAND),
             restDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),

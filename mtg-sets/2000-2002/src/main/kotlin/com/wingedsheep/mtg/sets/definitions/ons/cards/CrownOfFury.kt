@@ -2,12 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.effects.GrantToEnchantedCreatureTypeGroupEffect
 import com.wingedsheep.sdk.scripting.ModifyStats
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Crown of Fury
@@ -24,7 +25,7 @@ val CrownOfFury = card("Crown of Fury") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature\nEnchanted creature gets +1/+0 and has first strike.\nSacrifice Crown of Fury: Enchanted creature and other creatures that share a creature type with it get +1/+0 and gain first strike until end of turn."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = ModifyStats(1, 0)
@@ -36,7 +37,7 @@ val CrownOfFury = card("Crown of Fury") {
 
     activatedAbility {
         cost = Costs.SacrificeSelf
-        effect = GrantToEnchantedCreatureTypeGroupEffect(
+        effect = Effects.GrantToEnchantedCreatureTypeGroup(
             powerModifier = 1,
             toughnessModifier = 0,
             keyword = Keyword.FIRST_STRIKE

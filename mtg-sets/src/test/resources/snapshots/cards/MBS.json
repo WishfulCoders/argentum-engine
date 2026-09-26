@@ -15,9 +15,9 @@
             },
             "body": {
                 "type": "AddDynamicCounters",
-                "counterType": "-1/-1",
+                "counterType": "MINUS_ONE_MINUS_ONE",
                 "amount": "XValue",
-                "target": "Self"
+                "target": "IterationEntity"
             }
         },
         "selfShuffleIntoLibraryOnResolve": true
@@ -51,14 +51,14 @@
             "type": "DrawCards",
             "count": "XValue",
             "target": {
-                "type": "ContextTarget",
-                "index": 0
+                "type": "BoundVariable",
+                "name": "t0"
             }
         },
         "targetRequirements": [
             {
                 "type": "TargetPlayer",
-                "id": "target player"
+                "id": "t0"
             }
         ],
         "selfShuffleIntoLibraryOnResolve": true
@@ -111,7 +111,8 @@
                             ]
                         }
                     },
-                    "storeAs": "searchable"
+                    "storeAs": "searchable",
+                    "search": true
                 },
                 {
                     "type": "SelectFromCollection",
@@ -302,7 +303,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Massacre Wurm:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -325,12 +326,12 @@
                             "type": "Fixed",
                             "amount": -2
                         },
-                        "target": "Self"
+                        "target": "IterationEntity"
                     }
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Massacre Wurm:2",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "creature ctrl:opponent",
@@ -432,7 +433,7 @@
                         "type": "MarkExileOnDeath",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "any target"
+                            "name": "t0"
                         }
                     }
                 },
@@ -441,7 +442,7 @@
                     "amount": "XValue",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "any target"
+                        "name": "t0"
                     }
                 }
             ]
@@ -449,7 +450,7 @@
         "targetRequirements": [
             {
                 "type": "AnyTarget",
-                "id": "any target"
+                "id": "t0"
             }
         ],
         "selfShuffleIntoLibraryOnResolve": true
@@ -496,7 +497,7 @@
                                 "type": "Fixed",
                                 "amount": 3
                             },
-                            "target": "Self"
+                            "target": "IterationEntity"
                         }
                     },
                     "description": "Slagstorm deals 3 damage to each creature"
@@ -543,7 +544,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Spine of Ish Sah:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -552,7 +553,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "permanent"
+                        "name": "t0"
                     },
                     "destination": "Graveyard",
                     "byDestruction": true
@@ -562,11 +563,11 @@
                     "filter": {
                         "baseFilter": "permanent"
                     },
-                    "id": "permanent"
+                    "id": "t0"
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Spine of Ish Sah:2",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield",

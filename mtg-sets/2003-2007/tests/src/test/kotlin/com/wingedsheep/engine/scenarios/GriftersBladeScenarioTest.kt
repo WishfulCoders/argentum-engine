@@ -18,9 +18,9 @@ import io.kotest.matchers.shouldNotBe
  * attached to. If you do, it enters attached to that creature."
  *
  * The card is two entry replacements standing in a row: `EntersWithChoice` records the host before
- * the Blade enters, then `OnEnterRunEffect` attaches to it inline with entry. Those two had never
+ * the Blade enters, then `OnEnterRun` attaches to it inline with entry. Those two had never
  * met before — the `EntersWithChoice` resume path completed the permanent's entry itself and never
- * ran the `OnEnterRunEffect`, so the Blade would have made its choice and then entered unattached
+ * ran the `OnEnterRun`, so the Blade would have made its choice and then entered unattached
  * anyway. The first test is the regression for that; it fails on `main` with the choice prompted
  * and nothing attached.
  *

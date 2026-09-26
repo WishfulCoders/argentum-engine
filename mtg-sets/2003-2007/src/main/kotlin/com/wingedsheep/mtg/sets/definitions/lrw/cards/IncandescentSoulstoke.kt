@@ -3,18 +3,18 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.effects.ConditionalOnCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
+import com.wingedsheep.sdk.scripting.effects.CardDestination
+import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.references.Player
 
 /**
  * Incandescent Soulstoke
@@ -63,25 +63,28 @@ val IncandescentSoulstoke = card("Incandescent Soulstoke") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{R}"), Costs.Tap)
-        effect = Patterns.Hand.putFromHand(
-            filter = GameObjectFilter.Creature.withSubtype(Subtype.ELEMENTAL),
-            prompt = "Put an Elemental creature card onto the battlefield"
-        ).then(
-            ConditionalOnCollectionEffect(
-                collection = "putting",
-                ifNotEmpty = Effects.Composite(
-                    Effects.GrantKeyword(
-                        keyword = Keyword.HASTE,
-                        target = EffectTarget.PipelineTarget("putting", 0),
-                        duration = Duration.EndOfTurn
-                    ),
-                    CreateDelayedTriggerEffect(
-                        step = Step.END,
-                        effect = Effects.SacrificeTarget(EffectTarget.PipelineTarget("putting", 0))
-                    )
-                )
+        effect = Effects.Pipeline {
+            val candidates = gather(
+                CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Creature.withSubtype(Subtype.ELEMENTAL))
             )
-        )
+            val putting = chooseUpTo(
+                1,
+                from = candidates,
+                prompt = "Put an Elemental creature card onto the battlefield"
+            )
+            move(putting, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You))
+            ifNotEmpty(putting) {
+                run(Effects.GrantKeyword(
+                    keyword = Keyword.HASTE,
+                    target = putting.asTarget,
+                    duration = Duration.EndOfTurn
+                ))
+                run(Effects.CreateDelayedTrigger(
+                    step = Step.END,
+                    effect = Effects.SacrificeTarget(putting.asTarget)
+                ))
+            }
+        }
         description = "Put an Elemental creature card from your hand onto the battlefield. It gains " +
             "haste until end of turn. Sacrifice it at the beginning of the next end step."
     }

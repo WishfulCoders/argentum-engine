@@ -5,9 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.bargain
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Kellan's Lightblades
@@ -23,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  *
  * Unlike Candy Grapple's additive "-5/-5 instead", the word "instead" here swaps the whole effect —
  * a bargained Lightblades deals **no** damage at all, it destroys. So this is a true either/or
- * branch ([ConditionalEffect] with an `elseEffect`) rather than a base effect plus a rider. The
+ * branch ([Effects.If] with an `elseEffect`) rather than a base effect plus a rider. The
  * distinction is observable: no damage means no lifelink, no damage-triggered abilities, and no
  * marked damage for "damage dealt to it this turn" counts.
  *
@@ -44,14 +42,11 @@ val KellansLightblades = card("Kellan's Lightblades") {
     bargain()
 
     spell {
-        val creature = target(
-            "target attacking or blocking creature",
-            TargetCreature(filter = TargetFilter.AttackingOrBlockingCreature),
-        )
-        effect = ConditionalEffect(
+        val creature = target(TargetFilter.AttackingOrBlockingCreature)
+        effect = Effects.If(
             condition = Conditions.WasBargained,
-            effect = Effects.Destroy(creature),
-            elseEffect = Effects.DealDamage(3, creature),
+            then = Effects.Destroy(creature),
+            otherwise = Effects.DealDamage(3, creature),
         )
     }
 

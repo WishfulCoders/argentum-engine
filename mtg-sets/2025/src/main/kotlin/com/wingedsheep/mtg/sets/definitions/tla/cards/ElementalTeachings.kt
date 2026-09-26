@@ -8,16 +8,9 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.SelectionRestriction
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Elemental Teachings — {4}{G} Instant — Lesson (Avatar: The Last Airbender, rare).
@@ -44,42 +37,31 @@ val ElementalTeachings = card("Elemental Teachings") {
         "onto the battlefield tapped, then shuffle."
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.Land),
-                    storeAs = "searchable"
-                ),
-                SelectFromCollectionEffect(
-                    from = "searchable",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(4)),
-                    storeSelected = "found",
-                    restrictions = listOf(SelectionRestriction.OnePerCardName),
-                    prompt = "Search for up to four land cards with different names"
-                ),
-                RevealCollectionEffect(from = "found"),
-                SelectFromCollectionEffect(
-                    from = "found",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(2)),
-                    chooser = Chooser.Opponent,
-                    storeSelected = "toGraveyard",
-                    storeRemainder = "toBattlefield",
-                    selectedLabel = "Graveyard",
-                    remainderLabel = "Battlefield",
-                    prompt = "Choose two of the revealed cards. Those go into the controller's graveyard; the rest enter the battlefield tapped.",
-                    alwaysPrompt = true
-                ),
-                MoveCollectionEffect(
-                    from = "toGraveyard",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD)
-                ),
-                MoveCollectionEffect(
-                    from = "toBattlefield",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped)
-                ),
-                ShuffleLibraryEffect()
+        effect = Effects.Pipeline {
+            val searchable = gather(
+                CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.Land),
+                search = true
             )
-        )
+            val found = chooseUpTo(
+                4,
+                from = searchable,
+                restrictions = listOf(SelectionRestriction.OnePerCardName),
+                prompt = "Search for up to four land cards with different names"
+            )
+            reveal(found)
+            val (toGraveyardCards, toBattlefield) = chooseExactlySplit(
+                2,
+                from = found,
+                chooser = Chooser.Opponent,
+                selectedLabel = "Graveyard",
+                remainderLabel = "Battlefield",
+                prompt = "Choose two of the revealed cards. Those go into the controller's graveyard; the rest enter the battlefield tapped.",
+                alwaysPrompt = true
+            )
+            toGraveyard(toGraveyardCards)
+            move(toBattlefield, CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped))
+            run(Effects.ShuffleLibrary())
+        }
     }
 
     metadata {

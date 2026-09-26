@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -25,11 +24,9 @@ val StrokeOfMidnight = card("Stroke of Midnight") {
     typeLine = "Instant"
     oracleText = "Destroy target nonland permanent. Its controller creates a 1/1 white Human creature token."
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter.NonlandPermanent))
-        effect = Effects.Composite(
-            Effects.Move(t, Zone.GRAVEYARD, byDestruction = true),
+        val t = target(TargetFilter.NonlandPermanent)
+        effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true) then
             woeHumanToken(controller = EffectTarget.TargetController)
-        )
     }
     metadata {
         rarity = Rarity.UNCOMMON

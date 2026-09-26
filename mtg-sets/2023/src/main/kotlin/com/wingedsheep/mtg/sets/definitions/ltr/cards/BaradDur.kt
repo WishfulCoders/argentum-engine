@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -12,9 +13,7 @@ import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.AddManaEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Barad-dûr
@@ -48,7 +47,7 @@ val BaradDur = card("Barad-dûr") {
     // {T}: Add {B}.
     activatedAbility {
         cost = Costs.Tap
-        effect = AddManaEffect(Color.BLACK)
+        effect = Effects.AddMana(Color.BLACK)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
@@ -56,7 +55,7 @@ val BaradDur = card("Barad-dûr") {
     // {X}{X}{B}, {T}: Amass Orcs X. Activate only if a creature died this turn.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{X}{X}{B}"), Costs.Tap)
-        effect = Effects.Amass(DynamicAmount.XValue, "Orc")
+        effect = Effects.Amass(DynamicAmounts.xValue(), "Orc")
         restrictions = listOf(ActivationRestriction.OnlyIfCondition(Conditions.CreatureDiedThisTurn))
     }
 

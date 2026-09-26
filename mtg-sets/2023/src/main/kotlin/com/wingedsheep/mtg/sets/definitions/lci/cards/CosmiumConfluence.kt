@@ -1,17 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Cosmium Confluence
@@ -52,11 +50,8 @@ val CosmiumConfluence = card("Cosmium Confluence") {
                 )
             }
             mode("Put three +1/+1 counters on a Cave you control. It becomes a 0/0 Elemental creature with haste. It's still a land") {
-                val cave = target(
-                    "a Cave you control",
-                    TargetPermanent(filter = TargetFilter.Land.withSubtype("Cave").youControl())
-                )
-                effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 3, cave) then
+                val cave = target(TargetFilter.Land.withSubtype("Cave").youControl())
+                effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 3, cave) then
                     Effects.BecomeCreature(
                         target = cave,
                         power = 0,
@@ -67,7 +62,7 @@ val CosmiumConfluence = card("Cosmium Confluence") {
                     )
             }
             mode("Destroy target enchantment") {
-                val enchantment = target("target enchantment", Targets.Enchantment)
+                val enchantment = target(TargetFilter.Enchantment)
                 effect = Effects.Destroy(enchantment)
             }
         }

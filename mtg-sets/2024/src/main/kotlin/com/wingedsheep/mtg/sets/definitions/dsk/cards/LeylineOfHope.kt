@@ -1,17 +1,18 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.mayBeginGameOnBattlefield
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.ModifyLifeGain
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Leyline of Hope (DSK #18)
@@ -47,13 +48,10 @@ val LeylineOfHope = card("Leyline of Hope") {
                 toughnessBonus = 2,
                 filter = GroupFilter.AllCreaturesYouControl
             ),
-            condition = Compare(
-                left = DynamicAmount.LifeTotal(Player.You),
+            condition = Conditions.CompareAmounts(
+                left = DynamicAmounts.lifeTotal(Player.You),
                 operator = ComparisonOperator.GTE,
-                right = DynamicAmount.Add(
-                    DynamicAmount.StartingLifeTotal(Player.You),
-                    DynamicAmount.Fixed(7)
-                )
+                right = DynamicAmounts.startingLifeTotal(Player.You) + 7
             )
         )
     }

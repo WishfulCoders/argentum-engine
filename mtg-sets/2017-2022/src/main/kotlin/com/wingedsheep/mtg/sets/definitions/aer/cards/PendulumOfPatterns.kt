@@ -27,7 +27,7 @@ val PendulumOfPatterns = card("Pendulum of Patterns") {
         "{5}, {T}, Sacrifice this artifact: Draw a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(3)
         description = "When this artifact enters, you gain 3 life."
     }

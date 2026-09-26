@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.gtc.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Totally Lost
@@ -23,7 +23,7 @@ val TotallyLost = card("Totally Lost") {
     oracleText = "Put target nonland permanent on top of its owner's library."
 
     spell {
-        val victim = target("target", Targets.NonlandPermanent)
+        val victim = target(TargetFilter.NonlandPermanent)
         effect = Effects.Move(victim, Zone.LIBRARY, ZonePlacement.Top)
     }
 

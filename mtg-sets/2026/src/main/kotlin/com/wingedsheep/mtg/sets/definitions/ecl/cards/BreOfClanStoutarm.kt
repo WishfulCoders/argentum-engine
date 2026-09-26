@@ -1,7 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
@@ -10,17 +9,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GatherUntilMatchEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Bre of Clan Stoutarm
@@ -46,11 +37,9 @@ val BreOfClanStoutarm = card("Bre of Clan Stoutarm") {
     // {1}{W}, {T}: Another target creature you control gains flying and lifelink until end of turn.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{W}"), Costs.Tap)
-        val creature = target("creature", TargetCreature(filter = TargetFilter.CreatureYouControl.other()))
-        effect = Effects.Composite(listOf(
-            Effects.GrantKeyword(Keyword.FLYING, creature),
+        val creature = target(TargetFilter.CreatureYouControl.other())
+        effect = Effects.GrantKeyword(Keyword.FLYING, creature) then
             Effects.GrantKeyword(Keyword.LIFELINK, creature)
-        ))
     }
 
     // At the beginning of your end step, if you gained life this turn,
@@ -59,38 +48,28 @@ val BreOfClanStoutarm = card("Bre of Clan Stoutarm") {
     // less than or equal to the amount of life you gained this turn.
     // Otherwise, put it into your hand.
     triggeredAbility {
-        // Every road out of the "may cast" ends in your hand — the mana value being too high, and
-        // declining the offered cast — so both branches below move the same stored card the same way.
-        val nonlandToHand = MoveCollectionEffect(
-            from = "nonland",
-            destination = CardDestination.ToZone(Zone.HAND)
-        )
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.YouGainedLifeThisTurn
-        effect = Effects.Composite(listOf(
+        effect = Effects.Pipeline {
             // Exile from top until nonland — same pipeline as The Infamous Cruelclaw.
-            GatherUntilMatchEffect(
-                filter = GameObjectFilter.Nonland,
-                storeMatch = "nonland",
-                storeRevealed = "allRevealed"
-            ),
-            RevealCollectionEffect(from = "allRevealed"),
-            MoveCollectionEffect(
-                from = "allRevealed",
-                destination = CardDestination.ToZone(Zone.EXILE)
-            ),
+            val (nonland, allRevealed) = gatherUntilMatch(GameObjectFilter.Nonland)
+            reveal(allRevealed)
+            exile(allRevealed)
+            // Every road out of the "may cast" ends in your hand — the mana value being too high, and
+            // declining the offered cast — so both branches below move the same stored card the same way.
+            val nonlandToHand = Effects.Pipeline { toHand(nonland) }
             // Compare the exiled nonland's mana value to the life gained this turn.
-            ConditionalEffect(
-                condition = Compare(
-                    left = DynamicAmount.StoredCardManaValue("nonland"),
+            run(Effects.If(
+                condition = Conditions.CompareAmounts(
+                    left = DynamicAmounts.manaValueOf(nonland),
                     operator = ComparisonOperator.LTE,
                     right = DynamicAmounts.lifeGainedThisTurn()
                 ),
                 // MV ≤ life gained: you may cast it for free *while this ability resolves* (the
                 // printed ruling — you can't wait to cast it later), so cast inline from exile
                 // rather than granting deferred may-play permission.
-                effect = MayEffect(
-                    Effects.CastFromCollectionWithoutPayingCost("nonland"),
+                then = Effects.May(
+                    Effects.CastFromCollectionWithoutPayingCost(nonland),
                     otherwise = nonlandToHand
                 ),
                 // "Otherwise" covers every way you don't cast it — the mana value being too high,
@@ -100,9 +79,9 @@ val BreOfClanStoutarm = card("Bre of Clan Stoutarm") {
                 // onto the battlefield for any reason, you put the card into your hand." Cf. Fecund
                 // Greenshell and Aid from the Cowl, both ruled the same way. Nothing is ever left
                 // stranded in exile.
-                elseEffect = nonlandToHand
-            )
-        ))
+                otherwise = nonlandToHand
+            ))
+        }
     }
 
     metadata {

@@ -30,7 +30,7 @@ val NestingWurm = card("Nesting Wurm") {
     toughness = 3
     keywords(Keyword.TRAMPLE)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Any.named("Nesting Wurm"),

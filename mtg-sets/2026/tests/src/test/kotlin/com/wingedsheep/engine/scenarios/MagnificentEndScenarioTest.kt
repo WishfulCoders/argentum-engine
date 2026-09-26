@@ -21,7 +21,7 @@ import io.kotest.matchers.shouldBe
  */
 class MagnificentEndScenarioTest : ScenarioTestBase() {
 
-    private val calculator = CostCalculator(cardRegistry)
+    private val calculator = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator)
 
     init {
         context("Magnificent End") {

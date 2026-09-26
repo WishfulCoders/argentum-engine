@@ -4,15 +4,13 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.Gate
-import com.wingedsheep.sdk.scripting.effects.GatedEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * View from Above
@@ -36,19 +34,15 @@ val ViewFromAbove = card("View from Above") {
         "return View from Above to its owner's hand."
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = Effects.GrantKeyword(Keyword.FLYING, t)
-            .then(
-                GatedEffect(
-                    gate = Gate.WhenCondition(
-                        Exists(
-                            Player.You,
-                            Zone.BATTLEFIELD,
-                            GameObjectFilter.Permanent.withColor(Color.WHITE)
-                        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.GrantKeyword(Keyword.FLYING, t) then
+            Effects.If(
+                condition = Exists(
+                        Player.You,
+                        Zone.BATTLEFIELD,
+                        GameObjectFilter.Permanent.withColor(Color.WHITE)
                     ),
-                    then = Effects.ReturnToHand(EffectTarget.Self)
-                )
+                then = Effects.ReturnToHand(EffectTarget.Self)
             )
     }
 

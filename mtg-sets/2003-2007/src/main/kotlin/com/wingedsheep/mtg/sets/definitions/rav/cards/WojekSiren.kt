@@ -2,12 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.rav.cards
 
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Wojek Siren
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * until end of turn.
  *
  * Radiance: the target is pumped directly; every *other* creature sharing a color with it
- * (`sharingColorWith(EntityReference.Target(0))`, `otherThanTarget()`) is found as the spell
+ * (`sharingColorWith(EffectTarget.ContextTarget(0))`, `otherThanTarget()`) is found as the spell
  * resolves and pumped too. A colorless target shares a color with nothing, so only it grows.
  */
 val WojekSiren = card("Wojek Siren") {
@@ -29,13 +28,13 @@ val WojekSiren = card("Wojek Siren") {
         "get +1/+1 until end of turn."
 
     spell {
-        val radiant = target("target creature", Targets.Creature)
+        val radiant = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(1, 1, radiant) then
             Patterns.Group.modifyStatsForAll(
                 1,
                 1,
                 GroupFilter(
-                    GameObjectFilter.Creature.sharingColorWith(EntityReference.Target(0))
+                    GameObjectFilter.Creature.sharingColorWith(radiant)
                 ).otherThanTarget()
             )
     }

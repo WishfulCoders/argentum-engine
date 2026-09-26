@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.maxSpeed
 import com.wingedsheep.sdk.dsl.startYourEngines
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Risen Necroregent
@@ -28,7 +29,7 @@ val RisenNecroregent = card("Risen Necroregent") {
     startYourEngines()
     maxSpeed {
         triggeredAbility {
-            trigger = Triggers.YourEndStep
+            trigger = Triggers.you.beginningOf(Step.END)
             effect = Effects.CreateToken(
                 power = 2,
                 toughness = 2,

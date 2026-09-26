@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Summon: Shiva
@@ -30,18 +29,12 @@ val SummonShiva = card("Summon: Shiva") {
     toughness = 5
 
     sagaChapter(1) {
-        val t = target("creature", TargetObject(filter = TargetFilter.CreatureOpponentControls))
-        effect = Effects.Composite(
-            Effects.Tap(t),
-            Effects.AddCounters(Counters.STUN, 1, t),
-        )
+        val t = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.Tap(t) then Effects.AddCounters(CounterType.STUN, 1, t)
     }
     sagaChapter(2) {
-        val t = target("creature", TargetObject(filter = TargetFilter.CreatureOpponentControls))
-        effect = Effects.Composite(
-            Effects.Tap(t),
-            Effects.AddCounters(Counters.STUN, 1, t),
-        )
+        val t = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.Tap(t) then Effects.AddCounters(CounterType.STUN, 1, t)
     }
     sagaChapter(3) {
         effect = Effects.DrawCards(

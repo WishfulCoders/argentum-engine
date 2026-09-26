@@ -35,7 +35,7 @@ val GollumPatientPlotter = card("Gollum, Patient Plotter") {
         "as a sorcery."
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.TheRingTemptsYou()
     }
 

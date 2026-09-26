@@ -6,8 +6,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.PreventDamage
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
-import com.wingedsheep.sdk.scripting.events.SourceFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Indentured Oaf
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.events.SourceFilter
  * Prevent all damage that this creature would deal to red creatures.
  *
  * A continuous [PreventDamage] replacement (CR 615) scoped on both sides: source is the Oaf itself
- * ([SourceFilter.Self]) and the recipient is any red creature. The recipient filter is evaluated
+ * (`GameObjectFilter.Any.sourceItself()`) and the recipient is any red creature. The recipient filter is evaluated
  * against projected state at the moment damage would be dealt, so a creature that has been made red
  * — or has lost red — since blockers were declared is judged on its colour *then*, and the Oaf's own
  * controller is not spared: the sentence says "red creatures", not "red creatures an opponent
@@ -36,8 +35,8 @@ val IndenturedOaf = card("Indentured Oaf") {
         PreventDamage(
             amount = null,
             appliesTo = EventPattern.DamageEvent(
-                recipient = RecipientFilter.Matching(GameObjectFilter.Creature.withColor(Color.RED)),
-                source = SourceFilter.Self
+                recipient = Recipient.Object(GameObjectFilter.Creature.withColor(Color.RED)),
+                source = GameObjectFilter.Any.sourceItself()
             )
         )
     )

@@ -2,13 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 val Glamermite = card("Glamermite") {
     manaCost = "{2}{U}"
@@ -21,18 +20,16 @@ val Glamermite = card("Glamermite") {
     keywords(Keyword.FLASH, Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseOne(
-            Mode.withTarget(
-                Effects.Tap(EffectTarget.ContextTarget(0)),
-                Targets.Creature,
-                "Tap target creature"
-            ),
-            Mode.withTarget(
-                Effects.Untap(EffectTarget.ContextTarget(0)),
-                Targets.Creature,
-                "Untap target creature"
-            )
+            mode("Tap target creature") {
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.Tap(creature)
+            },
+            mode("Untap target creature") {
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.Untap(creature)
+            }
         )
     }
 

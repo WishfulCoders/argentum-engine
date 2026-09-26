@@ -45,16 +45,12 @@ val GenjiGlove = card("Genji Glove") {
     }
 
     triggeredAbility {
-        trigger = Triggers.attacks(binding = TriggerBinding.ATTACHED)
+        trigger = Triggers.attached.attacks()
         oncePerTurn = true
-        effect = Effects.Composite(
-            listOf(
-                // "untap it" — the attacking equipped creature.
-                Effects.Untap(EffectTarget.EquippedCreature),
-                // "After this phase, there is an additional combat phase." (combat only — no main)
-                Effects.AddCombatPhase,
-            )
-        )
+        // "untap it" — the attacking equipped creature.
+        effect = Effects.Untap(EffectTarget.EquippedCreature) then
+            // "After this phase, there is an additional combat phase." (combat only — no main)
+            Effects.AddCombatPhase
     }
 
     equipAbility("{3}")

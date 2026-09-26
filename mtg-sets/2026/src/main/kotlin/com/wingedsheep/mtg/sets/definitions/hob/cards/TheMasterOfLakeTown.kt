@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
@@ -9,8 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * The Master of Lake-town — The Hobbit #77
@@ -22,7 +21,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * When The Master of Lake-town dies, draw a card for each graveyard with seven or more cards in it.
  *
  * Modeling notes:
- *  - The mill trigger is [Triggers.AnyPlayerLosesLife], so it fires for *every* player including
+ *  - The mill trigger is `Triggers.anyPlayer.losesLife()`, so it fires for *every* player including
  *    its own controller, once per life-loss event. The amount rides on the triggering
  *    [com.wingedsheep.engine.core.LifeChangedEvent] via
  *    [ContextPropertyKey.TRIGGER_LIFE_LOST], and [Player.TriggeringPlayer] sends the mill at the
@@ -49,18 +48,18 @@ val TheMasterOfLakeTown = card("The Master of Lake-town") {
     keywords(Keyword.DEATHTOUCH)
 
     triggeredAbility {
-        trigger = Triggers.AnyPlayerLosesLife
+        trigger = Triggers.anyPlayer.losesLife()
         effect = Patterns.Library.mill(
-            count = DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_LIFE_LOST),
+            count = DynamicAmounts.triggerLifeLost(),
             target = EffectTarget.PlayerRef(Player.TriggeringPlayer)
         )
         description = "Whenever a player loses life, that player mills that many cards."
     }
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.DrawCards(
-            DynamicAmount.CountPlayersWith(
+            DynamicAmounts.countPlayersWith(
                 scope = Player.Each,
                 condition = Conditions.CardsInGraveyardAtLeast(7)
             )

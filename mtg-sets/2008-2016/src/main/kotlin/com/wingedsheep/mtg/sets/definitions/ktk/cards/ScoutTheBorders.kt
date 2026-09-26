@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Scout the Borders
@@ -27,7 +27,7 @@ val ScoutTheBorders = card("Scout the Borders") {
 
     spell {
         effect = Patterns.Library.lookAtTopAndTakeMatching(
-            count = DynamicAmount.Fixed(5),
+            count = DynamicAmounts.fixed(5),
             filter = GameObjectFilter.CreatureOrLand,
             prompt = "You may put a creature or land card from among them into your hand",
             revealed = true,

@@ -2,13 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.fem.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.values.EntityReference
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Homarid Spawning Bed
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
  * sacrificed creature's mana value.
  *
  * Priest of Yawgmoth's shape: the sacrificed permanent's last-known mana value is captured at cost
- * payment and read back by [EntityReference.Sacrificed], so a token (mana value 0) makes nothing.
+ * payment and read back by [EffectTarget.SacrificedAsCost], so a token (mana value 0) makes nothing.
  *
  * The 1/1 blue Camarid has never been printed as a token card, so there is no art for it anywhere
  * on Scryfall; it resolves through the engine-wide `TokenArt` table, which points it at Fallen
@@ -37,10 +36,7 @@ val HomaridSpawningBed = card("Homarid Spawning Bed") {
             Costs.Sacrifice(GameObjectFilter.Creature.withColor(Color.BLUE))
         )
         effect = Effects.CreateToken(
-            count = DynamicAmount.EntityProperty(
-                EntityReference.Sacrificed(0),
-                EntityNumericProperty.ManaValue
-            ),
+            count = DynamicAmounts.manaValueOf(EffectTarget.SacrificedAsCost(0)),
             power = 1,
             toughness = 1,
             colors = setOf(Color.BLUE),

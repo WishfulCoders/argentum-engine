@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.dka.cards
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
@@ -7,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -34,12 +34,10 @@ val FalkenrathTorturer = card("Falkenrath Torturer") {
 
     activatedAbility {
         cost = Costs.Sacrifice(GameObjectFilter.Creature)
-        effect = Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.SacrificedHadSubtype("Human"),
-                    effect = Effects.AddCounters("+1/+1", 1, EffectTarget.Self)
-                )
+        effect = Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self) then
+            Effects.If(
+                condition = Conditions.SacrificedHadSubtype("Human"),
+                then = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
             )
     }
 

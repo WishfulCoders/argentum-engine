@@ -3,12 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Elvish Eulogist
@@ -33,10 +33,10 @@ val ElvishEulogist = card("Elvish Eulogist") {
     activatedAbility {
         cost = Costs.SacrificeSelf
         effect = Effects.GainLife(
-            DynamicAmount.Count(
-                player = Player.You,
-                zone = Zone.GRAVEYARD,
-                filter = GameObjectFilter.Any.withSubtype(Subtype.ELF)
+            DynamicAmounts.count(
+                Player.You,
+                Zone.GRAVEYARD,
+                GameObjectFilter.Any.withSubtype(Subtype.ELF)
             )
         )
         description = "Sacrifice this creature: You gain 1 life for each Elf card in your graveyard."

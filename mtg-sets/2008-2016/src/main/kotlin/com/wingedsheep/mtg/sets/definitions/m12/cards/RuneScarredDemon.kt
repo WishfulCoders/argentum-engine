@@ -30,7 +30,7 @@ val RuneScarredDemon = card("Rune-Scarred Demon") {
     toughness = 6
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(filter = GameObjectFilter.Any, destination = SearchDestination.HAND)
     }
     metadata {

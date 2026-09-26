@@ -1,21 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.FaceDownMode
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Gandalf, Goblins' Bane // Flameshape — The Hobbit #96
@@ -56,11 +51,9 @@ val GandalfGoblinsBane = card("Gandalf, Goblins' Bane") {
         "deals 1 damage to each opponent."
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
-        effect = Effects.Composite(
-            Effects.ModifyStats(power = 1, toughness = 1, target = EffectTarget.Self),
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
+        effect = Effects.ModifyStats(power = 1, toughness = 1, target = EffectTarget.Self) then
             Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent))
-        )
     }
 
     adventure("Flameshape") {
@@ -70,22 +63,15 @@ val GandalfGoblinsBane = card("Gandalf, Goblins' Bane") {
             "long as they remain exiled, you may play them if you control a Wizard. (Then exile " +
             "this card. You may cast the creature later from exile.)"
         spell {
-            effect = Effects.Composite(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(2)),
-                    storeAs = "flameshapeExiled"
-                ),
-                MoveCollectionEffect(
-                    from = "flameshapeExiled",
-                    destination = CardDestination.ToZone(Zone.EXILE),
-                    faceDown = FaceDownMode.HIDDEN
-                ),
-                Effects.GrantMayPlayFromExile(
-                    from = "flameshapeExiled",
+            effect = Effects.Pipeline {
+                val flameshapeExiled = gather(CardSource.TopOfLibrary(2))
+                exile(flameshapeExiled, faceDown = FaceDownMode.HIDDEN)
+                run(Effects.GrantMayPlayFromExile(
+                    from = flameshapeExiled,
                     expiry = MayPlayExpiry.Permanent,
                     condition = Conditions.YouControl(GameObjectFilter.Creature.withSubtype("Wizard"))
-                )
-            )
+                ))
+            }
         }
     }
 

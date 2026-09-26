@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Nanoform Sentinel
@@ -26,11 +25,9 @@ val NanoformSentinel = card("Nanoform Sentinel") {
 
     // Trigger: whenever this creature becomes tapped, untap another target permanent (once per turn)
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
+        trigger = Triggers.self.becomesTapped()
         oncePerTurn = true
-        val targetPermanent = target("another target permanent", TargetPermanent(
-            filter = TargetFilter(GameObjectFilter.Permanent, excludeSelf = true)
-        ))
+        val targetPermanent = target(TargetFilter(GameObjectFilter.Permanent, excludeSelf = true))
         effect = Effects.Untap(targetPermanent)
     }
 

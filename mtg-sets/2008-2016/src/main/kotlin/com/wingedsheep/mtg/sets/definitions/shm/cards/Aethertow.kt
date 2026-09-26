@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Aethertow
@@ -35,10 +34,7 @@ val Aethertow = card("Aethertow") {
     keywordAbility(KeywordAbility.Conspire)
 
     spell {
-        val creature = target(
-            "target",
-            TargetCreature(filter = TargetFilter.AttackingOrBlockingCreature)
-        )
+        val creature = target(TargetFilter.AttackingOrBlockingCreature)
         effect = Effects.PutOnTopOfLibrary(creature)
     }
 

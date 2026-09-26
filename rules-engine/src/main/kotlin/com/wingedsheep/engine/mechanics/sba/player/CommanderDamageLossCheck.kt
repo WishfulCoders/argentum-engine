@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.mechanics.sba.player
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ExecutionResult
 import com.wingedsheep.engine.core.GameEndReason
 import com.wingedsheep.engine.core.GameEvent
@@ -18,7 +19,9 @@ import com.wingedsheep.sdk.core.Format
  * Threshold is read from `state.format` so non-Commander variants (Brawl, Oathbreaker, Pauper
  * Commander) drop in by config alone. The check is a no-op outside Commander shapes.
  */
-class CommanderDamageLossCheck : StateBasedActionCheck {
+class CommanderDamageLossCheck(
+    private val predicateEvaluator: PredicateEvaluator
+) : StateBasedActionCheck {
     override val name = "704.5c Commander Damage Loss"
     override val order = SbaOrder.COMMANDER_DAMAGE_LOSS
 
@@ -38,7 +41,7 @@ class CommanderDamageLossCheck : StateBasedActionCheck {
         for (playerId in state.turnOrder) {
             val container = state.getEntity(playerId) ?: continue
             if (container.has<PlayerLostComponent>()) continue
-            if (playerCantLoseGame(state, playerId)) continue
+            if (playerCantLoseGame(state, playerId, predicateEvaluator = predicateEvaluator)) continue
 
             val perCommanderTallies = byDefender[playerId] ?: continue
             if (perCommanderTallies.any { it >= threshold }) {

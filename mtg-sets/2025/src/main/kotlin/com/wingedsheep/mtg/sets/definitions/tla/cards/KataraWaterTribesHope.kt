@@ -3,6 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.tla.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -11,7 +12,6 @@ import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Katara, Water Tribe's Hope
@@ -32,7 +32,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *    is read at resolution via [DynamicAmount.XValue].
  *  - "Creatures you control have base power and toughness X/X until end of turn" is an
  *    [Effects.ForEachInGroup] over [GroupFilter.AllCreaturesYouControl] running a
- *    [Effects.SetBasePowerAndToughness] (Layer 7b set values) on each member ([EffectTarget.Self]
+ *    [Effects.SetBasePowerAndToughness] (Layer 7b set values) on each member ([EffectTarget.IterationEntity]
  *    binds to the current iteration creature). The group is snapshotted at resolution, so newly
  *    minted Allies created earlier in the turn are included.
  *  - "Activate only during your turn" → [ActivationRestriction.OnlyDuringYourTurn].
@@ -56,7 +56,7 @@ val KataraWaterTribesHope = card("Katara, Water Tribe's Hope") {
 
     // When Katara enters, create a 1/1 white Ally creature token.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
@@ -72,9 +72,9 @@ val KataraWaterTribesHope = card("Katara, Water Tribe's Hope") {
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreaturesYouControl,
             Effects.SetBasePowerAndToughness(
-                power = DynamicAmount.XValue,
-                toughness = DynamicAmount.XValue,
-                target = EffectTarget.Self,
+                power = DynamicAmounts.xValue(),
+                toughness = DynamicAmounts.xValue(),
+                target = EffectTarget.IterationEntity,
                 duration = Duration.EndOfTurn
             )
         )

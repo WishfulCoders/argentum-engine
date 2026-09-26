@@ -6,9 +6,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Scion of Darkness
@@ -31,9 +30,9 @@ val ScionOfDarkness = card("Scion of Darkness") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        val t = target("target", TargetObject(filter = TargetFilter.CreatureInGraveyard.ownedByOpponent()))
-        effect = MayEffect(Effects.PutOntoBattlefieldUnderYourControl(t))
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        val t = target(TargetFilter.CreatureInGraveyard.ownedByOpponent())
+        effect = Effects.May(Effects.PutOntoBattlefieldUnderYourControl(t))
     }
 
     keywordAbility(KeywordAbility.cycling("{3}"))

@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 
 /**
  * Unassuming Sage
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
  * to it. (Enchanted creature gets +1/+1 and has "Whenever this creature attacks, scry 1.")
  *
  * "Attached to it" points back at the Sage, not at a target — the trigger is untargeted, so
- * hexproof/shroud never enter into it and there's nothing to fizzle. [MayPayManaEffect] models
+ * hexproof/shroud never enter into it and there's nothing to fizzle. [Effects.MayPay] models
  * "you may pay {2}. If you do" as one step: declining, or being unable to produce the mana,
  * simply skips the Role. If the Sage has left the battlefield by the time the trigger resolves,
  * there's no legal host and the Role isn't created.
@@ -34,10 +33,10 @@ val UnassumingSage = card("Unassuming Sage") {
         "attacks, scry 1.\")"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayPayManaEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{2}"),
-            effect = Effects.CreateRoleToken("Sorcerer Role", EffectTarget.Self)
+            then = Effects.CreateRoleToken("Sorcerer Role", EffectTarget.Self)
         )
     }
 

@@ -4,11 +4,10 @@
 
 package com.wingedsheep.mtg.sets.definitions.uds.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 
@@ -24,8 +23,8 @@ val Caltrops = card("Caltrops") {
     typeLine = "Artifact"
     oracleText = "Whenever a creature attacks, this artifact deals 1 damage to it."
     triggeredAbility {
-        trigger = Triggers.attacks(binding = TriggerBinding.ANY)
-        effect = DealDamageEffect(1, EffectTarget.Self)
+        trigger = Triggers.a().attacks()
+        effect = Effects.DealDamage(1, EffectTarget.Self)
     }
     metadata {
         rarity = Rarity.UNCOMMON

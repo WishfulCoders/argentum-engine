@@ -1,20 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.fdn.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
+import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Gutless Plunderer
@@ -45,32 +38,20 @@ val GutlessPlunderer = card("Gutless Plunderer") {
     keywords(Keyword.DEATHTOUCH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouAttackedThisTurn
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(3)),
-                storeAs = "gp_looked",
-                revealed = false
-            ),
-            SelectFromCollectionEffect(
-                from = "gp_looked",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "gp_kept",
-                storeRemainder = "gp_rest",
+        effect = Effects.Pipeline {
+            val gpLooked = gather(CardSource.TopOfLibrary(3), revealed = false)
+            val (gpKept, gpRest) = chooseUpToSplit(
+                1,
+                from = gpLooked,
                 prompt = "You may put a card back on top of your library",
                 selectedLabel = "Put on top of your library",
                 remainderLabel = "Put into your graveyard"
-            ),
-            MoveCollectionEffect(
-                from = "gp_kept",
-                destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Top)
-            ),
-            MoveCollectionEffect(
-                from = "gp_rest",
-                destination = CardDestination.ToZone(Zone.GRAVEYARD)
             )
-        )
+            toLibraryTop(gpKept, order = CardOrder.Preserve)
+            toGraveyard(gpRest)
+        }
     }
 
     metadata {

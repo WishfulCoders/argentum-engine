@@ -1,10 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MarkExileOnDeathEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Bot Bashing Time
@@ -21,9 +20,8 @@ val BotBashingTime = card("Bot Bashing Time") {
     oracleText = "Bot Bashing Time deals 6 damage to target creature. If that creature would die this turn, exile it instead."
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = MarkExileOnDeathEffect(creature)
-            .then(Effects.DealDamage(6, creature))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.MarkExileOnDeath(creature) then Effects.DealDamage(6, creature)
     }
 
     metadata {

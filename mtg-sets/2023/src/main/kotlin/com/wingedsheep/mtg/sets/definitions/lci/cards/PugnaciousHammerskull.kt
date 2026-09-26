@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
@@ -19,14 +19,14 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * it. (If a permanent with a stun counter would become untapped, remove one from it instead.)
  *
  * Implementation notes:
- * - `Triggers.Attacks` fires per AttackEvent for the creature itself (SELF binding).
+ * - `Triggers.self.attacks()` fires per AttackEvent for the creature itself (SELF binding).
  * - The intervening-if (CR 603.4) is the negated, self-excluding control check
  *   `Conditions.YouControl(Creature Dinosaur, negate = true, excludeSelf = true)`:
  *   "you don't control another Dinosaur" — the Hammerskull itself is excluded from the search,
  *   and `negate` inverts the existence test. Checked both when the trigger would go on the stack
  *   and again on resolution; if either check finds another Dinosaur, the trigger doesn't fire (or
  *   is removed before resolving).
- * - `Effects.AddCounters(Counters.STUN, 1, EffectTarget.Self)` places one stun counter on the
+ * - `Effects.AddCounters(CounterType.STUN, 1, EffectTarget.Self)` places one stun counter on the
  *   Hammerskull, keeping it from untapping (CR 122.1d / stun counter replacement).
  */
 val PugnaciousHammerskull = card("Pugnacious Hammerskull") {
@@ -38,13 +38,13 @@ val PugnaciousHammerskull = card("Pugnacious Hammerskull") {
     oracleText = "Whenever this creature attacks while you don't control another Dinosaur, put a stun counter on it. (If a permanent with a stun counter would become untapped, remove one from it instead.)"
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         triggerRestriction = Conditions.YouControl(
             GameObjectFilter.Creature.withSubtype(Subtype.DINOSAUR),
             negate = true,
             excludeSelf = true
         )
-        effect = Effects.AddCounters(Counters.STUN, 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.STUN, 1, EffectTarget.Self)
     }
 
     metadata {

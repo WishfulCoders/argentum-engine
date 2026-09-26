@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ride Down
@@ -20,10 +20,10 @@ val RideDown = card("Ride Down") {
     oracleText = "Destroy target blocking creature. Creatures that were blocked by that creature this combat gain trample until end of turn."
 
     spell {
-        val blocker = target("blocking creature", Targets.BlockingCreature)
+        val blocker = target(TargetFilter.BlockingCreature)
         // Grant trample before destroy so combat relationships are still intact
-        effect = Effects.GrantKeywordToAttackersBlockedBy(Keyword.TRAMPLE, blocker)
-            .then(Effects.Destroy(blocker))
+        effect = Effects.GrantKeywordToAttackersBlockedBy(Keyword.TRAMPLE, blocker) then
+            Effects.Destroy(blocker)
     }
 
     metadata {

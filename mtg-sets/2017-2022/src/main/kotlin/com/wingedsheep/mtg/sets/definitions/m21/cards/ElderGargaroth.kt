@@ -56,12 +56,12 @@ val ElderGargaroth = card("Elder Gargaroth") {
     )
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = attackOrBlockChoice
     }
 
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         effect = attackOrBlockChoice
     }
 

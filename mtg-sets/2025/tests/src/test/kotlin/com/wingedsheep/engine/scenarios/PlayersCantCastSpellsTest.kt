@@ -1,7 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.CastSpell
-import com.wingedsheep.engine.handlers.ConditionEvaluator
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.legalactions.LegalActionEnumerator
 import com.wingedsheep.engine.legalactions.utils.CastPermissionUtils
@@ -239,7 +238,7 @@ class PlayersCantCastSpellsTest : FunSpec({
         val redInGraveyard = driver.putCardInGraveyard(opponent, "Lightning Bolt")  // red
         val blueInGraveyard = driver.putCardInGraveyard(opponent, "Counterspell")   // blue
 
-        val utils = CastPermissionUtils(driver.cardRegistry, PredicateEvaluator(), ConditionEvaluator())
+        val utils = CastPermissionUtils(driver.cardRegistry, PredicateEvaluator(cardRegistry = null), PredicateEvaluator(cardRegistry = null).conditions)
         utils.reasonCannotCast(driver.state, opponent, redInGraveyard) shouldNotBe null
         utils.reasonCannotCast(driver.state, opponent, blueInGraveyard) shouldBe null
     }

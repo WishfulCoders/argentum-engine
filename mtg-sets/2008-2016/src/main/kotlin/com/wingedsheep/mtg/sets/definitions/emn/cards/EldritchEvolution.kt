@@ -1,14 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.emn.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Eldritch Evolution
@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * Eldritch Evolution.
  *
  * The sacrificed creature's mana value is read from the cost-payment snapshot (last-known
- * information via [EntityReference.Sacrificed], as in Metamorphosis). The search cap is the
+ * information via [EffectTarget.SacrificedAsCost], as in Metamorphosis). The search cap is the
  * general [DynamicAmount]-backed mana-value predicate (`manaValueAtMostDynamic`) applied to a
  * creature filter, fed `2 + the sacrificed creature's mana value`. The card exiles itself on
  * resolution via [selfExile].
@@ -39,13 +39,7 @@ val EldritchEvolution = card("Eldritch Evolution") {
     spell {
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Creature.manaValueAtMostDynamic(
-                DynamicAmount.Add(
-                    DynamicAmount.Fixed(2),
-                    DynamicAmount.EntityProperty(
-                        EntityReference.Sacrificed(0),
-                        EntityNumericProperty.ManaValue
-                    )
-                )
+                2 + DynamicAmounts.manaValueOf(EffectTarget.SacrificedAsCost(0))
             ),
             count = 1,
             destination = SearchDestination.BATTLEFIELD,

@@ -4,14 +4,12 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CostModification
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 
 /**
@@ -41,9 +39,8 @@ import com.wingedsheep.sdk.scripting.predicates.CardPredicate
  * from hand — or cast from exile after its Adventure resolved — goes through the normal path with the
  * adventurer card's own type line, so it gets the {1}.
  *
- * Seek Thrills is [Patterns.Library.mill] (an `isMill = true` gather into the `"milled"` collection,
- * then a move to the graveyard) followed by a filtered [MoveCollectionEffect] back out of that same
- * collection. Filtering the collection rather than the graveyard is what makes "from among the milled
+ * Seek Thrills is the pipeline `mill` (an `isMill = true` gather of the top seven, then a move to
+ * the graveyard) followed by a filtered move back out of that same milled collection. Filtering the collection rather than the graveyard is what makes "from among the milled
  * cards" mean these seven specifically, and there is no selection step because the oracle says "put
  * **all** cards that have an Adventure" — no choice, no ordering, no "you may".
  *
@@ -78,13 +75,10 @@ val BelunaGrandsquall = card("Beluna Grandsquall") {
             "milled cards into your hand. " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            effect = Effects.Composite(
-                Patterns.Library.mill(7).effects + MoveCollectionEffect(
-                    from = "milled",
-                    destination = CardDestination.ToZone(Zone.HAND),
-                    filter = Filters.HasAdventure,
-                ),
-            )
+            effect = Effects.Pipeline {
+                val milled = mill(7)
+                move(milled, CardDestination.ToZone(Zone.HAND), filter = Filters.HasAdventure)
+            }
         }
     }
 

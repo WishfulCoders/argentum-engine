@@ -19,7 +19,7 @@ val RewardsOfDiversity = card("Rewards of Diversity") {
     oracleText = "Whenever an opponent casts a multicolored spell, you gain 4 life."
 
     triggeredAbility {
-        trigger = Triggers.opponentCasts(GameObjectFilter.Multicolored)
+        trigger = Triggers.anOpponent.casts(GameObjectFilter.Multicolored)
         effect = Effects.GainLife(4)
     }
 

@@ -11,8 +11,6 @@ import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -61,13 +59,12 @@ val AnzragsRampage = card("Anzrag's Rampage") {
         effect = Effects.Pipeline {
             // "Destroy all artifacts you don't control," — these land in graveyards before X is
             // read, so they count toward it.
-            val theirArtifacts = gather(GameObjectFilter.Artifact.opponentControls(), name = "theirArtifacts")
+            val theirArtifacts = gather(GameObjectFilter.Artifact.opponentControls())
             destroy(theirArtifacts)
 
             // "then exile the top X cards of your library, where X is …"
             val exiled = gather(
                 CardSource.TopOfLibrary(DynamicAmounts.artifactsDiedThisTurn()),
-                name = "exiledThisWay",
             )
             exile(exiled)
 
@@ -78,26 +75,22 @@ val AnzragsRampage = card("Anzrag's Rampage") {
                 filter = GameObjectFilter.Creature,
                 prompt = "You may put a creature card exiled this way onto the battlefield",
                 showAllCards = true,
-                name = "chosenCreature",
             )
             val entered = moveTracked(
                 from = chosen,
                 destination = CardDestination.ToZone(Zone.BATTLEFIELD),
                 markEnteredViaSourceAbility = true,
-                name = "entered",
             )
 
             // "It gains haste. Return it to your hand at the beginning of the next end step."
             run(
-                ForEachInCollectionEffect(
-                    collection = entered.key,
-                    effect = Effects.Composite(
-                        Effects.GrantKeyword(Keyword.HASTE, EffectTarget.Self, Duration.Permanent),
-                        CreateDelayedTriggerEffect(
+                Effects.ForEachInCollection(
+                    entered,
+                    Effects.GrantKeyword(Keyword.HASTE, EffectTarget.IterationEntity, Duration.Permanent) then
+                        Effects.CreateDelayedTrigger(
                             step = Step.END,
-                            effect = Effects.Move(EffectTarget.Self, Zone.HAND),
+                            effect = Effects.Move(EffectTarget.IterationEntity, Zone.HAND),
                         ),
-                    ),
                 ),
             )
         }

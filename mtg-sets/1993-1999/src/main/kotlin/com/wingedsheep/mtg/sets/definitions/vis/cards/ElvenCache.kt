@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -24,10 +23,7 @@ val ElvenCache = card("Elven Cache") {
     colorIdentity = "G"
     typeLine = "Sorcery"
     spell {
-        val t = target(
-            "target",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Any.ownedByYou(), zone = Zone.GRAVEYARD))
-        )
+        val t = target(TargetFilter(GameObjectFilter.Any.ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.Move(t, Zone.HAND)
     }
     metadata {

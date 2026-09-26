@@ -6,8 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 
 /**
  * Farsight Mask — Mirrodin #170
@@ -17,7 +15,7 @@ import com.wingedsheep.sdk.scripting.effects.MayEffect
  * you may draw a card.
  *
  * "A source an opponent controls" is the trigger's `sourceFilter`
- * ([Triggers.damageDealtToYou]`(GameObjectFilter.Any.opponentControls())`) — any object, not just
+ * (`Triggers.you.isDealtDamage(by, damageType)``(GameObjectFilter.Any.opponentControls())`) — any object, not just
  * creatures, matched relative to the Mask's controller. Per the 2004 rulings the ability watches
  * each *instance* of damage: two unblocked attackers, or one double strike, each trigger it
  * separately, and a single hit of any size still draws at most one card.
@@ -35,9 +33,9 @@ val FarsightMask = card("Farsight Mask") {
         "untapped, you may draw a card."
 
     triggeredAbility {
-        trigger = Triggers.damageDealtToYou(GameObjectFilter.Any.opponentControls())
+        trigger = Triggers.you.isDealtDamage(GameObjectFilter.Any.opponentControls())
         interveningIf = Conditions.SourceIsUntapped
-        effect = MayEffect(Effects.DrawCards(1))
+        effect = Effects.May(Effects.DrawCards(1))
     }
 
     metadata {

@@ -1,24 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
-import com.wingedsheep.sdk.scripting.EventPattern.SpellCastEvent
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Helga, Skittish Seer
@@ -44,34 +36,21 @@ val HelgaSkittishSeer = card("Helga, Skittish Seer") {
 
     // Triggered ability: whenever you cast a creature spell with MV 4+
     triggeredAbility {
-        trigger = TriggerSpec(
-            SpellCastEvent(
-                spellFilter = GameObjectFilter.Creature.manaValueAtLeast(4),
-                player = Player.You
-            ),
-            TriggerBinding.ANY
-        )
-        effect = Effects.Composite(
-            listOf(
-                DrawCardsEffect(1),
-                GainLifeEffect(1),
-                AddCountersEffect(
-                    counterType = Counters.PLUS_ONE_PLUS_ONE,
-                    count = 1,
-                    target = EffectTarget.Self
-                )
+        trigger = Triggers.you.casts(GameObjectFilter.Creature.manaValueAtLeast(4))
+        effect = Effects.DrawCards(1) then
+            Effects.GainLife(1) then
+            Effects.AddCounters(
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
+                count = 1,
+                target = EffectTarget.Self
             )
-        )
     }
 
     // Mana ability: {T}: Add X mana of any one color, where X is Helga's power
     activatedAbility {
         cost = AbilityCost.Tap
         effect = Effects.AddAnyColorMana(
-            DynamicAmount.EntityProperty(
-                EntityReference.Source,
-                EntityNumericProperty.Power
-            ),
+            DynamicAmounts.sourcePower(),
             ManaRestriction.SpellsWithManaValueAtLeast(4, orXInCost = true, creatureOnly = true)
         )
         manaAbility = true

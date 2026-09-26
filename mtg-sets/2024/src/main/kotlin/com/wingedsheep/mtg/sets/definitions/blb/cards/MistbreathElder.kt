@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -8,17 +8,10 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Mistbreath Elder {G}
@@ -38,41 +31,36 @@ val MistbreathElder = card("Mistbreath Elder") {
     oracleText = "At the beginning of your upkeep, return another creature you control to its owner's hand. If you do, put a +1/+1 counter on this creature. Otherwise, you may return this creature to its owner's hand."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         // The effect tree below (Exists → Gather → Select → Move) would otherwise render a
         // garbled auto-description ("...look at all other creature permanents...Put those cards
         // into a hand..."), so pin the player-facing text to the oracle wording.
         description = "At the beginning of your upkeep, return another creature you control to " +
             "its owner's hand. If you do, put a +1/+1 counter on this creature. Otherwise, you " +
             "may return this creature to its owner's hand."
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Exists(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature.youControl(), excludeSelf = true),
             // If you control another creature: bounce one of them (Gather → Select → Move;
             // the battlefield→hand move routes to the owner's hand), then counter self.
-            effect = Effects.Composite(
-                GatherCardsEffect(
-                    source = CardSource.BattlefieldMatching(
+            then = Effects.Pipeline {
+                val bounceCandidates = gather(
+                    CardSource.BattlefieldMatching(
                         filter = GameObjectFilter.Creature,
                         player = Player.You,
                         excludeSelf = true
-                    ),
-                    storeAs = "bounceCandidates"
-                ),
-                SelectFromCollectionEffect(
-                    from = "bounceCandidates",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                    storeSelected = "bounced",
+                    )
+                )
+                val bounced = chooseExactly(
+                    1,
+                    from = bounceCandidates,
                     prompt = "Return another creature you control to its owner's hand",
                     useTargetingUI = true
-                ),
-                MoveCollectionEffect(
-                    from = "bounced",
-                    destination = CardDestination.ToZone(Zone.HAND)
-                ),
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
-            ),
+                )
+                toHand(bounced)
+                run(Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self))
+            },
             // Otherwise: you may return this creature to hand
-            elseEffect = MayEffect(Effects.ReturnToHand(EffectTarget.Self))
+            otherwise = Effects.May(Effects.ReturnToHand(EffectTarget.Self))
         )
     }
 

@@ -54,7 +54,7 @@ val TheUnbeatableSquirrelGirl = card("The Unbeatable Squirrel Girl") {
 
     // "Do You Like Squirrels? — Whenever ~ enters ..."
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
@@ -68,7 +68,7 @@ val TheUnbeatableSquirrelGirl = card("The Unbeatable Squirrel Girl") {
 
     // "... or attacks, create a 1/1 green Squirrel creature token."
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

@@ -24,7 +24,7 @@ val WaterwindScout = card("Waterwind Scout") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateMapToken()
     }
 

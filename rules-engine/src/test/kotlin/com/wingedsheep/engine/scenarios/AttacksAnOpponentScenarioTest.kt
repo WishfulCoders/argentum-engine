@@ -11,13 +11,14 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.events.AttackPredicate
 
 /**
- * `AttackPredicate.DefenderIsPlayer` / `Triggers.AttacksAnOpponent` — "Whenever this creature
+ * `AttackPredicate.DefenderIsPlayer` / `Triggers.self.attacks(setOf(AttackPredicate.DefenderIsPlayer))` — "Whenever this creature
  * attacks a player (an opponent), …" (engine gap #1258, discovered adding Kaalia of the Vast).
  *
  * A creature is declared as attacking a player, a planeswalker, or a battle (CR 508.1). The
- * unfiltered `Triggers.Attacks` fires regardless of that choice; this predicate gates the trigger
+ * unfiltered `Triggers.self.attacks()` fires regardless of that choice; this predicate gates the trigger
  * to the *player* case only. Kaalia's 2024 ruling makes this concrete: her ability "doesn't
  * trigger if it attacks a planeswalker or battle."
  *
@@ -43,7 +44,7 @@ class AttacksAnOpponentScenarioTest : FunSpec({
         toughness = 2
         oracleText = "Whenever Opponent Striker attacks a player, draw a card."
         triggeredAbility {
-            trigger = Triggers.AttacksAnOpponent
+            trigger = Triggers.self.attacks(setOf(AttackPredicate.DefenderIsPlayer))
             effect = Effects.DrawCards(1)
         }
     }

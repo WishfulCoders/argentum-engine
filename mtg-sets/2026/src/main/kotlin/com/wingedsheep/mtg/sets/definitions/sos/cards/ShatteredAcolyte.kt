@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -32,7 +31,7 @@ val ShatteredAcolyte = card("Shattered Acolyte") {
     keywords(Keyword.LIFELINK)
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeSelf)
-        val t = target("target", TargetPermanent(filter = TargetFilter.ArtifactOrEnchantment))
+        val t = target(TargetFilter.ArtifactOrEnchantment)
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     metadata {

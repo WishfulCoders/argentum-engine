@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Roar of Endless Song
@@ -28,7 +28,7 @@ val RoarOfEndlessSong = card("Roar of Endless Song") {
         "III — Double the power and toughness of each creature you control until end of turn."
 
     sagaChapter(1) {
-        effect = CreateTokenEffect(
+        effect = Effects.CreateToken(
             power = 5,
             toughness = 5,
             colors = setOf(Color.GREEN),
@@ -39,7 +39,7 @@ val RoarOfEndlessSong = card("Roar of Endless Song") {
     }
 
     sagaChapter(2) {
-        effect = CreateTokenEffect(
+        effect = Effects.CreateToken(
             power = 5,
             toughness = 5,
             colors = setOf(Color.GREEN),

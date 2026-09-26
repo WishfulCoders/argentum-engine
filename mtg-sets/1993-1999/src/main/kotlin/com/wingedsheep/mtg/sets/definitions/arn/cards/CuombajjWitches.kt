@@ -29,10 +29,9 @@ val CuombajjWitches = card("Cuombajj Witches") {
     toughness = 3
     activatedAbility {
         cost = Costs.Tap
-        val mine = target("controller target", Targets.Any)
-        val theirs = target("opponent target", Targets.AnyChosenByOpponent)
-        effect = Effects.DealDamage(1, mine)
-            .then(Effects.DealDamage(1, theirs))
+        val mine = target(Targets.Any)
+        val theirs = target(Targets.AnyChosenByOpponent)
+        effect = Effects.DealDamage(1, mine) then Effects.DealDamage(1, theirs)
     }
     metadata {
         rarity = Rarity.COMMON

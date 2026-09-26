@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Werefox Bodyguard
@@ -22,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * {1}{W}, Sacrifice this creature: You gain 2 life.
  *
  * O-Ring-style linked exile: the ETB exiles the target ("up to one" → optional) via
- * [Effects.ExileUntilLeaves], and a companion [Triggers.LeavesBattlefield] trigger returns the
+ * [Effects.ExileUntilLeaves], and a companion `Triggers.self.leaves()` trigger returns the
  * exiled card with [Effects.ReturnLinkedExileUnderOwnersControl]. The target filter is
  * `Creature.notSubtype(Fox)` with `excludeSelf` (Werefox is itself a Fox, and the oracle says
  * "other"). The sacrifice ability lets its owner cash it in for 2 life before an opponent can
@@ -42,16 +41,10 @@ val WerefoxBodyguard = card("Werefox Bodyguard") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val creature = target(
-            "other target non-Fox creature",
-            TargetCreature(
-                optional = true,
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.notSubtype(Subtype("Fox")),
-                    excludeSelf = true
-                )
-            )
+            TargetFilter(GameObjectFilter.Creature.notSubtype(Subtype("Fox")), excludeSelf = true),
+            optional = true,
         )
         effect = Effects.ExileUntilLeaves(creature)
         description = "When this creature enters, exile up to one other target non-Fox creature " +
@@ -59,7 +52,7 @@ val WerefoxBodyguard = card("Werefox Bodyguard") {
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 

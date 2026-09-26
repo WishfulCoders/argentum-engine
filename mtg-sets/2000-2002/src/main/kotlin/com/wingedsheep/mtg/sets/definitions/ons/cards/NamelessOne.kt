@@ -1,8 +1,8 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 
@@ -20,7 +20,7 @@ val NamelessOne = card("Nameless One") {
     typeLine = "Creature — Wizard Avatar"
     oracleText = "Nameless One's power and toughness are each equal to the number of Wizards on the battlefield.\nMorph {2}{U}"
 
-    dynamicStats(DynamicAmount.AggregateBattlefield(Player.Each, GameObjectFilter.Permanent.withSubtype("Wizard")))
+    dynamicStats(DynamicAmounts.battlefield(Player.Each, GameObjectFilter.Permanent.withSubtype("Wizard")).count())
 
     morph = "{2}{U}"
 

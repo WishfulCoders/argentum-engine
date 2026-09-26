@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
@@ -13,9 +13,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantCardType
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -45,25 +42,23 @@ val EntropicBattlecruiser = card("Entropic Battlecruiser") {
 
     station()
 
-    val atLeast1Charge = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 1)
-    val atLeast8Charge = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 8)
+    val atLeast1Charge = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 1)
+    val atLeast8Charge = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 8)
 
     triggeredAbility {
-        trigger = Triggers.AnyOpponentDiscards
+        trigger = Triggers.anOpponent.discards()
         triggerRestriction = atLeast1Charge
-        effect = LoseLifeEffect(3, EffectTarget.PlayerRef(Player.TriggeringPlayer))
+        effect = Effects.LoseLife(3, EffectTarget.PlayerRef(Player.TriggeringPlayer))
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = ForEachPlayerEffect(
+        trigger = Triggers.self.attacks()
+        effect = Effects.ForEachPlayer(
             players = Player.EachOpponent,
-            effects = listOf(
-                ConditionalEffect(
-                    condition = Exists(Player.You, Zone.HAND),
-                    effect = Patterns.Hand.discardCards(1, EffectTarget.Controller),
-                    elseEffect = LoseLifeEffect(3, EffectTarget.Controller)
-                )
+            effect = Effects.If(
+                condition = Exists(Player.You, Zone.HAND),
+                then = Patterns.Hand.discardCards(1, EffectTarget.Controller),
+                otherwise = Effects.LoseLife(3, EffectTarget.Controller)
             )
         )
     }

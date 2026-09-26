@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 val FistfulOfForce = card("Fistful of Force") {
     manaCost = "{1}{G}"
@@ -14,12 +14,9 @@ val FistfulOfForce = card("Fistful of Force") {
     oracleText = "Target creature gets +2/+2 until end of turn. Clash with an opponent. If you win, that creature gets an additional +2/+2 and gains trample until end of turn. (Each clashing player reveals the top card of their library, then puts that card on their choice of the top or bottom. A player wins if their card had a greater mana value.)"
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.ModifyStats(2, 2, creature).then(
-            Patterns.Mechanic.clash(
-                Effects.ModifyStats(2, 2, creature)
-                    .then(Effects.GrantKeyword(Keyword.TRAMPLE, creature))
-            )
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 2, creature) then Patterns.Mechanic.clash(
+            Effects.ModifyStats(2, 2, creature) then Effects.GrantKeyword(Keyword.TRAMPLE, creature)
         )
     }
 

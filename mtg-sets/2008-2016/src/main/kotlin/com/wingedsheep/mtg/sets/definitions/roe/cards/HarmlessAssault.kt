@@ -3,7 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.roe.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Harmless Assault
@@ -17,12 +17,12 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  *    silenced wherever it would land — attackers hitting the defending player, attackers trading
  *    with blockers, attackers hitting a planeswalker. That is `Effects.PreventCombatDamageFrom`,
  *    which is the unified `PreventDamageEffect` with `PreventionDirection.FromTarget` (no recipient
- *    clause) and a `PreventionSourceFilter.FromGroup` naming the eligible sources — exactly the
+ *    clause) and a `PreventionSourceFilter.Matching` naming the eligible sources — exactly the
  *    shape Assay compiles this text to.
  *  - `PreventionScope.CombatOnly` is baked into that facade and is load-bearing here: the card says
  *    "combat damage", so an attacking creature's activated damage ability still resolves normally.
- *  - `GroupFilter.AttackingCreatures` is the pre-built "creatures that are attacking" group. The
- *    group is re-evaluated at the moment each damage instance would be dealt, so a creature that
+ *  - `GameObjectFilter.Creature.attacking()` names "creatures that are attacking". The filter
+ *    is re-evaluated at the moment each damage instance would be dealt, so a creature that
  *    stops attacking (or one put onto the battlefield attacking after this resolves) is judged as
  *    it is when combat damage happens, which is what "attacking creatures" means.
  */
@@ -33,7 +33,7 @@ val HarmlessAssault = card("Harmless Assault") {
     oracleText = "Prevent all combat damage that would be dealt this turn by attacking creatures."
 
     spell {
-        effect = Effects.PreventCombatDamageFrom(GroupFilter.AttackingCreatures)
+        effect = Effects.PreventCombatDamageFrom(GameObjectFilter.Creature.attacking())
     }
 
     metadata {

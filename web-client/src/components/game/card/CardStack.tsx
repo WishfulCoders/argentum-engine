@@ -1,8 +1,10 @@
-import { memo, useState } from 'react'
+import { memo } from 'react'
 import type { GroupedCard } from '@/store/selectors.ts'
 import { MAX_VISUAL_STACK_DEPTH } from '@/store/selectors.ts'
+import { useGameStore } from '@/store/gameStore.ts'
 import { useResponsiveContext } from '../board/shared'
 import { stackOffsetFor } from '../board/battlefieldLayout'
+import { isStackExpanded } from '../board/rowStats'
 import { GameCard } from './GameCard'
 
 /**
@@ -81,7 +83,10 @@ function CardStackImpl({
   isOpponentCard: boolean
 }) {
   const responsive = useResponsiveContext()
-  const [expanded, setExpanded] = useState(false)
+  // Store-held (not local state) so the battlefield sizing solver counts an
+  // ungrouped stack as the N cards it renders — see `expandedStackCardIds`.
+  const expanded = useGameStore((state) => isStackExpanded(group, state.expandedStackCardIds))
+  const setStackExpanded = useGameStore((state) => state.setStackExpanded)
 
   // For single cards, just render a normal GameCard
   if (group.count === 1) {
@@ -99,31 +104,28 @@ function CardStackImpl({
 
   // Ungrouped: every member rendered as its own non-overlapping card so each is
   // fully clickable (overlapping peek layers only expose a thin strip of the cards
-  // behind the front one). Wraps so a large group stays inside the row.
+  // behind the front one). Rendered as siblings in the row itself rather than in a
+  // wrapper, so they wrap card by card exactly as the sizing solver counted them —
+  // a wrapper box can only move to the next line whole.
   if (expanded) {
     return (
-      <div
-        style={{
-          position: 'relative',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'flex-end',
-          gap: responsive.cardGap,
-        }}
-      >
-        {group.cards.map((card) => (
-          <GameCard
-            key={card.id}
-            card={card}
-            count={1}
-            faceDown={card.isFaceDown}
-            interactive={interactive}
-            battlefield
-            isOpponentCard={isOpponentCard}
-          />
+      <>
+        {group.cards.map((card, index) => (
+          <div key={card.id} style={{ position: 'relative', display: 'flex', alignItems: 'flex-end' }}>
+            <GameCard
+              card={card}
+              count={1}
+              faceDown={card.isFaceDown}
+              interactive={interactive}
+              battlefield
+              isOpponentCard={isOpponentCard}
+            />
+            {index === 0 && (
+              <StackToggle expanded count={group.count} onToggle={() => setStackExpanded(group.cardIds, false)} />
+            )}
+          </div>
         ))}
-        <StackToggle expanded count={group.count} onToggle={() => setExpanded(false)} />
-      </div>
+      </>
     )
   }
 
@@ -180,7 +182,7 @@ function CardStackImpl({
       ))}
       {/* Ungroup affordance — lets the player split the stack to click individual
           members (e.g. tap 8 of 8 tokens for waterbend, not just the front 4). */}
-      <StackToggle expanded={false} count={group.count} onToggle={() => setExpanded(true)} />
+      <StackToggle expanded={false} count={group.count} onToggle={() => setStackExpanded(group.cardIds, true)} />
     </div>
   )
 }

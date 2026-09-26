@@ -45,7 +45,7 @@ val Cactarantula = card("Cactarantula") {
     }
 
     triggeredAbility {
-        trigger = Triggers.BecomesTargetByOpponent
+        trigger = Triggers.self.becomesTarget(byOpponent = true)
         optional = true
         effect = Effects.DrawCards(1)
     }

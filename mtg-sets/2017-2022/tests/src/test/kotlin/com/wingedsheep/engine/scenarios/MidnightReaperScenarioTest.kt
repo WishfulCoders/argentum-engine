@@ -2,9 +2,9 @@ package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Midnight Reaper — "{2}{B} 3/2. Whenever a nontoken creature you control dies, this creature
@@ -21,7 +21,7 @@ class MidnightReaperScenarioTest : ScenarioTestBase() {
             manaCost = "{0}"
             typeLine = "Sorcery"
             spell {
-                val c = target("target creature", Targets.Creature)
+                val c = target(TargetFilter.Creature)
                 effect = Effects.Destroy(c)
             }
         }

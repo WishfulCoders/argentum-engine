@@ -26,7 +26,7 @@ val Grapeshot = card("Grapeshot") {
         "Storm (When you cast this spell, copy it for each spell cast before it this turn. You may choose new targets for the copies.)"
 
     spell {
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
     }
 

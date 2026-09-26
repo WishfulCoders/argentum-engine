@@ -1,23 +1,19 @@
 package com.wingedsheep.mtg.sets.definitions.fdn.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Ordeal of Nylea
@@ -40,32 +36,29 @@ val OrdealOfNylea = card("Ordeal of Nylea") {
         "When you sacrifice this Aura, search your library for up to two basic land cards, put them " +
         "onto the battlefield tapped, then shuffle."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     // Whenever enchanted creature attacks, put a +1/+1 counter on it.
     // Then if it has three or more +1/+1 counters on it, sacrifice this Aura.
     triggeredAbility {
-        trigger = Triggers.attacks(binding = TriggerBinding.ATTACHED)
-        // EntityReference.Triggering resolves to the enchanted (attacking) creature here —
+        trigger = Triggers.attached.attacks()
+        // EffectTarget.TriggeringEntity resolves to the enchanted (attacking) creature here —
         // AttachmentTriggerDetector sets triggeringEntityId to the attached entity.
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.EnchantedCreature) then
-            ConditionalEffect(
-                condition = Compare(
-                    left = DynamicAmount.EntityProperty(
-                        entity = EntityReference.Triggering,
-                        numericProperty = EntityNumericProperty.CounterCount(CounterTypeFilter.PlusOnePlusOne)
-                    ),
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.EnchantedCreature) then
+            Effects.If(
+                condition = Conditions.CompareAmounts(
+                    left = DynamicAmounts.countersOnTriggering(CounterType.PLUS_ONE_PLUS_ONE),
                     operator = ComparisonOperator.GTE,
-                    right = DynamicAmount.Fixed(3)
+                    right = 3
                 ),
-                effect = Effects.SacrificeTarget(EffectTarget.Self)
+                then = Effects.SacrificeTarget(EffectTarget.Self)
             )
     }
 
     // When you sacrifice this Aura, search your library for up to two basic land cards,
     // put them onto the battlefield tapped, then shuffle.
     triggeredAbility {
-        trigger = Triggers.Sacrificed
+        trigger = Triggers.self.isSacrificed()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.BasicLand,
             count = 2,

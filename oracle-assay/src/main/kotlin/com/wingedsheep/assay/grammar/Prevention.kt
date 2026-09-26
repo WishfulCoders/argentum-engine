@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.scripting.effects.PreventDamageEffect
 import com.wingedsheep.sdk.scripting.effects.PreventionDirection
 import com.wingedsheep.sdk.scripting.effects.PreventionScope
 import com.wingedsheep.sdk.scripting.effects.PreventionSourceFilter
-import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetRequirement
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
@@ -56,20 +55,18 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *   owns that field and strips precisely it, the discipline [Filters] states. A frame that already
  *   spells a direction other than `ToTarget` is refused by the layer, so a group-sourced shield has
  *   one printed form ([groupClauses]' "…that would be dealt by creatures this turn") instead of two
- *   rules that can each print it.
+ *   rules that can each print it. The one exception is "you": a `Matching` source over a single
+ *   recipient has no executor lowering, so "to you … by {group}" reads the recipient as the
+ *   controller-only group shield (`recipientGroupIncludesController` with no group) — the model
+ *   the hand-written cards carry (Scarecrow, Deep Wood).
  *
  * ## Constructed rather than built through a facade
  *
- * Every other family here goes through an SDK companion factory, per the module's rule. `Effects`
- * publishes *fourteen* prevention facades and each one freezes a different subset of the same six
- * fields — `PreventAllCombatDamage()`, `PreventCombatDamageToAndBy(target)`,
- * `PreventAllDamageDealtBy(target)`, `PreventNextDamage(amount, target)` and so on. They are points
- * on the product this file spans, so picking one per combination would be a `when` over the model
- * reproducing a mapping nobody wrote down, and every combination the corpus prints and the facades
- * do not have would need a fifteenth. The type itself is the curated surface here, exactly as
- * [Replacements] argues for the replacement-effect constructors; that the facade list is a frozen
- * enumeration of a parametrized type is the same finding this file is an answer to, reported rather
- * than routed around.
+ * Every other family here goes through an SDK companion factory, per the module's rule. The
+ * prevention facade, `Effects.PreventDamage`, mirrors this type's fields one for one, so building
+ * the type directly denotes exactly what the facade would — and the grammar needs the concrete
+ * type anyway: every layer below strips or sets one field with `copy`, which an `Effect`-typed
+ * facade result cannot offer.
  *
  * ## Two SDK findings this file declines rather than approximates
  *
@@ -356,49 +353,48 @@ object Prevention {
     /**
      * The shields whose recipient or source is a **group** rather than one object.
      *
-     * `recipientGroup` and `PreventionSourceFilter.FromGroup` are two fields holding the same
-     * `GroupFilter` on opposite sides of the damage, and [Filters.plural] spells both — so every
+     * `recipientGroup` and `PreventionSourceFilter.Matching` are two fields holding the same kind of
+     * `GameObjectFilter` on opposite sides of the damage, and [Filters.plural] spells both — so every
      * noun phrase the grammar can read ("creatures you control", "nongreen creatures", "creatures
      * your opponents control") arrives here as a row in a filter list rather than as a rule.
      *
      * "you and creatures you control" is its own frame rather than a filter, for the reason
      * `PreventDamageEffect.recipientGroupIncludesController` exists: a player is not a permanent, so
-     * the "you and" can never come out of the `GroupFilter` itself.
+     * the "you and" can never come out of the permanent filter itself.
      */
     private val groupClauses: List<Phrase<CardScript>> = run {
         fun rule(
             frame: String,
             name: String,
             canonicalRule: Boolean = true,
-            effectFor: (GroupFilter, PreventionScope) -> PreventDamageEffect,
+            effectFor: (GameObjectFilter, PreventionScope) -> PreventDamageEffect,
         ): Phrase<CardScript> {
-            fun scriptFor(group: GroupFilter, scope: PreventionScope) =
+            fun scriptFor(group: GameObjectFilter, scope: PreventionScope) =
                 CardScript(spellEffect = effectFor(group, scope))
             val inner = phrase<CardScript>("prevent all {kind} $frame", name = name) {
                 canonical = canonicalRule
                 slot("kind", kind)
                 slot("group", Filters.plural)
-                build { scriptFor(GroupFilter(it.value("group")), it.value("kind")) }
+                build { scriptFor(it.value("group"), it.value("kind")) }
                 match { script ->
                     val effect = script.spellEffect as? PreventDamageEffect ?: return@match null
                     val group = effect.recipientGroup
-                        ?: (effect.sourceFilter as? PreventionSourceFilter.FromGroup)?.filter
+                        ?: (effect.sourceFilter as? PreventionSourceFilter.Matching)?.filter
                         ?: return@match null
-                    if (group != GroupFilter(group.baseFilter)) return@match null
                     if (script != scriptFor(group, effect.scope)) return@match null
-                    bind("kind" to effect.scope, "group" to group.baseFilter)
+                    bind("kind" to effect.scope, "group" to group)
                 }
             }
             return if (canonicalRule) inner else alternate(inner)
         }
 
-        fun dealtBy(group: GroupFilter, scope: PreventionScope) = PreventDamageEffect(
+        fun dealtBy(group: GameObjectFilter, scope: PreventionScope) = PreventDamageEffect(
             scope = scope,
             direction = PreventionDirection.FromTarget,
-            sourceFilter = PreventionSourceFilter.FromGroup(group),
+            sourceFilter = PreventionSourceFilter.Matching(group),
         )
 
-        fun toGroup(group: GroupFilter, scope: PreventionScope) =
+        fun toGroup(group: GameObjectFilter, scope: PreventionScope) =
             PreventDamageEffect(recipientGroup = group, scope = scope)
 
         listOf(
@@ -456,8 +452,7 @@ object Prevention {
     }
 
     /**
-     * The **source layer** — "… this turn by attacking creatures", "… this turn by a source of your
-     * choice", "… this turn by creatures".
+     * The **source layer** — "… this turn by a source of your choice".
      *
      * One layer, one field, and it strips precisely that field before delegating: the discipline
      * [Filters] states for a predicate bag, applied to a record. A combinator that could also spell
@@ -465,18 +460,12 @@ object Prevention {
      * value, which is exactly what would happen against [groupClauses]' "that would be dealt by
      * creatures this turn" — so the layer refuses any inner clause that is not `ToTarget`, and the
      * two shapes take disjoint halves of the model.
-     *
-     * @param guard the extra restriction a particular source imposes on the shield it modifies. Only
-     *   `AttackingCreatures` has one, and it is the executor's: that filter attaches the shield to
-     *   the ability's controller and ignores `target` entirely, so the layer may only wear a
-     *   recipient clause that already said "you".
      */
     private fun sourceLayer(
         inner: Phrase<CardScript>,
         suffix: String,
         name: String,
         source: PreventionSourceFilter,
-        guard: (PreventDamageEffect) -> Boolean = { true },
     ): Phrase<CardScript> = phrase("{inner}$suffix", name = name) {
         slot("inner", inner)
         build { bindings ->
@@ -484,7 +473,6 @@ object Prevention {
             val effect = script.spellEffect as? PreventDamageEffect ?: return@build null
             if (effect.direction != PreventionDirection.ToTarget) return@build null
             if (effect.sourceFilter != PreventionSourceFilter.AnySource) return@build null
-            if (!guard(effect)) return@build null
             CardScript(
                 spellEffect = effect.copy(sourceFilter = source),
                 targetRequirements = script.targetRequirements,
@@ -494,7 +482,6 @@ object Prevention {
             val effect = script.spellEffect as? PreventDamageEffect ?: return@match null
             if (effect.direction != PreventionDirection.ToTarget) return@match null
             if (effect.sourceFilter != source) return@match null
-            if (!guard(effect)) return@match null
             val bare = CardScript(
                 spellEffect = effect.copy(sourceFilter = PreventionSourceFilter.AnySource),
                 targetRequirements = script.targetRequirements,
@@ -504,18 +491,16 @@ object Prevention {
     }
 
     /**
-     * The noun phrase `PreventionSourceFilter.AttackingCreatures` already owns.
+     * The same layer over a source the sentence names with a noun phrase — "… by creatures", "… by
+     * attacking creatures".
      *
-     * "…by attacking creatures" is spellable twice — as the dedicated case and as a `FromGroup` over
-     * the filter [Filters.plural] reads out of the same three words — and two rules reading one text
-     * into two models is the hard ambiguity the design says never to resolve by ordering an
-     * alternation. The dedicated case wins because it is what the hand-written cards carry (Deep
-     * Wood), so [groupSourceLayer] refuses this filter outright and a shield holding the `FromGroup`
-     * spelling has no printed form. That omission is the SDK finding: two spellings of one thing.
+     * A `Matching` source needs its recipients named as a group: the executor has no lowering for
+     * one over a single object. A group recipient ("to creatures you control", "to you and creatures
+     * you control") takes the filter as it is. "To you" is the one single recipient it can wear, and
+     * it becomes the controller-only group shield — `recipientGroupIncludesController` with no
+     * group, what Scarecrow and Deep Wood carry — so the layer sets that flag alongside the source
+     * and strips both on the way back. Every other recipient ("~", "target creature") declines.
      */
-    private val attackingCreatures = GameObjectFilter.Creature.attacking()
-
-    /** The same layer over a source the sentence names with a noun phrase — "… by creatures". */
     private fun groupSourceLayer(inner: Phrase<CardScript>): Phrase<CardScript> =
         phrase("{inner} by {group}", name = "prevent damage from a group of sources") {
             slot("inner", inner)
@@ -523,31 +508,42 @@ object Prevention {
             build { bindings ->
                 val script = bindings.value<CardScript>("inner")
                 val group = bindings.value<GameObjectFilter>("group")
-                if (group == attackingCreatures) return@build null
                 val effect = script.spellEffect as? PreventDamageEffect ?: return@build null
                 if (effect.direction != PreventionDirection.ToTarget) return@build null
                 if (effect.sourceFilter != PreventionSourceFilter.AnySource) return@build null
+                val recipients = when {
+                    effect.recipientGroup != null -> effect
+                    isBareYou(effect) -> effect.copy(recipientGroupIncludesController = true)
+                    else -> return@build null
+                }
                 CardScript(
-                    spellEffect = effect.copy(
-                        sourceFilter = PreventionSourceFilter.FromGroup(GroupFilter(group))
-                    ),
+                    spellEffect = recipients.copy(sourceFilter = PreventionSourceFilter.Matching(group)),
                     targetRequirements = script.targetRequirements,
                 )
             }
             match { script ->
                 val effect = script.spellEffect as? PreventDamageEffect ?: return@match null
                 if (effect.direction != PreventionDirection.ToTarget) return@match null
-                val group = (effect.sourceFilter as? PreventionSourceFilter.FromGroup)?.filter
+                val group = (effect.sourceFilter as? PreventionSourceFilter.Matching)?.filter
                     ?: return@match null
-                if (group.baseFilter == attackingCreatures) return@match null
-                if (group != GroupFilter(group.baseFilter)) return@match null
-                val bare = CardScript(
-                    spellEffect = effect.copy(sourceFilter = PreventionSourceFilter.AnySource),
-                    targetRequirements = script.targetRequirements,
+                val stripped = effect.copy(sourceFilter = PreventionSourceFilter.AnySource)
+                val bare = when {
+                    effect.recipientGroup != null -> stripped
+                    effect.recipientGroupIncludesController ->
+                        stripped.copy(recipientGroupIncludesController = false).takeIf(::isBareYou)
+                    else -> null
+                } ?: return@match null
+                bind(
+                    "inner" to CardScript(spellEffect = bare, targetRequirements = script.targetRequirements),
+                    "group" to group,
                 )
-                bind("inner" to bare, "group" to group.baseFilter)
             }
         }
+
+    /** The "all damage … to you" shield — the one single recipient a group source can narrow. */
+    private fun isBareYou(effect: PreventDamageEffect): Boolean =
+        effect.target == you.target && effect.amount == null && effect.recipientGroup == null &&
+            !effect.recipientGroupIncludesController
 
     /**
      * The whole family over one set of [Recipient]s.
@@ -583,15 +579,9 @@ object Prevention {
         val layered = listOf(
             sourceLayer(
                 recipientClause,
-                " by attacking creatures",
-                "prevent damage from attacking creatures",
-                PreventionSourceFilter.AttackingCreatures,
-            ) { it.target == EffectTarget.Controller && it.amount == null },
-            sourceLayer(
-                recipientClause,
                 " by a source of your choice",
                 "prevent damage from a chosen source",
-                PreventionSourceFilter.ChosenSource,
+                PreventionSourceFilter.Chosen(),
             ),
             groupSourceLayer(recipientClause),
         )

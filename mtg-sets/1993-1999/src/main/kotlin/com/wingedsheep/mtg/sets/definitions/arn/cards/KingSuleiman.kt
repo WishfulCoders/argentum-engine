@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * King Suleiman
@@ -26,13 +25,10 @@ val KingSuleiman = card("King Suleiman") {
     activatedAbility {
         cost = Costs.Tap
         val creature = target(
-            "target Djinn or Efreet",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.withSubtype("Djinn") or
-                        GameObjectFilter.Creature.withSubtype("Efreet")
-                )
-            )
+            TargetFilter(
+                GameObjectFilter.Creature.withSubtype("Djinn") or
+                    GameObjectFilter.Creature.withSubtype("Efreet")
+            ),
         )
         effect = Effects.Destroy(creature)
     }

@@ -33,7 +33,7 @@ val GisaAndGeralf = card("Gisa and Geralf") {
         "Once during each of your turns, you may cast a Zombie creature spell from your graveyard."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.mill(4)
         description = "When Gisa and Geralf enters, mill four cards."
     }

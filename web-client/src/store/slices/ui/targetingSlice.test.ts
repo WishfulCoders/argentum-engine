@@ -42,7 +42,7 @@ function twoRequirementState(action: GameAction): TargetingState {
     allSelectedTargets: [],
     targetRequirements: [
       { index: 0, description: 'any target (takes 2 damage)', minTargets: 1, maxTargets: 1, validTargets: [id('a'), id('b'), id('c')] },
-      { index: 1, description: 'any other target (takes 1 damage)', minTargets: 1, maxTargets: 1, validTargets: [id('a'), id('b'), id('c')] },
+      { index: 1, description: 'any other target (takes 1 damage)', minTargets: 1, maxTargets: 1, validTargets: [id('a'), id('b'), id('c')], mustDifferFromEarlier: true },
     ],
     targetDescription: 'any target (takes 2 damage)',
     totalRequirements: 2,
@@ -66,10 +66,29 @@ describe('targetingSlice — multi-target back navigation', () => {
 
     const state = targeting(store)
     expect(state.currentRequirementIndex).toBe(1)
-    // Dependent-target dedup: the pick for requirement 0 leaves the pool
+    // "Another target": the pick for requirement 0 leaves the pool
     expect(state.validTargets).toEqual([id('b'), id('c')])
     expect(state.previousRequirementStates).toHaveLength(1)
     expect(state.previousRequirementStates![0]!.selectedTargets).toEqual([id('a')])
+  })
+
+  it('keeps an earlier pick selectable when the next requirement is a separate "target"', () => {
+    // Seeds of Strength: three "target creature" requirements may all choose the same creature.
+    const { store, advancePipeline } = makeStore()
+    const s = store.getState() as unknown as TargetingSlice
+    const base = twoRequirementState(store.getState().pipelineState!.accumulatedAction)
+    s.startTargeting({
+      ...base,
+      targetRequirements: base.targetRequirements!.map((r) => ({ ...r, mustDifferFromEarlier: false })),
+    })
+
+    s.addTarget(id('a'))
+    s.confirmTargeting('test-epoch')
+    expect(targeting(store).validTargets).toEqual([id('a'), id('b'), id('c')])
+
+    store.getState().addTarget(id('a'))
+    store.getState().confirmTargeting('test-epoch')
+    expect(advancePipeline).toHaveBeenCalledWith({ type: 'targeting', selectedTargets: [id('a'), id('a')] })
   })
 
   it('goBackTargeting restores the previous requirement with its picks selected', () => {

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.continuations.entityIdToChosenTarget
 import com.wingedsheep.engine.mechanics.mana.CostCalculator
 import com.wingedsheep.engine.support.GameTestDriver
@@ -32,7 +33,7 @@ class DragToTheRootsScenarioTest : FunSpec({
         val d = driver()
         val you = d.activePlayer!!
         d.passPriorityUntil(Step.PRECOMBAT_MAIN)
-        val calculator = CostCalculator(d.cardRegistry)
+        val calculator = CostCalculator(d.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val card = d.cardRegistry.requireCard("Drag to the Roots")
 
         // No delirium yet — full cost.

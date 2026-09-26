@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 
 /**
  * Dawn of Hope
@@ -25,8 +24,8 @@ val DawnOfHope = card("Dawn of Hope") {
         "{3}{W}: Create a 1/1 white Soldier creature token with lifelink."
 
     triggeredAbility {
-        trigger = Triggers.YouGainLife
-        effect = MayPayManaEffect(ManaCost.parse("{2}"), Effects.DrawCards(1))
+        trigger = Triggers.you.gainsLife()
+        effect = Effects.MayPay(ManaCost.parse("{2}"), Effects.DrawCards(1))
     }
     activatedAbility {
         cost = Costs.Mana("{3}{W}")

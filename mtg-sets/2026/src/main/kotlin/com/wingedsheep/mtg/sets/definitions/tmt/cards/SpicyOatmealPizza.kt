@@ -24,10 +24,9 @@ val SpicyOatmealPizza = card("Spicy Oatmeal Pizza") {
     oracleText = "When this artifact enters, it deals 4 damage to any target and 3 damage to you.\n{2}, {T}, Sacrifice this artifact: You gain 3 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val anyTarget = target("any target", Targets.Any)
-        effect = Effects.DealDamage(4, anyTarget)
-            .then(Effects.DealDamage(3, EffectTarget.Controller))
+        trigger = Triggers.self.enters()
+        val anyTarget = target(Targets.Any)
+        effect = Effects.DealDamage(4, anyTarget) then Effects.DealDamage(3, EffectTarget.Controller)
     }
 
     activatedAbility {

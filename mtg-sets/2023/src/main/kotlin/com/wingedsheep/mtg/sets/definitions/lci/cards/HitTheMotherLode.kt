@@ -1,9 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.minus
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Hit the Mother Lode
@@ -27,11 +28,8 @@ val HitTheMotherLode = card("Hit the Mother Lode") {
             amount = 10,
             storeDiscoveredAs = "discovered",
             thenEffect = Effects.CreateTreasure(
-                count = DynamicAmount.IfPositive(
-                    DynamicAmount.Subtract(
-                        DynamicAmount.Fixed(10),
-                        DynamicAmount.StoredCardManaValue("discovered")
-                    )
+                count = DynamicAmounts.nonNegative(
+                    10 - DynamicAmounts.manaValueOf("discovered")
                 ),
                 tapped = true,
             )

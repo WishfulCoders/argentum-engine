@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Wings of Velis Vel
@@ -35,12 +35,10 @@ val WingsOfVelisVel = card("Wings of Velis Vel") {
     keywords(Keyword.CHANGELING)
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.SetBasePowerAndToughness(4, 4, creature),
-            Effects.GrantKeyword(Keyword.CHANGELING, creature),
-            Effects.GrantKeyword(Keyword.FLYING, creature),
-        )
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.SetBasePowerAndToughness(4, 4, creature) then
+            Effects.GrantKeyword(Keyword.CHANGELING, creature) then
+            Effects.GrantKeyword(Keyword.FLYING, creature)
     }
 
     metadata {

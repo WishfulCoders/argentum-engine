@@ -13,7 +13,7 @@ This document outlines a hierarchy of strategies, ranging from simple compositio
 Most "complex" abilities are actually specific combinations of simple, existing actions. Instead of creating a new
 effect class for every variation, compose them using structural effects.
 
-* **Strategy:** Use `CompositeEffect` (sequence) and `ConditionalEffect` (branching) to chain existing primitives.
+* **Strategy:** Use `CompositeEffect` (sequence) and `Effects.If` (branching) to chain existing primitives.
 * **Best For:** Abilities with multiple steps or simple conditions.
 
 ### Example: *Cryptic Command* (Simplified Mode)
@@ -37,7 +37,7 @@ CompositeEffect(
 *"Destroy target creature if it's black. Otherwise, tap it."*
 
 ```kotlin
-ConditionalEffect(
+Effects.If(
     condition = TargetHasColor(Color.BLACK),
     effect = MoveToZoneEffect(EffectTarget.ContextTarget(0), Zone.Graveyard, byDestruction = true),
     elseEffect = TapEffect(EffectTarget.ContextTarget(0))
@@ -81,7 +81,7 @@ private fun executePlayerLoses(state: GameState, action: PlayerLoses): GameState
 When an ability performs a unique game action that doesn't exist in the engine yet (e.g., "Exchange life totals", "
 Restart the game"), you must extend the system.
 
-* **Strategy:** Follow the Open-Closed Principle. Create a new `Effect` data class and a corresponding `EffectHandler`.
+* **Strategy:** Follow the Open-Closed Principle. Create a new `Effect` data class and a corresponding `EffectExecutor`.
 * **Best For:** Truly unique actions that cannot be composed from existing primitives.
 
 ### Example: *Tree of Redemption*
@@ -89,7 +89,7 @@ Restart the game"), you must extend the system.
 *"Exchange your life total with this creature's toughness."*
 
 1. **Define Data:** `data class ExchangeLifeWithToughnessEffect(val target: EffectTarget) : Effect`
-2. **Implement Logic:** Create `ExchangeLifeWithToughnessHandler` that implements `EffectHandler`.
+2. **Implement Logic:** Create `ExchangeLifeWithToughnessHandler` that implements `EffectExecutor`.
 3. **Register:** Add the handler to the `EffectHandlerRegistry`.
 
 *Benefit:* The core `GameEngine` code remains untouched. The logic is isolated entirely within the handler.

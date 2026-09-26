@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ChooseOptionDecision
 import com.wingedsheep.engine.core.OptionChosenResponse
 import com.wingedsheep.engine.state.components.battlefield.CastChoicesComponent
@@ -74,7 +75,7 @@ class ArachnePsionicWeaverScenarioTest : FunSpec({
 
         // The durable card-type choice is visible to the client (rendered as a badge), not just
         // stored on the permanent's CastChoicesComponent.
-        val view = ClientStateTransformer(cardRegistry = driver.cardRegistry)
+        val view = ClientStateTransformer(cardRegistry = driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .transform(driver.state, viewingPlayerId = you)
         view.cards[arachne]?.chosenCardType shouldBe "Instant"
     }

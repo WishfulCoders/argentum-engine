@@ -20,7 +20,7 @@ val CityOfBrass = card("City of Brass") {
     oracleText = "Whenever this land becomes tapped, it deals 1 damage to you.\n{T}: Add one mana of any color."
 
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
+        trigger = Triggers.self.becomesTapped()
         effect = Effects.DealDamage(1, EffectTarget.Controller)
     }
 

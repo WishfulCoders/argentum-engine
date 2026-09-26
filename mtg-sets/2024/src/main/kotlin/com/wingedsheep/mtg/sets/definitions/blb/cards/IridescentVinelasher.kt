@@ -7,7 +7,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Iridescent Vinelasher
@@ -34,15 +34,15 @@ val IridescentVinelasher = card("Iridescent Vinelasher") {
 
     // Offspring ETB: when this enters, if offspring was paid, create a 1/1 token copy
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.WasKicked
         effect = Effects.CreateTokenCopyOfSelf(overridePower = 1, overrideToughness = 1)
     }
 
     // Landfall: whenever a land you control enters, deal 1 damage to target opponent
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
-        val opponent = target("opponent", Targets.Opponent)
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
+        val opponent = target(Targets.Opponent)
         effect = Effects.DealDamage(1, opponent)
     }
 

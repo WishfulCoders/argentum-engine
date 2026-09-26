@@ -32,7 +32,7 @@ val CrystalGrotto = card("Crystal Grotto") {
     oracleText = "When this land enters, scry 1.\n{T}: Add {C}.\n{1}, {T}: Add one mana of any color."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.scry(1)
     }
 

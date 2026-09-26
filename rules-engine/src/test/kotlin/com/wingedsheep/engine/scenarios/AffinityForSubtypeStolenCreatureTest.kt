@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.layers.StateProjector
 import com.wingedsheep.engine.mechanics.mana.CostCalculator
 import com.wingedsheep.engine.registry.CardRegistry
@@ -77,7 +78,7 @@ class AffinityForSubtypeStolenCreatureTest : FunSpec({
         registry.register(AffinityForFrogsSpell)
         registry.register(ControlAura)
 
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         val driver = createDriver()
         driver.initMirrorMatch(deck = Deck.of("Forest" to 40))
@@ -121,7 +122,7 @@ class AffinityForSubtypeStolenCreatureTest : FunSpec({
         registry.register(AffinityForFrogsSpell)
         registry.register(ControlAura)
 
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         val driver = createDriver()
         driver.initMirrorMatch(deck = Deck.of("Forest" to 40))

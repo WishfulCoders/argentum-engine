@@ -29,7 +29,7 @@ import io.kotest.matchers.shouldBe
  * the top of your library until you reveal a Saga card. Put that card onto the battlefield and the
  * rest on the bottom of your library in a random order. This ability triggers only once each turn."
  * (new [com.wingedsheep.sdk.scripting.EventPattern.SagaChapterResolvedEvent] +
- * [com.wingedsheep.sdk.dsl.Triggers.WheneverFinalChapterOfYourSagaResolves], oncePerTurn).
+ * `Triggers.you.sagaChapterResolves(true)`, oncePerTurn).
  */
 class TomBombadilScenarioTest : FunSpec({
 

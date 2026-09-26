@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.EntersWithCounters
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 
 /**
  * Vivid Crag
@@ -32,7 +31,7 @@ val VividCrag = card("Vivid Crag") {
     replacementEffect(EntersTapped())
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.Named(Counters.CHARGE),
+            counterType = CounterType.CHARGE,
             count = 2,
             selfOnly = true,
         )
@@ -46,7 +45,7 @@ val VividCrag = card("Vivid Crag") {
     }
 
     activatedAbility {
-        cost = Costs.Composite(Costs.Tap, Costs.RemoveCounterFromSelf(Counters.CHARGE, 1))
+        cost = Costs.Composite(Costs.Tap, Costs.RemoveCounterFromSelf(CounterType.CHARGE, 1))
         manaAbility = true
         effect = Effects.AddManaOfChoice()
         description = "{T}, Remove a charge counter from this land: Add one mana of any color."

@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.conditions.NotCondition
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -26,10 +25,10 @@ val BellowingSaddlebrute = card("Bellowing Saddlebrute") {
     oracleText = "Raid — When Bellowing Saddlebrute enters, you lose 4 life unless you attacked this turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ConditionalEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.If(
             condition = NotCondition(Conditions.YouAttackedThisTurn),
-            effect = Effects.LoseLife(4, EffectTarget.Controller)
+            then = Effects.LoseLife(4, EffectTarget.Controller)
         )
     }
 

@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Embereth Veteran
@@ -32,7 +31,7 @@ val EmberethVeteran = card("Embereth Veteran") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeSelf)
-        val t = target("target", TargetCreature(filter = TargetFilter.OtherCreature))
+        val t = target(TargetFilter.OtherCreature)
         effect = Effects.CreateRoleToken("Young Hero Role", t)
     }
 

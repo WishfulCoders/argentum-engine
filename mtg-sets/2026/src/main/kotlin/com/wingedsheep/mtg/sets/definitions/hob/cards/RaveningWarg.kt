@@ -6,11 +6,11 @@ package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -30,9 +30,9 @@ val RaveningWarg = card("Ravening Warg") {
     toughness = 2
     keywords(Keyword.DEATHTOUCH)
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         triggerRestriction = Conditions.YouControl(GameObjectFilter.Creature.powerAtLeast(4))
-        effect = GainLifeEffect(2)
+        effect = Effects.GainLife(2)
     }
     metadata {
         rarity = Rarity.COMMON

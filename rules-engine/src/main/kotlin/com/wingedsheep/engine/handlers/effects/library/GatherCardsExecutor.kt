@@ -2,7 +2,6 @@ package com.wingedsheep.engine.handlers.effects.library
 
 import com.wingedsheep.engine.core.CardsRevealedEvent
 import com.wingedsheep.engine.core.EffectResult
-import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.PredicateEvaluator
@@ -13,6 +12,7 @@ import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.OwnerComponent
+import com.wingedsheep.engine.state.components.player.CantSearchLibrariesComponent
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.effects.CardSource
@@ -34,12 +34,13 @@ import kotlin.reflect.KClass
  * from their current zone — they are only referenced for subsequent
  * pipeline steps (SelectFromCollection, MoveCollection).
  */
-class GatherCardsExecutor : EffectExecutor<GatherCardsEffect> {
+class GatherCardsExecutor(
+    private val predicateEvaluator: PredicateEvaluator
+) : EffectExecutor<GatherCardsEffect> {
 
     override val effectType: KClass<GatherCardsEffect> = GatherCardsEffect::class
 
-    private val amountEvaluator = DynamicAmountEvaluator()
-    private val predicateEvaluator = PredicateEvaluator()
+    private val amountEvaluator = predicateEvaluator.amounts
 
     override fun execute(
         state: GameState,
@@ -55,7 +56,7 @@ class GatherCardsExecutor : EffectExecutor<GatherCardsEffect> {
                     // For a mill, apply ModifyMillAmount replacement effects to the announced
                     // count per milling player (CR 701.13 — "mill that many plus four instead").
                     val effectiveCount = if (source.isMill) {
-                        MillAmountModifier.apply(state, playerId, count)
+                        MillAmountModifier.apply(state, playerId, count, predicateEvaluator = predicateEvaluator)
                     } else {
                         count
                     }
@@ -155,7 +156,8 @@ class GatherCardsExecutor : EffectExecutor<GatherCardsEffect> {
                     if (resolvedPlayerId != null) it.copy(controllerId = resolvedPlayerId) else it
                 }
                 val matched = BattlefieldFilterUtils.findMatchingOnBattlefield(
-                    state, baseFilter, predicateContext, excludeSelfId
+                    state, baseFilter, predicateContext, excludeSelfId,
+                    predicateEvaluator = predicateEvaluator
                 )
                 val afterTriggering = if (source.excludeTriggering) {
                     matched.filter { it != context.triggeringEntityId }
@@ -215,7 +217,7 @@ class GatherCardsExecutor : EffectExecutor<GatherCardsEffect> {
                     emptyList()
                 } else {
                     val matching = BattlefieldFilterUtils
-                        .findMatchingOnBattlefield(state, source.filter, context)
+                        .findMatchingOnBattlefield(state, source.filter, context, predicateEvaluator = predicateEvaluator)
                         .toSet()
                     attachedIds.filter { it in matching }
                 }
@@ -286,7 +288,7 @@ class GatherCardsExecutor : EffectExecutor<GatherCardsEffect> {
                 // to creatures still on the battlefield — a creature that already left can't be
                 // affected (last-known-information identifies them, it doesn't resurrect them).
                 val battlefield = state.getBattlefield().toSet()
-                (context.triggerLastKnownBlockingOrBlockedByIds ?: emptyList())
+                (context.triggerContext?.lastKnownBlockingOrBlockedByIds ?: emptyList())
                     .filter { it in battlefield }
             }
 
@@ -333,7 +335,17 @@ class GatherCardsExecutor : EffectExecutor<GatherCardsEffect> {
             }
         }
 
-        val cards = gathered
+        // A search the searcher is forbidden to make finds nothing in any library (Shadow of
+        // Doubt). Only the library half is dropped: "search your graveyard and/or library" still
+        // finds graveyard cards. The rest of the instruction (move nothing, shuffle) still runs.
+        val cards = if (effect.search &&
+            state.getEntity(context.controllerId)?.has<CantSearchLibrariesComponent>() == true
+        ) {
+            val libraries = state.turnOrder.flatMap { state.getZone(ZoneKey(it, Zone.LIBRARY)) }.toSet()
+            gathered.filter { it !in libraries }
+        } else {
+            gathered
+        }
 
         if (cards.isEmpty()) {
             return EffectResult.success(state).copy(

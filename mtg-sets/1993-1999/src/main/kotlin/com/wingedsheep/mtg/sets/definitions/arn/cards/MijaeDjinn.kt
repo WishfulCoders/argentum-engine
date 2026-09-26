@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.FlipCoinEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -24,9 +23,9 @@ val MijaeDjinn = card("Mijae Djinn") {
     oracleText = "Whenever this creature attacks, flip a coin. If you lose the flip, remove this creature from combat and tap it."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = FlipCoinEffect(
-            lostEffect = Effects.RemoveFromCombat(EffectTarget.Self).then(Effects.Tap(EffectTarget.Self)),
+        trigger = Triggers.self.attacks()
+        effect = Effects.FlipCoin(
+            lostEffect = Effects.RemoveFromCombat(EffectTarget.Self) then Effects.Tap(EffectTarget.Self),
         )
     }
 

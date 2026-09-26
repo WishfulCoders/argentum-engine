@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Coordinated Maneuver — Tarkir: Dragonstorm #6
@@ -30,11 +29,11 @@ val CoordinatedManeuver = card("Coordinated Maneuver") {
     spell {
         modal(chooseCount = 1) {
             mode("Deal damage equal to the number of creatures you control to target creature or planeswalker") {
-                val t = target("target creature or planeswalker", Targets.CreatureOrPlaneswalker)
+                val t = target(Targets.CreatureOrPlaneswalker)
                 effect = Effects.DealDamage(DynamicAmounts.creaturesYouControl(), t)
             }
             mode("Destroy target enchantment") {
-                val t = target("target enchantment", TargetPermanent(filter = TargetFilter.Enchantment))
+                val t = target(TargetFilter.Enchantment)
                 effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
             }
         }

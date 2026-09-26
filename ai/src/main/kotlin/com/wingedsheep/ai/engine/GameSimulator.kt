@@ -263,7 +263,7 @@ class GameSimulator(
             }
 
             // Auto-resolve trivial decisions; use decisionResolver for non-trivial ones
-            if (current.isPaused) {
+            if (current.outcome is Outcome.Paused) {
                 val decision = current.pendingDecision!!
                 val trivialResponse = trivialResponseFor(decision)
                 if (trivialResponse != null) {

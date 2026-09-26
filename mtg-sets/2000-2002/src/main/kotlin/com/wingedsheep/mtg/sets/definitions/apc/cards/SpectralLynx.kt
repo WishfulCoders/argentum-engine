@@ -6,11 +6,11 @@ package com.wingedsheep.mtg.sets.definitions.apc.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.ProtectionScope
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 
@@ -32,7 +32,7 @@ val SpectralLynx = card("Spectral Lynx") {
     keywordAbility(KeywordAbility.Protection(ProtectionScope.Color(Color.GREEN)))
     activatedAbility {
         cost = Costs.Mana("{B}")
-        effect = RegenerateEffect(EffectTarget.Self)
+        effect = Effects.Regenerate(EffectTarget.Self)
     }
     metadata {
         rarity = Rarity.RARE

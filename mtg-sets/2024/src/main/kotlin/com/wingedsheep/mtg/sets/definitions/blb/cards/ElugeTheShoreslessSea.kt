@@ -1,9 +1,8 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -15,8 +14,8 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Eluge, the Shoreless Sea
@@ -43,23 +42,23 @@ val ElugeTheShoreslessSea = card("Eluge, the Shoreless Sea") {
 
     // Whenever Eluge enters the battlefield, put a flood counter on target land
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val land = target("target land", Targets.Land)
-        effect = Effects.AddCounters(Counters.FLOOD, 1, land)
+        trigger = Triggers.self.enters()
+        val land = target(TargetFilter.Land)
+        effect = Effects.AddCounters(CounterType.FLOOD, 1, land)
     }
 
     // Whenever Eluge attacks, put a flood counter on target land
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val land = target("target land", Targets.Land)
-        effect = Effects.AddCounters(Counters.FLOOD, 1, land)
+        trigger = Triggers.self.attacks()
+        val land = target(TargetFilter.Land)
+        effect = Effects.AddCounters(CounterType.FLOOD, 1, land)
     }
 
     // Lands with flood counters are Islands in addition to their other types
     staticAbility {
         ability = AddLandTypeByCounter(
             landType = "Island",
-            counterType = Counters.FLOOD
+            counterType = CounterType.FLOOD
         )
     }
 
@@ -71,7 +70,7 @@ val ElugeTheShoreslessSea = card("Eluge, the Shoreless Sea") {
                 symbols = "{U}",
                 countSource = CostReductionSource.PermanentsWithCounterYouControl(
                     filter = GameObjectFilter.Land,
-                    counterType = Counters.FLOOD,
+                    counterType = CounterType.FLOOD,
                 ),
             ),
             gating = CostGating.NthOfTypePerTurn(1),

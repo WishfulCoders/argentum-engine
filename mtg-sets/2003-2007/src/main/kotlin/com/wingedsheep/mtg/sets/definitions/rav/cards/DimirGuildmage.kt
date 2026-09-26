@@ -29,14 +29,14 @@ val DimirGuildmage = card("Dimir Guildmage") {
 
     activatedAbility {
         cost = Costs.Mana("{3}{U}")
-        val p = target("target player", Targets.Player)
+        val p = target(Targets.Player)
         effect = Effects.DrawCards(1, p)
         timing = TimingRule.SorcerySpeed
     }
 
     activatedAbility {
         cost = Costs.Mana("{3}{B}")
-        val p = target("target player", Targets.Player)
+        val p = target(Targets.Player)
         effect = Patterns.Hand.discardCards(1, p)
         timing = TimingRule.SorcerySpeed
     }

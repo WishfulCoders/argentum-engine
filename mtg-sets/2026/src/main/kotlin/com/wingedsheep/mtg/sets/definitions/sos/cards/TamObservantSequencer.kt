@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Tam, Observant Sequencer // Deep Sight — Secrets of Strixhaven #237
@@ -32,7 +33,7 @@ val TamObservantSequencer = card("Tam, Observant Sequencer") {
 
     // Landfall — whenever a land you control enters, Tam becomes prepared.
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.BecomePrepared(EffectTarget.Self)
         description = "Landfall — Whenever a land you control enters, Tam becomes prepared."
     }
@@ -43,10 +44,7 @@ val TamObservantSequencer = card("Tam, Observant Sequencer") {
         typeLine = "Sorcery"
         oracleText = "You draw a card and gain 1 life."
         spell {
-            effect = Effects.Composite(
-                Effects.DrawCards(1),
-                Effects.GainLife(1),
-            )
+            effect = Effects.DrawCards(1) then Effects.GainLife(1)
         }
     }
 

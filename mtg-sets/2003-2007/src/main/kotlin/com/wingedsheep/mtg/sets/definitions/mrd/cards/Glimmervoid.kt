@@ -9,6 +9,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Glimmervoid — Mirrodin #281
@@ -22,7 +23,7 @@ import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
  * The mana half is [Effects.AddAnyColorMana] (one mana, one chosen color), marked
  * `manaAbility = true` with [TimingRule.ManaAbility] so it never uses the stack (CR 605.1a).
  *
- * The upkeep-of-the-drawback half is [Triggers.EachEndStep] — *each* end step, not just yours, so
+ * The upkeep-of-the-drawback half is `Triggers.anyPlayer.beginningOf(Step.END)` — *each* end step, not just yours, so
  * an opponent's turn kills it just as fast — with the "if you control no artifacts" clause as an
  * intervening-if [interveningIf]. That matters twice (CR 603.4): the ability doesn't even
  * trigger while you control an artifact, and if the last artifact leaves in response to the
@@ -39,7 +40,7 @@ val Glimmervoid = card("Glimmervoid") {
         "{T}: Add one mana of any color."
 
     triggeredAbility {
-        trigger = Triggers.EachEndStep
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
         interveningIf = Conditions.YouControl(GameObjectFilter.Artifact, negate = true)
         effect = SacrificeSelfEffect
     }

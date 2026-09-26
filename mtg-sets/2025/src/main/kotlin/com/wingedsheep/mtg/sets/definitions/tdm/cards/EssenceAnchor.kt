@@ -3,12 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.tdm.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Essence Anchor
@@ -19,7 +20,7 @@ import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
  * {T}: Create a 2/2 black Zombie Druid creature token. Activate only during your turn
  * and only if a card left your graveyard this turn.
  *
- * The upkeep trigger is [Triggers.YourUpkeep] + [Patterns.Library.surveil] (look at the top
+ * The upkeep trigger is `Triggers.you.beginningOf(Step.UPKEEP)` + [Patterns.Library.surveil] (look at the top
  * card, optionally bin it — which itself can feed the activation condition by sending a card
  * out of the graveyard later). The token ability is a tap activation gated by two
  * [ActivationRestriction]s: [OnlyDuringYourTurn] and [OnlyIfCondition] with
@@ -36,14 +37,14 @@ val EssenceAnchor = card("Essence Anchor") {
         "and only if a card left your graveyard this turn."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Patterns.Library.surveil(1)
         description = "At the beginning of your upkeep, surveil 1."
     }
 
     activatedAbility {
         cost = Costs.Tap
-        effect = CreateTokenEffect(
+        effect = Effects.CreateToken(
             count = 1,
             power = 2,
             toughness = 2,

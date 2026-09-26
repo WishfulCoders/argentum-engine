@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -32,10 +31,10 @@ val BanditsHaul = card("Bandit's Haul") {
         "{2}, {T}, Remove two loot counters from this artifact: Draw a card."
 
     triggeredAbility {
-        trigger = Triggers.YouCommitCrime
+        trigger = Triggers.you.commitsCrime()
         oncePerTurn = true
-        effect = AddCountersEffect(
-            counterType = Counters.LOOT,
+        effect = Effects.AddCounters(
+            counterType = CounterType.LOOT,
             count = 1,
             target = EffectTarget.Self
         )
@@ -55,7 +54,7 @@ val BanditsHaul = card("Bandit's Haul") {
         cost = Costs.Composite(
             Costs.Mana("{2}"),
             Costs.Tap,
-            Costs.RemoveCounterFromSelf(Counters.LOOT, 2)
+            Costs.RemoveCounterFromSelf(CounterType.LOOT, 2)
         )
         effect = Effects.DrawCards(1)
         description = "{2}, {T}, Remove two loot counters from this artifact: Draw a card."

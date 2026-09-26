@@ -24,7 +24,7 @@ class TapAllCreaturesTest : FunSpec({
         manaCost = ManaCost.parse("{2}{W}"),
         oracleText = "Tap all nonwhite creatures.",
         script = CardScript.spell(
-            effect = ForEachInGroupEffect(GroupFilter.AllCreatures.notColor(Color.WHITE), TapUntapEffect(EffectTarget.Self, tap = true))
+            effect = ForEachInGroupEffect(GroupFilter.AllCreatures.notColor(Color.WHITE), TapUntapEffect(EffectTarget.IterationEntity, tap = true))
         )
     )
 
@@ -34,7 +34,7 @@ class TapAllCreaturesTest : FunSpec({
         manaCost = ManaCost.parse("{2}{U}"),
         oracleText = "Tap all creatures.",
         script = CardScript.spell(
-            effect = ForEachInGroupEffect(GroupFilter.AllCreatures, TapUntapEffect(EffectTarget.Self, tap = true))
+            effect = ForEachInGroupEffect(GroupFilter.AllCreatures, TapUntapEffect(EffectTarget.IterationEntity, tap = true))
         )
     )
 

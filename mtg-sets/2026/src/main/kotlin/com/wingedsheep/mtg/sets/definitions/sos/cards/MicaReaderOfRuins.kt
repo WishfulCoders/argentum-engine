@@ -6,9 +6,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Mica, Reader of Ruins
@@ -22,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *   that spell and you may choose new targets for the copy.
  *
  * Modeling notes:
- * - "you may sacrifice an artifact. If you do, …" → [OptionalCostEffect]: the optional
+ * - "you may sacrifice an artifact. If you do, …" → [Effects.MayPay]: the optional
  *   [SacrificeEffect] cost gates the copy. Declining (or having no artifact) skips the copy.
  * - The copy targets the triggering spell ([EffectTarget.TriggeringEntity]); [Effects.CopyTargetSpell]
  *   lets the controller choose new targets for the copy. The copy is created on the stack, so it's
@@ -39,14 +38,14 @@ val MicaReaderOfRuins = card("Mica, Reader of Ruins") {
         "Whenever you cast an instant or sorcery spell, you may sacrifice an artifact. If you do, " +
         "copy that spell and you may choose new targets for the copy."
 
-    keywordAbility(KeywordAbility.wardLife(3))
+    keywordAbility(KeywordAbility.Ward(WardCost.Life(3)))
 
     // Whenever you cast an instant or sorcery spell, you may sacrifice an artifact to copy it.
     triggeredAbility {
-        trigger = Triggers.YouCastInstantOrSorcery
-        effect = OptionalCostEffect(
-            cost = SacrificeEffect(filter = GameObjectFilter.Artifact),
-            ifPaid = Effects.CopyTargetSpell(target = EffectTarget.TriggeringEntity),
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
+        effect = Effects.MayPay(
+            cost = Effects.SacrificeOwn(filter = GameObjectFilter.Artifact),
+            then = Effects.CopyTargetSpell(target = EffectTarget.TriggeringEntity),
         )
         description = "Whenever you cast an instant or sorcery spell, you may sacrifice an " +
             "artifact. If you do, copy that spell and you may choose new targets for the copy."

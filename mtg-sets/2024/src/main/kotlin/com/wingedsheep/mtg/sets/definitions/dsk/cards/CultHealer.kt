@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -30,17 +29,14 @@ val CultHealer = card("Cult Healer") {
 
     // Eerie trigger — part 1: whenever an enchantment you control enters
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Enchantment.youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Enchantment.youControl()).enters()
         effect = Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self)
         description = "Eerie — Whenever an enchantment you control enters, this creature gains lifelink until end of turn."
     }
 
     // Eerie trigger — part 2: whenever you fully unlock a Room
     triggeredAbility {
-        trigger = Triggers.RoomFullyUnlocked
+        trigger = Triggers.you.fullyUnlocksARoom()
         effect = Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self)
         description = "Eerie — Whenever you fully unlock a Room, this creature gains lifelink until end of turn."
     }

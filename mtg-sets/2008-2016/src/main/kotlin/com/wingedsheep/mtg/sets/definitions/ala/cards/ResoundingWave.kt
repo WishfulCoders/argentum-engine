@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ala.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Resounding Wave
@@ -20,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  *
  * The blue member of the Alara "Resounding" cycle, composed like the Onslaught cycling cycle: a
  * `spell { }` body, [KeywordAbility.cycling] for the wedge-coloured cycling cost, and a
- * [Triggers.YouCycleThis] triggered ability carrying the larger effect. The spell half is a single
+ * `Triggers.self.isCycled()` triggered ability carrying the larger effect. The spell half is a single
  * [Effects.ReturnToHand]; the trigger declares a `count = 2` [TargetPermanent] requirement and fans
  * the bounce out with [ForEachTargetEffect] so each chosen permanent is moved independently — one
  * illegal target on resolution no longer costs the other its bounce. Unlike the Onslaught cycle
@@ -36,17 +34,17 @@ val ResoundingWave = card("Resounding Wave") {
         "When you cycle this card, return two target permanents to their owners' hands."
 
     spell {
-        val t = target("target", Targets.Permanent)
+        val t = target(TargetFilter.Permanent)
         effect = Effects.ReturnToHand(t)
     }
 
     keywordAbility(KeywordAbility.cycling("{5}{W}{U}{B}"))
 
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
-        target("target", TargetPermanent(count = 2))
-        effect = ForEachTargetEffect(
-            effects = listOf(Effects.ReturnToHand(EffectTarget.ContextTarget(0)))
+        trigger = Triggers.self.isCycled()
+        targets(TargetFilter.Permanent, count = 2)
+        effect = Effects.ForEachTarget(
+            Effects.ReturnToHand(EffectTarget.ContextTarget(0))
         )
     }
 

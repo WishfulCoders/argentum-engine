@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Atzocan Seer
@@ -39,12 +38,9 @@ val AtzocanSeer = card("Atzocan Seer") {
     activatedAbility {
         cost = Costs.SacrificeSelf
         val dinosaur = target(
-            "target Dinosaur card from your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter.Any.withSubtype(Subtype.DINOSAUR).ownedByYou(),
-                    zone = Zone.GRAVEYARD,
-                ),
+            TargetFilter(
+                baseFilter = GameObjectFilter.Any.withSubtype(Subtype.DINOSAUR).ownedByYou(),
+                zone = Zone.GRAVEYARD,
             ),
         )
         effect = Effects.ReturnToHand(dinosaur)

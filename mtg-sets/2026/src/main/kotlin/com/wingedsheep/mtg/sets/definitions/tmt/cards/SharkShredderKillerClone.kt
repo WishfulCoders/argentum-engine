@@ -12,6 +12,7 @@ import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Shark Shredder, Killer Clone
@@ -49,13 +50,10 @@ val SharkShredderKillerClone = card("Shark Shredder, Killer Clone") {
     sneak("{3}{B}{B}")
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         val creatureCard = target(
-            "up to one target creature card in that player's graveyard",
-            TargetObject(
-                optional = true,
-                filter = TargetFilter(GameObjectFilter.Creature.ownedByOpponent(), zone = Zone.GRAVEYARD)
-            )
+            TargetFilter(GameObjectFilter.Creature.ownedByOpponent(), zone = Zone.GRAVEYARD),
+            optional = true,
         )
         effect = Effects.Move(
             target = creatureCard,

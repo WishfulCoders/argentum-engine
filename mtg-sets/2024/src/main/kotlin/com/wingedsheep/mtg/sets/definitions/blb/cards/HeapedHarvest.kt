@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 
 /**
  * Heaped Harvest
@@ -29,8 +28,8 @@ val HeapedHarvest = card("Heaped Harvest") {
 
     // When this artifact enters, you may search for a basic land
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.May(
             Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.BasicLand,
                 count = 1,
@@ -42,8 +41,8 @@ val HeapedHarvest = card("Heaped Harvest") {
 
     // When you sacrifice it, you may search for a basic land
     triggeredAbility {
-        trigger = Triggers.Sacrificed
-        effect = MayEffect(
+        trigger = Triggers.self.isSacrificed()
+        effect = Effects.May(
             Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.BasicLand,
                 count = 1,

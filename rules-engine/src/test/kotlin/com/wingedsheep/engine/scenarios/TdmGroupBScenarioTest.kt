@@ -22,7 +22,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  * The three Exhale cards model the optional "you may behold a Dragon" additional cost at
  * resolution time: gather the Dragons you control or hold, then a single "choose up to one"
  * selection (no separate yes/no — declining is selecting zero) stores the chosen Dragon, and
- * a ConditionalEffect gated on that store applies the rider. So after the spell resolves the
+ * a Effects.If gated on that store applies the rider. So after the spell resolves the
  * controller gets a card selection; picking a Dragon enables the bonus, picking none skips it.
  */
 class TdmGroupBScenarioTest : ScenarioTestBase() {

@@ -24,7 +24,7 @@ val SpiderBot = card("Spider-Bot") {
     toughness = 1
     keywords(Keyword.REACH)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.BasicLand,

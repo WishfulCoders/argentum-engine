@@ -6,8 +6,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyCounterPlacement
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Mauhúr, Uruk-hai Captain
@@ -35,8 +35,8 @@ val MauhurUrukhaiCaptain = card("Mauhúr, Uruk-hai Captain") {
         ModifyCounterPlacement(
             modifier = 1,
             appliesTo = EventPattern.CounterPlacementEvent(
-                counterType = CounterTypeFilter.PlusOnePlusOne,
-                recipient = RecipientFilter.Matching(
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
+                recipient = Recipient.Object(
                     GameObjectFilter.Permanent.withAnySubtype("Army", "Goblin", "Orc").youControl()
                 )
             )

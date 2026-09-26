@@ -1,17 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Essence Channeler
@@ -49,16 +49,16 @@ val EssenceChanneler = card("Essence Channeler") {
 
     // Whenever you gain life, put a +1/+1 counter on this creature
     triggeredAbility {
-        trigger = Triggers.YouGainLife
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.gainsLife()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     // When this creature dies, put its counters on target creature you control.
     // Per the Bloomburrow ruling, this moves *all* counter kinds, not just +1/+1.
     triggeredAbility {
-        trigger = Triggers.Dies
-        target = Targets.CreatureYouControl
-        effect = Effects.MoveAllLastKnownCounters(EffectTarget.ContextTarget(0))
+        val creatureYouControl = target(TargetFilter.CreatureYouControl)
+        trigger = Triggers.self.dies()
+        effect = Effects.MoveAllLastKnownCounters(creatureYouControl)
     }
 
     metadata {

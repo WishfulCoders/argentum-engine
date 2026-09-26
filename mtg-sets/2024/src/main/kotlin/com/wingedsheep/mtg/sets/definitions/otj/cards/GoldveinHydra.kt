@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Goldvein Hydra
@@ -29,11 +28,11 @@ val GoldveinHydra = card("Goldvein Hydra") {
     keywords(Keyword.VIGILANCE, Keyword.TRAMPLE, Keyword.HASTE)
 
     // Enters with X +1/+1 counters
-    replacementEffect(EntersWithDynamicCounters(count = DynamicAmount.XValue))
+    replacementEffect(EntersWithDynamicCounters(count = DynamicAmounts.xValue()))
 
     // When this creature dies, create tapped Treasure tokens equal to its (last-known) power
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateTreasure(count = DynamicAmounts.sourcePower(), tapped = true)
     }
 

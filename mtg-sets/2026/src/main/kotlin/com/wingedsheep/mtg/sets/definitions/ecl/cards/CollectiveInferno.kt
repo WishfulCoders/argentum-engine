@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.scripting.DoubleDamage
 import com.wingedsheep.sdk.scripting.EntersWithChoice
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.events.SourceFilter
 
 /**
  * Collective Inferno
@@ -34,7 +33,7 @@ val CollectiveInferno = card("Collective Inferno") {
     replacementEffect(
         DoubleDamage(
             appliesTo = EventPattern.DamageEvent(
-                source = SourceFilter.Matching(GameObjectFilter.Any.youControl().withChosenSubtype()),
+                source = GameObjectFilter.Any.youControl().withChosenSubtype(),
             )
         )
     )

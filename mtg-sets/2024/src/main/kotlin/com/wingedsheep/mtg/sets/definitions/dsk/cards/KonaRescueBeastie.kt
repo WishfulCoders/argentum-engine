@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Kona, Rescue Beastie
@@ -30,7 +31,7 @@ val KonaRescueBeastie = card("Kona, Rescue Beastie") {
 
     // Survival — second main phase, if tapped: you may put a permanent card from hand onto battlefield.
     triggeredAbility {
-        trigger = Triggers.YourPostcombatMain
+        trigger = Triggers.you.beginningOf(Step.POSTCOMBAT_MAIN)
         interveningIf = Conditions.SourceIsTapped
         effect = Patterns.Hand.putFromHand(filter = GameObjectFilter.Permanent)
     }

@@ -3,7 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.mrd.cards
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
 /**
@@ -13,7 +13,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  * This creature gets +1/+1 for each Equipment attached to it.
  *
  * The Champion of the Flame / Winter Soldier shape, restricted to Equipment: a
- * [GrantDynamicStatsEffect] over [GroupFilter.source] whose bonus is
+ * [GrantDynamicStats] over [GroupFilter.source] whose bonus is
  * [DynamicAmounts.equipmentAttachedToSelf] — the *Equipment-only* attachment count, so Auras
  * hung on the Adapter (Inertia Bubble, Relic Bane) don't feed it. The count is read from
  * projected subtypes and recomputed continuously, so the bonus tracks Equipment being attached,
@@ -32,7 +32,7 @@ val MyrAdapter = card("Myr Adapter") {
     oracleText = "This creature gets +1/+1 for each Equipment attached to it."
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
             powerBonus = DynamicAmounts.equipmentAttachedToSelf(),
             toughnessBonus = DynamicAmounts.equipmentAttachedToSelf()

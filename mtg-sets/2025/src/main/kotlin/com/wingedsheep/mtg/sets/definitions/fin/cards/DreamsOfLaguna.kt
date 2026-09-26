@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -21,10 +20,7 @@ val DreamsOfLaguna = card("Dreams of Laguna") {
     typeLine = "Instant"
     oracleText = "Surveil 1, then draw a card. (To surveil 1, look at the top card of your library. You may put it into your graveyard.)\nFlashback {3}{U} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
     spell {
-        effect = Effects.Composite(
-            Patterns.Library.surveil(1),
-            DrawCardsEffect(1)
-        )
+        effect = Patterns.Library.surveil(1) then Effects.DrawCards(1)
     }
     keywordAbility(KeywordAbility.flashback("{3}{U}"))
     metadata {

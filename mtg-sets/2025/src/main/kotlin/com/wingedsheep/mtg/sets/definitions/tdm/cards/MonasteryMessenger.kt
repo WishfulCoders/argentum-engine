@@ -34,16 +34,13 @@ val MonasteryMessenger = card("Monastery Messenger") {
     keywords(Keyword.FLYING, Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val card = target(
-            "noncreature, nonland card from your graveyard",
-            TargetObject(
-                optional = true,
-                filter = TargetFilter(
-                    GameObjectFilter.Nonland and GameObjectFilter.Noncreature.ownedByYou(),
-                    zone = Zone.GRAVEYARD
-                )
-            )
+            TargetFilter(
+                GameObjectFilter.Nonland and GameObjectFilter.Noncreature.ownedByYou(),
+                zone = Zone.GRAVEYARD
+            ),
+            optional = true,
         )
         effect = Effects.PutOnTopOfLibrary(card)
         description = "When this creature enters, put up to one target noncreature, nonland card from your graveyard on top of your library."

@@ -28,7 +28,7 @@ val DemonBolt = card("Demon Bolt") {
         "face down. Cast it on a later turn for its foretell cost.)"
 
     spell {
-        val t = target("target", Targets.CreatureOrPlaneswalker)
+        val t = target(Targets.CreatureOrPlaneswalker)
         effect = Effects.DealDamage(4, t)
     }
 

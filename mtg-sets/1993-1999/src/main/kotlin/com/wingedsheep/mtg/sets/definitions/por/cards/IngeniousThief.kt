@@ -5,11 +5,11 @@
 package com.wingedsheep.mtg.sets.definitions.por.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.LookAtTargetHandEffect
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -29,9 +29,9 @@ val IngeniousThief = card("Ingenious Thief") {
     toughness = 1
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetPlayer())
-        effect = LookAtTargetHandEffect(t)
+        trigger = Triggers.self.enters()
+        val t = target(Targets.Player)
+        effect = Effects.LookAtHand(t)
     }
     metadata {
         rarity = Rarity.UNCOMMON

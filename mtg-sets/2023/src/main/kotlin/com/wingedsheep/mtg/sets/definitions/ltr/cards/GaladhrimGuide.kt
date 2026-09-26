@@ -22,7 +22,7 @@ val GaladhrimGuide = card("Galadhrim Guide") {
     oracleText = "When this creature enters, scry 2."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.scry(2)
     }
 

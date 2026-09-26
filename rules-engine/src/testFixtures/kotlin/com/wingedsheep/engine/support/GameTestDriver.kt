@@ -56,7 +56,12 @@ import com.wingedsheep.sdk.model.EntityId
  */
 class GameTestDriver {
     val cardRegistry: CardRegistry = CardRegistry()
-    private val processor: ActionProcessor = ActionProcessor(cardRegistry)
+    /** This driver's engine graph — reach for its services instead of constructing new ones. */
+    val services = com.wingedsheep.engine.core.EngineServices(cardRegistry)
+    private val processor: ActionProcessor = ActionProcessor(services)
+
+    /** The engine's zone service — for tests that move a card the way an effect would. */
+    val zones get() = services.zones
     private var _state: GameState = GameState()
     private val _events = mutableListOf<GameEvent>()
 
@@ -205,7 +210,7 @@ class GameTestDriver {
      */
     fun submit(action: GameAction): ExecutionResult {
         val result = processor.process(_state, action).result
-        if (result.isSuccess || result.isPaused) {
+        if (result.outcome is Outcome.Done || result.outcome is Outcome.Paused) {
             _state = result.newState
             _events.addAll(result.events)
         }
@@ -217,7 +222,7 @@ class GameTestDriver {
      */
     fun submitSuccess(action: GameAction): ExecutionResult {
         val result = submit(action)
-        if (!result.isSuccess) {
+        if (result.outcome !is Outcome.Done) {
             throw AssertionError("Expected action to succeed but got: ${result.error}")
         }
         return result
@@ -225,7 +230,6 @@ class GameTestDriver {
 
     // Lazily-built enumerator; stateless (takes current state), shared across calls.
     private val legalActionEnumerator by lazy {
-        val services = com.wingedsheep.engine.core.EngineServices(cardRegistry)
         com.wingedsheep.engine.legalactions.LegalActionEnumerator(
             services.cardRegistry, services.manaSolver, services.costCalculator,
             services.predicateEvaluator, services.conditionEvaluator, services.turnManager
@@ -245,7 +249,7 @@ class GameTestDriver {
      */
     fun submitExpectFailure(action: GameAction): ExecutionResult {
         val result = processor.process(_state, action).result
-        if (result.isSuccess) {
+        if (result.outcome is Outcome.Done) {
             throw AssertionError("Expected action to fail but it succeeded")
         }
         return result
@@ -268,7 +272,7 @@ class GameTestDriver {
     fun bothPass(): ExecutionResult {
         autoSubmitCombatDeclarationIfNeeded()
         var result = passPriority(state.priorityPlayerId ?: player1)
-        if (result.isSuccess && state.priorityPlayerId != null) {
+        if (result.outcome is Outcome.Done && state.priorityPlayerId != null) {
             autoSubmitCombatDeclarationIfNeeded()
             result = passPriority(state.priorityPlayerId!!)
         }
@@ -1240,7 +1244,7 @@ class GameTestDriver {
             val land = findCardInHand(playerId, landName)
             if (land != null) {
                 val result = playLand(playerId, land)
-                if (!result.isSuccess) {
+                if (result.outcome !is Outcome.Done) {
                     // May have already played a land this turn - advance to next turn
                     passPriorityUntil(Step.END)
                     bothPass()

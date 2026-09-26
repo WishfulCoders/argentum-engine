@@ -37,26 +37,22 @@ val LotuslightDancers = card("Lotuslight Dancers") {
     keywords(Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Any.withColor(Color.BLACK),
             count = 1,
             destination = SearchDestination.GRAVEYARD,
             shuffleAfter = false
-        ).then(
-            Patterns.Library.searchLibrary(
-                filter = GameObjectFilter.Any.withColor(Color.GREEN),
-                count = 1,
-                destination = SearchDestination.GRAVEYARD,
-                shuffleAfter = false
-            )
-        ).then(
-            Patterns.Library.searchLibrary(
-                filter = GameObjectFilter.Any.withColor(Color.BLUE),
-                count = 1,
-                destination = SearchDestination.GRAVEYARD,
-                shuffleAfter = true
-            )
+        ) then Patterns.Library.searchLibrary(
+            filter = GameObjectFilter.Any.withColor(Color.GREEN),
+            count = 1,
+            destination = SearchDestination.GRAVEYARD,
+            shuffleAfter = false
+        ) then Patterns.Library.searchLibrary(
+            filter = GameObjectFilter.Any.withColor(Color.BLUE),
+            count = 1,
+            destination = SearchDestination.GRAVEYARD,
+            shuffleAfter = true
         )
         description = "When this creature enters, search your library for a black card, a green card, " +
             "and a blue card. Put those cards into your graveyard, then shuffle."

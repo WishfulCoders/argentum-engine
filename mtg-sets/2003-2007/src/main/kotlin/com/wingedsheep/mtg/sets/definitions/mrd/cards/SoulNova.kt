@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Soul Nova — Mirrodin #25
@@ -28,7 +28,7 @@ val SoulNova = card("Soul Nova") {
     oracleText = "Exile target attacking creature and all Equipment attached to it."
 
     spell {
-        val creature = target("target attacking creature", Targets.AttackingCreature)
+        val creature = target(TargetFilter.AttackingCreature)
         effect = Effects.Pipeline(
             descriptionOverride = "Exile target attacking creature and all Equipment attached to it."
         ) {

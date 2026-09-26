@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Relive the Past
@@ -27,46 +26,29 @@ val ReliveThePast = card("Relive the Past") {
         "Elemental creatures in addition to their other types."
 
     spell {
-        val artifact = target(
-            "up to one target artifact card from your graveyard",
-            TargetObject(
-                filter = TargetFilter.ArtifactInYourGraveyard,
-                optional = true,
-            ),
-        )
-        val land = target(
-            "up to one target land card from your graveyard",
-            TargetObject(
-                filter = TargetFilter(GameObjectFilter.Land.ownedByYou(), zone = Zone.GRAVEYARD),
-                optional = true,
-            ),
-        )
+        val artifact = target(TargetFilter.ArtifactInYourGraveyard, optional = true)
+        val land = target(TargetFilter(GameObjectFilter.Land.ownedByYou(), zone = Zone.GRAVEYARD), optional = true)
         val enchantment = target(
-            "up to one target non-Aura enchantment card from your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.Enchantment.notSubtype(Subtype.AURA).ownedByYou(),
-                    zone = Zone.GRAVEYARD,
-                ),
-                optional = true,
+            TargetFilter(
+                GameObjectFilter.Enchantment.notSubtype(Subtype.AURA).ownedByYou(),
+                zone = Zone.GRAVEYARD,
             ),
+            optional = true,
         )
 
         fun returnAsElemental(target: com.wingedsheep.sdk.scripting.targets.EffectTarget) =
-            Effects.PutOntoBattlefield(target)
-                .then(
-                    Effects.BecomeCreature(
-                        target = target,
-                        power = 5,
-                        toughness = 5,
-                        duration = Duration.Permanent,
-                    ),
-                )
-                .then(Effects.AddSubtype("Elemental", target, Duration.Permanent))
+            Effects.PutOntoBattlefield(target) then
+                Effects.BecomeCreature(
+                    target = target,
+                    power = 5,
+                    toughness = 5,
+                    duration = Duration.Permanent,
+                ) then
+                Effects.AddSubtype("Elemental", target, Duration.Permanent)
 
-        effect = returnAsElemental(artifact)
-            .then(returnAsElemental(land))
-            .then(returnAsElemental(enchantment))
+        effect = returnAsElemental(artifact) then
+            returnAsElemental(land) then
+            returnAsElemental(enchantment)
     }
 
     metadata {

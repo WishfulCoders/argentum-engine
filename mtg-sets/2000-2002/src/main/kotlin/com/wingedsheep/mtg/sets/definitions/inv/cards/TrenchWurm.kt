@@ -7,8 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Trench Wurm
@@ -26,18 +24,18 @@ val TrenchWurm = card("Trench Wurm") {
     oracleText = "{2}{R}, {T}: Destroy target nonbasic land."
 
     activatedAbility {
-        cost = Costs.Composite(Costs.Mana("{2}{R}"), Costs.Tap)
-        target = TargetPermanent(
-            filter = TargetFilter(
+        val permanent = target(
+            TargetFilter(
                 GameObjectFilter(
                     cardPredicates = listOf(
                         CardPredicate.IsLand,
                         CardPredicate.Not(CardPredicate.IsBasicLand),
                     )
                 )
-            )
+            ),
         )
-        effect = Effects.Destroy(EffectTarget.ContextTarget(0))
+        cost = Costs.Composite(Costs.Mana("{2}{R}"), Costs.Tap)
+        effect = Effects.Destroy(permanent)
         description = "{2}{R}, {T}: Destroy target nonbasic land."
     }
 

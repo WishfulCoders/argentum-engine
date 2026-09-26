@@ -4,16 +4,14 @@
 
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -33,13 +31,13 @@ val GreenbeltGuardian = card("Greenbelt Guardian") {
     toughness = 2
     activatedAbility {
         cost = Costs.Mana("{G}")
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+        val t = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(Keyword.TRAMPLE, t)
     }
     activatedAbility {
         cost = Costs.Mana("{3}{G}")
         isExhaust = true
-        effect = AddCountersEffect(counterType = Counters.PLUS_ONE_PLUS_ONE, count = 3, target = EffectTarget.Self)
+        effect = Effects.AddCounters(counterType = CounterType.PLUS_ONE_PLUS_ONE, count = 3, target = EffectTarget.Self)
     }
     metadata {
         rarity = Rarity.UNCOMMON

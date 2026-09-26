@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Commune with Nature
@@ -31,16 +30,14 @@ val CommuneWithNature = card("Commune with Nature") {
 
     spell {
         effect = Effects.Pipeline {
-            val looked = gather(CardSource.TopOfLibrary(DynamicAmount.Fixed(5)), name = "looked")
+            val looked = gather(CardSource.TopOfLibrary(5))
             val (kept, rest) = chooseUpToSplit(
                 1, from = looked,
                 filter = GameObjectFilter.Creature,
                 prompt = "You may reveal a creature card to put into your hand",
                 selectedLabel = "Put in hand",
                 remainderLabel = "Put on bottom",
-                showAllCards = true,
-                name = "kept",
-                remainderName = "rest"
+                showAllCards = true
             )
             toHand(kept, revealed = true)
             toLibraryBottom(rest)

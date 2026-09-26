@@ -4,6 +4,8 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.effects.PreventionSourceFilter
 
 /**
  * Circle of Protection: Artifacts
@@ -13,8 +15,8 @@ import com.wingedsheep.sdk.model.Rarity
  *   that damage.
  *
  * Modeling note: the Circle of Protection family — a single-instance prevention shield keyed to a
- * chosen source, here constrained to artifact sources
- * ([Effects.PreventNextDamageFromChosenArtifactSource]). Only artifact permanents/spells are offered
+ * chosen source (`nextInstanceOnly`), here constrained to artifact sources by the `Chosen`
+ * eligibility filter. Only artifact permanents/spells are offered
  * for the choice; the next whole damage instance from the chosen source is prevented, then the
  * shield is consumed.
  */
@@ -27,7 +29,10 @@ val CircleOfProtectionArtifacts = card("Circle of Protection: Artifacts") {
 
     activatedAbility {
         cost = Costs.Mana("{2}")
-        effect = Effects.PreventNextDamageFromChosenArtifactSource()
+        effect = Effects.PreventDamage(
+            sources = PreventionSourceFilter.Chosen(GameObjectFilter.Artifact),
+            nextInstanceOnly = true
+        )
         description = "{2}: The next time an artifact source of your choice would deal damage to you this turn, prevent that damage."
     }
 

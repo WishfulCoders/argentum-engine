@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.enduring
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Enduring Tenacity
@@ -37,11 +35,11 @@ val EnduringTenacity = card("Enduring Tenacity") {
     enduring()
 
     triggeredAbility {
-        trigger = Triggers.YouGainLife
-        target = Targets.Opponent
+        val opponent = target(Targets.Opponent)
+        trigger = Triggers.you.gainsLife()
         effect = Effects.LoseLife(
-            DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_LIFE_GAINED),
-            EffectTarget.ContextTarget(0)
+            DynamicAmounts.triggerLifeGained(),
+            opponent
         )
     }
 

@@ -6,10 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Yathan Roadwatcher — Tarkir: Dragonstorm #236
@@ -33,16 +30,14 @@ val YathanRoadwatcher = card("Yathan Roadwatcher") {
         "When you do, return target creature card with mana value 3 or less from your graveyard to the battlefield."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.WasCast
-        effect = ReflexiveTriggerEffect(
+        effect = Effects.ReflexiveTrigger(
             action = Patterns.Library.mill(4),
-            optional = false,
-            reflexiveEffect = Effects.PutOntoBattlefield(EffectTarget.ContextTarget(0)),
-            reflexiveTargetRequirements = listOf(
-                TargetObject(filter = TargetFilter.CreatureInYourGraveyard.manaValueAtMost(3))
-            )
-        )
+            optional = false) {
+            val creatureInYourGraveyard = target(TargetFilter.CreatureInYourGraveyard.manaValueAtMost(3))
+            effect = Effects.PutOntoBattlefield(creatureInYourGraveyard)
+        }
     }
 
     metadata {

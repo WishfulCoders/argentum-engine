@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.spm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -12,10 +12,10 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Miles Morales // Ultimate Spider-Man — Marvel's Spider-Man #108 (mythic)
@@ -41,7 +41,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *  - Camouflage (back): [Effects.Composite] of a permanent +1/+1 counter, [Effects.GrantHexproof]
  *    (until end of turn) and [Effects.ChangeColor] with an empty color set = colorless (until end
  *    of turn). Only the hexproof and colorless clauses are end-of-turn; the counter is permanent.
- *  - Attack trigger (back): [Triggers.YouAttack] + [Effects.ForEachInGroup] applying
+ *  - Attack trigger (back): `Triggers.you.attacks()` + [Effects.ForEachInGroup] applying
  *    [Effects.DoubleAllCounters] (counterType null → each kind of counter) to every Spider or
  *    legendary creature you control.
  */
@@ -58,10 +58,10 @@ private val MilesMoralesFront = card("Miles Morales") {
 
     // When Miles Morales enters, put a +1/+1 counter on each of up to two target creatures.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = Targets.UpToCreatures(2)
-        effect = ForEachTargetEffect(
-            listOf(Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0)))
+        trigger = Triggers.self.enters()
+        target = TargetObject(filter = TargetFilter.Creature, count = 2, optional = true)
+        effect = Effects.ForEachTarget(
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0))
         )
         description = "When Miles Morales enters, put a +1/+1 counter on each of up to two target creatures."
     }
@@ -69,7 +69,7 @@ private val MilesMoralesFront = card("Miles Morales") {
     // {3}{R}{G}{W}: Transform Miles Morales. Activate only as a sorcery.
     activatedAbility {
         cost = Costs.Mana("{3}{R}{G}{W}")
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
         timing = TimingRule.SorcerySpeed
         description = "Transform Miles Morales. Activate only as a sorcery."
     }
@@ -102,24 +102,22 @@ private val UltimateSpiderMan = card("Ultimate Spider-Man") {
     // colorless until end of turn.
     activatedAbility {
         cost = Costs.Mana("{2}")
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
-            Effects.GrantHexproof(EffectTarget.Self, Duration.EndOfTurn),
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self) then
+            Effects.GrantHexproof(EffectTarget.Self, Duration.EndOfTurn) then
             Effects.ChangeColor(EffectTarget.Self, emptySet(), Duration.EndOfTurn)
-        )
         description = "Camouflage — Put a +1/+1 counter on Ultimate Spider-Man. He gains hexproof and becomes colorless until end of turn."
     }
 
     // Whenever you attack, double the number of each kind of counter on each Spider and legendary
     // creature you control.
     triggeredAbility {
-        trigger = Triggers.YouAttack
+        trigger = Triggers.you.attacks()
         effect = Effects.ForEachInGroup(
             GroupFilter(
                 GameObjectFilter.Creature.youControl().withSubtype("Spider") or
                     GameObjectFilter.Creature.youControl().legendary()
             ),
-            Effects.DoubleAllCounters(EffectTarget.Self)
+            Effects.DoubleAllCounters(EffectTarget.IterationEntity)
         )
         description = "Whenever you attack, double the number of each kind of counter on each Spider and legendary creature you control."
     }

@@ -4,14 +4,15 @@
 
 package com.wingedsheep.mtg.sets.definitions.pcy.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 
 /**
@@ -26,9 +27,9 @@ val CitadelOfPain = card("Citadel of Pain") {
     typeLine = "Enchantment"
     oracleText = "At the beginning of each player's end step, this enchantment deals X damage to that player, where X is the number of untapped lands they control."
     triggeredAbility {
-        trigger = Triggers.EachEndStep
-        effect = DealDamageEffect(
-            DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land),
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
+        effect = Effects.DealDamage(
+            DynamicAmounts.landsYouControl(),
             EffectTarget.PlayerRef(Player.TriggeringPlayer)
         )
     }

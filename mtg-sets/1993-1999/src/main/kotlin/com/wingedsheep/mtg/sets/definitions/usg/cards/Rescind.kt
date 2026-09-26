@@ -9,7 +9,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 
 /**
@@ -25,7 +25,7 @@ val Rescind = card("Rescind") {
     typeLine = "Instant"
     oracleText = "Return target permanent to its owner's hand.\nCycling {2} ({2}, Discard this card: Draw a card.)"
     spell {
-        val t = target("target", TargetPermanent())
+        val t = target(TargetFilter.Permanent)
         effect = Effects.Move(t, Zone.HAND)
     }
     keywordAbility(KeywordAbility.cycling("{2}"))

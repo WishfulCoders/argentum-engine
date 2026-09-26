@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.chk.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachEffect
-import com.wingedsheep.sdk.scripting.effects.IterationSpace
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Unearthly Blizzard
@@ -25,10 +25,9 @@ val UnearthlyBlizzard = card("Unearthly Blizzard") {
     oracleText = "Up to three target creatures can't block this turn."
 
     spell {
-        target = TargetCreature(count = 3, optional = true)
-        effect = ForEachEffect(
-            space = IterationSpace.Targets,
-            body = Effects.CantBlock()
+        target = TargetObject(filter = TargetFilter.Creature, count = 3, optional = true)
+        effect = Effects.ForEachTarget(
+            Effects.CantBlock(target = EffectTarget.ContextTarget(0))
         )
     }
 

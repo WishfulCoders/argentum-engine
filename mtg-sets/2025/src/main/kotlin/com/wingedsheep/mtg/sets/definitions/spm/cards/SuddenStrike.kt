@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Sudden Strike
@@ -19,7 +18,7 @@ val SuddenStrike = card("Sudden Strike") {
     typeLine = "Instant"
     oracleText = "Destroy target attacking or blocking creature."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.AttackingOrBlockingCreature))
+        val t = target(TargetFilter.AttackingOrBlockingCreature)
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     metadata {

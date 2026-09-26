@@ -2,12 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sunscape Master
@@ -30,13 +29,13 @@ val SunscapeMaster = card("Sunscape Master") {
         cost = Costs.Composite(Costs.Mana("{G}{G}"), Costs.Tap)
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreaturesYouControl,
-            ModifyStatsEffect(2, 2, EffectTarget.Self)
+            Effects.ModifyStats(2, 2, EffectTarget.IterationEntity)
         )
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{U}{U}"), Costs.Tap)
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.ReturnToHand(t)
     }
 

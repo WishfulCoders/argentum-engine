@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.dom.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Call the Cavalry
@@ -19,7 +19,7 @@ val CallTheCavalry = card("Call the Cavalry") {
     oracleText = "Create two 2/2 white Knight creature tokens with vigilance."
 
     spell {
-        effect = CreateTokenEffect(
+        effect = Effects.CreateToken(
             count = 2,
             power = 2,
             toughness = 2,

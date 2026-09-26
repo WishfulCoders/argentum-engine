@@ -18,12 +18,27 @@ import com.wingedsheep.engine.core.TurnFaceUpEvent
 import com.wingedsheep.engine.core.UntappedEvent
 import com.wingedsheep.engine.core.PhasedInEvent
 import com.wingedsheep.engine.core.ZoneChangeEvent
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.EntityId
 
 /**
- * Context information about what caused a trigger.
+ * Context information about what caused a trigger — the one record of trigger facts.
+ *
+ * **Rule: a new trigger fact is one field here; carriers hold this whole record.** The fact is
+ * produced in [fromEvent] (or by [TriggerDetector] when it needs game state), and read where it
+ * matters through `EffectContext.triggerContext`. Nothing in between copies it field by field:
+ * [PendingTrigger], the target-selection frames
+ * ([com.wingedsheep.engine.core.TriggeredAbilityContinuation],
+ * [com.wingedsheep.engine.core.TriggerDamageDistributionContinuation]), the stack object
+ * ([com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent]), the
+ * resolving [com.wingedsheep.engine.handlers.EffectContext] and a reflexive trigger's
+ * [com.wingedsheep.engine.core.ReflexiveAbilityTriggeredEvent] all carry this object as-is.
+ * `TriggerContextCarrierInvariantTest` fails if a carrier grows a per-fact `trigger*` field again.
+ *
+ * Persisted games written before the record existed carried the facts as flat fields on those
+ * carriers; `GameStateSerializer` lifts them into this record on read.
  */
 @kotlinx.serialization.Serializable
 data class TriggerContext(
@@ -75,12 +90,12 @@ data class TriggerContext(
      */
     val lastKnownCardTypes: Set<String>? = null,
     /**
-     * Last-known counter map (counter-type-string → count) when the triggering source left
+     * Last-known counter map (kind → count) when the triggering source left
      * the battlefield. Used by triggers that move every counter onto another permanent
      * (e.g., Essence Channeler's "put its counters on target creature you control").
      * Null when the trigger's source never left the battlefield (or had no counters).
      */
-    val lastKnownCounters: Map<String, Int>? = null,
+    val lastKnownCounters: Map<CounterType, Int>? = null,
     /**
      * Per-player damage dealt to the triggering source this turn, captured at LTB time.
      * Read by LTB effects like Grothama's "each player draws X cards where X is the damage
@@ -246,7 +261,7 @@ data class TriggerContext(
                 )
                 is DamageDealtEvent -> TriggerContext(
                     triggeringEntityId = event.targetId,
-                    triggeringPlayerId = event.targetControllerId,
+                    triggeringPlayerId = event.targetLastKnown?.controllerId,
                     damageAmount = event.amount,
                     excessDamageAmount = event.excessAmount.takeIf { it > 0 },
                     recipientToughnessAtDamage = event.targetToughnessAtDamage
@@ -391,6 +406,10 @@ data class TriggerContext(
                 is BlockersDeclaredEvent -> TriggerContext()
                 is TappedEvent -> TriggerContext(triggeringEntityId = event.entityId)
                 is UntappedEvent -> TriggerContext(triggeringEntityId = event.entityId)
+                is com.wingedsheep.engine.core.LandTappedForManaEvent -> TriggerContext(
+                    triggeringEntityId = event.landId,
+                    triggeringPlayerId = event.tapperId
+                )
                 is PhasedInEvent -> TriggerContext(triggeringEntityId = event.entityId)
                 is LifeChangedEvent -> TriggerContext(
                     triggeringEntityId = event.playerId,

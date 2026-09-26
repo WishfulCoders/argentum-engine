@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Windrider Patrol
@@ -14,7 +15,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Flying
  * Whenever this creature deals combat damage to a player, scry 2.
  *
- * Printed flying plus the Jeskai Elder trigger shape — [Triggers.DealsCombatDamageToPlayer] feeding
+ * Printed flying plus the Jeskai Elder trigger shape — `Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)` feeding
  * [Effects.Scry]`(2)`.
  */
 val WindriderPatrol = card("Windrider Patrol") {
@@ -28,7 +29,7 @@ val WindriderPatrol = card("Windrider Patrol") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         effect = Effects.Scry(2)
         description = "Scry 2."
     }

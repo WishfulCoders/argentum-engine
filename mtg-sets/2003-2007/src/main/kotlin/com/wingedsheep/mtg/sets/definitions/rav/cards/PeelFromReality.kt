@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Peel from Reality
@@ -23,8 +23,8 @@ val PeelFromReality = card("Peel from Reality") {
     oracleText = "Return target creature you control and target creature you don't control to their owners' hands."
 
     spell {
-        val yours = target("target creature you control", Targets.CreatureYouControl)
-        val theirs = target("target creature you don't control", Targets.CreatureOpponentControls)
+        val yours = target(TargetFilter.CreatureYouControl)
+        val theirs = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.ReturnToHand(yours) then Effects.ReturnToHand(theirs)
     }
 

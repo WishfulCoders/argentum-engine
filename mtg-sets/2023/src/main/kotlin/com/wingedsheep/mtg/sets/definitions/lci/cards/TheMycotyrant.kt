@@ -3,15 +3,15 @@ package com.wingedsheep.mtg.sets.definitions.lci.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBlock
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * The Mycotyrant
@@ -50,15 +50,15 @@ val TheMycotyrant = card("The Mycotyrant") {
 
     keywords(Keyword.TRAMPLE)
     dynamicStats(
-        DynamicAmount.AggregateBattlefield(
+        DynamicAmounts.battlefield(
             Player.You,
             GameObjectFilter.Creature.withAnySubtype("Fungus", "Saproling")
-        )
+        ).count()
     )
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
-        effect = CreateTokenEffect(
+        trigger = Triggers.you.beginningOf(Step.END)
+        effect = Effects.CreateToken(
             count = DynamicAmounts.descendedThisTurn(),
             power = 1,
             toughness = 1,

@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * "Each creature with flying and each player" is two iterations, not one — the Thrashing Wumpus
  * idiom. A group pass over [GroupFilter.AllCreatures]`.withKeyword(FLYING)` deals the damage to
- * [EffectTarget.Self] (the current iteration entity), and a [Effects.ForEachPlayer] pass over
+ * [EffectTarget.IterationEntity] (the current iteration entity), and a [Effects.ForEachPlayer] pass over
  * [Player.Each] rebinds the controller each time so [EffectTarget.Controller] is the player being
  * processed. The activation cost is a plain off-colour [Costs.Mana].
  */
@@ -32,16 +32,14 @@ val RockcasterPlatoon = card("Rockcaster Platoon") {
 
     activatedAbility {
         cost = Costs.Mana("{4}{G}")
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(
-                GroupFilter.AllCreatures.withKeyword(Keyword.FLYING),
-                Effects.DealDamage(2, EffectTarget.Self)
-            ),
+        effect = Effects.ForEachInGroup(
+            GroupFilter.AllCreatures.withKeyword(Keyword.FLYING),
+            Effects.DealDamage(2, EffectTarget.IterationEntity)
+        ) then
             Effects.ForEachPlayer(
                 Player.Each,
                 listOf(Effects.DealDamage(2, EffectTarget.Controller))
             )
-        )
     }
 
     metadata {

@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Goblin Barrage
@@ -30,16 +31,13 @@ val GoblinBarrage = card("Goblin Barrage") {
 
     spell {
         // Unkicked: 4 damage to target creature
-        val creature = target("creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.DealDamage(4, creature)
 
         // Kicked: 4 damage to target creature AND 4 damage to target player or planeswalker
-        val kCreature = kickerTarget("creature", Targets.Creature)
-        val kPlayerOrPw = kickerTarget("player or planeswalker", Targets.PlayerOrPlaneswalker)
-        kickerEffect = Effects.Composite(
-            Effects.DealDamage(4, kCreature),
-            Effects.DealDamage(4, kPlayerOrPw)
-        )
+        val kCreature = kickerTarget(TargetFilter.Creature)
+        val kPlayerOrPw = kickerTarget(Targets.PlayerOrPlaneswalker)
+        kickerEffect = Effects.DealDamage(4, kCreature) then Effects.DealDamage(4, kPlayerOrPw)
     }
 
     metadata {

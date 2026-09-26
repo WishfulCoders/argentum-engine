@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Flying
  * Whenever this creature blocks, you may gain 4 life.
  *
- * - [Triggers.Blocks] is the SELF-bound "this creature blocks" event, so it fires once the Moth is
+ * - `Triggers.self.blocks()` is the SELF-bound "this creature blocks" event, so it fires once the Moth is
  *   declared as a blocker — not on the attacker becoming blocked, and regardless of whether combat
  *   damage is ever dealt.
  * - "You may gain 4 life" is a resolution-time yes/no with no cost, so it is the `optional = true`
@@ -32,7 +32,7 @@ val GoldenglowMoth = card("Goldenglow Moth") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         optional = true
         effect = Effects.GainLife(4)
         description = "Whenever this creature blocks, you may gain 4 life."

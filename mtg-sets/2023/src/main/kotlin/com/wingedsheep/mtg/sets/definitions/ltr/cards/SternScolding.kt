@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
 
 /**
  * Stern Scolding
@@ -35,7 +34,7 @@ val SternScolding = card("Stern Scolding") {
             ),
             zone = Zone.STACK
         )
-        target("target creature spell with power or toughness 2 or less", TargetSpell(filter = filter))
+        target(filter)
         effect = Effects.CounterSpell()
     }
 

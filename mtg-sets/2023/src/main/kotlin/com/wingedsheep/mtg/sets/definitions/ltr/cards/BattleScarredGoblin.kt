@@ -28,7 +28,7 @@ val BattleScarredGoblin = card("Battle-Scarred Goblin") {
     oracleText = "Whenever this creature becomes blocked, it deals 1 damage to each creature blocking it."
 
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
+        trigger = Triggers.self.becomesBlocked()
         effect = Patterns.Group.dealDamageToAll(1, GroupFilter(GameObjectFilter.Creature.blockingSource()))
     }
 

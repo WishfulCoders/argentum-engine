@@ -26,7 +26,7 @@ val PriestOfGix = card("Priest of Gix") {
     power = 2
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.AddMana(Color.BLACK, 3)
     }
     metadata {

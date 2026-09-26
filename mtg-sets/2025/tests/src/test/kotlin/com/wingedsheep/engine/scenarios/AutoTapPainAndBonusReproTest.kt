@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.components.player.ManaPoolComponent
@@ -19,6 +20,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Repro for the auto-tap bugs:
@@ -110,7 +112,7 @@ class AutoTapPainAndBonusReproTest : FunSpec({
 
         val before = driver.getLifeTotal(activePlayer)
         val result = driver.castSpell(activePlayer, spell)
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         driver.isTapped(town) shouldBe true
         driver.getLifeTotal(activePlayer) shouldBe (before - 1)
@@ -132,7 +134,7 @@ class AutoTapPainAndBonusReproTest : FunSpec({
 
         val before = driver.getLifeTotal(activePlayer)
         val result = driver.castSpell(activePlayer, spell)
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         driver.isTapped(forest) shouldBe true
         driver.isTapped(town1) shouldBe true
@@ -155,7 +157,7 @@ class AutoTapPainAndBonusReproTest : FunSpec({
 
         val before = driver.getLifeTotal(activePlayer)
         val result = driver.castSpell(activePlayer, spell)
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         driver.isTapped(forest) shouldBe true
         driver.isTapped(forge1) shouldBe true
@@ -176,7 +178,7 @@ class AutoTapPainAndBonusReproTest : FunSpec({
 
         val before = driver.getLifeTotal(activePlayer)
         val result = driver.castSpell(activePlayer, spell)
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         driver.isTapped(forge) shouldBe true
         driver.getLifeTotal(activePlayer) shouldBe (before - 1)
@@ -195,7 +197,7 @@ class AutoTapPainAndBonusReproTest : FunSpec({
 
         // Only one green source (the Elf), but Badgermole Cub's bonus supplies the 2nd {G}.
         val result = driver.castSpell(activePlayer, spell)
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         driver.isTapped(elf) shouldBe true
     }
 
@@ -210,7 +212,7 @@ class AutoTapPainAndBonusReproTest : FunSpec({
         val forest = driver.putLandOnBattlefield(you, "Forest")
         val lesson = driver.putCardInHand(you, "Earthbending Lesson")
         driver.giveMana(you, Color.GREEN, 4)
-        driver.castSpell(you, lesson, listOf(forest)).isSuccess shouldBe true
+        driver.castSpell(you, lesson, listOf(forest)).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         // Badgermole Cub in play (static only — putCreatureOnBattlefield doesn't fire its ETB).
@@ -218,11 +220,11 @@ class AutoTapPainAndBonusReproTest : FunSpec({
 
         // The earthbended Forest is the ONLY green source. Tapping it (a creature now) should
         // yield {G} + Badgermole Cub's bonus {G} — the autotapper must count both.
-        val solver = ManaSolver(createRegistry())
+        val solver = ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         solver.canPay(driver.state, you, ManaCost.parse("{G}{G}")) shouldBe true
 
         val spell = driver.putCardInHand(you, "Green Green Test Spell")
-        driver.castSpell(you, spell).isSuccess shouldBe true
+        driver.castSpell(you, spell).outcome shouldBe Outcome.Done
         driver.isTapped(forest) shouldBe true
     }
 })

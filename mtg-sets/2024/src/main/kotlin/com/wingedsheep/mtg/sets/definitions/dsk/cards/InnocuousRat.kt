@@ -27,7 +27,7 @@ val InnocuousRat = card("Innocuous Rat") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Patterns.Library.manifestDread()
     }
 

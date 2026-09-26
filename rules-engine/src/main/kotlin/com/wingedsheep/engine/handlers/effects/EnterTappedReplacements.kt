@@ -1,6 +1,5 @@
 package com.wingedsheep.engine.handlers.effects
 
-import com.wingedsheep.engine.handlers.ConditionEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.PredicateEvaluator
@@ -29,9 +28,6 @@ import com.wingedsheep.sdk.scripting.PermanentsEnterTapped
  */
 object EnterTappedReplacements {
 
-    private val predicateEvaluator = PredicateEvaluator()
-    private val conditionEvaluator = ConditionEvaluator()
-
     /**
      * True if any battlefield permanent grants a [PermanentsEnterTapped] replacement whose
      * `appliesTo` filter matches [enteringEntityId] (controlled by [enteringControllerId]) and
@@ -44,6 +40,7 @@ object EnterTappedReplacements {
         state: GameState,
         enteringEntityId: EntityId,
         enteringControllerId: EntityId,
+        predicateEvaluator: PredicateEvaluator
     ): Boolean {
         for (sourceId in state.getBattlefield()) {
             if (sourceId == enteringEntityId) continue
@@ -52,14 +49,14 @@ object EnterTappedReplacements {
             val sourceControllerId = container.get<ControllerComponent>()?.playerId ?: continue
             for (effect in replacementComponent.replacementEffects) {
                 if (effect !is PermanentsEnterTapped) continue
-                if (!matchesEnterFilter(effect.appliesTo, enteringEntityId, sourceId, sourceControllerId, state)) continue
+                if (!matchesEnterFilter(effect.appliesTo, enteringEntityId, sourceId, sourceControllerId, state, predicateEvaluator = predicateEvaluator)) continue
                 // Optional gate evaluated against the replacement *source*, mirroring
                 // RedirectDamage.condition — e.g. Ashling's Prerogative's tap clause applies only
                 // while the mode it chose as it entered is the one this effect was written for.
                 val gate = effect.condition
                 if (gate != null) {
                     val gateContext = EffectContext(sourceId = sourceId, controllerId = sourceControllerId)
-                    if (!conditionEvaluator.evaluate(state, gate, gateContext)) continue
+                    if (!predicateEvaluator.conditions.evaluate(state, gate, gateContext)) continue
                 }
                 return true
             }
@@ -90,13 +87,14 @@ object EnterTappedReplacements {
         controllerId: EntityId,
         definedTapped: Boolean = false,
         attacking: Boolean = false,
+        predicateEvaluator: PredicateEvaluator
     ): GameState {
-        val entersUntapped = EnterUntappedReplacements.entersUntapped(state, tokenId, controllerId)
+        val entersUntapped = EnterUntappedReplacements.entersUntapped(state, tokenId, controllerId, predicateEvaluator = predicateEvaluator)
         return when {
             definedTapped && !attacking && entersUntapped ->
                 state.updateEntity(tokenId) { it.without<TappedComponent>() }
             !definedTapped && !entersUntapped &&
-                entersTapped(state, tokenId, controllerId) ->
+                entersTapped(state, tokenId, controllerId, predicateEvaluator = predicateEvaluator) ->
                 state.updateEntity(tokenId) { it.with(TappedComponent) }
             else -> state
         }
@@ -115,6 +113,7 @@ object EnterTappedReplacements {
         replacementSourceId: EntityId,
         sourceControllerId: EntityId,
         state: GameState,
+        predicateEvaluator: PredicateEvaluator
     ): Boolean {
         if (event !is EventPattern.ZoneChangeEvent) return false
         if (event.to != Zone.BATTLEFIELD) return false

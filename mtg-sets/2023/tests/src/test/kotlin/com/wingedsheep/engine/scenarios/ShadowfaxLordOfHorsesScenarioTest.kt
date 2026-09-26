@@ -19,7 +19,7 @@ import io.kotest.matchers.shouldBe
  *   `Creature.withSubtype(Horse).youControl()`.)
  * - Whenever Shadowfax attacks, you may put a creature card with lesser power from your hand
  *   onto the battlefield tapped and attacking. ("lesser power" = strict
- *   `powerLessThanEntity(Source)` over hand cards; tapped+attacking entry via
+ *   `powerLessThanEntity(Self)` over hand cards; tapped+attacking entry via
  *   `Patterns.Hand.putFromHand(entersAttacking = true)`.)
  */
 class ShadowfaxLordOfHorsesScenarioTest : ScenarioTestBase() {

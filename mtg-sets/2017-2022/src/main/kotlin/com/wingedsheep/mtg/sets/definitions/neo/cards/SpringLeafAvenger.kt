@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.ninjutsu
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Spring-Leaf Avenger — Kamigawa: Neon Dynasty #208 (canonical printing)
@@ -35,13 +35,8 @@ val SpringLeafAvenger = card("Spring-Leaf Avenger") {
     ninjutsu("{3}{G}")
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        val t = target(
-            "permanent card in your graveyard",
-            TargetObject(
-                filter = TargetFilter(GameObjectFilter.Permanent.ownedByYou(), zone = Zone.GRAVEYARD),
-            ),
-        )
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        val t = target(TargetFilter(GameObjectFilter.Permanent.ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.ReturnToHand(t)
         description = "Whenever this creature deals combat damage to a player, return target " +
             "permanent card from your graveyard to your hand."

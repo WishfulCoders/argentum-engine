@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.fdn.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Uncharted Voyage
@@ -25,9 +25,8 @@ val UnchartedVoyage = card("Uncharted Voyage") {
         "Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)"
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.PutOnTopOrBottomOfLibrary(creature)
-            .then(Effects.Surveil(1))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.PutOnTopOrBottomOfLibrary(creature) then Effects.Surveil(1)
     }
 
     metadata {

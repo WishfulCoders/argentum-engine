@@ -25,13 +25,11 @@ val ImperialSeal = card("Imperial Seal") {
     oracleText = "Search your library for a card, then shuffle and put that card on top. You lose 2 life."
 
     spell {
-        effect = Effects.Composite(
-            Patterns.Library.searchLibrary(
-                filter = GameObjectFilter.Any,
-                destination = SearchDestination.TOP_OF_LIBRARY,
-            ),
-            Effects.LoseLife(2, EffectTarget.Controller),
-        )
+        effect = Patterns.Library.searchLibrary(
+            filter = GameObjectFilter.Any,
+            destination = SearchDestination.TOP_OF_LIBRARY,
+        ) then
+            Effects.LoseLife(2, EffectTarget.Controller)
     }
 
     metadata {

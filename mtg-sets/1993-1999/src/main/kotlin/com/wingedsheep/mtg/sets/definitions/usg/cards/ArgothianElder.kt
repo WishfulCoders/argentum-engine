@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -28,7 +27,7 @@ val ArgothianElder = card("Argothian Elder") {
     toughness = 2
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", TargetPermanent(count = 2, filter = TargetFilter.Land))
+        targets(TargetFilter.Land, count = 2)
         effect = Effects.UntapEachTarget()
     }
     metadata {

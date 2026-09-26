@@ -10,9 +10,9 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Sosuke, Son of Seshiro
@@ -57,9 +57,8 @@ val SosukeSonOfSeshiro = card("Sosuke, Son of Seshiro") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.DealsCombatDamageToCreature.event,
-                binding = Triggers.DealsCombatDamageToCreature.binding,
-                effect = CreateDelayedTriggerEffect(
+                trigger = Triggers.self.dealsCombatDamage(Recipient.AnyCreature),
+                effect = Effects.CreateDelayedTrigger(
                     step = Step.END_COMBAT,
                     effect = Effects.Destroy(EffectTarget.TriggeringEntity)
                 )

@@ -4,7 +4,7 @@
 
 package com.wingedsheep.mtg.sets.definitions.fdn.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Filters
@@ -41,7 +41,7 @@ val InspiringPaladin = card("Inspiring Paladin") {
         condition = Conditions.IsYourTurn
         ability = GrantKeyword(
             Keyword.FIRST_STRIKE,
-            GroupFilter(GameObjectFilter.Creature.withCounter(Counters.PLUS_ONE_PLUS_ONE).youControl())
+            GroupFilter(GameObjectFilter.Creature.withCounter(CounterType.PLUS_ONE_PLUS_ONE).youControl())
         )
     }
     metadata {

@@ -26,7 +26,7 @@ val WakandanDroneFlock = card("Wakandan Drone Flock") {
     toughness = 3
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.scry(2)
     }
     metadata {

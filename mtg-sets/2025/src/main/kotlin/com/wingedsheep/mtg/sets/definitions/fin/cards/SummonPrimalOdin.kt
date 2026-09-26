@@ -6,11 +6,10 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.GrantTriggeredAbilityEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Summon: Primal Odin
@@ -26,7 +25,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  * Three-chapter Saga (sacrifice after III; derived from the highest declared chapter). Chapter II
  * permanently grants the Saga creature itself the Phage-style "deals combat damage to a player →
  * that player loses the game" trigger via [GrantTriggeredAbilityEffect] (SELF, [Duration.Permanent]),
- * reusing [Triggers.DealsCombatDamageToPlayer] + [Effects.LoseGame] on the damaged player. Chapter
+ * reusing `Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)` + [Effects.LoseGame] on the damaged player. Chapter
  * III draws two and drains every player for 2 ([Player.Each]).
  */
 val SummonPrimalOdin = card("Summon: Primal Odin") {
@@ -43,16 +42,15 @@ val SummonPrimalOdin = card("Summon: Primal Odin") {
 
     // I — Gungnir — Destroy target creature an opponent controls.
     sagaChapter(1) {
-        val victim = target("creature", TargetObject(filter = TargetFilter.CreatureOpponentControls))
+        val victim = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.Destroy(victim)
     }
 
     // II — Zantetsuken — grant this creature the "combat damage to a player → that player loses" trigger.
     sagaChapter(2) {
-        effect = GrantTriggeredAbilityEffect(
+        effect = Effects.GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.DealsCombatDamageToPlayer.event,
-                binding = Triggers.DealsCombatDamageToPlayer.binding,
+                trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer),
                 effect = Effects.LoseGame(
                     target = EffectTarget.PlayerRef(Player.TriggeringPlayer),
                     message = "Summon: Primal Odin's Zantetsuken dealt combat damage"
@@ -65,8 +63,7 @@ val SummonPrimalOdin = card("Summon: Primal Odin") {
 
     // III — Hall of Sorrow — Draw two cards. Each player loses 2 life.
     sagaChapter(3) {
-        effect = Effects.DrawCards(2) then
-            Effects.LoseLife(2, EffectTarget.PlayerRef(Player.Each))
+        effect = Effects.DrawCards(2) then Effects.LoseLife(2, EffectTarget.PlayerRef(Player.Each))
     }
 
     metadata {

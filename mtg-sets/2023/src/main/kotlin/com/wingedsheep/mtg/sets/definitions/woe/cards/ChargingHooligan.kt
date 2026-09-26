@@ -10,10 +10,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Charging Hooligan
@@ -45,28 +43,26 @@ val ChargingHooligan = card("Charging Hooligan") {
         "attacking creature. If a Rat is attacking, this creature gains trample until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(
-            Effects.ModifyStats(
-                power = DynamicAmounts.battlefield(
-                    Player.Each,
-                    GameObjectFilter.Creature.attacking()
-                ).count(),
-                toughness = DynamicAmount.Fixed(0),
-                target = EffectTarget.Self
-            ),
-            ConditionalEffect(
+        trigger = Triggers.self.attacks()
+        effect = Effects.ModifyStats(
+            power = DynamicAmounts.battlefield(
+                Player.Each,
+                GameObjectFilter.Creature.attacking()
+            ).count(),
+            toughness = DynamicAmounts.fixed(0),
+            target = EffectTarget.Self
+        ) then
+            Effects.If(
                 condition = Conditions.CompareAmounts(
                     DynamicAmounts.battlefield(
                         Player.Each,
                         GameObjectFilter.Creature.withSubtype(Subtype.RAT).attacking()
                     ).count(),
                     ComparisonOperator.GTE,
-                    DynamicAmount.Fixed(1)
+                    1
                 ),
-                effect = Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
+                then = Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
             )
-        )
         description = "Whenever this creature attacks, it gets +1/+0 until end of turn for each " +
             "attacking creature. If a Rat is attacking, this creature gains trample until end of turn."
     }

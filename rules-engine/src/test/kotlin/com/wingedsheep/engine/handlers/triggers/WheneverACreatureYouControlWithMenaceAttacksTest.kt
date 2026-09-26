@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.triggers
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.AttackersDeclaredEvent
 import com.wingedsheep.engine.event.TriggerDetector
 import com.wingedsheep.engine.support.GameTestDriver
@@ -11,14 +12,12 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
-import com.wingedsheep.sdk.scripting.EventPattern.AttackEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * BDD tests for the per-creature filtered attack trigger:
@@ -54,10 +53,7 @@ class WheneverACreatureYouControlWithMenaceAttacksTest : FunSpec({
         typeLine = "Enchantment"
 
         triggeredAbility {
-            trigger = TriggerSpec(
-                AttackEvent(filter = GameObjectFilter.Creature.withKeyword(Keyword.MENACE).youControl()),
-                TriggerBinding.ANY
-            )
+            trigger = Triggers.a(GameObjectFilter.Creature.withKeyword(Keyword.MENACE).youControl()).attacks()
             effect = Effects.GainLife(1)
         }
     }
@@ -69,7 +65,7 @@ class WheneverACreatureYouControlWithMenaceAttacksTest : FunSpec({
         return driver
     }
 
-    fun detectorFor(driver: GameTestDriver): TriggerDetector = TriggerDetector(driver.cardRegistry)
+    fun detectorFor(driver: GameTestDriver): TriggerDetector = TriggerDetector(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null), conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
 
     context("per-creature filtered attack trigger fires once per qualifying attacker") {
 

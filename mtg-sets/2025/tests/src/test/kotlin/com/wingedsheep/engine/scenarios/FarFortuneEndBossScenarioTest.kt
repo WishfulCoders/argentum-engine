@@ -85,7 +85,7 @@ class FarFortuneEndBossScenarioTest : ScenarioTestBase() {
                 game.castSpellTargetingPlayer(1, "Lightning Bolt", 1).error shouldBe null
                 game.resolveStack()
 
-                withClue("RecipientFilter.OpponentOrPermanentTheyControl excludes you") {
+                withClue("Recipient.OpponentOrPermanentTheyControl excludes you") {
                     game.getLifeTotal(1) shouldBe 17
                 }
             }

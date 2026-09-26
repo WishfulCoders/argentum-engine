@@ -17,11 +17,9 @@ val HoardersGreed = card("Hoarder's Greed") {
 
     spell {
         effect = Effects.RepeatWhile(
-            body = Effects.Composite(
-                Effects.LoseLife(2, EffectTarget.Controller),
-                Effects.DrawCards(2),
-                Patterns.Mechanic.clash()
-            ),
+            body = Effects.LoseLife(2, EffectTarget.Controller) then
+                Effects.DrawCards(2) then
+                Patterns.Mechanic.clash(),
             repeatCondition = RepeatCondition.WhileCondition(
                 Conditions.CollectionContainsMatch(CLASH_WON)
             )

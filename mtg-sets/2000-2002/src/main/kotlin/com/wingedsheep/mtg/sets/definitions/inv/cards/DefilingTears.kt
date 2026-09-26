@@ -4,15 +4,13 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.ActivatedAbility
-import com.wingedsheep.sdk.scripting.effects.GrantActivatedAbilityEffect
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Defiling Tears
@@ -27,14 +25,14 @@ val DefilingTears = card("Defiling Tears") {
     oracleText = "Until end of turn, target creature becomes black, gets +1/-1, and gains \"{B}: Regenerate this creature.\""
 
     spell {
-        val t = target("target creature", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.ChangeColor(t, setOf(Color.BLACK)) then
             Effects.ModifyStats(1, -1, t) then
-            GrantActivatedAbilityEffect(
+            Effects.GrantActivatedAbility(
                 ability = ActivatedAbility(
-                    id = AbilityId.generate(),
+                    id = AbilityId.next(),
                     cost = Costs.Mana(ManaCost.parse("{B}")),
-                    effect = RegenerateEffect(EffectTarget.Self)
+                    effect = Effects.Regenerate(EffectTarget.Self)
                 ),
                 target = t
             )

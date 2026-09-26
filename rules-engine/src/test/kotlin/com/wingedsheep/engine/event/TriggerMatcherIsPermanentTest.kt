@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.event
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ZoneChangeEvent
 import com.wingedsheep.engine.state.components.stack.EntitySnapshot
 import com.wingedsheep.engine.support.GameTestDriver
@@ -12,10 +13,9 @@ import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldHaveSize
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Regression for the bug where "Whenever another permanent you control leaves the battlefield"
@@ -44,13 +44,7 @@ class TriggerMatcherIsPermanentTest : FunSpec({
         spell {}
 
         triggeredAbility {
-            trigger = TriggerSpec(
-                event = EventPattern.ZoneChangeEvent(
-                    filter = GameObjectFilter.Permanent.youControl(),
-                    from = Zone.BATTLEFIELD,
-                ),
-                binding = TriggerBinding.OTHER,
-            )
+            trigger = Triggers.another(GameObjectFilter.Permanent.youControl()).leaves()
             effect = Effects.DrawCards(1)
         }
     }
@@ -64,7 +58,7 @@ class TriggerMatcherIsPermanentTest : FunSpec({
     }
 
     fun zoneChanges(driver: GameTestDriver, event: ZoneChangeEvent) =
-        TriggerDetector(driver.cardRegistry)
+        TriggerDetector(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null), conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
             .detectTriggers(driver.state, listOf(event))
             .filter { it.ability.trigger is EventPattern.ZoneChangeEvent }
 

@@ -6,7 +6,7 @@ import com.wingedsheep.assay.syntax.printLine
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.CharacteristicValue
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.values.Aggregation
 import com.wingedsheep.sdk.scripting.values.CardNumericProperty
@@ -44,7 +44,7 @@ class AmountsTest : StringSpec({
 
     /** The power bonus of a line whose only ability is a `~ gets …` static. */
     fun dynamicStat(line: String): DynamicAmount =
-        (fragment(line).script.staticAbilities.single() as GrantDynamicStatsEffect).powerBonus
+        (fragment(line).script.staticAbilities.single() as GrantDynamicStats).powerBonus
 
     // ---------------------------------------------------------------------------------------
     // The vocabulary

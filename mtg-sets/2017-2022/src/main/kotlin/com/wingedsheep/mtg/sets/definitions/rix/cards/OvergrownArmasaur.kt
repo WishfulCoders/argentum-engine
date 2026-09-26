@@ -23,7 +23,7 @@ val OvergrownArmasaur = card("Overgrown Armasaur") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.TakesDamage
+        trigger = Triggers.self.isDealtDamage()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

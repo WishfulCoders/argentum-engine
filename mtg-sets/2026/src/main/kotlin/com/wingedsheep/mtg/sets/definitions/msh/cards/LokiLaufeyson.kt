@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
@@ -24,7 +24,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * evaluated when the spell is actually cast, which is exactly when the delayed trigger's condition
  * is checked, so pumping Loki with the power-up ability *after* activating this one still widens
  * what the rider will copy. (`CastSpellHandler` threads the rider's own `sourceId` into the
- * predicate context so `EntityReference.Source` resolves to Loki rather than to nothing.)
+ * predicate context so `EffectTarget.Self` resolves to Loki rather than to nothing.)
  *
  * Ability 2 is the plain power-up cycle shape (CR 702.193, Brave Brawler): `isPowerUp = true`
  * desugars to `ActivationRestriction.Once` and switches on the engine's pip-wise self cost
@@ -71,7 +71,7 @@ val LokiLaufeyson = card("Loki Laufeyson") {
     activatedAbility {
         isPowerUp = true
         cost = Costs.Mana("{4}{R}")
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
     }
 
     metadata {

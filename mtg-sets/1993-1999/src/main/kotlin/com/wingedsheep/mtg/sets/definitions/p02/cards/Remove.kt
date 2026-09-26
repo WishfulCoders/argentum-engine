@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.p02.cards
 
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.conditions.YouWereAttackedThisStep
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Remove
@@ -28,7 +28,7 @@ val Remove = card("Remove") {
     spell {
         castOnlyDuring(Step.DECLARE_ATTACKERS)
         castOnlyIf(YouWereAttackedThisStep)
-        val attacker = target("target", Targets.AttackingCreature)
+        val attacker = target(TargetFilter.AttackingCreature)
         effect = Effects.ReturnToHand(attacker)
     }
 

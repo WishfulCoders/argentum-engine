@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Mulch — Stronghold #110
@@ -37,7 +36,7 @@ val Mulch = card("Mulch") {
 
     spell {
         effect = Patterns.Library.revealTopPutAllMatchingToHand(
-            count = DynamicAmount.Fixed(4),
+            count = 4,
             filter = GameObjectFilter.Land,
             restDestination = CardDestination.ToZone(Zone.GRAVEYARD),
             restOrder = CardOrder.Preserve,

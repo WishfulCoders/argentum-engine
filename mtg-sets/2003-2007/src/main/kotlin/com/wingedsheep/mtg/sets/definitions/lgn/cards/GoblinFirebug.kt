@@ -23,7 +23,7 @@ val GoblinFirebug = card("Goblin Firebug") {
     oracleText = "When Goblin Firebug leaves the battlefield, sacrifice a land."
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.SacrificeOwn(GameObjectFilter.Land)
         description = "When Goblin Firebug leaves the battlefield, sacrifice a land."
     }

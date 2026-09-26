@@ -26,7 +26,7 @@ val MessengerDrake = card("Messenger Drake") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.DrawCards(1)
         description = "When this creature dies, draw a card."
     }

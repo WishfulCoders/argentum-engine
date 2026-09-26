@@ -20,6 +20,7 @@ plugins {
 
 dependencies {
     implementation(project(":mtg-sdk"))
+    implementation(project(":mtg-sdk-tooling"))
     implementation(libs.classgraph)
     implementation(libs.kotlinxSerialization)
 

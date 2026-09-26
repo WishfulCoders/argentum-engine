@@ -2,6 +2,7 @@ package com.wingedsheep.sdk.scripting.effects
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.CardType
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Subtype
@@ -83,7 +84,7 @@ data class CreateTokenEffect(
     val exileAtStep: Step? = null,
     val sacrificeAtStep: Step? = null,
     /** Counters to place on the token when it enters the battlefield. */
-    val initialCounters: Map<String, Int> = emptyMap(),
+    val initialCounters: Map<CounterType, Int> = emptyMap(),
     /**
      * If set, the token's color is the color the source locked into this cast-choice slot
      * (rather than the fixed [colors]) — e.g. Riptide Replicator "of the chosen color".

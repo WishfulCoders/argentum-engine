@@ -6,8 +6,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Circle of Confinement
@@ -21,7 +20,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  *
  * The exile is linked (CR 610.3) — the Glass Casket shape: the leaves trigger returns only what
  * this enchantment exiled. The life trigger reads that same linked pile through
- * [EntityReference.LinkedExiledCard], so it fires only while the prisoner is still exiled; once the
+ * [EffectTarget.LinkedExiledCard], so it fires only while the prisoner is still exiled; once the
  * Circle leaves and the card returns, the reference resolves to nothing and no spell matches.
  */
 val CircleOfConfinement = card("Circle of Confinement") {
@@ -34,25 +33,20 @@ val CircleOfConfinement = card("Circle of Confinement") {
         "this enchantment, you gain 2 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "target",
-            TargetCreature(filter = TargetFilter.Creature.manaValueAtMost(3).opponentControls())
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature.manaValueAtMost(3).opponentControls())
         effect = Effects.ExileUntilLeaves(t)
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 
     triggeredAbility {
-        trigger = Triggers.opponentCasts(
-            spellFilter = GameObjectFilter.Any
+        trigger = Triggers.anOpponent.casts(GameObjectFilter.Any
                 .withSubtype("Vampire")
-                .sharingNameWith(EntityReference.LinkedExiledCard()),
-        )
+                .sharingNameWith(EffectTarget.LinkedExiledCard()))
         effect = Effects.GainLife(2)
         description = "Whenever an opponent casts a Vampire spell with the same name as a card " +
             "exiled with Circle of Confinement, you gain 2 life."

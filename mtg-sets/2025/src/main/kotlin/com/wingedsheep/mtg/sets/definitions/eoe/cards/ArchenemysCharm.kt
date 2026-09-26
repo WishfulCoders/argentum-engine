@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
@@ -35,7 +35,7 @@ val ArchenemysCharm = card("Archenemy's Charm") {
     spell {
         modal(chooseCount = 1) {
             mode("Exile target creature or planeswalker") {
-                val target = target("target creature or planeswalker", Targets.CreatureOrPlaneswalker)
+                val target = target(Targets.CreatureOrPlaneswalker)
                 effect = Effects.Exile(target)
             }
             mode("Return one or two target creature and/or planeswalker cards from your graveyard to your hand") {
@@ -44,13 +44,13 @@ val ArchenemysCharm = card("Archenemy's Charm") {
                     count = 2,
                     minCount = 1
                 )
-                effect = ForEachTargetEffect(
-                    listOf(Effects.ReturnToHand(EffectTarget.ContextTarget(0)))
+                effect = Effects.ForEachTarget(
+                    Effects.ReturnToHand(EffectTarget.ContextTarget(0))
                 )
             }
             mode("Put two +1/+1 counters on target creature you control. It gains lifelink until end of turn") {
-                val target = target("target creature you control", Targets.CreatureYouControl)
-                effect = Effects.AddCounters("+1+1", 2, target) then Effects.GrantKeyword(com.wingedsheep.sdk.core.Keyword.LIFELINK, target)
+                val target = target(TargetFilter.CreatureYouControl)
+                effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, target) then Effects.GrantKeyword(com.wingedsheep.sdk.core.Keyword.LIFELINK, target)
             }
         }
     }

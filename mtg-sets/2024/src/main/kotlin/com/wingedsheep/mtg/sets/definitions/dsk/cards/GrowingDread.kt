@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever you turn a permanent face up, put a +1/+1 counter on it.
  *
  * The enters trigger reuses the shared [Patterns.Library.manifestDread] recipe. The face-up
- * payoff is the standard [Triggers.CreatureTurnedFaceUp] (any face-up turn you control — in DSK
+ * payoff is the standard `Triggers.<player>.permanentTurnedFaceUp(filter)` (any face-up turn you control — in DSK
  * every face-up permanent is a manifested creature) putting a +1/+1 counter on the triggering
  * permanent via [EffectTarget.TriggeringEntity].
  */
@@ -36,13 +36,13 @@ val GrowingDread = card("Growing Dread") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.manifestDread()
     }
 
     triggeredAbility {
-        trigger = Triggers.CreatureTurnedFaceUp()
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.TriggeringEntity)
+        trigger = Triggers.you.permanentTurnedFaceUp()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.TriggeringEntity)
     }
 
     metadata {

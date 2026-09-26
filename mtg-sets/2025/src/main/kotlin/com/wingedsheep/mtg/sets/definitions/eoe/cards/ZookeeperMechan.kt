@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.eoe.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Zookeeper Mechan
@@ -36,7 +36,7 @@ val ZookeeperMechan = card("Zookeeper Mechan") {
     activatedAbility {
         cost = Costs.Mana("{6}{R}")
         timing = TimingRule.SorcerySpeed
-        val target = target("target creature you control", Targets.CreatureYouControl)
+        val target = target(TargetFilter.CreatureYouControl)
         effect = Effects.ModifyStats(4, 0, target)
     }
 

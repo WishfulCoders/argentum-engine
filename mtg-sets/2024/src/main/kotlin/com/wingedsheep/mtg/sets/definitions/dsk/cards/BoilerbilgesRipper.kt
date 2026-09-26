@@ -5,8 +5,6 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.SelectTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
@@ -35,29 +33,27 @@ val BoilerbilgesRipper = card("Boilerbilges Ripper") {
         "When you do, this creature deals 2 damage to any target."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ReflexiveTriggerEffect(
-            action = Effects.Composite(
-                listOf(
-                    SelectTargetEffect(
-                        requirement = TargetObject(
-                            filter = TargetFilter.CreatureOrEnchantment.youControl().other()
-                        ),
-                        storeAs = "permanentToSacrifice"
-                    ),
-                    Effects.SacrificeTarget(EffectTarget.PipelineTarget("permanentToSacrifice"))
+        trigger = Triggers.self.enters()
+        effect = Effects.ReflexiveTrigger(
+            action = Effects.Pipeline {
+                val permanentToSacrifice = selectTarget(
+                    TargetObject(
+                        filter = TargetFilter.CreatureOrEnchantment.youControl().other()
+                    )
                 )
-            ),
+                run(Effects.SacrificeTarget(permanentToSacrifice.asTarget))
+            },
             optional = true,
-            reflexiveEffect = Effects.DealDamage(
-                amount = 2,
-                target = EffectTarget.ContextTarget(0),
-                damageSource = EffectTarget.Self
-            ),
-            reflexiveTargetRequirements = listOf(Targets.Any),
             descriptionOverride = "You may sacrifice another creature or enchantment. When you do, " +
                 "this creature deals 2 damage to any target."
-        )
+        ) {
+            val anyTarget = target(Targets.Any)
+            effect = Effects.DealDamage(
+                amount = 2,
+                target = anyTarget,
+                damageSource = EffectTarget.Self
+            )
+        }
         description = "When this creature enters, you may sacrifice another creature or enchantment. " +
             "When you do, this creature deals 2 damage to any target."
     }

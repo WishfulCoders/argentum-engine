@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Loch Mare
@@ -32,7 +31,7 @@ val LochMare = card("Loch Mare") {
         "Put a stun counter on it. (If a permanent with a stun counter would become untapped, remove one from it instead.)"
 
     replacementEffect(EntersWithCounters(
-        counterType = CounterTypeFilter.MinusOneMinusOne,
+        counterType = CounterType.MINUS_ONE_MINUS_ONE,
         count = 3,
         selfOnly = true
     ))
@@ -40,7 +39,7 @@ val LochMare = card("Loch Mare") {
     activatedAbility {
         cost = Costs.Composite(
             Costs.Mana("{1}{U}"),
-            Costs.RemoveCounterFromSelf(Counters.MINUS_ONE_MINUS_ONE)
+            Costs.RemoveCounterFromSelf(CounterType.MINUS_ONE_MINUS_ONE)
         )
         effect = Effects.DrawCards(1)
     }
@@ -48,11 +47,10 @@ val LochMare = card("Loch Mare") {
     activatedAbility {
         cost = Costs.Composite(
             Costs.Mana("{2}{U}"),
-            Costs.RemoveCounterFromSelf(Counters.MINUS_ONE_MINUS_ONE, 2)
+            Costs.RemoveCounterFromSelf(CounterType.MINUS_ONE_MINUS_ONE, 2)
         )
-        val creature = target("creature", Targets.Creature)
-        effect = Effects.Tap(creature)
-            .then(Effects.AddCounters(Counters.STUN, 1, creature))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.Tap(creature) then Effects.AddCounters(CounterType.STUN, 1, creature)
     }
 
     metadata {

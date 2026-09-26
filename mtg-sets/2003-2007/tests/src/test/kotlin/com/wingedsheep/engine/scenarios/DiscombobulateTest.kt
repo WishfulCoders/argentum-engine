@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.TypeLine
 import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.CardScript
@@ -23,6 +22,8 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Tests for Discombobulate.
@@ -43,7 +44,7 @@ class DiscombobulateTest : FunSpec({
             effect = CompositeEffect(
                 listOf(CounterEffect(), Patterns.Library.lookAtTopAndReorder(4))
             ),
-            Targets.Spell
+            TargetObject(filter = TargetFilter.SpellOnStack)
         )
     )
 

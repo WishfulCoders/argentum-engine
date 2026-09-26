@@ -31,14 +31,12 @@ class FinneasAceArcherTest : FunSpec({
         manaCost = "{G}"
         typeLine = "Sorcery"
         spell {
-            effect = Effects.CreateFood(1)
-                .then(
-                    Effects.CreateToken(
-                        power = 2,
-                        toughness = 2,
-                        colors = setOf(Color.GREEN),
-                        creatureTypes = setOf("Bear")
-                    )
+            effect = Effects.CreateFood(1) then
+                Effects.CreateToken(
+                    power = 2,
+                    toughness = 2,
+                    colors = setOf(Color.GREEN),
+                    creatureTypes = setOf("Bear")
                 )
         }
     }

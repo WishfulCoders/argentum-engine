@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 val SpringCleaning = card("Spring Cleaning") {
     manaCost = "{1}{G}"
@@ -14,11 +14,9 @@ val SpringCleaning = card("Spring Cleaning") {
     oracleText = "Destroy target enchantment. Clash with an opponent. If you win, destroy all enchantments your opponents control. (Each clashing player reveals the top card of their library, then puts that card on their choice of the top or bottom. A player wins if their card had a greater mana value.)"
 
     spell {
-        val enchantment = target("target enchantment", Targets.Enchantment)
-        effect = Effects.Destroy(enchantment).then(
-            Patterns.Mechanic.clash(
-                Effects.DestroyAll(GameObjectFilter.Enchantment.opponentControls())
-            )
+        val enchantment = target(TargetFilter.Enchantment)
+        effect = Effects.Destroy(enchantment) then Patterns.Mechanic.clash(
+            Effects.DestroyAll(GameObjectFilter.Enchantment.opponentControls())
         )
     }
 

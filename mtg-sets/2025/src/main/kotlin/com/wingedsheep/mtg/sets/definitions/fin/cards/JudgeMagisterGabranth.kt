@@ -1,8 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -20,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever another creature or artifact you control dies, put a +1/+1 counter on Judge Magister
  *   Gabranth.
  *
- * The dies trigger uses [Triggers.leavesBattlefield] with `to = GRAVEYARD` and
+ * The dies trigger uses `Triggers.<subject>.leaves(to, excludeTo, excludeSacrifice)` with `to = GRAVEYARD` and
  * [TriggerBinding.OTHER] ("another") over the [GameObjectFilter.CreatureOrArtifact] you control, so
  * Gabranth's own death never triggers it.
  */
@@ -36,12 +35,8 @@ val JudgeMagisterGabranth = card("Judge Magister Gabranth") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.CreatureOrArtifact.youControl(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.OTHER
-        )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.another(GameObjectFilter.CreatureOrArtifact.youControl()).dies()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     metadata {

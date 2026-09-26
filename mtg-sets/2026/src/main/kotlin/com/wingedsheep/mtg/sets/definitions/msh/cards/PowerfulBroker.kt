@@ -41,7 +41,7 @@ val PowerfulBroker = card("Powerful Broker") {
 
     activatedAbility {
         cost = Costs.Tap
-        val recipient = target("target permanent or player", Targets.PermanentOrPlayer)
+        val recipient = target(Targets.PermanentOrPlayer)
         effect = Effects.Proliferate(recipient)
         timing = TimingRule.SorcerySpeed
         description = "{T}: For each kind of counter on target permanent or player, give that " +

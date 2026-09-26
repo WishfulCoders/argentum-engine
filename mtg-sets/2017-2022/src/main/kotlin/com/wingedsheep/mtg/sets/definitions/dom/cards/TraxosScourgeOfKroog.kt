@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Traxos, Scourge of Kroog
@@ -32,7 +33,7 @@ val TraxosScourgeOfKroog = card("Traxos, Scourge of Kroog") {
     flags(AbilityFlag.DOESNT_UNTAP)
 
     triggeredAbility {
-        trigger = Triggers.YouCastHistoric
+        trigger = Triggers.you.casts(GameObjectFilter.Historic)
         effect = Effects.Untap(EffectTarget.Self)
     }
 

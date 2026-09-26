@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Spring Splasher
@@ -24,11 +24,8 @@ val SpringSplasher = card("Spring Splasher") {
     oracleText = "Whenever this creature attacks, target creature defending player controls gets -3/-0 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val creature = target(
-            "creature defending player controls",
-            Targets.CreatureOpponentControls
-        )
+        trigger = Triggers.self.attacks()
+        val creature = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.ModifyStats(-3, 0, creature)
     }
 

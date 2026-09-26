@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -24,10 +23,10 @@ val FeedTheClan = card("Feed the Clan") {
 
     spell {
         // Ferocious: if you control a creature with power 4+, gain 10 life instead of 5
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Exists(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature.powerAtLeast(4)),
-            effect = Effects.GainLife(10),
-            elseEffect = Effects.GainLife(5)
+            then = Effects.GainLife(10),
+            otherwise = Effects.GainLife(5)
         )
     }
 

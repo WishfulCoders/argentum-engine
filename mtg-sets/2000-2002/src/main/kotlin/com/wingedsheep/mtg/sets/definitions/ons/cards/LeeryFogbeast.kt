@@ -21,7 +21,7 @@ val LeeryFogbeast = card("Leery Fogbeast") {
     oracleText = "Whenever Leery Fogbeast becomes blocked, prevent all combat damage that would be dealt this turn."
 
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
+        trigger = Triggers.self.becomesBlocked()
         effect = Effects.PreventAllCombatDamage()
     }
 

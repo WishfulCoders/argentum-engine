@@ -3,12 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.ltr.cards
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Goblin Fireleaper
@@ -29,13 +28,13 @@ val GoblinFireleaper = card("Goblin Fireleaper") {
     // {1}{R}: This creature gets +1/+0 until end of turn.
     activatedAbility {
         cost = Costs.Mana("{1}{R}")
-        effect = ModifyStatsEffect(1, 0, EffectTarget.Self)
+        effect = Effects.ModifyStats(1, 0, EffectTarget.Self)
     }
 
     // When this creature dies, it deals damage equal to its power to target creature an opponent controls.
     triggeredAbility {
-        trigger = Triggers.Dies
-        val creature = target("target creature an opponent controls", Targets.CreatureOpponentControls)
+        trigger = Triggers.self.dies()
+        val creature = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.DealDamage(DynamicAmounts.sourcePower(), creature)
     }
 

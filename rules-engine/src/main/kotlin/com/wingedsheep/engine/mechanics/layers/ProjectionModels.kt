@@ -1,6 +1,7 @@
 package com.wingedsheep.engine.mechanics.layers
 
 import com.wingedsheep.engine.state.Component
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -135,7 +136,7 @@ sealed interface AffectsFilter {
      * Used for Aurification: "Each creature with a gold counter on it..."
      */
     @Serializable
-    data class CreaturesWithCounter(val counterType: String) : AffectsFilter {
+    data class CreaturesWithCounter(val counterType: CounterType) : AffectsFilter {
     }
 
     /**
@@ -143,7 +144,7 @@ sealed interface AffectsFilter {
      * Used for outlast lords: "Each creature you control with a +1/+1 counter on it has reach."
      */
     @Serializable
-    data class OwnCreaturesWithCounter(val counterType: String) : AffectsFilter {
+    data class OwnCreaturesWithCounter(val counterType: CounterType) : AffectsFilter {
     }
 
     /**
@@ -151,7 +152,7 @@ sealed interface AffectsFilter {
      * Used for Eluge: "Each land with a flood counter on it is an Island."
      */
     @Serializable
-    data class LandsWithCounter(val counterType: String) : AffectsFilter {
+    data class LandsWithCounter(val counterType: CounterType) : AffectsFilter {
     }
 
     /**
@@ -384,7 +385,7 @@ sealed interface Modification {
      */
     @Serializable
     data class SetCreatureSubtypesFrom(
-        val source: com.wingedsheep.sdk.scripting.values.EntityReference,
+        val source: com.wingedsheep.sdk.scripting.targets.EffectTarget.SingleEntity,
         val retainedTypes: Set<String> = emptySet()
     ) : Modification {
         override val layer get() = Layer.TYPE
@@ -569,6 +570,21 @@ sealed interface Modification {
         override val layer get() = Layer.ABILITY
     }
 
+    /**
+     * Grants each affected entity every keyword in [keywords] — plus, when [anyLandwalk] /
+     * [anyProtection] is set, every landwalk / protection keyword — that some creature card in any
+     * graveyard has (Cairn Wanderer). Read at apply-time off the graveyard cards' own printed
+     * keywords; see [com.wingedsheep.sdk.scripting.GainKeywordsOfGraveyardCreatureCards].
+     */
+    @Serializable
+    data class GrantKeywordsOfGraveyardCreatureCards(
+        val keywords: Set<String>,
+        val anyLandwalk: Boolean,
+        val anyProtection: Boolean
+    ) : Modification {
+        override val layer get() = Layer.ABILITY
+    }
+
     @Serializable
     data object SetCantAttack : Modification {
         override val layer get() = Layer.ABILITY
@@ -726,6 +742,9 @@ sealed interface Modification {
 internal data class MutableProjectedValues(
     var power: Int? = null,
     var toughness: Int? = null,
+    /** See [com.wingedsheep.engine.mechanics.layers.ProjectedValues.basePower]. */
+    var basePower: Int? = null,
+    var baseToughness: Int? = null,
     var name: String? = null,
     val keywords: MutableSet<String> = mutableSetOf(),
     val colors: MutableSet<String> = mutableSetOf(),

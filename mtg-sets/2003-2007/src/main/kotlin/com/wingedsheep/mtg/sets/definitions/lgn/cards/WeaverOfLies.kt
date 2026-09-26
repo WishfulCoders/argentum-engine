@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.lgn.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
-import com.wingedsheep.sdk.scripting.effects.TurnFaceDownEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Weaver of Lies
@@ -28,13 +26,10 @@ val WeaverOfLies = card("Weaver of Lies") {
     oracleText = "Morph {4}{U} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)\nWhen this creature is turned face up, turn any number of target creatures with morph abilities other than this creature face down."
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        val t = target("creatures with morph abilities other than this creature", TargetPermanent(
-            unlimited = true,
-            filter = TargetFilter(GameObjectFilter.Creature.withMorph().faceUp()).other()
-        ))
-        effect = ForEachTargetEffect(
-            effects = listOf(TurnFaceDownEffect(EffectTarget.ContextTarget(0)))
+        trigger = Triggers.self.turnedFaceUp()
+        targets(TargetFilter(GameObjectFilter.Creature.withMorph().faceUp()).other(), unlimited = true)
+        effect = Effects.ForEachTarget(
+            Effects.TurnFaceDown(EffectTarget.ContextTarget(0))
         )
     }
 

@@ -7,8 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.MultiplyManaOnSourceTap
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Virtue of Strength // Garenbrig Growth
@@ -58,15 +56,7 @@ val VirtueOfStrength = card("Virtue of Strength") {
         oracleText = "Return target creature or land card from your graveyard to your hand. (Then " +
             "exile this card. You may cast the enchantment later from exile.)"
         spell {
-            val card = target(
-                "target creature or land card in your graveyard",
-                TargetObject(
-                    filter = TargetFilter(
-                        GameObjectFilter.CreatureOrLand.ownedByYou(),
-                        zone = Zone.GRAVEYARD
-                    )
-                )
-            )
+            val card = target(TargetFilter(GameObjectFilter.CreatureOrLand.ownedByYou(), zone = Zone.GRAVEYARD))
             effect = Effects.Move(card, Zone.HAND)
         }
     }

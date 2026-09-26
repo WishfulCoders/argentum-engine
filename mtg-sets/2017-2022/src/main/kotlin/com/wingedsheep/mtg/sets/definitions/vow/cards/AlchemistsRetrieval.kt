@@ -1,13 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Alchemist's Retrieval
@@ -37,14 +34,11 @@ val AlchemistsRetrieval = card("Alchemist's Retrieval") {
 
     spell {
         // Printed (brackets present): return target nonland permanent you control.
-        val owned = target(
-            "nonland permanent you control",
-            TargetPermanent(filter = TargetFilter.NonlandPermanent.youControl()),
-        )
+        val owned = target(TargetFilter.NonlandPermanent.youControl())
         effect = Effects.ReturnToHand(owned)
 
         // Cleaved (brackets removed): return target nonland permanent.
-        val any = cleaveTarget("nonland permanent", Targets.NonlandPermanent)
+        val any = cleaveTarget(TargetFilter.NonlandPermanent)
         cleaveEffect = Effects.ReturnToHand(any)
     }
 

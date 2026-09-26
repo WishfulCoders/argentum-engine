@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -27,13 +26,11 @@ val SkyshroudBlessing = card("Skyshroud Blessing") {
     typeLine = "Instant"
     oracleText = "All lands gain shroud until end of turn. (They can't be the targets of spells or abilities.)\nDraw a card."
     spell {
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(
-                GroupFilter(GameObjectFilter.Land),
-                Effects.GrantKeyword(Keyword.SHROUD, EffectTarget.Self)
-            ),
-            DrawCardsEffect(1)
-        )
+        effect = Effects.ForEachInGroup(
+            GroupFilter(GameObjectFilter.Land),
+            Effects.GrantKeyword(Keyword.SHROUD, EffectTarget.IterationEntity)
+        ) then
+            Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.UNCOMMON

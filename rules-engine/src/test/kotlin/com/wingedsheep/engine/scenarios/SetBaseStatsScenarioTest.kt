@@ -4,11 +4,11 @@ import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * The unified [com.wingedsheep.sdk.scripting.effects.SetBaseStatsEffect] (reached through the
@@ -27,7 +27,7 @@ class SetBaseStatsScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Target creature has base power 7 until end of turn."
         spell {
-            val creature = target("creature", Targets.Creature)
+            val creature = target(TargetFilter.Creature)
             effect = Effects.SetBasePower(creature, DynamicAmount.Fixed(7), Duration.EndOfTurn)
         }
     }
@@ -37,7 +37,7 @@ class SetBaseStatsScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Target creature has base toughness 7 until end of turn."
         spell {
-            val creature = target("creature", Targets.Creature)
+            val creature = target(TargetFilter.Creature)
             effect = Effects.SetBaseToughness(creature, DynamicAmount.Fixed(7), Duration.EndOfTurn)
         }
     }
@@ -47,7 +47,7 @@ class SetBaseStatsScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Target creature has base power and toughness 4/4 until end of turn."
         spell {
-            val creature = target("creature", Targets.Creature)
+            val creature = target(TargetFilter.Creature)
             effect = Effects.SetBasePowerAndToughness(4, 4, creature, Duration.EndOfTurn)
         }
     }

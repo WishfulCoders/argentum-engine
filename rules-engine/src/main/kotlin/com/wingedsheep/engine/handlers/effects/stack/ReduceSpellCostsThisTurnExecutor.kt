@@ -25,7 +25,7 @@ import kotlin.reflect.KClass
  * keeps the state (and the client's cost display) free of dead entries.
  */
 class ReduceSpellCostsThisTurnExecutor(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<ReduceSpellCostsThisTurnEffect> {
 
     override val effectType: KClass<ReduceSpellCostsThisTurnEffect> = ReduceSpellCostsThisTurnEffect::class

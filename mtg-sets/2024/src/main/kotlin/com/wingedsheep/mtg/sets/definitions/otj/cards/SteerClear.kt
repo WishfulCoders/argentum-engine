@@ -5,9 +5,7 @@ import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Steer Clear
@@ -20,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * "As you cast this spell" is a cast-time condition capture (CR 601.2i): whether you controlled a
  * Mount is locked in the moment the spell is cast and read back at resolution, so losing the Mount
  * before resolution doesn't drop the damage to 2 (per the OTJ ruling). Modeled with the
- * `captureAtCast` DSL + `Conditions.CapturedAtCast`; the [ConditionalEffect] picks the 4- or 2-damage
+ * `captureAtCast` DSL + `Conditions.CapturedAtCast`; the [Effects.If] picks the 4- or 2-damage
  * branch against the frozen answer.
  */
 val SteerClear = card("Steer Clear") {
@@ -32,11 +30,11 @@ val SteerClear = card("Steer Clear") {
 
     spell {
         captureAtCast("controlledMount", Conditions.ControlCreatureOfType(Subtype("Mount")))
-        val creature = target("target", TargetCreature(filter = TargetFilter.AttackingOrBlockingCreature))
-        effect = ConditionalEffect(
+        val creature = target(TargetFilter.AttackingOrBlockingCreature)
+        effect = Effects.If(
             condition = Conditions.CapturedAtCast("controlledMount"),
-            effect = Effects.DealDamage(4, creature),
-            elseEffect = Effects.DealDamage(2, creature)
+            then = Effects.DealDamage(4, creature),
+            otherwise = Effects.DealDamage(2, creature)
         )
     }
 

@@ -4,10 +4,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Barrier Breach — Ikoria: Lair of Behemoths #145
@@ -29,9 +27,9 @@ val BarrierBreach = card("Barrier Breach") {
         "Cycling {2} ({2}, Discard this card: Draw a card.)"
 
     spell {
-        target("target", TargetPermanent(count = 3, optional = true, filter = TargetFilter.Enchantment))
-        effect = ForEachTargetEffect(
-            effects = listOf(Effects.Exile(EffectTarget.ContextTarget(0)))
+        targets(TargetFilter.Enchantment, count = 3, optional = true)
+        effect = Effects.ForEachTarget(
+            Effects.Exile(EffectTarget.ContextTarget(0))
         )
     }
 

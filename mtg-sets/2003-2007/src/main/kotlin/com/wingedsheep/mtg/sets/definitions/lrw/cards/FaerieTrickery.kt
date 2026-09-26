@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
 
 /**
  * Faerie Trickery
@@ -27,7 +26,7 @@ val FaerieTrickery = card("Faerie Trickery") {
         "instead of putting it into its owner's graveyard."
 
     spell {
-        target = TargetSpell(filter = TargetFilter.SpellOnStack.notSubtype(Subtype.FAERIE))
+        val spell = target(TargetFilter.SpellOnStack.notSubtype(Subtype.FAERIE))
         effect = Effects.CounterSpellToExile()
     }
 

@@ -9,8 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
 
 
 /**
@@ -29,11 +27,11 @@ val RedElementalBlast = card("Red Elemental Blast") {
     spell {
         modal(chooseCount = 1) {
             mode("Counter target blue spell") {
-                val t = target("target", TargetSpell(filter = TargetFilter.SpellOnStack.withColor(Color.BLUE)))
+                val t = target(TargetFilter.SpellOnStack.withColor(Color.BLUE))
                 effect = Effects.CounterSpell()
             }
             mode("Destroy target blue permanent") {
-                val t = target("target", TargetPermanent(filter = TargetFilter.Permanent.withColor(Color.BLUE)))
+                val t = target(TargetFilter.Permanent.withColor(Color.BLUE))
                 effect = Effects.Destroy(t)
             }
         }

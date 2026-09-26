@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.atq.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Artifact Possession
@@ -32,18 +32,15 @@ val ArtifactPossession = card("Artifact Possession") {
         "Whenever enchanted artifact becomes tapped or a player activates an ability of enchanted " +
         "artifact without {T} in its activation cost, this Aura deals 2 damage to that artifact's " +
         "controller."
-    auraTarget = Targets.Artifact
+    auraTarget = TargetObject(filter = TargetFilter.Artifact)
 
     triggeredAbility {
-        trigger = Triggers.becomesTapped(binding = TriggerBinding.ATTACHED)
+        trigger = Triggers.attached.becomesTapped()
         effect = Effects.DealDamage(2, EffectTarget.ControllerOfTriggeringEntity)
     }
 
     triggeredAbility {
-        trigger = Triggers.activatesAbilityWithoutTap(
-            player = Player.Each,
-            binding = TriggerBinding.ATTACHED
-        )
+        trigger = Triggers.attached.hasAbilityActivatedWithoutTap()
         effect = Effects.DealDamage(2, EffectTarget.ControllerOfTriggeringEntity)
     }
 

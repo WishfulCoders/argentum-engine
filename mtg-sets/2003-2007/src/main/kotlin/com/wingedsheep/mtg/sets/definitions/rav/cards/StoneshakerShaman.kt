@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Stoneshaker Shaman
@@ -17,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * At the beginning of each player's end step, that player sacrifices an untapped land of their
  * choice.
  *
- * "Each player's end step" is [Triggers.EachEndStep] — a `StepEvent(END, Player.Each)`. Only the
+ * "Each player's end step" is `Triggers.anyPlayer.beginningOf(Step.END)` — a `StepEvent(END, Player.Each)`. Only the
  * active player has an end step in a given turn, so this fires once per turn and
  * [Player.TriggeringPlayer] is whoever's turn it is. The Shaman's controller is not spared: the
  * sentence names the player whose step it is, not an opponent, which is what makes this a
@@ -39,7 +40,7 @@ val StoneshakerShaman = card("Stoneshaker Shaman") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.EachEndStep
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
         effect = Effects.Sacrifice(
             filter = GameObjectFilter.Land.untapped(),
             count = 1,

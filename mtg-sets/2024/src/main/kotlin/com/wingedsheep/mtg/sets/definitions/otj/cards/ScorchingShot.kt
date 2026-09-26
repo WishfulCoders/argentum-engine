@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Scorching Shot
@@ -18,7 +18,7 @@ val ScorchingShot = card("Scorching Shot") {
     oracleText = "Scorching Shot deals 5 damage to target creature."
 
     spell {
-        val creature = target("creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.DealDamage(5, creature)
     }
 

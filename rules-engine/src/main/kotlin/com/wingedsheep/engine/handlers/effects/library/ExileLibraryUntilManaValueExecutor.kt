@@ -3,11 +3,11 @@ package com.wingedsheep.engine.handlers.effects.library
 import com.wingedsheep.engine.core.CardsRevealedEvent
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.core.GameEvent as EngineGameEvent
-import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
 import com.wingedsheep.engine.handlers.effects.TargetResolutionUtils
 import com.wingedsheep.engine.handlers.effects.ZoneMovementUtils
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.identity.CardComponent
@@ -16,6 +16,7 @@ import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.effects.ExileLibraryUntilManaValueEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import kotlin.reflect.KClass
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Executor for [ExileLibraryUntilManaValueEffect].
@@ -26,11 +27,10 @@ import kotlin.reflect.KClass
  * accumulated into [ExileLibraryUntilManaValueEffect.storeAs] on the outer
  * pipeline so downstream grants operate under the spell's original controller.
  */
-class ExileLibraryUntilManaValueExecutor : EffectExecutor<ExileLibraryUntilManaValueEffect> {
+class ExileLibraryUntilManaValueExecutor(private val zones: ZoneTransitionService) : EffectExecutor<ExileLibraryUntilManaValueEffect> {
+    private val amountEvaluator = zones.predicateEvaluator.amounts
 
     override val effectType: KClass<ExileLibraryUntilManaValueEffect> = ExileLibraryUntilManaValueEffect::class
-
-    private val amountEvaluator = DynamicAmountEvaluator()
 
     override fun execute(
         state: GameState,
@@ -83,8 +83,8 @@ class ExileLibraryUntilManaValueExecutor : EffectExecutor<ExileLibraryUntilManaV
             )
 
             for (cardId in exiledForPlayer) {
-                val result = ZoneMovementUtils.moveCardToZone(currentState, cardId, Zone.EXILE)
-                if (result.isSuccess) {
+                val result = ZoneMovementUtils.moveCardToZone(zones, currentState, cardId, Zone.EXILE)
+                if (result.outcome is Outcome.Done) {
                     currentState = result.state
                     allEvents.addAll(result.events)
                     allExiled.add(cardId)
@@ -109,6 +109,9 @@ class ExileLibraryUntilManaValueExecutor : EffectExecutor<ExileLibraryUntilManaV
                 listOf(TargetResolutionUtils.run { it.toEntityId() })
             } ?: emptyList()
             is Player.ContextPlayer -> context.positionalTarget(player.index)?.let {
+                listOf(TargetResolutionUtils.run { it.toEntityId() })
+            } ?: emptyList()
+            is Player.BoundVariable -> context.pipeline.namedTargets[player.name]?.let {
                 listOf(TargetResolutionUtils.run { it.toEntityId() })
             } ?: emptyList()
             Player.TriggeringPlayer -> listOfNotNull(context.triggeringEntityId)

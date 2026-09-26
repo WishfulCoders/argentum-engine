@@ -1,11 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.mmq.cards
 
 import com.wingedsheep.sdk.core.ManaCost
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Customs Depot
@@ -16,7 +17,7 @@ import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
  * card.
  *
  * "You may pay {1}. If you do, …" is an *optional cost rider on the triggered ability itself*
- * ([MayPayManaEffect] → `Gate.MayPay`), not a reflexive trigger: the payment and the payoff both
+ * ([Effects.MayPay] → `Gate.MayPay`), not a reflexive trigger: the payment and the payoff both
  * happen as this one ability resolves. Lightning Rift and Mind's Eye are the same shape.
  * Affordability is checked before prompting, so a tapped-out controller is never offered an
  * unpayable "yes".
@@ -31,10 +32,10 @@ val CustomsDepot = card("Customs Depot") {
     oracleText = "Whenever you cast a creature spell, you may pay {1}. If you do, draw a card, then discard a card."
 
     triggeredAbility {
-        trigger = Triggers.YouCastCreature
-        effect = MayPayManaEffect(
+        trigger = Triggers.you.casts(GameObjectFilter.Creature)
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{1}"),
-            effect = Patterns.Hand.loot(draw = 1, discard = 1),
+            then = Patterns.Hand.loot(draw = 1, discard = 1),
         )
     }
 

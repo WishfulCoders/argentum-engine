@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.m19.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -30,18 +29,15 @@ val DragonsHoard = card("Dragon's Hoard") {
     oracleText = "Whenever a Dragon you control enters, put a gold counter on this artifact.\n{T}, Remove a gold counter from this artifact: Draw a card.\n{T}: Add one mana of any color."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Permanent.youControl().withSubtype(Subtype.DRAGON),
-            binding = TriggerBinding.ANY
-        )
-        effect = Effects.AddCounters(Counters.GOLD, 1, EffectTarget.Self)
+        trigger = Triggers.a(GameObjectFilter.Permanent.youControl().withSubtype(Subtype.DRAGON)).enters()
+        effect = Effects.AddCounters(CounterType.GOLD, 1, EffectTarget.Self)
         description = "Whenever a Dragon you control enters, put a gold counter on this artifact."
     }
 
     activatedAbility {
         cost = Costs.Composite(
             Costs.Tap,
-            Costs.RemoveCounterFromSelf(Counters.GOLD, 1)
+            Costs.RemoveCounterFromSelf(CounterType.GOLD, 1)
         )
         effect = Effects.DrawCards(1)
         description = "{T}, Remove a gold counter from this artifact: Draw a card."

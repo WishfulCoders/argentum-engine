@@ -1,11 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.lea.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
@@ -22,8 +21,8 @@ val Earthquake = card("Earthquake") {
     typeLine = "Sorcery"
 
     spell {
-        effect = Effects.ForEachInGroup(GroupFilter.AllCreatures.withoutKeyword(Keyword.FLYING), DealDamageEffect(DynamicAmount.XValue, EffectTarget.Self)) then
-            Effects.ForEachPlayer(Player.Each, listOf(Effects.DealDamage(DynamicAmount.XValue, EffectTarget.Controller)))
+        effect = Effects.ForEachInGroup(GroupFilter.AllCreatures.withoutKeyword(Keyword.FLYING), Effects.DealDamage(DynamicAmounts.xValue(), EffectTarget.IterationEntity)) then
+            Effects.ForEachPlayer(Player.Each, listOf(Effects.DealDamage(DynamicAmounts.xValue(), EffectTarget.Controller)))
     }
 
     metadata {

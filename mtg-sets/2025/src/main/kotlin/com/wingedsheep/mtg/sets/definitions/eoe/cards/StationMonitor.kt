@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.references.Player
 
 /**
  * Station Monitor
@@ -25,7 +24,7 @@ val StationMonitor = card("Station Monitor") {
         "creature token with flying and \"This token can block only creatures with flying.\""
 
     triggeredAbility {
-        trigger = Triggers.NthSpellCast(2, Player.You)
+        trigger = Triggers.you.castsNth(2)
         effect = Effects.CreateDroneToken()
         description = "create a 1/1 colorless Drone artifact creature token with flying and " +
             "\"This token can block only creatures with flying.\""

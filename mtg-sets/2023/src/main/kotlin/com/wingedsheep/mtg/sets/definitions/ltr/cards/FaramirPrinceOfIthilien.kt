@@ -8,11 +8,8 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerTiming
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Faramir, Prince of Ithilien
@@ -49,25 +46,25 @@ val FaramirPrinceOfIthilien = card("Faramir, Prince of Ithilien") {
         "Otherwise, create three 1/1 white Human Soldier creature tokens."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
-        target = Targets.Opponent
-        effect = CreateDelayedTriggerEffect(
+        val opponent = target(Targets.Opponent)
+        trigger = Triggers.you.beginningOf(Step.END)
+        effect = Effects.CreateDelayedTrigger(
             step = Step.END,
-            fireOnPlayer = EffectTarget.ContextTarget(0),
+            fireOnPlayer = opponent,
             // The chosen opponent is never the active player at Faramir's controller's end step,
             // so the next END step gated to that opponent (fireOnPlayer) is necessarily a later
             // turn — CURRENT_TURN_OR_LATER avoids a turn-floor off-by-one while still firing only
             // at "that player's next end step" (same axis as Nafs Asp).
             timing = DelayedTriggerTiming.CURRENT_TURN_OR_LATER,
-            effect = ConditionalEffect(
+            effect = Effects.If(
                 condition = Conditions.Not(
                     Conditions.PlayerAttackedPlayerThisTurn(
                         attacker = Player.TriggeringPlayer,
                         defender = Player.You
                     )
                 ),
-                effect = Effects.DrawCards(1),
-                elseEffect = Effects.CreateToken(
+                then = Effects.DrawCards(1),
+                otherwise = Effects.CreateToken(
                     power = 1,
                     toughness = 1,
                     colors = setOf(Color.WHITE),

@@ -1,17 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -29,27 +21,18 @@ val Duneblast = card("Duneblast") {
     oracleText = "Choose up to one creature. Destroy the rest."
 
     spell {
-        effect = Effects.Composite(listOf(
-            GatherCardsEffect(
-                source = CardSource.BattlefieldMatching(filter = GameObjectFilter.Creature),
-                storeAs = "all_creatures"
-            ),
-            SelectFromCollectionEffect(
-                from = "all_creatures",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "saved",
-                storeRemainder = "to_destroy",
+        effect = Effects.Pipeline {
+            val allCreatures = gather(CardSource.BattlefieldMatching(filter = GameObjectFilter.Creature))
+            val (_, toDestroy) = chooseUpToSplit(
+                1,
+                from = allCreatures,
                 prompt = "Choose up to one creature to save",
                 selectedLabel = "Save",
                 remainderLabel = "Destroy",
                 useTargetingUI = true
-            ),
-            MoveCollectionEffect(
-                from = "to_destroy",
-                destination = CardDestination.ToZone(Zone.GRAVEYARD),
-                moveType = MoveType.Destroy
             )
-        ))
+            destroy(toDestroy)
+        }
     }
 
     metadata {

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.state.components.battlefield.SolvedComponent
 import com.wingedsheep.engine.support.GameTestDriver
@@ -14,10 +15,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Case of the Burning Masks — {1}{R}{R} Enchantment — Case.
@@ -35,7 +35,7 @@ class CaseOfTheBurningMasksScenarioTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Test Spark deals 1 damage to target creature."
         spell {
-            val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+            val t = target(TargetFilter.Creature)
             effect = Effects.DealDamage(1, t)
         }
     }
@@ -46,11 +46,8 @@ class CaseOfTheBurningMasksScenarioTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Test Double Spark deals 1 damage to target creature, then 1 damage to it again."
         spell {
-            val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-            effect = Effects.Composite(
-                Effects.DealDamage(1, t),
-                Effects.DealDamage(1, t)
-            )
+            val t = target(TargetFilter.Creature)
+            effect = Effects.DealDamage(1, t) then Effects.DealDamage(1, t)
         }
     }
 
@@ -70,7 +67,7 @@ class CaseOfTheBurningMasksScenarioTest : FunSpec({
 
     /** The "to solve" progress badge the controller's client renders on [id], e.g. "2/3". */
     fun GameTestDriver.solveProgress(id: EntityId): String? =
-        ClientStateTransformer(cardRegistry)
+        ClientStateTransformer(cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .transform(state, player1)
             .cards.getValue(id)
             .activeEffects
@@ -80,7 +77,7 @@ class CaseOfTheBurningMasksScenarioTest : FunSpec({
     fun GameTestDriver.cast(name: String, target: EntityId) {
         val spell = putCardInHand(player1, name)
         giveMana(player1, Color.RED, 1)
-        castSpell(player1, spell, listOf(target)).isSuccess shouldBe true
+        castSpell(player1, spell, listOf(target)).outcome shouldBe Outcome.Done
         bothPass()
     }
 
@@ -117,7 +114,7 @@ class CaseOfTheBurningMasksScenarioTest : FunSpec({
 
         val card = driver.putCardInHand(driver.player1, "Case of the Burning Masks")
         driver.giveMana(driver.player1, Color.RED, 3)
-        driver.castSpell(driver.player1, card).isSuccess shouldBe true
+        driver.castSpell(driver.player1, card).outcome shouldBe Outcome.Done
         driver.bothPass()
         driver.submitTargetSelection(driver.player1, listOf(victim))
         driver.bothPass()

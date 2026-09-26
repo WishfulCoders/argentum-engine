@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Oliphaunt
@@ -33,10 +32,9 @@ val Oliphaunt = card("Oliphaunt") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val other = target("another target creature you control", TargetCreature(filter = TargetFilter.OtherCreatureYouControl))
-        effect = Effects.ModifyStats(2, 0, other)
-            .then(Effects.GrantKeyword(Keyword.TRAMPLE, other))
+        trigger = Triggers.self.attacks()
+        val other = target(TargetFilter.OtherCreatureYouControl)
+        effect = Effects.ModifyStats(2, 0, other) then Effects.GrantKeyword(Keyword.TRAMPLE, other)
     }
 
     keywordAbility(KeywordAbility.typecycling("Mountain", ManaCost.parse("{1}")))

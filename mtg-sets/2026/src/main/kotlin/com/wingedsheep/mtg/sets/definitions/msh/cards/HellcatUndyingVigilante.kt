@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * When Hellcat dies, return her to the battlefield under her owner's control with a +1/+1
  * counter on her. She loses all abilities and gains haste.
  *
- * The dies trigger is Retched Wretch's shape: [Triggers.Dies] with [EffectTarget.Self], because
+ * The dies trigger is Retched Wretch's shape: `Triggers.self.dies()` with [EffectTarget.Self], because
  * the graveyard→battlefield [Effects.Move] keeps the entity id, so every later step in the
  * composite still addresses the returned permanent (CR 611.2b — the grants have no duration and
  * modify the object created by this resolution, ending if it leaves again).
@@ -43,22 +43,20 @@ val HellcatUndyingVigilante = card("Hellcat, Undying Vigilante") {
     keywords(Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        effect = Effects.Composite(
-            // Return her to the battlefield under her owner's control *with* a +1/+1 counter on
-            // her — `addCounterType`, not a following AddCounters, because "with a counter on it"
-            // is an as-enters replacement (CR 614.1c): counter doublers and "enters with an
-            // additional counter" effects have to see her enter carrying it.
-            Effects.Move(
-                EffectTarget.Self,
-                Zone.BATTLEFIELD,
-                addCounterType = CounterType.PLUS_ONE_PLUS_ONE,
-            ),
+        trigger = Triggers.self.dies()
+        // Return her to the battlefield under her owner's control *with* a +1/+1 counter on
+        // her — `addCounterType`, not a following AddCounters, because "with a counter on it"
+        // is an as-enters replacement (CR 614.1c): counter doublers and "enters with an
+        // additional counter" effects have to see her enter carrying it.
+        effect = Effects.Move(
+            EffectTarget.Self,
+            Zone.BATTLEFIELD,
+            addCounterType = CounterType.PLUS_ONE_PLUS_ONE,
+        ) then
             // She loses all abilities ...
-            Effects.RemoveAllAbilities(EffectTarget.Self, Duration.Permanent),
+            Effects.RemoveAllAbilities(EffectTarget.Self, Duration.Permanent) then
             // ... and gains haste (granted after the strip, so it has the later timestamp).
             Effects.GrantKeyword(Keyword.HASTE, EffectTarget.Self, Duration.Permanent)
-        )
         description = "When Hellcat dies, return her to the battlefield under her owner's control " +
             "with a +1/+1 counter on her. She loses all abilities and gains haste."
     }

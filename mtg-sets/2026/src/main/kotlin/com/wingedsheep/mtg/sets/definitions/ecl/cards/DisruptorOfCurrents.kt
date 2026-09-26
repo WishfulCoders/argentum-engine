@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Disruptor of Currents
@@ -31,14 +30,8 @@ val DisruptorOfCurrents = card("Disruptor of Currents") {
     keywords(Keyword.FLASH, Keyword.CONVOKE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val permanent = target(
-            "up to one other target nonland permanent",
-            TargetPermanent(
-                optional = true,
-                filter = TargetFilter.NonlandPermanent.copy(excludeSelf = true)
-            )
-        )
+        trigger = Triggers.self.enters()
+        val permanent = target(TargetFilter.NonlandPermanent.copy(excludeSelf = true), optional = true)
         effect = Effects.ReturnToHand(permanent)
     }
 

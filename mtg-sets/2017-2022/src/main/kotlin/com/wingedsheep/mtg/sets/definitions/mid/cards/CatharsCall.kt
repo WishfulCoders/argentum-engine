@@ -3,13 +3,15 @@ package com.wingedsheep.mtg.sets.definitions.mid.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.TriggeredAbility
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Cathar's Call
@@ -32,7 +34,7 @@ val CatharsCall = card("Cathar's Call") {
         "Enchanted creature has vigilance and \"At the beginning of your end step, create a 1/1 " +
         "white Human creature token.\""
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = GrantKeyword(Keyword.VIGILANCE)
@@ -41,8 +43,7 @@ val CatharsCall = card("Cathar's Call") {
     staticAbility {
         ability = GrantTriggeredAbility(
             TriggeredAbility.create(
-                trigger = Triggers.YourEndStep.event,
-                binding = Triggers.YourEndStep.binding,
+                trigger = Triggers.you.beginningOf(Step.END),
                 effect = Effects.CreateToken(
                     power = 1,
                     toughness = 1,

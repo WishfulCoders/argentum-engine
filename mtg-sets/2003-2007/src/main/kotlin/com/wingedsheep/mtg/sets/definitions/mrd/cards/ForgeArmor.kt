@@ -1,16 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Forge Armor — Mirrodin #92
@@ -20,7 +18,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * Put X +1/+1 counters on target creature, where X is the sacrificed artifact's mana value.
  *
  * The spell-side twin of Bosh, Iron Golem, composed the same way as Eldritch Evolution: the
- * additional cost binds the sacrificed artifact to [EntityReference.Sacrificed] at cost payment,
+ * additional cost binds the sacrificed artifact to [EffectTarget.SacrificedAsCost] at cost payment,
  * and the counter count reads [EntityNumericProperty.ManaValue] off that snapshot at resolution —
  * mana value is a printed characteristic, so it still reads correctly from the graveyard.
  *
@@ -38,14 +36,11 @@ val ForgeArmor = card("Forge Armor") {
     additionalCost(Costs.additional.SacrificePermanent(GameObjectFilter.Artifact))
 
     spell {
-        target = Targets.Creature
+        val creature = target(TargetFilter.Creature)
         effect = Effects.AddDynamicCounters(
-            counterType = Counters.PLUS_ONE_PLUS_ONE,
-            amount = DynamicAmount.EntityProperty(
-                EntityReference.Sacrificed(0),
-                EntityNumericProperty.ManaValue
-            ),
-            target = EffectTarget.ContextTarget(0)
+            counterType = CounterType.PLUS_ONE_PLUS_ONE,
+            amount = DynamicAmounts.manaValueOf(EffectTarget.SacrificedAsCost(0)),
+            target = creature
         )
     }
 

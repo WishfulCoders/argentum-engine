@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.drk.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Tracker
@@ -41,19 +39,17 @@ val Tracker = card("Tracker") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{G}{G}"), Costs.Tap)
-        val prey = target("target creature", Targets.Creature)
-        effect = Effects.Composite(
+        val prey = target(TargetFilter.Creature)
+        effect = Effects.DealDamage(
+            DynamicAmounts.sourcePower(),
+            prey,
+            damageSource = EffectTarget.Self,
+        ) then
             Effects.DealDamage(
-                DynamicAmount.EntityProperty(EntityReference.Source, EntityNumericProperty.Power),
-                prey,
-                damageSource = EffectTarget.Self,
-            ),
-            Effects.DealDamage(
-                DynamicAmount.EntityProperty(EntityReference.Target(0), EntityNumericProperty.Power),
+                DynamicAmounts.powerOf(prey),
                 EffectTarget.Self,
                 damageSource = prey,
-            ),
-        )
+            )
         description = "{G}{G}, {T}: This creature deals damage equal to its power to target " +
             "creature. That creature deals damage equal to its power to this creature."
     }

@@ -5,8 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Fiend Hunter
@@ -41,17 +39,14 @@ val FiendHunter = card("Fiend Hunter") {
 
     // ETB: you may exile another target creature (until this leaves).
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target(
-            "another target creature",
-            TargetCreature(filter = TargetFilter.OtherCreature, optional = true)
-        )
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.OtherCreature, optional = true)
         effect = Effects.ExileUntilLeaves(creature)
     }
 
     // LTB: return the exiled card under its owner's control.
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 

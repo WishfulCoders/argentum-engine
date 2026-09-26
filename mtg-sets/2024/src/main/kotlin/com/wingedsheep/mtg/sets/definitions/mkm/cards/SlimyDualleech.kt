@@ -10,7 +10,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.core.Step
 
 
 /**
@@ -28,12 +28,9 @@ val SlimyDualleech = card("Slimy Dualleech") {
     power = 2
     toughness = 4
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.powerAtMost(2).youControl()))
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 0, t),
-            Effects.GrantKeyword(Keyword.DEATHTOUCH, t)
-        )
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        val t = target(TargetFilter.Creature.powerAtMost(2).youControl())
+        effect = Effects.ModifyStats(1, 0, t) then Effects.GrantKeyword(Keyword.DEATHTOUCH, t)
     }
     metadata {
         rarity = Rarity.UNCOMMON

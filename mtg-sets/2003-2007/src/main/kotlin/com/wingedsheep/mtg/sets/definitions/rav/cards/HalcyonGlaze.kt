@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Halcyon Glaze
@@ -32,7 +33,7 @@ val HalcyonGlaze = card("Halcyon Glaze") {
         "creature with flying in addition to its other types until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.YouCastCreature
+        trigger = Triggers.you.casts(GameObjectFilter.Creature)
         effect = Effects.BecomeCreature(
             target = EffectTarget.Self,
             power = 4,

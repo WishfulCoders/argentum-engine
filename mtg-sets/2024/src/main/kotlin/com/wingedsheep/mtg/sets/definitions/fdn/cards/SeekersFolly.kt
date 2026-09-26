@@ -11,7 +11,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -30,13 +30,13 @@ val SeekersFolly = card("Seeker's Folly") {
     spell {
         modal(chooseCount = 1) {
             mode("Target opponent discards two cards") {
-                val t = target("target", TargetOpponent())
+                val t = target(Targets.Opponent)
                 effect = Patterns.Hand.discardCards(2, t)
             }
             mode("Creatures your opponents control get -1/-1 until end of turn") {
                 effect = Effects.ForEachInGroup(
                     GroupFilter(GameObjectFilter.Creature.opponentControls()),
-                    Effects.ModifyStats(-1, -1, EffectTarget.Self)
+                    Effects.ModifyStats(-1, -1, EffectTarget.IterationEntity)
                 )
             }
         }

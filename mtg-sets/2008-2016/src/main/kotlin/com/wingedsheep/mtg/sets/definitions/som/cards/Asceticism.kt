@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.som.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Asceticism
@@ -30,8 +30,8 @@ val Asceticism = card("Asceticism") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{G}")
-        val creature = target("target creature", Targets.Creature)
-        effect = RegenerateEffect(creature)
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.Regenerate(creature)
         description = "{1}{G}: Regenerate target creature."
     }
 

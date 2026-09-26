@@ -22,11 +22,8 @@ val VesselOfParamnesia = card("Vessel of Paramnesia") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{U}"), Costs.SacrificeSelf)
-        val t = target("target", Targets.Player)
-        effect = Effects.Composite(
-            Patterns.Library.mill(3, t),
-            Effects.DrawCards(1)
-        )
+        val t = target(Targets.Player)
+        effect = Patterns.Library.mill(3, t) then Effects.DrawCards(1)
     }
 
     metadata {

@@ -12,7 +12,7 @@ val GripOfChaos = card("Grip of Chaos") {
     oracleText = "Whenever a spell or ability is put onto the stack, if it has a single target, reselect its target at random. (Select from among all legal targets.)"
 
     triggeredAbility {
-        trigger = Triggers.AnySpellOrAbilityOnStack
+        trigger = Triggers.anyPlayer.putsSpellOrAbilityOnStack()
         effect = Effects.ReselectTargetRandomly()
     }
 

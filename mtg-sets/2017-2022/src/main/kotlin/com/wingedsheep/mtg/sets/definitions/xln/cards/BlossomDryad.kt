@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.xln.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Blossom Dryad
@@ -24,7 +24,7 @@ val BlossomDryad = card("Blossom Dryad") {
 
     activatedAbility {
         cost = Costs.Tap
-        val land = target("target", Targets.Land)
+        val land = target(TargetFilter.Land)
         effect = Effects.Untap(land)
     }
 

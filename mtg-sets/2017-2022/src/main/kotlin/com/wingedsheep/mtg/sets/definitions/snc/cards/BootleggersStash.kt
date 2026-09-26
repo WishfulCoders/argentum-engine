@@ -26,7 +26,7 @@ val BootleggersStash = card("Bootleggers' Stash") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Tap,
                 effect = Effects.CreateTreasure()
             ),

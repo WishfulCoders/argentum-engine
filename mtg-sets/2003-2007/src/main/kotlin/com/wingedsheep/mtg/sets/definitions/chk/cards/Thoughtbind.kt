@@ -4,11 +4,10 @@
 
 package com.wingedsheep.mtg.sets.definitions.chk.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CounterEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
 
 
 /**
@@ -23,8 +22,8 @@ val Thoughtbind = card("Thoughtbind") {
     typeLine = "Instant"
     oracleText = "Counter target spell with mana value 4 or less."
     spell {
-        val t = target("target", TargetSpell(filter = TargetFilter.SpellOnStack.manaValueAtMost(4)))
-        effect = CounterEffect()
+        val t = target(TargetFilter.SpellOnStack.manaValueAtMost(4))
+        effect = Effects.CounterSpell()
     }
     metadata {
         rarity = Rarity.COMMON

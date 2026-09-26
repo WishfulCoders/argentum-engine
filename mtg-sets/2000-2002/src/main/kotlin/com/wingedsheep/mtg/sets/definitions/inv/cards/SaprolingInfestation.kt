@@ -5,10 +5,9 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern.SpellCastEvent
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.events.SpellCastPredicate
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Saproling Infestation
@@ -28,10 +27,7 @@ val SaprolingInfestation = card("Saproling Infestation") {
     oracleText = "Whenever a player kicks a spell, you create a 1/1 green Saproling creature token."
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            SpellCastEvent(player = Player.Each, requires = setOf(SpellCastPredicate.WasKicked)),
-            TriggerBinding.ANY
-        )
+        trigger = Triggers.anyPlayer.casts(requires = setOf(SpellCastPredicate.WasKicked))
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

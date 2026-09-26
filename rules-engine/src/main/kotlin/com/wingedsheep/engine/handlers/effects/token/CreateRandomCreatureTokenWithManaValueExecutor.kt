@@ -40,9 +40,9 @@ import kotlin.reflect.KClass
  *     controller's battlefield.
  */
 class CreateRandomCreatureTokenWithManaValueExecutor(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator(),
+    private val amountEvaluator: DynamicAmountEvaluator,
     private val staticAbilityHandler: StaticAbilityHandler? = null,
-    private val cardRegistry: CardRegistry,
+    private val cardRegistry: CardRegistry
 ) : EffectExecutor<CreateRandomCreatureTokenWithManaValueEffect> {
 
     override val effectType: KClass<CreateRandomCreatureTokenWithManaValueEffect> =
@@ -77,6 +77,7 @@ class CreateRandomCreatureTokenWithManaValueExecutor(
             controllerId = context.controllerId,
             cardRegistry = cardRegistry,
             staticAbilityHandler = staticAbilityHandler,
+            predicateEvaluator = amountEvaluator.predicates
         )
     }
 }

@@ -1,18 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
@@ -41,31 +40,28 @@ val WhiteWidowFreeAgent = card("White Widow, Free Agent") {
         "• Return target artifact or enchantment card from your graveyard to your hand."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseOne(
             Mode(
-                effect = ForEachTargetEffect(
-                    listOf(
-                        Effects.AddCounters(
-                            Counters.PLUS_ONE_PLUS_ONE,
-                            1,
-                            EffectTarget.ContextTarget(0),
-                        )
+                effect = Effects.ForEachTarget(
+                    Effects.AddCounters(
+                        CounterType.PLUS_ONE_PLUS_ONE,
+                        1,
+                        EffectTarget.ContextTarget(0),
                     )
                 ),
-                targetRequirements = listOf(TargetCreature(count = 2, optional = true)),
+                targetRequirements = listOf(TargetObject(filter = TargetFilter.Creature, count = 2, optional = true)),
                 description = "Put a +1/+1 counter on each of up to two target creatures",
             ),
-            Mode.withTarget(
-                Effects.ReturnToHand(EffectTarget.ContextTarget(0)),
-                TargetObject(
-                    filter = TargetFilter(
+            mode("Return target artifact or enchantment card from your graveyard to your hand") {
+                val artifactOrEnchantment = target(
+                    TargetFilter(
                         baseFilter = GameObjectFilter.ArtifactOrEnchantment.ownedByYou(),
                         zone = Zone.GRAVEYARD,
-                    )
-                ),
-                "Return target artifact or enchantment card from your graveyard to your hand",
-            ),
+                    ),
+                )
+                effect = Effects.ReturnToHand(artifactOrEnchantment)
+            },
         )
         description = "When White Widow enters, choose one — " +
             "• Put a +1/+1 counter on each of up to two target creatures. " +

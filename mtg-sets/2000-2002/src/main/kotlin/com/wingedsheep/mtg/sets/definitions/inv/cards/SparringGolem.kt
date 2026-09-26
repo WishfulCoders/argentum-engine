@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -23,7 +22,7 @@ val SparringGolem = card("Sparring Golem") {
     oracleText = "Whenever this creature becomes blocked, it gets +1/+1 until end of turn for each creature blocking it."
 
     triggeredAbility {
-        trigger = Triggers.becomesBlocked(binding = TriggerBinding.SELF)
+        trigger = Triggers.self.becomesBlocked()
         effect = Effects.ModifyStats(
             DynamicAmounts.numberOfBlockers(),
             DynamicAmounts.numberOfBlockers(),

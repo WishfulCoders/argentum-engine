@@ -3,11 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.drk.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Cave People
@@ -31,13 +31,13 @@ val CavePeople = card("Cave People") {
         "blocked as long as defending player controls a Mountain.)"
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ModifyStats(1, -2, EffectTarget.Self)
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{R}{R}"), Costs.Tap)
-        val creature = target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(Keyword.MOUNTAINWALK, creature)
     }
 

@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.akh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Grasping Dunes
@@ -31,8 +31,8 @@ val GraspingDunes = card("Grasping Dunes") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap, Costs.SacrificeSelf)
-        val creature = target("target", Targets.Creature)
-        effect = Effects.AddCounters(Counters.MINUS_ONE_MINUS_ONE, 1, creature)
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(CounterType.MINUS_ONE_MINUS_ONE, 1, creature)
         timing = TimingRule.SorcerySpeed
     }
 

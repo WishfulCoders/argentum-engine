@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Yavimaya Kavu
@@ -26,17 +26,17 @@ val YavimayaKavu = card("Yavimaya Kavu") {
         "Yavimaya Kavu's toughness is equal to the number of green creatures on the battlefield."
 
     dynamicPower(
-        DynamicAmount.AggregateBattlefield(
-            player = Player.Each,
-            filter = GameObjectFilter.Creature.withColor(Color.RED)
-        )
+        DynamicAmounts.battlefield(
+            Player.Each,
+            GameObjectFilter.Creature.withColor(Color.RED)
+        ).count()
     )
 
     dynamicToughness(
-        DynamicAmount.AggregateBattlefield(
-            player = Player.Each,
-            filter = GameObjectFilter.Creature.withColor(Color.GREEN)
-        )
+        DynamicAmounts.battlefield(
+            Player.Each,
+            GameObjectFilter.Creature.withColor(Color.GREEN)
+        ).count()
     )
 
     metadata {

@@ -5,8 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Join the Dead — {1}{B}{B}
@@ -17,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * permanent cards in your graveyard.
  *
  * The "Descend 4" clause is a resolution-time conditional: [Conditions.CardsInGraveyardMatchingAtLeast]
- * is evaluated when the spell resolves. If true, the -10/-10 branch fires via [ConditionalEffect]
+ * is evaluated when the spell resolves. If true, the -10/-10 branch fires via [Effects.If]
  * (lowers to GatedEffect with Gate.WhenCondition) and the -5/-5 branch is skipped. If false,
  * the -5/-5 branch fires instead. Both branches apply the modifier until end of turn (Layer 7c,
  * per CR 613).
@@ -33,11 +32,11 @@ val JoinTheDead = card("Join the Dead") {
         "Descend 4 — That creature gets -10/-10 until end of turn instead if there are four or more permanent cards in your graveyard."
 
     spell {
-        val t = target("target creature", TargetCreature())
-        effect = ConditionalEffect(
+        val t = target(TargetFilter.Creature)
+        effect = Effects.If(
             condition = Conditions.CardsInGraveyardMatchingAtLeast(4, GameObjectFilter.Permanent),
-            effect = Effects.ModifyStats(-10, -10, t),
-            elseEffect = Effects.ModifyStats(-5, -5, t)
+            then = Effects.ModifyStats(-10, -10, t),
+            otherwise = Effects.ModifyStats(-5, -5, t)
         )
     }
 

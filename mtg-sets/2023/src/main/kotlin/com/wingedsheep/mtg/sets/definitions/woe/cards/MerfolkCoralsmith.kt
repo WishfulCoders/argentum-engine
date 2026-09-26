@@ -33,7 +33,7 @@ val MerfolkCoralsmith = card("Merfolk Coralsmith") {
         effect = Effects.ModifyStats(1, -1, EffectTarget.Self)
     }
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Patterns.Library.scry(2)
     }
     metadata {

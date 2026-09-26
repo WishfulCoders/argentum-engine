@@ -1,14 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Curse of the Werefox
@@ -38,26 +34,25 @@ val CurseOfTheWerefox = card("Curse of the Werefox") {
         "Creatures that fight each deal damage equal to their power to the other.)"
 
     spell {
-        val host = target("target creature you control", Targets.CreatureYouControl)
+        val host = target(TargetFilter.CreatureYouControl)
         effect = Effects.Pipeline(
             descriptionOverride = "Create a Monster Role token attached to target creature you " +
                 "control. When you do, that creature fights up to one target creature you don't control."
         ) {
             val enchanted = gather(CardSource.ChosenTargets, name = "roleHost")
             run(
-                ReflexiveTriggerEffect(
+                Effects.ReflexiveTrigger(
                     action = Effects.CreateRoleToken("Monster Role", host),
                     optional = false,
-                    reflexiveEffect = Effects.Fight(
-                        EffectTarget.PipelineTarget(enchanted.key),
-                        EffectTarget.ContextTarget(0)
-                    ),
-                    reflexiveTargetRequirements = listOf(
-                        TargetCreature(optional = true, filter = TargetFilter.CreatureOpponentControls)
-                    ),
                     descriptionOverride = "When you do, that creature fights up to one target " +
                         "creature you don't control."
-                )
+                ) {
+                    val creatureOpponentControls = target(TargetFilter.CreatureOpponentControls, optional = true)
+                    effect = Effects.Fight(
+                        enchanted.asTarget,
+                        creatureOpponentControls
+                    )
+                }
             )
         }
     }

@@ -23,7 +23,7 @@ val ElderAuntie = card("Elder Auntie") {
     oracleText = "When this creature enters, create a 1/1 black and red Goblin creature token."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

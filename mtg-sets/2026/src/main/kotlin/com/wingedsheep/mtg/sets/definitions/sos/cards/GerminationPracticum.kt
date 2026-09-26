@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Snapshots "each creature you control" with [Effects.ForEachInGroup] over
  * [GroupFilter.AllCreaturesYouControl] and puts two +1/+1 counters on each iterated creature
- * ([EffectTarget.Self] rebinds to the current creature). `paradigm()` exiles the spell on resolve
+ * ([EffectTarget.IterationEntity] names the current creature). `paradigm()` exiles the spell on resolve
  * and synthesizes the recurring free copy.
  */
 val GerminationPracticum = card("Germination Practicum") {
@@ -34,7 +34,7 @@ val GerminationPracticum = card("Germination Practicum") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreaturesYouControl,
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self),
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.IterationEntity),
         )
         paradigm()
     }

@@ -23,7 +23,7 @@ val BoneFlute = card("Bone Flute") {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreatures,
-            Effects.ModifyStats(-1, 0, EffectTarget.Self)
+            Effects.ModifyStats(-1, 0, EffectTarget.IterationEntity)
         )
     }
 

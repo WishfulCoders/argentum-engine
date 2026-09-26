@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Guilty Conscience
@@ -23,12 +22,12 @@ val GuiltyConscience = card("Guilty Conscience") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature\nWhenever enchanted creature deals damage, Guilty Conscience deals that much damage to that creature."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.dealsDamage(binding = TriggerBinding.ATTACHED)
-        effect = DealDamageEffect(
-            amount = DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_DAMAGE_AMOUNT),
+        trigger = Triggers.attached.dealsDamage()
+        effect = Effects.DealDamage(
+            amount = DynamicAmounts.triggerDamageAmount(),
             target = EffectTarget.EnchantedCreature,
             damageSource = EffectTarget.Self
         )

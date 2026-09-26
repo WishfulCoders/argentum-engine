@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.mana.CostCalculator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.support.GameTestDriver
@@ -61,7 +62,7 @@ class LeechColoredTaxTest : FunSpec({
         driver.initMirrorMatch(deck = Deck.of("Mountain" to 20, "Island" to 20), startingLife = 20)
         driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
         driver.putCreatureOnBattlefield(driver.activePlayer!!, "Red Leech")
-        return Fixture(driver, CostCalculator(registry), registry)
+        return Fixture(driver, CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)), registry)
     }
 
     test("red spell you cast costs an extra {R}") {

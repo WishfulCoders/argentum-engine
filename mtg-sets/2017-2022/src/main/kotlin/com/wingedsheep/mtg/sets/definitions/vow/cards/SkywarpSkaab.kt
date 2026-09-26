@@ -7,16 +7,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.SuccessCriterion
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Skywarp Skaab
@@ -28,7 +20,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * When this creature enters, you may exile two creature cards from your graveyard. If you do,
  * draw a card.
  *
- * The ETB is the "exile exactly two" pipeline gated by [IfYouDoEffect] (see Aegis Sculptor):
+ * The ETB is the "exile exactly two" pipeline gated by [Effects.IfYouDo] (see Aegis Sculptor):
  * gather creature cards from your graveyard, choose exactly two, move them to exile, and only
  * draw when both were actually exiled ([SuccessCriterion.CollectionNonEmpty] with `min = 2`).
  * With fewer than two creature cards the player can't complete the exile, so no card is drawn.
@@ -46,31 +38,18 @@ val SkywarpSkaab = card("Skywarp Skaab") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(
-            IfYouDoEffect(
-                action = Effects.Composite(
-                    listOf(
-                        GatherCardsEffect(
-                            source = CardSource.FromZone(
-                                zone = Zone.GRAVEYARD,
-                                filter = GameObjectFilter.Creature
-                            ),
-                            storeAs = "graveyardCreatures"
-                        ),
-                        SelectFromCollectionEffect(
-                            from = "graveyardCreatures",
-                            selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(2)),
-                            storeSelected = "toExile",
-                            selectedLabel = "Exile"
-                        ),
-                        MoveCollectionEffect(
-                            from = "toExile",
-                            destination = CardDestination.ToZone(Zone.EXILE)
-                        )
+        trigger = Triggers.self.enters()
+        effect = Effects.May(
+            Effects.IfYouDo(
+                action = Effects.Pipeline {
+                    val graveyardCreatures = gather(
+                        CardSource.FromZone(zone = Zone.GRAVEYARD, filter = GameObjectFilter.Creature)
                     )
-                ),
-                ifYouDo = Effects.DrawCards(1),
+                    // Named: the "if you do" check below reads it from outside the pipeline.
+                    val toExile = chooseExactly(2, from = graveyardCreatures, selectedLabel = "Exile", name = "toExile")
+                    exile(toExile)
+                },
+                then = Effects.DrawCards(1),
                 successCriterion = SuccessCriterion.CollectionNonEmpty("toExile", min = 2)
             )
         )

@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Commune with Beavers
@@ -27,7 +26,7 @@ val CommuneWithBeavers = card("Commune with Beavers") {
 
     spell {
         effect = Patterns.Library.lookAtTopRevealMatchingToHand(
-            count = DynamicAmount.Fixed(3),
+            count = 3,
             filter = GameObjectFilter.Artifact or GameObjectFilter.Creature or GameObjectFilter.Land,
             prompt = "You may reveal an artifact, creature, or land card and put it into your hand",
             restDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),

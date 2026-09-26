@@ -2,17 +2,15 @@ package com.wingedsheep.mtg.sets.definitions.lgn.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedTriggeredAbility
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
-import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Hunter Sliver
@@ -43,12 +41,11 @@ val HunterSliver = card("Hunter Sliver") {
     // Grant the provoke triggered ability to all Slivers (functional)
     staticAbility {
         ability = GrantTriggeredAbility(
-            ability = TriggeredAbility.create(
-                trigger = Triggers.Attacks.event,
-                binding = Triggers.Attacks.binding,
-                effect = MayEffect(Effects.Provoke(EffectTarget.ContextTarget(0))),
-                targetRequirement = Targets.CreatureOpponentControls
-            ),
+            ability = grantedTriggeredAbility {
+                trigger = Triggers.self.attacks()
+                val creatureOpponentControls = target(TargetFilter.CreatureOpponentControls)
+                effect = Effects.May(Effects.Provoke(creatureOpponentControls))
+            },
             filter = sliverFilter
         )
     }

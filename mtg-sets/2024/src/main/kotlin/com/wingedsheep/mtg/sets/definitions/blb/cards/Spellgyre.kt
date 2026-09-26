@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Spellgyre
@@ -27,11 +28,11 @@ val Spellgyre = card("Spellgyre") {
         effect = ModalEffect.chooseOne(
             Mode.withTarget(
                 Effects.CounterSpell(),
-                Targets.Spell,
+                TargetObject(filter = TargetFilter.SpellOnStack),
                 "Counter target spell"
             ),
             Mode.noTarget(
-                Patterns.Library.surveil(2).then(Effects.DrawCards(2)),
+                Patterns.Library.surveil(2) then Effects.DrawCards(2),
                 "Surveil 2, then draw two cards"
             )
         )

@@ -29,7 +29,7 @@ val SizzlingChangeling = card("Sizzling Changeling") {
     keywords(Keyword.CHANGELING)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Patterns.Exile.impulse(count = 1, expiry = MayPlayExpiry.UntilEndOfNextTurn)
     }
 

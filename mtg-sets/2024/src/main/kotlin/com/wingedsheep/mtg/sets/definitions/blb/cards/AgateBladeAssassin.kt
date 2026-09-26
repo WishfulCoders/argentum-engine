@@ -4,8 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -26,13 +24,9 @@ val AgateBladeAssassin = card("Agate-Blade Assassin") {
     oracleText = "Whenever this creature attacks, defending player loses 1 life and you gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(
-            listOf(
-                LoseLifeEffect(1, EffectTarget.PlayerRef(Player.DefendingPlayer)),
-                GainLifeEffect(1, EffectTarget.Controller)
-            )
-        )
+        trigger = Triggers.self.attacks()
+        effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.DefendingPlayer)) then
+            Effects.GainLife(1, EffectTarget.Controller)
     }
 
     metadata {

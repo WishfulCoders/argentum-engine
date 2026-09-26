@@ -6,7 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * High-Speed Hoverbike — Kamigawa: Neon Dynasty #247 (canonical printing)
@@ -35,8 +35,8 @@ val HighSpeedHoverbike = card("High-Speed Hoverbike") {
     keywordAbility(KeywordAbility.crew(1))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("creature to tap", TargetCreature(optional = true))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature, optional = true)
         effect = Effects.Tap(t)
         description = "When this Vehicle enters, tap up to one target creature."
     }

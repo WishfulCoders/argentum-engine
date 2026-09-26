@@ -44,7 +44,7 @@ val SquirrelWrangler = card("Squirrel Wrangler") {
         cost = Costs.Composite(Costs.Mana("{1}{G}"), Costs.Sacrifice(GameObjectFilter.Land))
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withSubtype(Subtype.SQUIRREL)),
-            Effects.ModifyStats(1, 1, EffectTarget.Self)
+            Effects.ModifyStats(1, 1, EffectTarget.IterationEntity)
         )
     }
     metadata {

@@ -6,8 +6,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Culling Scales
@@ -26,11 +25,9 @@ val CullingScales = card("Culling Scales") {
     val abilityText = oracleText
     val nonlandPermanents = GameObjectFilter.NonlandPermanent
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        target = TargetObject(
-            filter = TargetFilter(nonlandPermanents.hasLeastManaValueAmong(nonlandPermanents))
-        )
-        effect = Effects.Destroy(EffectTarget.ContextTarget(0))
+        val target = target(TargetFilter(nonlandPermanents.hasLeastManaValueAmong(nonlandPermanents)))
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.Destroy(target)
         description = abilityText
     }
 

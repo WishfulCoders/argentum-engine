@@ -15,11 +15,11 @@ package com.wingedsheep.tooling.coverage.bridge
  */
 fun BridgeBuilder.energy() {
     // `_Action: GetEnergy` — "You get {E}...". No distinct leaf: Effects.GetEnergy is DSL sugar over
-    // the existing AddCounters (Counters.ENERGY, count, target), the same way poison-to-a-player
+    // the existing AddCounters (CounterType.ENERGY, count, target), the same way poison-to-a-player
     // already works (AddCountersExecutor's PlayerRef branch, Virulent Silencer).
     composed(
         "GetEnergy",
-        "\"You get N energy counters\" (CR 107.14) -> Effects.GetEnergy(amount) = AddCounters(Counters.ENERGY, amount, Controller)",
+        "\"You get N energy counters\" (CR 107.14) -> Effects.GetEnergy(amount) = AddCounters(CounterType.ENERGY, amount, Controller)",
         composes = listOf("AddCounters")
     )
     // `_Action: PayAnyAmountOfEnergy` — "you may pay any amount of {E}". A genuine new leaf effect
@@ -29,7 +29,7 @@ fun BridgeBuilder.energy() {
     effect(
         "PayAnyAmountOfEnergy",
         "PayCounters",
-        "player pays any amount of energy they have (CR 107.14) -> Effects.PayCounters(Counters.ENERGY, storeAmountAs = \"...\")"
+        "player pays any amount of energy they have (CR 107.14) -> Effects.PayCounters(CounterType.ENERGY, storeAmountAs = \"...\")"
     )
     // `_GameNumber: TheAmountOfEnergyPaidThisWay` — the amount just paid via PayAnyAmountOfEnergy,
     // read by a later action (Galvanic Discharge's SpellDealsDamage). Argentum expresses this as
@@ -55,6 +55,6 @@ fun BridgeBuilder.energy() {
     effect(
         "PayEnergy",
         "PayFixedCounters",
-        "player pays an exact amount of energy they have (CR 107.14) -> Effects.PayFixedCounters(Counters.ENERGY, amount)"
+        "player pays an exact amount of energy they have (CR 107.14) -> Effects.PayFixedCounters(CounterType.ENERGY, amount)"
     )
 }

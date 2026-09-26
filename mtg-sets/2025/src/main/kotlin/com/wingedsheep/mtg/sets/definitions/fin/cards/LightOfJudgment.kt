@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Light of Judgment
@@ -34,9 +34,8 @@ val LightOfJudgment = card("Light of Judgment") {
         "Equipment attached to that creature."
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.DealDamage(6, creature),
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.DealDamage(6, creature) then
             Effects.Pipeline {
                 val onCreature = gather(
                     CardSource.AttachedTo(
@@ -51,8 +50,7 @@ val LightOfJudgment = card("Light of Judgment") {
                     prompt = "Destroy up to one Equipment attached to that creature",
                 )
                 destroy(chosen)
-            },
-        )
+            }
     }
 
     metadata {

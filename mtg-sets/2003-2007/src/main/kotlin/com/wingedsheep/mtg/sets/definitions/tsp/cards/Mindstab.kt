@@ -25,7 +25,7 @@ val Mindstab = card("Mindstab") {
         "Suspend 4—{B} (Rather than cast this card from your hand, you may pay {B} and exile it with four time counters on it. At the beginning of your upkeep, remove a time counter. When the last is removed, you may cast it without paying its mana cost.)"
 
     spell {
-        val t = target("target", Targets.Player)
+        val t = target(Targets.Player)
         effect = Effects.Discard(3, t)
     }
 

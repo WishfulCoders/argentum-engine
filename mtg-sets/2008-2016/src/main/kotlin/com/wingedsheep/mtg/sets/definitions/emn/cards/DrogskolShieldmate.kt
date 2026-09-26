@@ -31,10 +31,10 @@ val DrogskolShieldmate = card("Drogskol Shieldmate") {
     toughness = 3
     keywords(Keyword.FLASH)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl(), excludeSelf = true),
-            Effects.ModifyStats(0, 1, EffectTarget.Self)
+            Effects.ModifyStats(0, 1, EffectTarget.IterationEntity)
         )
     }
     metadata {

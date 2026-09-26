@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -24,12 +23,10 @@ val SmaugsFury = card("Smaug's Fury") {
     typeLine = "Instant"
     oracleText = "Target creature gets +3/+0 and gains reach and first strike until end of turn."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.ModifyStats(3, 0, t),
-            Effects.GrantKeyword(Keyword.REACH, t),
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(3, 0, t) then
+            Effects.GrantKeyword(Keyword.REACH, t) then
             Effects.GrantKeyword(Keyword.FIRST_STRIKE, t)
-        )
     }
     metadata {
         rarity = Rarity.COMMON

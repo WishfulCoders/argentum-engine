@@ -23,7 +23,7 @@ val RootwaterHunter = card("Rootwater Hunter") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
         description = "{T}: This creature deals 1 damage to any target."
     }

@@ -4,13 +4,13 @@
 
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.effects.ForceSacrificeEffect
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -27,9 +27,9 @@ val CrudeBentBlade = card("Crude Bent Blade") {
     typeLine = "Artifact — Equipment"
     oracleText = "When this Equipment enters, target opponent sacrifices a creature of their choice.\nEquipped creature gets +2/+1.\nEquip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)"
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetOpponent())
-        effect = ForceSacrificeEffect(GameObjectFilter.Creature, 1, t)
+        trigger = Triggers.self.enters()
+        val t = target(Targets.Opponent)
+        effect = Effects.Sacrifice(GameObjectFilter.Creature, 1, t)
     }
     staticAbility {
         ability = ModifyStats(2, 1)

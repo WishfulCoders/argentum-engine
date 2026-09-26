@@ -6,9 +6,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Rocket Launcher
@@ -36,14 +35,12 @@ val RocketLauncher = card("Rocket Launcher") {
 
     activatedAbility {
         cost = Costs.Mana("{2}")
-        val t = target("any target", AnyTarget())
-        effect = Effects.Composite(
-            Effects.DealDamage(1, t),
-            CreateDelayedTriggerEffect(
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(1, t) then
+            Effects.CreateDelayedTrigger(
                 step = Step.END,
                 effect = Effects.Destroy(EffectTarget.Self)
             )
-        )
         restrictions = listOf(ActivationRestriction.ControlledSinceYourMostRecentTurn)
         description = "{2}: Rocket Launcher deals 1 damage to any target. Destroy it at the beginning " +
             "of the next end step. Activate only if you've controlled it continuously since your most recent turn began."

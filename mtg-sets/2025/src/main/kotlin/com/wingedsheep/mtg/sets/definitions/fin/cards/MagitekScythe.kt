@@ -6,10 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.MustBeBlockedEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Magitek Scythe
@@ -23,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  *
  * The ETB is "you may attach … if you do, …": the target creature you control is chosen when the
  * trigger goes on the stack (CR 603.3d), then on resolution the controller may decline. Accepting
- * runs the whole [MayEffect] body — attach, grant first strike until end of turn, and force the
+ * runs the whole [Effects.May] body — attach, grant first strike until end of turn, and force the
  * creature to be blocked this turn. "Must be blocked … if able" is the at-least-one-blocker form
  * ([MustBeBlockedEffect] with `allCreatures = false`), not the Lure-style every-blocker form.
  */
@@ -37,14 +34,12 @@ val MagitekScythe = card("Magitek Scythe") {
         "Equip {2}"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.youControl()))
-        effect = MayEffect(
-            Effects.Composite(
-                Effects.AttachEquipment(t),
-                Effects.GrantKeyword(Keyword.FIRST_STRIKE, t),
-                MustBeBlockedEffect(t, allCreatures = false)
-            )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature.youControl())
+        effect = Effects.May(
+            Effects.AttachEquipment(t) then
+                Effects.GrantKeyword(Keyword.FIRST_STRIKE, t) then
+                Effects.MustBeBlocked(t, allCreatures = false)
         )
     }
 

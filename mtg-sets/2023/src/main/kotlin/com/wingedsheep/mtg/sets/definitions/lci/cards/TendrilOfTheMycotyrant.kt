@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Tendril of the Mycotyrant
@@ -41,11 +40,8 @@ val TendrilOfTheMycotyrant = card("Tendril of the Mycotyrant") {
 
     activatedAbility {
         cost = Costs.Mana("{5}{G}{G}")
-        val land = target(
-            "target noncreature land you control",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Land.notCreature().youControl()))
-        )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 7, land) then
+        val land = target(TargetFilter(GameObjectFilter.Land.notCreature().youControl()))
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 7, land) then
             Effects.BecomeCreature(
                 target = land,
                 power = 0,

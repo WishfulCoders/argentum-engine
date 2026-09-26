@@ -10,10 +10,8 @@ import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.AddManaEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Fire Nation Palace — Land — Rare
@@ -45,17 +43,14 @@ val FireNationPalace = card("Fire Nation Palace") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = AddManaEffect(Color.RED)
+        effect = Effects.AddMana(Color.RED)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{R}"), Costs.Tap)
-        val creature = target(
-            "target creature you control",
-            TargetObject(filter = TargetFilter.CreatureYouControl)
-        )
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.GrantFirebending(4, creature)
     }
 

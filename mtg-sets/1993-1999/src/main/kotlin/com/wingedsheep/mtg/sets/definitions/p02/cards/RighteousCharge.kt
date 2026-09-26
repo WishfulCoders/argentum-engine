@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Creatures you control get +2/+2 until end of turn.
  *
  * The untargeted mass pump: [Effects.ForEachInGroup] over the creatures you control, with the stat
- * change aimed at [EffectTarget.Self] — the current iteration entity — the same shape Rally the
+ * change aimed at [EffectTarget.IterationEntity] — the current iteration entity — the same shape Rally the
  * Troops uses for its mass untap.
  */
 val RighteousCharge = card("Righteous Charge") {
@@ -26,7 +26,7 @@ val RighteousCharge = card("Righteous Charge") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(2, 2, EffectTarget.Self)
+            Effects.ModifyStats(2, 2, EffectTarget.IterationEntity)
         )
     }
 

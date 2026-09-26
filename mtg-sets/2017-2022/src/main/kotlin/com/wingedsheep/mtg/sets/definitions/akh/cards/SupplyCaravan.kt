@@ -29,7 +29,7 @@ val SupplyCaravan = card("Supply Caravan") {
     toughness = 5
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouControl(GameObjectFilter.Creature.tapped())
         effect = Effects.CreateToken(
             power = 1,

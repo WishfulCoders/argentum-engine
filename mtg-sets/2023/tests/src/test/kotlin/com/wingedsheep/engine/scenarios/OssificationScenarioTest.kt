@@ -8,12 +8,12 @@ import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 class OssificationScenarioTest : ScenarioTestBase() {
     init {
@@ -28,14 +28,14 @@ class OssificationScenarioTest : ScenarioTestBase() {
         cardRegistry.register(card("Test Removal") {
             manaCost = "{0}"
             typeLine = "Instant"
-            spell { effect = Effects.Destroy(target("permanent", TargetPermanent())) }
+            spell { effect = Effects.Destroy(target(TargetFilter.Permanent)) }
         })
         cardRegistry.register(card("Test Sequential Sweep") {
             manaCost = "{0}"
             typeLine = "Instant"
             spell {
-                effect = Effects.DestroyAll(GameObjectFilter.Enchantment)
-                    .then(Effects.DestroyAll(GameObjectFilter.Creature))
+                effect = Effects.DestroyAll(GameObjectFilter.Enchantment) then
+                    Effects.DestroyAll(GameObjectFilter.Creature)
             }
         })
 
@@ -118,7 +118,7 @@ class OssificationScenarioTest : ScenarioTestBase() {
             val steal = card("Test Steal Land") {
                 manaCost = "{0}"
                 typeLine = "Instant"
-                spell { effect = Effects.GainControl(target("land", TargetPermanent())) }
+                spell { effect = Effects.GainControl(target(TargetFilter.Permanent)) }
             }
             cardRegistry.register(steal)
             val game = board().withCardInHand(2, "Test Steal Land").build()

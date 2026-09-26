@@ -1,8 +1,8 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Counters
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -10,10 +10,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Explorer's Cache — The Lost Caverns of Ixalan #184
@@ -27,10 +25,10 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *
  * Ability 1 — [EntersWithCounters] replacement effect (count = 2, selfOnly = true) applies the
  *   two +1/+1 counters as the Cache enters the battlefield; no counterType parameter needed since
- *   the default is PlusOnePlusOne.
+ *   the default is +1/+1.
  *
- * Ability 2 — The dies trigger uses [Triggers.leavesBattlefield] with a
- *   `GameObjectFilter.Creature.youControl().withCounter(Counters.PLUS_ONE_PLUS_ONE)` filter
+ * Ability 2 — The dies trigger uses `Triggers.<subject>.leaves(to, excludeTo, excludeSacrifice)` with a
+ *   `GameObjectFilter.Creature.youControl().withCounter(CounterType.PLUS_ONE_PLUS_ONE)` filter
  *   (ANY binding, to = GRAVEYARD). The engine evaluates `withCounter` against last-known-information
  *   for zone-change triggers (TriggerMatcher.matchesStatePredicateForZoneChangeTrigger, CR 603.10),
  *   so the +1/+1 counter check correctly reads the dying creature's captured counters rather than
@@ -54,25 +52,21 @@ val ExplorersCache = card("Explorer's Cache") {
     // Whenever a creature you control with a +1/+1 counter on it dies,
     // put a +1/+1 counter on this artifact.
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.youControl().withCounter(Counters.PLUS_ONE_PLUS_ONE),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY
-        )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl().withCounter(CounterType.PLUS_ONE_PLUS_ONE)).dies()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Whenever a creature you control with a +1/+1 counter on it dies, " +
             "put a +1/+1 counter on this artifact."
     }
 
     // {T}: Move a +1/+1 counter from this artifact onto target creature. Activate only as a sorcery.
     activatedAbility {
+        val creature = target(TargetFilter.Creature)
         cost = Costs.Tap
-        target = TargetCreature()
         effect = Effects.MoveCounters(
-            counterType = Counters.PLUS_ONE_PLUS_ONE,
-            amount = DynamicAmount.Fixed(1),
+            counterType = CounterType.PLUS_ONE_PLUS_ONE,
+            amount = DynamicAmounts.fixed(1),
             source = EffectTarget.Self,
-            destination = EffectTarget.ContextTarget(0)
+            destination = creature
         )
         timing = TimingRule.SorcerySpeed
     }

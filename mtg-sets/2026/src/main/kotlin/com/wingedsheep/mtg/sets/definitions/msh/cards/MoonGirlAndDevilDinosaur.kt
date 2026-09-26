@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -20,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *   base power and toughness become 6/6 and they gain trample.
  * Whenever an artifact you control enters, draw a card. This ability triggers only once each turn.
  *
- *  - **"Whenever you draw your second card each turn"** is [Triggers.NthCardDrawn]`(2)` — the
+ *  - **"Whenever you draw your second card each turn"** is `Triggers.<player>.drawsNth(n)``(2)` — the
  *    controller-scoped default. The per-turn draw count lives on `CardsDrawnThisTurnComponent`
  *    and is reset each turn, so the ability fires at most once a turn even though it carries no
  *    `oncePerTurn` flag; a single multi-card draw that crosses the threshold fires it once
@@ -51,25 +50,20 @@ val MoonGirlAndDevilDinosaur = card("Moon Girl and Devil Dinosaur") {
     // Whenever you draw your second card each turn, until end of turn, Moon Girl and Devil
     // Dinosaur's base power and toughness become 6/6 and they gain trample.
     triggeredAbility {
-        trigger = Triggers.NthCardDrawn(2)
+        trigger = Triggers.you.drawsNth(2)
         effect = Effects.SetBasePowerAndToughness(
             power = 6,
             toughness = 6,
             target = EffectTarget.Self,
             duration = Duration.EndOfTurn,
-        ).then(
-            Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self, Duration.EndOfTurn)
-        )
+        ) then Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self, Duration.EndOfTurn)
         description = "Whenever you draw your second card each turn, until end of turn, Moon Girl " +
             "and Devil Dinosaur's base power and toughness become 6/6 and they gain trample."
     }
 
     // Whenever an artifact you control enters, draw a card. This ability triggers only once each turn.
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Artifact.youControl()).enters()
         oncePerTurn = true
         effect = Effects.DrawCards(1)
         description = "Whenever an artifact you control enters, draw a card. This ability " +

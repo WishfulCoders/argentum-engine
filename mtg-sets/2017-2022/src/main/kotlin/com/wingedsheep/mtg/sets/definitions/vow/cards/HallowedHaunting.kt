@@ -68,7 +68,7 @@ val HallowedHaunting = card("Hallowed Haunting") {
 
     // Whenever you cast an enchantment spell, create a white Spirit Cleric creature token …
     triggeredAbility {
-        trigger = Triggers.YouCastEnchantment
+        trigger = Triggers.you.casts(GameObjectFilter.Enchantment)
         effect = Effects.CreateToken(
             power = 0,
             toughness = 0,

@@ -7,10 +7,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Mardu Siegebreaker — Tarkir: Dragonstorm #206
@@ -51,33 +48,30 @@ val MarduSiegebreaker = card("Mardu Siegebreaker") {
 
     // ETB: exile up to one other target creature you control until this leaves the battlefield.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target(
-            "up to one other target creature you control",
-            TargetCreature(count = 1, optional = true, filter = TargetFilter.OtherCreatureYouControl)
-        )
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.OtherCreatureYouControl, optional = true)
         effect = Effects.ExileUntilLeaves(creature)
     }
 
     // LTB: return the exiled card to its owner's control.
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 
     // Attacks: create a tapped, attacking token copy of the exiled card; sacrifice it at your next end step.
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(listOf(
-            GatherCardsEffect(source = CardSource.FromLinkedExile(), storeAs = "exiledCard"),
-            Effects.CreateTokenCopyOfTarget(
-                target = EffectTarget.PipelineTarget("exiledCard"),
+        trigger = Triggers.self.attacks()
+        effect = Effects.Pipeline {
+            val exiledCard = gather(CardSource.FromLinkedExile())
+            run(Effects.CreateTokenCopyOfTarget(
+                target = exiledCard.asTarget,
                 tapped = true,
                 attacking = true,
                 sacrificeAtStep = Step.END,
                 sacrificeOnlyOnControllersTurn = true
-            )
-        ))
+            ))
+        }
     }
 
     metadata {

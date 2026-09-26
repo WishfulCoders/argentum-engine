@@ -74,26 +74,24 @@ val RestlessSpire = card("Restless Spire") {
         // shape into the action-menu button. Say what the card says instead.
         description = "Until end of turn, this land becomes a 2/1 blue and red Elemental creature " +
             "with \"During your turn, this creature has first strike.\" It's still a land."
-        effect = Effects.Composite(
-            Effects.BecomeCreature(
-                target = EffectTarget.Self,
-                power = 2,
-                toughness = 1,
-                creatureTypes = setOf("Elemental"),
-                colors = setOf(Color.BLUE.name, Color.RED.name),
-                duration = Duration.EndOfTurn,
-            ),
+        effect = Effects.BecomeCreature(
+            target = EffectTarget.Self,
+            power = 2,
+            toughness = 1,
+            creatureTypes = setOf("Elemental"),
+            colors = setOf(Color.BLUE.name, Color.RED.name),
+            duration = Duration.EndOfTurn,
+        ) then
             Effects.GrantKeyword(
                 keyword = Keyword.FIRST_STRIKE,
                 target = EffectTarget.Self,
                 duration = Duration.EndOfTurn,
                 condition = Conditions.IsYourTurn,
-            ),
-        )
+            )
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Library.scry(1)
         description = "Whenever this land attacks, scry 1."
     }

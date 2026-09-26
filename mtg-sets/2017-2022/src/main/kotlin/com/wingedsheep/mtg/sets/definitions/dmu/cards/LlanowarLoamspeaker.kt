@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Llanowar Loamspeaker
@@ -39,7 +38,7 @@ val LlanowarLoamspeaker = card("Llanowar Loamspeaker") {
     activatedAbility {
         cost = Costs.Tap
         timing = TimingRule.SorcerySpeed
-        val land = target("land", TargetPermanent(filter = TargetFilter(GameObjectFilter.Land.youControl())))
+        val land = target(TargetFilter(GameObjectFilter.Land.youControl()))
         effect = Effects.BecomeCreature(
             target = land,
             power = 3,

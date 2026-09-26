@@ -22,7 +22,7 @@ val StarfighterPilot = card("Starfighter Pilot") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
+        trigger = Triggers.self.becomesTapped()
         effect = com.wingedsheep.sdk.dsl.Patterns.Library.surveil(1)
     }
 

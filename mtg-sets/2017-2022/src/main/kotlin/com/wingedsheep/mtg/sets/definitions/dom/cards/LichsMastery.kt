@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantCantLoseGame
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Lich's Mastery {3}{B}{B}{B}
@@ -40,20 +39,20 @@ val LichsMastery = card("Lich's Mastery") {
 
     // Whenever you gain life, draw that many cards
     triggeredAbility {
-        trigger = Triggers.YouGainLife
-        effect = Effects.DrawCards(DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_LIFE_GAINED))
+        trigger = Triggers.you.gainsLife()
+        effect = Effects.DrawCards(DynamicAmounts.triggerLifeGained())
     }
 
     // Whenever you lose life, for each 1 life you lost, exile a permanent you control
     // or a card from your hand or graveyard
     triggeredAbility {
-        trigger = Triggers.YouLoseLife
-        effect = Effects.ForceExileMultiZone(DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_LIFE_LOST))
+        trigger = Triggers.you.losesLife()
+        effect = Effects.ForceExileMultiZone(DynamicAmounts.triggerLifeLost())
     }
 
     // When Lich's Mastery leaves the battlefield, you lose the game
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.LoseGame()
     }
 

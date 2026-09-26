@@ -47,7 +47,7 @@ val EnduringVitality = card("Enduring Vitality") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Tap,
                 effect = Effects.AddAnyColorMana(1),
                 isManaAbility = true,

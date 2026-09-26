@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -33,10 +32,7 @@ val Quicksand = card("Quicksand") {
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.SacrificeSelf)
-        val t = target(
-            "target",
-            TargetCreature(filter = TargetFilter.Creature.withoutKeyword(Keyword.FLYING).attacking())
-        )
+        val t = target(TargetFilter.Creature.withoutKeyword(Keyword.FLYING).attacking())
         effect = Effects.ModifyStats(-1, -2, t)
     }
     metadata {

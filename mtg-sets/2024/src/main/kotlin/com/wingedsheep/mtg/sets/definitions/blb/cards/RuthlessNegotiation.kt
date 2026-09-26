@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Ruthless Negotiation
@@ -27,12 +25,12 @@ val RuthlessNegotiation = card("Ruthless Negotiation") {
     oracleText = "Target opponent exiles a card from their hand. If this spell was cast from a graveyard, draw a card.\nFlashback {4}{B} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
 
     spell {
-        val opponent = target("opponent", Targets.Opponent)
-        effect = Patterns.Hand.exileFromHand(1, opponent)
-            .then(ConditionalEffect(
+        val opponent = target(Targets.Opponent)
+        effect = Patterns.Hand.exileFromHand(1, opponent) then
+            Effects.If(
                 condition = Conditions.WasCastFromZone(Zone.GRAVEYARD),
-                effect = Effects.DrawCards(1)
-            ))
+                then = Effects.DrawCards(1)
+            )
     }
 
     keywordAbility(KeywordAbility.flashback("{4}{B}"))

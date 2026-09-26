@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -26,7 +25,7 @@ val AncientGrudge = card("Ancient Grudge") {
     typeLine = "Instant"
     oracleText = "Destroy target artifact.\nFlashback {G} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter.Artifact))
+        val t = target(TargetFilter.Artifact)
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     keywordAbility(KeywordAbility.flashback("{G}"))

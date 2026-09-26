@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.ons.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Quicksilver Dragon
@@ -27,8 +27,8 @@ val QuicksilverDragon = card("Quicksilver Dragon") {
     keywords(Keyword.FLYING)
 
     activatedAbility {
+        val spell = target(TargetFilter.SpellOnStack)
         cost = Costs.Mana("{U}")
-        target = Targets.Spell
         effect = Effects.ChangeSpellTarget(targetMustBeSource = true)
     }
 

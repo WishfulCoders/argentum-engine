@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.drk.cards
 
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * People of the Woods
@@ -26,7 +26,7 @@ val PeopleOfTheWoods = card("People of the Woods") {
     oracleText = "People of the Woods's toughness is equal to the number of Forests you control."
 
     dynamicToughness(
-        DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land.withSubtype(Subtype.FOREST))
+        DynamicAmounts.battlefield(Player.You, GameObjectFilter.Land.withSubtype(Subtype.FOREST)).count()
     )
 
     metadata {

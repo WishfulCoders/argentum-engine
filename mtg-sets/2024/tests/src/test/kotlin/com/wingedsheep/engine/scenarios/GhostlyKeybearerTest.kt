@@ -41,7 +41,7 @@ class GhostlyKeybearerTest : FunSpec({
             typeLine = "Enchantment — Room"
             oracleText = "At the beginning of your end step, draw a card."
             triggeredAbility {
-                trigger = Triggers.YourEndStep
+                trigger = Triggers.you.beginningOf(Step.END)
                 effect = Effects.DrawCards(1)
             }
         }
@@ -50,7 +50,7 @@ class GhostlyKeybearerTest : FunSpec({
             typeLine = "Enchantment — Room"
             oracleText = "When you unlock this door, draw a card."
             triggeredAbility {
-                trigger = Triggers.OnDoorUnlocked
+                trigger = Triggers.self.doorUnlocked()
                 effect = Effects.DrawCards(1)
             }
         }

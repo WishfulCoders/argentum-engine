@@ -1,14 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.minus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Slumbering Trudge — Secrets of Strixhaven #160
@@ -22,9 +22,8 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * entity onto the battlefield so the enters-with replacement and the enters-tapped replacement
  * see the same value:
  *  - [EntersWithDynamicCounters] adds `3 - X` stun counters (clamped to 0 at or above X = 3 by
- *    the replacement executor's non-negative count), using [CounterTypeFilter.Named] with the
- *    [Counters.STUN] kind so the engine's stun-counter untap replacement (CR 122.1c) keeps it
- *    tapped.
+ *    the replacement executor's non-negative count), so the engine's stun-counter untap
+ *    replacement (CR 122.1c) keeps it tapped.
  *  - [EntersTapped] taps it on entry *unless* X is 3 or more (the inverse of "X is 2 or less").
  */
 val SlumberingTrudge = card("Slumbering Trudge") {
@@ -39,16 +38,16 @@ val SlumberingTrudge = card("Slumbering Trudge") {
 
     replacementEffect(
         EntersWithDynamicCounters(
-            counterType = CounterTypeFilter.Named(Counters.STUN),
-            count = DynamicAmount.Subtract(DynamicAmount.Fixed(3), DynamicAmount.CastX),
+            counterType = CounterType.STUN,
+            count = 3 - DynamicAmounts.castX(),
         )
     )
     replacementEffect(
         EntersTapped(
             unlessCondition = Conditions.CompareAmounts(
-                DynamicAmount.CastX,
+                DynamicAmounts.castX(),
                 ComparisonOperator.GTE,
-                DynamicAmount.Fixed(3),
+                3,
             )
         )
     )

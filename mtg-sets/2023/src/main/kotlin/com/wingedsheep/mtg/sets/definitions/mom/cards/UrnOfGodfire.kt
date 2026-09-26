@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.mom.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Urn of Godfire
@@ -28,7 +28,7 @@ val UrnOfGodfire = card("Urn of Godfire") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{6}"), Costs.Tap, Costs.SacrificeSelf)
-        val victim = target("target creature or enchantment", Targets.CreatureOrEnchantment)
+        val victim = target(TargetFilter.CreatureOrEnchantment)
         effect = Effects.Destroy(victim)
     }
 

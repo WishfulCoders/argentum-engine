@@ -14,12 +14,6 @@ import com.wingedsheep.sdk.scripting.conditions.IsYourTurn
 import com.wingedsheep.sdk.scripting.conditions.YouControlSource
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Hama, the Bloodbender
@@ -58,43 +52,35 @@ val HamaTheBloodbender: CardDefinition = card("Hama, the Bloodbender") {
         "creatures to help. Each one pays for {1}.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val opponent = target("target opponent", Targets.Opponent)
-        effect = Effects.Composite(
-            listOf(
-                // target opponent mills three cards
-                Patterns.Library.mill(3, opponent),
-                // Exile up to one noncreature, nonland card from that player's graveyard.
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        zone = Zone.GRAVEYARD,
-                        player = Player.ContextPlayer(0),
-                        filter = GameObjectFilter.Noncreature and GameObjectFilter.Nonland,
-                    ),
-                    storeAs = "hamaGraveyard",
-                ),
-                SelectFromCollectionEffect(
-                    from = "hamaGraveyard",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    storeSelected = "hamaChosen",
-                    prompt = "Exile up to one noncreature, nonland card from that player's graveyard",
-                ),
-                MoveCollectionEffect(
-                    from = "hamaChosen",
-                    // The exiled card is owned by the target opponent — keep it in that player's
-                    // exile (a graveyard→exile move doesn't collapse to owner automatically the way a
-                    // battlefield→exile move does).
-                    destination = CardDestination.ToZone(Zone.EXILE, Player.ContextPlayer(0)),
-                    storeMovedAs = "hamaExiled",
-                ),
-                // For as long as you control Hama, you may cast the exiled card during your turn by
-                // waterbending {its mana value} rather than paying its mana cost.
-                Effects.WaterbendCastFromExile(
-                    from = "hamaExiled",
-                    condition = AllConditions(listOf(IsYourTurn, YouControlSource)),
-                ),
+        trigger = Triggers.self.enters()
+        val opponent = target(Targets.Opponent)
+        effect = Effects.Pipeline {
+            // target opponent mills three cards
+            run(Patterns.Library.mill(3, opponent))
+            // Exile up to one noncreature, nonland card from that player's graveyard.
+            val hamaGraveyard = gather(
+                CardSource.FromZone(
+                    zone = Zone.GRAVEYARD,
+                    player = opponent.asPlayer,
+                    filter = GameObjectFilter.Noncreature and GameObjectFilter.Nonland,
+                )
             )
-        )
+            val hamaChosen = chooseUpTo(
+                1,
+                from = hamaGraveyard,
+                prompt = "Exile up to one noncreature, nonland card from that player's graveyard"
+            )
+            // The exiled card is owned by the target opponent — keep it in that player's
+            // exile (a graveyard→exile move doesn't collapse to owner automatically the way a
+            // battlefield→exile move does).
+            val hamaExiled = moveTracked(hamaChosen, CardDestination.ToZone(Zone.EXILE, opponent.asPlayer))
+            // For as long as you control Hama, you may cast the exiled card during your turn by
+            // waterbending {its mana value} rather than paying its mana cost.
+            run(Effects.WaterbendCastFromExile(
+                from = hamaExiled,
+                condition = AllConditions(listOf(IsYourTurn, YouControlSource)),
+            ))
+        }
     }
 
     metadata {

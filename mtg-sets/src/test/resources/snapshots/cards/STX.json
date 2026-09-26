@@ -12,7 +12,7 @@
                     "type": "MarkMustBlockThisTurn",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 {
@@ -23,7 +23,7 @@
                         "keyword": "REACH",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target creature"
+                            "name": "t0"
                         }
                     },
                     "descriptionOverride": "You may have it gain reach until end of turn."
@@ -118,7 +118,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "target creature"
+                "id": "t0"
             }
         ]
     },
@@ -143,7 +143,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Access Tunnel:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddColorlessMana",
@@ -156,7 +156,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Access Tunnel:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -175,7 +175,7 @@
                     "keyword": "CANT_BE_BLOCKED",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -184,7 +184,7 @@
                         "filter": {
                             "baseFilter": "creature pow<=3"
                         },
-                        "id": "target"
+                        "id": "t0"
                     }
                 ]
             }
@@ -214,7 +214,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     },
                     "destination": "Hand"
                 },
@@ -222,7 +222,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target 1"
+                        "name": "t1"
                     },
                     "destination": "Hand"
                 }
@@ -234,7 +234,7 @@
                 "filter": {
                     "baseFilter": "permanent"
                 },
-                "id": "target"
+                "id": "t0"
             },
             {
                 "type": "TargetObject",
@@ -242,7 +242,7 @@
                     "baseFilter": "permanent own:you",
                     "zone": "Graveyard"
                 },
-                "id": "target 1"
+                "id": "t1"
             }
         ]
     },
@@ -301,7 +301,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 {
@@ -394,7 +394,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "target creature"
+                "id": "t0"
             }
         ]
     },
@@ -418,7 +418,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Archway Commons:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -438,7 +438,7 @@
         ],
         "activatedAbilities": [
             {
-                "id": "ability_2",
+                "id": "Archway Commons:2",
                 "cost": "CostTap",
                 "effect": "AddManaOfChoice",
                 "timing": "ManaAbility",
@@ -557,7 +557,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature you control"
+                        "name": "t0"
                     }
                 },
                 {
@@ -565,7 +565,7 @@
                     "keyword": "HEXPROOF",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature you control"
+                        "name": "t0"
                     }
                 }
             ]
@@ -576,7 +576,7 @@
                 "filter": {
                     "baseFilter": "creature ctrl:you"
                 },
-                "id": "target creature you control"
+                "id": "t0"
             }
         ]
     },
@@ -602,40 +602,35 @@
             "type": "Composite",
             "effects": [
                 {
-                    "type": "Composite",
-                    "effects": [
-                        {
-                            "type": "ModifyStats",
-                            "powerModifier": {
-                                "type": "Fixed",
-                                "amount": 2
-                            },
-                            "toughnessModifier": {
-                                "type": "Fixed",
-                                "amount": 2
-                            },
-                            "target": {
-                                "type": "BoundVariable",
-                                "name": "target"
-                            }
-                        },
-                        {
-                            "type": "GrantKeyword",
-                            "keyword": "REACH",
-                            "target": {
-                                "type": "BoundVariable",
-                                "name": "target"
-                            }
-                        }
-                    ]
+                    "type": "ModifyStats",
+                    "powerModifier": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "toughnessModifier": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
+                },
+                {
+                    "type": "GrantKeyword",
+                    "keyword": "REACH",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "t0"
+                    }
                 },
                 {
                     "type": "AddCounters",
-                    "counterType": "+1/+1",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
                     "count": 1,
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 }
             ]
@@ -646,7 +641,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -711,12 +706,12 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Blood Researcher:1",
                 "trigger": "LifeGainEvent",
                 "binding": "ANY",
                 "effect": {
                     "type": "AddCounters",
-                    "counterType": "+1/+1",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
                     "count": 1,
                     "target": "Self"
                 }
@@ -748,7 +743,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Brackish Trudge:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -816,7 +811,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Burrog Befuddler:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -833,7 +828,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirement": {
@@ -841,7 +836,7 @@
                     "filter": {
                         "baseFilter": "creature ctrl:opponent"
                     },
-                    "id": "target"
+                    "id": "t0"
                 }
             }
         ]
@@ -870,7 +865,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Campus Guide:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -888,7 +883,8 @@
                                     "zone": "Library",
                                     "filter": "basicland"
                                 },
-                                "storeAs": "searchable"
+                                "storeAs": "searchable",
+                                "search": true
                             },
                             {
                                 "type": "SelectFromCollection",
@@ -945,7 +941,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Combat Professor:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "BEGIN_COMBAT"
@@ -966,7 +962,7 @@
                             },
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target creature you control"
+                                "name": "t0"
                             }
                         },
                         {
@@ -974,7 +970,7 @@
                             "keyword": "VIGILANCE",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target creature you control"
+                                "name": "t0"
                             }
                         }
                     ]
@@ -984,7 +980,7 @@
                     "filter": {
                         "baseFilter": "creature ctrl:you"
                     },
-                    "id": "target creature you control"
+                    "id": "t0"
                 }
             }
         ]
@@ -1127,7 +1123,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Daemogoth Titan:1",
                 "trigger": "AttackEvent",
                 "effect": {
                     "type": "Sacrifice",
@@ -1135,7 +1131,7 @@
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Daemogoth Titan:2",
                 "trigger": "BlockEvent",
                 "effect": {
                     "type": "Sacrifice",
@@ -1192,11 +1188,11 @@
                                     "filter": "permanent",
                                     "excludeSacrificedThisWay": true
                                 },
-                                "storeAs": "eligible"
+                                "storeAs": "gathered0"
                             },
                             {
                                 "type": "SelectFromCollection",
-                                "from": "eligible",
+                                "from": "gathered0",
                                 "selection": {
                                     "type": "ChooseUpTo",
                                     "count": {
@@ -1204,12 +1200,12 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "chosen",
+                                "storeSelected": "selected1",
                                 "prompt": "Choose a permanent card to return to your hand"
                             },
                             {
                                 "type": "MoveCollection",
-                                "from": "chosen",
+                                "from": "selected1",
                                 "destination": {
                                     "type": "ToZone",
                                     "zone": "Hand"
@@ -1339,7 +1335,7 @@
                                 "type": "Fixed",
                                 "amount": 1
                             },
-                            "target": "Self"
+                            "target": "IterationEntity"
                         }
                     },
                     "description": "Creatures you control get +1/+1 until end of turn"
@@ -1349,7 +1345,7 @@
                         "type": "MoveToZone",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target"
+                            "name": "t0"
                         },
                         "destination": "Graveyard",
                         "byDestruction": true
@@ -1360,7 +1356,7 @@
                             "filter": {
                                 "baseFilter": "creature pow>=4"
                             },
-                            "id": "target"
+                            "id": "t0"
                         }
                     ],
                     "description": "Destroy target creature with power 4 or greater"
@@ -1393,7 +1389,7 @@
                     "type": "ReturnSpellOrPermanentToOwnersHand",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target spell or permanent with mana value 1 or greater"
+                        "name": "t0"
                     }
                 },
                 {
@@ -1483,7 +1479,7 @@
         "targetRequirements": [
             {
                 "type": "TargetSpellOrPermanent",
-                "id": "target spell or permanent with mana value 1 or greater",
+                "id": "t0",
                 "permanentFilter": {
                     "cardPredicates": [
                         "IsPermanent",
@@ -1533,7 +1529,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Dream Strix:1",
                 "trigger": {
                     "type": "BecomesTargetEvent",
                     "spellsOnly": true
@@ -1544,7 +1540,7 @@
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Dream Strix:2",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield",
@@ -1700,7 +1696,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 {
@@ -1708,7 +1704,7 @@
                     "keyword": "TRAMPLE",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 {
@@ -1801,7 +1797,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "target creature"
+                "id": "t0"
             }
         ]
     },
@@ -1833,7 +1829,8 @@
                         "zone": "Library",
                         "filter": "basicland"
                     },
-                    "storeAs": "searchable"
+                    "storeAs": "searchable",
+                    "search": true
                 },
                 {
                     "type": "SelectFromCollection",
@@ -1889,11 +1886,11 @@
             "effects": [
                 {
                     "type": "AddCounters",
-                    "counterType": "+1/+1",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
                     "count": 2,
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 {
@@ -1901,7 +1898,7 @@
                     "keyword": "LIFELINK",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 }
             ]
@@ -1912,7 +1909,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -1943,7 +1940,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Excavated Wall:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -2006,11 +2003,11 @@
             "effects": [
                 {
                     "type": "AddCounters",
-                    "counterType": "+1/+1",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
                     "count": 2,
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 {
@@ -2018,7 +2015,7 @@
                     "keyword": "VIGILANCE",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 }
             ]
@@ -2029,7 +2026,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "target creature"
+                "id": "t0"
             }
         ]
     },
@@ -2053,7 +2050,7 @@
             "type": "MoveToZone",
             "target": {
                 "type": "BoundVariable",
-                "name": "target tapped creature"
+                "name": "t0"
             },
             "destination": "Exile"
         },
@@ -2063,7 +2060,7 @@
                 "filter": {
                     "baseFilter": "creature tapped"
                 },
-                "id": "target tapped creature"
+                "id": "t0"
             }
         ]
     },
@@ -2094,7 +2091,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Eyetwitch:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield",
@@ -2214,7 +2211,8 @@
                         "zone": "Library",
                         "filter": "basicland Forest"
                     },
-                    "storeAs": "searchable"
+                    "storeAs": "searchable",
+                    "search": true
                 },
                 {
                     "type": "SelectFromCollection",
@@ -2351,7 +2349,7 @@
                         "effects": [
                             {
                                 "type": "AddCounters",
-                                "counterType": "+1/+1",
+                                "counterType": "PLUS_ONE_PLUS_ONE",
                                 "count": 1,
                                 "target": "TriggeringEntity"
                             },
@@ -2479,7 +2477,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Flamescroll Celebrant:1",
                 "trigger": {
                     "type": "AbilityActivatedEvent",
                     "player": "EachOpponent"
@@ -2500,7 +2498,7 @@
         ],
         "activatedAbilities": [
             {
-                "id": "ability_2",
+                "id": "Flamescroll Celebrant:2",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -2594,7 +2592,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Fuming Effigy:1",
                 "trigger": "CardsLeftYourGraveyardEvent",
                 "binding": "ANY",
                 "effect": {
@@ -2638,7 +2636,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Galazeth Prismari:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -2653,7 +2651,7 @@
             {
                 "type": "GrantActivatedAbility",
                 "ability": {
-                    "id": "ability_2",
+                    "id": "Galazeth Prismari:2",
                     "cost": "CostTap",
                     "effect": {
                         "type": "AddManaOfChoice",
@@ -2696,7 +2694,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Gnarled Professor:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -2810,11 +2808,11 @@
             "effects": [
                 {
                     "type": "AddCounters",
-                    "counterType": "+1/+1",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
                     "count": 1,
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 {
@@ -2907,7 +2905,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "target creature"
+                "id": "t0"
             }
         ]
     },
@@ -2938,7 +2936,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Hall Monitor:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -2956,7 +2954,7 @@
                     "type": "CantBlockTargetCreatures",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -2965,7 +2963,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target"
+                        "id": "t0"
                     }
                 ]
             }
@@ -2998,13 +2996,13 @@
             },
             "target": {
                 "type": "BoundVariable",
-                "name": "target"
+                "name": "t0"
             }
         },
         "targetRequirements": [
             {
                 "type": "TargetCreatureOrPlaneswalker",
-                "id": "target"
+                "id": "t0"
             }
         ],
         "cantBeCountered": true
@@ -3261,7 +3259,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "any target"
+                        "name": "t0"
                     },
                     "damageSource": "Self"
                 },
@@ -3352,7 +3350,7 @@
         "targetRequirements": [
             {
                 "type": "AnyTarget",
-                "id": "any target"
+                "id": "t0"
             }
         ]
     },
@@ -3455,7 +3453,7 @@
             },
             "target": {
                 "type": "BoundVariable",
-                "name": "target"
+                "name": "t0"
             }
         },
         "targetRequirements": [
@@ -3464,7 +3462,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -3488,14 +3486,14 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Letter of Acceptance:1",
                 "cost": "CostTap",
                 "effect": "AddManaOfChoice",
                 "timing": "ManaAbility",
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Letter of Acceptance:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -3538,7 +3536,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Lorehold Campus:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -3548,7 +3546,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Lorehold Campus:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -3558,7 +3556,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_3",
+                "id": "Lorehold Campus:3",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -3641,17 +3639,17 @@
                                         "type": "Fixed",
                                         "amount": 0
                                     },
-                                    "target": "Self"
+                                    "target": "IterationEntity"
                                 },
                                 {
                                     "type": "GrantKeyword",
                                     "keyword": "INDESTRUCTIBLE",
-                                    "target": "Self"
+                                    "target": "IterationEntity"
                                 },
                                 {
                                     "type": "GrantKeyword",
                                     "keyword": "HASTE",
-                                    "target": "Self"
+                                    "target": "IterationEntity"
                                 }
                             ]
                         }
@@ -3670,7 +3668,7 @@
                                 },
                                 "target": {
                                     "type": "BoundVariable",
-                                    "name": "any target"
+                                    "name": "t0"
                                 }
                             },
                             {
@@ -3681,7 +3679,7 @@
                                 },
                                 "target": {
                                     "type": "BoundVariable",
-                                    "name": "target player"
+                                    "name": "t1"
                                 }
                             }
                         ]
@@ -3689,11 +3687,11 @@
                     "targetRequirements": [
                         {
                             "type": "AnyTarget",
-                            "id": "any target"
+                            "id": "t0"
                         },
                         {
                             "type": "TargetPlayer",
-                            "id": "target player"
+                            "id": "t1"
                         }
                     ],
                     "description": "Lorehold Command deals 3 damage to any target. Target player gains 3 life"
@@ -3770,7 +3768,7 @@
             "type": "MoveToZone",
             "target": {
                 "type": "BoundVariable",
-                "name": "target nonland permanent"
+                "name": "t0"
             },
             "destination": "Graveyard",
             "byDestruction": true
@@ -3781,7 +3779,7 @@
                 "filter": {
                     "baseFilter": "nonland permanent"
                 },
-                "id": "target nonland permanent"
+                "id": "t0"
             }
         ],
         "staticAbilities": [
@@ -3863,7 +3861,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Novice Dissector:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -3886,11 +3884,11 @@
                 },
                 "effect": {
                     "type": "AddCounters",
-                    "counterType": "+1/+1",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
                     "count": 1,
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -3899,7 +3897,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target"
+                        "id": "t0"
                     }
                 ],
                 "timing": "SorcerySpeed",
@@ -3934,7 +3932,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Oggyar Battle-Seer:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "Scry",
@@ -3972,7 +3970,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Overgrown Arch:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "GainLife",
@@ -3983,7 +3981,7 @@
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Overgrown Arch:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -4144,7 +4142,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Pillardrop Rescuer:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -4153,7 +4151,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     },
                     "destination": "Hand"
                 },
@@ -4163,7 +4161,7 @@
                         "baseFilter": "creature mv<=3 own:you",
                         "zone": "Graveyard"
                     },
-                    "id": "target"
+                    "id": "t0"
                 }
             }
         ]
@@ -4188,7 +4186,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Poet's Quill:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -4279,7 +4277,7 @@
         ],
         "activatedAbilities": [
             {
-                "id": "ability_2",
+                "id": "Poet's Quill:2",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -4453,7 +4451,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Prismari Campus:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -4463,7 +4461,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Prismari Campus:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -4473,7 +4471,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_3",
+                "id": "Prismari Campus:3",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -4523,7 +4521,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Professor of Symbology:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -4638,11 +4636,11 @@
                 {
                     "effect": {
                         "type": "AddCounters",
-                        "counterType": "+1/+1",
+                        "counterType": "PLUS_ONE_PLUS_ONE",
                         "count": 1,
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target"
+                            "name": "t0"
                         }
                     },
                     "targetRequirements": [
@@ -4651,7 +4649,7 @@
                             "filter": {
                                 "baseFilter": "creature"
                             },
-                            "id": "target"
+                            "id": "t0"
                         }
                     ],
                     "description": "Put a +1/+1 counter on target creature."
@@ -4662,7 +4660,7 @@
                         "keyword": "INDESTRUCTIBLE",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target"
+                            "name": "t1"
                         }
                     },
                     "targetRequirements": [
@@ -4671,7 +4669,7 @@
                             "filter": {
                                 "baseFilter": "creature"
                             },
-                            "id": "target"
+                            "id": "t1"
                         }
                     ],
                     "description": "Target creature gains indestructible until end of turn."
@@ -4699,7 +4697,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Quandrix Campus:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -4709,7 +4707,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Quandrix Campus:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -4719,7 +4717,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_3",
+                "id": "Quandrix Campus:3",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -4769,7 +4767,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Quintorius, Field Historian:1",
                 "trigger": "CardsLeftYourGraveyardEvent",
                 "binding": "ANY",
                 "effect": {
@@ -4856,13 +4854,13 @@
                         },
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target creature or planeswalker"
+                            "name": "t0"
                         }
                     },
                     "targetRequirements": [
                         {
                             "type": "TargetCreatureOrPlaneswalker",
-                            "id": "target creature or planeswalker"
+                            "id": "t0"
                         }
                     ],
                     "description": "Rip Apart deals 3 damage to target creature or planeswalker"
@@ -4872,7 +4870,7 @@
                         "type": "MoveToZone",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target artifact or enchantment"
+                            "name": "t1"
                         },
                         "destination": "Graveyard",
                         "byDestruction": true
@@ -4883,7 +4881,7 @@
                             "filter": {
                                 "baseFilter": "artifact|enchantment"
                             },
-                            "id": "target artifact or enchantment"
+                            "id": "t1"
                         }
                     ],
                     "description": "Destroy target artifact or enchantment"
@@ -4918,15 +4916,15 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     },
                     "destination": "Exile"
                 },
                 {
                     "type": "MoveToZone",
                     "target": {
-                        "type": "ContextTarget",
-                        "index": 1
+                        "type": "BoundVariable",
+                        "name": "t1"
                     },
                     "destination": "Exile"
                 },
@@ -5020,7 +5018,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "target creature"
+                "id": "t0"
             },
             {
                 "type": "TargetObject",
@@ -5029,7 +5027,7 @@
                     "baseFilter": "instant|sorcery",
                     "zone": "Graveyard"
                 },
-                "id": "up to one target instant or sorcery card from a graveyard"
+                "id": "t1"
             }
         ]
     },
@@ -5107,7 +5105,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Silverquill Campus:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -5117,7 +5115,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Silverquill Campus:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -5127,7 +5125,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_3",
+                "id": "Silverquill Campus:3",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -5177,7 +5175,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Soothsayer Adept:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -5262,7 +5260,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Sparring Regimen:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -5351,7 +5349,7 @@
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Sparring Regimen:2",
                 "trigger": "YouAttackEvent",
                 "binding": "ANY",
                 "effect": {
@@ -5359,18 +5357,18 @@
                     "effects": [
                         {
                             "type": "AddCounters",
-                            "counterType": "+1/+1",
+                            "counterType": "PLUS_ONE_PLUS_ONE",
                             "count": 1,
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target attacking creature"
+                                "name": "t0"
                             }
                         },
                         {
                             "type": "TapUntap",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target attacking creature"
+                                "name": "t0"
                             },
                             "tap": false
                         }
@@ -5381,7 +5379,7 @@
                     "filter": {
                         "baseFilter": "creature attacking"
                     },
-                    "id": "target attacking creature"
+                    "id": "t0"
                 }
             }
         ]
@@ -5462,7 +5460,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Springmane Cervin:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -5507,13 +5505,13 @@
                         },
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target"
+                            "name": "t0"
                         }
                     },
                     "targetRequirements": [
                         {
                             "type": "AnyTarget",
-                            "id": "target"
+                            "id": "t0"
                         }
                     ],
                     "description": "Start from Scratch deals 1 damage to any target"
@@ -5523,7 +5521,7 @@
                         "type": "MoveToZone",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target"
+                            "name": "t1"
                         },
                         "destination": "Graveyard",
                         "byDestruction": true
@@ -5534,7 +5532,7 @@
                             "filter": {
                                 "baseFilter": "artifact"
                             },
-                            "id": "target"
+                            "id": "t1"
                         }
                     ],
                     "description": "Destroy target artifact"
@@ -5567,7 +5565,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Stonebound Mentor:1",
                 "trigger": "CardsLeftYourGraveyardEvent",
                 "binding": "ANY",
                 "effect": {
@@ -5606,7 +5604,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Stonerise Spirit:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -5631,7 +5629,7 @@
                     "keyword": "FLYING",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -5640,7 +5638,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target creature"
+                        "id": "t0"
                     }
                 ]
             }
@@ -5770,7 +5768,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "up to two target creatures"
+                "id": "t0"
             }
         ]
     },
@@ -5804,7 +5802,7 @@
                         },
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target"
+                            "name": "t0"
                         }
                     },
                     "targetRequirements": [
@@ -5813,7 +5811,7 @@
                             "filter": {
                                 "baseFilter": "creature kw:flying"
                             },
-                            "id": "target"
+                            "id": "t0"
                         }
                     ],
                     "description": "Tangletrap deals 5 damage to target creature with flying."
@@ -5823,7 +5821,7 @@
                         "type": "MoveToZone",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target"
+                            "name": "t1"
                         },
                         "destination": "Graveyard",
                         "byDestruction": true
@@ -5834,7 +5832,7 @@
                             "filter": {
                                 "baseFilter": "artifact"
                             },
-                            "id": "target"
+                            "id": "t1"
                         }
                     ],
                     "description": "Destroy target artifact."
@@ -5914,13 +5912,13 @@
                         "filter": "creature|planeswalker",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target"
+                            "name": "t0"
                         }
                     },
                     "targetRequirements": [
                         {
                             "type": "TargetPlayer",
-                            "id": "target"
+                            "id": "t0"
                         }
                     ],
                     "description": "Target player sacrifices a creature or planeswalker of their choice."
@@ -6001,7 +5999,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Witherbloom Campus:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -6011,7 +6009,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Witherbloom Campus:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -6021,7 +6019,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_3",
+                "id": "Witherbloom Campus:3",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -6071,7 +6069,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Wormhole Serpent:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -6084,7 +6082,7 @@
                     "keyword": "CANT_BE_BLOCKED",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -6093,7 +6091,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{3}{U}: Target creature can't be blocked this turn."

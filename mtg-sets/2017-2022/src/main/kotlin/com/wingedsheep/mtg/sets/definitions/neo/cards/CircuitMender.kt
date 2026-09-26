@@ -13,8 +13,8 @@ import com.wingedsheep.sdk.model.Rarity
  * When this creature enters, you gain 2 life.
  * When this creature leaves the battlefield, draw a card.
  *
- * Two independent SELF zone-change triggers. The second is [Triggers.LeavesBattlefield], not
- * [Triggers.Dies] — bouncing, exiling, or milling it off the battlefield all draw the card.
+ * Two independent SELF zone-change triggers. The second is `Triggers.self.leaves()`, not
+ * `Triggers.self.dies()` — bouncing, exiling, or milling it off the battlefield all draw the card.
  */
 val CircuitMender = card("Circuit Mender") {
     manaCost = "{3}"
@@ -25,13 +25,13 @@ val CircuitMender = card("Circuit Mender") {
     oracleText = "When this creature enters, you gain 2 life.\nWhen this creature leaves the battlefield, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(2)
         description = "When this creature enters, you gain 2 life."
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.DrawCards(1)
         description = "When this creature leaves the battlefield, draw a card."
     }

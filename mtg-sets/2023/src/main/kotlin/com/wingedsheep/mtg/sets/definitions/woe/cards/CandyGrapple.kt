@@ -5,8 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.bargain
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Candy Grapple
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * -5/-5 until end of turn instead.
  *
  * The spell-rider shape of bargain (CR 702.166c): the fact is read off the spell while it is still
- * on the stack, so the payoff is a [ConditionalEffect] gated on [Conditions.WasBargained] rather
+ * on the stack, so the payoff is a [Effects.If] gated on [Conditions.WasBargained] rather
  * than anything riding a resolved permanent.
  *
  * The "-5/-5 instead" is modelled as the base -3/-3 plus a further -2/-2 on the bargained branch.
@@ -39,14 +38,12 @@ val CandyGrapple = card("Candy Grapple") {
     bargain()
 
     spell {
-        val creature = target("target creature", TargetCreature())
-        effect = Effects.Composite(
-            Effects.ModifyStats(power = -3, toughness = -3, target = creature),
-            ConditionalEffect(
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(power = -3, toughness = -3, target = creature) then
+            Effects.If(
                 condition = Conditions.WasBargained,
-                effect = Effects.ModifyStats(power = -2, toughness = -2, target = creature),
-            ),
-        )
+                then = Effects.ModifyStats(power = -2, toughness = -2, target = creature),
+            )
     }
 
     metadata {

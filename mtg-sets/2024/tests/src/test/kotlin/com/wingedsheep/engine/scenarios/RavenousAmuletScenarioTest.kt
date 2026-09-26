@@ -24,7 +24,7 @@ import io.kotest.matchers.shouldBe
  * {4}, {T}, Sacrifice this artifact: Each opponent loses life equal to the number of soul
  *   counters on this artifact.
  *
- * Proves the new [com.wingedsheep.sdk.core.Counters.SOUL] passive counter: the first ability
+ * Proves the new [com.wingedsheep.sdk.core.CounterType.SOUL] passive counter: the first ability
  * accrues one per activation (and draws), and the second reads the accumulated count to size the
  * life each opponent loses.
  */

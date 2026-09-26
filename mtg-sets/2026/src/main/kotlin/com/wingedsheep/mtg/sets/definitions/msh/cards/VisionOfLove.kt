@@ -6,11 +6,8 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ChooseActionEffect
 import com.wingedsheep.sdk.scripting.effects.EffectChoice
 import com.wingedsheep.sdk.scripting.effects.FeasibilityCheck
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
 
 /**
  * Vision of Love (MSH #158) — {1}{R} Instant
@@ -18,7 +15,7 @@ import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
  * You may sacrifice an artifact or discard a card. If you do, draw two cards.
  *
  * Implementation notes:
- * - "You may … or …" is the Nimble Hobbit idiom: a [MayEffect] yes/no wrapping a
+ * - "You may … or …" is the Nimble Hobbit idiom: a [Effects.May] yes/no wrapping a
  *   [ChooseActionEffect] whose two [EffectChoice]s are the sacrifice and the discard. Each
  *   option carries a [FeasibilityCheck], so an option the controller can't perform is hidden
  *   (no artifact → only the discard is offered; neither → nothing happens and no cards are
@@ -36,12 +33,12 @@ val VisionOfLove = card("Vision of Love") {
     oracleText = "You may sacrifice an artifact or discard a card. If you do, draw two cards."
 
     spell {
-        effect = MayEffect(
-            effect = ChooseActionEffect(
+        effect = Effects.May(
+            effect = Effects.ChooseAction(
                 choices = listOf(
                     EffectChoice(
                         label = "Sacrifice an artifact",
-                        effect = SacrificeEffect(filter = GameObjectFilter.Artifact) then
+                        effect = Effects.SacrificeOwn(filter = GameObjectFilter.Artifact) then
                             Effects.DrawCards(2),
                         feasibilityCheck = FeasibilityCheck.ControlsPermanentMatching(
                             filter = GameObjectFilter.Artifact

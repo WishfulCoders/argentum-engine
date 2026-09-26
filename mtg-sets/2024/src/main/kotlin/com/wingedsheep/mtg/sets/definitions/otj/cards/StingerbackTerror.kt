@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.otj.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.dsl.unaryMinus
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.model.Rarity
 
 /**
@@ -35,8 +35,8 @@ val StingerbackTerror = card("Stingerback Terror") {
 
     staticAbility {
         // -1/-1 for each card in your hand, applied to this creature itself.
-        val negHand = DynamicAmount.Multiply(DynamicAmounts.cardsInYourHand(), -1)
-        ability = GrantDynamicStatsEffect(
+        val negHand = -DynamicAmounts.cardsInYourHand()
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
             powerBonus = negHand,
             toughnessBonus = negHand

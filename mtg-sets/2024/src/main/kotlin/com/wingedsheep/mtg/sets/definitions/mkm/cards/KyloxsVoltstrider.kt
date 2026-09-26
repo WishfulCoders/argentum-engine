@@ -10,11 +10,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.AfterResolveDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Kylox's Voltstrider — Murders at Karlov Manor #215
@@ -75,29 +71,23 @@ val KyloxsVoltstrider = card("Kylox's Voltstrider") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromLinkedExile(),
-                    storeAs = "exiledWithIt"
-                ),
-                SelectFromCollectionEffect(
-                    from = "exiledWithIt",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    filter = GameObjectFilter.InstantOrSorcery,
-                    storeSelected = "toCast",
-                    // No `showAllCards`: the pile is public exile the player can already read, and
-                    // an all-permanents pile would otherwise raise a picker with nothing in it
-                    // selectable and no way out.
-                    prompt = "Cast an instant or sorcery exiled with Kylox's Voltstrider?"
-                ),
-                Effects.CastFromCollection(
-                    from = "toCast",
-                    insteadOfGraveyard = AfterResolveDestination.BOTTOM_OF_LIBRARY
-                )
+        trigger = Triggers.self.attacks()
+        effect = Effects.Pipeline {
+            val exiledWithIt = gather(CardSource.FromLinkedExile())
+            // No `showAllCards`: the pile is public exile the player can already read, and
+            // an all-permanents pile would otherwise raise a picker with nothing in it
+            // selectable and no way out.
+            val toCast = chooseUpTo(
+                1,
+                from = exiledWithIt,
+                filter = GameObjectFilter.InstantOrSorcery,
+                prompt = "Cast an instant or sorcery exiled with Kylox's Voltstrider?"
             )
-        )
+            run(Effects.CastFromCollection(
+                from = toCast,
+                insteadOfGraveyard = AfterResolveDestination.BOTTOM_OF_LIBRARY
+            ))
+        }
         description = "Whenever this Vehicle attacks, you may cast an instant or sorcery spell " +
             "from among cards exiled with it. If that spell would be put into a graveyard, put " +
             "it on the bottom of its owner's library instead."

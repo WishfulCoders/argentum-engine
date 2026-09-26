@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.mechanics.mana.SpellPaymentContext
@@ -19,6 +20,7 @@ import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Scenario tests for Steelswarm Operator's two restricted mana abilities.
@@ -73,7 +75,7 @@ class SteelswarmOperatorTest : FunSpec({
         val relic = driver.putCardInHand(caster, "Cryogen Relic")
 
         val castResult = driver.castSpell(caster, relic)
-        castResult.isSuccess shouldBe true
+        castResult.outcome shouldBe Outcome.Done
 
         // Both sources tapped.
         driver.state.getEntity(operator)?.has<TappedComponent>() shouldBe true
@@ -101,7 +103,7 @@ class SteelswarmOperatorTest : FunSpec({
 
         // Steelswarm is the only source. Both abilities restrict to artifact contexts;
         // a non-artifact creature spell should report unaffordable.
-        val solver = ManaSolver(driver.cardRegistry)
+        val solver = ManaSolver(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val cost = ManaCost.parse("{U}")
         val creatureSpellContext = SpellPaymentContext(
             isCreature = true,
@@ -138,7 +140,7 @@ class SteelswarmOperatorTest : FunSpec({
                 targets = listOf(ChosenTarget.Card(graveyardCard, caster, Zone.GRAVEYARD)),
             )
         )
-        activateResult.isSuccess shouldBe true
+        activateResult.outcome shouldBe Outcome.Done
 
         // Steelswarm Operator must have been tapped to produce the {U}{U} that paid the
         // {2} portion of Chrome Companion's cost.
@@ -174,7 +176,7 @@ class SteelswarmOperatorTest : FunSpec({
 
         driver.putPermanentOnBattlefield(caster, "Steelswarm Operator")
 
-        val solver = ManaSolver(driver.cardRegistry)
+        val solver = ManaSolver(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val cost = ManaCost.parse("{U}")
         val abilityContext = SpellPaymentContext(
             isAbilityActivation = true,

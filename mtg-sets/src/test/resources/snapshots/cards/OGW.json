@@ -34,7 +34,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Ayli, Eternal Pilgrim:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -59,14 +59,14 @@
                     "type": "GainLife",
                     "amount": {
                         "type": "EntityProperty",
-                        "entity": "Sacrificed",
+                        "entity": "SacrificedAsCost",
                         "numericProperty": "Toughness"
                     }
                 },
                 "descriptionOverride": "You gain life equal to the sacrificed creature's toughness."
             },
             {
-                "id": "ability_2",
+                "id": "Ayli, Eternal Pilgrim:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -91,7 +91,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     },
                     "destination": "Exile"
                 },
@@ -101,7 +101,7 @@
                         "filter": {
                             "baseFilter": "nonland permanent"
                         },
-                        "id": "target"
+                        "id": "t0"
                     }
                 ],
                 "restrictions": [
@@ -166,7 +166,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 {
@@ -174,7 +174,7 @@
                     "keyword": "TRAMPLE",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 }
             ]
@@ -185,7 +185,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "target creature"
+                "id": "t0"
             }
         ]
     },
@@ -229,7 +229,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Cinder Barrens:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -239,7 +239,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Cinder Barrens:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -281,7 +281,7 @@
                     "keyword": "HASTE",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 {
@@ -299,7 +299,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -342,12 +342,12 @@
                             "type": "Fixed",
                             "amount": 0
                         },
-                        "target": "Self"
+                        "target": "IterationEntity"
                     },
                     {
                         "type": "GrantKeyword",
                         "keyword": "INDESTRUCTIBLE",
-                        "target": "Self"
+                        "target": "IterationEntity"
                     }
                 ]
             }
@@ -374,7 +374,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Meandering River:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -384,7 +384,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Meandering River:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -455,7 +455,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Submerged Boneyard:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -465,7 +465,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Submerged Boneyard:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -530,7 +530,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Thought-Knot Seer:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -542,7 +542,7 @@
                             "type": "RevealHand",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target opponent"
+                                "name": "t0"
                             }
                         },
                         {
@@ -551,8 +551,8 @@
                                 "type": "FromZone",
                                 "zone": "Hand",
                                 "player": {
-                                    "type": "ContextPlayer",
-                                    "index": 0
+                                    "type": "BoundVariable",
+                                    "name": "t0"
                                 },
                                 "filter": "nonland"
                             },
@@ -578,8 +578,8 @@
                                 "type": "ToZone",
                                 "zone": "Exile",
                                 "player": {
-                                    "type": "ContextPlayer",
-                                    "index": 0
+                                    "type": "BoundVariable",
+                                    "name": "t0"
                                 }
                             }
                         }
@@ -587,12 +587,12 @@
                 },
                 "targetRequirement": {
                     "type": "TargetOpponent",
-                    "id": "target opponent"
+                    "id": "t0"
                 },
                 "descriptionOverride": "When this creature enters, target opponent reveals their hand. You choose a nonland card from it and exile that card."
             },
             {
-                "id": "ability_2",
+                "id": "Thought-Knot Seer:2",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield"
@@ -605,12 +605,12 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target opponent"
+                        "name": "t1"
                     }
                 },
                 "targetRequirement": {
                     "type": "TargetOpponent",
-                    "id": "target opponent"
+                    "id": "t1"
                 },
                 "descriptionOverride": "When this creature leaves the battlefield, target opponent draws a card."
             }
@@ -634,7 +634,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Timber Gorge:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -644,7 +644,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Timber Gorge:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -680,7 +680,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Tranquil Expanse:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -690,7 +690,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Tranquil Expanse:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -769,7 +769,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Warden of Geometries:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddColorlessMana",

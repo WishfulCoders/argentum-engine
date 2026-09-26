@@ -1,20 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Zero Point Ballad
@@ -32,38 +28,32 @@ val ZeroPointBallad = card("Zero Point Ballad") {
         "to the battlefield under your control."
 
     spell {
-        effect = Effects.Composite(
-            listOf(
+        effect = Effects.Pipeline {
+            val destroyed = runStoringCollection {
                 Effects.DestroyAll(
                     filter = GameObjectFilter.Creature.toughnessAtMostX(),
-                    storeDestroyedAs = "destroyed"
-                ),
-                Effects.LoseLife(DynamicAmount.XValue, EffectTarget.Controller),
-                ConditionalEffect(
-                    condition = Compare(
-                        DynamicAmount.XValue,
-                        ComparisonOperator.GTE,
-                        DynamicAmount.Fixed(6)
-                    ),
-                    effect = Effects.Composite(
-                        listOf(
-                            SelectFromCollectionEffect(
-                                from = "destroyed",
-                                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                                chooser = Chooser.Controller,
-                                // Oracle reads "a creature card" — tokens cease to exist on death.
-                                filter = GameObjectFilter.Creature.nontoken(),
-                                storeSelected = "reanimated"
-                            ),
-                            MoveCollectionEffect(
-                                from = "reanimated",
-                                destination = CardDestination.ToZone(Zone.BATTLEFIELD)
-                            )
-                        )
-                    )
+                    storeDestroyedAs = it
                 )
-            )
-        )
+            }
+            run(Effects.LoseLife(DynamicAmounts.xValue(), EffectTarget.Controller))
+            run(Effects.If(
+                condition = Conditions.CompareAmounts(
+                    DynamicAmounts.xValue(),
+                    ComparisonOperator.GTE,
+                    6
+                ),
+                then = Effects.Pipeline {
+                    val reanimated = chooseExactly(
+                        1,
+                        from = destroyed,
+                        chooser = Chooser.Controller,
+                        // Oracle reads "a creature card" — tokens cease to exist on death.
+                        filter = GameObjectFilter.Creature.nontoken()
+                    )
+                    move(reanimated, CardDestination.ToZone(Zone.BATTLEFIELD))
+                }
+            ))
+        }
     }
 
     metadata {

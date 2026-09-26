@@ -5,9 +5,9 @@
 package com.wingedsheep.mtg.sets.definitions.tmp.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -26,7 +26,7 @@ val BottleGnomes = card("Bottle Gnomes") {
     toughness = 3
     activatedAbility {
         cost = Costs.SacrificeSelf
-        effect = GainLifeEffect(3)
+        effect = Effects.GainLife(3)
     }
     metadata {
         rarity = Rarity.UNCOMMON

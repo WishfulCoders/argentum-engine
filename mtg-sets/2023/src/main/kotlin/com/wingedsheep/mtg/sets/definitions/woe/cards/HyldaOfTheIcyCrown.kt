@@ -1,8 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
-import com.wingedsheep.sdk.core.ManaCost
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
@@ -11,8 +10,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.PayManaCostEffect
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -28,7 +25,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * • Put a +1/+1 counter on each creature you control.
  * • Scry 2, then draw a card.
  *
- * [Triggers.YouTap] carries the *attribution* half — only a tap Hylda's controller caused fires
+ * `Triggers.you.taps(filter, batch)` carries the *attribution* half — only a tap Hylda's controller caused fires
  * this, so an opponent tapping their own creature (attacking, crewing, paying a cost) does nothing,
  * and neither does a spell you control that instructs *them* to tap (Tangle Wire). "Untapped" is
  * intrinsic: tapping is a transition (CR 603.2f), so an already-tapped creature emits no tap event.
@@ -51,9 +48,9 @@ val HyldaOfTheIcyCrown = card("Hylda of the Icy Crown") {
         "• Scry 2, then draw a card."
 
     triggeredAbility {
-        trigger = Triggers.YouTap(GameObjectFilter.Creature.opponentControls())
-        effect = ReflexiveTriggerEffect(
-            action = PayManaCostEffect(ManaCost.parse("{1}")),
+        trigger = Triggers.you.taps(GameObjectFilter.Creature.opponentControls())
+        effect = Effects.ReflexiveTrigger(
+            action = Effects.PayMana("{1}"),
             optional = true,
             reflexiveEffect = ModalEffect.chooseOne(
                 Mode.noTarget(
@@ -68,12 +65,12 @@ val HyldaOfTheIcyCrown = card("Hylda of the Icy Crown") {
                 Mode.noTarget(
                     Effects.ForEachInGroup(
                         filter = GroupFilter(GameObjectFilter.Creature.youControl()),
-                        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+                        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity)
                     ),
                     "Put a +1/+1 counter on each creature you control"
                 ),
                 Mode.noTarget(
-                    Patterns.Library.scry(2).then(Effects.DrawCards(1)),
+                    Patterns.Library.scry(2) then Effects.DrawCards(1),
                     "Scry 2, then draw a card"
                 ),
             ),

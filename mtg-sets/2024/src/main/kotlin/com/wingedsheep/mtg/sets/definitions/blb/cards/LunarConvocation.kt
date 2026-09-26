@@ -10,6 +10,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Lunar Convocation
@@ -32,7 +33,7 @@ val LunarConvocation = card("Lunar Convocation") {
 
     // At the beginning of your end step, if you gained life this turn, each opponent loses 1 life.
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.YouGainedLifeThisTurn
         effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent))
     }
@@ -40,7 +41,7 @@ val LunarConvocation = card("Lunar Convocation") {
     // At the beginning of your end step, if you gained and lost life this turn,
     // create a 1/1 black Bat creature token with flying.
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.YouGainedAndLostLifeThisTurn
         effect = Effects.CreateToken(
             power = 1,

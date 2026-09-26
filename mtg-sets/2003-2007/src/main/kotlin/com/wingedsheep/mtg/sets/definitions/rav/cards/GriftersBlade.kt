@@ -7,7 +7,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ChoiceType
 import com.wingedsheep.sdk.scripting.EntersWithChoice
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.OnEnterRunEffect
+import com.wingedsheep.sdk.scripting.OnEnterRun
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -24,7 +24,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * attached" primitive: [EntersWithChoice] with [ChoiceType.CREATURE_ON_BATTLEFIELD] records the
  * host on the Blade before it enters (its candidate pool is already "creature you control,
  * excluding the entering object", and an empty pool skips the choice — which is precisely the
- * card's "If you do" and its second ruling), and [OnEnterRunEffect] then attaches to
+ * card's "If you do" and its second ruling), and [OnEnterRun] then attaches to
  * [EffectTarget.ChosenCreature] inline with entry.
  *
  * "A creature you control **it could be attached to**" is, for an Equipment with no printed equip
@@ -48,7 +48,7 @@ val GriftersBlade = card("Grifter's Blade") {
     keywords(Keyword.FLASH)
 
     replacementEffect(EntersWithChoice(ChoiceType.CREATURE_ON_BATTLEFIELD))
-    replacementEffect(OnEnterRunEffect(Effects.AttachEquipment(EffectTarget.ChosenCreature)))
+    replacementEffect(OnEnterRun(Effects.AttachEquipment(EffectTarget.ChosenCreature)))
 
     staticAbility {
         ability = ModifyStats(1, 1)

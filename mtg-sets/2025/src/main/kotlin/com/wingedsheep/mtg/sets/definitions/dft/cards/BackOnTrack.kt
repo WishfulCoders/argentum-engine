@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CrewSaddleContribution
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Back on Track — Aetherdrift #76
@@ -22,23 +21,13 @@ val BackOnTrack = card("Back on Track") {
         "Vehicles as though its power were 2 greater.\""
 
     spell {
-        val returned = target(
-            "target creature or Vehicle card in your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.CreatureOrVehicle.ownedByYou(),
-                    zone = Zone.GRAVEYARD
-                )
-            )
-        )
-        effect = Effects.Move(returned, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD).then(
-            Effects.CreateToken(
-                power = 1,
-                toughness = 1,
-                creatureTypes = setOf("Pilot"),
-                imageUri = "https://cards.scryfall.io/normal/front/8/6/8672d795-04f9-4089-9c92-6d6ff628da12.jpg?1783907682",
-                staticAbilities = listOf(CrewSaddleContribution(modifier = 2))
-            )
+        val returned = target(TargetFilter(GameObjectFilter.CreatureOrVehicle.ownedByYou(), zone = Zone.GRAVEYARD))
+        effect = Effects.Move(returned, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD) then Effects.CreateToken(
+            power = 1,
+            toughness = 1,
+            creatureTypes = setOf("Pilot"),
+            imageUri = "https://cards.scryfall.io/normal/front/8/6/8672d795-04f9-4089-9c92-6d6ff628da12.jpg?1783907682",
+            staticAbilities = listOf(CrewSaddleContribution(modifier = 2))
         )
     }
 

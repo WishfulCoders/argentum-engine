@@ -16,6 +16,7 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.model.CreatureStats
 import com.wingedsheep.sdk.model.Deck
+import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.TriggeredAbility
@@ -26,6 +27,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * `PayOrSufferEffect.consequenceDescription` on the **choice-of-costs** path.
@@ -66,6 +68,7 @@ class PayOrSufferRoutedChoiceTest : FunSpec({
         creatureStats = CreatureStats(2, 2),
         script = CardScript.creature(
             TriggeredAbility.create(
+                id = AbilityId("PayOrSufferRoutedChoiceTest_1"),
                 trigger = EventPattern.ZoneChangeEvent(to = Zone.BATTLEFIELD),
                 binding = TriggerBinding.SELF,
                 effect = PayOrSufferEffect(
@@ -99,7 +102,7 @@ class PayOrSufferRoutedChoiceTest : FunSpec({
         driver.giveMana(victim, Color.GREEN, 1)
         val card = driver.putCardInHand(me, "Toll Collector")
         driver.giveMana(me, Color.GREEN, 2)
-        driver.castSpell(me, card).isSuccess shouldBe true
+        driver.castSpell(me, card).outcome shouldBe Outcome.Done
         driver.bothPass() // resolve the permanent
         driver.bothPass() // resolve the enters trigger
         return me to victim

@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.assay.grammar.CardFragment
 import com.wingedsheep.sdk.scripting.AdditionalCost
 import com.wingedsheep.sdk.scripting.costs.CostAtom
@@ -31,6 +31,7 @@ import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import java.util.Locale
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * The differential's own behaviour, on hand-built pairs. The corpus run lives in
@@ -258,7 +259,7 @@ class DifferentialTest : StringSpec({
                     "Punk Frogs",
                     "Ward {3}",
                     keywords = setOf(Keyword.WARD),
-                    keywordAbilities = listOf(KeywordAbility.ward("{3}")),
+                    keywordAbilities = listOf(KeywordAbility.Ward(WardCost.Mana("{3}"))),
                 )
             ),
             index(card),
@@ -286,7 +287,7 @@ class DifferentialTest : StringSpec({
 
     fun destroyScript(slot: String?, reference: EffectTarget) = CardScript(
         spellEffect = Effects.Destroy(reference),
-        targetRequirements = listOf(TargetPermanent(filter = TargetFilter(GameObjectFilter.Creature), id = slot)),
+        targetRequirements = listOf(TargetObject(filter = TargetFilter(GameObjectFilter.Creature), id = slot)),
     )
 
     // Six cards reported as divergent over this: the grammar's slot is called "target", which is
@@ -305,7 +306,7 @@ class DifferentialTest : StringSpec({
     // neither model — the same shape as the four other ways this gate has found to lie to itself.
     "an aura's attachment restriction is normalized like every other requirement" {
         fun aura(slot: String?) = CardScript(
-            auraTarget = TargetPermanent(filter = TargetFilter(GameObjectFilter.Creature), id = slot),
+            auraTarget = TargetObject(filter = TargetFilter(GameObjectFilter.Creature), id = slot),
             staticAbilities = listOf(ModifyStats(1, 2)),
         )
 
@@ -317,8 +318,8 @@ class DifferentialTest : StringSpec({
     "an aura's restriction is numbered after the spell's own requirements" {
         val script = CardScript(
             spellEffect = Effects.Destroy(EffectTarget.ContextTarget(0)),
-            targetRequirements = listOf(TargetPermanent(filter = TargetFilter(GameObjectFilter.Land))),
-            auraTarget = TargetPermanent(filter = TargetFilter(GameObjectFilter.Creature)),
+            targetRequirements = listOf(TargetObject(filter = TargetFilter(GameObjectFilter.Land))),
+            auraTarget = TargetObject(filter = TargetFilter(GameObjectFilter.Creature)),
         )
 
         differential.normalizeSlotNames(script).contains("\"slot_1\"") shouldBe true
@@ -355,7 +356,7 @@ class DifferentialTest : StringSpec({
                     cost = AbilityCost.Tap,
                     effect = Effects.Destroy(reference),
                     targetRequirements = listOf(
-                        TargetPermanent(filter = TargetFilter(GameObjectFilter.Creature), id = slot)
+                        TargetObject(filter = TargetFilter(GameObjectFilter.Creature), id = slot)
                     ),
                 )
             )

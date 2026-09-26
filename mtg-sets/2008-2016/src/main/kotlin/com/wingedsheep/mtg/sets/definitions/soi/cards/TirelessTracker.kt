@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.soi.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -18,9 +18,9 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever you sacrifice a Clue, put a +1/+1 counter on this creature.
  *
  * Both halves are existing vocabulary:
- * - The landfall half is [Triggers.LandYouControlEnters] + [Effects.Investigate] (CR 701.36 — the
+ * - The landfall half is `Triggers.a(GameObjectFilter.Land.youControl()).enters()` + [Effects.Investigate] (CR 701.36 — the
  *   keyword-action spelling of "create a Clue token").
- * - "Whenever you sacrifice **a** Clue" is the per-permanent template ([Triggers.YouSacrificeA],
+ * - "Whenever you sacrifice **a** Clue" is the per-permanent template (`Triggers.you.sacrifices(filter)`,
  *   CR 603.2c), not the batch one: sacrificing two Clues at once yields two +1/+1 counters. Per the
  *   2024-02-02 ruling a Clue is any Clue *artifact*, not just a token, so the filter keys on the
  *   artifact subtype rather than on token-ness — and it fires for a Clue sacrificed for any reason,
@@ -37,14 +37,14 @@ val TirelessTracker = card("Tireless Tracker") {
         "Whenever you sacrifice a Clue, put a +1/+1 counter on this creature."
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.Investigate()
         description = "Landfall — Whenever a land you control enters, investigate."
     }
 
     triggeredAbility {
-        trigger = Triggers.YouSacrificeA(GameObjectFilter.Artifact.withSubtype("Clue"))
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Artifact.withSubtype("Clue"))
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Whenever you sacrifice a Clue, put a +1/+1 counter on this creature."
     }
 

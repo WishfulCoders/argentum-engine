@@ -9,17 +9,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Roads Go Ever, Ever On
@@ -47,31 +38,24 @@ val RoadsGoEverEverOn = card("Roads Go Ever, Ever On") {
         "turn for each Plains you control."
 
     sagaChapter(1) {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        Zone.LIBRARY,
-                        Player.You,
-                        GameObjectFilter.BasicLand.withSubtype("Plains"),
-                    ),
-                    storeAs = "roadsSearchable",
+        effect = Effects.Pipeline {
+            val roadsSearchable = gather(
+                CardSource.FromZone(
+                    Zone.LIBRARY,
+                    Player.You,
+                    GameObjectFilter.BasicLand.withSubtype("Plains"),
                 ),
-                SelectFromCollectionEffect(
-                    from = "roadsSearchable",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(2)),
-                    storeSelected = "roadsExiled",
-                    prompt = "Search your library for up to two basic Plains cards",
-                ),
-                MoveCollectionEffect(
-                    from = "roadsExiled",
-                    destination = CardDestination.ToZone(Zone.EXILE),
-                    linkToSource = true,
-                ),
-                ShuffleLibraryEffect(),
-                Effects.GainLife(2),
+                search = true
             )
-        )
+            val roadsExiled = chooseUpTo(
+                2,
+                from = roadsSearchable,
+                prompt = "Search your library for up to two basic Plains cards"
+            )
+            exile(roadsExiled, linkToSource = true)
+            run(Effects.ShuffleLibrary())
+            run(Effects.GainLife(2))
+        }
     }
 
     sagaChapter(2) { effect = returnChosenRoad() }
@@ -82,15 +66,16 @@ val RoadsGoEverEverOn = card("Roads Go Ever, Ever On") {
             Player.You,
             GameObjectFilter.Land.withSubtype("Plains"),
         ).count()
-        effect = CreateDelayedTriggerEffect(
-            trigger = Triggers.YouAttack,
-            targetRequirement = TargetCreature(filter = TargetFilter.Creature.youControl()),
+        effect = Effects.CreateDelayedTrigger(
+            trigger = Triggers.you.attacks(),
+        ) {
+            val creature = target(TargetFilter.Creature.youControl())
             effect = Effects.ModifyStats(
                 power = plainsCount,
                 toughness = plainsCount,
-                target = EffectTarget.ContextTarget(0),
-            ),
-        )
+                target = creature,
+            )
+        }
     }
 
     metadata {
@@ -101,22 +86,12 @@ val RoadsGoEverEverOn = card("Roads Go Ever, Ever On") {
     }
 }
 
-private fun returnChosenRoad() = Effects.Composite(
-    listOf(
-        GatherCardsEffect(
-            source = CardSource.FromLinkedExile(),
-            storeAs = "roadsLinked",
-        ),
-        SelectFromCollectionEffect(
-            from = "roadsLinked",
-            selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-            storeSelected = "roadsReturned",
-            prompt = "Choose a card exiled with Roads Go Ever, Ever On to put into its owner's hand",
-        ),
-        MoveCollectionEffect(
-            from = "roadsReturned",
-            destination = CardDestination.ToZone(Zone.HAND),
-            unlinkFromSource = true,
-        ),
+private fun returnChosenRoad() = Effects.Pipeline {
+    val roadsLinked = gather(CardSource.FromLinkedExile())
+    val roadsReturned = chooseExactly(
+        1,
+        from = roadsLinked,
+        prompt = "Choose a card exiled with Roads Go Ever, Ever On to put into its owner's hand"
     )
-)
+    move(roadsReturned, CardDestination.ToZone(Zone.HAND), unlinkFromSource = true)
+}

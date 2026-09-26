@@ -8,9 +8,10 @@ import com.wingedsheep.engine.state.components.battlefield.DamageDealtToCreature
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.FaceDownComponent
 import com.wingedsheep.engine.state.components.identity.TokenComponent
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.TriggeredAbility
@@ -388,6 +389,7 @@ class DeathAndLeaveTriggerDetector(
         val info = resolveDyingEntity(state, event) ?: return
 
         val persistAbility = TriggeredAbility.create(
+            id = AbilityId("persist"),
             trigger = EventPattern.ZoneChangeEvent(
                 from = Zone.BATTLEFIELD,
                 to = Zone.GRAVEYARD
@@ -400,7 +402,7 @@ class DeathAndLeaveTriggerDetector(
                         destination = Zone.BATTLEFIELD
                     ),
                     AddCountersEffect(
-                        counterType = Counters.MINUS_ONE_MINUS_ONE,
+                        counterType = CounterType.MINUS_ONE_MINUS_ONE,
                         count = 1,
                         target = EffectTarget.Self
                     )
@@ -440,6 +442,7 @@ class DeathAndLeaveTriggerDetector(
         val info = resolveDyingEntity(state, event) ?: return
 
         val undyingAbility = TriggeredAbility.create(
+            id = AbilityId("undying"),
             trigger = EventPattern.ZoneChangeEvent(
                 from = Zone.BATTLEFIELD,
                 to = Zone.GRAVEYARD
@@ -452,7 +455,7 @@ class DeathAndLeaveTriggerDetector(
                         destination = Zone.BATTLEFIELD
                     ),
                     AddCountersEffect(
-                        counterType = Counters.PLUS_ONE_PLUS_ONE,
+                        counterType = CounterType.PLUS_ONE_PLUS_ONE,
                         count = 1,
                         target = EffectTarget.Self
                     )
@@ -507,6 +510,7 @@ class DeathAndLeaveTriggerDetector(
         val info = resolveDyingEntity(state, event) ?: return
 
         val enduringAbility = TriggeredAbility.create(
+            id = AbilityId("enduring"),
             trigger = EventPattern.ZoneChangeEvent(
                 from = Zone.BATTLEFIELD,
                 to = Zone.GRAVEYARD

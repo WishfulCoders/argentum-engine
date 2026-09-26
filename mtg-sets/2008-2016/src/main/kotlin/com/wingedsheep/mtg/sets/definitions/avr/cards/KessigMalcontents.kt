@@ -31,8 +31,8 @@ val KessigMalcontents = card("Kessig Malcontents") {
         "of Humans you control."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", Targets.PlayerOrPlaneswalker)
+        trigger = Triggers.self.enters()
+        val t = target(Targets.PlayerOrPlaneswalker)
         effect = Effects.DealDamage(
             DynamicAmounts.battlefield(
                 Player.You,

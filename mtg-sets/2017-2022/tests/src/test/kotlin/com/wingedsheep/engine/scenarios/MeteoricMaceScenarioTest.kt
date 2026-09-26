@@ -22,7 +22,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  *
  * The corpus' first **cascade on a noncreature permanent spell**. Cascade (CR 702.85a) is itself a
  * "when you cast this spell" triggered ability, so the card wires it as
- * `Triggers.WhenYouCastThisSpell()` -> `Effects.Cascade`; the executor reads the *triggering spell's*
+ * `Triggers.self.isCast()` -> `Effects.Cascade`; the executor reads the *triggering spell's*
  * mana value for the "costs less" threshold, which is the part that has to work off an Equipment
  * rather than a creature. The library is stacked deterministically here so the cascade hit is not
  * left to a shuffle: a land on top (walked past, then bottom-randomized) and a cheaper nonland card

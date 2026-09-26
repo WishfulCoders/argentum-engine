@@ -3,12 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.dft.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.maxSpeed
 import com.wingedsheep.sdk.dsl.startYourEngines
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Amonkhet Raceway
@@ -38,7 +38,7 @@ val AmonkhetRaceway = card("Amonkhet Raceway") {
     maxSpeed {
         activatedAbility {
             cost = Costs.Tap
-            val creature = target("target creature", Targets.Creature)
+            val creature = target(TargetFilter.Creature)
             effect = Effects.GrantKeyword(Keyword.HASTE, creature)
             // The auto-rendered label reads "{T}: target gains haste until end of turn" — the bound
             // variable name lands mid-sentence. `maxSpeed { }` prepends "Max speed — " to whichever

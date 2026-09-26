@@ -13,7 +13,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * When this creature dies, create a Food token.
  *
- * [Triggers.Dies] is the self battlefield→graveyard trigger (CR 700.4); its controller creates a
+ * `Triggers.self.dies()` is the self battlefield→graveyard trigger (CR 700.4); its controller creates a
  * Food token via [Effects.CreateFood].
  */
 val Mintstrosity = card("Mintstrosity") {
@@ -26,7 +26,7 @@ val Mintstrosity = card("Mintstrosity") {
         "\"{2}, {T}, Sacrifice this token: You gain 3 life.\")"
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateFood()
     }
 

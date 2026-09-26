@@ -34,6 +34,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * `spell { selfShuffleIntoLibrary() }` — the card-intrinsic "Shuffle <card name> into its owner's
@@ -117,7 +118,7 @@ class SelfShuffleIntoLibraryOnResolveScenarioTest : FunSpec({
         manaCost = "{1}"
         typeLine = "Sorcery"
         spell {
-            target("target creature", Targets.Creature)
+            target(TargetFilter.Creature)
             effect = Effects.DealDamage(1, EffectTarget.ContextTarget(0))
             selfShuffleIntoLibrary()
         }
@@ -178,24 +179,22 @@ class SelfShuffleIntoLibraryOnResolveScenarioTest : FunSpec({
         manaCost = "{1}"
         typeLine = "Sorcery"
         spell {
-            effect = Effects.Composite(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        zone = Zone.GRAVEYARD,
-                        filter = GameObjectFilter.InstantOrSorcery,
-                    ),
-                    storeAs = "pool",
+            effect = GatherCardsEffect(
+                source = CardSource.FromZone(
+                    zone = Zone.GRAVEYARD,
+                    filter = GameObjectFilter.InstantOrSorcery,
                 ),
+                storeAs = "pool",
+            ) then
                 SelectFromCollectionEffect(
                     from = "pool",
                     selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
                     storeSelected = "pick",
-                ),
+                ) then
                 Effects.CastFromCollectionWithoutPayingCost(
                     from = "pick",
                     insteadOfGraveyard = AfterResolveDestination.BOTTOM_OF_LIBRARY,
-                ),
-            )
+                )
         }
     }
 

@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.effects.CantBeRegeneratedEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Verduran Emissary
@@ -29,10 +28,10 @@ val VerduranEmissary = card("Verduran Emissary") {
     keywordAbility(KeywordAbility.kicker("{1}{R}"))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = WasKicked
-        val t = target("artifact", Targets.Artifact)
-        effect = CantBeRegeneratedEffect(t) then Effects.Destroy(t)
+        val t = target(TargetFilter.Artifact)
+        effect = Effects.CantBeRegenerated(t) then Effects.Destroy(t)
     }
 
     metadata {

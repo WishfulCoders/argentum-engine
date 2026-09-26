@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
@@ -9,9 +9,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -41,7 +39,7 @@ val ReapingWillow = card("Reaping Willow") {
     keywords(Keyword.LIFELINK)
 
     replacementEffect(EntersWithCounters(
-        counterType = CounterTypeFilter.MinusOneMinusOne,
+        counterType = CounterType.MINUS_ONE_MINUS_ONE,
         count = 2,
         selfOnly = true
     ))
@@ -49,17 +47,9 @@ val ReapingWillow = card("Reaping Willow") {
     activatedAbility {
         cost = Costs.Composite(
             Costs.Mana("{1}{W/B}"),
-            Costs.RemoveCounterFromSelf(Counters.MINUS_ONE_MINUS_ONE, count = 2)
+            Costs.RemoveCounterFromSelf(CounterType.MINUS_ONE_MINUS_ONE, count = 2)
         )
-        val creature = target(
-            "target creature card with mana value 3 or less from your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.ownedByYou().manaValueAtMost(3),
-                    zone = Zone.GRAVEYARD
-                )
-            )
-        )
+        val creature = target(TargetFilter(GameObjectFilter.Creature.ownedByYou().manaValueAtMost(3), zone = Zone.GRAVEYARD))
         effect = Effects.Move(
             target = creature,
             destination = Zone.BATTLEFIELD

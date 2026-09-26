@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -15,32 +14,25 @@ import com.wingedsheep.sdk.scripting.GrantSupertype
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * "attach ... to it" — one attach per chosen Equipment. [EffectTarget.Self] is the granted
  * ability's source, i.e. the enchanted creature.
  */
-private val attachEquipmentToSelf = ForEachTargetEffect(
-    listOf(
-        Effects.AttachTargetEquipmentToCreature(
-            equipmentTarget = EffectTarget.ContextTarget(0),
-            creatureTarget = EffectTarget.Self,
-        )
+private val attachEquipmentToSelf = Effects.ForEachTarget(
+    Effects.AttachTargetEquipmentToCreature(
+        equipmentTarget = EffectTarget.ContextTarget(0),
+        creatureTarget = EffectTarget.Self,
     )
 )
 
 /** "any number of target Equipment you control" — `unlimited` implies a minimum of zero. */
-private fun equipmentYouControl(): TargetObject = TargetPermanent(
-    unlimited = true,
-    filter = TargetFilter(
+private fun equipmentYouControl(): TargetObject = TargetObject(filter = TargetFilter(
         baseFilter = GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl()
-    ),
-)
+    ), unlimited = true)
 
 /**
  * Super-Soldier Serum — Marvel Super Heroes #38
@@ -60,7 +52,7 @@ private fun equipmentYouControl(): TargetObject = TargetPermanent(
  * The combat ability is one printed ability with two trigger conditions, so it is modeled as two
  * granted triggered abilities — the Astrologian's Planisphere idiom: [GrantTriggeredAbility] over
  * [Filters.EnchantedCreature] installs the trigger *on the enchanted creature*, where
- * [Triggers.Attacks] and [Triggers.Blocks] both fire with SELF binding and "it"
+ * `Triggers.self.attacks()` and `Triggers.self.blocks()` both fire with SELF binding and "it"
  * ([EffectTarget.Self]) is the creature itself. "Any number of target Equipment you control" is a
  * `TargetPermanent(unlimited = true)` (minimum zero) fanned out with [ForEachTargetEffect] so each
  * chosen Equipment is attached independently by [Effects.AttachTargetEquipmentToCreature].
@@ -82,7 +74,7 @@ val SuperSoldierSerum = card("Super-Soldier Serum") {
         "Whenever enchanted creature attacks or blocks, attach any number of target Equipment " +
         "you control to it."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = ModifyStats(2, 2, Filters.EnchantedCreature)
@@ -104,8 +96,7 @@ val SuperSoldierSerum = card("Super-Soldier Serum") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.Attacks.event,
-                binding = Triggers.Attacks.binding,
+                trigger = Triggers.self.attacks(),
                 effect = attachEquipmentToSelf,
                 targetRequirement = equipmentYouControl(),
                 descriptionOverride = "Whenever this creature attacks, attach any number of " +
@@ -119,8 +110,7 @@ val SuperSoldierSerum = card("Super-Soldier Serum") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.Blocks.event,
-                binding = Triggers.Blocks.binding,
+                trigger = Triggers.self.blocks(),
                 effect = attachEquipmentToSelf,
                 targetRequirement = equipmentYouControl(),
                 descriptionOverride = "Whenever this creature blocks, attach any number of " +

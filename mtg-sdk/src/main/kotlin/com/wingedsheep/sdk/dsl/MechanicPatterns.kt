@@ -2,7 +2,7 @@ package com.wingedsheep.sdk.dsl
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.ManaCost
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -35,19 +35,20 @@ import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.effects.MoveType
 import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
 import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.SelectionMode
+import com.wingedsheep.sdk.scripting.effects.StorePlayerEffect
+import com.wingedsheep.sdk.scripting.effects.RepeatDynamicTimesEffect
 import com.wingedsheep.sdk.scripting.effects.SuccessCriterion
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
- * Named MTG keyword-mechanic recipes (Blight, Bolster, Explore, Forage, Gift, Incubate, Learn,
- * Recruit).
+ * Named MTG keyword-mechanic recipes (Blight, Bolster, Empower Jace, Explore, Forage, Gift, Incubate,
+ * Learn, Recruit, Tempting offer).
  *
  * Reached through the [Patterns] index — `Patterns.Mechanic.blight(...)`. Each composes existing
  * atomic effects into the printed keyword behaviour; they live here (rather than a zone-based
@@ -57,16 +58,16 @@ object MechanicPatterns {
 
     /**
      * Extort (CR 702.101) — the effect of "Whenever you cast a spell, you may pay {W/B}. If you do,
-     * each opponent loses 1 life and you gain that much life." Pair with [Triggers.YouCastSpell]; each
+     * each opponent loses 1 life and you gain that much life." Pair with `Triggers.you.casts()`; each
      * instance of extort is its own trigger, so a card with extort gets one triggered ability.
      *
      * The hybrid {W/B} is paid (or not) as the ability resolves, at most once per trigger, and
      * [Effects.DrainLife] gains the total life actually lost — so no life if no opponent lost any.
      * The Kingpin of Crime and Blind Obedience.
      */
-    fun extort(): Effect = MayPayManaEffect(
+    fun extort(): Effect = Effects.MayPay(
         cost = ManaCost.parse("{W/B}"),
-        effect = Effects.DrainLife(1),
+        then = Effects.DrainLife(1),
     )
 
     /**
@@ -103,8 +104,51 @@ object MechanicPatterns {
                     prompt = "Blight $amount — choose a creature $possessive",
                     useTargetingUI = true
                 ),
-                AddCountersToCollectionEffect("blighted", Counters.MINUS_ONE_MINUS_ONE, amount)
+                AddCountersToCollectionEffect("blighted", CounterType.MINUS_ONE_MINUS_ONE, amount)
             )
+        )
+    }
+
+    /**
+     * Tempting offer (an ability word, CR 207.2c) — "[offer]. Then each opponent may [offer]. For each
+     * opponent who does, [offer] again for you." Tempt with Bunnies, Tempt with Discovery.
+     *
+     * Follows the cycle's ruling: you do [offer]; then every opponent decides, in turn order and
+     * knowing the earlier answers, whether to accept; *then* [offer] happens for each opponent who
+     * accepted (in APNAP order, each as that opponent's own "you"); then it happens again for you
+     * once per accepting opponent. No opponent acts before every opponent has answered.
+     *
+     * Composed from the player-recording primitives: a `ForEachPlayerCollecting` over
+     * [Player.EachOpponent] whose body is a yes/no that records the opponent
+     * ([StorePlayerEffect]), a `ForEachPlayer` over the recorded players
+     * ([Player.InCollection]), and a [RepeatDynamicTimesEffect] sized by the recorded count.
+     *
+     * @param offer What "you" do — written from the doer's point of view ([Player.You] / the
+     *   controller), since each accepting opponent runs it as themselves.
+     * @param description The printed text of the whole ability, which the composite's derived text
+     *   can't reproduce.
+     */
+    fun temptingOffer(offer: Effect, description: String): CompositeEffect {
+        val accepter = "temptingOfferAccepter"
+        val accepted = "temptingOfferAccepted"
+        return CompositeEffect(
+            listOf(
+                offer,
+                com.wingedsheep.sdk.scripting.effects.ForEachPlayerCollectingEffect(
+                    players = Player.EachOpponent,
+                    effects = listOf(
+                        Effects.May(
+                            StorePlayerEffect(storeAs = accepter),
+                            prompt = "Accept the tempting offer? (${offer.description})",
+                            descriptionOverride = "You may accept the tempting offer",
+                        )
+                    ),
+                    collectCollections = mapOf(accepter to accepted),
+                ),
+                com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect(Player.InCollection(accepted), listOf(offer)),
+                RepeatDynamicTimesEffect(DynamicAmount.DistinctEntitiesInCollections(listOf(accepted)), offer),
+            ),
+            descriptionOverride = description,
         )
     }
 
@@ -131,7 +175,7 @@ object MechanicPatterns {
             ),
             FilterCollectionEffect(
                 from = "bolsterCreatures",
-                filter = CollectionFilter.LeastToughness,
+                collectionFilter = CollectionFilter.LeastToughness,
                 storeMatching = "bolsterLeastToughness"
             ),
             SelectFromCollectionEffect(
@@ -142,7 +186,7 @@ object MechanicPatterns {
                 prompt = "Bolster $amount — choose a creature with the least toughness",
                 useTargetingUI = true
             ),
-            AddCountersToCollectionEffect("bolstered", Counters.PLUS_ONE_PLUS_ONE, amount)
+            AddCountersToCollectionEffect("bolstered", CounterType.PLUS_ONE_PLUS_ONE, amount)
         )
     )
 
@@ -175,7 +219,7 @@ object MechanicPatterns {
             ),
             FilterCollectionEffect(
                 from = "explored",
-                filter = CollectionFilter.MatchesFilter(GameObjectFilter.Land),
+                filter = GameObjectFilter.Land,
                 storeMatching = "exploredLand",
                 storeNonMatching = "exploredNonland"
             ),
@@ -190,7 +234,7 @@ object MechanicPatterns {
                 then = CompositeEffect(
                     listOf(
                         AddCountersEffect(
-                            counterType = Counters.PLUS_ONE_PLUS_ONE,
+                            counterType = CounterType.PLUS_ONE_PLUS_ONE,
                             count = 1,
                             target = explorer
                         ),
@@ -221,7 +265,7 @@ object MechanicPatterns {
      * offered when the player can actually fulfill at least one option.
      *
      * **Each mode ends by emitting the foraged event** ([Effects.Foraged]), which is what makes
-     * "Whenever you forage" (`Triggers.WheneverYouForage`) see a forage taken as an *effect*. The
+     * "Whenever you forage" (`Triggers.you.forages()`) see a forage taken as an *effect*. The
      * three *cost* contexts — an activated-ability cost, a cast-time additional cost, the
      * graveyard-cast permission — emit it from their shared payment implementation instead, because
      * they never come through here. That split is waterbend's: a keyword action that is sometimes a
@@ -382,7 +426,7 @@ object MechanicPatterns {
      * spell {
      *     effect = Patterns.Mechanic.giftSpell(
      *         noGiftMode = Mode.noTarget(baseEffect, "Don't promise a gift — …"),
-     *         giftMode = Mode.noTarget(baseEffect.then(opponentDraws).then(Effects.GiftGiven()),
+     *         giftMode = Mode.noTarget(baseEffect then opponentDraws then Effects.GiftGiven(),
      *                                  "Promise a gift — …")
      *     )
      * }
@@ -393,8 +437,8 @@ object MechanicPatterns {
         ModalEffect.chooseOne(
             noGiftMode,
             giftMode.copy(
-                effect = ChooseOpponentForSourceEffect(prompt = "Choose an opponent to receive the gift")
-                    .then(giftMode.effect)
+                effect = ChooseOpponentForSourceEffect(prompt = "Choose an opponent to receive the gift") then
+                    giftMode.effect
             ),
             countsAsModalSpell = false
         )
@@ -415,7 +459,7 @@ object MechanicPatterns {
         listOf(
             CreatePredefinedTokenEffect(tokenType = "Incubator", count = 1),
             AddCountersEffect(
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
                 count = n,
                 target = EffectTarget.PipelineTarget(CREATED_TOKENS, 0)
             )
@@ -433,12 +477,72 @@ object MechanicPatterns {
         listOf(
             CreatePredefinedTokenEffect(tokenType = "Incubator", count = 1),
             AddDynamicCountersEffect(
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
                 amount = amount,
                 target = EffectTarget.PipelineTarget(CREATED_TOKENS, 0)
             )
         )
     )
+
+    // =========================================================================
+    // Empower Jace (Reality Fracture)
+    // =========================================================================
+
+    /**
+     * The permanents empower Jace can choose among: Jace planeswalker tokens (CR 701.71a). A
+     * nontoken Jace planeswalker card doesn't qualify, and neither would a token that is a Jace
+     * but not a planeswalker.
+     */
+    val JACE_PLANESWALKER_TOKEN: GameObjectFilter =
+        GameObjectFilter.Planeswalker.withSubtype("Jace").token()
+
+    /**
+     * Empower Jace N (CR 701.71a) — "If you don't control a Jace planeswalker token, create a
+     * blue Jace planeswalker token with 0 loyalty, '[−1]: Surveil 1,' and '[−3]: Draw a card.'
+     * Choose a Jace planeswalker token you control. Put N loyalty counters on it."
+     *
+     * Atomic composition, same find-or-create shape as amass:
+     * 1. create the predefined `Jace` token only when no Jace planeswalker token is controlled;
+     * 2. gather the Jace planeswalker tokens controlled *now* (which includes the one just made);
+     * 3. choose exactly one — auto-picked when there is only one, a battlefield choice otherwise
+     *    (non-targeting: the reminder text never says "target");
+     * 4. put N loyalty counters on it.
+     *
+     * The token enters with 0 loyalty and gets its counters in the same resolution, so the
+     * zero-loyalty state-based action (CR 704.5i) only sees it at 0 when N is 0.
+     *
+     * @param amount N, evaluated when the counters are placed. Creating a noncreature
+     *   planeswalker token first can't change a creature- or damage-based N.
+     */
+    fun empowerJace(amount: DynamicAmount): CompositeEffect = CompositeEffect(
+        listOf(
+            Effects.If(
+                condition = Conditions.YouControl(JACE_PLANESWALKER_TOKEN, negate = true),
+                then = CreatePredefinedTokenEffect(tokenType = "Jace")
+            ),
+            GatherCardsEffect(
+                source = CardSource.BattlefieldMatching(JACE_PLANESWALKER_TOKEN, Player.You),
+                storeAs = "empower_jaces"
+            ),
+            SelectFromCollectionEffect(
+                from = "empower_jaces",
+                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
+                chooser = Chooser.Controller,
+                storeSelected = "empower_jace",
+                prompt = "Empower Jace ${amount.description} — choose a Jace token you control",
+                useTargetingUI = true
+            ),
+            AddCountersToCollectionEffect(
+                collectionName = "empower_jace",
+                counterType = CounterType.LOYALTY,
+                amount = amount
+            )
+        ),
+        descriptionOverride = "Empower Jace ${amount.description}"
+    )
+
+    /** Empower Jace N with a fixed N — see [empowerJace]. */
+    fun empowerJace(amount: Int): CompositeEffect = empowerJace(DynamicAmount.Fixed(amount))
 
     // =========================================================================
     // Recruit Pattern (The Hobbit)

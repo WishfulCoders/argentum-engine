@@ -17,7 +17,7 @@ import io.kotest.matchers.shouldBe
  *   "{T}: Target creature you control gets +1/+0 until end of turn. Activate only as a sorcery."
  *   Plot {2}{R}
  *
- * The trigger reuses [com.wingedsheep.sdk.dsl.Triggers.NthSpellCast] (n = 2, You), and the token is
+ * The trigger reuses `Triggers.<player>.castsNth(n, spell)` (n = 2, You), and the token is
  * the standard OTJ Mercenary (same shape as Form a Posse). Plot is the shared keyword and is covered
  * by other plot scenario tests; here we exercise the unique second-spell trigger + token ability.
  */

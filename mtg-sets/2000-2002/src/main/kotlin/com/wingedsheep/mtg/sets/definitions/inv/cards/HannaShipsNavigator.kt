@@ -7,8 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Hanna, Ship's Navigator
@@ -28,13 +26,10 @@ val HannaShipsNavigator = card("Hanna, Ship's Navigator") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{W}{U}"), Costs.Tap)
         val t = target(
-            "target",
-            TargetObject(
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter.ArtifactOrEnchantment.ownedByYou(),
-                    zone = Zone.GRAVEYARD
-                )
-            )
+            TargetFilter(
+                baseFilter = GameObjectFilter.ArtifactOrEnchantment.ownedByYou(),
+                zone = Zone.GRAVEYARD
+            ),
         )
         effect = Effects.ReturnToHand(t)
         description = "{1}{W}{U}, {T}: Return target artifact or enchantment card from your graveyard to your hand."

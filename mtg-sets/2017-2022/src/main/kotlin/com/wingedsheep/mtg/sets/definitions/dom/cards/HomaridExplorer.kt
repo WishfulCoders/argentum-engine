@@ -22,8 +22,8 @@ val HomaridExplorer = card("Homarid Explorer") {
     oracleText = "When this creature enters, target player mills four cards."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", Targets.Player)
+        trigger = Triggers.self.enters()
+        val t = target(Targets.Player)
         effect = Patterns.Library.mill(4, t)
     }
 

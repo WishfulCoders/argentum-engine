@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Bushido 1 (Whenever this creature blocks or becomes blocked, it gets +1/+1 until end of turn.)
  * Whenever Nagao attacks, Samurai creatures you control get +1/+1 until end of turn.
  *
- * The attack trigger is [Triggers.Attacks] (a SELF binding — it fires only when Nagao himself is
+ * The attack trigger is `Triggers.self.attacks()` (a SELF binding — it fires only when Nagao himself is
  * declared as an attacker) over a group pump. The printed wording says "Samurai *creatures* you
  * control", so the group filter is `Creature.withSubtype(SAMURAI).youControl()` rather than a bare
  * permanent filter — the same spelling `chk/cards/CallToGlory.kt` uses for the identical phrase, and
@@ -33,7 +33,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * mutually exclusive in any one combat, so the pump never doubles.
  *
  * The bushido pump targets [EffectTarget.Self] rather than `TriggeringEntity` because
- * [Triggers.Blocks] fires off a block event that does not bind the source as the triggering entity.
+ * `Triggers.self.blocks()` fires off a block event that does not bind the source as the triggering entity.
  */
 val NagaoBoundByHonor = card("Nagao, Bound by Honor") {
     manaCost = "{3}{W}"
@@ -48,23 +48,23 @@ val NagaoBoundByHonor = card("Nagao, Bound by Honor") {
 
     // Bushido 1, half one: "Whenever this creature blocks …"
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
         description = "Bushido 1"
     }
 
     // Bushido 1, half two: "… or becomes blocked, it gets +1/+1 until end of turn."
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
+        trigger = Triggers.self.becomesBlocked()
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
         description = "Bushido 1"
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withSubtype(Subtype.SAMURAI).youControl()),
-            Effects.ModifyStats(1, 1, EffectTarget.Self)
+            Effects.ModifyStats(1, 1, EffectTarget.IterationEntity)
         )
         description = "Whenever Nagao attacks, Samurai creatures you control get +1/+1 until end of turn."
     }

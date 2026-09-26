@@ -5,8 +5,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 
 /**
  * Pondering Mage
@@ -29,12 +27,10 @@ val PonderingMage = card("Pondering Mage") {
     oracleText = "When this creature enters, look at the top three cards of your library, then put them back in any order. You may shuffle. Draw a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Patterns.Library.lookAtTopAndReorder(count = 3),
-            MayEffect(ShuffleLibraryEffect()),
-            Effects.DrawCards(1),
-        )
+        trigger = Triggers.self.enters()
+        effect = Patterns.Library.lookAtTopAndReorder(count = 3) then
+            Effects.May(Effects.ShuffleLibrary()) then
+            Effects.DrawCards(1)
         description = "When this creature enters, look at the top three cards of your library, then put them back in any order. You may shuffle. Draw a card."
     }
 

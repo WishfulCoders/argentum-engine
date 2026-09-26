@@ -23,7 +23,7 @@ val KalastriaNightwatch = card("Kalastria Nightwatch") {
     oracleText = "Whenever you gain life, this creature gains flying until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.YouGainLife
+        trigger = Triggers.you.gainsLife()
         effect = Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
     }
 

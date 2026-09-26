@@ -1,9 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.SetEnchantedLandType
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Sea's Claim
@@ -18,7 +19,7 @@ val SeasClaim = card("Sea's Claim") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant land\nEnchanted land is an Island."
 
-    auraTarget = Targets.Land
+    auraTarget = TargetObject(filter = TargetFilter.Land)
 
     staticAbility {
         ability = SetEnchantedLandType("Island")

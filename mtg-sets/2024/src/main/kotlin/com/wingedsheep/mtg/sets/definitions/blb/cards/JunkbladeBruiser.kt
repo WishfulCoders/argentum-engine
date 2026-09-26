@@ -29,7 +29,7 @@ val JunkbladeBruiser = card("Junkblade Bruiser") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.Expend(4)
+        trigger = Triggers.you.expends(4)
         effect = Effects.ModifyStats(2, 1, EffectTarget.Self)
     }
 

@@ -6,15 +6,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Scout the City
@@ -35,36 +28,26 @@ val ScoutTheCity = card("Scout the City") {
     spell {
         modal(chooseCount = 1) {
             mode("Look Around — Mill three cards. You may put a permanent card from among them into your hand. You gain 3 life") {
-                effect = Effects.Composite(
+                effect = Effects.Pipeline {
                     // Mill three: gather top 3, move to graveyard
-                    GatherCardsEffect(
-                        source = CardSource.TopOfLibrary(DynamicAmount.Fixed(3)),
-                        storeAs = "milled"
-                    ),
-                    MoveCollectionEffect(
-                        from = "milled",
-                        destination = CardDestination.ToZone(Zone.GRAVEYARD)
-                    ),
+                    val milled = gather(CardSource.TopOfLibrary(3))
+                    toGraveyard(milled)
                     // You may put a permanent card from among the milled cards into your hand
-                    SelectFromCollectionEffect(
-                        from = "milled",
-                        selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
+                    val selected = chooseUpTo(
+                        1,
+                        from = milled,
                         filter = GameObjectFilter.Permanent,
-                        storeSelected = "selected",
                         showAllCards = true,
                         prompt = "You may put a permanent card into your hand",
                         selectedLabel = "Put in hand",
                         remainderLabel = "Leave in graveyard"
-                    ),
-                    MoveCollectionEffect(
-                        from = "selected",
-                        destination = CardDestination.ToZone(Zone.HAND)
-                    ),
-                    Effects.GainLife(3)
-                )
+                    )
+                    toHand(selected)
+                    run(Effects.GainLife(3))
+                }
             }
             mode("Bring Down — Destroy target creature with flying") {
-                val t = target("target", TargetCreature(filter = TargetFilter.Creature.withKeyword(Keyword.FLYING)))
+                val t = target(TargetFilter.Creature.withKeyword(Keyword.FLYING))
                 effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
             }
         }

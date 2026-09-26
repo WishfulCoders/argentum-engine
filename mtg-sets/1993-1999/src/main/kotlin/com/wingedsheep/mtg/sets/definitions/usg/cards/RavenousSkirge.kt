@@ -29,7 +29,7 @@ val RavenousSkirge = card("Ravenous Skirge") {
     toughness = 1
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ModifyStats(2, 0, EffectTarget.Self)
     }
     metadata {

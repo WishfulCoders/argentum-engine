@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantWebSlingingToSpells
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -48,7 +47,7 @@ private val PeterParkerFront = card("Peter Parker") {
 
     // When Peter Parker enters, create a 2/1 green Spider creature token with reach.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 2,
             toughness = 1,
@@ -63,7 +62,7 @@ private val PeterParkerFront = card("Peter Parker") {
     // {1}{G}{W}{U}: Transform Peter Parker. Activate only as a sorcery.
     activatedAbility {
         cost = Costs.Mana("{1}{G}{W}{U}")
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
         timing = TimingRule.SorcerySpeed
         description = "Transform Peter Parker. Activate only as a sorcery."
     }

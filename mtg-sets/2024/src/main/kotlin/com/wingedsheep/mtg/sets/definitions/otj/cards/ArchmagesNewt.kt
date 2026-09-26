@@ -7,10 +7,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Archmage's Newt
@@ -23,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  * Saddle 3
  *
  * The combat-damage trigger grants Flashback (CR 702.34) at runtime via [Effects.GrantFlashback],
- * whose cost defaults to the targeted card's own mana cost. A [ConditionalEffect] gated on
+ * whose cost defaults to the targeted card's own mana cost. A [Effects.If] gated on
  * [Conditions.SourceIsSaddled] swaps in a fixed `{0}` flashback cost on the saddled branch. The
  * cast-from-graveyard enumerator, the cast handler, and the stack resolver's exile-on-resolution
  * clause honor the granted flashback exactly like a printed one through the shared
@@ -42,14 +40,12 @@ val ArchmagesNewt = card("Archmage's Newt") {
         "Then exile it.)\nSaddle 3"
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        target = TargetObject(
-            filter = TargetFilter.InstantOrSorceryInGraveyard.ownedByYou()
-        )
-        effect = ConditionalEffect(
+        val target = target(TargetFilter.InstantOrSorceryInGraveyard.ownedByYou())
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.If(
             condition = Conditions.SourceIsSaddled,
-            effect = Effects.GrantFlashback(EffectTarget.ContextTarget(0), cost = ManaCost.parse("{0}")),
-            elseEffect = Effects.GrantFlashback(EffectTarget.ContextTarget(0))
+            then = Effects.GrantFlashback(target, cost = ManaCost.parse("{0}")),
+            otherwise = Effects.GrantFlashback(target)
         )
         description = "Whenever this creature deals combat damage to a player, target instant or " +
             "sorcery card in your graveyard gains flashback until end of turn. The flashback cost " +

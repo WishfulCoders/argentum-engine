@@ -13,7 +13,7 @@ import io.kotest.matchers.shouldBe
  * Last-known source P/T on a self-sacrifice cost (CR 113.7a / 608.2h).
  *
  * "{T}, Sacrifice this creature: It deals damage equal to its power …" — the source is gone by the
- * time the ability resolves, so `EntityProperty(Source, Power)` (`DynamicAmounts.sourcePower()`)
+ * time the ability resolves, so `EntityProperty(Self, Power)` (`DynamicAmounts.sourcePower()`)
  * must read the power the source *last had on the battlefield*, not zero. `ActivateAbilityHandler`
  * snapshots the source's projected P/T at cost-payment time (mirroring the
  * `LastKnownSourceCounters` snapshot) and `DynamicAmountEvaluator` reads it back.

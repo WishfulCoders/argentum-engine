@@ -38,7 +38,7 @@ val AsinineAntics = card("Asinine Antics") {
     spell {
         effect = Effects.ForEachInGroup(
             filter = GroupFilter.AllCreaturesOpponentsControl,
-            effect = Effects.CreateRoleToken("Cursed Role", EffectTarget.Self),
+            effect = Effects.CreateRoleToken("Cursed Role", EffectTarget.IterationEntity),
         )
     }
 

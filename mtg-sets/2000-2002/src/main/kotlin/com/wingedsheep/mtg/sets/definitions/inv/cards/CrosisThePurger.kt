@@ -8,16 +8,11 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.RevealHandEffect
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Crosis, the Purger
@@ -46,30 +41,23 @@ val CrosisThePurger = card("Crosis, the Purger") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = MayPayManaEffect(
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{2}{B}"),
-            effect = Effects.ChooseColorThen(
-                then = Effects.Composite(
-                    listOf(
-                        RevealHandEffect(EffectTarget.PlayerRef(Player.TriggeringPlayer)),
-                        GatherCardsEffect(
-                            source = CardSource.FromZone(
-                                zone = Zone.HAND,
-                                player = Player.TriggeringPlayer,
-                                filter = GameObjectFilter(
-                                    cardPredicates = listOf(CardPredicate.HasChosenColor),
-                                ),
+            then = Effects.ChooseColorThen(
+                then = Effects.Pipeline {
+                    run(Effects.RevealHand(EffectTarget.PlayerRef(Player.TriggeringPlayer)))
+                    val crosisDiscard = gather(
+                        CardSource.FromZone(
+                            zone = Zone.HAND,
+                            player = Player.TriggeringPlayer,
+                            filter = GameObjectFilter(
+                                cardPredicates = listOf(CardPredicate.HasChosenColor),
                             ),
-                            storeAs = "crosisDiscard",
-                        ),
-                        MoveCollectionEffect(
-                            from = "crosisDiscard",
-                            destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.TriggeringPlayer),
-                            moveType = MoveType.Discard,
-                        ),
-                    ),
-                ),
+                        )
+                    )
+                    discard(crosisDiscard, Player.TriggeringPlayer)
+                },
                 prompt = "Choose a color",
             ),
         )

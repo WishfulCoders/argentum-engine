@@ -13,11 +13,13 @@ import com.wingedsheep.sdk.scripting.effects.CompositeEffect
 import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.effects.SelectTargetEffect
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Tests for SelectTargetEffect — mid-resolution pipeline targeting.
@@ -40,7 +42,7 @@ class SelectTargetPipelineTest : FunSpec({
             effect = CompositeEffect(
                 listOf(
                     SelectTargetEffect(
-                        requirement = TargetCreature(),
+                        requirement = TargetObject(filter = TargetFilter.Creature),
                         storeAs = "chosen"
                     ),
                     DealDamageEffect(
@@ -61,7 +63,7 @@ class SelectTargetPipelineTest : FunSpec({
             effect = CompositeEffect(
                 listOf(
                     SelectTargetEffect(
-                        requirement = TargetCreature(optional = true),
+                        requirement = TargetObject(filter = TargetFilter.Creature, optional = true),
                         storeAs = "chosen"
                     ),
                     DealDamageEffect(
@@ -109,7 +111,7 @@ class SelectTargetPipelineTest : FunSpec({
         // Add Pipeline Bolt directly to hand (avoid flaky random draw)
         val boltId = driver.putCardInHand(caster, "Pipeline Bolt")
         val castResult = driver.castSpell(caster, boltId)
-        castResult.isSuccess shouldBe true
+        castResult.outcome shouldBe Outcome.Done
 
         // Spell is on the stack — resolve it
         driver.bothPass()

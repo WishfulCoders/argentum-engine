@@ -3,7 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.ReplaceDrawWithEffect
+import com.wingedsheep.sdk.scripting.ReplaceDrawWith
 
 /**
  * Eruth, Tormented Prophet (Innistrad: Crimson Vow #237)
@@ -12,7 +12,7 @@ import com.wingedsheep.sdk.scripting.ReplaceDrawWithEffect
  * If you would draw a card, exile the top two cards of your library instead. You may play those
  * cards this turn.
  *
- * Implementation: [ReplaceDrawWithEffect] (the Laboratory Maniac shape, applying to every draw)
+ * Implementation: [ReplaceDrawWith] (the Laboratory Maniac shape, applying to every draw)
  * whose replacement is the impulse-draw composition [Patterns.Exile.impulse] at count 2 — exile
  * the top two, then a may-play-from-exile grant on those cards that expires at end of turn. Each
  * replaced draw is its own impulse, so "draw two" exiles four. An empty library exiles nothing and
@@ -28,7 +28,7 @@ val EruthTormentedProphet = card("Eruth, Tormented Prophet") {
         "play those cards this turn."
 
     replacementEffect(
-        ReplaceDrawWithEffect(
+        ReplaceDrawWith(
             replacementEffect = Patterns.Exile.impulse(2),
         )
     )

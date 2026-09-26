@@ -1,12 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ornery Tumblewagg
@@ -38,16 +40,16 @@ val OrneryTumblewagg = card("Ornery Tumblewagg") {
     keywordAbility(KeywordAbility.saddle(2))
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        val creature = target("target creature", TargetCreature())
-        effect = Effects.AddCounters("+1/+1", 1, creature)
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature)
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         triggerRestriction = Conditions.SourceIsSaddled
-        val creature = target("target creature", TargetCreature())
-        effect = Effects.DoubleCounters("+1/+1", creature)
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.DoubleCounters(CounterType.PLUS_ONE_PLUS_ONE, creature)
     }
 
     metadata {

@@ -6,7 +6,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Stoneskin
@@ -31,7 +31,7 @@ val Stoneskin = card("Stoneskin") {
 
     keywords(Keyword.FLASH)
 
-    auraTarget = TargetPermanent(filter = TargetFilter(GameObjectFilter.Creature))
+    auraTarget = TargetObject(filter = TargetFilter(GameObjectFilter.Creature))
 
     staticAbility {
         ability = ModifyStats(0, 10)

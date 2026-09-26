@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.SwapBlockingAssignmentsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * "Two target blocking creatures controlled by the same opponent" — so a legal target is a blocking
@@ -56,14 +55,7 @@ val SorrowsPath = card("Sorrow's Path") {
         // requirements they were checked at resolution instead, which is too late: the tap is a
         // cost, so the becomes-tapped trigger had already dealt its 2 damage across your board by
         // the time the ability fizzled for naming the same blocker twice.
-        target(
-            "blockers",
-            TargetCreature(
-                count = 2,
-                sameController = true,
-                filter = TargetFilter(opponentsBlockingCreature),
-            ),
-        )
+        targets(TargetFilter(opponentsBlockingCreature), count = 2, sameController = true)
         effect = SwapBlockingAssignmentsEffect
         description = "{T}: Choose two target blocking creatures controlled by the same opponent. " +
             "If each of those creatures could block all creatures that the other is blocking, " +
@@ -72,11 +64,9 @@ val SorrowsPath = card("Sorrow's Path") {
     }
 
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
-        effect = Effects.Composite(
-            Effects.DealDamage(2, EffectTarget.Controller),
-            Patterns.Group.dealDamageToAll(2, Filters.Group.creaturesYouControl),
-        )
+        trigger = Triggers.self.becomesTapped()
+        effect = Effects.DealDamage(2, EffectTarget.Controller) then
+            Patterns.Group.dealDamageToAll(2, Filters.Group.creaturesYouControl)
         description = "Whenever this land becomes tapped, it deals 2 damage to you and each " +
             "creature you control."
     }

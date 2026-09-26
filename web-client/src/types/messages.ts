@@ -356,6 +356,12 @@ export interface SelectCardsDecision extends PendingDecisionBase {
   /** When true, at most one card of each colour may be selected (colourless unconstrained) */
   readonly onePerColor?: boolean
   /**
+   * When true, at most one card of each name may be selected ("cards with different names" —
+   * Behold the Sinister Six!, Extrapolate the Impossible). The server enforces this; the UI
+   * disables cards sharing an already-selected card's name.
+   */
+  readonly onePerCardName?: boolean
+  /**
    * When true, at most one land of each basic land type may be selected (a kept land claims
    * every basic type it has); a land with no basic land type can't be selected (Global Ruin).
    */
@@ -435,6 +441,12 @@ export interface TargetRequirementInfo {
    * Already resolved to a concrete number server-side.
    */
   readonly totalManaValueAtMost?: number | null
+  /**
+   * True for "another target" wording: a pick here must differ from every target chosen for an
+   * earlier requirement. Absent/false lets separate "target" instances choose the same object
+   * (Seeds of Strength), so earlier picks stay in this requirement's pool.
+   */
+  readonly mustDifferFromEarlier?: boolean
 }
 
 /**
@@ -569,6 +581,8 @@ export interface DistributeDecision extends PendingDecisionBase {
 export interface ChooseColorDecision extends PendingDecisionBase {
   readonly type: 'ChooseColorDecision'
   readonly availableColors: readonly string[]
+  /** How many distinct colors may be chosen; >1 means "one or more" (toggle + confirm). */
+  readonly maxColors?: number
 }
 
 /**
@@ -820,6 +834,12 @@ export interface LegalActionTargetInfo {
    * selectable targets to the X chosen at cast time.
    */
   readonly xConstrainsCount?: boolean
+  /**
+   * True for "another target" wording: a pick here must differ from every target chosen for an
+   * earlier requirement. Absent/false lets separate "target" instances choose the same object
+   * (Seeds of Strength), so earlier picks stay in this requirement's pool.
+   */
+  readonly mustDifferFromEarlier?: boolean
 }
 
 /**
@@ -883,6 +903,11 @@ export interface LegalActionInfo {
   readonly hasXCost?: boolean
   /** Maximum X value the player can afford (null if not X cost spell) */
   readonly maxAffordableX?: number
+  /**
+   * Set when the caster may pay "any amount of mana" as an additional cost (Chorus of the
+   * Conclave): the upper bound for the amount picker. Sent back as `additionalManaForCounters`.
+   */
+  readonly maxAdditionalManaForCounters?: number
   /** Minimum X value (usually 0) */
   readonly minX?: number
   /** Whether this is a mana ability (doesn't highlight card as playable) */
@@ -1407,7 +1432,7 @@ export interface AvailableSet {
   readonly name: string
   /**
    * True when the set isn't fully implemented for sealed/draft (not sealed-supported, or flagged
-   * incomplete). The lobby set picker hides partial sets behind a default-off toggle.
+   * incomplete). The lobby set picker hides partial sets while browsing by default; search includes them.
    */
   readonly partial?: boolean
   /**

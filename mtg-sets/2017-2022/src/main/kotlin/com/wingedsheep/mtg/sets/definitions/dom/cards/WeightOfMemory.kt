@@ -19,9 +19,8 @@ val WeightOfMemory = card("Weight of Memory") {
     oracleText = "Draw three cards. Target player mills three cards."
 
     spell {
-        val t = target("target", Targets.Player)
-        effect = Effects.DrawCards(3)
-            .then(Patterns.Library.mill(3, t))
+        val t = target(Targets.Player)
+        effect = Effects.DrawCards(3) then Patterns.Library.mill(3, t)
     }
 
     metadata {

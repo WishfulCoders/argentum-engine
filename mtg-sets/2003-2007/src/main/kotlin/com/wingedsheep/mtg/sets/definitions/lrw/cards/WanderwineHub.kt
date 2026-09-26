@@ -6,9 +6,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.OnEnterRunEffect
+import com.wingedsheep.sdk.scripting.OnEnterRun
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddManaEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -21,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * One of Lorwyn's five "tribal reveal" duals. Same two atoms as Shadows over Innistrad's
  * shadowlands (see Game Trail):
- *  - [OnEnterRunEffect] — the generic "as ~ enters, run [effect]" replacement wrapper.
+ *  - [OnEnterRun] — the generic "as ~ enters, run [effect]" replacement wrapper.
  *  - [Effects.MayRevealCardFromHand] — an optional reveal whose `otherwise` rider fires when the
  *    player declines or holds no eligible card; here it taps the land.
  *
@@ -37,7 +36,7 @@ val WanderwineHub = card("Wanderwine Hub") {
         "If you don't, this land enters tapped.\n{T}: Add {W} or {U}."
 
     replacementEffect(
-        OnEnterRunEffect(
+        OnEnterRun(
             Effects.MayRevealCardFromHand(
                 filter = GameObjectFilter.Any.withSubtype("Merfolk"),
                 otherwise = Effects.Tap(EffectTarget.Self),
@@ -47,14 +46,14 @@ val WanderwineHub = card("Wanderwine Hub") {
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddManaEffect(Color.WHITE)
+        effect = Effects.AddMana(Color.WHITE)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddManaEffect(Color.BLUE)
+        effect = Effects.AddMana(Color.BLUE)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

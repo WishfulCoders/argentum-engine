@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBlock
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CantBlockEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Blood Hypnotist
@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.effects.CantBlockEffect
  * This ability triggers only once each turn.
  *
  * "This creature can't block" is the static [CantBlock]. The batch trigger uses
- * [Triggers.YouSacrificeOneOrMore] filtered to Blood tokens (artifacts with subtype
+ * `Triggers.you.sacrifices(filter, batch = true)` filtered to Blood tokens (artifacts with subtype
  * "Blood") — it fires once per sacrifice event regardless of how many Blood were
  * sacrificed at once. The "only once each turn" clause is `oncePerTurn = true`; the
  * targeted [CantBlockEffect] defaults to Duration.EndOfTurn ("this turn").
@@ -39,10 +39,10 @@ val BloodHypnotist = card("Blood Hypnotist") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YouSacrificeOneOrMore(GameObjectFilter.Artifact.withSubtype("Blood"))
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Artifact.withSubtype("Blood"), batch = true)
         oncePerTurn = true
-        val creature = target("creature", Targets.Creature)
-        effect = CantBlockEffect(target = creature)
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.CantBlock(target = creature)
     }
 
     metadata {

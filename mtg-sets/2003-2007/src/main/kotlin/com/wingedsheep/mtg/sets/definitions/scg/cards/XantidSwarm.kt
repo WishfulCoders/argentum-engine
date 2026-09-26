@@ -27,7 +27,7 @@ val XantidSwarm = card("Xantid Swarm") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.CantCastSpells(EffectTarget.PlayerRef(Player.DefendingPlayer))
     }
 

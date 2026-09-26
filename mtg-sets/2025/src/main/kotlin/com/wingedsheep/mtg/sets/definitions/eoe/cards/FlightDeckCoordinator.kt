@@ -1,14 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Flight-Deck Coordinator
@@ -27,11 +28,11 @@ val FlightDeckCoordinator = card("Flight-Deck Coordinator") {
     oracleText = "At the beginning of your end step, if you control two or more tapped creatures, you gain 2 life."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
-        interveningIf = Compare(
-            DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Creature.tapped()),
+        trigger = Triggers.you.beginningOf(Step.END)
+        interveningIf = Conditions.CompareAmounts(
+            DynamicAmounts.battlefield(Player.You, GameObjectFilter.Creature.tapped()).count(),
             ComparisonOperator.GTE,
-            DynamicAmount.Fixed(2)
+            2
         )
         effect = Effects.GainLife(2)
     }

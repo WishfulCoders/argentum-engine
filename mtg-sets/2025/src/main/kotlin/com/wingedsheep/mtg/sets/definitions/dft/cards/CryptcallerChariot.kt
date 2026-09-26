@@ -2,13 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.dft.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Cryptcaller Chariot — Aetherdrift #80
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Whenever you discard one or more cards, create that many tapped 2/2 black Zombie creature tokens.
  * Crew 2
  *
- * Batch-worded discard payoff (CR 603.2c), so it uses [Triggers.YouDiscardOneOrMore] — one trigger
+ * Batch-worded discard payoff (CR 603.2c), so it uses `Triggers.you.discards(batch = true)` — one trigger
  * per discard *event* however many cards it held — and reads the batch size back through
  * [ContextPropertyKey.TRIGGER_DISCARD_COUNT] for "that many". Discarding three cards to a single
  * effect makes three Zombies; three separate discards make one each. Same shape as its set-mates
@@ -41,9 +40,9 @@ val CryptcallerChariot = card("Cryptcaller Chariot") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.YouDiscardOneOrMore
+        trigger = Triggers.you.discards(batch = true)
         effect = Effects.CreateToken(
-            count = DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_DISCARD_COUNT),
+            count = DynamicAmounts.triggerDiscardCount(),
             power = 2,
             toughness = 2,
             colors = setOf(Color.BLACK),

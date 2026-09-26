@@ -15,13 +15,14 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Case File Auditor — "When this creature enters **and whenever you solve a Case**, look at the top
  * six cards of your library. You may reveal an enchantment card from among them and put it into
  * your hand. Put the rest on the bottom of your library in a random order."
  *
- * The new vocabulary is `Triggers.WheneverYouSolveACase`, so the load-bearing assertions are:
+ * The new vocabulary is `Triggers.you.solvesACase()`, so the load-bearing assertions are:
  *
  *  1. solving a Case fires it — and fires it for the *solving* player, which is what the event's
  *     carried controller is for;
@@ -62,7 +63,7 @@ class CaseFileAuditorScenarioTest : FunSpec({
 
         val card = driver.putCardInHand(driver.player1, "Case File Auditor")
         driver.giveMana(driver.player1, Color.WHITE, 3)
-        driver.castSpell(driver.player1, card).isSuccess shouldBe true
+        driver.castSpell(driver.player1, card).outcome shouldBe Outcome.Done
         driver.bothPass() // resolve the creature; the enters trigger goes on the stack
         driver.bothPass() // resolve the trigger
 
@@ -101,7 +102,7 @@ class CaseFileAuditorScenarioTest : FunSpec({
 
         val card = driver.putCardInHand(driver.player1, "Case File Auditor")
         driver.giveMana(driver.player1, Color.WHITE, 3)
-        driver.castSpell(driver.player1, card).isSuccess shouldBe true
+        driver.castSpell(driver.player1, card).outcome shouldBe Outcome.Done
         driver.bothPass()
         driver.bothPass()
 

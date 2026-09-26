@@ -46,13 +46,13 @@ val OverlordOfTheHauntwoods = card("Overlord of the Hauntwoods") {
     val createEverywhere: Effect = Effects.CreateEverywhere(count = 1, tapped = true)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = createEverywhere
         description = "Whenever this permanent enters, create a tapped colorless land token named Everywhere that is every basic land type."
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = createEverywhere
         description = "Whenever this permanent attacks, create a tapped colorless land token named Everywhere that is every basic land type."
     }

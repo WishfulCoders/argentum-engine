@@ -20,11 +20,9 @@ val PointedDiscussion = card("Pointed Discussion") {
         "\"{1}, {T}, Discard a card, Sacrifice this token: Draw a card.\")"
 
     spell {
-        effect = Effects.Composite(
-            Effects.DrawCards(2),
-            Effects.LoseLife(2, EffectTarget.Controller),
+        effect = Effects.DrawCards(2) then
+            Effects.LoseLife(2, EffectTarget.Controller) then
             Effects.CreateBlood(1)
-        )
     }
 
     metadata {

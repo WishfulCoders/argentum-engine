@@ -50,11 +50,9 @@ val TreacherousGreed = card("Treacherous Greed") {
     )
 
     spell {
-        effect = Effects.Composite(
-            Effects.DrawCards(3),
-            Effects.LoseLife(3, EffectTarget.PlayerRef(Player.EachOpponent)),
+        effect = Effects.DrawCards(3) then
+            Effects.LoseLife(3, EffectTarget.PlayerRef(Player.EachOpponent)) then
             Effects.GainLife(3)
-        )
     }
 
     metadata {

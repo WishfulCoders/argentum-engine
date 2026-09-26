@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -38,10 +37,7 @@ val BarrowBlade = card("Barrow-Blade") {
     }
 
     triggeredAbility {
-        trigger = Triggers.BlocksOrBecomesBlockedBy(
-            filter = GameObjectFilter.Creature,
-            binding = TriggerBinding.ATTACHED
-        )
+        trigger = Triggers.attached.blocksOrBecomesBlocked(GameObjectFilter.Creature)
         effect = Effects.RemoveAllAbilities(EffectTarget.TriggeringEntity, Duration.EndOfTurn)
     }
 

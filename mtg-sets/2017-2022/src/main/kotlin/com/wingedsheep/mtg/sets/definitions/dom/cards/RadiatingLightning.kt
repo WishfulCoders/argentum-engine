@@ -22,9 +22,9 @@ val RadiatingLightning = card("Radiating Lightning") {
     oracleText = "Radiating Lightning deals 3 damage to target player and 1 damage to each creature that player controls."
 
     spell {
-        val player = target("target player", Targets.Player)
-        effect = Effects.DealDamage(3, player)
-            .then(Patterns.Group.dealDamageToAll(1, GroupFilter(GameObjectFilter.Creature.targetPlayerControls())))
+        val player = target(Targets.Player)
+        effect = Effects.DealDamage(3, player) then
+            Patterns.Group.dealDamageToAll(1, GroupFilter(GameObjectFilter.Creature.targetPlayerControls()))
     }
 
     metadata {

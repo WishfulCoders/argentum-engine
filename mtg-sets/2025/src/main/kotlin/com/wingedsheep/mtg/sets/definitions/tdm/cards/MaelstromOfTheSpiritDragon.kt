@@ -10,8 +10,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddColorlessManaEffect
-import com.wingedsheep.sdk.scripting.effects.AddManaOfChoiceEffect
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
 import com.wingedsheep.sdk.scripting.values.ManaColorSet
 
@@ -39,14 +37,14 @@ val MaelstromOfTheSpiritDragon = card("Maelstrom of the Spirit Dragon") {
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddColorlessManaEffect(1)
+        effect = Effects.AddColorlessMana(1)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddManaOfChoiceEffect(
+        effect = Effects.AddManaOfChoice(
             colorSet = ManaColorSet.AnyColor,
             restriction = ManaRestriction.SubtypeSpellsOnly(setOf("Dragon", "Omen"))
         )

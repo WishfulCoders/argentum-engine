@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Stalked Researcher
@@ -20,8 +19,8 @@ import com.wingedsheep.sdk.scripting.TriggerBinding
  * The "X and whenever Y" Eerie templating is two distinct triggered abilities sharing one
  * payoff (CR has no "or" trigger combiner), modelled like the other DSK Eerie creatures
  * (e.g. Optimistic Scavenger): one block fires when an enchantment you control enters
- * ([Triggers.entersBattlefield] filtered to enchantments you control), the other when you
- * fully unlock a Room ([Triggers.RoomFullyUnlocked]). Both grant this creature
+ * (`Triggers.a(filter).enters()` filtered to enchantments you control), the other when you
+ * fully unlock a Room (`Triggers.you.fullyUnlocksARoom()`). Both grant this creature
  * [Effects.CanAttackDespiteDefenderThisTurn] (the turn-scoped counterpart to the static
  * CanAttackDespiteDefender), which lets it attack as though it didn't have defender for the turn.
  */
@@ -38,10 +37,7 @@ val StalkedResearcher = card("Stalked Researcher") {
 
     // Eerie trigger — part 1: whenever an enchantment you control enters
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Enchantment.youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Enchantment.youControl()).enters()
         effect = Effects.CanAttackDespiteDefenderThisTurn()
         description = "Eerie — Whenever an enchantment you control enters, this creature can " +
             "attack this turn as though it didn't have defender."
@@ -49,7 +45,7 @@ val StalkedResearcher = card("Stalked Researcher") {
 
     // Eerie trigger — part 2: whenever you fully unlock a Room
     triggeredAbility {
-        trigger = Triggers.RoomFullyUnlocked
+        trigger = Triggers.you.fullyUnlocksARoom()
         effect = Effects.CanAttackDespiteDefenderThisTurn()
         description = "Eerie — Whenever you fully unlock a Room, this creature can attack this " +
             "turn as though it didn't have defender."

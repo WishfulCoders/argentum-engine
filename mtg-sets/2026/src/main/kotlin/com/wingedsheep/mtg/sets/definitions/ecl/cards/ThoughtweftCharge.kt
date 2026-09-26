@@ -2,13 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Thoughtweft Charge
@@ -26,17 +25,17 @@ val ThoughtweftCharge = card("Thoughtweft Charge") {
         "If a creature entered the battlefield under your control this turn, draw a card."
 
     spell {
-        val creature = target("creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
 
-        effect = Effects.ModifyStats(3, 3, creature)
-            .then(ConditionalEffect(
+        effect = Effects.ModifyStats(3, 3, creature) then
+            Effects.If(
                 condition = Exists(
                     Player.You,
                     Zone.BATTLEFIELD,
                     GameObjectFilter.Creature.youControl().enteredThisTurn()
                 ),
-                effect = Effects.DrawCards(1)
-            ))
+                then = Effects.DrawCards(1)
+            )
     }
 
     metadata {

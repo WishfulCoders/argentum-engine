@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
@@ -9,12 +9,9 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.MultiplyTokenCreation
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Elspeth, Storm Slayer — Tarkir: Dragonstorm #11
@@ -58,21 +55,16 @@ val ElspethStormSlayer = card("Elspeth, Storm Slayer") {
     loyaltyAbility(0) {
         effect = Effects.ForEachInGroup(
             filter = GroupFilter.AllCreaturesYouControl,
-            effect = AddCountersEffect(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
-        ).then(
-            Effects.ForEachInGroup(
-                filter = GroupFilter.AllCreaturesYouControl,
-                effect = GrantKeywordEffect(Keyword.FLYING, EffectTarget.Self, Duration.UntilYourNextTurn)
-            )
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity)
+        ) then Effects.ForEachInGroup(
+            filter = GroupFilter.AllCreaturesYouControl,
+            effect = Effects.GrantKeyword(Keyword.FLYING, EffectTarget.IterationEntity, Duration.UntilYourNextTurn)
         )
     }
 
     // −3: Destroy target creature an opponent controls with mana value 3 or greater.
     loyaltyAbility(-3) {
-        val victim = target(
-            "creature an opponent controls with mana value 3 or greater",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Creature.opponentControls().manaValueAtLeast(3)))
-        )
+        val victim = target(TargetFilter(GameObjectFilter.Creature.opponentControls().manaValueAtLeast(3)))
         effect = Effects.Destroy(victim)
     }
 

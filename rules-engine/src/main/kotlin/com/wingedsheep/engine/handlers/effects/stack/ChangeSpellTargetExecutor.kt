@@ -27,13 +27,13 @@ import kotlin.reflect.KClass
  * 5. Present a selection decision to Meddle's controller
  * 6. Push ChangeSpellTargetContinuation
  */
-class ChangeSpellTargetExecutor : EffectExecutor<ChangeSpellTargetEffect> {
+class ChangeSpellTargetExecutor(
+    private val targetFinder: TargetFinder
+) : EffectExecutor<ChangeSpellTargetEffect> {
 
     override val effectType: KClass<ChangeSpellTargetEffect> = ChangeSpellTargetEffect::class
 
     private val decisionHandler = DecisionHandler()
-    private val targetFinder = TargetFinder()
-
     override fun execute(
         state: GameState,
         effect: ChangeSpellTargetEffect,

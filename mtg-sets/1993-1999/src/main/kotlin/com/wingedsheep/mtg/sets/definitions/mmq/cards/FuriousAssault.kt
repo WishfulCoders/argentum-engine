@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Furious Assault
@@ -14,7 +15,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Whenever you cast a creature spell, this enchantment deals 1 damage to target player or
  * planeswalker.
  *
- * [Triggers.YouCastCreature] is the cast trigger (an ANY-bound `SpellCastEvent` filtered to
+ * `Triggers.you.casts(GameObjectFilter.Creature)` is the cast trigger (an ANY-bound `SpellCastEvent` filtered to
  * creature spells and to your own casts), so the ability goes on the stack *above* the creature
  * spell and resolves first. The damage target is the errata'd modern wording —
  * [Targets.PlayerOrPlaneswalker], not a bare player.
@@ -26,8 +27,8 @@ val FuriousAssault = card("Furious Assault") {
     oracleText = "Whenever you cast a creature spell, this enchantment deals 1 damage to target player or planeswalker."
 
     triggeredAbility {
-        trigger = Triggers.YouCastCreature
-        val t = target("target", Targets.PlayerOrPlaneswalker)
+        trigger = Triggers.you.casts(GameObjectFilter.Creature)
+        val t = target(Targets.PlayerOrPlaneswalker)
         effect = Effects.DealDamage(1, t)
     }
 

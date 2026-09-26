@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -31,11 +30,11 @@ val ValorousStance = card("Valorous Stance") {
             mode(
                 "Target creature gains indestructible until end of turn. (Damage and effects that say \"destroy\" don't destroy it.)"
             ) {
-                val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+                val t = target(TargetFilter.Creature)
                 effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t)
             }
             mode("Destroy target creature with toughness 4 or greater") {
-                val t = target("target", TargetCreature(filter = TargetFilter.Creature.toughnessAtLeast(4)))
+                val t = target(TargetFilter.Creature.toughnessAtLeast(4))
                 effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
             }
         }

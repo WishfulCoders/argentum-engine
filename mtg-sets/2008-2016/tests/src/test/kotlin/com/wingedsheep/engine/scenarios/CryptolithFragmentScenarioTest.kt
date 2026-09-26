@@ -1,6 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.handlers.ConditionEvaluator
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
@@ -17,7 +17,7 @@ class CryptolithFragmentScenarioTest : FunSpec({
         initMirrorMatch(deck = Deck.of("Forest" to 20), skipMulligans = true)
     }
 
-    fun GameTestDriver.conditionIsMet(): Boolean = ConditionEvaluator().evaluate(
+    fun GameTestDriver.conditionIsMet(): Boolean = PredicateEvaluator(cardRegistry = null).conditions.evaluate(
         state,
         EachPlayerLifeAtMost(10),
         EffectContext(

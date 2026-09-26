@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Geyser Glider
@@ -14,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * 4/4
  * Landfall — Whenever a land you control enters, this creature gains flying until end of turn.
  *
- * Landfall is [Triggers.LandYouControlEnters] — the `ZoneChangeEvent` over
+ * Landfall is `Triggers.a(GameObjectFilter.Land.youControl()).enters()` — the `ZoneChangeEvent` over
  * `GameObjectFilter.Land.youControl()` with `TriggerBinding.ANY`.
  */
 val GeyserGlider = card("Geyser Glider") {
@@ -26,7 +27,7 @@ val GeyserGlider = card("Geyser Glider") {
     oracleText = "Landfall — Whenever a land you control enters, this creature gains flying until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
     }
 

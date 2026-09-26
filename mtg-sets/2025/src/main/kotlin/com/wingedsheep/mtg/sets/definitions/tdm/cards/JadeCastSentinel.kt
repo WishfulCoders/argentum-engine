@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.MoveToZoneEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -35,10 +34,7 @@ val JadeCastSentinel = card("Jade-Cast Sentinel") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        val cardInGraveyard = target(
-            "target card from a graveyard",
-            TargetObject(filter = TargetFilter.CardInGraveyard)
-        )
+        val cardInGraveyard = target(TargetFilter.CardInGraveyard)
         effect = Effects.Move(
             target = cardInGraveyard,
             destination = Zone.LIBRARY,

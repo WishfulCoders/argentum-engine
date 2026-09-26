@@ -35,10 +35,8 @@ val SteadfastUnicorn = card("Steadfast Unicorn") {
         restrictions = listOf(ActivationRestriction.OnlyDuringYourTurn)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.Composite(
-                Effects.ModifyStats(1, 1, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.VIGILANCE, EffectTarget.Self)
-            )
+            Effects.ModifyStats(1, 1, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.VIGILANCE, EffectTarget.IterationEntity)
         )
         description = "{3}{W}: Creatures you control get +1/+1 and gain vigilance until end of turn. Activate only during your turn."
     }

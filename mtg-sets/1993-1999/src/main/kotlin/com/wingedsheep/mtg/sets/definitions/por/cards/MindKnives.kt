@@ -7,7 +7,7 @@ package com.wingedsheep.mtg.sets.definitions.por.cards
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -22,7 +22,7 @@ val MindKnives = card("Mind Knives") {
     typeLine = "Sorcery"
     oracleText = "Target opponent discards a card at random."
     spell {
-        val t = target("target", TargetOpponent())
+        val t = target(Targets.Opponent)
         effect = Patterns.Hand.discardRandom(1, t)
     }
     metadata {

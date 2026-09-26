@@ -3,13 +3,14 @@ package com.wingedsheep.mtg.sets.definitions.tmp.cards
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ChoiceType
 import com.wingedsheep.sdk.scripting.EntersWithChoice
 import com.wingedsheep.sdk.scripting.GrantProtectionFromChosenColorToGroup
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Flickering Ward
@@ -36,7 +37,7 @@ val FlickeringWard = card("Flickering Ward") {
         "Enchanted creature has protection from the chosen color. This effect doesn't remove this Aura.\n" +
         "{W}: Return this Aura to its owner's hand."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     replacementEffect(EntersWithChoice(ChoiceType.COLOR))
 

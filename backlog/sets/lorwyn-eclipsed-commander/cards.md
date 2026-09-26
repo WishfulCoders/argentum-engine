@@ -2,7 +2,7 @@
 
 **Set Size:** 153 cards
 **Release Date:** January 23, 2026
-**Implemented:** 2 / 153
+**Implemented:** 7 / 153
 | Color      | Total | Done |
 |------------|-------|------|
 | White      | 4     | 0    |
@@ -152,11 +152,11 @@
 - [ ] Terramorphic Expanse
 - [ ] The Reaper, King No More
 - [ ] The Scorpion God
-- [ ] Thriving Bluff
-- [ ] Thriving Grove
-- [ ] Thriving Heath
-- [ ] Thriving Isle
-- [ ] Thriving Moor
+- [x] Thriving Bluff
+- [x] Thriving Grove
+- [x] Thriving Heath
+- [x] Thriving Isle
+- [x] Thriving Moor
 - [ ] Timeless Lotus
 - [ ] Titan of Industry
 - [x] Tree of Perdition

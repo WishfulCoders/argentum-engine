@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.drk.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Merfolk Assassin
@@ -24,7 +24,7 @@ val MerfolkAssassin = card("Merfolk Assassin") {
 
     activatedAbility {
         cost = Costs.Tap
-        val creature = target("target creature with islandwalk", Targets.CreatureWithKeyword(Keyword.ISLANDWALK))
+        val creature = target(TargetFilter.Creature.withKeyword(Keyword.ISLANDWALK))
         effect = Effects.Destroy(creature)
     }
 

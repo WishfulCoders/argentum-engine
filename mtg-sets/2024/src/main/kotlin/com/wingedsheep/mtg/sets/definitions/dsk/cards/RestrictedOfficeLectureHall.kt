@@ -34,7 +34,7 @@ val RestrictedOfficeLectureHall = card("Restricted Office // Lecture Hall") {
         oracleText = "When you unlock this door, destroy all creatures with power 3 or greater."
 
         triggeredAbility {
-            trigger = Triggers.OnDoorUnlocked
+            trigger = Triggers.self.doorUnlocked()
             effect = Effects.DestroyAll(GameObjectFilter.Creature.powerAtLeast(3))
             description = "When you unlock this door, destroy all creatures with power 3 or greater."
         }

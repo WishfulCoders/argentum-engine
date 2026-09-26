@@ -3,14 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.eoe.cards
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.GrantWard
 import com.wingedsheep.sdk.scripting.effects.WardCost
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Hardlight Containment
@@ -26,19 +25,16 @@ val HardlightContainment = card("Hardlight Containment") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant artifact you control\nWhen this Aura enters, exile target creature an opponent controls until this Aura leaves the battlefield.\nEnchanted permanent has ward {1}."
 
-    auraTarget = TargetPermanent(filter = TargetFilter(GameObjectFilter.Artifact.youControl()))
+    auraTarget = TargetObject(filter = TargetFilter(GameObjectFilter.Artifact.youControl()))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target(
-            "creature an opponent controls",
-            TargetPermanent(filter = TargetFilter.CreatureOpponentControls)
-        )
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.ExileUntilLeaves(creature)
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 

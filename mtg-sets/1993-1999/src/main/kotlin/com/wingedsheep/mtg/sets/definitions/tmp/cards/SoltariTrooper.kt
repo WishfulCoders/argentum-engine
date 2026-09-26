@@ -27,7 +27,7 @@ val SoltariTrooper = card("Soltari Trooper") {
     keywords(Keyword.SHADOW)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }
 

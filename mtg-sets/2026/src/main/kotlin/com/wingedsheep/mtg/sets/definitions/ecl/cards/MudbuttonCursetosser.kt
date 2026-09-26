@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBlock
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.dsl.Costs
 
 /**
@@ -45,11 +44,8 @@ val MudbuttonCursetosser = card("Mudbutton Cursetosser") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val creature = target(
-            "creature an opponent controls with power 2 or less",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.opponentControls().powerAtMost(2)))
-        )
+        trigger = Triggers.self.dies()
+        val creature = target(TargetFilter(GameObjectFilter.Creature.opponentControls().powerAtMost(2)))
         effect = Effects.Destroy(creature)
     }
 

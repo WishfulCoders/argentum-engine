@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Spider Food
@@ -28,18 +27,14 @@ val SpiderFood = card("Spider Food") {
 
     spell {
         val t = target(
-            "target",
-            TargetPermanent(
-                optional = true,
-                filter = TargetFilter(
-                    GameObjectFilter.Artifact or
-                        GameObjectFilter.Enchantment or
-                        GameObjectFilter.Creature.withKeyword(Keyword.FLYING)
-                )
-            )
+            TargetFilter(
+                GameObjectFilter.Artifact or
+                    GameObjectFilter.Enchantment or
+                    GameObjectFilter.Creature.withKeyword(Keyword.FLYING)
+            ),
+            optional = true,
         )
-        effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true) then
-            Effects.CreateFood()
+        effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true) then Effects.CreateFood()
     }
 
     metadata {

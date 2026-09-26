@@ -37,7 +37,7 @@ val DeltaBloodflies = card("Delta Bloodflies") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         interveningIf = Conditions.YouControl(GameObjectFilter.Creature.withAnyCounter())
         effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent))
         description = "Whenever this creature attacks, if you control a creature with a counter on it, " +

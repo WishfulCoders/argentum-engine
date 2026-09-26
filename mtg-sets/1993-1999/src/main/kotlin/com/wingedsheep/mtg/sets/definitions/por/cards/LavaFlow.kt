@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -24,7 +23,7 @@ val LavaFlow = card("Lava Flow") {
     typeLine = "Sorcery"
     oracleText = "Destroy target creature or land."
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter.CreatureOrLandPermanent))
+        val t = target(TargetFilter.CreatureOrLandPermanent)
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     metadata {

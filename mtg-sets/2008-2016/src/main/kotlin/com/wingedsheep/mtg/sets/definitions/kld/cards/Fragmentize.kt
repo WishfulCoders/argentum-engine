@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Fragmentize
@@ -24,10 +23,7 @@ val Fragmentize = card("Fragmentize") {
     oracleText = "Destroy target artifact or enchantment with mana value 4 or less."
 
     spell {
-        val t = target(
-            "target",
-            TargetPermanent(filter = TargetFilter.ArtifactOrEnchantment.manaValueAtMost(4)),
-        )
+        val t = target(TargetFilter.ArtifactOrEnchantment.manaValueAtMost(4))
         effect = Effects.Destroy(t)
     }
 

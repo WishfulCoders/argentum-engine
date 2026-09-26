@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.avr.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
-import com.wingedsheep.sdk.scripting.effects.PayDynamicLifeEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Killing Wave
@@ -43,10 +41,10 @@ val KillingWave = card("Killing Wave") {
             listOf(
                 Effects.ForEachInGroup(
                     filter = GroupFilter.AllCreaturesYouControl,
-                    effect = OptionalCostEffect(
-                        cost = PayDynamicLifeEffect(DynamicAmount.XValue),
-                        ifPaid = Effects.Composite(emptyList()),
-                        ifNotPaid = Effects.SacrificeTarget(EffectTarget.Self),
+                    effect = Effects.MayPay(
+                        cost = Effects.PayDynamicLife(DynamicAmounts.xValue()),
+                        then = Effects.Nothing,
+                        otherwise = Effects.SacrificeTarget(EffectTarget.IterationEntity),
                         // The gate labels its own "yes" button with the computed cost ("Pay 2
                         // life") and its "no" with "Don't pay", so the prompt only has to state
                         // the stakes. *Which* creature each of the N identical prompts covers is

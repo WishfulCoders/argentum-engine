@@ -22,7 +22,7 @@ val FortressKinGuard = card("Fortress Kin-Guard") {
         "(Put a +1/+1 counter on it or create a 1/1 white Spirit creature token.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Endure(1)
         description = "When this creature enters, it endures 1."
     }

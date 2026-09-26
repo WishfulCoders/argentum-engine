@@ -4,6 +4,7 @@ import com.wingedsheep.assay.syntax.Phrase
 import com.wingedsheep.assay.syntax.alternate
 import com.wingedsheep.assay.syntax.bind
 import com.wingedsheep.assay.syntax.phrase
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.model.CardScript
@@ -169,7 +170,7 @@ object Recursion {
 
     /** One rule: a move, how it lands, and what it lands with. */
     private fun moveRule(move: Move, landing: Landing, counters: CounterForm): Phrase<CardScript> {
-        fun scriptFor(kind: String?, count: Int): CardScript {
+        fun scriptFor(kind: CounterType?, count: Int): CardScript {
             val moved = Effects.Move(
                 EffectTarget.Self,
                 move.destination,
@@ -180,7 +181,7 @@ object Recursion {
                 spellEffect = if (kind == null) {
                     moved
                 } else {
-                    Effects.Composite(listOf(moved, Effects.AddCounters(kind, count, EffectTarget.Self)))
+                    moved then Effects.AddCounters(kind, count, EffectTarget.Self)
                 }
             )
         }
@@ -230,7 +231,7 @@ object Recursion {
      * Only the two-element shape [moveRule] builds — anything longer is a clause run and belongs to
      * [Steps], not to this rider.
      */
-    private fun counterRider(effect: Effect?): Pair<String, Int>? {
+    private fun counterRider(effect: Effect?): Pair<CounterType, Int>? {
         val composite = effect as? CompositeEffect ?: return null
         if (composite.effects.size != 2) return null
         return Steps.countersAdded(composite.effects[1], EffectTarget.Self)

@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Creatures you control get +2/+1 until end of turn.
  *
  * The team pump is the corpus's standard shape: [Effects.ForEachInGroup] over the creatures you
- * control, with the per-member body pumping the iteration's own member ([EffectTarget.Self]).
+ * control, with the per-member body pumping the iteration's own member ([EffectTarget.IterationEntity]).
  */
 val EtherealGuidance = card("Ethereal Guidance") {
     manaCost = "{2}{W}"
@@ -26,7 +26,7 @@ val EtherealGuidance = card("Ethereal Guidance") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(2, 1, EffectTarget.Self)
+            Effects.ModifyStats(2, 1, EffectTarget.IterationEntity)
         )
     }
 

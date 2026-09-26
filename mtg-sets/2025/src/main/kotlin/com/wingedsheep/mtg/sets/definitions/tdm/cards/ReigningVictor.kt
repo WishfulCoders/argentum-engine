@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.mobilize
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Reigning Victor — Tarkir: Dragonstorm #216
@@ -35,10 +35,10 @@ val ReigningVictor = card("Reigning Victor") {
     mobilize(1)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("target creature to get +1/+0 and gain indestructible", Targets.Creature)
-        effect = Effects.ModifyStats(1, 0, creature)
-            .then(Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, creature))
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(1, 0, creature) then
+            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, creature)
         description = "When this creature enters, target creature gets +1/+0 and gains indestructible until end of turn."
     }
 

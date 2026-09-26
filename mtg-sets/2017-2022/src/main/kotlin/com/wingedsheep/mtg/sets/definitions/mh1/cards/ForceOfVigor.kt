@@ -10,10 +10,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CostZone
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.SelfAlternativeCost
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Force of Vigor
@@ -52,16 +50,13 @@ val ForceOfVigor = card("Force of Vigor") {
     )
 
     spell {
-        target(
-            "targets",
-            TargetPermanent(
-                count = 2,
-                optional = true,
-                filter = TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Enchantment)
-            )
+        targets(
+            TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Enchantment),
+            count = 2,
+            optional = true,
         )
-        effect = ForEachTargetEffect(
-            listOf(Effects.Destroy(EffectTarget.ContextTarget(0)))
+        effect = Effects.ForEachTarget(
+            Effects.Destroy(EffectTarget.ContextTarget(0))
         )
     }
 

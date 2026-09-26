@@ -1,15 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.ice.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Iceberg
@@ -20,9 +19,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * {3}: Put an ice counter on this enchantment.
  * Remove an ice counter from this enchantment: Add {C}.
  *
- * A mana battery, so the counters are the store and nothing else reads them: `Counters.ICE` is
- * already in the `CounterType` enum, which keeps `CounterTypeFilter.Named` from failing open to
- * +1/+1. The cast-time X reaches the permanent through [EntersWithDynamicCounters] with a
+ * A mana battery, so the counters are the store and nothing else reads them. The cast-time X reaches the permanent through [EntersWithDynamicCounters] with a
  * [DynamicAmount.XValue] count — the replacement effect runs inside the permanent spell's own
  * resolution, where X is still live. Withdrawals are a plain mana ability whose cost is
  * `Costs.RemoveCounterFromSelf`, so they can be activated while paying for something else.
@@ -37,19 +34,19 @@ val Iceberg = card("Iceberg") {
 
     replacementEffect(
         EntersWithDynamicCounters(
-            counterType = CounterTypeFilter.Named(Counters.ICE),
-            count = DynamicAmount.XValue
+            counterType = CounterType.ICE,
+            count = DynamicAmounts.xValue()
         )
     )
 
     activatedAbility {
         cost = Costs.Mana("{3}")
-        effect = Effects.AddCounters(Counters.ICE, 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.ICE, 1, EffectTarget.Self)
         description = "{3}: Put an ice counter on this enchantment."
     }
 
     activatedAbility {
-        cost = Costs.RemoveCounterFromSelf(Counters.ICE)
+        cost = Costs.RemoveCounterFromSelf(CounterType.ICE)
         effect = Effects.AddColorlessMana(1)
         manaAbility = true
         timing = TimingRule.ManaAbility

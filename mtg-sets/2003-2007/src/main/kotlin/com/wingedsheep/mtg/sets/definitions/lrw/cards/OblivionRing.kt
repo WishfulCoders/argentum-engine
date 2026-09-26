@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Oblivion Ring
@@ -31,16 +30,13 @@ val OblivionRing = card("Oblivion Ring") {
         "When this enchantment leaves the battlefield, return the exiled card to the battlefield under its owner's control."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val exiled = target(
-            "another target nonland permanent",
-            TargetPermanent(filter = TargetFilter.OtherNonlandPermanent),
-        )
+        trigger = Triggers.self.enters()
+        val exiled = target(TargetFilter.OtherNonlandPermanent)
         effect = Effects.ExileUntilLeaves(exiled)
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 

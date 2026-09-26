@@ -42,8 +42,7 @@ val WhiteMagesStaff = card("White Mage's Staff") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.attacks().event,
-                binding = Triggers.attacks().binding,
+                trigger = Triggers.self.attacks(),
                 effect = Effects.GainLife(1)
             ),
             filter = Filters.EquippedCreature

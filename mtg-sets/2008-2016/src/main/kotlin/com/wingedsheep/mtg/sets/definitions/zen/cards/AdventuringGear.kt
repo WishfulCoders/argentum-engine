@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Adventuring Gear
@@ -27,7 +28,7 @@ val AdventuringGear = card("Adventuring Gear") {
 
     // Landfall — Whenever a land you control enters, equipped creature gets +2/+2 until end of turn.
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.ModifyStats(2, 2, EffectTarget.EquippedCreature)
         description = "Landfall — Whenever a land you control enters, equipped creature gets +2/+2 until end of turn."
     }

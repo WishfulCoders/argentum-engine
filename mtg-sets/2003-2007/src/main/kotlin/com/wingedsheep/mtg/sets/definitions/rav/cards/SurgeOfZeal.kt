@@ -3,12 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.rav.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Surge of Zeal
@@ -19,7 +18,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * until end of turn.
  *
  * Radiance: the target gains haste directly; every *other* creature sharing a color with it
- * (`sharingColorWith(EntityReference.Target(0))`, `otherThanTarget()`) is found as the spell
+ * (`sharingColorWith(EffectTarget.ContextTarget(0))`, `otherThanTarget()`) is found as the spell
  * resolves and gains haste too. A colorless target shares a color with nothing, so only it is
  * affected.
  */
@@ -31,12 +30,12 @@ val SurgeOfZeal = card("Surge of Zeal") {
         "gain haste until end of turn."
 
     spell {
-        val radiant = target("target creature", Targets.Creature)
+        val radiant = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(Keyword.HASTE, radiant) then
             Patterns.Group.grantKeywordToAll(
                 Keyword.HASTE,
                 GroupFilter(
-                    GameObjectFilter.Creature.sharingColorWith(EntityReference.Target(0))
+                    GameObjectFilter.Creature.sharingColorWith(radiant)
                 ).otherThanTarget()
             )
     }

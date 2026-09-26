@@ -22,7 +22,7 @@ val BulwarkGiant = card("Bulwark Giant") {
     toughness = 6
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(5)
         description = "When this creature enters, you gain 5 life."
     }

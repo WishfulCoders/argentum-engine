@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Tel-Jilad Stylus — Mirrodin #260
@@ -35,10 +34,7 @@ val TelJiladStylus = card("Tel-Jilad Stylus") {
 
     activatedAbility {
         cost = Costs.Tap
-        val permanent = target(
-            "permanent",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Permanent.ownedByYou()))
-        )
+        val permanent = target(TargetFilter(GameObjectFilter.Permanent.ownedByYou()))
         effect = Effects.Move(
             target = permanent,
             destination = Zone.LIBRARY,

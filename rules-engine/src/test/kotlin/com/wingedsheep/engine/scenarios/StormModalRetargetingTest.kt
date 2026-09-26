@@ -1,10 +1,12 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.Suspension
 import com.wingedsheep.engine.core.ChooseTargetsDecision
 import com.wingedsheep.engine.core.StormCopyModalTargetContinuation
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.TargetFinder
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.handlers.effects.stack.StormCopyEffectExecutor
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.ComponentContainer
@@ -28,6 +30,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Phase 4 of `backlog/storm-implementation-correctness.md`: per 702.40a the copy
@@ -37,6 +40,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  * per-mode targets.
  */
 class StormModalRetargetingTest : FunSpec({
+    val zones = ZoneTransitionService(CardRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
     fun buildState(
         p1: EntityId,
@@ -88,10 +92,7 @@ class StormModalRetargetingTest : FunSpec({
             )
         )
 
-        val executor = StormCopyEffectExecutor(
-            cardRegistry = CardRegistry(),
-            targetFinder = TargetFinder()
-        )
+        val executor = StormCopyEffectExecutor(targetFinder = TargetFinder(PredicateEvaluator(cardRegistry = null)))
         val result = executor.execute(
             buildState(p1, p2, spellEntity, source),
             StormCopyEffect(
@@ -102,7 +103,7 @@ class StormModalRetargetingTest : FunSpec({
             EffectContext(sourceId = spellEntity, controllerId = p1)
         )
 
-        result.isPaused shouldBe true
+        (result.outcome is Outcome.Paused) shouldBe true
         val decision = result.pendingDecision
         decision.shouldBeInstanceOf<ChooseTargetsDecision>()
         decision.playerId shouldBe p1
@@ -129,10 +130,7 @@ class StormModalRetargetingTest : FunSpec({
             modeTargetRequirements = mapOf(0 to emptyList(), 1 to emptyList())
         )
 
-        val executor = StormCopyEffectExecutor(
-            cardRegistry = CardRegistry(),
-            targetFinder = TargetFinder()
-        )
+        val executor = StormCopyEffectExecutor(targetFinder = TargetFinder(PredicateEvaluator(cardRegistry = null)))
         val result = executor.execute(
             buildState(p1, p2, spellEntity, source),
             StormCopyEffect(
@@ -143,7 +141,7 @@ class StormModalRetargetingTest : FunSpec({
             EffectContext(sourceId = spellEntity, controllerId = p1)
         )
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         val copyId = result.state.stack.single { id ->
             val c = result.state.getEntity(id)
             c?.get<SpellOnStackComponent>() != null && c.has<CopyOfComponent>()

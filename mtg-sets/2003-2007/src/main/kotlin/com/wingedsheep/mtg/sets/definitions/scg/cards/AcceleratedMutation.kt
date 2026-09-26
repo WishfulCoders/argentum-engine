@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.scg.cards
 
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Accelerated Mutation
@@ -21,10 +21,10 @@ val AcceleratedMutation = card("Accelerated Mutation") {
     oracleText = "Target creature gets +X/+X until end of turn, where X is the highest mana value among permanents you control."
 
     spell {
-        target = Targets.Creature
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(
             power = DynamicAmounts.battlefield(Player.You).maxManaValue(),
-            toughness = DynamicAmounts.battlefield(Player.You).maxManaValue()
+            toughness = DynamicAmounts.battlefield(Player.You).maxManaValue(), target = creature
         )
     }
 

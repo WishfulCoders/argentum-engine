@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Ravenous Rats
@@ -26,8 +26,8 @@ val RavenousRats = card("Ravenous Rats") {
     oracleText = "When this creature enters, target opponent discards a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target opponent", TargetOpponent())
+        trigger = Triggers.self.enters()
+        val t = target(Targets.Opponent)
         effect = Patterns.Hand.discardCards(1, t)
     }
 

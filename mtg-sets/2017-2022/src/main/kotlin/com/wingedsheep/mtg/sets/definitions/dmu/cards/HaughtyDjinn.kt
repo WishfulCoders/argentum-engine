@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.dmu.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.dsl.Filters
@@ -11,7 +12,6 @@ import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Haughty Djinn
@@ -30,10 +30,10 @@ val HaughtyDjinn = card("Haughty Djinn") {
 
     // Power is dynamic based on instant and sorcery cards in controller's graveyard
     dynamicPower(
-        DynamicAmount.Count(
-            player = Player.You,
-            zone = Zone.GRAVEYARD,
-            filter = Filters.Unified.instantOrSorcery
+        DynamicAmounts.count(
+            Player.You,
+            Zone.GRAVEYARD,
+            Filters.Unified.instantOrSorcery
         )
     )
 

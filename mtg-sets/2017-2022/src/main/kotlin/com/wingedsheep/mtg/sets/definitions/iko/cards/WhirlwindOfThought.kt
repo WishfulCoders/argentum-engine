@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Whirlwind of Thought
@@ -12,7 +13,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * Whenever you cast a noncreature spell, draw a card.
  *
- * [Triggers.YouCastNoncreature] already carries both halves of the sentence — the
+ * `Triggers.you.casts(GameObjectFilter.Noncreature)` already carries both halves of the sentence — the
  * `GameObjectFilter.Noncreature` spell filter and `Player.You` — so the trigger needs no extra
  * scoping. It fires on *cast*, not on resolution: the card is drawn even if the spell that caused
  * it is countered, and the draw trigger goes on the stack above the spell.
@@ -24,7 +25,7 @@ val WhirlwindOfThought = card("Whirlwind of Thought") {
     oracleText = "Whenever you cast a noncreature spell, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
         effect = Effects.DrawCards(1)
     }
 

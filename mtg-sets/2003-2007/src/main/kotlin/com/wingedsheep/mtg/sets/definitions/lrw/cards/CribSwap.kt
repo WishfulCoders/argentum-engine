@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Crib Swap
@@ -27,17 +27,15 @@ val CribSwap = card("Crib Swap") {
     keywords(Keyword.CHANGELING)
 
     spell {
-        val creature = target("creature", Targets.Creature)
-        effect = Effects.Move(creature, Zone.EXILE)
-            .then(
-                Effects.CreateToken(
-                    power = 1,
-                    toughness = 1,
-                    creatureTypes = setOf("Shapeshifter"),
-                    keywords = setOf(Keyword.CHANGELING),
-                    controller = EffectTarget.TargetController,
-                    imageUri = "https://cards.scryfall.io/normal/front/c/2/c2963ce1-f9d8-437a-9489-e0913a8b8d26.jpg?1767660071"
-                )
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.Move(creature, Zone.EXILE) then
+            Effects.CreateToken(
+                power = 1,
+                toughness = 1,
+                creatureTypes = setOf("Shapeshifter"),
+                keywords = setOf(Keyword.CHANGELING),
+                controller = EffectTarget.TargetController,
+                imageUri = "https://cards.scryfall.io/normal/front/c/2/c2963ce1-f9d8-437a-9489-e0913a8b8d26.jpg?1767660071"
             )
     }
 

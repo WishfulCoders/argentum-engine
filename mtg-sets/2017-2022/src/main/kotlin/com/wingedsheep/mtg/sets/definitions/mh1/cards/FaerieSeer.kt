@@ -25,7 +25,7 @@ val FaerieSeer = card("Faerie Seer") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Scry(2)
         description = "When this creature enters, scry 2."
     }

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -8,7 +8,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.EffectChoice
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Reluctant Role Model — Duskmourn: House of Horror #26
@@ -21,14 +23,14 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  *
  * First ability: the "Survival" ability word is flavor only — mechanically this is an
  * intervening-"if" postcombat-main trigger gated on the source being tapped
- * (`Triggers.YourPostcombatMain` + `Conditions.SourceIsTapped`), exactly like the other DSK
+ * (`Triggers.you.beginningOf(Step.POSTCOMBAT_MAIN)` + `Conditions.SourceIsTapped`), exactly like the other DSK
  * Survival creatures. "put a flying, lifelink, or +1/+1 counter" is the controller's choice at
  * resolution, modeled as `Effects.ChooseAction` over the three keyword/+1+1 counter kinds, each
  * adding one counter to this creature (`EffectTarget.Self`). Flying and lifelink are keyword
  * counters (CR 122.1b) granting their keyword via the projected keyword-counter map.
  *
  * Second ability: "this creature or another creature you control dies" is
- * `Triggers.YourCreatureDies` (ANY binding, creatures-you-control filter — includes this card
+ * `Triggers.a(GameObjectFilter.Creature.youControl()).dies()` (ANY binding, creatures-you-control filter — includes this card
  * itself). The intervening "if it had counters on it" (CR 603.4) is
  * `Conditions.TriggeringEntityHadCounters`, reading the dying creature's last-known total
  * counter count. `Effects.MoveAllLastKnownCounters` puts the same number of each kind of counter
@@ -48,21 +50,21 @@ val ReluctantRoleModel = card("Reluctant Role Model") {
     // Survival — At the beginning of your second main phase, if this creature is tapped,
     // put a flying, lifelink, or +1/+1 counter on it.
     triggeredAbility {
-        trigger = Triggers.YourPostcombatMain
+        trigger = Triggers.you.beginningOf(Step.POSTCOMBAT_MAIN)
         interveningIf = Conditions.SourceIsTapped
         effect = Effects.ChooseAction(
             listOf(
                 EffectChoice(
                     label = "Flying counter",
-                    effect = Effects.AddCounters(Counters.FLYING, 1, EffectTarget.Self),
+                    effect = Effects.AddCounters(CounterType.FLYING, 1, EffectTarget.Self),
                 ),
                 EffectChoice(
                     label = "Lifelink counter",
-                    effect = Effects.AddCounters(Counters.LIFELINK, 1, EffectTarget.Self),
+                    effect = Effects.AddCounters(CounterType.LIFELINK, 1, EffectTarget.Self),
                 ),
                 EffectChoice(
                     label = "+1/+1 counter",
-                    effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
+                    effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
                 ),
             )
         )
@@ -73,10 +75,10 @@ val ReluctantRoleModel = card("Reluctant Role Model") {
     // Whenever this creature or another creature you control dies, if it had counters on it,
     // put those counters on up to one target creature.
     triggeredAbility {
-        trigger = Triggers.YourCreatureDies
+        val creature = target(TargetFilter.Creature, optional = true)
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).dies()
         interveningIf = Conditions.TriggeringEntityHadCounters
-        target = TargetCreature(optional = true)
-        effect = Effects.MoveAllLastKnownCounters(EffectTarget.ContextTarget(0))
+        effect = Effects.MoveAllLastKnownCounters(creature)
         description = "Whenever this creature or another creature you control dies, if it had " +
             "counters on it, put those counters on up to one target creature."
     }

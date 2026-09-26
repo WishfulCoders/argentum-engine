@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Relm's Sketching
@@ -24,14 +23,7 @@ val RelmsSketching = card("Relm's Sketching") {
     oracleText = "Create a token that's a copy of target artifact, creature, or land."
 
     spell {
-        val permanent = target(
-            "target artifact, creature, or land",
-            TargetPermanent(
-                filter = TargetFilter(
-                    GameObjectFilter.Artifact or GameObjectFilter.Creature or GameObjectFilter.Land
-                )
-            )
-        )
+        val permanent = target(TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Creature or GameObjectFilter.Land))
         effect = Effects.CreateTokenCopyOfTarget(target = permanent)
     }
 

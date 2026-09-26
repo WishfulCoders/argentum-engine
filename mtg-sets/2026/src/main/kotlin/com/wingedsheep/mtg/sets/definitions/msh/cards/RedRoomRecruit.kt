@@ -22,7 +22,7 @@ val RedRoomRecruit = card("Red Room Recruit") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Connive()
     }
 

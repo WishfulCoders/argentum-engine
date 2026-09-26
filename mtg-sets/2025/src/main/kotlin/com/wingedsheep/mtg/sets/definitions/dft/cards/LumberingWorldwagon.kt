@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
 import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 
 /**
@@ -26,8 +26,8 @@ import com.wingedsheep.sdk.scripting.effects.SearchDestination
  *
  * "Enters or attacks" is the repo's established two-ability idiom (Sentinel of the Nameless
  * City, Queen's Bay Paladin, Visage of Dread): there is no single enters-or-attacks
- * `TriggerSpec`, so [Triggers.EntersBattlefield] and [Triggers.Attacks] share one
- * [MayEffect]-wrapped search. The "you may" is a decline of the whole search (Quirion
+ * `TriggerSpec`, so `Triggers.self.enters()` and `Triggers.self.attacks()` share one
+ * [Effects.May]-wrapped search. The "you may" is a decline of the whole search (Quirion
  * Trailblazer), not a failure-to-find, so it wraps the pattern rather than living inside it.
  */
 val LumberingWorldwagon = card("Lumbering Worldwagon") {
@@ -43,8 +43,8 @@ val LumberingWorldwagon = card("Lumbering Worldwagon") {
     dynamicPower(DynamicAmounts.landsYouControl())
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.May(
             Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.BasicLand,
                 count = 1,
@@ -55,8 +55,8 @@ val LumberingWorldwagon = card("Lumbering Worldwagon") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = MayEffect(
+        trigger = Triggers.self.attacks()
+        effect = Effects.May(
             Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.BasicLand,
                 count = 1,

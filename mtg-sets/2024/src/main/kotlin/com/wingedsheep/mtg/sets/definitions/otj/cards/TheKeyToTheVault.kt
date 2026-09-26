@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -10,17 +11,8 @@ import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CastFromCollectionWithoutPayingCostEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * The Key to the Vault
@@ -59,43 +51,26 @@ val TheKeyToTheVault = card("The Key to the Vault") {
         "the exiled card without paying its mana cost.\nEquip {2}{U}"
 
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            damageType = DamageType.Combat,
-            recipient = RecipientFilter.AnyPlayer,
-            binding = TriggerBinding.ATTACHED
-        )
-        val damageDealt = DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_DAMAGE_AMOUNT)
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(count = damageDealt, player = Player.You),
-                    storeAs = "keyLooked",
-                    revealed = false
-                ),
-                SelectFromCollectionEffect(
-                    from = "keyLooked",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    filter = GameObjectFilter.Nonland,
-                    showAllCards = true,
-                    storeSelected = "keyChosen",
-                    storeRemainder = "keyToBottom",
-                    prompt = "You may exile a nonland card to cast for free.",
-                    selectedLabel = "Exile",
-                    remainderLabel = "Put on the bottom of your library"
-                ),
-                MoveCollectionEffect(
-                    from = "keyChosen",
-                    destination = CardDestination.ToZone(Zone.EXILE, Player.You),
-                    storeMovedAs = "keyExiled"
-                ),
-                MoveCollectionEffect(
-                    from = "keyToBottom",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, Player.You, ZonePlacement.Bottom),
-                    order = CardOrder.Random
-                ),
-                CastFromCollectionWithoutPayingCostEffect(from = "keyExiled")
+        trigger = Triggers.attached.dealsCombatDamage(Recipient.AnyPlayer)
+        val damageDealt = DynamicAmounts.triggerDamageAmount()
+        effect = Effects.Pipeline {
+            val keyLooked = gather(
+                CardSource.TopOfLibrary(count = damageDealt, player = Player.You),
+                revealed = false
             )
-        )
+            val (keyChosen, keyToBottom) = chooseUpToSplit(
+                1,
+                from = keyLooked,
+                filter = GameObjectFilter.Nonland,
+                showAllCards = true,
+                prompt = "You may exile a nonland card to cast for free.",
+                selectedLabel = "Exile",
+                remainderLabel = "Put on the bottom of your library"
+            )
+            val keyExiled = moveTracked(keyChosen, CardDestination.ToZone(Zone.EXILE, Player.You))
+            toLibraryBottom(keyToBottom, order = CardOrder.Random)
+            run(Effects.CastFromCollectionWithoutPayingCost(from = keyExiled))
+        }
     }
 
     equipAbility("{2}{U}")

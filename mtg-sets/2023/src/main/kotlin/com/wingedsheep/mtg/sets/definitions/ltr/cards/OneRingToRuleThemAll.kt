@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
@@ -8,9 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * One Ring to Rule Them All
@@ -25,7 +22,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * Chapter I composes [Effects.TheRingTemptsYou] with a mill-each-player whose amount is
  * `EntityProperty(RingBearer(Player.You), Power)` — the power of the Saga controller's
  * designated Ring-bearer (0 if none). The mill applies to every player ([Player.Each]) while
- * the amount stays anchored to *your* Ring-bearer, because [EntityReference.RingBearer] reads
+ * the amount stays anchored to *your* Ring-bearer, because [EffectTarget.RingBearer] reads
  * the referenced player's bearer rather than the player being milled.
  *
  * Chapter II is a board wipe over `Creature.nonlegendary()` (legendary creatures survive).
@@ -45,16 +42,11 @@ val OneRingToRuleThemAll = card("One Ring to Rule Them All") {
         "III — Each opponent loses 1 life for each creature card in that player's graveyard."
 
     sagaChapter(1) {
-        effect = Effects.Composite(
-            Effects.TheRingTemptsYou(),
+        effect = Effects.TheRingTemptsYou() then
             Patterns.Library.mill(
-                count = DynamicAmount.EntityProperty(
-                    EntityReference.RingBearer(Player.You),
-                    EntityNumericProperty.Power
-                ),
+                count = DynamicAmounts.powerOf(EffectTarget.RingBearer(Player.You)),
                 target = EffectTarget.PlayerRef(Player.Each)
             )
-        )
     }
 
     sagaChapter(2) {
@@ -66,7 +58,7 @@ val OneRingToRuleThemAll = card("One Ring to Rule Them All") {
             players = Player.EachOpponent,
             effects = listOf(
                 Effects.LoseLife(
-                    amount = DynamicAmount.Count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Creature),
+                    amount = DynamicAmounts.creatureCardsInYourGraveyard(),
                     target = EffectTarget.Controller
                 )
             )

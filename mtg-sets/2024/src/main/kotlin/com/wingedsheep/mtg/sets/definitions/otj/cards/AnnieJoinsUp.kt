@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AdditionalSourceTriggers
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Annie Joins Up
@@ -32,11 +31,8 @@ val AnnieJoinsUp = card("Annie Joins Up") {
         "If a triggered ability of a legendary creature you control triggers, that ability triggers an additional time."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "target creature or planeswalker an opponent controls",
-            TargetObject(filter = TargetFilter(GameObjectFilter.CreatureOrPlaneswalker.opponentControls()))
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter(GameObjectFilter.CreatureOrPlaneswalker.opponentControls()))
         effect = Effects.DealDamage(5, t)
     }
 

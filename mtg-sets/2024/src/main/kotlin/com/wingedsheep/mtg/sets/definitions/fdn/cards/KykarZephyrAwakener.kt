@@ -11,13 +11,12 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 
 /**
@@ -39,19 +38,16 @@ val KykarZephyrAwakener = card("Kykar, Zephyr Awakener") {
     toughness = 4
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
         effect = ModalEffect.chooseOne(
-            Mode.withTarget(
-                Effects.Composite(
-                    Effects.Exile(EffectTarget.ContextTarget(0)),
-                    CreateDelayedTriggerEffect(
+            mode("Exile another target creature you control. Return that card to the battlefield under its owner's control at the beginning of the next end step") {
+                val otherCreatureYouControl = target(TargetFilter.OtherCreatureYouControl)
+                effect = Effects.Exile(otherCreatureYouControl) then
+                    Effects.CreateDelayedTrigger(
                         step = Step.END,
-                        effect = Effects.Move(EffectTarget.ContextTarget(0), Zone.BATTLEFIELD)
+                        effect = Effects.Move(otherCreatureYouControl, Zone.BATTLEFIELD)
                     )
-                ),
-                TargetCreature(filter = TargetFilter.OtherCreatureYouControl),
-                "Exile another target creature you control. Return that card to the battlefield under its owner's control at the beginning of the next end step"
-            ),
+            },
             Mode.noTarget(
                 Effects.CreateToken(
                     power = 1,

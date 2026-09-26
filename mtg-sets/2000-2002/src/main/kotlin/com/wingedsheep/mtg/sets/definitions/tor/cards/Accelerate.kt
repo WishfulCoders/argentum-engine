@@ -8,9 +8,7 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -26,11 +24,8 @@ val Accelerate = card("Accelerate") {
     typeLine = "Instant"
     oracleText = "Target creature gains haste until end of turn.\nDraw a card."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.HASTE, t),
-            DrawCardsEffect(1)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.GrantKeyword(Keyword.HASTE, t) then Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.COMMON

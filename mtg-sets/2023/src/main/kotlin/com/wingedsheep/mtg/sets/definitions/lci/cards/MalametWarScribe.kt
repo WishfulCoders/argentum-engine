@@ -28,10 +28,10 @@ val MalametWarScribe = card("Malamet War Scribe") {
     power = 4
     toughness = 3
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(2, 1, EffectTarget.Self)
+            Effects.ModifyStats(2, 1, EffectTarget.IterationEntity)
         )
     }
     metadata {

@@ -26,7 +26,7 @@ val HolyLight = card("Holy Light") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.notColor(Color.WHITE)),
-            Effects.ModifyStats(-1, -1, EffectTarget.Self)
+            Effects.ModifyStats(-1, -1, EffectTarget.IterationEntity)
         )
     }
 

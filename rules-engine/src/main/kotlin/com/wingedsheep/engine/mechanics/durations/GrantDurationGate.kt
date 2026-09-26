@@ -4,7 +4,6 @@ import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.AttachedToComponent
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
-import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.Duration
 
@@ -87,9 +86,7 @@ object GrantDurationGate {
         is Duration.WhileAffectedHasCounter -> {
             if (!state.getBattlefield().contains(entityId)) true
             else {
-                val counterType = CounterType.fromName(duration.counterType)
-                counterType == null ||
-                    (state.getEntity(entityId)?.get<CountersComponent>()?.getCount(counterType) ?: 0) <= 0
+                (state.getEntity(entityId)?.get<CountersComponent>()?.getCount(duration.counterType) ?: 0) <= 0
             }
         }
 

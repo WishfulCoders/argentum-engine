@@ -55,11 +55,20 @@ sealed interface Effect : TextReplaceable<Effect> {
     fun runtimeDescription(resolver: (DynamicAmount) -> Int?): String = description
 
     /**
-     * Operator to chain effects.
-     * Allows syntax like: EffectA then EffectB
+     * Sequence two effects: `Effects.DrawCards(2) then Effects.CreateToken(...)`. This is the one
+     * way a card writes "do A, then B"; a chain `a then b then c` builds a single flat sequence.
+     *
+     * Across lines the operator ends the line:
+     * ```kotlin
+     * effect = Effects.Move(creature, Zone.EXILE) then
+     *     Effects.CreateDelayedTrigger(step = Step.END, effect = Effects.Move(creature, Zone.BATTLEFIELD))
+     * ```
+     *
+     * Only a *plain* sequence on the left is extended in place; one carrying its own
+     * `descriptionOverride` or `stopOnError` is kept whole, so chaining never drops them.
      */
     infix fun then(next: Effect): CompositeEffect {
-        return if (this is CompositeEffect) {
+        return if (this is CompositeEffect && isPlainSequence()) {
             CompositeEffect(this.effects + next)
         } else {
             CompositeEffect(listOf(this, next))

@@ -7,6 +7,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Galvanic Arc
@@ -27,11 +29,11 @@ val GalvanicArc = card("Galvanic Arc") {
         "When this Aura enters, it deals 3 damage to any target.\n" +
         "Enchanted creature has first strike."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("any target", Targets.Any)
+        trigger = Triggers.self.enters()
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(3, t)
     }
 

@@ -9,11 +9,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.MarkExileOnDeathEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -28,19 +24,11 @@ val FieryAnnihilation = card("Fiery Annihilation") {
     typeLine = "Instant"
     oracleText = "Fiery Annihilation deals 5 damage to target creature. Exile up to one target Equipment attached to that creature. If that creature would die this turn, exile it instead."
     spell {
-        val t1 = target("t1", TargetCreature(filter = TargetFilter.Creature))
-        val t2 = target(
-            "t2",
-            TargetPermanent(
-                optional = true,
-                filter = TargetFilter(GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT))
-            )
-        )
-        effect = Effects.Composite(
-            DealDamageEffect(5, t1),
-            Effects.Exile(t2),
-            MarkExileOnDeathEffect(t1)
-        )
+        val t1 = target(TargetFilter.Creature)
+        val t2 = target(TargetFilter(GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT)), optional = true)
+        effect = Effects.DealDamage(5, t1) then
+            Effects.Exile(t2) then
+            Effects.MarkExileOnDeath(t1)
     }
     metadata {
         rarity = Rarity.UNCOMMON

@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -10,9 +11,6 @@ import com.wingedsheep.sdk.dsl.craft
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Saheeli's Lattice // Mastercraft Raptor (CR 702.167, The Lost Caverns of Ixalan)
@@ -50,11 +48,11 @@ private val SaheelisLatticeFront = card("Saheeli's Lattice") {
 
     // ETB: you may discard a card. If you do, draw two cards.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(
-            IfYouDoEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.May(
+            Effects.IfYouDo(
                 action = Patterns.Hand.discardCards(1),
-                ifYouDo = Effects.DrawCards(2)
+                then = Effects.DrawCards(2)
             )
         )
     }
@@ -75,7 +73,7 @@ private val MastercraftRaptor = card("Mastercraft Raptor") {
     typeLine = "Artifact Creature — Dinosaur"
     // Power = total power of cards exiled to craft this permanent (CR 702.167c).
     // The CDA reads CraftedFromExiledComponent on this entity each projection pass.
-    dynamicPower(DynamicAmount.CraftedMaterialsTotalPower)
+    dynamicPower(DynamicAmounts.craftedMaterialsTotalPower())
     toughness = 4
     oracleText = "Mastercraft Raptor's power is equal to the total power of the exiled cards used to craft it."
 

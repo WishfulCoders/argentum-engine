@@ -22,7 +22,7 @@ val BeastWhisperer = card("Beast Whisperer") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(GameObjectFilter.Creature)
+        trigger = Triggers.you.casts(GameObjectFilter.Creature)
         effect = Effects.DrawCards(1)
     }
 

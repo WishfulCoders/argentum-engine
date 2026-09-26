@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -25,10 +24,7 @@ val Recollect = card("Recollect") {
     typeLine = "Sorcery"
     oracleText = "Return target card from your graveyard to your hand."
     spell {
-        val t = target(
-            "target",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Any.ownedByYou(), zone = Zone.GRAVEYARD)),
-        )
+        val t = target(TargetFilter(GameObjectFilter.Any.ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.Move(t, Zone.HAND)
     }
     metadata {

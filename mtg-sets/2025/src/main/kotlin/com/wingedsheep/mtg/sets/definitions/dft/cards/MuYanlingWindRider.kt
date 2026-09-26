@@ -9,8 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern.OneOrMoreDealCombatDamageToPlayerEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
 /**
@@ -52,7 +50,7 @@ val MuYanlingWindRider = card("Mu Yanling, Wind Rider") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateVehicleToken()
         description = "When Mu Yanling enters, create a 3/2 colorless Vehicle artifact token with " +
             "crew 1."
@@ -66,12 +64,7 @@ val MuYanlingWindRider = card("Mu Yanling, Wind Rider") {
     }
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            OneOrMoreDealCombatDamageToPlayerEvent(
-                sourceFilter = GameObjectFilter.Creature.withKeyword(Keyword.FLYING)
-            ),
-            TriggerBinding.ANY
-        )
+        trigger = Triggers.oneOrMore(GameObjectFilter.Creature.withKeyword(Keyword.FLYING)).dealCombatDamageToAPlayer()
         effect = Effects.DrawCards(1)
         description = "Whenever one or more creatures you control with flying deal combat damage " +
             "to a player, draw a card."

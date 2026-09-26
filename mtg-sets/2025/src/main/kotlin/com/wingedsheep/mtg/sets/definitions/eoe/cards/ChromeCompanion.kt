@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
@@ -26,17 +25,14 @@ val ChromeCompanion = card("Chrome Companion") {
     oracleText = "Whenever this creature becomes tapped, you gain 1 life.\n{2}, {T}: Put target card from a graveyard on the bottom of its owner's library."
 
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
+        trigger = Triggers.self.becomesTapped()
         effect = Effects.GainLife(1)
         description = "Whenever this creature becomes tapped, you gain 1 life."
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        val cardInGraveyard = target(
-            "target card from a graveyard",
-            TargetObject(filter = TargetFilter.CardInGraveyard)
-        )
+        val cardInGraveyard = target(TargetFilter.CardInGraveyard)
         effect = Effects.Move(
             target = cardInGraveyard,
             destination = Zone.LIBRARY,

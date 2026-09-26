@@ -3,11 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.bfz.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Retreat to Valakut
@@ -26,18 +26,16 @@ val RetreatToValakut = card("Retreat to Valakut") {
         "• Target creature can't block this turn."
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = ModalEffect.chooseOne(
-            Mode.withTarget(
-                Effects.ModifyStats(2, 0, EffectTarget.ContextTarget(0)),
-                TargetCreature(),
-                "Target creature gets +2/+0 until end of turn",
-            ),
-            Mode.withTarget(
-                Effects.CantBlock(EffectTarget.ContextTarget(0)),
-                TargetCreature(),
-                "Target creature can't block this turn",
-            ),
+            mode("Target creature gets +2/+0 until end of turn") {
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.ModifyStats(2, 0, creature)
+            },
+            mode("Target creature can't block this turn") {
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.CantBlock(creature)
+            },
         )
     }
 

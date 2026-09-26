@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Electrostatic Field
@@ -27,7 +28,7 @@ val ElectrostaticField = card("Electrostatic Field") {
 
     keywords(Keyword.DEFENDER)
     triggeredAbility {
-        trigger = Triggers.YouCastInstantOrSorcery
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
         effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent))
     }
 

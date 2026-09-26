@@ -27,7 +27,7 @@ val DusyutEarthcarver = card("Dusyut Earthcarver") {
     keywords(Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Endure(3)
         description = "When this creature enters, it endures 3."
     }

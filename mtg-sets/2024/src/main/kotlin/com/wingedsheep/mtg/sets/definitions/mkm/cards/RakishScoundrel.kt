@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Rakish Scoundrel — Murders at Karlov Manor #225
@@ -36,8 +36,8 @@ val RakishScoundrel = card("Rakish Scoundrel") {
     disguise = "{4}{B/G}{B/G}"
 
     triggeredAbility {
-        trigger = Triggers.or(Triggers.EntersBattlefield, Triggers.TurnedFaceUp)
-        val creature = target("target creature", Targets.Creature)
+        trigger = Triggers.or(Triggers.self.enters(), Triggers.self.turnedFaceUp())
+        val creature = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, creature)
     }
 

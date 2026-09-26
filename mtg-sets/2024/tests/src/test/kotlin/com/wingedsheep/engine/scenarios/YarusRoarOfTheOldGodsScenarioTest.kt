@@ -18,6 +18,8 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Yarus, Roar of the Old Gods — "Other creatures you control have haste. Whenever one or more
@@ -120,7 +122,7 @@ class YarusRoarOfTheOldGodsScenarioTest : FunSpec({
 
             driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
             withClue("the granted haste lets a freshly-entered creature attack") {
-                driver.declareAttackers(player, listOf(bear), opponent).isSuccess shouldBe true
+                driver.declareAttackers(player, listOf(bear), opponent).outcome shouldBe Outcome.Done
             }
         }
     }
@@ -137,7 +139,7 @@ class YarusRoarOfTheOldGodsScenarioTest : FunSpec({
 
             val handBefore = driver.getHandSize(player)
             driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-            driver.declareAttackers(player, listOf(hidden), opponent).isSuccess shouldBe true
+            driver.declareAttackers(player, listOf(hidden), opponent).outcome shouldBe Outcome.Done
             driver.passPriorityUntil(Step.DECLARE_BLOCKERS)
             driver.declareNoBlockers(opponent)
             driver.passPriorityUntil(Step.POSTCOMBAT_MAIN)
@@ -161,7 +163,7 @@ class YarusRoarOfTheOldGodsScenarioTest : FunSpec({
 
             val handBefore = driver.getHandSize(player)
             driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-            driver.declareAttackers(player, listOf(first, second), opponent).isSuccess shouldBe true
+            driver.declareAttackers(player, listOf(first, second), opponent).outcome shouldBe Outcome.Done
             driver.passPriorityUntil(Step.DECLARE_BLOCKERS)
             driver.declareNoBlockers(opponent)
             driver.passPriorityUntil(Step.POSTCOMBAT_MAIN)
@@ -185,7 +187,7 @@ class YarusRoarOfTheOldGodsScenarioTest : FunSpec({
 
             val handBefore = driver.getHandSize(player)
             driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-            driver.declareAttackers(player, listOf(bear), opponent).isSuccess shouldBe true
+            driver.declareAttackers(player, listOf(bear), opponent).outcome shouldBe Outcome.Done
             driver.passPriorityUntil(Step.DECLARE_BLOCKERS)
             driver.declareNoBlockers(opponent)
             driver.passPriorityUntil(Step.POSTCOMBAT_MAIN)
@@ -209,13 +211,8 @@ class YarusRoarOfTheOldGodsScenarioTest : FunSpec({
                 power = 1
                 toughness = 3
                 triggeredAbility {
-                    trigger = com.wingedsheep.sdk.scripting.TriggerSpec(
-                        com.wingedsheep.sdk.scripting.EventPattern.OneOrMoreDealCombatDamageToPlayerEvent(
-                            sourceFilter = com.wingedsheep.sdk.scripting.GameObjectFilter.Creature
-                                .named("Named Test Hitter")
-                        ),
-                        com.wingedsheep.sdk.scripting.TriggerBinding.ANY
-                    )
+                    trigger = Triggers.oneOrMore(com.wingedsheep.sdk.scripting.GameObjectFilter.Creature
+                                .named("Named Test Hitter")).dealCombatDamageToAPlayer()
                     effect = com.wingedsheep.sdk.dsl.Effects.DrawCards(1)
                     description = "Whenever one or more creatures named Named Test Hitter you " +
                         "control deal combat damage to a player, draw a card."
@@ -232,7 +229,7 @@ class YarusRoarOfTheOldGodsScenarioTest : FunSpec({
 
             val handBefore = driver.getHandSize(player)
             driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-            driver.declareAttackers(player, listOf(hidden), opponent).isSuccess shouldBe true
+            driver.declareAttackers(player, listOf(hidden), opponent).outcome shouldBe Outcome.Done
             driver.passPriorityUntil(Step.DECLARE_BLOCKERS)
             driver.declareNoBlockers(opponent)
             driver.passPriorityUntil(Step.POSTCOMBAT_MAIN)
@@ -257,7 +254,7 @@ class YarusRoarOfTheOldGodsScenarioTest : FunSpec({
             // Kill it in combat: a 2/2 face-down attacker into a 3/3 blocker.
             val blocker = driver.putCreatureOnBattlefield(opponent, "Test Blocker")
             driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-            driver.declareAttackers(player, listOf(hidden), opponent).isSuccess shouldBe true
+            driver.declareAttackers(player, listOf(hidden), opponent).outcome shouldBe Outcome.Done
             driver.passPriorityUntil(Step.DECLARE_BLOCKERS)
             driver.declareBlockers(opponent, mapOf(blocker to listOf(hidden)))
             driver.passPriorityUntil(Step.POSTCOMBAT_MAIN)
@@ -285,7 +282,7 @@ class YarusRoarOfTheOldGodsScenarioTest : FunSpec({
 
             val blocker = driver.putCreatureOnBattlefield(opponent, "Test Blocker")
             driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-            driver.declareAttackers(player, listOf(bear), opponent).isSuccess shouldBe true
+            driver.declareAttackers(player, listOf(bear), opponent).outcome shouldBe Outcome.Done
             driver.passPriorityUntil(Step.DECLARE_BLOCKERS)
             driver.declareBlockers(opponent, mapOf(blocker to listOf(bear)))
             driver.passPriorityUntil(Step.POSTCOMBAT_MAIN)

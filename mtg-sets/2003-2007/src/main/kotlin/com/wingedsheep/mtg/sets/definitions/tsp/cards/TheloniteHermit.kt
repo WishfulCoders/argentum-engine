@@ -36,7 +36,7 @@ val TheloniteHermit = card("Thelonite Hermit") {
     morph = "{3}{G}{G}"
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
+        trigger = Triggers.self.turnedFaceUp()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Defender (This creature can't attack.)
  * When this creature dies, create a 3/3 white Bird creature token with flying.
  *
- * - [Triggers.Dies] is the battlefield-to-graveyard zone change bound to the source itself
+ * - `Triggers.self.dies()` is the battlefield-to-graveyard zone change bound to the source itself
  *   (CR 700.4), so the egg hatches whether it was destroyed, sacrificed, or died to lethal damage —
  *   but not when it is exiled or bounced.
  * - The reminder text for defender is printed on the card and kept verbatim in the oracle text.
@@ -33,7 +33,7 @@ val RocEgg = card("Roc Egg") {
     keywords(Keyword.DEFENDER)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateToken(
             power = 3,
             toughness = 3,

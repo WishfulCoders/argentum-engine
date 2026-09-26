@@ -81,7 +81,7 @@ class CreatureTypeChoiceContinuationResumer(
      * Injects the chosen value into every EffectContinuation on the stack
      * (via chosenValues map) so any downstream pipeline effect — including
      * ones in outer composites that wrap the choice (e.g., a ChooseOption
-     * nested inside a MayEffect inside an outer CompositeEffect) — can
+     * nested inside a Effects.May inside an outer CompositeEffect) — can
      * read it via EffectContext.chosenValues[storeAs].
      *
      * Special case: when storeAs == "chosenCreatureType", additionally
@@ -293,7 +293,7 @@ class CreatureTypeChoiceContinuationResumer(
     /**
      * Copy [chosenValue] into `chosenValues[storeAs]` on every [EffectContinuation] frame, so a
      * downstream pipeline step inside the same composite — or in an outer composite that wraps
-     * the choice (a `ChooseOption` nested inside a `MayEffect` inside a `CompositeEffect`) —
+     * the choice (a `ChooseOption` nested inside a `Effects.May` inside a `CompositeEffect`) —
      * reads the same value the original chooser saw. Non-effect frames pass through unchanged.
      *
      * Pass [mirrorChosenCreatureType] = true to also write the value into the legacy

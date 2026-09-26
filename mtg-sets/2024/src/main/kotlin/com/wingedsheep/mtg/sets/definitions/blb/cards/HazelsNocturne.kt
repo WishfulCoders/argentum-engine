@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -31,10 +30,10 @@ val HazelsNocturne = card("Hazel's Nocturne") {
             optional = true,
             filter = TargetFilter.CreatureInYourGraveyard,
         )
-        effect = ForEachTargetEffect(
-            effects = listOf(Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND)),
-        ).then(Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent)))
-            .then(Effects.GainLife(2))
+        effect = Effects.ForEachTarget(
+            Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND),
+        ) then Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent)) then
+            Effects.GainLife(2)
     }
 
     metadata {

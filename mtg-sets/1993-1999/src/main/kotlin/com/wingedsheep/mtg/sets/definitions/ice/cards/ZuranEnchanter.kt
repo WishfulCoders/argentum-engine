@@ -32,7 +32,7 @@ val ZuranEnchanter = card("Zuran Enchanter") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{B}"), Costs.Tap)
         restrictions = listOf(ActivationRestriction.OnlyDuringYourTurn)
-        val t = target("target", Targets.Player)
+        val t = target(Targets.Player)
         effect = Patterns.Hand.discardCards(1, t)
     }
 

@@ -49,8 +49,8 @@ val ThievingSprite = card("Thieving Sprite") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target("target player", Targets.Player)
+        trigger = Triggers.self.enters()
+        target(Targets.Player)
         effect = Effects.Pipeline {
             val hand = gather(CardSource.FromZone(Zone.HAND, Player.TargetPlayer))
             val revealed = chooseExactly(

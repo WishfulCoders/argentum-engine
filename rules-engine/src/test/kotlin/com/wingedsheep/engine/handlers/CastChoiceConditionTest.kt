@@ -27,7 +27,7 @@ import io.kotest.matchers.shouldBe
  */
 class CastChoiceConditionTest : FunSpec({
 
-    val evaluator = ConditionEvaluator()
+    val evaluator = PredicateEvaluator(cardRegistry = null).conditions
     val player = EntityId.generate()
     val permanent = EntityId.generate()
 

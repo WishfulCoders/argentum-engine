@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Sanctum Gargoyle
@@ -28,12 +27,9 @@ val SanctumGargoyle = card("Sanctum Gargoyle") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
-        val t = target(
-            "target",
-            TargetObject(filter = TargetFilter.ArtifactInYourGraveyard)
-        )
+        val t = target(TargetFilter.ArtifactInYourGraveyard)
         effect = Effects.Move(t, Zone.HAND)
     }
 

@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.leg.cards
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Teleport
@@ -24,7 +24,7 @@ val Teleport = card("Teleport") {
 
     spell {
         castOnlyDuring(Step.DECLARE_ATTACKERS)
-        val creature = target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, creature)
     }
 

@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Rain of Thorns
@@ -32,15 +31,15 @@ val RainOfThorns = card("Rain of Thorns") {
     spell {
         modal(chooseCount = 3, minChooseCount = 1) {
             mode("Destroy target artifact") {
-                val t = target("target", TargetPermanent(filter = TargetFilter.Artifact))
+                val t = target(TargetFilter.Artifact)
                 effect = Effects.Destroy(t)
             }
             mode("Destroy target enchantment") {
-                val t = target("target", TargetPermanent(filter = TargetFilter.Enchantment))
+                val t = target(TargetFilter.Enchantment)
                 effect = Effects.Destroy(t)
             }
             mode("Destroy target land") {
-                val t = target("target", TargetPermanent(filter = TargetFilter.Land))
+                val t = target(TargetFilter.Land)
                 effect = Effects.Destroy(t)
             }
         }

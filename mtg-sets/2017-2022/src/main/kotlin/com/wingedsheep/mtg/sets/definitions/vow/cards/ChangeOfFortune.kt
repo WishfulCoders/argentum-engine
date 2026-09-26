@@ -27,12 +27,7 @@ val ChangeOfFortune = card("Change of Fortune") {
     oracleText = "Discard your hand, then draw a card for each card you've discarded this turn."
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                Patterns.Hand.discardHand(),
-                Effects.DrawCards(DynamicAmounts.cardsDiscardedThisTurn())
-            )
-        )
+        effect = Patterns.Hand.discardHand() then Effects.DrawCards(DynamicAmounts.cardsDiscardedThisTurn())
     }
 
     metadata {

@@ -2,12 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.mir.cards
 
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Wellspring
@@ -26,19 +27,17 @@ val Wellspring = card("Wellspring") {
         "When this Aura enters, gain control of enchanted land until end of turn.\n" +
         "At the beginning of your upkeep, untap enchanted land. You gain control of that land until end of turn."
 
-    auraTarget = Targets.Land
+    auraTarget = TargetObject(filter = TargetFilter.Land)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainControl(EffectTarget.EnchantedPermanent, Duration.EndOfTurn)
     }
 
     triggeredAbility {
-        trigger = Triggers.phase(Step.UPKEEP)
-        effect = Effects.Composite(
-            Effects.Untap(EffectTarget.EnchantedPermanent),
-            Effects.GainControl(EffectTarget.EnchantedPermanent, Duration.EndOfTurn),
-        )
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.Untap(EffectTarget.EnchantedPermanent) then
+            Effects.GainControl(EffectTarget.EnchantedPermanent, Duration.EndOfTurn)
     }
 
     metadata {

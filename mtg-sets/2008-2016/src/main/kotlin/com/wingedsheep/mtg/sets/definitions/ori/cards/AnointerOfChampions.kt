@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Anointer of Champions
@@ -25,7 +24,7 @@ val AnointerOfChampions = card("Anointer of Champions") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target attacking creature", TargetCreature(filter = TargetFilter.Creature.attacking()))
+        val t = target(TargetFilter.Creature.attacking())
         effect = Effects.ModifyStats(1, 1, t)
     }
 

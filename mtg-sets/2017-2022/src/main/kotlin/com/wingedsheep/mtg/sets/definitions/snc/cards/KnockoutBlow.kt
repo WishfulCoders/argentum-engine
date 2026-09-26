@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Knockout Blow
@@ -30,11 +29,8 @@ val KnockoutBlow = card("Knockout Blow") {
     oracleText = "This spell costs {2} less to cast if it targets a red creature.\nKnockout Blow deals 4 damage to target attacking or blocking creature and you gain 2 life."
 
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.AttackingOrBlockingCreature))
-        effect = Effects.Composite(
-            Effects.DealDamage(4, t),
-            Effects.GainLife(2)
-        )
+        val t = target(TargetFilter.AttackingOrBlockingCreature)
+        effect = Effects.DealDamage(4, t) then Effects.GainLife(2)
     }
 
     staticAbility {

@@ -7,11 +7,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Demolition Field
@@ -47,15 +45,12 @@ val DemolitionField = card("Demolition Field") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap, Costs.SacrificeSelf)
-        val land = target(
-            "target nonbasic land an opponent controls",
-            TargetPermanent(filter = TargetFilter.NonbasicLand.opponentControls())
-        )
+        val land = target(TargetFilter.NonbasicLand.opponentControls())
         effect = Effects.Destroy(land) then
             Effects.ForEachPlayer(
                 Player.ControllerOf("the destroyed land"),
                 listOf(
-                    MayEffect(
+                    Effects.May(
                         Patterns.Library.searchLibrary(
                             filter = GameObjectFilter.BasicLand,
                             count = 1,
@@ -64,7 +59,7 @@ val DemolitionField = card("Demolition Field") {
                     )
                 )
             ) then
-            MayEffect(
+            Effects.May(
                 Patterns.Library.searchLibrary(
                     filter = GameObjectFilter.BasicLand,
                     count = 1,

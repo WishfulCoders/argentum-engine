@@ -25,7 +25,7 @@ val LightshellDuo = card("Lightshell Duo") {
     prowess()
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.surveil(2)
     }
 

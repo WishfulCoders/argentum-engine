@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.thb.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Final Flare
@@ -31,7 +31,7 @@ val FinalFlare = card("Final Flare") {
     additionalCost(Costs.additional.SacrificePermanent(GameObjectFilter.CreatureOrEnchantment))
 
     spell {
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.DealDamage(5, t)
     }
 

@@ -5,10 +5,10 @@
 package com.wingedsheep.mtg.sets.definitions.mir.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -27,11 +27,11 @@ val ElixirOfVitality = card("Elixir of Vitality") {
     replacementEffect(EntersTapped())
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.SacrificeSelf)
-        effect = GainLifeEffect(4)
+        effect = Effects.GainLife(4)
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{8}"), Costs.Tap, Costs.SacrificeSelf)
-        effect = GainLifeEffect(8)
+        effect = Effects.GainLife(8)
     }
     metadata {
         rarity = Rarity.UNCOMMON

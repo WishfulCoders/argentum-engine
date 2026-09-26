@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.scripting.effects.ChoosePileEffect
 import com.wingedsheep.sdk.scripting.effects.Chooser
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
 import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
 import com.wingedsheep.sdk.scripting.effects.Effect
 import com.wingedsheep.sdk.scripting.effects.FaceDownMode
 import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
@@ -40,6 +39,9 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * reveal-until, look-at-top, shuffle-graveyard, and reorder operations.
  */
 object LibraryPatterns {
+
+    /** The cards the most recent [mill] put into the graveyard, as a typed handle. */
+    val milled: CollectionSlot = CollectionSlot("milled")
 
     fun lookAtTopAndKeep(
         count: Int,
@@ -269,6 +271,15 @@ object LibraryPatterns {
      * has.
      */
     fun lookAtTopRevealMatchingToHand(
+        count: Int,
+        filter: GameObjectFilter,
+        prompt: String,
+        restDestination: CardDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
+        restOrder: CardOrder = CardOrder.Random
+    ): CompositeEffect = lookAtTopRevealMatchingToHand(DynamicAmount.Fixed(count), filter, prompt, restDestination, restOrder)
+
+    /** [lookAtTopRevealMatchingToHand] with a count evaluated at resolution. */
+    fun lookAtTopRevealMatchingToHand(
         count: DynamicAmount,
         filter: GameObjectFilter,
         prompt: String,
@@ -294,6 +305,14 @@ object LibraryPatterns {
      * unless [restOrder] reshuffles it.
      */
     fun revealTopPutAllMatchingToHand(
+        count: Int,
+        filter: GameObjectFilter,
+        restDestination: CardDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
+        restOrder: CardOrder = CardOrder.Random
+    ): CompositeEffect = revealTopPutAllMatchingToHand(DynamicAmount.Fixed(count), filter, restDestination, restOrder)
+
+    /** [revealTopPutAllMatchingToHand] with a count evaluated at resolution. */
+    fun revealTopPutAllMatchingToHand(
         count: DynamicAmount,
         filter: GameObjectFilter,
         restDestination: CardDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
@@ -307,7 +326,7 @@ object LibraryPatterns {
             RevealCollectionEffect(from = "looked"),
             FilterCollectionEffect(
                 from = "looked",
-                filter = CollectionFilter.MatchesFilter(filter),
+                filter = filter,
                 storeMatching = "kept",
                 storeNonMatching = "rest"
             ),
@@ -375,7 +394,7 @@ object LibraryPatterns {
     private fun scryPlayer(target: EffectTarget): Player = when (target) {
         EffectTarget.Controller -> Player.You
         is EffectTarget.ContextTarget -> Player.ContextPlayer(target.index)
-        is EffectTarget.BoundVariable -> Player.ContextPlayer(0)
+        is EffectTarget.BoundVariable -> Player.BoundVariable(target.name)
         is EffectTarget.PlayerRef -> target.player
         else -> Player.You
     }
@@ -395,6 +414,15 @@ object LibraryPatterns {
      * overload.
      */
     fun surveil(count: DynamicAmount): CompositeEffect = surveilPipeline(count)
+
+    /**
+     * "Surveil [count]" that remembers which cards it put into the graveyard, stored under
+     * [storeGraveyardAs] for a later "if you put a card … into your graveyard this way" clause
+     * (Enlightened Confidant). Same expanded pipeline as [surveilPipeline] — `SurveiledEvent`
+     * included — with the graveyard move recording the cards it moved.
+     */
+    fun surveil(count: Int, storeGraveyardAs: String): CompositeEffect =
+        surveilPipeline(count, storeGraveyardAs)
 
     /**
      * Expand a library *macro effect* ([ScryEffect] / [SurveilEffect]) to its underlying
@@ -459,7 +487,7 @@ object LibraryPatterns {
      * Public so the engine's surveil macro executor can build and delegate to it; card definitions
      * should use [surveil] / [com.wingedsheep.sdk.dsl.Effects.Surveil] instead.
      */
-    fun surveilPipeline(count: Int): CompositeEffect = CompositeEffect(
+    fun surveilPipeline(count: Int, storeGraveyardAs: String? = null): CompositeEffect = CompositeEffect(
         listOfNotNull(
             GatherCardsEffect(
                 source = CardSource.TopOfLibrary(DynamicAmount.Fixed(count)),
@@ -475,7 +503,8 @@ object LibraryPatterns {
             ),
             MoveCollectionEffect(
                 from = "toGraveyard",
-                destination = CardDestination.ToZone(Zone.GRAVEYARD)
+                destination = CardDestination.ToZone(Zone.GRAVEYARD),
+                storeMovedAs = storeGraveyardAs
             ),
             MoveCollectionEffect(
                 from = "toTop",
@@ -548,7 +577,8 @@ object LibraryPatterns {
         effects.add(
             GatherCardsEffect(
                 source = CardSource.FromZone(Zone.LIBRARY, Player.You, filter),
-                storeAs = "searchable"
+                storeAs = "searchable",
+                search = true
             )
         )
 
@@ -608,7 +638,8 @@ object LibraryPatterns {
         effects.add(
             GatherCardsEffect(
                 source = CardSource.FromMultipleZones(zones, Player.You, filter),
-                storeAs = "searchable"
+                storeAs = "searchable",
+                search = Zone.LIBRARY in zones
             )
         )
 
@@ -698,7 +729,7 @@ object LibraryPatterns {
             RevealCollectionEffect(from = "revealed"),
             FilterCollectionEffect(
                 from = "revealed",
-                filter = CollectionFilter.MatchesFilter(filter),
+                filter = filter,
                 storeMatching = "matchedToHand",
                 storeNonMatching = "rest"
             ),
@@ -842,7 +873,7 @@ object LibraryPatterns {
         )
     }
 
-    fun shuffleGraveyardIntoLibrary(target: EffectTarget = EffectTarget.ContextTarget(0)): CompositeEffect {
+    fun shuffleGraveyardIntoLibrary(target: EffectTarget): CompositeEffect {
         val player = effectTargetToPlayer(target)
         return CompositeEffect(
             listOf(
@@ -870,7 +901,8 @@ object LibraryPatterns {
         effects = listOf(
             GatherCardsEffect(
                 source = CardSource.FromZone(Zone.LIBRARY, Player.You, filter),
-                storeAs = "searchable"
+                storeAs = "searchable",
+                search = true
             ),
             SelectFromCollectionEffect(
                 from = "searchable",

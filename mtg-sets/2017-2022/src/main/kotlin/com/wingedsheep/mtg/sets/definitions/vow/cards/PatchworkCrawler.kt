@@ -1,14 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.DonorCards
 import com.wingedsheep.sdk.scripting.HasAllActivatedAbilitiesOfCards
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Patchwork Crawler
@@ -38,11 +38,9 @@ val PatchworkCrawler = card("Patchwork Crawler") {
 
     activatedAbility {
         cost = Costs.Mana("{2}{U}")
-        val exiled = target("target creature card from your graveyard", Targets.CreatureCardInYourGraveyard)
-        effect = Effects.Composite(
-            Effects.ExileLinkedToSource(exiled),
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
-        )
+        val exiled = target(TargetFilter.CreatureInYourGraveyard)
+        effect = Effects.ExileLinkedToSource(exiled) then
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Exile target creature card from your graveyard and put a +1/+1 counter " +
             "on Patchwork Crawler."
     }

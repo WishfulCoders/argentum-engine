@@ -1,6 +1,7 @@
 package com.wingedsheep.engine.mechanics.sba.permanent
 
 import com.wingedsheep.engine.core.ExecutionResult
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.mechanics.sba.SbaOrder
 import com.wingedsheep.engine.mechanics.sba.SbaZoneMovementHelper
 import com.wingedsheep.engine.mechanics.sba.StateBasedActionCheck
@@ -17,6 +18,7 @@ import com.wingedsheep.sdk.core.CounterType
  * triggered but not yet left the stack, the Saga's controller sacrifices it.
  */
 class SagaSacrificeCheck(
+    private val zones: ZoneTransitionService,
     private val cardRegistry: CardRegistry
 ) : StateBasedActionCheck {
     override val name = "714.4 Saga Sacrifice"
@@ -38,15 +40,19 @@ class SagaSacrificeCheck(
             val loreCount = counters.getCount(CounterType.LORE)
             if (loreCount < finalChapter) continue
 
-            // Check if any chapter ability from this saga is on the stack
+            // "Triggered but not yet left the stack" covers a chapter ability on the stack and one
+            // still waiting to be put there: the settle boundary checks state-based actions before
+            // it places the chapter that lore accrual just triggered.
             val hasChapterOnStack = newState.stack.any { stackId ->
                 val stackEntity = newState.getEntity(stackId) ?: return@any false
                 val triggeredComponent = stackEntity.get<com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent>()
                 triggeredComponent?.sourceId == entityId
             }
-            if (hasChapterOnStack) continue
+            val hasChapterWaiting = newState.pendingTriggers.any { it.sourceId == entityId }
+            if (hasChapterOnStack || hasChapterWaiting) continue
 
             val result = SbaZoneMovementHelper.putPermanentInGraveyard(
+                zones,
                 newState, entityId, cardComponent
             )
             newState = result.newState

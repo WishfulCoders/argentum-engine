@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Altanak, the Thrice-Called
@@ -39,7 +38,7 @@ val AltanakTheThriceCalled = card("Altanak, the Thrice-Called") {
 
     // Whenever Altanak becomes the target of a spell or ability an opponent controls, draw a card.
     triggeredAbility {
-        trigger = Triggers.BecomesTargetByOpponent
+        trigger = Triggers.self.becomesTarget(byOpponent = true)
         effect = Effects.DrawCards(1)
     }
 
@@ -47,10 +46,7 @@ val AltanakTheThriceCalled = card("Altanak, the Thrice-Called") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{G}"), Costs.DiscardSelf)
         activateFromZone = Zone.HAND
-        val t = target(
-            "land",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Land.ownedByYou(), zone = Zone.GRAVEYARD))
-        )
+        val t = target(TargetFilter(GameObjectFilter.Land.ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.PutOntoBattlefield(t, tapped = true)
     }
 

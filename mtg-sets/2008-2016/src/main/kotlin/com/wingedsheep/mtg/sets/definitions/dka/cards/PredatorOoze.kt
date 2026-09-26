@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.dka.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -33,13 +33,13 @@ val PredatorOoze = card("Predator Ooze") {
     keywords(Keyword.INDESTRUCTIBLE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.self.attacks()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     triggeredAbility {
-        trigger = Triggers.CreatureDealtDamageByThisDies
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.self.damagedCreatureDies()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     metadata {

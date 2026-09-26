@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.rna.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Swirling Torrent — Ravnica Allegiance #56
@@ -24,11 +24,11 @@ val SwirlingTorrent = card("Swirling Torrent") {
     spell {
         modal(chooseCount = 2, minChooseCount = 1) {
             mode("Put target creature on top of its owner's library") {
-                val creature = target("target", Targets.Creature)
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.PutOnTopOfLibrary(creature)
             }
             mode("Return target creature to its owner's hand") {
-                val creature = target("target", Targets.Creature)
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.ReturnToHand(creature)
             }
         }

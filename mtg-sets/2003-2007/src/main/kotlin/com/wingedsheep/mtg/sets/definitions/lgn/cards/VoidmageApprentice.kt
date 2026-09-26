@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.lgn.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Voidmage Apprentice
@@ -23,8 +23,8 @@ val VoidmageApprentice = card("Voidmage Apprentice") {
     oracleText = "Morph {2}{U}{U} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)\nWhen this creature is turned face up, counter target spell."
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        target = Targets.Spell
+        val spell = target(TargetFilter.SpellOnStack)
+        trigger = Triggers.self.turnedFaceUp()
         effect = Effects.CounterSpell()
     }
 

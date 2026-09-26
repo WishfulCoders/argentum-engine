@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 
 /**
  * Mardu Heart-Piercer
@@ -25,10 +25,10 @@ val MarduHeartPiercer = card("Mardu Heart-Piercer") {
     oracleText = "Raid — When Mardu Heart-Piercer enters, if you attacked this turn, Mardu Heart-Piercer deals 2 damage to any target."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouAttackedThisTurn
-        val t = target("any target", Targets.Any)
-        effect = DealDamageEffect(2, t)
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(2, t)
     }
 
     metadata {

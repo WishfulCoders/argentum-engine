@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Unburden
@@ -20,7 +20,7 @@ val Unburden = card("Unburden") {
     oracleText = "Target player discards two cards.\nCycling {2}"
 
     spell {
-        val t = target("target", TargetPlayer())
+        val t = target(Targets.Player)
         effect = Patterns.Hand.discardCards(2, t)
     }
 

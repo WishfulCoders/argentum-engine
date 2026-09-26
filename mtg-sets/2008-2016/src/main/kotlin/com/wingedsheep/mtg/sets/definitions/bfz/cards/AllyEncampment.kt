@@ -2,14 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.bfz.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Ally Encampment
@@ -44,10 +42,7 @@ val AllyEncampment = card("Ally Encampment") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap, Costs.SacrificeSelf)
-        val ally = target(
-            "target Ally you control",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Permanent.withSubtype("Ally").youControl())),
-        )
+        val ally = target(TargetFilter(GameObjectFilter.Permanent.withSubtype("Ally").youControl()))
         effect = Effects.ReturnToHand(ally)
     }
 

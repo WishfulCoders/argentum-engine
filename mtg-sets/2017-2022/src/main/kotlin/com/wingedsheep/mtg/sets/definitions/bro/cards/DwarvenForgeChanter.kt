@@ -3,6 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.bro.cards
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Dwarven Forge-Chanter
@@ -22,7 +23,7 @@ val DwarvenForgeChanter = card("Dwarven Forge-Chanter") {
 
     // Ward—Pay 2 life (CR 702.21a). The bare `Keyword.WARD` marker is derived from this ability by
     // the builder, so it is not restated here.
-    keywordAbility(KeywordAbility.wardLife(2))
+    keywordAbility(KeywordAbility.Ward(WardCost.Life(2)))
     prowess()
 
     metadata {

@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Otawara, Soaring City — Kamigawa: Neon Dynasty #271 (canonical printing)
@@ -58,15 +57,12 @@ val OtawaraSoaringCity = card("Otawara, Soaring City") {
         activateFromZone = Zone.HAND
         genericCostReduction = DynamicAmounts.legendaryCreaturesYouControl()
         val t = target(
-            "target artifact, creature, enchantment, or planeswalker",
-            TargetPermanent(
-                filter = TargetFilter(
-                    GameObjectFilter.Artifact or
-                        GameObjectFilter.Creature or
-                        GameObjectFilter.Enchantment or
-                        GameObjectFilter.Planeswalker
-                )
-            )
+            TargetFilter(
+                GameObjectFilter.Artifact or
+                    GameObjectFilter.Creature or
+                    GameObjectFilter.Enchantment or
+                    GameObjectFilter.Planeswalker
+            ),
         )
         effect = Effects.ReturnToHand(t)
     }

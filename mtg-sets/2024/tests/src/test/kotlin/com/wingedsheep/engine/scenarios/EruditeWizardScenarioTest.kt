@@ -12,7 +12,7 @@ import io.kotest.matchers.shouldBe
  * Erudite Wizard (FDN) — {2}{U} 2/3 Human Wizard.
  * "Whenever you draw your second card each turn, put a +1/+1 counter on this creature."
  *
- * Exercises the [com.wingedsheep.sdk.dsl.Triggers.NthCardDrawn]`(2)` primitive wired to a
+ * Exercises the `Triggers.<player>.drawsNth(n)``(2)` primitive wired to a
  * +1/+1 counter. The first draw of the turn does not fire it; the second does, exactly once.
  */
 class EruditeWizardScenarioTest : ScenarioTestBase() {

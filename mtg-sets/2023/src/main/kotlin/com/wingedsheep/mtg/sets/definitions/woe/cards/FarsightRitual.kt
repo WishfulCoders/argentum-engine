@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.bargain
 import com.wingedsheep.sdk.dsl.card
@@ -9,7 +10,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Farsight Ritual
@@ -23,7 +23,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *
  * The spell-rider shape of bargain (CR 702.166c), like [ArchonsGlory] — except the payoff isn't an
  * extra clause but a *bigger number*, so it's a [DynamicAmount.Conditional] on
- * [Conditions.WasBargained] feeding the dig's count rather than a `ConditionalEffect` wrapping a
+ * [Conditions.WasBargained] feeding the dig's count rather than a `Effects.If` wrapping a
  * second effect. The bargained fact is stamped on the spell as it's cast and read while the spell
  * is still resolving.
  *
@@ -50,12 +50,12 @@ val FarsightRitual = card("Farsight Ritual") {
 
     spell {
         effect = Patterns.Library.lookAtTopAndKeep(
-            count = DynamicAmount.Conditional(
+            count = DynamicAmounts.conditional(
                 condition = Conditions.WasBargained,
-                ifTrue = DynamicAmount.Fixed(8),
-                ifFalse = DynamicAmount.Fixed(4),
+                ifTrue = 8,
+                ifFalse = 4,
             ),
-            keepCount = DynamicAmount.Fixed(2),
+            keepCount = DynamicAmounts.fixed(2),
             keepDestination = CardDestination.ToZone(Zone.HAND),
             restDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
             restOrder = CardOrder.Random,

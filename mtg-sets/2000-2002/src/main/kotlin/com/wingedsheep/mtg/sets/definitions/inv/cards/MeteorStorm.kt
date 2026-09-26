@@ -23,7 +23,7 @@ val MeteorStorm = card("Meteor Storm") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{R}{G}"), Costs.DiscardAtRandom(2))
-        val t = target("any target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(4, t)
     }
 

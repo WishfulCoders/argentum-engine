@@ -2,15 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.drk.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Reflecting Mirror
@@ -43,21 +41,15 @@ val ReflectingMirror = card("Reflecting Mirror") {
         "is you. The new target must be a player. X is twice the mana value of that spell."
 
     activatedAbility {
+        val spellOrAbilityWithSingleTarget = target(TargetFilter.SpellOrAbilityOnStack)
         cost = Costs.Composite(Costs.Mana("{X}"), Costs.Tap)
-        target = Targets.SpellOrAbilityWithSingleTarget
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.CompareAmounts(
-                DynamicAmount.XValue,
+                DynamicAmounts.xValue(),
                 ComparisonOperator.GTE,
-                DynamicAmount.Multiply(
-                    DynamicAmount.EntityProperty(
-                        EntityReference.Target(0),
-                        EntityNumericProperty.ManaValue,
-                    ),
-                    multiplier = 2,
-                ),
+                DynamicAmounts.manaValueOf(spellOrAbilityWithSingleTarget) * 2,
             ),
-            effect = Effects.ChangeTarget(
+            then = Effects.ChangeTarget(
                 newTargetMustBePlayer = true,
                 onlyIfCurrentTargetIsController = true,
             ),

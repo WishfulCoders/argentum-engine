@@ -1,17 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Arwen, Mortal Queen
@@ -36,7 +33,7 @@ val ArwenMortalQueen = card("Arwen, Mortal Queen") {
         "and a lifelink counter on Arwen."
 
     replacementEffect(EntersWithCounters(
-        counterType = CounterTypeFilter.Named(Counters.INDESTRUCTIBLE),
+        counterType = CounterType.INDESTRUCTIBLE,
         count = 1,
         selfOnly = true
     ))
@@ -44,21 +41,14 @@ val ArwenMortalQueen = card("Arwen, Mortal Queen") {
     activatedAbility {
         cost = Costs.Composite(
             Costs.Mana("{1}"),
-            Costs.RemoveCounterFromSelf(Counters.INDESTRUCTIBLE)
+            Costs.RemoveCounterFromSelf(CounterType.INDESTRUCTIBLE)
         )
-        val creature = target(
-            "another target creature",
-            TargetCreature(filter = TargetFilter.Creature.copy(excludeSelf = true))
-        )
-        effect = Effects.Composite(
-            listOf(
-                Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, creature),
-                AddCountersEffect(Counters.PLUS_ONE_PLUS_ONE, 1, creature),
-                AddCountersEffect(Counters.LIFELINK, 1, creature),
-                AddCountersEffect(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
-                AddCountersEffect(Counters.LIFELINK, 1, EffectTarget.Self)
-            )
-        )
+        val creature = target(TargetFilter.Creature.copy(excludeSelf = true))
+        effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, creature) then
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature) then
+            Effects.AddCounters(CounterType.LIFELINK, 1, creature) then
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self) then
+            Effects.AddCounters(CounterType.LIFELINK, 1, EffectTarget.Self)
     }
 
     metadata {

@@ -1,18 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Chainsaw
@@ -24,7 +22,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Equip {3}
  *
  * The "whenever one or more creatures die" trigger is the batched death shape
- * ([Triggers.OneOrMoreCreaturesDie]): it fires at most once per death batch regardless of how many
+ * (`Triggers.oneOrMore(filter.anyController()).die()`): it fires at most once per death batch regardless of how many
  * creatures died simultaneously and regardless of who controlled them (CR 603.3b), so a board wipe
  * adds exactly one rev counter, not one per creature.
  *
@@ -42,22 +40,22 @@ val Chainsaw = card("Chainsaw") {
         "Equip {3}"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("up to one target creature", TargetCreature(optional = true, filter = TargetFilter.Creature))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature, optional = true)
         effect = Effects.DealDamage(3, t)
     }
 
     triggeredAbility {
-        trigger = Triggers.OneOrMoreCreaturesDie()
-        effect = Effects.AddCounters(Counters.REV, 1, EffectTarget.Self)
+        trigger = Triggers.oneOrMore(GameObjectFilter.Creature.anyController()).die()
+        effect = Effects.AddCounters(CounterType.REV, 1, EffectTarget.Self)
     }
 
     staticAbility {
-        val revCount = DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.REV))
-        ability = GrantDynamicStatsEffect(
+        val revCount = DynamicAmounts.countersOnSelf(CounterType.REV)
+        ability = GrantDynamicStats(
             filter = Filters.EquippedCreature,
             powerBonus = revCount,
-            toughnessBonus = DynamicAmount.Fixed(0)
+            toughnessBonus = DynamicAmounts.fixed(0)
         )
     }
 

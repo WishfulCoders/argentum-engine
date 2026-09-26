@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.arn.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Singing Tree
@@ -27,11 +26,8 @@ val SingingTree = card("Singing Tree") {
 
     activatedAbility {
         cost = Costs.Tap
-        val creature = target(
-            "target attacking creature",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Creature.attacking()))
-        )
-        effect = Effects.SetBasePower(creature, DynamicAmount.Fixed(0), Duration.EndOfTurn)
+        val creature = target(TargetFilter(GameObjectFilter.Creature.attacking()))
+        effect = Effects.SetBasePower(creature, DynamicAmounts.fixed(0), Duration.EndOfTurn)
     }
 
     metadata {

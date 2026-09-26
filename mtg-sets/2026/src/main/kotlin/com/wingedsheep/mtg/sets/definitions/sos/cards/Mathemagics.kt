@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Mathemagics
@@ -23,9 +23,9 @@ val Mathemagics = card("Mathemagics") {
     oracleText = "Target player draws 2ˣ cards. (2⁰ = 1, 2¹ = 2, 2² = 4, 2³ = 8, 2⁴ = 16, 2⁵ = 32, and so on.)"
 
     spell {
-        val targetPlayer = target("target player", TargetPlayer())
+        val targetPlayer = target(Targets.Player)
         effect = Effects.DrawCards(
-            count = DynamicAmount.Power(base = 2, exponent = DynamicAmount.XValue),
+            count = DynamicAmounts.pow(base = 2, exponent = DynamicAmounts.xValue()),
             target = targetPlayer
         )
     }

@@ -25,7 +25,7 @@ val Glimmerlight = card("Glimmerlight") {
         "Equip {1} ({1}: Attach to target creature you control. Equip only as a sorcery.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

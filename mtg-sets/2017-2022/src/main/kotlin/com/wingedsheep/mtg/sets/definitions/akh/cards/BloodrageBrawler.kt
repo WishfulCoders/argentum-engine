@@ -22,7 +22,7 @@ val BloodrageBrawler = card("Bloodrage Brawler") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Discard(1)
         description = "When this creature enters, discard a card."
     }

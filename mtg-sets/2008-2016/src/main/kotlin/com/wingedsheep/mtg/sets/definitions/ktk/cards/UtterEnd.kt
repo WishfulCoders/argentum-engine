@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 /**
  * Utter End
  * {2}{W}{B}
@@ -18,7 +18,7 @@ val UtterEnd = card("Utter End") {
     oracleText = "Exile target nonland permanent."
 
     spell {
-        val t = target("target", Targets.NonlandPermanent)
+        val t = target(TargetFilter.NonlandPermanent)
         effect = Effects.Move(t, Zone.EXILE)
     }
 

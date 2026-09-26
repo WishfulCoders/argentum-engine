@@ -9,10 +9,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Andúril, Flame of the West
@@ -38,11 +34,11 @@ val AndurilFlameOfTheWest = card("Andúril, Flame of the West") {
     }
 
     triggeredAbility {
-        trigger = Triggers.attacks(binding = TriggerBinding.ATTACHED)
-        effect = ConditionalEffect(
+        trigger = Triggers.attached.attacks()
+        effect = Effects.If(
             condition = Conditions.EnchantedCreatureIsLegendary(),
-            effect = CreateTokenEffect(
-                count = DynamicAmount.Fixed(2),
+            then = Effects.CreateToken(
+                count = 2,
                 power = 1,
                 toughness = 1,
                 colors = setOf(Color.WHITE),
@@ -52,8 +48,8 @@ val AndurilFlameOfTheWest = card("Andúril, Flame of the West") {
                 attacking = true,
                 imageUri = "https://cards.scryfall.io/normal/front/b/5/b53ee2f0-afbd-491f-b3b8-c9997f175199.jpg?1699974536"
             ),
-            elseEffect = CreateTokenEffect(
-                count = DynamicAmount.Fixed(2),
+            otherwise = Effects.CreateToken(
+                count = 2,
                 power = 1,
                 toughness = 1,
                 colors = setOf(Color.WHITE),

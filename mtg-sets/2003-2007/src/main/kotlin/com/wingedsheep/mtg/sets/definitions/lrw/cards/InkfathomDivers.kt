@@ -28,7 +28,7 @@ val InkfathomDivers = card("Inkfathom Divers") {
     keywords(Keyword.ISLANDWALK)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.lookAtTopAndReorder(4)
         description = "look at the top four cards of your library, then put them back in any order."
     }

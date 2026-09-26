@@ -17,7 +17,7 @@ val DocOcksHenchmen = card("Doc Ock's Henchmen") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.Connive()
     }
 

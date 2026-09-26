@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.permanent.counters
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.suspendForDecision
 import com.wingedsheep.engine.core.CountersAddedEvent
 import com.wingedsheep.engine.core.DecisionContext
@@ -49,7 +50,9 @@ import kotlin.reflect.KClass
  * that has since left the battlefield, and a permanent keeps its `CountersComponent` in the
  * graveyard, so without the check the counters would land on a graveyard object.
  */
-class ProliferateExecutor : EffectExecutor<ProliferateEffect> {
+class ProliferateExecutor(
+    private val predicateEvaluator: PredicateEvaluator
+) : EffectExecutor<ProliferateEffect> {
 
     override val effectType: KClass<ProliferateEffect> = ProliferateEffect::class
 
@@ -72,7 +75,7 @@ class ProliferateExecutor : EffectExecutor<ProliferateEffect> {
                 return EffectResult.success(state, emptyList())
             }
 
-            val (newState, events) = addOneOfEachKind(state, listOf(recipientId), context.controllerId)
+            val (newState, events) = addOneOfEachKind(state, listOf(recipientId), context.controllerId, predicateEvaluator = predicateEvaluator)
             return EffectResult.success(newState, events)
         }
 
@@ -147,7 +150,8 @@ class ProliferateExecutor : EffectExecutor<ProliferateEffect> {
         fun addOneOfEachKind(
             state: GameState,
             recipients: List<EntityId>,
-            controllerId: EntityId
+            controllerId: EntityId,
+            predicateEvaluator: PredicateEvaluator
         ): Pair<GameState, List<GameEvent>> {
             var newState = state
             val events = mutableListOf<GameEvent>()
@@ -167,7 +171,8 @@ class ProliferateExecutor : EffectExecutor<ProliferateEffect> {
 
                 for (counterType in kinds) {
                     val modifiedAmount = ReplacementEffectUtils.applyCounterPlacementModifiers(
-                        newState, entityId, counterType, 1, placerId = controllerId
+                        newState, entityId, counterType, 1, placerId = controllerId,
+                        predicateEvaluator = predicateEvaluator
                     )
                     if (modifiedAmount <= 0) continue
 
@@ -179,14 +184,14 @@ class ProliferateExecutor : EffectExecutor<ProliferateEffect> {
                     val (afterMark, firstThisTurn) = DamageUtils.recordCounterPlacement(
                         newState,
                         entityId,
-                        counterTypeToString(counterType),
+                        counterType,
                         placerId = controllerId,
                     )
                     newState = afterMark
                     events.add(
                         CountersAddedEvent(
                             entityId,
-                            counterTypeToString(counterType),
+                            counterType,
                             modifiedAmount,
                             entityName,
                             firstThisTurn,

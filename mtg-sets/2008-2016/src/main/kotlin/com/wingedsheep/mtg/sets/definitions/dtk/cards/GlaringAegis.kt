@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.dtk.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Glaring Aegis
@@ -32,11 +31,11 @@ val GlaringAegis = card("Glaring Aegis") {
         "When this Aura enters, tap target creature an opponent controls.\n" +
         "Enchanted creature gets +1/+3."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetCreature(filter = TargetFilter.CreatureOpponentControls))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.Tap(t)
     }
 

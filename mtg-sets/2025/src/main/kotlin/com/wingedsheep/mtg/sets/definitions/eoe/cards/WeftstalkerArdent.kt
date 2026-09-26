@@ -1,15 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Weftstalker Ardent
@@ -30,13 +27,7 @@ val WeftstalkerArdent = card("Weftstalker Ardent") {
 
     // Whenever another creature or artifact you control enters, this creature deals 1 damage to each opponent.
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.CreatureOrArtifact.youControl(),
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.OTHER
-        )
+        trigger = Triggers.another(GameObjectFilter.CreatureOrArtifact.youControl()).enters()
         effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent))
         description = "Whenever another creature or artifact you control enters, this creature deals 1 damage to each opponent."
     }

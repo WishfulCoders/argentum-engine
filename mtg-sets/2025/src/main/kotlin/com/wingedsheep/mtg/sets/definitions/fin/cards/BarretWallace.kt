@@ -36,7 +36,7 @@ val BarretWallace = card("Barret Wallace") {
     keywords(Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.DealDamage(
             DynamicAmounts.equippedCreaturesYouControl(),
             EffectTarget.PlayerRef(Player.DefendingPlayer)

@@ -30,7 +30,7 @@ val WeatherseedTreefolk = card("Weatherseed Treefolk") {
     toughness = 3
     keywords(Keyword.TRAMPLE)
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.Move(EffectTarget.Self, Zone.HAND)
     }
     metadata {

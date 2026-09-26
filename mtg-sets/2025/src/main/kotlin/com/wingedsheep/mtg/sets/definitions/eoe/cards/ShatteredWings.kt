@@ -2,13 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Shattered Wings
@@ -23,13 +21,10 @@ val ShatteredWings = card("Shattered Wings") {
     oracleText = "Destroy target artifact, enchantment, or creature with flying. Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)"
 
     spell {
-        val target = target("target artifact, enchantment, or creature with flying", TargetPermanent(filter = TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Enchantment or GameObjectFilter.Creature.withKeyword(Keyword.FLYING))))
-        effect = Effects.Composite(
-            listOf(
-                Effects.Destroy(target),
-                Patterns.Library.surveil(1)
-            )
+        val target = target(
+            TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Enchantment or GameObjectFilter.Creature.withKeyword(Keyword.FLYING)),
         )
+        effect = Effects.Destroy(target) then Patterns.Library.surveil(1)
     }
 
     metadata {

@@ -2,12 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Aquitect's Defenses
@@ -26,10 +27,10 @@ val AquitectsDefenses = card("Aquitect's Defenses") {
 
     keywords(Keyword.FLASH)
 
-    auraTarget = Targets.CreatureYouControl
+    auraTarget = TargetObject(filter = TargetFilter.CreatureYouControl)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GrantHexproof(EffectTarget.EnchantedCreature)
     }
 

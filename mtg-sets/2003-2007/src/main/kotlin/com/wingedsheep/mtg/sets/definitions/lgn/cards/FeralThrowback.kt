@@ -2,12 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.lgn.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithRevealCounters
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Feral Throwback
@@ -32,10 +31,10 @@ val FeralThrowback = card("Feral Throwback") {
     replacementEffect(EntersWithRevealCounters(countersPerReveal = 2))
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        val creatureOpponentControls = target(TargetFilter.CreatureOpponentControls)
+        trigger = Triggers.self.attacks()
         optional = true
-        target = Targets.CreatureOpponentControls
-        effect = Effects.Provoke(EffectTarget.ContextTarget(0))
+        effect = Effects.Provoke(creatureOpponentControls)
     }
 
     metadata {

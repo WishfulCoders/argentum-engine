@@ -8,10 +8,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Eden, Seat of the Sanctum
@@ -45,23 +43,20 @@ val EdenSeatOfTheSanctum = card("Eden, Seat of the Sanctum") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{5}"), Costs.Tap)
-        effect = Effects.Composite(
-            Patterns.Library.mill(2),
-            ReflexiveTriggerEffect(
+        effect = Patterns.Library.mill(2) then
+            Effects.ReflexiveTrigger(
                 action = Effects.SacrificeTarget(EffectTarget.Self),
                 optional = true,
-                reflexiveEffect = Effects.ReturnToHand(EffectTarget.ContextTarget(0)),
-                reflexiveTargetRequirements = listOf(
-                    TargetObject(
-                        filter = TargetFilter(
-                            baseFilter = GameObjectFilter.Permanent.ownedByYou(),
-                            zone = Zone.GRAVEYARD,
-                            excludeSelf = true,
-                        )
-                    )
-                ),
-            ),
-        )
+            ) {
+                val permanent = target(
+                    TargetFilter(
+                        baseFilter = GameObjectFilter.Permanent.ownedByYou(),
+                        zone = Zone.GRAVEYARD,
+                        excludeSelf = true,
+                    ),
+                )
+                effect = Effects.ReturnToHand(permanent)
+            }
     }
 
     metadata {

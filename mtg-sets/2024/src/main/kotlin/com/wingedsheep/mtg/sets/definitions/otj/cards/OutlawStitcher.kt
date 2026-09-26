@@ -1,15 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.minus
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.CREATED_TOKENS
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Outlaw Stitcher
@@ -43,30 +45,25 @@ val OutlawStitcher = card("Outlaw Stitcher") {
     keywordAbility(KeywordAbility.plot("{4}{U}"))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         // 2 counters per spell cast this turn other than the first: 2 * max(spellsCast - 1, 0).
-        val otherThanFirst = DynamicAmount.Max(
-            DynamicAmount.Subtract(
-                DynamicAmount.SpellsCastThisTurn(),
-                DynamicAmount.Fixed(1)
-            ),
-            DynamicAmount.Fixed(0)
+        val otherThanFirst = DynamicAmounts.max(
+            DynamicAmounts.spellsCastThisTurn() - 1,
+            DynamicAmounts.fixed(0)
         )
-        val counterAmount = DynamicAmount.Multiply(otherThanFirst, 2)
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                power = 2,
-                toughness = 2,
-                colors = setOf(Color.BLUE, Color.BLACK),
-                creatureTypes = setOf("Zombie", "Rogue"),
-                imageUri = "https://cards.scryfall.io/normal/front/7/4/74c7a0bd-6011-495a-b56c-8fa707dd7f12.jpg?1712316777"
-            ),
+        val counterAmount = otherThanFirst * 2
+        effect = Effects.CreateToken(
+            power = 2,
+            toughness = 2,
+            colors = setOf(Color.BLUE, Color.BLACK),
+            creatureTypes = setOf("Zombie", "Rogue"),
+            imageUri = "https://cards.scryfall.io/normal/front/7/4/74c7a0bd-6011-495a-b56c-8fa707dd7f12.jpg?1712316777"
+        ) then
             Effects.AddDynamicCounters(
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
                 amount = counterAmount,
                 target = EffectTarget.PipelineTarget(CREATED_TOKENS, 0)
             )
-        )
         description = "When this creature enters, create a 2/2 blue and black Zombie Rogue creature token, " +
             "then put two +1/+1 counters on that token for each spell you've cast this turn other than the first."
     }

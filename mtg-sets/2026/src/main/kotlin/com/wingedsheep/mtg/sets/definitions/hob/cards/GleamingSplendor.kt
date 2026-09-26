@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetPlayer
 
 /**
@@ -16,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPlayer
  * Whenever an opponent draws their second card each turn, you create a Treasure token.
  * {2}{W}: Two target players each draw a card.
  *
- * The trigger is [Triggers.NthCardDrawn]`(2, Player.EachOpponent)` (CR 121.2 — each card drawn is
+ * The trigger is `Triggers.<player>.drawsNth(n)``(2, Player.EachOpponent)` (CR 121.2 — each card drawn is
  * an individual draw, so a multi-card draw fires it at most once, when the second card lands
  * inside that batch). `EachOpponent` scopes the per-turn draw counter to every player who isn't
  * the controller, so in multiplayer each opponent's own second draw fires it separately.
@@ -35,20 +34,15 @@ val GleamingSplendor = card("Gleaming Splendor") {
         "{2}{W}: Two target players each draw a card."
 
     triggeredAbility {
-        trigger = Triggers.NthCardDrawn(2, Player.EachOpponent)
+        trigger = Triggers.anOpponent.drawsNth(2)
         effect = Effects.CreateTreasure()
         description = "Whenever an opponent draws their second card each turn, you create a Treasure token."
     }
 
     activatedAbility {
         cost = Costs.Mana("{2}{W}")
-        target("two target players", TargetPlayer(count = 2))
-        effect = Effects.Composite(
-            listOf(
-                Effects.DrawCards(1, EffectTarget.ContextTarget(0)),
-                Effects.DrawCards(1, EffectTarget.ContextTarget(1)),
-            )
-        )
+        val (firstPlayer, secondPlayer) = targets(TargetPlayer(count = 2))
+        effect = Effects.DrawCards(1, firstPlayer) then Effects.DrawCards(1, secondPlayer)
         description = "Two target players each draw a card."
     }
 

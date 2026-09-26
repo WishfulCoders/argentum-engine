@@ -22,7 +22,7 @@ import io.kotest.matchers.shouldBe
  * (This effect lasts indefinitely.)
  * Morph {U}{U}
  *
- * Engine flow: The trigger has both MayEffect and target, so the engine uses
+ * Engine flow: The trigger has both Effects.May and target, so the engine uses
  * processMayThenTargetTrigger: asks "may sacrifice?" first, then if yes, asks for
  * target selection, then puts the unwrapped composite effect on the stack.
  */

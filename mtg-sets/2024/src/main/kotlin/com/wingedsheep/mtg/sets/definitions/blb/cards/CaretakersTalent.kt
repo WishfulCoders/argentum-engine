@@ -6,11 +6,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.effects.CreateTokenCopyOfTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Caretaker's Talent
@@ -38,7 +35,7 @@ val CaretakersTalent = card("Caretaker's Talent") {
 
     // Level 1: Whenever one or more tokens you control enter, draw a card. Once per turn.
     triggeredAbility {
-        trigger = Triggers.OneOrMorePermanentsEnter(GameObjectFilter.Token)
+        trigger = Triggers.oneOrMore(GameObjectFilter.Token).enter()
         oncePerTurn = true
         effect = Effects.DrawCards(1)
     }
@@ -46,12 +43,9 @@ val CaretakersTalent = card("Caretaker's Talent") {
     // Level 2: When this Class becomes level 2, create a token that's a copy of target token you control.
     classLevel(2, "{W}") {
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
-            val token = target(
-                "token you control",
-                TargetObject(filter = TargetFilter(GameObjectFilter.Token.youControl()))
-            )
-            effect = CreateTokenCopyOfTargetEffect(token)
+            trigger = Triggers.self.enters()
+            val token = target(TargetFilter(GameObjectFilter.Token.youControl()))
+            effect = Effects.CreateTokenCopyOfTarget(token)
         }
     }
 

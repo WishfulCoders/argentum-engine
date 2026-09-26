@@ -1,17 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.gtc.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.GatherUntilMatchEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Consuming Aberration
@@ -38,26 +34,18 @@ val ConsumingAberration = card("Consuming Aberration") {
         "Whenever you cast a spell, each opponent reveals cards from the top of their library until they reveal a land card, then puts those cards into their graveyard."
 
     dynamicStats(
-        DynamicAmount.Count(Player.EachOpponent, Zone.GRAVEYARD, GameObjectFilter.Any)
+        DynamicAmounts.count(Player.EachOpponent, Zone.GRAVEYARD)
     )
 
     triggeredAbility {
-        trigger = Triggers.YouCastSpell
+        trigger = Triggers.you.casts()
         effect = Effects.ForEachPlayer(
             Player.EachOpponent,
-            listOf(
-                GatherUntilMatchEffect(
-                    player = Player.You,
-                    filter = GameObjectFilter.Land,
-                    storeMatch = "revealedLand",
-                    storeRevealed = "allRevealed"
-                ),
-                RevealCollectionEffect(from = "allRevealed"),
-                MoveCollectionEffect(
-                    from = "allRevealed",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD, player = Player.You)
-                )
-            )
+            Effects.Pipeline {
+                val (_, allRevealed) = gatherUntilMatch(GameObjectFilter.Land, player = Player.You)
+                reveal(allRevealed)
+                toGraveyard(allRevealed)
+            }
         )
         description = "Whenever you cast a spell, each opponent reveals cards from the top of their library until they reveal a land card, then puts those cards into their graveyard."
     }

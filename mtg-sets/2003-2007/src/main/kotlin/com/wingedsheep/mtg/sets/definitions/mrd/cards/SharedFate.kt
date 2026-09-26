@@ -1,20 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
-import com.wingedsheep.sdk.scripting.ReplaceDrawWithEffect
-import com.wingedsheep.sdk.scripting.effects.CardDestination
+import com.wingedsheep.sdk.scripting.ReplaceDrawWith
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.FaceDownMode
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Shared Fate — Mirrodin #49
@@ -61,30 +55,24 @@ val SharedFate = card("Shared Fate") {
         "and cast spells from among those cards."
 
     replacementEffect(
-        ReplaceDrawWithEffect(
+        ReplaceDrawWith(
             appliesTo = EventPattern.DrawEvent(player = Player.Each),
-            replacementEffect = Effects.Composite(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(
-                        count = DynamicAmount.Fixed(1),
+            replacementEffect = Effects.Pipeline {
+                val sharedFateExiled = gather(
+                    CardSource.TopOfLibrary(
+                        count = 1,
                         player = Player.AnOpponent
-                    ),
-                    storeAs = "sharedFateExiled"
-                ),
-                MoveCollectionEffect(
-                    from = "sharedFateExiled",
-                    destination = CardDestination.ToZone(Zone.EXILE),
-                    faceDown = FaceDownMode.HIDDEN,
-                    linkToSource = true
-                ),
+                    )
+                )
+                exile(sharedFateExiled, faceDown = FaceDownMode.HIDDEN, linkToSource = true)
                 // "…and they may play lands and cast spells from among those cards" — "play", so
                 // the permission covers a land drop as well as a cast. Granting it here rather than
                 // as a static is what scopes it to the cards *this* player exiled.
-                GrantMayPlayFromExileEffect(
-                    from = "sharedFateExiled",
+                run(Effects.GrantMayPlayFromExile(
+                    from = sharedFateExiled,
                     expiry = MayPlayExpiry.WhileSourceOnBattlefield("this enchantment")
-                )
-            )
+                ))
+            }
         )
     )
 

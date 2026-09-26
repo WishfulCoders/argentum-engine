@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.dsl.Costs
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CounterEffect
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Voidmage Prodigy
@@ -24,12 +24,12 @@ val VoidmageProdigy = card("Voidmage Prodigy") {
     oracleText = "{U}{U}, Sacrifice a Wizard: Counter target spell.\nMorph {U}"
 
     activatedAbility {
+        val spell = target(TargetFilter.SpellOnStack)
         cost = Costs.Composite(
             Costs.Mana("{U}{U}"),
             Costs.Sacrifice(GameObjectFilter.Permanent.withSubtype("Wizard"))
         )
-        target = Targets.Spell
-        effect = CounterEffect()
+        effect = Effects.CounterSpell()
     }
 
     morph = "{U}"

@@ -1,11 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.TapReason
 
 /**
  * Agent Maria Hill — Marvel Super Heroes #2
@@ -37,11 +38,9 @@ val AgentMariaHill = card("Agent Maria Hill") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.BecomesTappedForTeamwork
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
-            Effects.DrawCards(1),
-        )
+        trigger = Triggers.self.becomesTapped(TapReason.TEAMWORK)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self) then
+            Effects.DrawCards(1)
     }
 
     metadata {

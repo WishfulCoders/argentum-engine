@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Vanish from Sight
@@ -25,11 +25,8 @@ val VanishFromSight = card("Vanish from Sight") {
         "graveyard.)"
 
     spell {
-        val permanent = target("target nonland permanent", Targets.NonlandPermanent)
-        effect = Effects.Composite(
-            Effects.PutOnTopOrBottomOfLibrary(permanent),
-            Patterns.Library.surveil(1)
-        )
+        val permanent = target(TargetFilter.NonlandPermanent)
+        effect = Effects.PutOnTopOrBottomOfLibrary(permanent) then Patterns.Library.surveil(1)
     }
 
     metadata {

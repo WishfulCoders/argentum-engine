@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * HYDRA Assault Robot — Marvel Super Heroes #137 (common)
@@ -35,14 +34,11 @@ val HydraAssaultRobot = card("HYDRA Assault Robot") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = (
+        val opponent = target(Targets.Opponent)
+        trigger = Triggers.another((
                 GameObjectFilter.Permanent.withSubtype(Subtype.VILLAIN) or GameObjectFilter.Artifact
-                ).youControl(),
-            binding = TriggerBinding.OTHER
-        )
-        target = Targets.Opponent
-        effect = Effects.DealDamage(1, EffectTarget.ContextTarget(0))
+                ).youControl()).enters()
+        effect = Effects.DealDamage(1, opponent)
     }
 
     metadata {

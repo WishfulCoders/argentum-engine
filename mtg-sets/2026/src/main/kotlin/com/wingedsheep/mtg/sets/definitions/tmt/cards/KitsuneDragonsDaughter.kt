@@ -6,9 +6,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Kitsune, Dragon's Daughter
@@ -34,30 +33,18 @@ val KitsuneDragonsDaughter = card("Kitsune, Dragon's Daughter") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val yours = target(
-            "target creature you control",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.youControl(), excludeSelf = true))
-        )
-        val theirs = target(
-            "target creature an opponent controls",
-            TargetCreature(filter = TargetFilter.CreatureOpponentControls)
-        )
-        effect = MayEffect(Effects.ExchangeControl(yours, theirs))
+        trigger = Triggers.self.enters()
+        val yours = target(TargetFilter(GameObjectFilter.Creature.youControl(), excludeSelf = true))
+        val theirs = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.May(Effects.ExchangeControl(yours, theirs))
         description = "When Kitsune enters, you may exchange control of two other target creatures controlled by different players."
     }
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        val yours = target(
-            "target creature you control",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.youControl(), excludeSelf = true))
-        )
-        val theirs = target(
-            "target creature an opponent controls",
-            TargetCreature(filter = TargetFilter.CreatureOpponentControls)
-        )
-        effect = MayEffect(Effects.ExchangeControl(yours, theirs))
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        val yours = target(TargetFilter(GameObjectFilter.Creature.youControl(), excludeSelf = true))
+        val theirs = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.May(Effects.ExchangeControl(yours, theirs))
         description = "Whenever Kitsune deals combat damage to a player, you may exchange control of two other target creatures controlled by different players."
     }
 

@@ -6,18 +6,10 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.OpponentsPlayWithHandsRevealed
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Seer's Vision
@@ -52,32 +44,22 @@ val SeersVision = card("Seer's Vision") {
     activatedAbility {
         cost = Costs.SacrificeSelf
         timing = TimingRule.SorcerySpeed
-        val targetPlayer = target("target player", TargetPlayer())
-        effect = Effects.Composite(
-            listOf(
-                // Look at target player's hand.
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.HAND, Player.ContextPlayer(0)),
-                    storeAs = "targetHand"
-                ),
-                // You choose a card from it.
-                SelectFromCollectionEffect(
-                    from = "targetHand",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                    chooser = Chooser.Controller,
-                    storeSelected = "toDiscard",
-                    prompt = "Choose a card for that player to discard",
-                    alwaysPrompt = true,
-                    showAllCards = true
-                ),
-                // That player discards that card.
-                MoveCollectionEffect(
-                    from = "toDiscard",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
-                    moveType = MoveType.Discard
-                )
+        val targetPlayer = target(Targets.Player)
+        effect = Effects.Pipeline {
+            // Look at target player's hand.
+            val targetHand = gather(CardSource.FromZone(Zone.HAND, targetPlayer.asPlayer))
+            // You choose a card from it.
+            val toDiscard = chooseExactly(
+                1,
+                from = targetHand,
+                chooser = Chooser.Controller,
+                prompt = "Choose a card for that player to discard",
+                alwaysPrompt = true,
+                showAllCards = true
             )
-        )
+            // That player discards that card.
+            discard(toDiscard, targetPlayer.asPlayer)
+        }
         description = "Sacrifice this enchantment: Look at target player's hand and choose a card from it. " +
             "That player discards that card. Activate only as a sorcery."
     }

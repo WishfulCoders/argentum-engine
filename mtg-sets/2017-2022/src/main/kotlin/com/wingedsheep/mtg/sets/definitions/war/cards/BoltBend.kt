@@ -5,7 +5,6 @@
 package com.wingedsheep.mtg.sets.definitions.war.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CostModification
@@ -13,6 +12,7 @@ import com.wingedsheep.sdk.scripting.CostReductionSource
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 
 /**
@@ -36,7 +36,7 @@ val BoltBend = card("Bolt Bend") {
         )
     }
     spell {
-        val t = target("target", Targets.SpellOrAbilityWithSingleTarget)
+        val t = target(TargetFilter.SpellOrAbilityOnStack)
         effect = Effects.ChangeTarget()
     }
     metadata {

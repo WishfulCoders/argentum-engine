@@ -16,7 +16,7 @@ import io.kotest.matchers.shouldBe
  * Rent Is Due (SPM #11) — "At the beginning of your end step, you may tap two untapped creatures
  * and/or Treasures you control. If you do, draw a card. Otherwise, sacrifice this enchantment."
  *
- * Pins the trigger timing: it fires at the **end step** (the pre-fix bug used `Triggers.YourUpkeep`).
+ * Pins the trigger timing: it fires at the **end step** (the pre-fix bug used `Triggers.you.beginningOf(Step.UPKEEP)`).
  * The enchantment is placed during the main phase — after this turn's upkeep — so if the trigger were
  * still on the upkeep it would never fire this turn and the draw/tap below would not happen.
  */

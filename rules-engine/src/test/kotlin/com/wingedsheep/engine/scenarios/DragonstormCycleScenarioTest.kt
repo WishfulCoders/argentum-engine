@@ -16,7 +16,7 @@ import io.kotest.matchers.shouldBe
  * "When a Dragon you control enters, return this enchantment to its owner's hand" — exercised here
  * with Breaching as the representative, plus each card's distinct enters-the-battlefield ability.
  *
- * Breaching also exercises the new `CollectionFilter.InZone` primitive: after the optional
+ * Breaching also exercises the `currentlyIn(zone)` filter (`StatePredicate.InZone`): after the optional
  * free-cast of the exiled nonland, only the copy *still in exile* (declined / mana value > 8) is
  * put into hand — the one just cast has moved to the stack and must not be bounced.
  */

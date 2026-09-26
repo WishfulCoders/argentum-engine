@@ -4,10 +4,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetOpponentOrPlaneswalker
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.dsl.Targets
 
 /** Collective Defiance — Eldritch Moon #123. */
 val CollectiveDefiance = card("Collective Defiance") {
@@ -23,21 +21,16 @@ val CollectiveDefiance = card("Collective Defiance") {
     spell {
         modal(chooseCount = 3, minChooseCount = 1, additionalManaCostPerExtraMode = "{1}") {
             mode("Target player discards their hand, then draws that many cards.") {
-                val player = target("wheel player", TargetPlayer())
-                effect = Effects.Composite(
-                    Patterns.Hand.discardHand(player),
-                    Effects.DrawCards(DynamicAmount.VariableReference("discardedHand_count"), player),
-                )
+                val player = target(Targets.Player)
+                effect = Patterns.Hand.discardHand(player) then
+                    Effects.DrawCards(Patterns.Hand.discardedHand.count, player)
             }
             mode("Collective Defiance deals 4 damage to target creature.") {
-                val creature = target("damage creature", TargetCreature())
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.DealDamage(4, creature)
             }
             mode("Collective Defiance deals 3 damage to target opponent or planeswalker.") {
-                val opponentOrPlaneswalker = target(
-                    "damage opponent or planeswalker",
-                    TargetOpponentOrPlaneswalker(),
-                )
+                val opponentOrPlaneswalker = target(Targets.OpponentOrPlaneswalker)
                 effect = Effects.DealDamage(3, opponentOrPlaneswalker)
             }
         }

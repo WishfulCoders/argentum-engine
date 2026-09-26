@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Flame of Anor
@@ -36,22 +37,22 @@ val FlameOfAnor = card("Flame of Anor") {
         modal(
             chooseCount = 2,
             minChooseCount = 1,
-            dynamicChooseCount = DynamicAmount.Conditional(
+            dynamicChooseCount = DynamicAmounts.conditional(
                 condition = Conditions.YouControlAtLeast(1, GameObjectFilter.Creature.withSubtype("Wizard")),
-                ifTrue = DynamicAmount.Fixed(2),
-                ifFalse = DynamicAmount.Fixed(1)
+                ifTrue = 2,
+                ifFalse = 1
             )
         ) {
             mode("Target player draws two cards") {
-                val player = target("target player", Targets.Player)
+                val player = target(Targets.Player)
                 effect = Effects.DrawCards(2, player)
             }
             mode("Destroy target artifact") {
-                val artifact = target("target artifact", Targets.Artifact)
+                val artifact = target(TargetFilter.Artifact)
                 effect = Effects.Destroy(artifact)
             }
             mode("Flame of Anor deals 5 damage to target creature") {
-                val creature = target("target creature", Targets.Creature)
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.DealDamage(5, creature)
             }
         }

@@ -1,5 +1,6 @@
 package com.wingedsheep.ai.engine
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.combat.CombatTaxes
 import com.wingedsheep.engine.mechanics.layers.ProjectedState
 import com.wingedsheep.engine.mechanics.mana.ManaPool
@@ -43,9 +44,10 @@ object CombatTaxBudget {
         mandatory: Set<EntityId> = emptySet(),
     ): Map<EntityId, EntityId> {
         if (cardRegistry == null || attackers.isEmpty()) return attackers
-        val solver = ManaSolver(cardRegistry)
+        val predicateEvaluator = PredicateEvaluator(cardRegistry)
+        val solver = ManaSolver(cardRegistry, predicateEvaluator)
         val payable = { plan: Map<EntityId, EntityId> ->
-            payable(state, playerId, solver, CombatTaxes.attackTax(state, cardRegistry, plan, projected))
+            payable(state, playerId, solver, CombatTaxes.attackTax(state, cardRegistry, plan, projected, predicateEvaluator))
         }
         if (payable(attackers)) return attackers
 
@@ -75,9 +77,10 @@ object CombatTaxBudget {
         if (cardRegistry == null) return blockers
         val declared = blockers.filterValues { it.isNotEmpty() }
         if (declared.isEmpty()) return blockers
-        val solver = ManaSolver(cardRegistry)
+        val predicateEvaluator = PredicateEvaluator(cardRegistry)
+        val solver = ManaSolver(cardRegistry, predicateEvaluator)
         val payable = { plan: Map<EntityId, List<EntityId>> ->
-            payable(state, playerId, solver, CombatTaxes.blockTax(state, cardRegistry, plan.keys, projected))
+            payable(state, playerId, solver, CombatTaxes.blockTax(state, cardRegistry, plan.keys, projected, predicateEvaluator))
         }
         if (payable(declared)) return blockers
 

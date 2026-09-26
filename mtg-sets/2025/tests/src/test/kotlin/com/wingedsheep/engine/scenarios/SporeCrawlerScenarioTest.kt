@@ -11,7 +11,7 @@ import io.kotest.matchers.shouldBe
  *
  *   When this creature dies, draw a card.
  *
- * Exercises the Triggers.Dies + DrawCardsEffect(1) composition: killing the creature with
+ * Exercises the Triggers.self.dies() + DrawCardsEffect(1) composition: killing the creature with
  * lethal damage fires the trigger and draws a card.
  */
 class SporeCrawlerScenarioTest : ScenarioTestBase() {

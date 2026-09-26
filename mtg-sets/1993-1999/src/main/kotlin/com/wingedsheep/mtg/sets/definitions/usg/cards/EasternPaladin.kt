@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -30,7 +29,7 @@ val EasternPaladin = card("Eastern Paladin") {
     toughness = 3
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{B}{B}"), Costs.Tap)
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.withColor(Color.GREEN)))
+        val t = target(TargetFilter.Creature.withColor(Color.GREEN))
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     metadata {

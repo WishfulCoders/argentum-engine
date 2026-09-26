@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.conditions.IsYourTurn
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Mental Modulation
@@ -37,12 +36,8 @@ val MentalModulation = card("Mental Modulation") {
     }
 
     spell {
-        val target = target(
-            "target artifact or creature",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Creature)),
-        )
-        effect = Effects.Tap(target)
-            .then(Effects.DrawCards(1))
+        val target = target(TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Creature))
+        effect = Effects.Tap(target) then Effects.DrawCards(1)
     }
 
     metadata {

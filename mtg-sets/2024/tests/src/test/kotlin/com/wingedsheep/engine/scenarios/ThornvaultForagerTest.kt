@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.legalactions.EnumerationMode
 import com.wingedsheep.engine.legalactions.LegalActionEnumerator
@@ -17,6 +18,7 @@ import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.engine.core.Outcome
 
 class ThornvaultForagerTest : FunSpec({
 
@@ -84,7 +86,7 @@ class ThornvaultForagerTest : FunSpec({
             driver.state.updateEntity(forager) { it.without<SummoningSicknessComponent>() }
         )
 
-        val solver = ManaSolver(driver.cardRegistry)
+        val solver = ManaSolver(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val source = solver.findAvailableManaSources(driver.state, active)
             .find { it.entityId == forager }
 
@@ -114,7 +116,7 @@ class ThornvaultForagerTest : FunSpec({
         )
         repeat(3) { driver.putCardInGraveyard(active, "Forest") }
 
-        val solver = ManaSolver(driver.cardRegistry)
+        val solver = ManaSolver(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val source = solver.findAvailableManaSources(driver.state, active)
             .find { it.entityId == forager }
 
@@ -144,6 +146,6 @@ class ThornvaultForagerTest : FunSpec({
 
         val result = driver.castSpell(active, spear, targets = listOf(opponent))
 
-        result.isSuccess shouldBe false
+        result.outcome shouldNotBe Outcome.Done
     }
 })

@@ -1,18 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MakePlottedEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Make Your Own Luck {3}{G}{U}
@@ -39,21 +31,19 @@ val MakeYourOwnLuck = card("Make Your Own Luck") {
         "as a sorcery on a later turn without paying its mana cost.)"
 
     spell {
-        effect = Effects.Composite(
-            GatherCardsEffect(CardSource.TopOfLibrary(DynamicAmount.Fixed(3)), storeAs = "looked"),
-            SelectFromCollectionEffect(
-                from = "looked",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
+        effect = Effects.Pipeline {
+            val looked = gather(CardSource.TopOfLibrary(3))
+            val (toPlot, toHandCards) = chooseUpToSplit(
+                1,
+                from = looked,
                 filter = GameObjectFilter.Nonland,
-                storeSelected = "toPlot",
-                storeRemainder = "toHand",
                 selectedLabel = "Exile and plot",
                 remainderLabel = "Put into hand"
-            ),
-            MoveCollectionEffect(from = "toPlot", destination = CardDestination.ToZone(Zone.EXILE)),
-            MakePlottedEffect(from = "toPlot"),
-            MoveCollectionEffect(from = "toHand", destination = CardDestination.ToZone(Zone.HAND))
-        )
+            )
+            exile(toPlot)
+            run(Effects.MakePlotted(from = toPlot))
+            toHand(toHandCards)
+        }
     }
 
     metadata {

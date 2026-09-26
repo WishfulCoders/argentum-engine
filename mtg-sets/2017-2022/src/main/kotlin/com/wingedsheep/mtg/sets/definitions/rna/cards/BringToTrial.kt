@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Bring to Trial
@@ -20,10 +19,7 @@ val BringToTrial = card("Bring to Trial") {
     oracleText = "Exile target creature with power 4 or greater."
 
     spell {
-        val t = target(
-            "creature with power 4 or greater",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.powerAtLeast(4)))
-        )
+        val t = target(TargetFilter(GameObjectFilter.Creature.powerAtLeast(4)))
         effect = Effects.Exile(t)
     }
 

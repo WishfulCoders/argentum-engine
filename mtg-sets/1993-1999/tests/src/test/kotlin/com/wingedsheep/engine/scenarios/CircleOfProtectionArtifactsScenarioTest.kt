@@ -21,8 +21,8 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  * "{2}: The next time an artifact source of your choice would deal damage to you this turn, prevent
  *  that damage."
  *
- * Exercises the `ChosenSourceMatching(GameObjectFilter.Artifact)` prevention filter: only artifact
- * sources are eligible for the choice, and — because the facade sets `nextInstanceOnly = true` —
+ * Exercises the `Chosen(GameObjectFilter.Artifact)` prevention filter: only artifact
+ * sources are eligible for the choice, and — because the card sets `nextInstanceOnly = true` —
  * only the *next* damage instance from the chosen artifact source is prevented, not all damage from
  * it for the turn.
  */

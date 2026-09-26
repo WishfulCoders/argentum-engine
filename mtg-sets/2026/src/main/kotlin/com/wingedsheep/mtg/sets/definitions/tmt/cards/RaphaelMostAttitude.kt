@@ -1,19 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Raphael, Most Attitude
@@ -39,31 +33,23 @@ val RaphaelMostAttitude = card("Raphael, Most Attitude") {
 
     // Alliance: exile the top card linked to Raphael (accumulates the impulse pile).
     triggeredAbility {
-        trigger = Triggers.OtherCreatureEnters
-        effect = MayEffect(
-            Effects.Composite(
-                listOf(
-                    GatherCardsEffect(source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1)), storeAs = "raphaelTop"),
-                    MoveCollectionEffect(
-                        from = "raphaelTop",
-                        destination = CardDestination.ToZone(Zone.EXILE),
-                        linkToSource = true
-                    )
-                )
-            )
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
+        effect = Effects.May(
+            Effects.Pipeline {
+                val raphaelTop = gather(CardSource.TopOfLibrary(1))
+                exile(raphaelTop, linkToSource = true)
+            }
         )
         description = "Alliance — Whenever another creature you control enters, you may exile the top card of your library."
     }
 
     // Attack: grant permission to play any card exiled with Raphael until end of turn.
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(source = CardSource.FromLinkedExile(), storeAs = "raphaelExile"),
-                GrantMayPlayFromExileEffect("raphaelExile", MayPlayExpiry.EndOfTurn)
-            )
-        )
+        trigger = Triggers.self.attacks()
+        effect = Effects.Pipeline {
+            val raphaelExile = gather(CardSource.FromLinkedExile())
+            run(Effects.GrantMayPlayFromExile(raphaelExile, MayPlayExpiry.EndOfTurn))
+        }
         description = "Whenever Raphael attacks, until end of turn, you may play a card exiled with Raphael."
     }
 

@@ -23,7 +23,7 @@ val TribalForcemage = card("Tribal Forcemage") {
     oracleText = "Morph {1}{G} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)\nWhen this creature is turned face up, creatures of the creature type of your choice get +2/+2 and gain trample until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
+        trigger = Triggers.self.turnedFaceUp()
         effect = Effects.ChooseCreatureTypeModifyStats(
             powerModifier = 2,
             toughnessModifier = 2,

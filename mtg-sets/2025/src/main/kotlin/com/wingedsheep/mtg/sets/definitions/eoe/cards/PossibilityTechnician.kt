@@ -5,18 +5,12 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Possibility Technician
@@ -37,34 +31,20 @@ val PossibilityTechnician = card("Possibility Technician") {
         "Warp {1}{R} (You may cast this card from your hand for its warp cost. Exile this creature at the beginning of the next end step, then you may cast it from exile on a later turn.)"
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Creature.withSubtype(Subtype.KAVU).youControl(),
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.ANY
-        )
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1)),
-                    storeAs = "exiledCard"
-                ),
-                MoveCollectionEffect(
-                    from = "exiledCard",
-                    destination = CardDestination.ToZone(Zone.EXILE)
-                ),
-                Effects.GrantMayPlayFromExile(
-                    from = "exiledCard",
-                    expiry = MayPlayExpiry.Permanent,
-                    condition = Exists(
-                        player = Player.You,
-                        zone = Zone.BATTLEFIELD,
-                        filter = GameObjectFilter.Creature.withSubtype(Subtype.KAVU)
-                    )
+        trigger = Triggers.a(GameObjectFilter.Creature.withSubtype(Subtype.KAVU).youControl()).enters()
+        effect = Effects.Pipeline {
+            val exiledCard = gather(CardSource.TopOfLibrary(1))
+            exile(exiledCard)
+            run(Effects.GrantMayPlayFromExile(
+                from = exiledCard,
+                expiry = MayPlayExpiry.Permanent,
+                condition = Exists(
+                    player = Player.You,
+                    zone = Zone.BATTLEFIELD,
+                    filter = GameObjectFilter.Creature.withSubtype(Subtype.KAVU)
                 )
-            )
-        )
+            ))
+        }
     }
 
     warp = "{1}{R}"

@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Scuzzback Scrounger
@@ -28,10 +28,10 @@ val ScuzzbackScrounger = card("Scuzzback Scrounger") {
         "A Treasure token is an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")"
 
     triggeredAbility {
-        trigger = Triggers.FirstMainPhase
-        effect = OptionalCostEffect(
+        trigger = Triggers.you.beginningOf(Step.PRECOMBAT_MAIN)
+        effect = Effects.MayPay(
             cost = Patterns.Mechanic.blight(1),
-            ifPaid = Effects.CreateTreasure(),
+            then = Effects.CreateTreasure(),
             descriptionOverride = "You may blight 1. If you do, create a Treasure token"
         )
     }

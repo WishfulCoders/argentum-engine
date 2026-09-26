@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.avr.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.TakeExtraTurnEffect
 
 /**
  * Temporal Mastery
@@ -21,7 +21,7 @@ val TemporalMastery = card("Temporal Mastery") {
 
     spell {
         selfExile()
-        effect = TakeExtraTurnEffect()
+        effect = Effects.TakeExtraTurn()
     }
 
     keywordAbility(KeywordAbility.miracle("{1}{U}"))

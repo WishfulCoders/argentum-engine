@@ -1,8 +1,10 @@
 package com.wingedsheep.engine.handlers.effects.library
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.LibraryShuffledEvent
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PipelineState
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.state.ComponentContainer
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
@@ -22,6 +24,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Permanents leaving the battlefield go to their owner's zone (Rule 110.5a / 614.10).
@@ -31,7 +34,8 @@ import io.kotest.matchers.shouldBe
 class MoveCollectionToLibraryOwnerRoutingTest : FunSpec({
 
     val cardRegistry = com.wingedsheep.engine.registry.CardRegistry()
-    val executor = MoveCollectionExecutor(cardRegistry)
+    val zones = ZoneTransitionService(cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
+    val executor = MoveCollectionExecutor(zones, cardRegistry)
 
     val playerId = EntityId.generate()
     val opponentId = EntityId.generate()
@@ -84,7 +88,7 @@ class MoveCollectionToLibraryOwnerRoutingTest : FunSpec({
         )
         val result = executor.execute(state, effect, context(playerId, "targets", listOf(cardId1)))
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         result.state.getZone(ZoneKey(opponentId, Zone.LIBRARY)) shouldContain cardId1
         result.state.getZone(ZoneKey(playerId, Zone.LIBRARY)) shouldNotContain cardId1
         result.state.getEntity(cardId1)!!.has<ControllerComponent>() shouldBe false
@@ -106,7 +110,7 @@ class MoveCollectionToLibraryOwnerRoutingTest : FunSpec({
         )
         val result = executor.execute(state, effect, context(playerId, "targets", listOf(cardId1)))
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         result.state.getZone(ZoneKey(opponentId, Zone.LIBRARY)) shouldContain cardId1
         result.state.getZone(ZoneKey(playerId, Zone.LIBRARY)) shouldNotContain cardId1
 
@@ -144,7 +148,7 @@ class MoveCollectionToLibraryOwnerRoutingTest : FunSpec({
         )
         val result = executor.execute(state, effect, context(playerId, "targets", listOf(cardId1, cardId2)))
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         result.state.getZone(ZoneKey(playerId, Zone.LIBRARY)) shouldContain cardId1
         result.state.getZone(ZoneKey(opponentId, Zone.LIBRARY)) shouldContain cardId2
         result.state.getZone(ZoneKey(playerId, Zone.LIBRARY)) shouldNotContain cardId2

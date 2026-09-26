@@ -9,14 +9,8 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.SelectionRestriction
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Michelangelo's Technique
@@ -37,35 +31,21 @@ val MichelangelosTechnique = card("Michelangelo's Technique") {
     sneak("{3}{G}")
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(count = DynamicAmount.Fixed(8), player = Player.You),
-                    storeAs = "looked"
-                ),
-                SelectFromCollectionEffect(
-                    from = "looked",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(2)),
-                    filter = GameObjectFilter.Creature,
-                    restrictions = listOf(SelectionRestriction.TotalManaValueAtMost(6)),
-                    showAllCards = true,
-                    storeSelected = "toBattlefield",
-                    storeRemainder = "toBottom",
-                    prompt = "Put up to two creature cards with total mana value 6 or less onto the battlefield",
-                    selectedLabel = "Put onto the battlefield",
-                    remainderLabel = "Put on the bottom of your library"
-                ),
-                MoveCollectionEffect(
-                    from = "toBattlefield",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD, Player.You)
-                ),
-                MoveCollectionEffect(
-                    from = "toBottom",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, Player.You, ZonePlacement.Bottom),
-                    order = CardOrder.Random
-                )
+        effect = Effects.Pipeline {
+            val looked = gather(CardSource.TopOfLibrary(count = 8, player = Player.You))
+            val (toBattlefield, toBottom) = chooseUpToSplit(
+                2,
+                from = looked,
+                filter = GameObjectFilter.Creature,
+                restrictions = listOf(SelectionRestriction.TotalManaValueAtMost(6)),
+                showAllCards = true,
+                prompt = "Put up to two creature cards with total mana value 6 or less onto the battlefield",
+                selectedLabel = "Put onto the battlefield",
+                remainderLabel = "Put on the bottom of your library"
             )
-        )
+            move(toBattlefield, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You))
+            toLibraryBottom(toBottom, order = CardOrder.Random)
+        }
     }
 
     metadata {

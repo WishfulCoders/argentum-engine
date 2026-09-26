@@ -2,13 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Soul Enervation — Murders at Karlov Manor #106
@@ -23,7 +23,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * is the payoff for the graveyard decks that want the first one to be filling their yard.
  *
  * "One or more creature cards leave your graveyard" is a **batching** trigger (CR 603.2c) —
- * [Triggers.CardsLeaveYourGraveyard] fires at most once per batch no matter how many cards left,
+ * `Triggers.oneOrMore(filter).leaveYourGraveyard()` fires at most once per batch no matter how many cards left,
  * which is the printed ruling. Leaving covers every exit: cast from the yard, reanimated, exiled
  * to delve or escape, shuffled back in. The graveyard is scoped to the enchantment's controller,
  * so an opponent recurring their own creature never drains them.
@@ -44,18 +44,15 @@ val SoulEnervation = card("Soul Enervation") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("target creature", Targets.Creature)
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(-4, -4, creature)
         description = "When this enchantment enters, target creature gets -4/-4 until end of turn."
     }
 
     triggeredAbility {
-        trigger = Triggers.CardsLeaveYourGraveyard(GameObjectFilter.Creature)
-        effect = Effects.Composite(
-            Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)),
-            Effects.GainLife(1),
-        )
+        trigger = Triggers.oneOrMore(GameObjectFilter.Creature).leaveYourGraveyard()
+        effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(1)
         description = "Whenever one or more creature cards leave your graveyard, each opponent " +
             "loses 1 life and you gain 1 life."
     }

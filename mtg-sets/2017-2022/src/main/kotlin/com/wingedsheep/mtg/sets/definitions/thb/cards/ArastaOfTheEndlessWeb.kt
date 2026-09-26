@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  * Whenever an opponent casts an instant or sorcery spell, create a 1/2 green Spider creature
  * token with reach.
  *
- * The trigger watches *opponents only* ([Triggers.opponentCasts]), so Arasta's controller casting
+ * The trigger watches *opponents only* (`Triggers.anOpponent.casts(spell, requires)`), so Arasta's controller casting
  * their own removal spell doesn't feed them Spiders.
  */
 val ArastaOfTheEndlessWeb = card("Arasta of the Endless Web") {
@@ -34,7 +34,7 @@ val ArastaOfTheEndlessWeb = card("Arasta of the Endless Web") {
     keywords(Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.opponentCasts(GameObjectFilter.InstantOrSorcery)
+        trigger = Triggers.anOpponent.casts(GameObjectFilter.InstantOrSorcery)
         effect = Effects.CreateToken(
             power = 1,
             toughness = 2,

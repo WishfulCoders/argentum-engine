@@ -37,7 +37,7 @@ val GaiusVanBaelsar = card("Gaius van Baelsar") {
         "• Each player sacrifices an enchantment of their choice."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseOne(
             Mode.noTarget(
                 Effects.Sacrifice(

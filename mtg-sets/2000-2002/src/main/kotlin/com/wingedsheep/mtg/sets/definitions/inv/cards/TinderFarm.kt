@@ -31,10 +31,7 @@ val TinderFarm = card("Tinder Farm") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.SacrificeSelf)
-        effect = Effects.Composite(
-            Effects.AddMana(Color.RED),
-            Effects.AddMana(Color.WHITE),
-        )
+        effect = Effects.AddMana(Color.RED) then Effects.AddMana(Color.WHITE)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

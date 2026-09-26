@@ -25,7 +25,7 @@ val PerilousVault = card("Perilous Vault") {
         cost = Costs.Composite(Costs.Mana("{5}"), Costs.Tap, Costs.ExileSelf)
         effect = Effects.ForEachInGroup(
             GroupFilter.AllNonlandPermanents,
-            Effects.Exile(EffectTarget.Self)
+            Effects.Exile(EffectTarget.IterationEntity)
         )
     }
 

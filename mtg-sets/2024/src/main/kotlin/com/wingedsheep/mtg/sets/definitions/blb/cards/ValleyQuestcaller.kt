@@ -36,7 +36,7 @@ val ValleyQuestcaller = card("Valley Questcaller") {
     // Batched (CR 603.3b): simultaneous entries yield a single scry, and Questcaller's own
     // entry doesn't count ("other") — but it does trigger off others entering alongside it.
     triggeredAbility {
-        trigger = Triggers.OneOrMorePermanentsEnter(valleyCreatureFilter, excludeSource = true)
+        trigger = Triggers.oneOrMoreOther(valleyCreatureFilter).enter()
         effect = Patterns.Library.scry(1)
     }
 

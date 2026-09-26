@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -35,7 +34,7 @@ val WintermoonMesa = card("Wintermoon Mesa") {
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap, Costs.SacrificeSelf)
-        val t = target("target", TargetPermanent(count = 2, filter = TargetFilter.Land))
+        targets(TargetFilter.Land, count = 2)
         effect = Effects.TapEachTarget()
     }
     metadata {

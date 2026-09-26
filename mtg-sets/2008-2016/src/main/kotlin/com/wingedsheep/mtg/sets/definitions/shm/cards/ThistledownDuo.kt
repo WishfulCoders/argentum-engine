@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever you cast a white spell, this creature gets +1/+1 until end of turn.
  * Whenever you cast a blue spell, this creature gains flying until end of turn.
  *
- * - Both triggers are `Triggers.youCastSpell(spellFilter = GameObjectFilter.Any.withColor(...))`:
+ * - Both triggers are `Triggers.you.casts(GameObjectFilter.Any.withColor(...))`:
  *   "a white spell" is not limited to creature spells, so the filter stays `Any`.
  * - A spell that is both white and blue triggers both abilities — correct for the Duo cycle.
  * - `EffectTarget.Self` with the facades' default `Duration.EndOfTurn` gives the printed wording.
@@ -33,13 +33,13 @@ val ThistledownDuo = card("Thistledown Duo") {
 
     // Whenever you cast a white spell, this creature gets +1/+1 until end of turn.
     triggeredAbility {
-        trigger = Triggers.youCastSpell(spellFilter = GameObjectFilter.Any.withColor(Color.WHITE))
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withColor(Color.WHITE))
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }
 
     // Whenever you cast a blue spell, this creature gains flying until end of turn.
     triggeredAbility {
-        trigger = Triggers.youCastSpell(spellFilter = GameObjectFilter.Any.withColor(Color.BLUE))
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withColor(Color.BLUE))
         effect = Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
     }
 

@@ -29,10 +29,8 @@ val VanguardOfTheRose = card("Vanguard of the Rose") {
     toughness = 1
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeAnother(GameObjectFilter.CreatureOrArtifact))
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self),
+        effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self) then
             Effects.Tap(EffectTarget.Self)
-        )
     }
     metadata {
         rarity = Rarity.UNCOMMON

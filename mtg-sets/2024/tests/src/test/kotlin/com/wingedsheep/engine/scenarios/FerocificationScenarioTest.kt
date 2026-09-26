@@ -19,7 +19,7 @@ import io.kotest.matchers.shouldBe
  *  • Target creature you control gets +2/+0 until end of turn.
  *  • Target creature you control gains menace and haste until end of turn."
  *
- * Exercises the modal beginning-of-combat trigger ([com.wingedsheep.sdk.dsl.Triggers.BeginCombat])
+ * Exercises the modal beginning-of-combat trigger (`Triggers.you.beginningOf(Step.BEGIN_COMBAT)`)
  * with per-mode targets: each mode picks "target creature you control" and applies an existing
  * effect. The trigger only fires on the controller's turn.
  */

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.battlefield.DamageComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
@@ -18,7 +19,7 @@ import io.kotest.matchers.shouldBe
  * Fog Bank (USG #75) — "Prevent all combat damage that would be dealt to and dealt by this creature."
  *
  * Exercises the source-relative static prevention pair, including the new
- * [com.wingedsheep.sdk.scripting.events.SourceFilter.Self] filter used for the "dealt by" half.
+ * `GameObjectFilter.Any.sourceItself()` source filter used for the "dealt by" half.
  */
 class FogBankScenarioTest : FunSpec({
 
@@ -59,7 +60,7 @@ class FogBankScenarioTest : FunSpec({
         driver.state.getBattlefield().contains(fogBank) shouldBe true
     }
 
-    test("prevents combat damage dealt BY Fog Bank (SourceFilter.Self)") {
+    test("prevents combat damage dealt BY Fog Bank (GameObjectFilter.Any.sourceItself())") {
         val driver = newGame()
         val you = driver.activePlayer!!
         val opponent = driver.getOpponent(you)

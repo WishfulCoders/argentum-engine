@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 
 /**
@@ -27,15 +27,15 @@ val GrowFromTheAshes = card("Grow from the Ashes") {
     keywordAbility(KeywordAbility.kicker("{2}"))
 
     spell {
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = WasKicked,
-            effect = Patterns.Library.searchLibrary(
+            then = Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.BasicLand,
                 count = 2,
                 destination = SearchDestination.BATTLEFIELD,
                 shuffleAfter = true
             ),
-            elseEffect = Patterns.Library.searchLibrary(
+            otherwise = Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.BasicLand,
                 count = 1,
                 destination = SearchDestination.BATTLEFIELD,

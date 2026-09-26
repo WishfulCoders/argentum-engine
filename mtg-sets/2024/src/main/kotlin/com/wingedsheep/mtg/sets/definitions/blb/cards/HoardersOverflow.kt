@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
@@ -8,9 +8,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -33,14 +31,14 @@ val HoardersOverflow = card("Hoarder's Overflow") {
 
     // When this enchantment enters, put a stash counter on it.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.AddCounters(Counters.STASH, 1, EffectTarget.Self)
+        trigger = Triggers.self.enters()
+        effect = Effects.AddCounters(CounterType.STASH, 1, EffectTarget.Self)
     }
 
     // Whenever you expend 4, put a stash counter on it.
     triggeredAbility {
-        trigger = Triggers.Expend(4)
-        effect = Effects.AddCounters(Counters.STASH, 1, EffectTarget.Self)
+        trigger = Triggers.you.expends(4)
+        effect = Effects.AddCounters(CounterType.STASH, 1, EffectTarget.Self)
     }
 
     // {1}{R}, Sacrifice this enchantment: Discard your hand, then draw cards equal to
@@ -48,16 +46,12 @@ val HoardersOverflow = card("Hoarder's Overflow") {
     activatedAbility {
         cost = Costs.Mana("{1}{R}")
         description = "{1}{R}, Sacrifice: Discard your hand, draw cards equal to stash counters"
-        effect = Effects.Composite(
-            listOf(
-                Patterns.Hand.discardHand(),
-                DrawCardsEffect(
-                    count = DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.STASH)),
-                    target = EffectTarget.Controller
-                ),
-                SacrificeSelfEffect
-            )
-        )
+        effect = Patterns.Hand.discardHand() then
+            Effects.DrawCards(
+                count = DynamicAmounts.countersOnSelf(CounterType.STASH),
+                target = EffectTarget.Controller
+            ) then
+            SacrificeSelfEffect
     }
 
     metadata {

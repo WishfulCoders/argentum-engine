@@ -55,7 +55,7 @@ class CardIdentityVisibilityTest : ScenarioTestBase() {
     }
 
     private val visibility: Visibility
-        get() = Visibility(cardRegistry)
+        get() = Visibility(cardRegistry, conditionEvaluator = services.conditionEvaluator)
 
     init {
         cardRegistry.register(listOf(openThoughts, publicTop, privateTop))
@@ -83,7 +83,7 @@ class CardIdentityVisibilityTest : ScenarioTestBase() {
                 game.player1Id,
             ) shouldBe false
 
-            val clientView = ClientStateTransformer(cardRegistry).transform(state, game.player1Id)
+            val clientView = ClientStateTransformer(cardRegistry, predicateEvaluator = services.predicateEvaluator).transform(state, game.player1Id)
             clientView.cards.keys shouldContain ownCard
             clientView.cards.keys shouldNotContain opposingCard
         }
@@ -114,7 +114,7 @@ class CardIdentityVisibilityTest : ScenarioTestBase() {
                 visibility.isCardIdentityVisibleTo(state, player2Hand, known, bystander) shouldBe false
             }
 
-            val client = ClientStateTransformer(cardRegistry)
+            val client = ClientStateTransformer(cardRegistry, predicateEvaluator = services.predicateEvaluator)
             client.transform(state, base.player1Id).cards.keys.let {
                 it shouldContain known
                 it shouldNotContain unknown

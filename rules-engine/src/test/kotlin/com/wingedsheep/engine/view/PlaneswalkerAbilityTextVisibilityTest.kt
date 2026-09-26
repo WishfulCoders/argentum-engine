@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.view
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.Step
@@ -30,7 +31,7 @@ class PlaneswalkerAbilityTextVisibilityTest : FunSpec({
     }
 
     fun abilities(d: GameTestDriver, permanent: EntityId, viewer: EntityId) =
-        ClientStateTransformer(cardRegistry = d.cardRegistry)
+        ClientStateTransformer(cardRegistry = d.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .transform(d.state, viewingPlayerId = viewer)
             .cards[permanent]
             .shouldNotBeNull()

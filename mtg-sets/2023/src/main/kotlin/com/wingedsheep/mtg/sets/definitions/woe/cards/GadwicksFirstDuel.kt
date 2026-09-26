@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Gadwick's First Duel
@@ -28,10 +27,7 @@ val GadwicksFirstDuel = card("Gadwick's First Duel") {
         "copy that spell. You may choose new targets for the copy."
 
     sagaChapter(1) {
-        val creature = target(
-            "up to one target creature",
-            TargetCreature(optional = true, filter = TargetFilter.Creature)
-        )
+        val creature = target(TargetFilter.Creature, optional = true)
         effect = Effects.CreateRoleToken("Cursed Role", creature)
     }
 

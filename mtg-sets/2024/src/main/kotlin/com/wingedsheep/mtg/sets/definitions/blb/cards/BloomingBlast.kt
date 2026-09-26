@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreatePredefinedTokenEffect
-import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Blooming Blast
@@ -34,20 +33,18 @@ val BloomingBlast = card("Blooming Blast") {
     spell {
         effect = Patterns.Mechanic.giftSpell(
             // Mode 1: No gift — 2 damage to target creature
-            Mode.withTarget(
-                Effects.DealDamage(2, EffectTarget.ContextTarget(0)),
-                Targets.Creature,
-                "Don't promise a gift — deal 2 damage to target creature"
-            ),
+            mode("Don't promise a gift — deal 2 damage to target creature") {
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.DealDamage(2, creature)
+            },
             // Mode 2: Gift a Treasure — opponent creates Treasure, 2 damage to creature, 3 damage to controller
-            Mode.withTarget(
-                CreatePredefinedTokenEffect("Treasure", 1, EffectTarget.PlayerRef(Player.ChosenOpponent))
-                    .then(Effects.DealDamage(2, EffectTarget.ContextTarget(0)))
-                    .then(Effects.DealDamage(3, EffectTarget.TargetController))
-                    .then(Effects.GiftGiven()),
-                Targets.Creature,
-                "Promise a gift — opponent creates a Treasure token, deal 2 damage to target creature and 3 damage to its controller"
-            )
+            mode("Promise a gift — opponent creates a Treasure token, deal 2 damage to target creature and 3 damage to its controller") {
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.CreateTreasure(1, controller = EffectTarget.PlayerRef(Player.ChosenOpponent)) then
+                    Effects.DealDamage(2, creature) then
+                    Effects.DealDamage(3, EffectTarget.TargetController) then
+                    Effects.GiftGiven()
+            }
         )
     }
 

@@ -36,11 +36,8 @@ val BontusMonument = card("Bontu's Monument") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YouCastCreature
-        effect = Effects.Composite(
-            Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)),
-            Effects.GainLife(1),
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.Creature)
+        effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(1)
     }
 
     metadata {

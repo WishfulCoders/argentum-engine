@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# Implement a whole set with headless Claude Code, one fresh session per step.
+#   just set-loop <code>            e.g. just set-loop ecl
+# Stop it with Ctrl-C, or `touch .claude/loop-runs/<code>.stop` to stop after the current step.
+# When the subscription's usage limit is hit, it waits and retries.
+set -uo pipefail
+
+CODE=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+MODEL=${MODEL:-claude-opus-5-5}
+REPO=$(cd "$(git rev-parse --git-common-dir)/.." && pwd)
+RUNS="$REPO/.claude/loop-runs"
+mkdir -p "$RUNS"
+
+PROMPT="You are one iteration of an unattended loop implementing MTG set '$CODE' (Scryfall code).
+You are a fresh session: your memory is the ledger at $RUNS/$CODE-cards.md (create it if missing),
+the gap analysis at $RUNS/$CODE-gaps.md, and GitHub. Do exactly ONE of the steps below, then stop.
+
+The set is built in three phases: gap analysis once, then every engine gap one PR at a time, then the
+cards in big batches — by then every remaining card composes from existing primitives.
+
+Find our open PR for this set: \`gh pr list --author @me --state open --search 'agent-loop in:title'\`
+and keep only one whose files touch definitions/$CODE/ or whose title names this set. Work on it in its
+worktree under $REPO/.claude/worktrees/ (create one with \`git worktree add\` if missing). Never work in the
+main checkout.
+
+0. No $RUNS/$CODE-gaps.md yet -> gap analysis, no PR. From a fresh worktree off origin/main, list the
+   unimplemented cards (\`just card-status --set $CODE --list\`; \`just assay-ready $CODE\` marks the ones that are
+   already free). If backlog/$CODE-engine-gaps.md or the set's backlog/sets/*/mechanics.md exists, start from
+   it but re-verify every claim against the current SDK — they go stale. Fan the cards out to subagents in
+   chunks (by colour), each checking Scryfall oracle text against docs/card-sdk-language-reference.md and the
+   source, and returning one line per card: READY, or BLOCKED on a named missing capability. Merge the answers
+   into $RUNS/$CODE-gaps.md with two sections:
+   '## Gaps' — one line per distinct missing capability: \`- [ ] G<n> <capability> — unlocks <k>: <cards> — deps: <G ids or none>\`,
+     ordered by dependencies first, then most cards unlocked. Collapse near-duplicates into one gap; a gap is
+     engine/SDK vocabulary, never a single card's quirk that composition can express.
+   '## Ready' — every card that composes from existing primitives today.
+   Stop after writing it.
+1. PR open, CI failed -> read only the failing log tail (\`gh run view <id> --log-failed | tail -200\`),
+   fix it, re-run the affected gate per the verify skill, push. A known-flaky test: \`gh run rerun --failed\` instead.
+2. PR open, has merge conflicts -> rebase on origin/main (re-bless snapshot goldens instead of hand-merging), gate, push.
+3. PR open, CI green, not yet reviewed (no 'loop-reviewed' comment) -> review it with the review-changes skill,
+   fix what holds up, gate, push, and post a PR comment starting 'loop-reviewed' listing fixes and declines.
+4. PR open, CI green, reviewed, nothing pushed since -> \`gh pr merge --squash --delete-branch\` (from $REPO, after
+   \`git worktree remove\` of its worktree), mark the unit done in the ledger. If it closed a gap, tick it \`[x]\`
+   in the gaps file and move the cards it unlocked (minus any it shipped) into '## Ready'.
+5. No PR open, an unticked gap whose deps are all \`[x]\` -> engine gap. \`git fetch\`, new worktree + branch from
+   origin/main. Take the first such gap, mark it \`[~]\`, and build it with the add-feature skill: the capability,
+   its SDK reference entry, engine tests, plus one or two of the cards it unlocks as proof (one scenario test file
+   per card). Gate, commit, push, open a PR titled '[agent-loop: $MODEL] <capability> for <set name>' whose body
+   names the gap, the cards it unlocks, the gate run, and that nothing was play-tested. Record the unit in the ledger.
+6. No PR open, no buildable gap left -> card batch. \`git fetch\`, new worktree + branch from origin/main. Take up
+   to 15 unimplemented cards from '## Ready', grouped by colour or theme. Fan them out to subagents, one card each,
+   with the add-card skill (one definition file and one scenario test file per card). A card that turns out to need
+   new vocabulary is dropped from the batch and added to '## Gaps' as a new \`[ ]\` gap — the next iteration builds
+   it before more cards. Gate once per the verify skill, commit, push, open a PR titled
+   '[agent-loop: $MODEL] Add <N> <set name> cards' whose body lists the cards, the gate run, and that nothing was
+   play-tested. Record the unit in the ledger.
+
+If a step fails twice for the same PR, comment on it, mark it needs-human in the ledger (and the gap \`[!]\` if it
+was one), and move on. Cards blocked on a \`[!]\` gap are skipped. When the only cards left are blocked on \`[!]\`
+gaps, answer STUCK naming those gaps; when \`card-status\` shows the set complete, answer SET_COMPLETE.
+Follow AGENTS.md. Never revert or stash work that isn't yours.
+End your reply with exactly one line: STEP <n> DONE | SET_COMPLETE | STUCK <reason>"
+
+# Everything the loop prints also goes to the run log.
+LOGDIR="$RUNS/$CODE-logs"
+mkdir -p "$LOGDIR"
+exec > >(tee -a "$RUNS/$CODE.log") 2>&1
+log() { echo "[$(date '+%F %T')] $*"; }
+
+# One line per action the session takes, streamed live: its messages and each tool call.
+PRETTY='select(.type == "assistant") | .message.content[]? |
+  (if .type == "text" then "   💬 " + (.text | split("\n")[0] | .[0:160])
+   elif .type == "tool_use" then "   → " + .name + ": " +
+     ((.input.description // .input.command // .input.skill // .input.file_path // .input.pattern
+       // .input.prompt // "") | tostring | split("\n")[0] | .[0:140])
+   else empty end)'
+
+log "set-loop $CODE started (model $MODEL, log $RUNS/$CODE.log)"
+N=0
+while [ ! -e "$RUNS/$CODE.stop" ]; do
+  N=$((N + 1))
+  # Wait on CI for free instead of spending a session on it.
+  PR=$(gh pr list --author @me --state open --search 'agent-loop in:title' --json number,files \
+        --jq "[.[] | select([.files[].path] | any(test(\"definitions/$CODE/\")))][0].number // empty")
+  if [ -n "$PR" ]; then
+    log "waiting for CI on PR #$PR"
+    sleep 60
+    gh pr checks "$PR" --watch >/dev/null 2>&1
+    log "CI on PR #$PR: $(gh pr checks "$PR" --json bucket --jq '[.[].bucket] | group_by(.) | map("\(.[0])=\(length)") | join(" ")' 2>/dev/null)"
+  fi
+
+  TRANSCRIPT="$LOGDIR/$(date '+%Y%m%d-%H%M%S')-iter$N.jsonl"
+  log "iteration $N (PR: ${PR:-none}) — transcript $TRANSCRIPT"
+  (cd "$REPO" && claude -p "$PROMPT" --model "$MODEL" --permission-mode "${PERMISSION_MODE:-auto}" \
+      --output-format stream-json --verbose 2>&1) \
+    | tee "$TRANSCRIPT" | jq -Rr --unbuffered "fromjson? | $PRETTY"
+
+  FINAL=$(jq -Rc 'fromjson? | select(.type == "result")' "$TRANSCRIPT" 2>/dev/null | tail -1)
+  RESULT=$(echo "$FINAL" | jq -r '.result // empty' 2>/dev/null)
+  LAST=$(echo "$RESULT" | tail -1)
+  log "iteration $N finished: ${LAST:-<no result>} ($(echo "$FINAL" | jq -r '"\(.num_turns // "?") turns, \((.duration_ms // 0) / 60000 | floor) min"' 2>/dev/null))"
+
+  if [ -z "$FINAL" ] || grep -qiE 'usage limit|hit your limit|rate limit|overloaded' <<<"$RESULT$(tail -5 "$TRANSCRIPT")"; then
+    log "no result or limit reached — waiting 30 min"; sleep 1800; continue
+  fi
+  case $LAST in
+    SET_COMPLETE*) log "set $CODE complete"; exit 0 ;;
+    STUCK*)        log "stuck — see the ledger at $RUNS/$CODE-cards.md"; exit 1 ;;
+  esac
+done
+log "stop file found — stopping"
+rm -f "$RUNS/$CODE.stop"

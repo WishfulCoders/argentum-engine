@@ -23,7 +23,7 @@ val LurkingNightstalker = card("Lurking Nightstalker") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ModifyStats(2, 0, EffectTarget.Self)
     }
 

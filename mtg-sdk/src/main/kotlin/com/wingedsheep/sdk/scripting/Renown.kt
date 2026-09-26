@@ -1,6 +1,6 @@
 package com.wingedsheep.sdk.scripting
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.CardDefinition
@@ -10,7 +10,7 @@ import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
 import com.wingedsheep.sdk.scripting.effects.BecomeRenownedEffect
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
 import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -31,7 +31,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *    CR 702.112c relies on: a creature with two instances of renown puts *two* abilities on the
  *    stack, the first to resolve makes it renowned, and the second then does nothing because its
  *    intervening-`if` no longer holds. Modelling the check as a
- *    [com.wingedsheep.sdk.scripting.effects.ConditionalEffect] inside the effect would get the
+ *    [com.wingedsheep.sdk.dsl.Effects.If] inside the effect would get the
  *    same end result for the common case but would let the ability trigger at all while renowned,
  *    which the rules do not.
  *  - **The counters and the designation are one effect**, applied in printed order — the counters
@@ -74,14 +74,14 @@ object Renown {
             id = AbilityId(if (instance == 0) ABILITY_ID_PREFIX else "${ABILITY_ID_PREFIX}_$instance"),
             trigger = EventPattern.DealsDamageEvent(
                 damageType = DamageType.Combat,
-                recipient = RecipientFilter.AnyPlayer,
+                recipient = Recipient.AnyPlayer,
             ),
             binding = TriggerBinding.SELF,
             activeZones = setOf(Zone.BATTLEFIELD),
             interveningIf = isNotRenowned,
             effect = CompositeEffect(
                 effects = listOf(
-                    AddCountersEffect(Counters.PLUS_ONE_PLUS_ONE, n, EffectTarget.Self),
+                    AddCountersEffect(CounterType.PLUS_ONE_PLUS_ONE, n, EffectTarget.Self),
                     BecomeRenownedEffect(EffectTarget.Self),
                 ),
                 descriptionOverride = "put $n +1/+1 $counterWord on this creature and it becomes " +

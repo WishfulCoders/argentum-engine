@@ -8,6 +8,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.ProtectionScope
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Dross Harvester — Mirrodin #63
@@ -18,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever a creature dies, you gain 2 life.
  *
  * A 4/4 for three that bleeds you out unless the board keeps dying. The life-gain trigger is
- * [Triggers.AnyCreatureDies] — *any* creature, either player's, including Dross Harvester itself, so
+ * `Triggers.a(GameObjectFilter.Creature).dies()` — *any* creature, either player's, including Dross Harvester itself, so
  * the trigger has to be a battlefield-wide one rather than a self or you-control death trigger. Note
  * [Effects.LoseLife] defaults to targeting an opponent; the upkeep drain is explicitly
  * [EffectTarget.Controller].
@@ -36,12 +38,12 @@ val DrossHarvester = card("Dross Harvester") {
     keywordAbility(KeywordAbility.Protection(ProtectionScope.Color(Color.WHITE)))
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         effect = Effects.LoseLife(4, EffectTarget.Controller)
     }
 
     triggeredAbility {
-        trigger = Triggers.AnyCreatureDies
+        trigger = Triggers.a(GameObjectFilter.Creature).dies()
         effect = Effects.GainLife(2)
     }
 

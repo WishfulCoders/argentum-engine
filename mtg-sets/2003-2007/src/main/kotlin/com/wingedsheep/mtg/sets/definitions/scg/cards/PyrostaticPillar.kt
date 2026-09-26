@@ -3,12 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.scg.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Triggers
 
 val PyrostaticPillar = card("Pyrostatic Pillar") {
     manaCost = "{1}{R}"
@@ -17,10 +15,7 @@ val PyrostaticPillar = card("Pyrostatic Pillar") {
     oracleText = "Whenever a player casts a spell with mana value 3 or less, Pyrostatic Pillar deals 2 damage to that player."
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = EventPattern.SpellCastEvent(spellFilter = GameObjectFilter.Any.manaValueAtMost(3), player = Player.Each),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.anyPlayer.casts(GameObjectFilter.Any.manaValueAtMost(3))
         effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.TriggeringPlayer))
     }
 

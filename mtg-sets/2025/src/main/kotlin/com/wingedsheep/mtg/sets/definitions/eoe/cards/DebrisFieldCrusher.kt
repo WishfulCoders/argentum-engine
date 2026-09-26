@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -35,8 +35,8 @@ val DebrisFieldCrusher = card("Debris Field Crusher") {
 
     // ETB: deals 3 damage to any target
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val target = target("any target", Targets.Any)
+        trigger = Triggers.self.enters()
+        val target = target(Targets.Any)
         effect = Effects.DealDamage(3, target)
     }
 
@@ -44,7 +44,7 @@ val DebrisFieldCrusher = card("Debris Field Crusher") {
     station()
 
     // Station threshold: 8+ charge counters on this Spacecraft
-    val charge8 = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 8)
+    val charge8 = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 8)
 
     // Conditional type change: artifact creature at 8+ charge counters
     staticAbility {

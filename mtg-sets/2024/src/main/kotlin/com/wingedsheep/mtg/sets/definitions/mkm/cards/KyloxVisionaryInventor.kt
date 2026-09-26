@@ -1,22 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.WardCost
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Kylox, Visionary Inventor — Murders at Karlov Manor #214
@@ -62,29 +56,19 @@ val KyloxVisionaryInventor = card("Kylox, Visionary Inventor") {
     keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(
-            listOf(
-                Effects.SacrificeAnyNumber(GameObjectFilter.Creature, excludeSource = true),
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(
-                        DynamicAmount.TotalPowerSacrificedThisWay,
-                        player = Player.You
-                    ),
-                    storeAs = "exiled"
-                ),
-                MoveCollectionEffect(
-                    from = "exiled",
-                    destination = CardDestination.ToZone(Zone.EXILE, player = Player.You)
-                ),
-                FilterCollectionEffect(
-                    from = "exiled",
-                    filter = CollectionFilter.MatchesFilter(GameObjectFilter.InstantOrSorcery),
-                    storeMatching = "castable"
-                ),
-                Effects.CastAnyNumberFromCollectionWithoutPayingCost("castable")
+        trigger = Triggers.self.attacks()
+        effect = Effects.Pipeline {
+            run(Effects.SacrificeAnyNumber(GameObjectFilter.Creature, excludeSource = true))
+            val exiled = gather(
+                CardSource.TopOfLibrary(
+                    DynamicAmounts.totalPowerSacrificedThisWay(),
+                    player = Player.You
+                )
             )
-        )
+            exile(exiled)
+            val castable = filter(exiled, GameObjectFilter.InstantOrSorcery)
+            run(Effects.CastAnyNumberFromCollectionWithoutPayingCost(castable))
+        }
         description = "Whenever Kylox attacks, sacrifice any number of other creatures, then " +
             "exile the top X cards of your library, where X is their total power. You may cast " +
             "any number of instant and/or sorcery spells from among the exiled cards without " +

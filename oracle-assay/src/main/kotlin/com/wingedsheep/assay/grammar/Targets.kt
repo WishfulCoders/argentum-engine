@@ -11,12 +11,10 @@ import com.wingedsheep.sdk.scripting.effects.IterationSpace
 import com.wingedsheep.sdk.scripting.targets.AnyTarget
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.targets.TargetCreatureOrPlaneswalker
 import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.scripting.targets.TargetOpponent
 import com.wingedsheep.sdk.scripting.targets.TargetOpponentOrPlaneswalker
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import com.wingedsheep.sdk.scripting.targets.TargetPlayer
 import com.wingedsheep.sdk.scripting.targets.TargetPlayerOrPlaneswalker
 import com.wingedsheep.sdk.scripting.targets.TargetRequirement
@@ -67,7 +65,7 @@ object Targets {
 
     /** "target creature you control and target creature an opponent controls" — one of several. */
     fun permanent(filter: GameObjectFilter, index: Int): TargetRequirement =
-        TargetPermanent(filter = TargetFilter(filter), id = slot(index))
+        TargetObject(filter = TargetFilter(filter), id = slot(index))
 
     /**
      * "target player" — the requirement half.
@@ -121,7 +119,7 @@ object Targets {
         if (filter == GameObjectFilter.CreatureOrPlaneswalker) {
             TargetCreatureOrPlaneswalker(optional = optional, id = SLOT)
         } else {
-            TargetPermanent(optional = optional, filter = TargetFilter(filter), id = SLOT)
+            TargetObject(optional = optional, filter = TargetFilter(filter), id = SLOT)
         }
 
     /**
@@ -180,7 +178,7 @@ object Targets {
      * ever hand this that filter.
      */
     fun several(count: Int, filter: GameObjectFilter, optional: Boolean): TargetRequirement =
-        TargetCreature(count = count, optional = optional, filter = TargetFilter(filter), id = SLOT)
+        TargetObject(count = count, optional = optional, filter = TargetFilter(filter), id = SLOT)
 
     /**
      * "up to X target creatures" — the count is not a number in the text but the X the spell was
@@ -227,7 +225,7 @@ object Targets {
      * forms denote one model, which is the redundant-reading class the gate holds at zero. It stays
      * declined until the SDK can tell the two requirements apart.
      */
-    fun upToX(filter: GameObjectFilter): TargetRequirement = TargetCreature(
+    fun upToX(filter: GameObjectFilter): TargetRequirement = TargetObject(
         optional = true,
         filter = TargetFilter(filter),
         id = SLOT,
@@ -244,7 +242,7 @@ object Targets {
      * built the same way before there was a table to put it in.
      */
     fun anyNumber(filter: GameObjectFilter): TargetRequirement =
-        TargetCreature(unlimited = true, filter = TargetFilter(filter), id = SLOT)
+        TargetObject(unlimited = true, filter = TargetFilter(filter), id = SLOT)
 
     /** The marker a [Quantifier.prefix] spells a count with, and the slot name the rule binds. */
     const val COUNT_SLOT = "n"

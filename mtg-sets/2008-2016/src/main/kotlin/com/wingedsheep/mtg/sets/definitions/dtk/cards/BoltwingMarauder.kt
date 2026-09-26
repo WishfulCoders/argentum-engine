@@ -6,6 +6,8 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Boltwing Marauder
@@ -16,7 +18,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Flying
  * Whenever another creature you control enters, target creature gets +2/+0 until end of turn.
  *
- * "**Another** creature you control" is the binding, not the filter: [Triggers.OtherCreatureEnters]
+ * "**Another** creature you control" is the binding, not the filter: `Triggers.another(GameObjectFilter.Creature.youControl()).enters()`
  * is `Creature.youControl()` entering the battlefield under [com.wingedsheep.sdk.scripting.TriggerBinding.OTHER],
  * so the Dragon's own arrival doesn't pump anything. The pump names its own target — "target
  * creature", any creature on the battlefield, not just yours — so the ability declares its
@@ -34,8 +36,8 @@ val BoltwingMarauder = card("Boltwing Marauder") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.OtherCreatureEnters
-        val creature = target("target creature", Targets.Creature)
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(2, 0, creature)
     }
 

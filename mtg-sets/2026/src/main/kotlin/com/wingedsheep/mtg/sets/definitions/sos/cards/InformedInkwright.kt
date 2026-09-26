@@ -30,9 +30,7 @@ val InformedInkwright = card("Informed Inkwright") {
     toughness = 2
     keywords(Keyword.VIGILANCE)
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.InstantOrSorcery.targetsMatching(GameObjectFilter.Creature)
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery.targetsMatching(GameObjectFilter.Creature))
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.rna.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Storm Strike — Ravnica Allegiance #119
@@ -20,14 +20,10 @@ val StormStrike = card("Storm Strike") {
     oracleText = "Target creature gets +1/+0 and gains first strike until end of turn. Scry 1."
 
     spell {
-        val creature = target("target", Targets.Creature)
-        effect = Effects.Composite(listOf(
-            Effects.Composite(listOf(
-                Effects.ModifyStats(1, 0, creature),
-                Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature)
-            )),
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(1, 0, creature) then
+            Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature) then
             Effects.Scry(1)
-        ))
     }
 
     metadata {

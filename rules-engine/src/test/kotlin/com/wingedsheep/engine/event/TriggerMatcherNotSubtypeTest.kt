@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.event
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ZoneChangeEvent
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
@@ -10,12 +11,11 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Regression for the gap where [TriggerMatcher.matchesCardPredicate] had no branch for
@@ -41,19 +41,12 @@ class TriggerMatcherNotSubtypeTest : FunSpec({
         spell {}
 
         triggeredAbility {
-            trigger = TriggerSpec(
-                event = EventPattern.ZoneChangeEvent(
-                    filter = GameObjectFilter(
+            trigger = Triggers.another(GameObjectFilter(
                         cardPredicates = listOf(
                             CardPredicate.IsCreature,
                             CardPredicate.NotSubtype(Subtype("Zombie")),
                         ),
-                    ),
-                    from = Zone.BATTLEFIELD,
-                    to = Zone.GRAVEYARD,
-                ),
-                binding = TriggerBinding.OTHER,
-            )
+                    )).dies()
             effect = Effects.DrawCards(1)
         }
     }
@@ -67,7 +60,7 @@ class TriggerMatcherNotSubtypeTest : FunSpec({
     }
 
     fun detectorFor(driver: GameTestDriver): TriggerDetector =
-        TriggerDetector(driver.cardRegistry)
+        TriggerDetector(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null), conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
 
     test("non-Zombie creature dying fires the non-Zombie death trigger") {
         val driver = createDriver()

@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.thb.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Chain to Memory
@@ -23,11 +23,8 @@ val ChainToMemory = card("Chain to Memory") {
     oracleText = "Target creature gets -4/-0 until end of turn. Scry 2."
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(-4, 0, t),
-            Effects.Scry(2)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(-4, 0, t) then Effects.Scry(2)
     }
 
     metadata {

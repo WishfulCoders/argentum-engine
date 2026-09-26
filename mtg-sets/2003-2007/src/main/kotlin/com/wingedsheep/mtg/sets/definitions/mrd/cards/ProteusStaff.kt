@@ -3,20 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.mrd.cards
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.CardOrder
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherUntilMatchEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Proteus Staff
@@ -53,41 +46,18 @@ val ProteusStaff = card("Proteus Staff") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{U}"), Costs.Tap)
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.PutOnBottomOfLibrary(creature),
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.PutOnBottomOfLibrary(creature) then
             Effects.ForEachPlayer(
                 Player.ControllerOf("that creature"),
-                listOf(
-                    GatherUntilMatchEffect(
-                        player = Player.You,
-                        filter = GameObjectFilter.Creature,
-                        storeMatch = "proteusIgnored",
-                        storeRevealed = "proteusRevealed"
-                    ),
-                    RevealCollectionEffect(from = "proteusRevealed"),
-                    FilterCollectionEffect(
-                        from = "proteusRevealed",
-                        filter = CollectionFilter.MatchesFilter(GameObjectFilter.Creature),
-                        storeMatching = "proteusCreature",
-                        storeNonMatching = "proteusRest"
-                    ),
-                    MoveCollectionEffect(
-                        from = "proteusCreature",
-                        destination = CardDestination.ToZone(Zone.BATTLEFIELD, Player.You)
-                    ),
-                    MoveCollectionEffect(
-                        from = "proteusRest",
-                        destination = CardDestination.ToZone(
-                            Zone.LIBRARY,
-                            Player.You,
-                            ZonePlacement.Bottom
-                        ),
-                        order = CardOrder.ControllerChooses
-                    )
-                )
+                Effects.Pipeline {
+                    val (_, proteusRevealed) = gatherUntilMatch(GameObjectFilter.Creature, player = Player.You)
+                    reveal(proteusRevealed)
+                    val (proteusCreature, proteusRest) = filterSplit(proteusRevealed, GameObjectFilter.Creature)
+                    move(proteusCreature, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You))
+                    toLibraryBottom(proteusRest)
+                }
             )
-        )
         timing = TimingRule.SorcerySpeed
     }
 

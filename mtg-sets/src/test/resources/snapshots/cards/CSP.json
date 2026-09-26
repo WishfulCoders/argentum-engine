@@ -9,7 +9,7 @@
             "type": "MoveToZone",
             "target": {
                 "type": "BoundVariable",
-                "name": "target"
+                "name": "t0"
             },
             "destination": "Graveyard",
             "byDestruction": true
@@ -20,7 +20,7 @@
                 "filter": {
                     "baseFilter": "creature green|white"
                 },
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -94,7 +94,7 @@
                     "baseFilter": "red|green",
                     "zone": "Stack"
                 },
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -143,13 +143,13 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Ronom Unicorn:1",
                 "cost": "CostSacrificeSelf",
                 "effect": {
                     "type": "MoveToZone",
                     "target": {
-                        "type": "ContextTarget",
-                        "index": 0
+                        "type": "BoundVariable",
+                        "name": "t0"
                     },
                     "destination": "Graveyard",
                     "byDestruction": true
@@ -159,7 +159,8 @@
                         "type": "TargetObject",
                         "filter": {
                             "baseFilter": "enchantment"
-                        }
+                        },
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "Sacrifice this creature: Destroy target enchantment."
@@ -190,7 +191,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Simian Brawler:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -240,7 +241,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Zur the Enchanter:1",
                 "trigger": "AttackEvent",
                 "effect": {
                     "type": "Gated",
@@ -255,7 +256,8 @@
                                     "zone": "Library",
                                     "filter": "enchantment mv<=3"
                                 },
-                                "storeAs": "searchable"
+                                "storeAs": "searchable",
+                                "search": true
                             },
                             {
                                 "type": "SelectFromCollection",

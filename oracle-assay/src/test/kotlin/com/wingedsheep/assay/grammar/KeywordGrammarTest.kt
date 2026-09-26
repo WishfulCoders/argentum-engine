@@ -14,6 +14,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 class KeywordGrammarTest : StringSpec({
 
@@ -68,7 +69,7 @@ class KeywordGrammarTest : StringSpec({
     }
 
     "parameterized keywords carry their parameter both ways" {
-        parse("Ward {2}") shouldContainExactly listOf(KeywordAbility.ward("{2}"))
+        parse("Ward {2}") shouldContainExactly listOf(KeywordAbility.Ward(WardCost.Mana("{2}")))
         roundTrips("Ward {2}")
         roundTrips("Ward—Pay 3 life.")
         roundTrips("Annihilator 2")

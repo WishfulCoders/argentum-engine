@@ -35,7 +35,7 @@ val FlameholdGrappler = card("Flamehold Grappler") {
     keywords(Keyword.FIRST_STRIKE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CopyNextSpellCast(copies = 1, spellFilter = GameObjectFilter.Any)
         description = "copy the next spell you cast this turn when you cast it. You may choose new targets for the copy."
     }

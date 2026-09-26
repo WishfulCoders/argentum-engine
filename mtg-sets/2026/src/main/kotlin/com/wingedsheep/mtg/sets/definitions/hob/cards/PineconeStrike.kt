@@ -4,10 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MarkExileOnDeathEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Pinecone Strike
@@ -36,17 +33,11 @@ val PineconeStrike = card("Pinecone Strike") {
             mode(
                 "Pinecone Strike deals 3 damage to target creature. If that creature would die this turn, exile it instead"
             ) {
-                val creature = target("target creature", TargetCreature(filter = TargetFilter.Creature))
-                effect = Effects.Composite(
-                    Effects.DealDamage(3, creature),
-                    MarkExileOnDeathEffect(creature)
-                )
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.DealDamage(3, creature) then Effects.MarkExileOnDeath(creature)
             }
             mode("Destroy target artifact token") {
-                val artifactToken = target(
-                    "target artifact token",
-                    TargetPermanent(filter = TargetFilter(GameObjectFilter.Artifact.token()))
-                )
+                val artifactToken = target(TargetFilter(GameObjectFilter.Artifact.token()))
                 effect = Effects.Destroy(artifactToken)
             }
         }

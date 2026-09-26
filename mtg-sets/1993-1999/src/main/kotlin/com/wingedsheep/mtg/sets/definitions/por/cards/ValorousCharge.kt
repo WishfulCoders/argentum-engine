@@ -27,7 +27,7 @@ val ValorousCharge = card("Valorous Charge") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withColor(Color.WHITE)),
-            Effects.ModifyStats(2, 0, EffectTarget.Self)
+            Effects.ModifyStats(2, 0, EffectTarget.IterationEntity)
         )
     }
     metadata {

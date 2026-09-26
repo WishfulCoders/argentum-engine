@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
@@ -82,7 +82,7 @@ val OviyaAutomechArtisan = card("Oviya, Automech Artisan") {
             val put = moveTracked(chosen, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You))
             // Artifact-ness is read off the permanent that just entered, not off the card in hand.
             val artifacts = filter(put, GameObjectFilter.Artifact)
-            run(Effects.AddCountersToCollection(artifacts.key, Counters.PLUS_ONE_PLUS_ONE, 2))
+            run(Effects.AddCountersToCollection(artifacts, CounterType.PLUS_ONE_PLUS_ONE, 2))
         }
         description = "{G}, {T}: You may put a creature or Vehicle card from your hand onto the " +
             "battlefield. If you put an artifact onto the battlefield this way, put two +1/+1 " +

@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Louisoix's Sacrifice — Final Fantasy #59
@@ -41,11 +40,11 @@ val LouisoixsSacrifice = card("Louisoix's Sacrifice") {
     )
 
     spell {
-        target = TargetObject(
-            filter = TargetFilter.anyOf(
+        val target = target(
+            TargetFilter.anyOf(
                 TargetFilter.ActivatedOrTriggeredAbilityOnStack,
                 TargetFilter.NoncreatureSpellOnStack,
-            )
+            ),
         )
         effect = Effects.CounterSpellOrAbility()
     }

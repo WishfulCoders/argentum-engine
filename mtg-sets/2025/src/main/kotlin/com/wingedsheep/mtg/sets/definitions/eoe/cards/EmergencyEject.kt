@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Emergency Eject
@@ -20,10 +20,8 @@ val EmergencyEject = card("Emergency Eject") {
     oracleText = "Destroy target nonland permanent. Its controller creates a Lander token. (It's an artifact with \"{2}, {T}, Sacrifice this token: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.\")"
 
     spell {
-        val target = target("target nonland permanent", Targets.NonlandPermanent)
-        effect = Effects.Destroy(target).then(
-            Effects.CreateLander(controller = EffectTarget.TargetController)
-        )
+        val target = target(TargetFilter.NonlandPermanent)
+        effect = Effects.Destroy(target) then Effects.CreateLander(controller = EffectTarget.TargetController)
     }
 
     metadata {

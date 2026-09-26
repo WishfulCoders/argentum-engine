@@ -1,9 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ControlEnchantedPermanent
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * In Bolas's Clutches
@@ -22,7 +23,7 @@ val InBolassClutches = card("In Bolas's Clutches") {
     typeLine = "Legendary Enchantment — Aura"
     oracleText = "Enchant permanent\nYou control enchanted permanent.\nEnchanted permanent is legendary."
 
-    auraTarget = Targets.Permanent
+    auraTarget = TargetObject(filter = TargetFilter.Permanent)
 
     staticAbility {
         ability = ControlEnchantedPermanent

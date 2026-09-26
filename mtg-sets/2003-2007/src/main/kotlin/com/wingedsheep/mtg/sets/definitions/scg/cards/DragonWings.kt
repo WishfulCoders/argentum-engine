@@ -4,16 +4,14 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.effects.MayEffect
+import com.wingedsheep.sdk.dsl.Triggers
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Dragon Wings
@@ -31,7 +29,7 @@ val DragonWings = card("Dragon Wings") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature\nEnchanted creature has flying.\nCycling {1}{U}\nWhen a creature with mana value 6 or greater enters, you may return Dragon Wings from your graveyard to the battlefield attached to that creature."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = GrantKeyword(Keyword.FLYING, GroupFilter.attachedCreature())
@@ -40,15 +38,9 @@ val DragonWings = card("Dragon Wings") {
     keywordAbility(KeywordAbility.cycling("{1}{U}"))
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Creature.manaValueAtLeast(6),
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.manaValueAtLeast(6)).enters()
         triggerZone = Zone.GRAVEYARD
-        effect = MayEffect(
+        effect = Effects.May(
             effect = Effects.ReturnSelfToBattlefieldAttached(),
             descriptionOverride = "Attach Dragon Wings to this creature?",
             sourceRequiredZone = Zone.GRAVEYARD,

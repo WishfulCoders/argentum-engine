@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.tsp.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Squall Line
@@ -27,16 +27,14 @@ val SquallLine = card("Squall Line") {
     oracleText = "Squall Line deals X damage to each creature with flying and each player."
 
     spell {
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(
-                GroupFilter.AllCreatures.withKeyword(Keyword.FLYING),
-                Effects.DealDamage(DynamicAmount.XValue, EffectTarget.Self)
-            ),
+        effect = Effects.ForEachInGroup(
+            GroupFilter.AllCreatures.withKeyword(Keyword.FLYING),
+            Effects.DealDamage(DynamicAmounts.xValue(), EffectTarget.IterationEntity)
+        ) then
             Effects.ForEachPlayer(
                 Player.Each,
-                listOf(Effects.DealDamage(DynamicAmount.XValue, EffectTarget.Controller))
+                listOf(Effects.DealDamage(DynamicAmounts.xValue(), EffectTarget.Controller))
             )
-        )
     }
 
     metadata {

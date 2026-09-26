@@ -31,10 +31,7 @@ val DwarvenSoldier = card("Dwarven Soldier") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.BlocksOrBecomesBlockedBy(
-            GameObjectFilter.Creature.withSubtype(Subtype.ORC),
-            oncePerCombat = true,
-        )
+        trigger = Triggers.self.blocksOrBecomesBlocked(GameObjectFilter.Creature.withSubtype(Subtype.ORC), oncePerCombat = true)
         effect = Effects.ModifyStats(0, 2, EffectTarget.Self)
         description = "Whenever this creature blocks or becomes blocked by one or more Orcs, this creature gets +0/+2 until end of turn."
     }

@@ -27,7 +27,7 @@ val AirNomadLegacy = card("Air Nomad Legacy") {
         "Creatures you control with flying get +1/+1."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateClue()
     }
 

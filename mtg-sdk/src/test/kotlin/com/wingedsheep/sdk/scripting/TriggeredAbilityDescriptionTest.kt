@@ -1,6 +1,7 @@
 package com.wingedsheep.sdk.scripting
 
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.AbilityId
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldEndWith
@@ -12,6 +13,7 @@ class TriggeredAbilityDescriptionTest : DescribeSpec({
 
         it("appends the printed rider when effectOncePerTurn is set and no override is given") {
             val ability = TriggeredAbility.create(
+                id = AbilityId("TriggeredAbilityDescriptionTest_1"),
                 trigger = EventPattern.LifeGainEvent(),
                 effect = Effects.GainLife(2),
                 effectOncePerTurn = true,
@@ -21,6 +23,7 @@ class TriggeredAbilityDescriptionTest : DescribeSpec({
 
         it("does not append it for the trigger cap (oncePerTurn), which prints different text") {
             val ability = TriggeredAbility.create(
+                id = AbilityId("TriggeredAbilityDescriptionTest_2"),
                 trigger = EventPattern.LifeGainEvent(),
                 effect = Effects.GainLife(2),
                 oncePerTurn = true,
@@ -30,6 +33,7 @@ class TriggeredAbilityDescriptionTest : DescribeSpec({
 
         it("lets descriptionOverride win, as both shipped cards rely on") {
             val ability = TriggeredAbility.create(
+                id = AbilityId("TriggeredAbilityDescriptionTest_3"),
                 trigger = EventPattern.LifeGainEvent(),
                 effect = Effects.GainLife(2),
                 effectOncePerTurn = true,

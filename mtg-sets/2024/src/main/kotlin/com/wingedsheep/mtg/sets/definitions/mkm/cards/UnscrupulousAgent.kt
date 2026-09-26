@@ -26,8 +26,8 @@ val UnscrupulousAgent = card("Unscrupulous Agent") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val opponent = target("target opponent", Targets.Opponent)
+        trigger = Triggers.self.enters()
+        val opponent = target(Targets.Opponent)
         effect = Patterns.Hand.exileFromHand(1, opponent)
     }
 

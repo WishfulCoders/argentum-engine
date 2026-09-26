@@ -25,7 +25,7 @@ import com.wingedsheep.sdk.scripting.TriggeredAbility
  * means any Clue artifact, not just a Clue artifact token").
  *
  * The attack trigger is granted to the equipped creature via [GrantTriggeredAbility] with
- * [Triggers.Attacks] (SELF binding), so it fires on that creature's attack rather than on any
+ * `Triggers.self.attacks()` (SELF binding), so it fires on that creature's attack rather than on any
  * attack — and it surveils for the *creature's* controller, which is what matters when the
  * Equipment's controller and the equipped creature's controller have diverged. Unequipping
  * before the trigger resolves doesn't fizzle it: the granted ability has already triggered and
@@ -47,8 +47,7 @@ val Candlestick = card("Candlestick") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.Attacks.event,
-                binding = Triggers.Attacks.binding,
+                trigger = Triggers.self.attacks(),
                 effect = Patterns.Library.surveil(2)
             ),
             filter = Filters.EquippedCreature

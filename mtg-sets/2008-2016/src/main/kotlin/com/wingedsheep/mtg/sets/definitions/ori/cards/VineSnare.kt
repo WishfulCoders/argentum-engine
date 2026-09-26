@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
 /**
  * Vine Snare
@@ -14,7 +13,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  * Prevent all combat damage that would be dealt this turn by creatures with power 4 or less.
  *
  * A source-side shield: [Effects.PreventCombatDamageFrom] installs the prevention keyed on the
- * damage *source* group, so it catches every qualifying creature on both sides of combat rather
+ * damage *source* filter, so it catches every qualifying creature on both sides of combat rather
  * than protecting one recipient.
  */
 val VineSnare = card("Vine Snare") {
@@ -24,9 +23,7 @@ val VineSnare = card("Vine Snare") {
     oracleText = "Prevent all combat damage that would be dealt this turn by creatures with power 4 or less."
 
     spell {
-        effect = Effects.PreventCombatDamageFrom(
-            GroupFilter(GameObjectFilter.Creature.powerAtMost(4))
-        )
+        effect = Effects.PreventCombatDamageFrom(GameObjectFilter.Creature.powerAtMost(4))
     }
 
     metadata {

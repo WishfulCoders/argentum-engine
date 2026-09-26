@@ -5,11 +5,8 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Eerie Interlude
@@ -29,23 +26,14 @@ val EerieInterlude = card("Eerie Interlude") {
             "under their owner's control at the beginning of the next end step."
 
     spell {
-        target(
-            "any number of target creatures you control",
-            TargetCreature(
-                unlimited = true,
-                optional = true,
-                filter = TargetFilter.Creature.youControl(),
-            ),
-        )
-        effect = ForEachTargetEffect(
-            effects = listOf(
-                Effects.Move(EffectTarget.ContextTarget(0), Zone.EXILE),
-                CreateDelayedTriggerEffect(
-                    step = Step.END,
-                    effect = Effects.Move(
-                        target = EffectTarget.ContextTarget(0),
-                        destination = Zone.BATTLEFIELD,
-                    ),
+        targets(TargetFilter.Creature.youControl(), optional = true, unlimited = true)
+        effect = Effects.ForEachTarget(
+            Effects.Move(EffectTarget.ContextTarget(0), Zone.EXILE),
+            Effects.CreateDelayedTrigger(
+                step = Step.END,
+                effect = Effects.Move(
+                    target = EffectTarget.ContextTarget(0),
+                    destination = Zone.BATTLEFIELD,
                 ),
             ),
         )

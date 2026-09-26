@@ -26,22 +26,18 @@ val HeroicReinforcements = card("Heroic Reinforcements") {
     typeLine = "Sorcery"
     oracleText = "Create two 1/1 white Soldier creature tokens. Until end of turn, creatures you control get +1/+1 and gain haste. (They can attack and {T} this turn.)"
     spell {
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                power = 1,
-                toughness = 1,
-                colors = setOf(Color.WHITE),
-                creatureTypes = setOf("Soldier"),
-                count = 2
-            ),
+        effect = Effects.CreateToken(
+            power = 1,
+            toughness = 1,
+            colors = setOf(Color.WHITE),
+            creatureTypes = setOf("Soldier"),
+            count = 2
+        ) then
             Effects.ForEachInGroup(
                 GroupFilter(GameObjectFilter.Creature.youControl()),
-                Effects.Composite(
-                    Effects.ModifyStats(1, 1, EffectTarget.Self),
-                    Effects.GrantKeyword(Keyword.HASTE, EffectTarget.Self)
-                )
+                Effects.ModifyStats(1, 1, EffectTarget.IterationEntity) then
+                    Effects.GrantKeyword(Keyword.HASTE, EffectTarget.IterationEntity)
             )
-        )
     }
     metadata {
         rarity = Rarity.UNCOMMON

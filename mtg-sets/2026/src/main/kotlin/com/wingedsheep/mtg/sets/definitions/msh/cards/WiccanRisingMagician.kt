@@ -8,9 +8,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Wiccan, Rising Magician
@@ -46,20 +44,13 @@ val WiccanRisingMagician = card("Wiccan, Rising Magician") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
-        val permanent = target(
-            "another target nonland, nontoken permanent",
-            TargetPermanent(
-                filter = TargetFilter(GameObjectFilter.NonlandPermanent.nontoken()).other(),
-            ),
-        )
-        effect = Effects.Composite(
-            Effects.Move(permanent, Zone.EXILE),
-            CreateDelayedTriggerEffect(
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
+        val permanent = target(TargetFilter(GameObjectFilter.NonlandPermanent.nontoken()).other())
+        effect = Effects.Move(permanent, Zone.EXILE) then
+            Effects.CreateDelayedTrigger(
                 step = Step.END,
                 effect = Effects.Move(permanent, Zone.BATTLEFIELD),
-            ),
-        )
+            )
         description = "Whenever you cast a noncreature spell, exile another target nonland, " +
             "nontoken permanent. Return that card to the battlefield under its owner's control " +
             "at the beginning of the next end step."

@@ -10,7 +10,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -29,7 +29,7 @@ val SadisticHypnotist = card("Sadistic Hypnotist") {
     toughness = 2
     activatedAbility {
         cost = Costs.Sacrifice(GameObjectFilter.Creature)
-        val t = target("target", TargetPlayer())
+        val t = target(Targets.Player)
         effect = Patterns.Hand.discardCards(2, t)
         timing = TimingRule.SorcerySpeed
     }

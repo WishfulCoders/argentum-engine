@@ -7,12 +7,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.Exists
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.dsl.Effects
 
@@ -34,44 +28,25 @@ val SeeTheUnwritten = card("See the Unwritten") {
     spell {
         val ferocious = Exists(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature.powerAtLeast(4))
 
-        fun selectAndMove(count: Int) = Effects.Composite(
-            listOf(
-                SelectFromCollectionEffect(
-                    from = "revealed",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(count)),
+        effect = Effects.Pipeline {
+            val revealed = gather(CardSource.TopOfLibrary(8), revealed = true)
+
+            fun selectAndMove(count: Int) = Effects.Pipeline {
+                val (selected, rest) = chooseUpToSplit(
+                    count,
+                    from = revealed,
                     filter = GameObjectFilter.Creature,
-                    storeSelected = "selected",
-                    storeRemainder = "rest",
                     prompt = "Choose creature card${if (count > 1) "s" else ""} to put onto the battlefield",
                     selectedLabel = "Put onto the battlefield",
                     remainderLabel = "Put into your graveyard",
                     showAllCards = true
-                ),
-                MoveCollectionEffect(
-                    from = "selected",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD)
-                ),
-                MoveCollectionEffect(
-                    from = "rest",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD)
                 )
-            )
-        )
+                move(selected, CardDestination.ToZone(Zone.BATTLEFIELD))
+                toGraveyard(rest)
+            }
 
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(8)),
-                    storeAs = "revealed",
-                    revealed = true
-                ),
-                ConditionalEffect(
-                    condition = ferocious,
-                    effect = selectAndMove(2),
-                    elseEffect = selectAndMove(1)
-                )
-            )
-        )
+            run(Effects.If(condition = ferocious, then = selectAndMove(2), otherwise = selectAndMove(1)))
+        }
     }
 
     metadata {

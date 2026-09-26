@@ -1,6 +1,7 @@
 package com.wingedsheep.engine.core
 
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
@@ -469,7 +470,7 @@ data class PayLifeOrEnterTappedSpellContinuation(
  * @property spellId The spell entity being resolved
  * @property controllerId The player who cast the spell
  * @property ownerId The card's owner
- * @property counterType Counter type description (e.g., "+1/+1")
+ * @property counterType The kind of counter to place
  * @property countersPerReveal Number of counters per revealed card
  */
 @Serializable
@@ -477,7 +478,7 @@ data class RevealCountersContinuation(
     val spellId: EntityId,
     val controllerId: EntityId,
     val ownerId: EntityId,
-    val counterType: String,
+    val counterType: CounterType,
     val countersPerReveal: Int
 ) : AnswerContinuation
 
@@ -487,7 +488,7 @@ data class ExileCountersContinuation(
     val spellId: EntityId,
     val controllerId: EntityId,
     val ownerId: EntityId,
-    val counterType: String,
+    val counterType: CounterType,
     val countersPerCard: Int
 ) : AnswerContinuation
 
@@ -504,7 +505,7 @@ data class ExileCountersContinuation(
  * @property controllerId The player who cast the spell
  * @property ownerId The card's owner
  * @property multiplier Counters placed per sacrificed permanent
- * @property counterType Serialized counter type (string form of [com.wingedsheep.sdk.scripting.events.CounterTypeFilter])
+ * @property counterType The kind of counter devour places
  */
 @Serializable
 data class DevourEntersContinuation(
@@ -512,7 +513,7 @@ data class DevourEntersContinuation(
     val controllerId: EntityId,
     val ownerId: EntityId,
     val multiplier: Int,
-    val counterType: String
+    val counterType: CounterType
 ) : AnswerContinuation
 
 /**
@@ -530,14 +531,14 @@ data class DevourEntersContinuation(
  * @property cardDefinitionId Name of the definition the token will copy
  * @property controllerId The player creating (and controlling) the token
  * @property multiplier Counters placed per sacrificed permanent
- * @property counterType Serialized counter type (string form of [com.wingedsheep.sdk.scripting.events.CounterTypeFilter])
+ * @property counterType The kind of counter devour places
  */
 @Serializable
 data class DevourMintedTokenContinuation(
     val cardDefinitionId: String,
     val controllerId: EntityId,
     val multiplier: Int,
-    val counterType: String
+    val counterType: CounterType
 ) : AnswerContinuation
 
 /**

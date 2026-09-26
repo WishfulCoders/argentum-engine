@@ -7,9 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
 
 /**
  * Brigid's Command
@@ -35,14 +32,11 @@ val BrigidsCommand = card("Brigid's Command") {
     spell {
         modal(chooseCount = 2) {
             mode("Create a token that's a copy of target Kithkin you control") {
-                val kithkin = target(
-                    "target Kithkin you control",
-                    TargetObject(filter = TargetFilter(GameObjectFilter.Creature.youControl().withSubtype("Kithkin")))
-                )
+                val kithkin = target(TargetFilter(GameObjectFilter.Creature.youControl().withSubtype("Kithkin")))
                 effect = Effects.CreateTokenCopyOfTarget(kithkin)
             }
             mode("Target player creates a 1/1 green and white Kithkin creature token") {
-                val player = target("target player", TargetPlayer())
+                val player = target(Targets.Player)
                 effect = Effects.CreateToken(
                     power = 1,
                     toughness = 1,
@@ -53,12 +47,12 @@ val BrigidsCommand = card("Brigid's Command") {
                 )
             }
             mode("Target creature you control gets +3/+3 until end of turn") {
-                val creature = target("target creature you control", Targets.CreatureYouControl)
+                val creature = target(TargetFilter.CreatureYouControl)
                 effect = Effects.ModifyStats(3, 3, creature)
             }
             mode("Target creature you control fights target creature an opponent controls") {
-                val yourCreature = target("target creature you control", Targets.CreatureYouControl)
-                val theirCreature = target("target creature an opponent controls", Targets.CreatureOpponentControls)
+                val yourCreature = target(TargetFilter.CreatureYouControl)
+                val theirCreature = target(TargetFilter.CreatureOpponentControls)
                 effect = Effects.Fight(yourCreature, theirCreature)
             }
         }

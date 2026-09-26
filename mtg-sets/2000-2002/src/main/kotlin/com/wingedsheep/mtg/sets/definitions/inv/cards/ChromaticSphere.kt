@@ -26,10 +26,7 @@ val ChromaticSphere = card("Chromatic Sphere") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap, Costs.SacrificeSelf)
-        effect = Effects.Composite(
-            Effects.AddAnyColorMana(1),
-            Effects.DrawCards(1),
-        )
+        effect = Effects.AddAnyColorMana(1) then Effects.DrawCards(1)
     }
 
     metadata {

@@ -14,7 +14,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
 import com.wingedsheep.sdk.scripting.effects.Effect
 import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
@@ -433,7 +432,7 @@ object TopOfLibrary {
      */
     private fun partition(steps: List<Effect>): GameObjectFilter? =
         steps.filterIsInstance<FilterCollectionEffect>().singleOrNull()
-            ?.let { (it.filter as? CollectionFilter.MatchesFilter)?.filter }
+            ?.takeIf { it.collectionFilter == null }?.filter
 
     // ---------------------------------------------------------------------------------------
     // The sentences

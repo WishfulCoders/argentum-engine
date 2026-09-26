@@ -33,7 +33,7 @@ val FireBowman = card("Fire Bowman") {
             ActivationRestriction.OnlyDuringYourTurn,
             ActivationRestriction.BeforeStep(Step.DECLARE_ATTACKERS)
         )
-        val victim = target("target", Targets.Any)
+        val victim = target(Targets.Any)
         effect = Effects.DealDamage(1, victim)
     }
 

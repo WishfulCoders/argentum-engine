@@ -10,10 +10,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.SelectTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
@@ -26,7 +23,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  * Implementation notes:
  * - The +1/+0 buff is a [ModifyStats] static scoped to [Filters.EquippedCreature].
  * - The quoted attack ability is granted to the equipped creature via [GrantTriggeredAbility]
- *   + [Triggers.attacks] (SELF binding, the Pirate Hat / Dire Blunderbuss idiom), so it lives
+ *   + `Triggers.<subject>.attacks(requires)` (SELF binding, the Pirate Hat / Dire Blunderbuss idiom), so it lives
  *   on the creature and fires when that creature attacks. The body is a [ReflexiveTriggerEffect]:
  *   the optional action sacrifices Sunfire Torch; only "when you do" puts the reflexive part on
  *   the stack to choose any target and deal 2 damage. The damage source defaults to the granted
@@ -57,25 +54,24 @@ val SunfireTorch = card("Sunfire Torch") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.attacks().event,
-                binding = Triggers.attacks().binding,
-                effect = ReflexiveTriggerEffect(
-                    action = Effects.Composite(listOf(
-                        SelectTargetEffect(
-                            requirement = TargetObject(
+                trigger = Triggers.self.attacks(),
+                effect = Effects.ReflexiveTrigger(
+                    action = Effects.Pipeline {
+                        val toSacrifice = selectTarget(
+                            TargetObject(
                                 filter = TargetFilter(
                                     GameObjectFilter.Artifact.named("Sunfire Torch").attachedToSource()
                                 )
-                            ),
-                            storeAs = "toSacrifice"
-                        ),
-                        Effects.SacrificeTarget(EffectTarget.PipelineTarget("toSacrifice"))
-                    )),
+                            )
+                        )
+                        run(Effects.SacrificeTarget(toSacrifice.asTarget))
+                    },
                     optional = true,
-                    reflexiveEffect = Effects.DealDamage(2, EffectTarget.ContextTarget(0)),
-                    reflexiveTargetRequirements = listOf(Targets.Any),
                     descriptionOverride = "You may sacrifice Sunfire Torch. When you do, this creature deals 2 damage to any target."
-                )
+                ) {
+                    val anyTarget = target(Targets.Any)
+                    effect = Effects.DealDamage(2, anyTarget)
+                }
             ),
             filter = Filters.EquippedCreature
         )

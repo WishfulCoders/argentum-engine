@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.scripting.effects.TurnFaceDownEffect
 import com.wingedsheep.sdk.scripting.effects.TurnFaceUpEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Clauses that turn a permanent over — the payoff half of morph.
@@ -53,7 +53,7 @@ object Morph {
     private val turnTargetFaceDown: Phrase<CardScript> = run {
         val script = CardScript(
             spellEffect = TurnFaceDownEffect(Targets.bound()),
-            targetRequirements = listOf(TargetPermanent(filter = TargetFilter(morphFilter), id = Targets.SLOT)),
+            targetRequirements = listOf(TargetObject(filter = TargetFilter(morphFilter), id = Targets.SLOT)),
         )
         phrase("turn target creature with a morph ability face down", name = "turn a target face down") {
             build { script }
@@ -74,7 +74,7 @@ object Morph {
         val script = CardScript(
             spellEffect = ForEachTargetEffect(listOf(TurnFaceDownEffect(EffectTarget.ContextTarget(0)))),
             targetRequirements = listOf(
-                TargetPermanent(
+                TargetObject(
                     unlimited = true,
                     filter = TargetFilter(morphFilter).other(),
                     id = Targets.SLOT,
@@ -102,9 +102,7 @@ object Morph {
      */
     private val turnTargetFaceUpAndSacrifice: Phrase<CardScript> = run {
         fun scriptFor(filter: GameObjectFilter) = CardScript(
-            spellEffect = TurnFaceUpEffect(Targets.bound()).then(
-                CreateDelayedTriggerEffect(step = Step.END, effect = SacrificeTargetEffect(Targets.bound()))
-            ),
+            spellEffect = TurnFaceUpEffect(Targets.bound()) then CreateDelayedTriggerEffect(step = Step.END, effect = SacrificeTargetEffect(Targets.bound())),
             targetRequirements = listOf(Targets.permanent(filter)),
         )
         phrase(

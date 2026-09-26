@@ -29,7 +29,7 @@ val HairStrungKoto = card("Hair-Strung Koto") {
 
     activatedAbility {
         cost = Costs.TapPermanents(count = 1, filter = GameObjectFilter.Creature)
-        val player = target("target", Targets.Player)
+        val player = target(Targets.Player)
         effect = Patterns.Library.mill(1, player)
     }
 

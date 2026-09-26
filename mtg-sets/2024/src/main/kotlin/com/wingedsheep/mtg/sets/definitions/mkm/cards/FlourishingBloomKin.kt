@@ -8,19 +8,13 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.EmitLibrarySearchedEventEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Flourishing Bloom-Kin — Murders at Karlov Manor #160
@@ -31,7 +25,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * When this creature is turned face up, search your library for up to two Forest cards and reveal
  * them. Put one of them onto the battlefield tapped and the other into your hand, then shuffle.
  *
- * A printed 0/0 that stays alive only because of its own static ([GrantDynamicStatsEffect] over
+ * A printed 0/0 that stays alive only because of its own static ([GrantDynamicStats] over
  * [GroupFilter.source]) — it is a continuous effect recomputed in the projection, so playing or
  * losing a Forest resizes it immediately and the state-based-action check kills it the moment you
  * control none. Cast face down for {3} it is a plain 2/2 with ward {2} instead: a face-down permanent
@@ -49,7 +43,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * the option to route the single card to your hand instead.
  *
  * Unlike [BubbleSmuggler]'s `disguiseFaceUpEffect`, this is a genuine **triggered** ability
- * ([Triggers.TurnedFaceUp], as on [EssenceOfAntiquity]): "When … is turned face up" uses the stack,
+ * (`Triggers.self.turnedFaceUp()`, as on [EssenceOfAntiquity]): "When … is turned face up" uses the stack,
  * so the flip resolves first and opponents do get a window before the search happens.
  */
 val FlourishingBloomKin = card("Flourishing Bloom-Kin") {
@@ -67,7 +61,7 @@ val FlourishingBloomKin = card("Flourishing Bloom-Kin") {
     toughness = 0
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
             powerBonus = DynamicAmounts.battlefield(
                 Player.You,
@@ -83,46 +77,33 @@ val FlourishingBloomKin = card("Flourishing Bloom-Kin") {
     disguise = "{4}{G}"
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        Zone.LIBRARY,
-                        Player.You,
-                        GameObjectFilter.Land.withSubtype(Subtype.FOREST)
-                    ),
-                    storeAs = "searchable"
+        trigger = Triggers.self.turnedFaceUp()
+        effect = Effects.Pipeline {
+            val searchable = gather(
+                CardSource.FromZone(
+                    Zone.LIBRARY,
+                    Player.You,
+                    GameObjectFilter.Land.withSubtype(Subtype.FOREST)
                 ),
-                SelectFromCollectionEffect(
-                    from = "searchable",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(2)),
-                    storeSelected = "found",
-                    prompt = "Search your library for up to two Forest cards"
-                ),
-                SelectFromCollectionEffect(
-                    from = "found",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                    storeSelected = "toBattlefield",
-                    storeRemainder = "toHand",
-                    selectedLabel = "Onto the battlefield tapped",
-                    remainderLabel = "Into your hand",
-                    prompt = "Choose which Forest enters the battlefield tapped; the other goes to your hand."
-                ),
-                MoveCollectionEffect(
-                    from = "toBattlefield",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped),
-                    revealed = true
-                ),
-                MoveCollectionEffect(
-                    from = "toHand",
-                    destination = CardDestination.ToZone(Zone.HAND),
-                    revealed = true
-                ),
-                ShuffleLibraryEffect(),
-                EmitLibrarySearchedEventEffect
+                search = true
             )
-        )
+            val found = chooseUpTo(2, from = searchable, prompt = "Search your library for up to two Forest cards")
+            val (toBattlefield, toHandCards) = chooseExactlySplit(
+                1,
+                from = found,
+                selectedLabel = "Onto the battlefield tapped",
+                remainderLabel = "Into your hand",
+                prompt = "Choose which Forest enters the battlefield tapped; the other goes to your hand."
+            )
+            move(
+                toBattlefield,
+                CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped),
+                revealed = true
+            )
+            toHand(toHandCards, revealed = true)
+            run(Effects.ShuffleLibrary())
+            run(EmitLibrarySearchedEventEffect)
+        }
         description = "When this creature is turned face up, search your library for up to two " +
             "Forest cards and reveal them. Put one of them onto the battlefield tapped and the " +
             "other into your hand, then shuffle."

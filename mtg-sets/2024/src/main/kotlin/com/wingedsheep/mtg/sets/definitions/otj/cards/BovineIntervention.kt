@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Bovine Intervention
@@ -24,20 +24,16 @@ val BovineIntervention = card("Bovine Intervention") {
     oracleText = "Destroy target artifact or creature. Its controller creates a 2/2 white Ox creature token."
 
     spell {
-        val permanent = target("permanent", Targets.CreatureOrArtifact)
-        effect = Effects.Composite(
-            listOf(
-                Effects.Destroy(permanent),
-                Effects.CreateToken(
-                    power = 2,
-                    toughness = 2,
-                    colors = setOf(Color.WHITE),
-                    creatureTypes = setOf("Ox"),
-                    controller = EffectTarget.TargetController,
-                    imageUri = "https://cards.scryfall.io/normal/front/c/e/cee3ecef-4566-4164-af39-89cb0bbbffeb.jpg?1712316060"
-                )
+        val permanent = target(TargetFilter.CreatureOrArtifact)
+        effect = Effects.Destroy(permanent) then
+            Effects.CreateToken(
+                power = 2,
+                toughness = 2,
+                colors = setOf(Color.WHITE),
+                creatureTypes = setOf("Ox"),
+                controller = EffectTarget.TargetController,
+                imageUri = "https://cards.scryfall.io/normal/front/c/e/cee3ecef-4566-4164-af39-89cb0bbbffeb.jpg?1712316060"
             )
-        )
     }
 
     metadata {

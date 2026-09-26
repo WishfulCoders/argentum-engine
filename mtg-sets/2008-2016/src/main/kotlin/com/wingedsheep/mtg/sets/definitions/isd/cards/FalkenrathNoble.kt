@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Falkenrath Noble
@@ -28,12 +29,9 @@ val FalkenrathNoble = card("Falkenrath Noble") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.AnyCreatureDies
-        val player = target("target player", Targets.Player)
-        effect = Effects.Composite(
-            Effects.LoseLife(1, player),
-            Effects.GainLife(1, EffectTarget.Controller),
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature).dies()
+        val player = target(Targets.Player)
+        effect = Effects.LoseLife(1, player) then Effects.GainLife(1, EffectTarget.Controller)
     }
 
     metadata {

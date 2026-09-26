@@ -4,13 +4,10 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.DealsDamageEvent
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Hypnotic Specter
@@ -30,13 +27,7 @@ val HypnoticSpecter = card("Hypnotic Specter") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = DealsDamageEvent(
-                damageType = DamageType.Any,
-                recipient = RecipientFilter.Opponent
-            ),
-            binding = TriggerBinding.SELF
-        )
+        trigger = Triggers.self.dealsDamage(Recipient.Opponent)
         effect = Patterns.Hand.discardRandom(1, EffectTarget.PlayerRef(Player.TriggeringPlayer))
     }
 

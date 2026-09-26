@@ -2,13 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.spm.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Secret Identity
@@ -39,59 +37,53 @@ val SecretIdentity = card("Secret Identity") {
         "and toughness 3/4 and gains flying and vigilance."
 
     spell {
-        effect = ModalEffect(
+        effect = Effects.Modal(
             modes = listOf(
-                Mode.withTarget(
-                    effect = Effects.Composite(
-                        Effects.SetCreatureSubtypes(
-                            subtypes = setOf("Citizen"),
-                            target = EffectTarget.ContextTarget(0),
-                            duration = Duration.EndOfTurn
-                        ),
+                mode("Conceal — Until end of turn, target creature you control " +
+                    "becomes a Citizen with base power and toughness 1/1 and gains hexproof.") {
+                    val creatureYouControl = target(TargetFilter.CreatureYouControl)
+                    effect = Effects.SetCreatureSubtypes(
+                        subtypes = setOf("Citizen"),
+                        target = creatureYouControl,
+                        duration = Duration.EndOfTurn
+                    ) then
                         Effects.SetBasePowerAndToughness(
                             power = 1,
                             toughness = 1,
-                            target = EffectTarget.ContextTarget(0),
+                            target = creatureYouControl,
                             duration = Duration.EndOfTurn
-                        ),
+                        ) then
                         Effects.GrantKeyword(
                             keyword = Keyword.HEXPROOF,
-                            target = EffectTarget.ContextTarget(0),
+                            target = creatureYouControl,
                             duration = Duration.EndOfTurn
                         )
-                    ),
-                    target = Targets.CreatureYouControl,
-                    description = "Conceal — Until end of turn, target creature you control " +
-                        "becomes a Citizen with base power and toughness 1/1 and gains hexproof."
-                ),
-                Mode.withTarget(
-                    effect = Effects.Composite(
-                        Effects.SetCreatureSubtypes(
-                            subtypes = setOf("Hero"),
-                            target = EffectTarget.ContextTarget(0),
-                            duration = Duration.EndOfTurn
-                        ),
+                },
+                mode("Reveal — Until end of turn, target creature you control becomes " +
+                    "a Hero with base power and toughness 3/4 and gains flying and vigilance.") {
+                    val creatureYouControl = target(TargetFilter.CreatureYouControl)
+                    effect = Effects.SetCreatureSubtypes(
+                        subtypes = setOf("Hero"),
+                        target = creatureYouControl,
+                        duration = Duration.EndOfTurn
+                    ) then
                         Effects.SetBasePowerAndToughness(
                             power = 3,
                             toughness = 4,
-                            target = EffectTarget.ContextTarget(0),
+                            target = creatureYouControl,
                             duration = Duration.EndOfTurn
-                        ),
+                        ) then
                         Effects.GrantKeyword(
                             keyword = Keyword.FLYING,
-                            target = EffectTarget.ContextTarget(0),
+                            target = creatureYouControl,
                             duration = Duration.EndOfTurn
-                        ),
+                        ) then
                         Effects.GrantKeyword(
                             keyword = Keyword.VIGILANCE,
-                            target = EffectTarget.ContextTarget(0),
+                            target = creatureYouControl,
                             duration = Duration.EndOfTurn
                         )
-                    ),
-                    target = Targets.CreatureYouControl,
-                    description = "Reveal — Until end of turn, target creature you control becomes " +
-                        "a Hero with base power and toughness 3/4 and gains flying and vigilance."
-                )
+                }
             ),
             chooseCount = 1,
             minChooseCount = 1

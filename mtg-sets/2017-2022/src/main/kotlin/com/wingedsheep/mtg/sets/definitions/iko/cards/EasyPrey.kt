@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Easy Prey
@@ -26,7 +25,7 @@ val EasyPrey = card("Easy Prey") {
         "Cycling {2} ({2}, Discard this card: Draw a card.)"
 
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.manaValueAtMost(2)))
+        val t = target(TargetFilter.Creature.manaValueAtMost(2))
         effect = Effects.Destroy(t)
     }
 

@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Death in the Family
@@ -20,10 +19,7 @@ val DeathInTheFamily = card("Death in the Family") {
     oracleText = "Exile target creature with mana value 3 or less."
 
     spell {
-        val creature = target(
-            "creature with mana value 3 or less",
-            TargetObject(filter = TargetFilter.Creature.manaValueAtMost(3))
-        )
+        val creature = target(TargetFilter.Creature.manaValueAtMost(3))
         effect = Effects.Exile(creature)
     }
 

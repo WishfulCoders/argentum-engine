@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Groundskeeper
@@ -27,15 +26,7 @@ val Groundskeeper = card("Groundskeeper") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{G}")
-        val t = target(
-            "target basic land card",
-            TargetObject(
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter.BasicLand.ownedByYou(),
-                    zone = Zone.GRAVEYARD
-                )
-            )
-        )
+        val t = target(TargetFilter(baseFilter = GameObjectFilter.BasicLand.ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.ReturnToHand(t)
         description = "{1}{G}: Return target basic land card from your graveyard to your hand."
     }

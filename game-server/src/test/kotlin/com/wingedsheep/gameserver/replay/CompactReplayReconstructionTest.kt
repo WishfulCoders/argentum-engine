@@ -85,7 +85,7 @@ class CompactReplayReconstructionTest : ScenarioTestBase() {
 
             // The player-visible spectator projection (what the replay viewer actually shows) is
             // identical — it carries no decision id, so it matches exactly.
-            val builder = SpectatorStateBuilder(cardRegistry, ClientStateTransformer(cardRegistry))
+            val builder = SpectatorStateBuilder(cardRegistry, ClientStateTransformer(cardRegistry, predicateEvaluator = services.predicateEvaluator))
             val seats = setup.players.map { SpectatorSeat(EntityId.of(it.playerId), it.name) }
             builder.buildState(reconFinal, seats, setup.seatRoster, session.sessionId) shouldBe
                 builder.buildState(liveFinal, seats, setup.seatRoster, session.sessionId)

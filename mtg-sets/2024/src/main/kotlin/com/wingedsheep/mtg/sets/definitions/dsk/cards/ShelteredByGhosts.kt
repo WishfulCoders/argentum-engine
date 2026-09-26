@@ -2,7 +2,6 @@ package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -11,7 +10,7 @@ import com.wingedsheep.sdk.scripting.GrantWard
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.effects.WardCost
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Sheltered by Ghosts
@@ -28,19 +27,16 @@ val ShelteredByGhosts = card("Sheltered by Ghosts") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature you control\nWhen this Aura enters, exile target nonland permanent an opponent controls until this Aura leaves the battlefield.\nEnchanted creature gets +1/+0 and has lifelink and ward {2}."
 
-    auraTarget = Targets.CreatureYouControl
+    auraTarget = TargetObject(filter = TargetFilter.CreatureYouControl)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val permanent = target(
-            "nonland permanent an opponent controls",
-            TargetPermanent(filter = TargetFilter.NonlandPermanentOpponentControls)
-        )
+        trigger = Triggers.self.enters()
+        val permanent = target(TargetFilter.NonlandPermanentOpponentControls)
         effect = Effects.ExileUntilLeaves(permanent)
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 

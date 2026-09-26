@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.scripting.TriggerBinding
  *    compiles `"binding": "OTHER"` over a `ZoneChangeEvent` to the battlefield, and this matches it.
  *  - The card prints no "you control", so the filter is a bare [GameObjectFilter.Creature]: an
  *    opponent's creature entering triggers this just as one of yours does. This is why the trigger
- *    is spelled with `Triggers.entersBattlefield(...)` rather than `Triggers.OtherCreatureEnters`,
+ *    is spelled with `Triggers.self.matching(...).enters()` rather than `Triggers.another(GameObjectFilter.Creature.youControl()).enters()`,
  *    whose filter is scoped to your own side — the same choice Essence Warden documents.
  *  - "you **may** gain 1 life" is a consent gate on resolution, which is what the `optional = true`
  *    shorthand lowers to (`Gate.MayDecide` wrapping the effect — Assay's `Gated`/`Gate.MayDecide`).
@@ -36,10 +36,7 @@ val SoulsAttendant = card("Soul's Attendant") {
     oracleText = "Whenever another creature enters, you may gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature,
-            binding = TriggerBinding.OTHER
-        )
+        trigger = Triggers.another(GameObjectFilter.Creature).enters()
         optional = true
         effect = Effects.GainLife(1)
     }

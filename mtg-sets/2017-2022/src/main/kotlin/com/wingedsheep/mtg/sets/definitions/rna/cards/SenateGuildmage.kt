@@ -28,10 +28,7 @@ val SenateGuildmage = card("Senate Guildmage") {
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{U}"), Costs.Tap)
-        effect = Effects.Composite(listOf(
-            Effects.DrawCards(1),
-            Patterns.Hand.discardCards(1)
-        ))
+        effect = Effects.DrawCards(1) then Patterns.Hand.discardCards(1)
     }
 
     metadata {

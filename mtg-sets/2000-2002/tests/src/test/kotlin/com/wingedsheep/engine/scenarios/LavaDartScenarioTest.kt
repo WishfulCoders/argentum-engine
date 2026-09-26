@@ -3,6 +3,7 @@ package com.wingedsheep.engine.scenarios
 import com.wingedsheep.engine.core.AlternativeCostType
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.PaymentStrategy
+import com.wingedsheep.engine.legalactions.LegalActionEnumerator
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.support.GameTestDriver
@@ -13,7 +14,10 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.AdditionalCostPayment
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Lava Dart {R} — Instant.
@@ -48,7 +52,7 @@ class LavaDartScenarioTest : FunSpec({
                 targets = listOf(ChosenTarget.Player(opp)),
                 paymentStrategy = PaymentStrategy.AutoPay
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         driver.getLifeTotal(opp) shouldBe 19
@@ -74,7 +78,7 @@ class LavaDartScenarioTest : FunSpec({
                 additionalCostPayment = AdditionalCostPayment(sacrificedPermanents = listOf(mountain)),
                 paymentStrategy = PaymentStrategy.AutoPay
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         // Damage dealt.
@@ -84,5 +88,38 @@ class LavaDartScenarioTest : FunSpec({
         // Flashback exiles Lava Dart from the graveyard.
         driver.state.getZone(ZoneKey(me, Zone.EXILE)).contains(dart) shouldBe true
         driver.state.getZone(ZoneKey(me, Zone.GRAVEYARD)).contains(dart) shouldBe false
+    }
+
+    test("the flashback legal action offers the Mountain sacrifice picker") {
+        val driver = createDriver()
+        driver.initMirrorMatch(deck = Deck.of("Mountain" to 40), skipMulligans = true, startingLife = 20)
+        val me = driver.activePlayer!!
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+
+        driver.putCardInGraveyard(me, "Lava Dart")
+        val mountain = driver.putLandOnBattlefield(me, "Mountain")
+
+        val flashback = LegalActionEnumerator.create(driver.cardRegistry).enumerate(driver.state, me)
+            .firstOrNull { it.actionType == "CastWithFlashback" }
+            .shouldNotBeNull()
+        flashback.affordable shouldBe true
+        val info = flashback.additionalCostInfo.shouldNotBeNull()
+        info.costType shouldBe "SacrificePermanent"
+        info.sacrificeCount shouldBe 1
+        info.validSacrificeTargets shouldContainExactly listOf(mountain)
+    }
+
+    test("without a Mountain to sacrifice, flashback is not affordable") {
+        val driver = createDriver()
+        driver.initMirrorMatch(deck = Deck.of("Mountain" to 40), skipMulligans = true, startingLife = 20)
+        val me = driver.activePlayer!!
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+
+        driver.putCardInGraveyard(me, "Lava Dart")
+
+        val flashback = LegalActionEnumerator.create(driver.cardRegistry).enumerate(driver.state, me)
+            .firstOrNull { it.actionType == "CastWithFlashback" }
+            .shouldNotBeNull()
+        flashback.affordable shouldBe false
     }
 })

@@ -31,12 +31,12 @@ val AshcloudPhoenix = card("Ashcloud Phoenix") {
     morph = "{4}{R}{R}"
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.PutOntoBattlefieldFaceDown()
     }
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
+        trigger = Triggers.self.turnedFaceUp()
         effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.Each))
     }
 

@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Enchantress's Presence
@@ -18,7 +19,7 @@ val EnchantresssPresence = card("Enchantress's Presence") {
     oracleText = "Whenever you cast an enchantment spell, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.YouCastEnchantment
+        trigger = Triggers.you.casts(GameObjectFilter.Enchantment)
         effect = Effects.DrawCards(1)
     }
 

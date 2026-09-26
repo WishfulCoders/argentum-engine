@@ -1,5 +1,6 @@
 package com.wingedsheep.ai.engine.hidden
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.hidden.HiddenSlotRewrite
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
@@ -36,7 +37,7 @@ class Determinizer internal constructor(
 ) {
     constructor(
         cardRegistry: CardRegistry,
-        visibility: Visibility = Visibility(cardRegistry),
+        visibility: Visibility = Visibility(cardRegistry, conditionEvaluator = PredicateEvaluator(cardRegistry).conditions),
     ) : this(cardRegistry, visibility, HiddenSlotRewrite::identitySensitiveInFlightPins)
 
     /** Pure per-position entry point used by the Strategist before it simulates any candidate. */

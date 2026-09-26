@@ -3,15 +3,14 @@ package com.wingedsheep.mtg.sets.definitions.blc.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedTriggeredAbility
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
-import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Grothama, All-Devouring {3}{G}{G}
@@ -46,24 +45,21 @@ val GrothamaAllDevouring = card("Grothama, All-Devouring") {
         "When Grothama, All-Devouring leaves the battlefield, each player draws cards " +
         "equal to the amount of damage dealt to Grothama this turn by sources they controlled."
 
-    val grothamaTarget = TargetCreature(
-        filter = TargetFilter(GameObjectFilter.Creature.named("Grothama, All-Devouring"))
-    )
+    val grothamaTarget = TargetObject(filter = TargetFilter(GameObjectFilter.Creature.named("Grothama, All-Devouring")))
 
     staticAbility {
         ability = GrantTriggeredAbility(
-            ability = TriggeredAbility.create(
-                trigger = Triggers.Attacks.event,
-                binding = Triggers.Attacks.binding,
-                effect = MayEffect(Effects.Fight(EffectTarget.Self, EffectTarget.ContextTarget(0))),
-                targetRequirement = grothamaTarget,
-            ),
+            ability = grantedTriggeredAbility {
+                trigger = Triggers.self.attacks()
+                val grothama = target(grothamaTarget)
+                effect = Effects.May(Effects.Fight(EffectTarget.Self, grothama))
+            },
             filter = GroupFilter.AllCreatures.other(),
         )
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.EachPlayerDrawsForDamageDealtToSource()
     }
 

@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.ninjutsu
 import com.wingedsheep.sdk.model.Rarity
@@ -17,8 +16,8 @@ import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.GrantSubtype
 import com.wingedsheep.sdk.scripting.RemoveCardType
 import com.wingedsheep.sdk.scripting.SetBasePowerToughnessStatic
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Kaito, Bane of Nightmares
@@ -68,7 +67,7 @@ val KaitoBaneOfNightmares = card("Kaito, Bane of Nightmares") {
     // planeswalker, per the official ruling) gated on your-turn AND has-a-loyalty-counter.
     val animationActive = Conditions.All(
         Conditions.IsYourTurn,
-        Conditions.SourceHasCounter(CounterTypeFilter.Loyalty)
+        Conditions.SourceHasCounter(CounterType.LOYALTY)
     )
     staticAbility {
         condition = animationActive
@@ -111,8 +110,8 @@ val KaitoBaneOfNightmares = card("Kaito, Bane of Nightmares") {
 
     // −2: Tap target creature. Put two stun counters on it.
     loyaltyAbility(-2) {
-        val creature = target("creature", Targets.Creature)
-        effect = Effects.Tap(creature) then Effects.AddCounters(Counters.STUN, 2, creature)
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.Tap(creature) then Effects.AddCounters(CounterType.STUN, 2, creature)
     }
 
     metadata {

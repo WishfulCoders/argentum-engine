@@ -4,9 +4,9 @@
 
 package com.wingedsheep.mtg.sets.definitions.por.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -21,7 +21,7 @@ val SacredNectar = card("Sacred Nectar") {
     typeLine = "Sorcery"
     oracleText = "You gain 4 life."
     spell {
-        effect = GainLifeEffect(4)
+        effect = Effects.GainLife(4)
     }
     metadata {
         rarity = Rarity.COMMON

@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 
 /**
@@ -30,10 +29,7 @@ val SnarlingGorehound = card("Snarling Gorehound") {
     toughness = 1
     keywords(Keyword.MENACE)
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.powerAtMost(2).youControl(),
-            binding = TriggerBinding.OTHER
-        )
+        trigger = Triggers.another(GameObjectFilter.Creature.powerAtMost(2).youControl()).enters()
         effect = Patterns.Library.surveil(1)
     }
     metadata {

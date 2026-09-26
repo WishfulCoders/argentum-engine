@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -32,7 +31,7 @@ val VoltaicConstruct = card("Voltaic Construct") {
         // "artifact creature" is a conjunction, not a disjunction. This shipped filtering on
         // TargetFilter.CreatureOrArtifact, which let it untap any creature *or* any artifact.
         // Found by the Assay differential gate; see VoltaicConstructScenarioTest.
-        val t = target("target", TargetPermanent(filter = TargetFilter(GameObjectFilter.ArtifactCreature)))
+        val t = target(TargetFilter(GameObjectFilter.ArtifactCreature))
         effect = Effects.Untap(t)
     }
     metadata {

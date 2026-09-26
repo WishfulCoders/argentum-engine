@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever you cast a green spell, this creature gains forestwalk until end of turn. (It can't be
  * blocked as long as defending player controls a Forest.)
  *
- * - Both triggers are `Triggers.youCastSpell(spellFilter = GameObjectFilter.Any.withColor(...))`:
+ * - Both triggers are `Triggers.you.casts(GameObjectFilter.Any.withColor(...))`:
  *   "a red spell" covers every card type, so the filter stays `Any`.
  * - A spell that is both red and green triggers both abilities — correct for the Duo cycle.
  * - Forestwalk is granted with the plain `Effects.GrantKeyword` facade (as Unseen Walker does);
@@ -35,13 +35,13 @@ val TattermungeDuo = card("Tattermunge Duo") {
 
     // Whenever you cast a red spell, this creature gets +1/+1 until end of turn.
     triggeredAbility {
-        trigger = Triggers.youCastSpell(spellFilter = GameObjectFilter.Any.withColor(Color.RED))
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withColor(Color.RED))
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }
 
     // Whenever you cast a green spell, this creature gains forestwalk until end of turn.
     triggeredAbility {
-        trigger = Triggers.youCastSpell(spellFilter = GameObjectFilter.Any.withColor(Color.GREEN))
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withColor(Color.GREEN))
         effect = Effects.GrantKeyword(Keyword.FORESTWALK, EffectTarget.Self)
     }
 

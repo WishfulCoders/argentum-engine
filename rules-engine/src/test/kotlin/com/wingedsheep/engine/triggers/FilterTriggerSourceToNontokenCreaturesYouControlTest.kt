@@ -1,23 +1,22 @@
 package com.wingedsheep.engine.triggers
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.DamageDealtEvent
 import com.wingedsheep.engine.event.TriggerDetector
 import com.wingedsheep.engine.state.components.identity.TokenComponent
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.ManaCost
-import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.EventPattern.OneOrMoreDealCombatDamageToPlayerEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Batch combat-damage trigger scoped to "nontoken creatures you control" must exclude
@@ -36,12 +35,7 @@ class FilterTriggerSourceToNontokenCreaturesYouControlTest : FunSpec({
         power = 0
         toughness = 1
         triggeredAbility {
-            trigger = TriggerSpec(
-                OneOrMoreDealCombatDamageToPlayerEvent(
-                    sourceFilter = GameObjectFilter.Creature.nontoken()
-                ),
-                TriggerBinding.ANY
-            )
+            trigger = Triggers.oneOrMore(GameObjectFilter.Creature.nontoken()).dealCombatDamageToAPlayer()
             effect = Effects.DrawCards(1)
         }
     }
@@ -63,7 +57,7 @@ class FilterTriggerSourceToNontokenCreaturesYouControlTest : FunSpec({
     }
 
     fun detectorFor(driver: GameTestDriver): TriggerDetector =
-        TriggerDetector(driver.cardRegistry)
+        TriggerDetector(driver.cardRegistry, conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
     context("'nontoken creature you control' source predicate in combat-damage batch trigger") {
 

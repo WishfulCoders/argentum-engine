@@ -22,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Evoke {2}{U}
  *
  * Modeling notes:
- *  - The draw is a **cast trigger** ([Triggers.WhenYouCastThisSpell]), not an enters trigger. That
+ *  - The draw is a **cast trigger** (`Triggers.self.isCast()`), not an enters trigger. That
  *    is what makes the evoke line work: evoking still *casts* the spell, so the trigger fires and
  *    resolves before Nulldrifter itself does, and the two cards are drawn even though the body is
  *    sacrificed the moment it enters. It also means the draw survives Nulldrifter being countered
@@ -54,14 +54,14 @@ val Nulldrifter = card("Nulldrifter") {
     evoke = "{2}{U}"
 
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
+        trigger = Triggers.self.isCast()
         effect = Effects.DrawCards(2)
         description = "When you cast this spell, draw two cards."
     }
 
     // Annihilator 1 — the lowering of the display-only keyword ability above.
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.Sacrifice(
             GameObjectFilter.Permanent,
             1,

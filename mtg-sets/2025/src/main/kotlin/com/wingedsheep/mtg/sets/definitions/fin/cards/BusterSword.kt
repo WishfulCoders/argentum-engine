@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Triggers
@@ -11,16 +12,9 @@ import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Buster Sword
@@ -34,7 +28,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *
  * Composed from existing primitives (the Glamdring / Press the Enemy free-cast shape):
  *   1. [ModifyStats] +3/+2 on [Filters.EquippedCreature].
- *   2. A [DamageType.Combat] / [RecipientFilter.AnyPlayer] trigger bound to the equipped
+ *   2. A [DamageType.Combat] / [Recipient.AnyPlayer] trigger bound to the equipped
  *      creature ([TriggerBinding.ATTACHED]). "That damage" is captured from the triggering
  *      event via [ContextPropertyKey.TRIGGER_DAMAGE_AMOUNT] *before* the draw (so the drawn
  *      card can't change the cap), then: draw a card → gather nonland cards from your hand
@@ -56,45 +50,32 @@ val BusterSword = card("Buster Sword") {
     }
 
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            damageType = DamageType.Combat,
-            recipient = RecipientFilter.AnyPlayer,
-            binding = TriggerBinding.ATTACHED
-        )
-        effect = Effects.Composite(
+        trigger = Triggers.attached.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.Pipeline {
             // Capture "that damage" before drawing, so the drawn card can't alter the cap.
-            Effects.StoreNumber(
-                "combatDamage",
-                DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_DAMAGE_AMOUNT)
-            ),
+            val combatDamage = storeNumber(DynamicAmounts.triggerDamageAmount())
             // Draw a card.
-            Effects.DrawCards(1),
+            run(Effects.DrawCards(1))
             // Gather nonland cards from your hand with mana value ≤ that damage.
-            GatherCardsEffect(
-                source = CardSource.FromZone(
+            val handSpells = gather(
+                CardSource.FromZone(
                     zone = Zone.HAND,
                     player = Player.You,
                     filter = GameObjectFilter.Nonland
-                ),
-                storeAs = "handSpells"
-            ),
-            FilterCollectionEffect(
-                from = "handSpells",
-                filter = CollectionFilter.ManaValueAtMost(DynamicAmount.VariableReference("combatDamage")),
-                storeMatching = "castable"
-            ),
+                )
+            )
+            val castable = filter(handSpells, GameObjectFilter.Any.manaValueAtMostDynamic(combatDamage.amount))
             // You may choose one of the eligible spells (the "you may cast a spell" choice).
-            SelectFromCollectionEffect(
-                from = "castable",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
+            val chosen = chooseUpTo(
+                1,
+                from = castable,
                 chooser = Chooser.Controller,
-                storeSelected = "chosen",
                 prompt = "You may cast a spell with mana value less than or equal to that damage without paying its mana cost.",
-                selectedLabel = "Cast for free",
-            ),
+                selectedLabel = "Cast for free"
+            )
             // Cast the chosen spell without paying its mana cost.
-            Effects.CastFromCollectionWithoutPayingCost("chosen")
-        )
+            run(Effects.CastFromCollectionWithoutPayingCost(chosen))
+        }
     }
 
     equipAbility("{2}")

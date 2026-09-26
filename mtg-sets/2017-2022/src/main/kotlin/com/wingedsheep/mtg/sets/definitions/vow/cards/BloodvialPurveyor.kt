@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Bloodvial Purveyor
@@ -46,7 +45,7 @@ val BloodvialPurveyor = card("Bloodvial Purveyor") {
 
     // Whenever an opponent casts a spell, that player creates a Blood token.
     triggeredAbility {
-        trigger = Triggers.OpponentCastsSpell
+        trigger = Triggers.anOpponent.casts()
         effect = Effects.CreateBlood(controller = EffectTarget.PlayerRef(Player.TriggeringPlayer))
         description = "Whenever an opponent casts a spell, that player creates a Blood token."
     }
@@ -54,14 +53,14 @@ val BloodvialPurveyor = card("Bloodvial Purveyor") {
     // Whenever this creature attacks, it gets +1/+0 until end of turn for each Blood token
     // defending player controls.
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         val bloodDefender = DynamicAmounts.battlefield(
             Player.DefendingPlayer,
             GameObjectFilter.Artifact.withSubtype("Blood")
         ).count()
         effect = Effects.ModifyStats(
             power = bloodDefender,
-            toughness = DynamicAmount.Fixed(0),
+            toughness = DynamicAmounts.fixed(0),
             target = EffectTarget.Self
         )
         description = "Whenever this creature attacks, it gets +1/+0 until end of turn for each " +

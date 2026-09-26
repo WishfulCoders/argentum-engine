@@ -24,7 +24,7 @@ val JarethLeonineTitan = card("Jareth, Leonine Titan") {
     oracleText = "Whenever Jareth, Leonine Titan blocks, it gets +7/+7 until end of turn.\n{W}: Jareth gains protection from the color of your choice until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         effect = Effects.ModifyStats(7, 7, EffectTarget.Self)
     }
 

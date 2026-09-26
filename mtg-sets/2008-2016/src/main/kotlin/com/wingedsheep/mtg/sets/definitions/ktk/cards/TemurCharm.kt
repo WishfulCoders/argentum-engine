@@ -1,14 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
 
 /**
  * Temur Charm
@@ -28,17 +25,13 @@ val TemurCharm = card("Temur Charm") {
     spell {
         modal(chooseCount = 1) {
             mode("Target creature you control gets +1/+1 until end of turn. It fights target creature you don't control") {
-                val yourCreature = target("creature you control", TargetCreature(
-                    filter = TargetFilter(GameObjectFilter.Creature.youControl())
-                ))
-                val theirCreature = target("creature you don't control", TargetCreature(
-                    filter = TargetFilter(GameObjectFilter.Creature.opponentControls())
-                ))
-                effect = Effects.ModifyStats(1, 1, yourCreature)
-                    .then(Effects.Fight(yourCreature, theirCreature))
+                val yourCreature = target(TargetFilter(GameObjectFilter.Creature.youControl()))
+                val theirCreature = target(TargetFilter(GameObjectFilter.Creature.opponentControls()))
+                effect = Effects.ModifyStats(1, 1, yourCreature) then
+                    Effects.Fight(yourCreature, theirCreature)
             }
             mode("Counter target spell unless its controller pays {3}") {
-                target("target", TargetSpell())
+                target(TargetFilter.SpellOnStack)
                 effect = Effects.CounterUnlessPays("{3}")
             }
             mode("Creatures with power 3 or less can't block this turn") {

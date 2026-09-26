@@ -6,9 +6,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GiveControlToTargetPlayerEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Jinxed Idol
@@ -26,14 +26,14 @@ val JinxedIdol = card("Jinxed Idol") {
         "Sacrifice a creature: Target opponent gains control of this artifact."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.DealDamage(2, EffectTarget.Controller)
     }
 
     activatedAbility {
         cost = Costs.Sacrifice(GameObjectFilter.Creature)
-        val opponent = target("opponent", TargetOpponent())
-        effect = GiveControlToTargetPlayerEffect(
+        val opponent = target(Targets.Opponent)
+        effect = Effects.GiveControl(
             permanent = EffectTarget.Self,
             newController = opponent
         )

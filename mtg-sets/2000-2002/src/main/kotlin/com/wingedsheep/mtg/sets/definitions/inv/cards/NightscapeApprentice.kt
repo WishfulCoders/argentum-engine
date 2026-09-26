@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.inv.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Nightscape Apprentice
@@ -26,13 +26,13 @@ val NightscapeApprentice = card("Nightscape Apprentice") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{U}"), Costs.Tap)
-        val t = target("target", Targets.CreatureYouControl)
+        val t = target(TargetFilter.CreatureYouControl)
         effect = Effects.PutOnTopOfLibrary(t)
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{R}"), Costs.Tap)
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(Keyword.FIRST_STRIKE, t)
     }
 

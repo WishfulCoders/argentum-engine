@@ -1,17 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.zen.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Scute Mob
@@ -32,13 +32,13 @@ val ScuteMob = card("Scute Mob") {
     oracleText = "At the beginning of your upkeep, if you control five or more lands, put four +1/+1 counters on this creature."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        interveningIf = Compare(
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        interveningIf = Conditions.CompareAmounts(
             DynamicAmounts.battlefield(Player.You, GameObjectFilter.Land).count(),
             ComparisonOperator.GTE,
-            DynamicAmount.Fixed(5),
+            5,
         )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 4, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 4, EffectTarget.Self)
     }
 
     metadata {

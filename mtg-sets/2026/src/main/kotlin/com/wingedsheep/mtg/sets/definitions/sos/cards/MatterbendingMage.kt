@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.events.SpellCastPredicate
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Matterbending Mage
@@ -37,21 +36,13 @@ val MatterbendingMage = card("Matterbending Mage") {
         "blocked this turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target(
-            "other creature",
-            TargetCreature(
-                optional = true,
-                filter = TargetFilter.OtherCreature
-            )
-        )
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.OtherCreature, optional = true)
         effect = Effects.ReturnToHand(creature)
     }
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            requires = setOf(SpellCastPredicate.HasXInCost),
-        )
+        trigger = Triggers.you.casts(requires = setOf(SpellCastPredicate.HasXInCost))
         effect = Effects.GrantKeyword(
             AbilityFlag.CANT_BE_BLOCKED,
             EffectTarget.Self,

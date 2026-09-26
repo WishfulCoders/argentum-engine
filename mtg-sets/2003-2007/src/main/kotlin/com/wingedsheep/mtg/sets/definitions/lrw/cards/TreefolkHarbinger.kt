@@ -25,7 +25,7 @@ val TreefolkHarbinger = card("Treefolk Harbinger") {
         "then shuffle and put that card on top."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Any.withAnySubtype("Treefolk", "Forest"),
             count = 1,

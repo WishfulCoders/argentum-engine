@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Calamity of Cinders deals 6 damage to each untapped creature.
  *
  * "Each untapped creature" is a group sweep, not a target: [Effects.ForEachInGroup] over
- * `Creature.untapped()`, where `EffectTarget.Self` inside the body rebinds to each member.
+ * `Creature.untapped()`, where `EffectTarget.IterationEntity` inside the body binds to each member.
  */
 val CalamityOfCinders = card("Calamity of Cinders") {
     manaCost = "{5}{R}{R}"
@@ -32,7 +32,7 @@ val CalamityOfCinders = card("Calamity of Cinders") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.untapped()),
-            Effects.DealDamage(6, EffectTarget.Self)
+            Effects.DealDamage(6, EffectTarget.IterationEntity)
         )
     }
 

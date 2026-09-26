@@ -2,18 +2,17 @@ package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.Aggregation
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Wildfire Wickerfolk — Duskmourn: House of Horror #239
@@ -42,15 +41,13 @@ val WildfireWickerfolk = card("Wildfire Wickerfolk") {
 
     keywords(Keyword.HASTE)
 
-    val delirium = Compare(
-        DynamicAmount.AggregateZone(
+    val delirium = Conditions.CompareAmounts(
+        DynamicAmounts.zone(
             Player.You,
-            Zone.GRAVEYARD,
-            GameObjectFilter.Any,
-            Aggregation.DISTINCT_TYPES
-        ),
+            Zone.GRAVEYARD
+        ).distinctTypes(),
         ComparisonOperator.GTE,
-        DynamicAmount.Fixed(4)
+        4
     )
 
     staticAbility {

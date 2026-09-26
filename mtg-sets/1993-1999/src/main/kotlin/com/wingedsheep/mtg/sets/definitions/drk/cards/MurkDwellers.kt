@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * 2/2
  * Whenever this creature attacks and isn't blocked, it gets +2/+0 until end of combat.
  *
- * Composes existing primitives: [Triggers.AttacksAndIsntBlocked] (which fires in the declare
+ * Composes existing primitives: `Triggers.self.attacksAndIsntBlocked()` (which fires in the declare
  * blockers step once no creature has been declared to block it) driving a self-targeted
  * [Effects.ModifyStats] for [Duration.EndOfCombat]. Same shape as Arabian Nights' Merchant Ship.
  */
@@ -27,7 +27,7 @@ val MurkDwellers = card("Murk Dwellers") {
     oracleText = "Whenever this creature attacks and isn't blocked, it gets +2/+0 until end of combat."
 
     triggeredAbility {
-        trigger = Triggers.AttacksAndIsntBlocked
+        trigger = Triggers.self.attacksAndIsntBlocked()
         effect = Effects.ModifyStats(2, 0, EffectTarget.Self, Duration.EndOfCombat)
     }
 

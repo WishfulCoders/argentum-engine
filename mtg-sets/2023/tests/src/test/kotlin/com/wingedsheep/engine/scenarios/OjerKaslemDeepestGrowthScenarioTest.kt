@@ -22,7 +22,7 @@ import io.kotest.matchers.shouldNotBe
  * Covers the three behaviours of the card:
  *  1. **Dies → return tapped + transformed** — the shared
  *     [com.wingedsheep.sdk.scripting.effects.ReturnSelfFromZoneTransformedEffect]`(tapped = true)`
- *     wired to [com.wingedsheep.sdk.dsl.Triggers.Dies]. When the God dies, the same entity returns
+ *     wired to `Triggers.self.dies()`. When the God dies, the same entity returns
  *     to the battlefield **tapped** as its back face, Temple of Cultivation.
  *  2. **Combat-damage reveal** — deals N combat damage → reveal N → put up to one creature and up
  *     to one land onto the battlefield (the "and/or") → bottom the rest in a random order.

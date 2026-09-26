@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.lgn.cards
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.Effects
@@ -25,10 +24,10 @@ val BloodstokeHowler = card("Bloodstoke Howler") {
     oracleText = "Morph {6}{R} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)\nWhen this creature is turned face up, Beast creatures you control get +3/+0 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
+        trigger = Triggers.self.turnedFaceUp()
         effect = Effects.ForEachInGroup(
             filter = GroupFilter.allCreaturesWithSubtype("Beast").youControl(),
-            effect = ModifyStatsEffect(3, 0, EffectTarget.Self)
+            effect = Effects.ModifyStats(3, 0, EffectTarget.IterationEntity)
         )
     }
 

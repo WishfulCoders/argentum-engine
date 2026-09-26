@@ -4,14 +4,12 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedActivatedAbility
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.AbilityId
-import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantActivatedAbility
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Frondland Felidar
@@ -41,12 +39,11 @@ val FrondlandFelidar = card("Frondland Felidar") {
 
     staticAbility {
         ability = GrantActivatedAbility(
-            ability = ActivatedAbility(
-                id = AbilityId.generate(),
-                cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap),
-                effect = Effects.Tap(EffectTarget.ContextTarget(0)),
-                targetRequirements = listOf(TargetCreature())
-            ),
+            ability = grantedActivatedAbility {
+                cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.Tap(creature)
+            },
             filter = GroupFilter(
                 GameObjectFilter.Creature.withKeyword(Keyword.VIGILANCE).youControl()
             )

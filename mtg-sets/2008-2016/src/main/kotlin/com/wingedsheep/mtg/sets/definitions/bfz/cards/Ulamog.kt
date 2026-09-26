@@ -1,16 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.bfz.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ulamog, the Ceaseless Hunger — Battle for Zendikar #15
@@ -21,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  * Whenever Ulamog attacks, defending player exiles the top twenty cards of their library.
  *
  * Modeling notes:
- *  - The exile is a **cast trigger** ([Triggers.WhenYouCastThisSpell]), not an ETB — per the
+ *  - The exile is a **cast trigger** (`Triggers.self.isCast()`), not an ETB — per the
  *    2015-08-25 ruling it resolves independently of Ulamog and before Ulamog itself, and it
  *    still resolves even if Ulamog is countered (see [com.wingedsheep.mtg.sets.definitions.roe.cards.ArtisanOfKozilek]
  *    for the same pattern on a smaller Eldrazi titan). Two simultaneous targets use
@@ -44,10 +42,10 @@ val Ulamog = card("Ulamog, the Ceaseless Hunger") {
         "Whenever Ulamog attacks, defending player exiles the top twenty cards of their library."
 
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
-        val targets = target("target permanents", TargetPermanent(count = 2))
-        effect = ForEachTargetEffect(
-            listOf(Effects.Exile(EffectTarget.ContextTarget(0)))
+        trigger = Triggers.self.isCast()
+        targets(TargetFilter.Permanent, count = 2)
+        effect = Effects.ForEachTarget(
+            Effects.Exile(EffectTarget.ContextTarget(0))
         )
         description = "When you cast this spell, exile two target permanents."
     }
@@ -55,7 +53,7 @@ val Ulamog = card("Ulamog, the Ceaseless Hunger") {
     keywords(Keyword.INDESTRUCTIBLE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Library.exileTop(20, EffectTarget.PlayerRef(Player.DefendingPlayer))
         description = "Whenever Ulamog attacks, defending player exiles the top twenty cards of their library."
     }

@@ -249,6 +249,7 @@ export function OpponentBoardArea({
   const handBlock = (
     <div
       data-zone="opponent-hand"
+      data-zone-owner={opponent.playerId}
       style={{
         position: layout === 'grid' ? 'fixed' : 'absolute',
         top: topOffset,
@@ -397,6 +398,7 @@ export function OpponentBoardArea({
       {hideHand && !drivesOwnHand && effectiveCellHand === 'fan' && (
         <div
           data-zone="opponent-hand"
+          data-zone-owner={opponent.playerId}
           style={{
             position: 'absolute',
             // Only the inverted fan spills *upward*; pushing it down by the overhang is what

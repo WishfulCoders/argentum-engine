@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.m19.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Dismissive Pyromancer
@@ -36,7 +36,7 @@ val DismissivePyromancer = card("Dismissive Pyromancer") {
     // {2}{R}, {T}, Sacrifice this creature: It deals 4 damage to target creature.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{R}"), Costs.Tap, Costs.SacrificeSelf)
-        val victim = target("target", Targets.Creature)
+        val victim = target(TargetFilter.Creature)
         effect = Effects.DealDamage(4, victim)
     }
 

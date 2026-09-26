@@ -2,15 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.dft.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Plow Through
@@ -36,21 +33,16 @@ val PlowThrough = card("Plow Through") {
     spell {
         effect = ModalEffect.chooseOne(
             // Mode 1: fight
-            Mode(
-                effect = Effects.Fight(EffectTarget.ContextTarget(0), EffectTarget.ContextTarget(1)),
-                targetRequirements = listOf(Targets.CreatureYouControl, Targets.CreatureOpponentControls),
-                description = "Target creature you control fights target creature an opponent controls",
-            ),
+            mode("Target creature you control fights target creature an opponent controls") {
+                val creatureYouControl = target(TargetFilter.CreatureYouControl)
+                val creatureOpponentControls = target(TargetFilter.CreatureOpponentControls)
+                effect = Effects.Fight(creatureYouControl, creatureOpponentControls)
+            },
             // Mode 2: destroy target Vehicle
-            Mode(
-                effect = Effects.Destroy(EffectTarget.ContextTarget(0)),
-                targetRequirements = listOf(
-                    TargetPermanent(
-                        filter = TargetFilter(GameObjectFilter.Artifact.withSubtype(Subtype.VEHICLE)),
-                    ),
-                ),
-                description = "Destroy target Vehicle",
-            ),
+            mode("Destroy target Vehicle") {
+                val artifact = target(TargetFilter(GameObjectFilter.Artifact.withSubtype(Subtype.VEHICLE)))
+                effect = Effects.Destroy(artifact)
+            },
         )
     }
 

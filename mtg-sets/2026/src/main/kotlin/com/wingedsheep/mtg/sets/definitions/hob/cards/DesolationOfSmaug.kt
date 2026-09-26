@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -39,16 +38,14 @@ val DesolationOfSmaug = card("Desolation of Smaug") {
         "Add four mana in any combination of colors. Spend this mana only to cast Dragon spells."
 
     spell {
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(
-                GroupFilter(GameObjectFilter.Creature.notSubtype(Subtype.DRAGON)),
-                DealDamageEffect(3, EffectTarget.Self)
-            ),
+        effect = Effects.ForEachInGroup(
+            GroupFilter(GameObjectFilter.Creature.notSubtype(Subtype.DRAGON)),
+            Effects.DealDamage(3, EffectTarget.IterationEntity)
+        ) then
             Effects.AddManaInAnyCombination(
                 amount = 4,
                 restriction = ManaRestriction.SubtypeSpellsOnly(setOf("Dragon"))
             )
-        )
     }
 
     metadata {

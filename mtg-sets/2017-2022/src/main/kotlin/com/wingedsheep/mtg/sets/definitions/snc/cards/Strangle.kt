@@ -3,7 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.snc.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreatureOrPlaneswalker
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Strangle
@@ -18,7 +18,7 @@ val Strangle = card("Strangle") {
     oracleText = "Strangle deals 3 damage to target creature or planeswalker."
 
     spell {
-        val victim = target("target creature or planeswalker", TargetCreatureOrPlaneswalker())
+        val victim = target(Targets.CreatureOrPlaneswalker)
         effect = Effects.DealDamage(3, victim)
     }
 

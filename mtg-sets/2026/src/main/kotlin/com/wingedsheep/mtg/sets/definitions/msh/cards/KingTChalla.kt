@@ -10,8 +10,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.PreventDamage
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -38,7 +37,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * no mana-value exception) the transformed permanent has the back face's mana value, not the
  * front's.
  *
- *  - **"Whenever a player draws their second card each turn"** is [Triggers.NthCardDrawn] with
+ *  - **"Whenever a player draws their second card each turn"** is `Triggers.<player>.drawsNth(n)` with
  *    [Player.Each], not [Player.You] — it watches *every* player's per-turn draw count
  *    (`CardsDrawnThisTurnComponent`), and fires once per player per turn when their count crosses
  *    two, including when a single multi-card draw crosses the threshold (CR 121.2). The payoff is
@@ -48,11 +47,11 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *  - **"Prevent all damage that would be dealt to Black Panther"** is a *static* prevention
  *    replacement effect, not a triggered or one-shot shield: [PreventDamage] with `amount = null`
  *    ("prevent all") over an unrestricted [EventPattern.DamageEvent] keyed to
- *    [RecipientFilter.Self]. Leaving `damageType` at its default `Any` is what separates it from
+ *    [Recipient.Self]. Leaving `damageType` at its default `Any` is what separates it from
  *    Fog Bank's combat-only twin — noncombat damage (burn, pingers, sagas) is prevented too.
  *    Being a prevention *shield* rather than damage immunity, it does not stop "damage can't be
  *    prevented" sources, and it never turns off state-based lethality for other creatures.
- *  - The back's draw is a plain [Triggers.DealsCombatDamageToPlayer]. Double strike makes it fire
+ *  - The back's draw is a plain `Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)`. Double strike makes it fire
  *    twice in a combat where both strikes connect (two separate combat-damage steps, two
  *    triggers), which is the card's intended payoff.
  */
@@ -71,7 +70,7 @@ private val KingTChallaFront = card("King T'Challa") {
 
     // Whenever a player draws their second card each turn, you draw a card.
     triggeredAbility {
-        trigger = Triggers.NthCardDrawn(2, Player.Each)
+        trigger = Triggers.anyPlayer.drawsNth(2)
         effect = Effects.DrawCards(1)
         description = "Whenever a player draws their second card each turn, you draw a card."
     }
@@ -79,7 +78,7 @@ private val KingTChallaFront = card("King T'Challa") {
     // {4}{W}{U}: Transform King T'Challa. Activate only as a sorcery.
     activatedAbility {
         cost = Costs.Mana("{4}{W}{U}")
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
         timing = TimingRule.SorcerySpeed
         description = "Transform King T'Challa. Activate only as a sorcery."
     }
@@ -109,13 +108,13 @@ private val BlackPantherHopeEnduringBack = card("Black Panther, Hope Enduring") 
     replacementEffect(
         PreventDamage(
             amount = null,
-            appliesTo = EventPattern.DamageEvent(recipient = RecipientFilter.Self),
+            appliesTo = EventPattern.DamageEvent(recipient = Recipient.Self),
         )
     )
 
     // Whenever Black Panther deals combat damage to a player, draw a card.
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         effect = Effects.DrawCards(1)
         description = "Whenever Black Panther deals combat damage to a player, draw a card."
     }

@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -25,12 +24,10 @@ val BlindWithAnger = card("Blind with Anger") {
     typeLine = "Instant — Arcane"
     oracleText = "Untap target nonlegendary creature and gain control of it until end of turn. That creature gains haste until end of turn."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.nonlegendary()))
-        effect = Effects.Composite(
-            Effects.Untap(t),
-            Effects.GainControl(t, Duration.EndOfTurn),
+        val t = target(TargetFilter.Creature.nonlegendary())
+        effect = Effects.Untap(t) then
+            Effects.GainControl(t, Duration.EndOfTurn) then
             Effects.GrantKeyword(Keyword.HASTE, t)
-        )
     }
     metadata {
         rarity = Rarity.UNCOMMON

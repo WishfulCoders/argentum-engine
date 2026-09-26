@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Terror
@@ -19,7 +18,7 @@ val Terror = card("Terror") {
     typeLine = "Instant"
     oracleText = "Destroy target nonartifact, nonblack creature. It can't be regenerated."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.nonartifact().notColor(Color.BLACK)))
+        val t = target(TargetFilter.Creature.nonartifact().notColor(Color.BLACK))
         effect = Effects.Destroy(t, noRegenerate = true)
     }
     metadata {

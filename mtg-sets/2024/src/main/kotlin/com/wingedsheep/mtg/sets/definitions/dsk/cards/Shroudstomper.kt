@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * "Enters or attacks" is two distinct triggered abilities sharing one payoff (CR has no "or"
  * trigger combiner), modeled like Sentinel of the Nameless City: one fires on
- * [Triggers.EntersBattlefield], the other on [Triggers.Attacks]. The shared payoff composes a
+ * `Triggers.self.enters()`, the other on `Triggers.self.attacks()`. The shared payoff composes a
  * 2-life [Effects.LoseLife] against [Player.EachOpponent], a 2-life [Effects.GainLife] for the
  * controller, and a single [Effects.DrawCards].
  */
@@ -35,17 +35,17 @@ val Shroudstomper = card("Shroudstomper") {
 
     keywords(Keyword.DEATHTOUCH)
 
-    val payoff = Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent))
-        .then(Effects.GainLife(2))
-        .then(Effects.DrawCards(1))
+    val payoff = Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent)) then
+        Effects.GainLife(2) then
+        Effects.DrawCards(1)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = payoff
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = payoff
     }
 

@@ -4,10 +4,10 @@ import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Vito, Fanatic of Aclazotz (LCI #243) — {2}{W}{B} Legendary Creature — Vampire Demon, 4/4, flying.
@@ -31,7 +31,7 @@ class VitoFanaticOfAclazotzScenarioTest : ScenarioTestBase() {
         typeLine = "Sorcery"
         oracleText = "Sacrifice target permanent you control."
         spell {
-            val t = target("target permanent you control", Targets.Permanent)
+            val t = target(TargetFilter.Permanent)
             effect = Effects.SacrificeTarget(t)
         }
     }

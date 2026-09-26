@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Sunstar Expansionist
@@ -28,18 +29,18 @@ val SunstarExpansionist = card("Sunstar Expansionist") {
     //
     // The "if" stands *between* the trigger event and the effect, so CR 603.4's intervening-"if"
     // rule applies: the ability triggers only when the condition already holds, and it is checked
-    // again as the ability resolves. It used to be a `ConditionalEffect`, which is the model for the
+    // again as the ability resolves. It used to be a `Effects.If`, which is the model for the
     // *trailing* "if" ("create a Lander token if an opponent controls more lands than you") — that
     // one always triggers and decides on resolution. Found by the Assay differential.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.OpponentControlsMoreLands
         effect = Effects.CreateLander()
     }
 
     // Landfall: +1/+0 until end of turn when land enters
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.ModifyStats(1, 0, EffectTarget.Self)
     }
 

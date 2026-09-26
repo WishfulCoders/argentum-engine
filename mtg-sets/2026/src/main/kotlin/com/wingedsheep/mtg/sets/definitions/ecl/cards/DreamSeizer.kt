@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 
 /**
  * Dream Seizer
@@ -30,10 +29,9 @@ val DreamSeizer = card("Dream Seizer") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(
-            effect = Patterns.Mechanic.blight(1)
-                .then(Effects.EachOpponentDiscards(1)),
+        trigger = Triggers.self.enters()
+        effect = Effects.May(
+            effect = Patterns.Mechanic.blight(1) then Effects.EachOpponentDiscards(1),
             descriptionOverride = "You may blight 1. If you do, each opponent discards a card."
         )
     }

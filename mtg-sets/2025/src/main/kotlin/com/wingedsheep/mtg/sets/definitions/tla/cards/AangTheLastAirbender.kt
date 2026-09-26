@@ -9,7 +9,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetOther
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Aang, the Last Airbender — {3}{W} Legendary Creature — Human Avatar Ally — 3/2
@@ -36,16 +36,15 @@ val AangTheLastAirbender = card("Aang, the Last Airbender") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         target(
-            "up to one other target nonland permanent",
-            TargetOther(baseRequirement = TargetPermanent(count = 1, optional = true, filter = TargetFilter.NonlandPermanent))
+            TargetOther(baseRequirement = TargetObject(filter = TargetFilter.NonlandPermanent, optional = true)),
         )
         effect = Effects.Airbend()
     }
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(spellFilter = GameObjectFilter.Any.withSubtype("Lesson"))
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withSubtype("Lesson"))
         effect = Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self)
     }
 

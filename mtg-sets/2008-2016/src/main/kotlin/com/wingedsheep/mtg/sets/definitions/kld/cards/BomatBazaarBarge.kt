@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
  * an artifact creature until end of turn.)
  *
  * The Vehicle enters as a noncreature artifact, so the enters trigger fires without any crewing —
- * plain [Triggers.EntersBattlefield]. Crew is the engine-owned [KeywordAbility.crew] ability.
+ * plain `Triggers.self.enters()`. Crew is the engine-owned [KeywordAbility.crew] ability.
  */
 val BomatBazaarBarge = card("Bomat Bazaar Barge") {
     manaCost = "{4}"
@@ -27,7 +27,7 @@ val BomatBazaarBarge = card("Bomat Bazaar Barge") {
     toughness = 5
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1)
     }
 

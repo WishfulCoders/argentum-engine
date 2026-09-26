@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Mirkwood Channeler
@@ -28,14 +28,11 @@ val MirkwoodChanneler = card("Mirkwood Channeler") {
     oracleText = "At the beginning of combat on your turn, target Elf you control gains trample and gets +X/+X until end of turn, where X is the number of Forests you control."
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        val elf = target(
-            "target Elf you control",
-            TargetCreature(filter = TargetFilter.CreatureYouControl.withSubtype(Subtype("Elf")))
-        )
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        val elf = target(TargetFilter.CreatureYouControl.withSubtype(Subtype("Elf")))
         val forestCount = DynamicAmounts.landsWithSubtype(Subtype("Forest"))
-        effect = Effects.GrantKeyword(Keyword.TRAMPLE, elf)
-            .then(Effects.ModifyStats(forestCount, forestCount, elf))
+        effect = Effects.GrantKeyword(Keyword.TRAMPLE, elf) then
+            Effects.ModifyStats(forestCount, forestCount, elf)
     }
 
     metadata {

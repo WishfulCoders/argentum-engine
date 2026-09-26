@@ -11,8 +11,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 private val BiolumeEggFront = card("Biolume Egg") {
@@ -28,13 +26,13 @@ private val BiolumeEggFront = card("Biolume Egg") {
     keywords(Keyword.DEFENDER)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Scry(2)
     }
 
     triggeredAbility {
-        trigger = Triggers.Sacrificed
-        effect = CreateDelayedTriggerEffect(
+        trigger = Triggers.self.isSacrificed()
+        effect = Effects.CreateDelayedTrigger(
             step = Step.END,
             effect = Effects.ReturnSelfFromGraveyardTransformed(),
         )
@@ -65,7 +63,7 @@ private val BiolumeSerpent = card("Biolume Serpent") {
             count = 2,
             filter = GameObjectFilter.Land.withSubtype(Subtype.ISLAND),
         )
-        effect = GrantKeywordEffect(AbilityFlag.CANT_BE_BLOCKED.name, EffectTarget.Self)
+        effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, EffectTarget.Self)
         description = "This creature can't be blocked this turn."
     }
 

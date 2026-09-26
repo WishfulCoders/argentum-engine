@@ -39,11 +39,8 @@ val RacersScoreboard = card("Racers' Scoreboard") {
     startYourEngines()
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Effects.DrawCards(2),
-            Effects.Discard(1)
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.DrawCards(2) then Effects.Discard(1)
     }
 
     maxSpeed {

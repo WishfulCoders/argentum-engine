@@ -5,8 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern.YouAttackEvent
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Meddling Youths — Murders at Karlov Manor #219
@@ -32,7 +31,7 @@ val MeddlingYouths = card("Meddling Youths") {
     keywords(Keyword.HASTE)
 
     triggeredAbility {
-        trigger = TriggerSpec(YouAttackEvent(minAttackers = 3), TriggerBinding.ANY)
+        trigger = Triggers.you.attacks(minAttackers = 3)
         effect = Effects.Investigate()
         description = "Whenever you attack with three or more creatures, investigate."
     }

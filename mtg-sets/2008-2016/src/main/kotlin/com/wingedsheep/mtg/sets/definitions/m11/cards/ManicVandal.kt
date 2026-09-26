@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.m11.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Manic Vandal — Magic 2011 #151
@@ -12,7 +12,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * When this creature enters, destroy target artifact.
  *
- * The Oxidda Scrapmelter shape: a SELF-bound [Triggers.EntersBattlefield] over [Effects.Destroy],
+ * The Oxidda Scrapmelter shape: a SELF-bound `Triggers.self.enters()` over [Effects.Destroy],
  * which lowers to a graveyard move flagged `byDestruction` so indestructible and regeneration see
  * it. The trigger is not optional and its target is not "up to", so it must pick an artifact when
  * one is on the battlefield — including one of yours when the opponent has none.
@@ -26,8 +26,8 @@ val ManicVandal = card("Manic Vandal") {
     oracleText = "When this creature enters, destroy target artifact."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val artifact = target("target artifact", Targets.Artifact)
+        trigger = Triggers.self.enters()
+        val artifact = target(TargetFilter.Artifact)
         effect = Effects.Destroy(artifact)
     }
 

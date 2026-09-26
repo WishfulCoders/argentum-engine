@@ -1,12 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.teamwork
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Too Evil to Stay Dead — Marvel Super Heroes #118
@@ -47,16 +45,10 @@ val TooEvilToStayDead = card("Too Evil to Stay Dead") {
     teamwork(4)
 
     spell {
-        val cheapCreature = target(
-            "target creature card in your graveyard with mana value 4 or less",
-            TargetObject(filter = TargetFilter.CreatureInYourGraveyard.manaValueAtMost(4)),
-        )
+        val cheapCreature = target(TargetFilter.CreatureInYourGraveyard.manaValueAtMost(4))
         effect = Effects.PutOntoBattlefieldFromGraveyard(cheapCreature)
 
-        val anyCreature = kickerTarget(
-            "target creature card in your graveyard",
-            Targets.CreatureCardInYourGraveyard,
-        )
+        val anyCreature = kickerTarget(TargetFilter.CreatureInYourGraveyard)
         kickerEffect = Effects.PutOntoBattlefieldFromGraveyard(anyCreature)
     }
 

@@ -19,7 +19,7 @@ import io.kotest.matchers.shouldBe
  */
 class ImpendingClientViewTest : ScenarioTestBase() {
 
-    private val transformer = com.wingedsheep.engine.view.ClientStateTransformer(cardRegistry)
+    private val transformer = com.wingedsheep.engine.view.ClientStateTransformer(cardRegistry, predicateEvaluator = services.predicateEvaluator)
     private val p1 = EntityId.of("player-1")
 
     init {

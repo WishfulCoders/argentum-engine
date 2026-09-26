@@ -4,15 +4,13 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GiveControlToTargetPlayerEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.RemoveFromCombatEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Bill Ferny, Bree Swindler
@@ -35,7 +33,7 @@ val BillFernyBreeSwindler = card("Bill Ferny, Bree Swindler") {
         "• Target opponent gains control of target Horse you control. If they do, remove Bill Ferny from combat and create three Treasure tokens."
 
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
+        trigger = Triggers.self.becomesBlocked()
         effect = ModalEffect.chooseOne(
             // Mode 1: Create a Treasure token.
             Mode.noTarget(
@@ -43,21 +41,16 @@ val BillFernyBreeSwindler = card("Bill Ferny, Bree Swindler") {
                 "Create a Treasure token"
             ),
             // Mode 2: Target opponent gains control of target Horse you control.
-            Mode(
-                effect = GiveControlToTargetPlayerEffect(
-                    permanent = EffectTarget.ContextTarget(1),
-                    newController = EffectTarget.ContextTarget(0)
-                )
-                    .then(RemoveFromCombatEffect(EffectTarget.Self))
-                    .then(Effects.CreateTreasure(3)),
-                targetRequirements = listOf(
-                    Targets.Opponent,
-                    TargetCreature(
-                        filter = TargetFilter(GameObjectFilter.Creature.withSubtype("Horse").youControl())
-                    )
-                ),
-                description = "Target opponent gains control of target Horse you control. If they do, remove Bill Ferny from combat and create three Treasure tokens"
-            )
+            mode("Target opponent gains control of target Horse you control. If they do, remove Bill Ferny from combat and create three Treasure tokens") {
+                val opponent = target(Targets.Opponent)
+                val creature = target(TargetFilter(GameObjectFilter.Creature.withSubtype("Horse").youControl()))
+                effect = Effects.GiveControl(
+                    permanent = creature,
+                    newController = opponent
+                ) then
+                    Effects.RemoveFromCombat(EffectTarget.Self) then
+                    Effects.CreateTreasure(3)
+            }
         )
     }
 

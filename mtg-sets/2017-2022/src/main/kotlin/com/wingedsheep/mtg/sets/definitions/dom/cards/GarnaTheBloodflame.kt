@@ -30,7 +30,7 @@ val GarnaTheBloodflame = card("Garna, the Bloodflame") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ReturnCreaturesPutInGraveyardThisTurn()
     }
 

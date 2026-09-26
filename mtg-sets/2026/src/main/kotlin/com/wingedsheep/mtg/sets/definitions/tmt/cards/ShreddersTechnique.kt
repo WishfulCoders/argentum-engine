@@ -2,13 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.sneak
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Shredder's Technique
@@ -33,11 +32,11 @@ val ShreddersTechnique = card("Shredder's Technique") {
     sneak("{B}")
 
     spell {
-        val t = target("target creature or enchantment", Targets.CreatureOrEnchantment)
-        effect = ConditionalEffect(
-            condition = Conditions.TargetMatchesFilter(GameObjectFilter.Enchantment),
-            effect = Effects.Destroy(t).then(Effects.LoseLife(2, EffectTarget.Controller)),
-            elseEffect = Effects.Destroy(t)
+        val t = target(TargetFilter.CreatureOrEnchantment)
+        effect = Effects.If(
+            condition = Conditions.TargetMatchesFilter(GameObjectFilter.Enchantment, t),
+            then = Effects.Destroy(t) then Effects.LoseLife(2, EffectTarget.Controller),
+            otherwise = Effects.Destroy(t)
         )
     }
 

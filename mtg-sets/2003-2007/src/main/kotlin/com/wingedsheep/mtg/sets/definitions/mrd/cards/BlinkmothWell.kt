@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Blinkmoth Well — Mirrodin #279 (canonical printing, only printing)
@@ -42,7 +41,7 @@ val BlinkmothWell = card("Blinkmoth Well") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        val artifact = target("noncreature artifact", TargetPermanent(filter = NoncreatureArtifact))
+        val artifact = target(NoncreatureArtifact)
         effect = Effects.Tap(artifact)
     }
 

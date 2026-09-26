@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.GrantTriggeredAbilityEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -23,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * resolution (Rule 611.2c — the set of affected creatures is locked in when the spell
  * resolves; creatures entering later in the turn are unaffected). Each affected creature
  * receives +2/+2, the menace keyword, and a granted "Whenever this creature attacks, you
- * gain 1 life" triggered ability ([TriggerBinding.SELF] via [Triggers.Attacks]), all for
+ * gain 1 life" triggered ability ([TriggerBinding.SELF] via `Triggers.self.attacks()`), all for
  * the duration of the turn.
  */
 val RootManipulation = card("Root Manipulation") {
@@ -36,18 +35,15 @@ val RootManipulation = card("Root Manipulation") {
 
     spell {
         val attackGainLife = TriggeredAbility.create(
-            trigger = Triggers.Attacks.event,
-            binding = Triggers.Attacks.binding,
+            trigger = Triggers.self.attacks(),
             effect = Effects.GainLife(1),
             descriptionOverride = "Whenever this creature attacks, you gain 1 life.",
         )
         effect = Effects.ForEachInGroup(
             filter = GroupFilter(GameObjectFilter.Creature.youControl()),
-            effect = Effects.Composite(
-                Effects.ModifyStats(2, 2, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.MENACE, EffectTarget.Self),
-                GrantTriggeredAbilityEffect(ability = attackGainLife, target = EffectTarget.Self),
-            ),
+            effect = Effects.ModifyStats(2, 2, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.MENACE, EffectTarget.IterationEntity) then
+                Effects.GrantTriggeredAbility(ability = attackGainLife, target = EffectTarget.IterationEntity),
         )
     }
 

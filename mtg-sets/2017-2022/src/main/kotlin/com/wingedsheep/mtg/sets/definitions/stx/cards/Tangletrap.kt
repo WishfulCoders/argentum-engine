@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Tangletrap — Strixhaven: School of Mages #145 (canonical printing)
@@ -31,11 +32,11 @@ val Tangletrap = card("Tangletrap") {
     spell {
         modal {
             mode("Tangletrap deals 5 damage to target creature with flying.") {
-                val flyer = target("target", Targets.CreatureWithKeyword(Keyword.FLYING))
+                val flyer = target(TargetFilter.Creature.withKeyword(Keyword.FLYING))
                 effect = Effects.DealDamage(5, flyer)
             }
             mode("Destroy target artifact.") {
-                val artifact = target("target", Targets.Artifact)
+                val artifact = target(TargetFilter.Artifact)
                 effect = Effects.Destroy(artifact)
             }
         }

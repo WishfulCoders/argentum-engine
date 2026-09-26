@@ -28,7 +28,7 @@ val HorizonScholar = card("Horizon Scholar") {
     toughness = 4
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.scry(2)
     }
     metadata {

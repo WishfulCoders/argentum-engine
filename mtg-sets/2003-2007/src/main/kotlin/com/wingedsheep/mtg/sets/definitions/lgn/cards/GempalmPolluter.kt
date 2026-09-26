@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.lgn.cards
 
 import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 
 /**
  * Gempalm Polluter
@@ -30,10 +29,10 @@ val GempalmPolluter = card("Gempalm Polluter") {
     keywordAbility(KeywordAbility.cycling("{B}{B}"))
 
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
-        val player = target("target player", Targets.Player)
-        effect = MayEffect(
-            LoseLifeEffect(
+        trigger = Triggers.self.isCycled()
+        val player = target(Targets.Player)
+        effect = Effects.May(
+            Effects.LoseLife(
                 DynamicAmounts.permanentsWithSubtype(Subtype("Zombie")),
                 player
             )

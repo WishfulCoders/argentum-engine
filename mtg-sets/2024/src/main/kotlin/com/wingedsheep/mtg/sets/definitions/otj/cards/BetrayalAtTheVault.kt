@@ -1,16 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.scripting.targets.TargetOther
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Betrayal at the Vault — Outlaws of Thunder Junction #155
@@ -41,28 +38,20 @@ val BetrayalAtTheVault = card("Betrayal at the Vault") {
 
     spell {
         // Target 0: the source — a creature you control.
-        target("creature you control", Targets.CreatureYouControl)
+        val creatureYouControl = target(TargetFilter.CreatureYouControl)
         // Targets 1 & 2: two other target creatures (distinct from the source and each other).
-        target(
-            "first other target creature",
-            TargetOther(baseRequirement = TargetObject(filter = TargetFilter.Creature))
-        )
-        target(
-            "second other target creature",
-            TargetOther(baseRequirement = TargetObject(filter = TargetFilter.Creature))
-        )
+        val firstOtherCreature = target(TargetOther(baseRequirement = TargetObject(filter = TargetFilter.Creature)))
+        val secondOtherCreature = target(TargetOther(baseRequirement = TargetObject(filter = TargetFilter.Creature)))
 
-        val sourcePower = DynamicAmount.EntityProperty(EntityReference.Target(0), EntityNumericProperty.Power)
+        val sourcePower = DynamicAmounts.powerOf(creatureYouControl)
         effect = Effects.DealDamage(
             amount = sourcePower,
-            target = EffectTarget.ContextTarget(1),
-            damageSource = EffectTarget.ContextTarget(0)
-        ).then(
-            Effects.DealDamage(
-                amount = sourcePower,
-                target = EffectTarget.ContextTarget(2),
-                damageSource = EffectTarget.ContextTarget(0)
-            )
+            target = firstOtherCreature,
+            damageSource = creatureYouControl
+        ) then Effects.DealDamage(
+            amount = sourcePower,
+            target = secondOtherCreature,
+            damageSource = creatureYouControl
         )
     }
 

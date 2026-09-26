@@ -35,7 +35,7 @@ val TicketTortoise = card("Ticket Tortoise") {
     keywords(Keyword.DEFENDER)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.OpponentControlsMoreLands
         effect = Effects.CreateTreasure(1)
         description = "When this creature enters, if an opponent controls more lands than you, you " +

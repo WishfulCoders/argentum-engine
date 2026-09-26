@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.CreatePredefinedTokenEffect
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
 
 /**
@@ -61,7 +60,7 @@ val CastleDoom = card("Castle Doom") {
             Costs.Tap,
             Costs.Sacrifice(GameObjectFilter.Artifact),
         )
-        effect = CreatePredefinedTokenEffect("Doombot")
+        effect = Effects.CreatePredefinedToken("Doombot")
         timing = TimingRule.SorcerySpeed
         description = "Create a 3/3 colorless Robot Villain artifact creature token named " +
             "Doombot. Activate only as a sorcery."

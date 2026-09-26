@@ -2,8 +2,8 @@ package com.wingedsheep.gameserver.replay
 
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.sdk.model.CardDefinition
-import com.wingedsheep.sdk.serialization.CardExporter
-import com.wingedsheep.sdk.serialization.CardLoader
+import com.wingedsheep.sdk.tooling.CardExporter
+import com.wingedsheep.sdk.tooling.CardLoader
 import org.slf4j.LoggerFactory
 
 /**

@@ -4,16 +4,15 @@ import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Underhanded Designs
@@ -27,7 +26,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * The trigger takes `TriggerBinding.ANY` — an enchantment can never be the artifact that entered,
  * so "an artifact you control" is the whole group rather than "another". "You may pay {1}. If you
- * do, ..." is [MayPayManaEffect] (a `Gate.MayPay` over the payment), not a reflexive trigger.
+ * do, ..." is [Effects.MayPay] (a `Gate.MayPay` over the payment), not a reflexive trigger.
  */
 val UnderhandedDesigns = card("Underhanded Designs") {
     manaCost = "{1}{B}"
@@ -37,22 +36,16 @@ val UnderhandedDesigns = card("Underhanded Designs") {
         "{1}{B}, Sacrifice this enchantment: Destroy target creature. Activate only if you control two or more artifacts."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            binding = TriggerBinding.ANY,
-        )
-        effect = MayPayManaEffect(
+        trigger = Triggers.a(GameObjectFilter.Artifact.youControl()).enters()
+        effect = Effects.MayPay(
             ManaCost.parse("{1}"),
-            Effects.Composite(
-                Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)),
-                Effects.GainLife(1),
-            ),
+            Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(1),
         )
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{B}"), Costs.SacrificeSelf)
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.Destroy(t)
         restrictions = listOf(
             ActivationRestriction.OnlyIfCondition(

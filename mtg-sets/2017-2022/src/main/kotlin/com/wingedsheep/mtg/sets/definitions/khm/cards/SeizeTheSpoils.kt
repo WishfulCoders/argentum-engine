@@ -28,7 +28,7 @@ val SeizeTheSpoils = card("Seize the Spoils") {
     additionalCost(Costs.additional.DiscardCards())
 
     spell {
-        effect = Effects.DrawCards(2).then(Effects.CreateTreasure(1))
+        effect = Effects.DrawCards(2) then Effects.CreateTreasure(1)
     }
 
     metadata {

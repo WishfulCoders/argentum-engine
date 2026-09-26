@@ -25,7 +25,7 @@ import io.kotest.matchers.shouldBe
  *  When there are 1,000 or more time counters on The Millennium Calendar, sacrifice it and each
  *  opponent loses 1,000 life."
  *
- * The headline is the new **batch untap** trigger ([com.wingedsheep.sdk.dsl.Triggers.OneOrMoreBecomeUntapped]):
+ * The headline is the new **batch untap** trigger (`Triggers.oneOrMore(filter).becomeUntapped()`):
  * the untap step untaps all your permanents at once but the ability fires a *single* time, and the
  * count of untapped permanents is read via the trigger's captured collection ("put that many").
  * The doubler reuses `DoubleCounters`; the 1,000-counter kill is a CR 603.8 state-triggered ability.

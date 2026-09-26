@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Volcanic Submersion
@@ -27,7 +28,7 @@ val VolcanicSubmersion = card("Volcanic Submersion") {
         "Cycling {2} ({2}, Discard this card: Draw a card.)"
 
     spell {
-        val t = target("target", Targets.ArtifactOrLand)
+        val t = target(TargetFilter.ArtifactOrLand)
         effect = Effects.Destroy(t)
     }
 

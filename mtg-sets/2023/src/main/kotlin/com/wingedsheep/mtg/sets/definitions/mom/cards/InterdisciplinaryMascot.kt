@@ -41,7 +41,7 @@ val InterdisciplinaryMascot = card("Interdisciplinary Mascot") {
     keywordAbility(KeywordAbility.Ward(WardCost.Mana("{3}")))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.lookAtTopAndKeep(
             count = 4,
             keepCount = 1,

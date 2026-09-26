@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.mrd.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Wizard Replica — Mirrodin #275
@@ -33,8 +33,8 @@ val WizardReplica = card("Wizard Replica") {
     keywords(Keyword.FLYING)
 
     activatedAbility {
+        val spell = target(TargetFilter.SpellOnStack)
         cost = Costs.Composite(Costs.Mana("{U}"), Costs.SacrificeSelf)
-        target = Targets.Spell
         effect = Effects.CounterUnlessPays("{2}")
         description = "{U}, Sacrifice this creature: Counter target spell unless its controller pays {2}."
     }

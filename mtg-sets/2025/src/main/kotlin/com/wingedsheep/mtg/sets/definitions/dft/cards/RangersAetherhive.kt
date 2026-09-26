@@ -23,7 +23,7 @@ val RangersAetherhive = card("Rangers' Aetherhive") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.YouActivateExhaustAbility
+        trigger = Triggers.you.activatesAbility(exhaust = true)
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

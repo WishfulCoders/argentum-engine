@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * High Stride
@@ -19,10 +19,10 @@ val HighStride = card("High Stride") {
     oracleText = "Target creature gets +1/+3 and gains reach until end of turn. Untap it."
 
     spell {
-        val t = target("target creature to get +1/+3 and reach", TargetCreature())
-        effect = Effects.ModifyStats(1, 3, t)
-            .then(Effects.GrantKeyword(Keyword.REACH, t))
-            .then(Effects.Untap(t))
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(1, 3, t) then
+            Effects.GrantKeyword(Keyword.REACH, t) then
+            Effects.Untap(t)
     }
 
     metadata {

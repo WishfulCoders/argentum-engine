@@ -31,7 +31,7 @@ val SelflessCathar = card("Selfless Cathar") {
         cost = Costs.Composite(Costs.Mana("{1}{W}"), Costs.SacrificeSelf)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(1, 1, EffectTarget.Self)
+            Effects.ModifyStats(1, 1, EffectTarget.IterationEntity)
         )
     }
     metadata {

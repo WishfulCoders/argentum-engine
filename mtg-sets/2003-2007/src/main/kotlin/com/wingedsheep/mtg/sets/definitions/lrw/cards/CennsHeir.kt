@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -8,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Cenn's Heir
@@ -31,12 +31,12 @@ val CennsHeir = card("Cenn's Heir") {
     oracleText = "Whenever this creature attacks, it gets +1/+1 until end of turn for each other attacking Kithkin."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val otherAttackingKithkin = DynamicAmount.AggregateBattlefield(
+        trigger = Triggers.self.attacks()
+        val otherAttackingKithkin = DynamicAmounts.battlefield(
             Player.Each,
             GameObjectFilter.Creature.withSubtype(Subtype.KITHKIN).attacking(),
             excludeSelf = true
-        )
+        ).count()
         effect = Effects.ModifyStats(
             power = otherAttackingKithkin,
             toughness = otherAttackingKithkin,

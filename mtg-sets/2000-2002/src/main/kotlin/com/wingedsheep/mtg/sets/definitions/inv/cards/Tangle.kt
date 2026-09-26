@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -24,15 +23,13 @@ val Tangle = card("Tangle") {
         "Each attacking creature doesn't untap during its controller's next untap step."
 
     spell {
-        effect = Effects.PreventAllCombatDamage()
-            .then(
-                Effects.ForEachInGroup(
-                    GroupFilter.AttackingCreatures,
-                    GrantKeywordEffect(
-                        AbilityFlag.DOESNT_UNTAP.name,
-                        EffectTarget.Self,
-                        Duration.UntilAfterAffectedControllersNextUntap
-                    )
+        effect = Effects.PreventAllCombatDamage() then
+            Effects.ForEachInGroup(
+                GroupFilter.AttackingCreatures,
+                Effects.GrantKeyword(
+                    AbilityFlag.DOESNT_UNTAP,
+                    EffectTarget.IterationEntity,
+                    Duration.UntilAfterAffectedControllersNextUntap
                 )
             )
     }

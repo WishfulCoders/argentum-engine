@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.inv.cards
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Cinder Shade
@@ -35,7 +35,7 @@ val CinderShade = card("Cinder Shade") {
             Costs.Mana("{R}"),
             Costs.SacrificeSelf
         )
-        val t = target("target creature", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         // Power is read from the sacrifice-time snapshot (Rule 608.2h — "as it last
         // existed on the battlefield"), since the source has already left play.
         effect = Effects.DealDamage(DynamicAmounts.sacrificedPower(), t)

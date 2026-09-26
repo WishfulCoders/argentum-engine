@@ -31,7 +31,7 @@ val NecrogenScudder = card("Necrogen Scudder") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.LoseLife(3, EffectTarget.Controller)
         description = "When this creature enters, you lose 3 life."
     }

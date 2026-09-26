@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.custom
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
@@ -10,9 +10,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.CreatePredefinedTokenEffect
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -63,26 +60,20 @@ val SekshaasEarlySleeper = card("Sekshaas, Early Sleeper") {
 
     // Early to Rest — exile at each end step, return at your next upkeep with haste
     triggeredAbility {
-        trigger = Triggers.EachEndStep
-        effect = Effects.Composite(
-            listOf(
-                Effects.Move(EffectTarget.Self, Zone.EXILE),
-                CreateDelayedTriggerEffect(
-                    step = Step.UPKEEP,
-                    effect = Effects.Composite(listOf(
-                        Effects.Move(EffectTarget.Self, Zone.BATTLEFIELD),
-                        GrantKeywordEffect(Keyword.HASTE, EffectTarget.Self)
-                    )),
-                    fireOnPlayer = EffectTarget.PlayerRef(Player.You)
-                )
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
+        effect = Effects.Move(EffectTarget.Self, Zone.EXILE) then
+            Effects.CreateDelayedTrigger(
+                step = Step.UPKEEP,
+                effect = Effects.Move(EffectTarget.Self, Zone.BATTLEFIELD) then
+                    Effects.GrantKeyword(Keyword.HASTE, EffectTarget.Self),
+                fireOnPlayer = EffectTarget.PlayerRef(Player.You)
             )
-        )
     }
 
     // {T}: Create a Food token named "Just One Glass" — once per turn
     activatedAbility {
         cost = Costs.Tap
-        effect = CreatePredefinedTokenEffect("Just One Glass", 1)
+        effect = Effects.CreatePredefinedToken("Just One Glass")
         restrictions = listOf(ActivationRestriction.OncePerTurn)
         description = "Create a Food token named \"Just One Glass.\""
     }
@@ -90,7 +81,7 @@ val SekshaasEarlySleeper = card("Sekshaas, Early Sleeper") {
     // Climb {1}{G} — +1/+1 counter, sorcery speed
     activatedAbility {
         cost = Costs.Mana("{1}{G}")
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         timing = TimingRule.SorcerySpeed
     }
 

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
@@ -10,6 +11,8 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import io.kotest.matchers.shouldNotBe
 
 /**
  * Ancient Spring has a sacrifice-free mana ability *and* a sacrifice one, and the sacrifice
@@ -49,7 +52,7 @@ class AncientSpringAutoTapTest : FunSpec({
         // {U} plus something else. {1}{U} is unpayable off this land alone.
         val result = driver.castSpell(activePlayer, zombie)
 
-        result.isSuccess shouldBe false
+        result.outcome shouldNotBe Outcome.Done
         driver.findPermanent(activePlayer, "Ancient Spring") shouldBe spring
         driver.isTapped(spring) shouldBe false
         driver.getGraveyardCardNames(activePlayer).contains("Ancient Spring") shouldBe false
@@ -63,7 +66,7 @@ class AncientSpringAutoTapTest : FunSpec({
 
         driver.putPermanentOnBattlefield(activePlayer, "Ancient Spring")
 
-        val solver = ManaSolver(driver.cardRegistry)
+        val solver = ManaSolver(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         // {W}{B} is payable — that's exactly what the sacrifice ability makes.
         solver.canPay(driver.state, activePlayer, ManaCost.parse("{W}{B}")) shouldBe true
         // A lone {U} is payable via the sacrifice-free ability.
@@ -80,7 +83,7 @@ class AncientSpringAutoTapTest : FunSpec({
 
         driver.putPermanentOnBattlefield(activePlayer, "Ancient Spring")
 
-        val solver = ManaSolver(driver.cardRegistry)
+        val solver = ManaSolver(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         // Best case is sacrificing for {W}{B}; the {U} ability shares the same {T} cost.
         solver.getAvailableManaCount(driver.state, activePlayer) shouldBe 2
     }
@@ -98,7 +101,7 @@ class AncientSpringAutoTapTest : FunSpec({
         // Mountain pays the generic {1}, Ancient Spring taps for {U} without being sacrificed.
         val result = driver.castSpell(activePlayer, zombie)
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         driver.isTapped(spring) shouldBe true
         driver.isTapped(mountain) shouldBe true
         driver.findPermanent(activePlayer, "Ancient Spring") shouldBe spring

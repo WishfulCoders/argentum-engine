@@ -29,7 +29,7 @@ val DuneMover = card("Dune Mover") {
     keywordAbility(KeywordAbility.Numeric(Keyword.TOXIC, 1))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.BasicLand,

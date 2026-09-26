@@ -16,14 +16,11 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldNotContain
@@ -53,13 +50,13 @@ class AirbendScenarioTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Airbend target nonland permanent."
         spell {
-            target("target nonland permanent", Targets.NonlandPermanent)
+            target(TargetFilter.NonlandPermanent)
             effect = Effects.Airbend()
         }
     }
 
     // {W} instant: "Airbend up to one target creature or spell." Exercises the airbend stack branch
-    // (the combined cross-zone target + the spell-vs-permanent ConditionalEffect dispatch), the same
+    // (the combined cross-zone target + the spell-vs-permanent Effects.If dispatch), the same
     // shape as Aang, Swift Savior's ETB.
     val airbendOrSpellTester = card("Airbend Or Spell Tester") {
         manaCost = "{W}"
@@ -67,20 +64,13 @@ class AirbendScenarioTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Airbend up to one target creature or spell."
         spell {
-            target(
-                "up to one target creature or spell",
-                TargetObject(
-                    count = 1,
-                    optional = true,
-                    filter = TargetFilter.anyOf(TargetFilter.Creature, TargetFilter.SpellOnStack)
-                )
-            )
-            effect = ConditionalEffect(
+            target(TargetFilter.anyOf(TargetFilter.Creature, TargetFilter.SpellOnStack), optional = true)
+            effect = Effects.If(
                 condition = Conditions.TargetIsSpellOnStack(0),
                 // Spell branch: airbend "exiles it" (not a counter) — Effects.AirbendSpell, which
                 // also fires "whenever you airbend" once the spell is exiled (CR 701.65b).
-                effect = Effects.AirbendSpell(ManaCost.parse("{2}")),
-                elseEffect = Effects.Airbend()
+                then = Effects.AirbendSpell(ManaCost.parse("{2}")),
+                otherwise = Effects.Airbend()
             )
         }
     }

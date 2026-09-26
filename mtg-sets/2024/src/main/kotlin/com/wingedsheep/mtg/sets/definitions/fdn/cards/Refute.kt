@@ -8,9 +8,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CounterEffect
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 
 /**
@@ -25,12 +23,10 @@ val Refute = card("Refute") {
     typeLine = "Instant"
     oracleText = "Counter target spell. Draw a card, then discard a card."
     spell {
-        val t = target("target", TargetSpell())
-        effect = Effects.Composite(
-            CounterEffect(),
-            DrawCardsEffect(1),
+        val t = target(TargetFilter.SpellOnStack)
+        effect = Effects.CounterSpell() then
+            Effects.DrawCards(1) then
             Patterns.Hand.discardCards(1)
-        )
     }
     metadata {
         rarity = Rarity.COMMON

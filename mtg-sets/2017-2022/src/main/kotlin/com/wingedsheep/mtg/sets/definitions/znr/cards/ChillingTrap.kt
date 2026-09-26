@@ -3,10 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.znr.cards
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Chilling Trap
@@ -15,7 +14,7 @@ import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
  * Target creature gets -4/-0 until end of turn. If you control a Wizard, draw a card.
  *
  * The Wizard clause is a rider on resolution, not a cast condition: it is checked as the spell
- * resolves ([ConditionalEffect]), and per the Scryfall ruling a fizzled spell (illegal target)
+ * resolves ([Effects.If]), and per the Scryfall ruling a fizzled spell (illegal target)
  * never gets that far, so no card is drawn. "A Wizard" is a bare tribal noun — any *permanent*
  * with the subtype counts ([Conditions.ControlPermanentOfType]).
  */
@@ -26,13 +25,11 @@ val ChillingTrap = card("Chilling Trap") {
     oracleText = "Target creature gets -4/-0 until end of turn. If you control a Wizard, draw a card."
 
     spell {
-        val creature = target("creature", Targets.Creature)
-        effect = Effects.ModifyStats(-4, 0, creature)
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.ControlPermanentOfType(Subtype("Wizard")),
-                    effect = Effects.DrawCards(1),
-                )
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(-4, 0, creature) then
+            Effects.If(
+                condition = Conditions.ControlPermanentOfType(Subtype("Wizard")),
+                then = Effects.DrawCards(1),
             )
     }
 

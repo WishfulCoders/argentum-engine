@@ -27,10 +27,7 @@ val MidnightGuard = card("Midnight Guard") {
     oracleText = "Whenever another creature enters, untap this creature."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature,
-            binding = TriggerBinding.OTHER,
-        )
+        trigger = Triggers.another(GameObjectFilter.Creature).enters()
         effect = Effects.Untap(EffectTarget.Self)
         description = "Whenever another creature enters, untap this creature."
     }

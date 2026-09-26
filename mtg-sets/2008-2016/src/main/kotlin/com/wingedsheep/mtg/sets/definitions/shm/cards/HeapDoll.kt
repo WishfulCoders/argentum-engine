@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Heap Doll
@@ -31,7 +32,7 @@ val HeapDoll = card("Heap Doll") {
     // Sacrifice this creature: Exile target card from a graveyard.
     activatedAbility {
         cost = Costs.SacrificeSelf
-        val t = target("target", Targets.CardInGraveyard)
+        val t = target(TargetFilter.CardInGraveyard)
         effect = Effects.Exile(t)
     }
 

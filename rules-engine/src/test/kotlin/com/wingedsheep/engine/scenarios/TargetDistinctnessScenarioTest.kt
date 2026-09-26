@@ -10,10 +10,10 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * CR 601.2c: "The same target can't be chosen multiple times for any one instance of the word
@@ -32,9 +32,9 @@ class TargetDistinctnessScenarioTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Test Twin Ping deals 1 damage to each of two target creatures."
         spell {
-            target("two target creatures", TargetCreature(count = 2))
-            effect = Effects.DealDamage(1, EffectTarget.ContextTarget(0))
-                .then(Effects.DealDamage(1, EffectTarget.ContextTarget(1)))
+            targets(TargetFilter.Creature, count = 2)
+            effect = Effects.DealDamage(1, EffectTarget.ContextTarget(0)) then
+                Effects.DealDamage(1, EffectTarget.ContextTarget(1))
         }
         metadata {
             rarity = Rarity.COMMON

@@ -9,10 +9,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.RedirectZoneChange
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -47,20 +44,12 @@ val StoneOfErech = card("Stone of Erech") {
             Costs.Tap,
             Costs.SacrificeSelf
         )
-        target("target player", Targets.Player)
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
-                    storeAs = "targetGraveyard"
-                ),
-                MoveCollectionEffect(
-                    from = "targetGraveyard",
-                    destination = CardDestination.ToZone(Zone.EXILE, Player.ContextPlayer(0))
-                ),
-                Effects.DrawCards(1)
-            )
-        )
+        val player = target(Targets.Player)
+        effect = Effects.Pipeline {
+            val targetGraveyard = gather(CardSource.FromZone(Zone.GRAVEYARD, player.asPlayer))
+            exile(targetGraveyard, player.asPlayer)
+            run(Effects.DrawCards(1))
+        }
     }
 
     metadata {

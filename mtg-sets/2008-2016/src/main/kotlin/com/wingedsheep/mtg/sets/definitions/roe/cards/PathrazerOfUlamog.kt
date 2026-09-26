@@ -23,7 +23,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Modeling notes:
  *  - Annihilator is a **display-only** [KeywordAbility.Numeric] in this SDK — nothing in
  *    `rules-engine` reads it — so the card declares it for the printed line *and* lowers the
- *    behaviour by hand, exactly as Artisan of Kozilek does for annihilator 2: a [Triggers.Attacks]
+ *    behaviour by hand, exactly as Artisan of Kozilek does for annihilator 2: a `Triggers.self.attacks()`
  *    triggered ability whose effect is the edict form of [Effects.Sacrifice], where the *defending
  *    player* chooses. Declaring the keyword ability alone would render the reminder text and do
  *    nothing.
@@ -47,7 +47,7 @@ val PathrazerOfUlamog = card("Pathrazer of Ulamog") {
 
     // Annihilator 3 — the lowering of the display-only keyword ability above.
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.Sacrifice(
             GameObjectFilter.Permanent,
             3,

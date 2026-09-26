@@ -6,8 +6,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetOpponentOrPlaneswalker
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Jeskai Charm
@@ -27,11 +27,11 @@ val JeskaiCharm = card("Jeskai Charm") {
     spell {
         modal(chooseCount = 1) {
             mode("Put target creature on top of its owner's library") {
-                val creature = target("target creature", TargetCreature())
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.PutOnTopOfLibrary(creature)
             }
             mode("Jeskai Charm deals 4 damage to target opponent or planeswalker") {
-                val t = target("target opponent or planeswalker", TargetOpponentOrPlaneswalker())
+                val t = target(Targets.OpponentOrPlaneswalker)
                 effect = Effects.DealDamage(4, t)
             }
             mode("Creatures you control get +1/+1 and gain lifelink until end of turn") {

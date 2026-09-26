@@ -29,6 +29,8 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Disguise (CR 702.168) — morph plus ward {2}.
@@ -53,7 +55,7 @@ class DisguiseKeywordScenarioTest : FunSpec({
         power = 2
         toughness = 2
         morph = "{2}"
-        keywordAbility(KeywordAbility.ward("{2}"))
+        keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
     }
 
     val allCards = TestCards.all + listOf(
@@ -106,7 +108,7 @@ class DisguiseKeywordScenarioTest : FunSpec({
                     castFaceDown = true,
                     paymentStrategy = PaymentStrategy.FromPool
                 )
-            ).isSuccess shouldBe true
+            ).outcome shouldBe Outcome.Done
             driver.stackSize shouldBe 1
 
             // Resolving it produces a face-down permanent stamped with the DISGUISE mode.
@@ -148,7 +150,7 @@ class DisguiseKeywordScenarioTest : FunSpec({
                     castFaceDown = true,
                     paymentStrategy = PaymentStrategy.FromPool
                 )
-            ).isSuccess shouldBe false
+            ).outcome shouldNotBe Outcome.Done
         }
 
         test("the face-down cast is unavailable at instant speed") {
@@ -238,7 +240,7 @@ class DisguiseKeywordScenarioTest : FunSpec({
             driver.giveMana(player, Color.RED, 1)
             val bolt = driver.putCardInHand(player, "Lightning Bolt")
             driver.castSpellWithTargets(player, bolt, listOf(ChosenTarget.Permanent(moroii)))
-                .isSuccess shouldBe true
+                .outcome shouldBe Outcome.Done
 
             // Resolve the ward trigger — the caster is asked for {2}.
             driver.bothPass()

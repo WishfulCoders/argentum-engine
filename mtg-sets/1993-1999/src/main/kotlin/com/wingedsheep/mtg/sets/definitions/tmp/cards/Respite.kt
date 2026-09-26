@@ -20,12 +20,10 @@ val Respite = card("Respite") {
     oracleText = "Prevent all combat damage that would be dealt this turn. You gain 1 life for each attacking creature."
 
     spell {
-        effect = Effects.Composite(
-            Effects.PreventAllCombatDamage(),
+        effect = Effects.PreventAllCombatDamage() then
             Effects.GainLife(
                 DynamicAmounts.battlefield(Player.Each, GameObjectFilter.Creature.attacking()).count()
             )
-        )
     }
 
     metadata {

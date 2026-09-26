@@ -11,7 +11,7 @@ import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.PreventDamage
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Diamond Weapon
@@ -28,7 +28,7 @@ import com.wingedsheep.sdk.scripting.events.RecipientFilter
  *     graveyard" (CR 601.2f cost reduction).
  *   - [Keyword.REACH].
  *   - A continuous [PreventDamage] replacement (CR 615) scoped to combat damage
- *     ([DamageType.Combat]) dealt to itself ([RecipientFilter.Self]). Per Scryfall ruling this
+ *     ([DamageType.Combat]) dealt to itself ([Recipient.Self]). Per Scryfall ruling this
  *     prevention isn't considered while a trampling attacker it blocks assigns lethal damage
  *     (CR 510.1c handles that at assignment time, before the replacement applies).
  */
@@ -56,7 +56,7 @@ val DiamondWeapon = card("Diamond Weapon") {
     replacementEffect(
         PreventDamage(
             appliesTo = EventPattern.DamageEvent(
-                recipient = RecipientFilter.Self,
+                recipient = Recipient.Self,
                 damageType = DamageType.Combat
             )
         )

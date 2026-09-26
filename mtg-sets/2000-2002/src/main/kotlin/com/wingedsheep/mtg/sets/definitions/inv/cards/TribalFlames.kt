@@ -20,7 +20,7 @@ val TribalFlames = card("Tribal Flames") {
     oracleText = "Domain — Tribal Flames deals X damage to any target, where X is the number of basic land types among lands you control."
 
     spell {
-        val t = target("any target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(DynamicAmounts.domain(), t)
     }
 

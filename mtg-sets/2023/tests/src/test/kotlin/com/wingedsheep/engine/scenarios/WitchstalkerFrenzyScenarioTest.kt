@@ -34,7 +34,7 @@ class WitchstalkerFrenzyScenarioTest : ScenarioTestBase() {
                     .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
                     .build()
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Witchstalker Frenzy"),
                     game.player1Id,
@@ -62,7 +62,7 @@ class WitchstalkerFrenzyScenarioTest : ScenarioTestBase() {
                     mapOf("Grizzly Bears" to 2, "Hill Giant" to 2)
                 ).error shouldBe null
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Witchstalker Frenzy"),
                     game.player1Id,
@@ -97,7 +97,7 @@ class WitchstalkerFrenzyScenarioTest : ScenarioTestBase() {
                     game.findPermanent("Grizzly Bears") shouldBe null
                 }
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Witchstalker Frenzy"),
                     game.player1Id,
@@ -124,7 +124,7 @@ class WitchstalkerFrenzyScenarioTest : ScenarioTestBase() {
                 game.advanceToPhase(Phase.COMBAT, Step.DECLARE_ATTACKERS)
                 game.declareAttackers(mapOf("Grizzly Bears" to 2)).error shouldBe null
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Witchstalker Frenzy"),
                     game.player2Id,
@@ -160,7 +160,7 @@ class WitchstalkerFrenzyScenarioTest : ScenarioTestBase() {
                     )
                 ).error shouldBe null
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Witchstalker Frenzy"),
                     game.player1Id,

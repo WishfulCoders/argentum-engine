@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Wistfulness
@@ -32,18 +31,15 @@ val Wistfulness = card("Wistfulness") {
 
     // Green gate defined first (goes on stack first, resolves second)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.ManaSpentToCastIncludes(requiredGreen = 2)
-        val artifactOrEnchantment = target(
-            "artifact or enchantment an opponent controls",
-            TargetObject(filter = TargetFilter.ArtifactOrEnchantment.opponentControls())
-        )
+        val artifactOrEnchantment = target(TargetFilter.ArtifactOrEnchantment.opponentControls())
         effect = Effects.Exile(artifactOrEnchantment)
     }
 
     // Blue gate defined second (goes on stack second, resolves first)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.ManaSpentToCastIncludes(requiredBlue = 2)
         effect = Patterns.Hand.loot(draw = 2, discard = 1)
     }

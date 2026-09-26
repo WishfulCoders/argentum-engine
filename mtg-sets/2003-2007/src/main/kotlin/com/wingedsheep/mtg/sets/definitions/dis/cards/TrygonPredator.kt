@@ -5,9 +5,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Trygon Predator
@@ -23,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  * carried as the *triggering entity*, not the triggering player, so `Player.TriggeringPlayer`
  * can't scope the target filter here (it stays null). We therefore scope to artifacts/enchantments
  * an opponent controls — identical to the damaged player in a two-player game, and matching the
- * established precedent for this exact card shape (Dawning Purist). "You may" is the [MayEffect]
+ * established precedent for this exact card shape (Dawning Purist). "You may" is the [Effects.May]
  * wrapper; if the opponent controls no artifact or enchantment the ability never goes on the
  * stack (CR 603.3d).
  */
@@ -40,12 +39,9 @@ val TrygonPredator = card("Trygon Predator") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        val t = target(
-            "target artifact or enchantment that player controls",
-            TargetPermanent(filter = TargetFilter.ArtifactOrEnchantment.opponentControls()),
-        )
-        effect = MayEffect(Effects.Destroy(t))
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        val t = target(TargetFilter.ArtifactOrEnchantment.opponentControls())
+        effect = Effects.May(Effects.Destroy(t))
     }
 
     metadata {

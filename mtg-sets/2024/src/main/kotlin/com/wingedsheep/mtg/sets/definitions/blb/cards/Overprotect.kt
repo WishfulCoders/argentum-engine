@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Overprotect {1}{G}
@@ -20,11 +20,11 @@ val Overprotect = card("Overprotect") {
     oracleText = "Target creature you control gets +3/+3 and gains trample, hexproof, and indestructible until end of turn."
 
     spell {
-        val creature = target("target creature you control", Targets.CreatureYouControl)
-        effect = Effects.ModifyStats(3, 3, creature)
-            .then(Effects.GrantKeyword(Keyword.TRAMPLE, creature))
-            .then(Effects.GrantKeyword(Keyword.HEXPROOF, creature))
-            .then(Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, creature))
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.ModifyStats(3, 3, creature) then
+            Effects.GrantKeyword(Keyword.TRAMPLE, creature) then
+            Effects.GrantKeyword(Keyword.HEXPROOF, creature) then
+            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, creature)
     }
 
     metadata {

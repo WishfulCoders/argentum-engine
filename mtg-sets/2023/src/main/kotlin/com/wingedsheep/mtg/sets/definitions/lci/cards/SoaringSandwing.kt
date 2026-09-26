@@ -6,11 +6,11 @@ package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -31,8 +31,8 @@ val SoaringSandwing = card("Soaring Sandwing") {
     toughness = 5
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = GainLifeEffect(3)
+        trigger = Triggers.self.enters()
+        effect = Effects.GainLife(3)
     }
     keywordAbility(KeywordAbility.typecycling("Plains", ManaCost.parse("{2}")))
     metadata {

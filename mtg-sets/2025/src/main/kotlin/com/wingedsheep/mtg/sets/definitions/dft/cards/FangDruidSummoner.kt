@@ -23,7 +23,7 @@ val FangDruidSummoner = card("Fang-Druid Summoner") {
 
     keywords(Keyword.REACH)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchMultipleZones(
             zones = listOf(Zone.LIBRARY, Zone.GRAVEYARD),
             filter = Filters.CreatureWithNoAbilities,

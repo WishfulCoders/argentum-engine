@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.grn.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Worldsoul Colossus
@@ -24,7 +24,7 @@ val WorldsoulColossus = card("Worldsoul Colossus") {
     toughness = 0
 
     keywords(Keyword.CONVOKE)
-    replacementEffect(EntersWithDynamicCounters(count = DynamicAmount.XValue))
+    replacementEffect(EntersWithDynamicCounters(count = DynamicAmounts.xValue()))
 
     metadata {
         rarity = Rarity.UNCOMMON

@@ -13,7 +13,7 @@
                         "type": "MoveToZone",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "creature or planeswalker"
+                            "name": "t0"
                         },
                         "destination": "Graveyard",
                         "byDestruction": true
@@ -21,7 +21,7 @@
                     "targetRequirements": [
                         {
                             "type": "TargetCreatureOrPlaneswalker",
-                            "id": "creature or planeswalker"
+                            "id": "t0"
                         }
                     ],
                     "description": "Destroy target creature or planeswalker"
@@ -31,7 +31,7 @@
                         "type": "MoveToZone",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "Zombie creature card in your graveyard"
+                            "name": "t1"
                         },
                         "destination": "Battlefield",
                         "placement": "Tapped"
@@ -43,7 +43,7 @@
                                 "baseFilter": "creature Zombie own:you",
                                 "zone": "Graveyard"
                             },
-                            "id": "Zombie creature card in your graveyard"
+                            "id": "t1"
                         }
                     ],
                     "description": "Return target Zombie creature card from your graveyard to the battlefield tapped"
@@ -79,7 +79,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Giant Ladybug:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -97,7 +97,8 @@
                                     "zone": "Library",
                                     "filter": "basicland"
                                 },
-                                "storeAs": "searchable"
+                                "storeAs": "searchable",
+                                "search": true
                             },
                             {
                                 "type": "SelectFromCollection",
@@ -153,7 +154,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Ingenious Leonin:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -166,11 +167,11 @@
                     "effects": [
                         {
                             "type": "AddCounters",
-                            "counterType": "+1/+1",
+                            "counterType": "PLUS_ONE_PLUS_ONE",
                             "count": 1,
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target"
+                                "name": "t0"
                             }
                         },
                         {
@@ -180,8 +181,8 @@
                                 "condition": {
                                     "type": "EntityMatches",
                                     "entity": {
-                                        "type": "ContextTarget",
-                                        "index": 0
+                                        "type": "BoundVariable",
+                                        "name": "t0"
                                     },
                                     "filter": "creature Cat"
                                 }
@@ -191,7 +192,7 @@
                                 "keyword": "FIRST_STRIKE",
                                 "target": {
                                     "type": "BoundVariable",
-                                    "name": "target"
+                                    "name": "t0"
                                 }
                             }
                         }
@@ -204,7 +205,7 @@
                             "baseFilter": "creature attacking ctrl:you",
                             "excludeSelf": true
                         },
-                        "id": "target"
+                        "id": "t0"
                     }
                 ]
             }
@@ -235,7 +236,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Mild-Mannered Librarian:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -254,7 +255,7 @@
                         },
                         {
                             "type": "AddCounters",
-                            "counterType": "+1/+1",
+                            "counterType": "PLUS_ONE_PLUS_ONE",
                             "count": 2,
                             "target": "Self"
                         },
@@ -297,7 +298,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Spectral Hunt-Caller:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -326,12 +327,12 @@
                                     "type": "Fixed",
                                     "amount": 1
                                 },
-                                "target": "Self"
+                                "target": "IterationEntity"
                             },
                             {
                                 "type": "GrantKeyword",
                                 "keyword": "TRAMPLE",
-                                "target": "Self"
+                                "target": "IterationEntity"
                             }
                         ]
                     }
@@ -363,7 +364,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Suspicious Shambler:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [

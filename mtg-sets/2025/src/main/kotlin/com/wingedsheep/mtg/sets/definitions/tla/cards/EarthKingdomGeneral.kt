@@ -1,18 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Earth Kingdom General
@@ -32,11 +28,11 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Ability 2 mirrors Terrasymbiosis ("you put one or more +1/+1 counters on a creature you control,
  * you may draw that many cards. Do this only once each turn.") but pays off with life and is not
  * restricted to creatures you control — the oracle reads "a creature" (any creature). It fires on a
- * `Triggers.countersPlacedOn` for `Counters.PLUS_ONE_PLUS_ONE` over any creature with
+ * `Triggers.<subject>.getsCounters(type, by, firstTimeEachTurn, batch)` for `CounterType.PLUS_ONE_PLUS_ONE` over any creature with
  * `placedBy = Player.You` — the recipient filter is unrestricted, so the "you put" scope comes from
  * the placer selector (CR 122.6a), not from a "you control" recipient filter; a counter placed by
  * an opponent doesn't fire it. Gains `TRIGGER_COUNTERS_PLACED_AMOUNT` ("that much") life, wrapped in
- * `MayEffect` for the "may" (a bare `optional = true` is ignored on a no-target ability, like
+ * `Effects.May` for the "may" (a bare `optional = true` is ignored on a no-target ability, like
  * Terrasymbiosis) plus `effectOncePerTurn = true` for "Do this only once each turn" — CR 603.2h,
  * the rider keyed to the action rather than the trigger cap.
  */
@@ -53,30 +49,24 @@ val EarthKingdomGeneral = card("Earth Kingdom General") {
         "Do this only once each turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val land = target("target land you control", TargetObject(filter = TargetFilter.Land.youControl()))
+        trigger = Triggers.self.enters()
+        val land = target(TargetFilter.Land.youControl())
         effect = Effects.Earthbend(2, land)
         description = "When this creature enters, earthbend 2."
     }
 
     triggeredAbility {
-        trigger = Triggers.countersPlacedOn(
-            filter = GameObjectFilter.Creature,
-            counterType = Counters.PLUS_ONE_PLUS_ONE,
-            firstTimeEachTurn = false,
-            binding = TriggerBinding.ANY,
-            placedBy = Player.You,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature).getsCounters(CounterType.PLUS_ONE_PLUS_ONE, by = Player.You)
         // CR 603.2h — keyed to the life gain, not to the trigger: "Once you choose to gain life
         // using Earth Kingdom General's second ability, that ability won't trigger again that
         // turn" (Scryfall ruling). Declining a small placement keeps a bigger one later live.
         effectOncePerTurn = true
-        // The "you may" is a MayEffect, not a bare `optional = true` — the engine ignores that
+        // The "you may" is a Effects.May, not a bare `optional = true` — the engine ignores that
         // flag on a no-target ability with no elseEffect (same as Terrasymbiosis), gaining the life
         // unconditionally instead of offering the choice.
-        effect = MayEffect(
+        effect = Effects.May(
             Effects.GainLife(
-                DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_COUNTERS_PLACED_AMOUNT)
+                DynamicAmounts.triggerCountersPlaced()
             )
         )
         description = "Whenever you put one or more +1/+1 counters on a creature, you may gain " +

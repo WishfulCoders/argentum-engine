@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -40,25 +39,22 @@ val InfernalPhantom = card("Infernal Phantom") {
 
     // Eerie trigger — part 1: whenever an enchantment you control enters
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Enchantment.youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Enchantment.youControl()).enters()
         effect = Effects.ModifyStats(2, 0, EffectTarget.Self)
         description = "Eerie — Whenever an enchantment you control enters, this creature gets +2/+0 until end of turn."
     }
 
     // Eerie trigger — part 2: whenever you fully unlock a Room
     triggeredAbility {
-        trigger = Triggers.RoomFullyUnlocked
+        trigger = Triggers.you.fullyUnlocksARoom()
         effect = Effects.ModifyStats(2, 0, EffectTarget.Self)
         description = "Eerie — Whenever you fully unlock a Room, this creature gets +2/+0 until end of turn."
     }
 
     // When this creature dies, it deals damage equal to its power to any target.
     triggeredAbility {
-        trigger = Triggers.Dies
-        val anyTarget = target("any target", Targets.Any)
+        trigger = Triggers.self.dies()
+        val anyTarget = target(Targets.Any)
         effect = Effects.DealDamage(DynamicAmounts.sourcePower(), anyTarget)
         description = "When this creature dies, it deals damage equal to its power to any target."
     }

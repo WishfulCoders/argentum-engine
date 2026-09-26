@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.targeting.ControllerShroud
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.support.GameTestDriver
@@ -57,8 +58,8 @@ class ControllerGrantFollowsProjectedControllerTest : FunSpec({
         val believer = driver.putCreatureOnBattlefield(owner, "True Believer")
 
         withClue("Control: before the theft the grant protects its owner") {
-            ControllerShroud.appliesTo(driver.state, owner) shouldBe true
-            ControllerShroud.appliesTo(driver.state, thief) shouldBe false
+            ControllerShroud.appliesTo(driver.state, owner, predicateEvaluator = PredicateEvaluator(cardRegistry = null)) shouldBe true
+            ControllerShroud.appliesTo(driver.state, thief, predicateEvaluator = PredicateEvaluator(cardRegistry = null)) shouldBe false
         }
 
         // Advance to the thief's precombat main so they can cast a sorcery-speed aura.
@@ -81,10 +82,10 @@ class ControllerGrantFollowsProjectedControllerTest : FunSpec({
         }
 
         withClue("The grant moved with the permanent, so it must stop protecting its owner") {
-            ControllerShroud.appliesTo(driver.state, owner) shouldBe false
+            ControllerShroud.appliesTo(driver.state, owner, predicateEvaluator = PredicateEvaluator(cardRegistry = null)) shouldBe false
         }
         withClue("...and must start protecting whoever controls it now") {
-            ControllerShroud.appliesTo(driver.state, thief) shouldBe true
+            ControllerShroud.appliesTo(driver.state, thief, predicateEvaluator = PredicateEvaluator(cardRegistry = null)) shouldBe true
         }
     }
 })

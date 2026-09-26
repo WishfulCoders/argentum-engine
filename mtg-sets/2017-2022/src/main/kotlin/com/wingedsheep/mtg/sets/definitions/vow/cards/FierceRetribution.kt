@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Fierce Retribution
@@ -33,11 +33,11 @@ val FierceRetribution = card("Fierce Retribution") {
 
     spell {
         // Printed (brackets present): destroy target attacking creature.
-        val attacker = target("attacking creature", Targets.AttackingCreature)
+        val attacker = target(TargetFilter.AttackingCreature)
         effect = Effects.Destroy(attacker)
 
         // Cleaved (brackets removed): destroy target creature.
-        val anyCreature = cleaveTarget("creature", Targets.Creature)
+        val anyCreature = cleaveTarget(TargetFilter.Creature)
         cleaveEffect = Effects.Destroy(anyCreature)
     }
 

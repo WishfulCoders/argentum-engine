@@ -5,15 +5,9 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.RevealHandEffect
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Amnesia
@@ -36,23 +30,18 @@ val Amnesia = card("Amnesia") {
     oracleText = "Target player reveals their hand and discards all nonland cards."
 
     spell {
-        val targetPlayer = target("target player", TargetPlayer())
-        effect = Effects.Composite(
-            RevealHandEffect(targetPlayer),
-            GatherCardsEffect(
-                source = CardSource.FromZone(
+        val targetPlayer = target(Targets.Player)
+        effect = Effects.Pipeline {
+            run(Effects.RevealHand(targetPlayer))
+            val amnesiaDiscard = gather(
+                CardSource.FromZone(
                     zone = Zone.HAND,
-                    player = Player.ContextPlayer(0),
+                    player = targetPlayer.asPlayer,
                     filter = GameObjectFilter(cardPredicates = listOf(CardPredicate.IsNonland)),
-                ),
-                storeAs = "amnesiaDiscard",
-            ),
-            MoveCollectionEffect(
-                from = "amnesiaDiscard",
-                destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
-                moveType = MoveType.Discard,
-            ),
-        )
+                )
+            )
+            discard(amnesiaDiscard, targetPlayer.asPlayer)
+        }
     }
 
     metadata {

@@ -15,7 +15,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -37,7 +36,7 @@ class DisturbingMirthScenarioTest : FunSpec({
         manaCost = "{1}"
         typeLine = "Sorcery"
         spell {
-            target("target permanent you control", TargetPermanent(filter = TargetFilter.PermanentYouControl))
+            target(TargetFilter.PermanentYouControl)
             effect = Effects.SacrificeTarget(EffectTarget.ContextTarget(0))
         }
     }

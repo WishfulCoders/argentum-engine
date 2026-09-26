@@ -1,17 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Momo, Playful Pet
@@ -40,17 +39,16 @@ val MomoPlayfulPet = card("Momo, Playful Pet") {
     keywords(Keyword.FLYING, Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = ModalEffect.chooseOne(
             Mode.noTarget(
                 Effects.CreateFood(),
                 "Create a Food token."
             ),
-            Mode.withTarget(
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0)),
-                TargetCreature(filter = TargetFilter.Creature.youControl()),
-                "Put a +1/+1 counter on target creature you control."
-            ),
+            mode("Put a +1/+1 counter on target creature you control.") {
+                val creature = target(TargetFilter.Creature.youControl())
+                effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature)
+            },
             Mode.noTarget(
                 Patterns.Library.scry(2),
                 "Scry 2."

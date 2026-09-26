@@ -3,13 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.mrd.cards
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Molten Rain
@@ -24,22 +23,20 @@ val MoltenRain = card("Molten Rain") {
     oracleText = "Destroy target land. If that land was nonbasic, Molten Rain deals 2 damage to the land's controller."
 
     spell {
-        target = Targets.Land
+        val land = target(TargetFilter.Land)
         // Same ordering as Choking Sands: deal the damage while the target is still on the
         // battlefield with its controller intact, then destroy. The conditional reads the
         // target's current nonbasic status, which matches the past-tense oracle phrasing
         // ("if that land was nonbasic").
-        effect = ConditionalEffect(
-            condition = Conditions.TargetMatchesFilter(
-                GameObjectFilter(
+        effect = Effects.If(
+            condition = Conditions.TargetMatchesFilter(GameObjectFilter(
                     cardPredicates = listOf(
                         CardPredicate.IsLand,
                         CardPredicate.Not(CardPredicate.IsBasicLand),
                     )
-                )
-            ),
-            effect = Effects.DealDamage(2, EffectTarget.TargetController)
-        ) then Effects.Move(EffectTarget.ContextTarget(0), Zone.GRAVEYARD, byDestruction = true)
+                ), land),
+            then = Effects.DealDamage(2, EffectTarget.TargetController)
+        ) then Effects.Move(land, Zone.GRAVEYARD, byDestruction = true)
     }
 
     metadata {

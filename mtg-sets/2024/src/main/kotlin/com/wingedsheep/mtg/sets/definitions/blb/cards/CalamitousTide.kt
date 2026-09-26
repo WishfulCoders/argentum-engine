@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Calamitous Tide
@@ -21,10 +21,10 @@ val CalamitousTide = card("Calamitous Tide") {
     oracleText = "Return up to two target creatures to their owners' hands. Draw two cards, then discard a card."
 
     spell {
-        val (c1, c2) = targets("creature", TargetCreature(count = 2, optional = true))
-        effect = Effects.ReturnToHand(c1)
-            .then(Effects.ReturnToHand(c2))
-            .then(Patterns.Hand.loot(draw = 2, discard = 1))
+        val (c1, c2) = targets(TargetFilter.Creature, count = 2, optional = true)
+        effect = Effects.ReturnToHand(c1) then
+            Effects.ReturnToHand(c2) then
+            Patterns.Hand.loot(draw = 2, discard = 1)
     }
 
     metadata {

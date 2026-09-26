@@ -5,13 +5,10 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Charming Prince
@@ -46,23 +43,20 @@ val CharmingPrince = card("Charming Prince") {
         "at the beginning of the next end step."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ModalEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.Modal(
             modes = listOf(
                 Mode.noTarget(Effects.Scry(2), "Scry 2."),
                 Mode.noTarget(Effects.GainLife(3), "You gain 3 life."),
-                Mode.withTarget(
-                    effect = Effects.Move(EffectTarget.ContextTarget(0), Zone.EXILE)
-                        .then(
-                            CreateDelayedTriggerEffect(
-                                step = Step.END,
-                                effect = Effects.Move(EffectTarget.ContextTarget(0), Zone.BATTLEFIELD)
-                            )
-                        ),
-                    target = TargetCreature(filter = TargetFilter.Creature.ownedByYou().other()),
-                    description = "Exile another target creature you own. Return it to the battlefield " +
-                        "under your control at the beginning of the next end step."
-                )
+                mode("Exile another target creature you own. Return it to the battlefield " +
+                    "under your control at the beginning of the next end step.") {
+                    val creature = target(TargetFilter.Creature.ownedByYou().other())
+                    effect = Effects.Move(creature, Zone.EXILE) then
+                        Effects.CreateDelayedTrigger(
+                            step = Step.END,
+                            effect = Effects.Move(creature, Zone.BATTLEFIELD)
+                        )
+                }
             )
         )
     }

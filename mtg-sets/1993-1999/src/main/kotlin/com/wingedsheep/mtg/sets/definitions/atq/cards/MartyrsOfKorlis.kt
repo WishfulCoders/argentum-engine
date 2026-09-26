@@ -6,8 +6,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.RedirectDamage
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
-import com.wingedsheep.sdk.scripting.events.SourceFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -26,7 +25,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * from artifact sources to its controller is redirected to Martyrs ([EffectTarget.Self]).
  *
  * The source filter is `GameObjectFilter.Artifact` (the damage source must be an artifact);
- * `RecipientFilter.You` is the replacement's controller (Martyrs's controller).
+ * `Recipient.You` is the replacement's controller (Martyrs's controller).
  */
 val MartyrsOfKorlis = card("Martyrs of Korlis") {
     manaCost = "{3}{W}{W}"
@@ -42,8 +41,8 @@ val MartyrsOfKorlis = card("Martyrs of Korlis") {
         RedirectDamage(
             redirectTo = EffectTarget.Self,
             appliesTo = EventPattern.DamageEvent(
-                recipient = RecipientFilter.You,
-                source = SourceFilter.Matching(GameObjectFilter.Artifact),
+                recipient = Recipient.You,
+                source = GameObjectFilter.Artifact,
             ),
             condition = Conditions.SourceIsUntapped,
         )

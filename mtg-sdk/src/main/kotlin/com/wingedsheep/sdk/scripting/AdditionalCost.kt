@@ -1,5 +1,6 @@
 package com.wingedsheep.sdk.scripting
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.costs.CostAtom
@@ -387,7 +388,7 @@ sealed interface AdditionalCost : TextReplaceable<AdditionalCost> {
      * is recorded in [AdditionalCostPayment.beheldCards] and surfaced to the
      * resolution context under [storeAs] via the spell's pipeline storage.
      * Downstream effects can reference the chosen entity via
-     * [com.wingedsheep.sdk.scripting.values.EntityReference.FromCostStorage].
+     * [com.wingedsheep.sdk.scripting.targets.EffectTarget.PipelineTarget].
      *
      * This is the silent sibling of [Behold]: same general shape (filter the
      * candidates, record one pick under a `storeAs` key) but **no reveal
@@ -519,6 +520,14 @@ data class AdditionalCostPayment(
      */
     val revealedCards: List<EntityId> = emptyList(),
 
+    /**
+     * Cards put from hand on top of the library for a
+     * [com.wingedsheep.sdk.scripting.costs.CostAtom.PutFromHandOnTopOfLibrary] cost (Leashling),
+     * in the order chosen — the last one ends up on top. Its own channel rather than
+     * [discardedCards] because the move is not a discard (no discard trigger, no madness).
+     */
+    val cardsPutOnLibrary: List<EntityId> = emptyList(),
+
     /** Permanents that were tapped */
     val tappedPermanents: List<EntityId> = emptyList(),
 
@@ -557,6 +566,7 @@ data class AdditionalCostPayment(
                 variableCostPermanents.isEmpty() &&
                 beheldCards.isEmpty() &&
                 revealedCards.isEmpty() &&
+                cardsPutOnLibrary.isEmpty() &&
                 tappedPermanents.isEmpty() &&
                 bouncedPermanents.isEmpty() &&
                 blightTargets.isEmpty() &&
@@ -573,11 +583,9 @@ data class AdditionalCostPayment(
  * A single removal entry for distributed counter-removal costs.
  * Remove [count] counters of [counterType] from [entityId].
  *
- * `counterType` is the canonical symbol (e.g. `"+1/+1"`, `"-1/-1"`, `"stun"`)
- * — the same string keys used in [CounterRemovalCreatureInfo.availableCountersByType]
- * — not the [CounterType] enum name. Stored as a string so the wire format
- * stays human-friendly and matches what the engine emits in those DTOs; the
- * engine resolves it back to a [CounterType] when paying the cost.
+ * `counterType` is the printed spelling ([CounterType.printed] — `"+1/+1"`, `"stun"`), the same
+ * string keys the client is offered in `CounterRemovalCreatureInfo.availableCountersByType` and
+ * echoes back here. The engine reads it back with [CounterType.of] when paying the cost.
  */
 @Serializable
 data class DistributedCounterRemoval(

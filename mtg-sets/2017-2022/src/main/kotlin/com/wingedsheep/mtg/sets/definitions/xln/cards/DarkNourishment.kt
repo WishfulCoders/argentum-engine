@@ -19,7 +19,7 @@ val DarkNourishment = card("Dark Nourishment") {
     oracleText = "Dark Nourishment deals 3 damage to any target. You gain 3 life."
 
     spell {
-        val victim = target("target", Targets.Any)
+        val victim = target(Targets.Any)
         effect = Effects.DealDamage(3, victim) then Effects.GainLife(3)
     }
 

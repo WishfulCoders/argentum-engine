@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Territorial Witchstalker
@@ -40,7 +41,7 @@ val TerritorialWitchstalker = card("Territorial Witchstalker") {
     keywords(Keyword.DEFENDER)
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
         interveningIf = Conditions.YouControl(GameObjectFilter.Creature.powerAtLeast(4))
         effect = Effects.ModifyStats(1, 0, EffectTarget.Self) then
             Effects.CanAttackDespiteDefenderThisTurn(EffectTarget.Self)

@@ -51,7 +51,7 @@ val LotusRing = card("Lotus Ring") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Composite(Costs.Tap, Costs.SacrificeSelf),
                 effect = Effects.AddAnyColorMana(3),
                 isManaAbility = true,

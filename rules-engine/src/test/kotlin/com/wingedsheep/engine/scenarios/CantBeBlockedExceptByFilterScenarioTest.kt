@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.engine.view.ClientStateTransformer
@@ -12,6 +13,8 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * A creature granted "can't be blocked except by creatures with <filter>" routes through the
@@ -28,7 +31,7 @@ class CantBeBlockedExceptByFilterScenarioTest : FunSpec({
         manaCost = "{R}"
         typeLine = "Instant"
         spell {
-            val victim = target("target creature", com.wingedsheep.sdk.dsl.Targets.Creature)
+            val victim = target(TargetFilter.Creature)
             effect = Effects.GrantCantBeBlockedExceptBy(
                 victim,
                 GameObjectFilter.Creature.withKeyword(Keyword.HASTE),
@@ -49,7 +52,7 @@ class CantBeBlockedExceptByFilterScenarioTest : FunSpec({
 
         val spell = d.putCardInHand(d.player1, "Grant Haste Evasion Test")
         d.giveMana(d.player1, com.wingedsheep.sdk.core.Color.RED, 1)
-        d.castSpell(d.player1, spell, listOf(runner)).isSuccess shouldBe true
+        d.castSpell(d.player1, spell, listOf(runner)).outcome shouldBe Outcome.Done
         // Stop as soon as the stack is empty: passing further would run the turn to cleanup and
         // expire the EndOfTurn floating effect we're trying to observe.
         repeat(12) {
@@ -58,7 +61,7 @@ class CantBeBlockedExceptByFilterScenarioTest : FunSpec({
             else return@repeat
         }
 
-        val card = ClientStateTransformer(d.cardRegistry).transform(d.state, d.player1)
+        val card = ClientStateTransformer(d.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)).transform(d.state, d.player1)
             .cards.getValue(runner)
 
         withClue("activeEffects=${card.activeEffects.map { it.effectId to it.description }}") {

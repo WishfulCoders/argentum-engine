@@ -2,7 +2,6 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.disturb
 import com.wingedsheep.sdk.model.CardDefinition
@@ -12,6 +11,8 @@ import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.RedirectZoneChange
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Gutter Skulker // Gutter Shortcut (Innistrad: Crimson Vow #62 — the card's earliest printing)
@@ -77,7 +78,7 @@ private val GutterShortcut = card("Gutter Shortcut") {
         "Enchanted creature can't be blocked as long as it's attacking alone.\n" +
         "If Gutter Shortcut would be put into a graveyard from anywhere, exile it instead."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = CantBeBlocked(filter = GroupFilter.attachedCreature())

@@ -4,8 +4,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Mirkwood Meditator
@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * A base-stat *swap*, not a pump: [Effects.SetBasePowerAndToughness] writes Layer 7b set values, so
  * the 2/4 body becomes 4/2 and any +1/+1 counters or Layer 7c modifiers still apply on top. The
- * choice is genuinely the controller's each time a land lands, hence [MayEffect] rather than an
+ * choice is genuinely the controller's each time a land lands, hence [Effects.May] rather than an
  * unconditional effect — with the printed body already 2/4, taking the 4/2 is often the wrong call.
  */
 val MirkwoodMeditator = card("Mirkwood Meditator") {
@@ -30,8 +30,8 @@ val MirkwoodMeditator = card("Mirkwood Meditator") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
-        effect = MayEffect(
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
+        effect = Effects.May(
             Effects.SetBasePowerAndToughness(power = 4, toughness = 2, target = EffectTarget.Self),
             descriptionOverride = "Have Mirkwood Meditator's base power and toughness become 4/2 until end of turn?"
         )

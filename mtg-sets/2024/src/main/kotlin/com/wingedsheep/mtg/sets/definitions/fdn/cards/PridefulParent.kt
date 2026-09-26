@@ -29,7 +29,7 @@ val PridefulParent = card("Prideful Parent") {
     toughness = 2
     keywords(Keyword.VIGILANCE)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

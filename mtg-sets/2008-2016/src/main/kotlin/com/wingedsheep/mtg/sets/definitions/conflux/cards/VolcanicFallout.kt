@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.conflux.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -27,12 +26,10 @@ val VolcanicFallout = card("Volcanic Fallout") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreatures,
-            DealDamageEffect(2, EffectTarget.Self),
-        ).then(
-            Effects.ForEachPlayer(
-                Player.Each,
-                listOf(DealDamageEffect(2, EffectTarget.Controller)),
-            )
+            Effects.DealDamage(2, EffectTarget.IterationEntity),
+        ) then Effects.ForEachPlayer(
+            Player.Each,
+            listOf(Effects.DealDamage(2, EffectTarget.Controller)),
         )
     }
 

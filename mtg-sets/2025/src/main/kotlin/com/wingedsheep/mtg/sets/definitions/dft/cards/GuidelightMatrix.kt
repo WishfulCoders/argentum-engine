@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Guidelight Matrix — Aetherdrift #233
@@ -40,20 +39,13 @@ val GuidelightMatrix = card("Guidelight Matrix") {
         "{2}, {T}: Target Vehicle you control becomes an artifact creature until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1)
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        val mount = target(
-            "target Mount you control",
-            TargetPermanent(
-                filter = TargetFilter(
-                    GameObjectFilter.Permanent.withSubtype(Subtype("Mount")).youControl()
-                )
-            )
-        )
+        val mount = target(TargetFilter(GameObjectFilter.Permanent.withSubtype(Subtype("Mount")).youControl()))
         effect = Effects.BecomeSaddled(mount)
         timing = TimingRule.SorcerySpeed
         description = "{2}, {T}: Target Mount you control becomes saddled until end of turn. " +
@@ -62,14 +54,7 @@ val GuidelightMatrix = card("Guidelight Matrix") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        val vehicle = target(
-            "target Vehicle you control",
-            TargetPermanent(
-                filter = TargetFilter(
-                    GameObjectFilter.Permanent.withSubtype(Subtype.VEHICLE).youControl()
-                )
-            )
-        )
+        val vehicle = target(TargetFilter(GameObjectFilter.Permanent.withSubtype(Subtype.VEHICLE).youControl()))
         effect = Effects.AddCardType("Creature", vehicle, Duration.EndOfTurn)
         description = "{2}, {T}: Target Vehicle you control becomes an artifact creature until end of turn."
     }

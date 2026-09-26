@@ -1,7 +1,7 @@
 package com.wingedsheep.sdk.dsl
 
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *  - **Enters with counters** (the "Archaic" cycle) — use [convergeEntersWithCounters].
  *  - **A spell whose effect scales** — read [DynamicAmounts.colorsOfManaSpent] directly in the
  *    spell's effect (e.g. a dynamic amount fed to draw/damage/token effects).
- *  - **Exile-by-color-count** — use the `manaValueAtMostColorsSpent(EntityReference.Source)`
+ *  - **Exile-by-color-count** — use the `manaValueAtMostColorsSpent(EffectTarget.Self)`
  *    target/group predicate.
  *
  * In every case author the printed "Converge — …" reminder into the card's `oracleText`; the
@@ -30,7 +30,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * cycle); defaults to +1/+1 counters.
  */
 fun CardBuilder.convergeEntersWithCounters(
-    counterType: CounterTypeFilter = CounterTypeFilter.PlusOnePlusOne,
+    counterType: CounterType = CounterType.PLUS_ONE_PLUS_ONE,
 ) {
     replacementEffect(
         EntersWithDynamicCounters(

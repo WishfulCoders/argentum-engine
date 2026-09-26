@@ -1,7 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.atq.cards
 
 import com.wingedsheep.sdk.core.CardType
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBeBlockedBy
@@ -9,9 +8,10 @@ import com.wingedsheep.sdk.scripting.CantBeTargetedBySourceTypeAbilities
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.PreventDamage
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
-import com.wingedsheep.sdk.scripting.events.SourceFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Artifact Ward
@@ -40,7 +40,7 @@ val ArtifactWard = card("Artifact Ward") {
         "Prevent all damage that would be dealt to enchanted creature by artifact sources.\n" +
         "Enchanted creature can't be the target of abilities from artifact sources."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     // Can't be blocked by artifact creatures.
     staticAbility {
@@ -54,8 +54,8 @@ val ArtifactWard = card("Artifact Ward") {
     replacementEffect(
         PreventDamage(
             appliesTo = EventPattern.DamageEvent(
-                recipient = RecipientFilter.EnchantedCreature,
-                source = SourceFilter.Matching(GameObjectFilter.Artifact)
+                recipient = Recipient.EnchantedCreature,
+                source = GameObjectFilter.Artifact
             )
         )
     )

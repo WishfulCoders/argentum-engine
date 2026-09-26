@@ -1,15 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Glen Elendra Guardian
@@ -35,19 +34,18 @@ val GlenElendraGuardian = card("Glen Elendra Guardian") {
     keywords(Keyword.FLASH, Keyword.FLYING)
 
     replacementEffect(EntersWithCounters(
-        counterType = CounterTypeFilter.MinusOneMinusOne,
+        counterType = CounterType.MINUS_ONE_MINUS_ONE,
         count = 1,
         selfOnly = true
     ))
 
     activatedAbility {
+        val noncreatureSpell = target(TargetFilter.NoncreatureSpellOnStack)
         cost = Costs.Composite(
             Costs.Mana("{1}{U}"),
-            Costs.RemoveCounterFromSelf(Counters.MINUS_ONE_MINUS_ONE)
+            Costs.RemoveCounterFromSelf(CounterType.MINUS_ONE_MINUS_ONE)
         )
-        target = Targets.NoncreatureSpell
-        effect = Effects.CounterSpell()
-            .then(Effects.DrawCards(1, target = EffectTarget.TargetController))
+        effect = Effects.CounterSpell() then Effects.DrawCards(1, target = EffectTarget.TargetController)
     }
 
     metadata {

@@ -10,8 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -31,15 +29,12 @@ val OutcasterTrailblazer = card("Outcaster Trailblazer") {
     power = 4
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.AddManaOfChoice()
     }
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.powerAtLeast(4).youControl(),
-            binding = TriggerBinding.OTHER
-        )
-        effect = DrawCardsEffect(1)
+        trigger = Triggers.another(GameObjectFilter.Creature.powerAtLeast(4).youControl()).enters()
+        effect = Effects.DrawCards(1)
     }
     keywordAbility(KeywordAbility.plot("{2}{G}"))
     metadata {

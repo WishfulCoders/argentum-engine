@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
@@ -8,12 +8,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Sazh Katzroy
@@ -34,8 +31,8 @@ val SazhKatzroy = card("Sazh Katzroy") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.May(
             Patterns.Library.searchLibrary(
                 filter = GameObjectFilter(
                     cardPredicates = listOf(
@@ -55,12 +52,10 @@ val SazhKatzroy = card("Sazh Katzroy") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            AddCountersEffect(counterType = Counters.PLUS_ONE_PLUS_ONE, count = 1, target = t),
-            Effects.DoubleCounters(Counters.PLUS_ONE_PLUS_ONE, t)
-        )
+        trigger = Triggers.self.attacks()
+        val t = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(counterType = CounterType.PLUS_ONE_PLUS_ONE, count = 1, target = t) then
+            Effects.DoubleCounters(CounterType.PLUS_ONE_PLUS_ONE, t)
     }
 
     metadata {

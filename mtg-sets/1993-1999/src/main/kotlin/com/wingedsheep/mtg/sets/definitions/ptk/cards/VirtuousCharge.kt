@@ -13,7 +13,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Creatures you control get +1/+1 until end of turn.
  *
  * The board-wide pump is [Effects.ForEachInGroup] over `creaturesYouControl` with the modifier aimed
- * at [EffectTarget.Self] — the current iteration entity.
+ * at [EffectTarget.IterationEntity] — the current iteration entity.
  */
 val VirtuousCharge = card("Virtuous Charge") {
     manaCost = "{2}{W}"
@@ -24,7 +24,7 @@ val VirtuousCharge = card("Virtuous Charge") {
     spell {
         effect = Effects.ForEachInGroup(
             Filters.Group.creaturesYouControl,
-            Effects.ModifyStats(1, 1, EffectTarget.Self)
+            Effects.ModifyStats(1, 1, EffectTarget.IterationEntity)
         )
     }
 

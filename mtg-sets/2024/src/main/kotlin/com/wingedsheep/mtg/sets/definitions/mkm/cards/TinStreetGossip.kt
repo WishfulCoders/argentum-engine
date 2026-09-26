@@ -54,10 +54,8 @@ val TinStreetGossip = card("Tin Street Gossip") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.Composite(
-            Effects.AddMana(Color.RED, 1, restriction = faceDownMana),
+        effect = Effects.AddMana(Color.RED, 1, restriction = faceDownMana) then
             Effects.AddMana(Color.GREEN, 1, restriction = faceDownMana)
-        )
         manaAbility = true
         timing = TimingRule.ManaAbility
         description = "{T}: Add {R}{G}. Spend this mana only to cast face-down spells or to turn " +

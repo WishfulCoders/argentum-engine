@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Rambunctious Mutt
@@ -25,11 +24,8 @@ val RambunctiousMutt = card("Rambunctious Mutt") {
     oracleText = "When this creature enters, destroy target artifact or enchantment an opponent controls."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "target",
-            TargetPermanent(filter = TargetFilter.ArtifactOrEnchantment.opponentControls())
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.ArtifactOrEnchantment.opponentControls())
         effect = Effects.Destroy(t)
         description = "When this creature enters, destroy target artifact or enchantment an opponent controls."
     }

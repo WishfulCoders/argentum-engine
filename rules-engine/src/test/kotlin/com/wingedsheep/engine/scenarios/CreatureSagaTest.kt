@@ -15,10 +15,10 @@ import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Engine coverage for **Summon Sagas** — "Enchantment Creature — Saga" permanents (FIN), which are
@@ -50,7 +50,7 @@ class CreatureSagaTest : FunSpec({
         sagaChapter(2) { effect = Effects.GainLife(2) }
         sagaChapter(3) {
             effect = Effects.DealDamage(
-                amount = DynamicAmount.EntityProperty(EntityReference.Source, EntityNumericProperty.Power),
+                amount = DynamicAmount.EntityProperty(EffectTarget.Self, EntityNumericProperty.Power),
                 target = EffectTarget.PlayerRef(Player.EachOpponent),
                 damageSource = EffectTarget.Self,
             )
@@ -172,6 +172,6 @@ class CreatureSagaTest : FunSpec({
         driver.removeSummoningSickness(saga)
 
         driver.passPriorityUntil(Step.DECLARE_ATTACKERS, maxPasses = 100)
-        driver.declareAttackers(active, listOf(saga), opponent).isSuccess shouldBe true
+        driver.declareAttackers(active, listOf(saga), opponent).outcome shouldBe Outcome.Done
     }
 })

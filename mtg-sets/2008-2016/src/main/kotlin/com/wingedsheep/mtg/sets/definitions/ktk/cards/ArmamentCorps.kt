@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Armament Corps
@@ -24,8 +24,8 @@ val ArmamentCorps = card("Armament Corps") {
     oracleText = "When this creature enters, distribute two +1/+1 counters among one or two target creatures you control."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = TargetCreature(count = 2, minCount = 1, filter = TargetFilter.CreatureYouControl)
+        trigger = Triggers.self.enters()
+        target = TargetObject(filter = TargetFilter.CreatureYouControl, count = 2, minCount = 1)
         effect = Effects.DistributeCountersAmongTargets(totalCounters = 2)
     }
 

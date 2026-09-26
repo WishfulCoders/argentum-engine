@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.zen.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Slaughter Cry
@@ -19,11 +19,8 @@ val SlaughterCry = card("Slaughter Cry") {
     oracleText = "Target creature gets +3/+0 and gains first strike until end of turn. (It deals combat damage before creatures without first strike.)"
 
     spell {
-        val creature = target("creature", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(3, 0, creature),
-            Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature),
-        )
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(3, 0, creature) then Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature)
     }
 
     metadata {

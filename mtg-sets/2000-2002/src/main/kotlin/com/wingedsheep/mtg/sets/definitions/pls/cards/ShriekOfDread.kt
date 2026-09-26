@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -24,7 +23,7 @@ val ShriekOfDread = card("Shriek of Dread") {
     typeLine = "Instant"
     oracleText = "Target creature gains fear until end of turn. (It can't be blocked except by artifact creatures and/or black creatures.)"
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+        val t = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(Keyword.FEAR, t)
     }
     metadata {

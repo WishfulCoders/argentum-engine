@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -12,7 +13,6 @@ import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Creepy Puppeteer (Innistrad: Crimson Vow #151)
@@ -46,15 +46,15 @@ val CreepyPuppeteer = card("Creepy Puppeteer") {
     keywords(Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         interveningIf = Conditions.CompareAmounts(
-            DynamicAmount.AggregateBattlefield(
-                player = Player.You,
-                filter = GameObjectFilter.Creature.attackedThisCombat(),
+            DynamicAmounts.battlefield(
+                Player.You,
+                GameObjectFilter.Creature.attackedThisCombat(),
                 excludeSelf = true,
-            ),
+            ).count(),
             ComparisonOperator.EQ,
-            DynamicAmount.Fixed(1),
+            1,
         )
         optional = true
         effect = Effects.ForEachInGroup(
@@ -62,7 +62,7 @@ val CreepyPuppeteer = card("Creepy Puppeteer") {
                 baseFilter = GameObjectFilter.Creature.youControl().attackedThisCombat(),
                 excludeSelf = true,
             ),
-            Effects.SetBasePowerAndToughness(4, 3, EffectTarget.Self, Duration.EndOfTurn),
+            Effects.SetBasePowerAndToughness(4, 3, EffectTarget.IterationEntity, Duration.EndOfTurn),
         )
         description = "Whenever this creature attacks, if you attacked with exactly one other " +
             "creature this combat, you may have that creature's base power and toughness become " +

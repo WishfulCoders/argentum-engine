@@ -1,19 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.increment
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern
-import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.effects.CREATED_TOKENS
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Berta, Wise Extrapolator
@@ -41,13 +38,7 @@ val BertaWiseExtrapolator = card("Berta, Wise Extrapolator") {
 
     // Whenever one or more +1/+1 counters are put on Berta, add one mana of any color.
     triggeredAbility {
-        trigger = TriggerSpec(
-            EventPattern.CountersPlacedEvent(
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
-                filter = GameObjectFilter.Any,
-            ),
-            TriggerBinding.SELF,
-        )
+        trigger = Triggers.self.getsCounters(CounterType.PLUS_ONE_PLUS_ONE)
         effect = Effects.AddManaOfChoice()
         description = "Whenever one or more +1/+1 counters are put on Berta, add one mana of any color."
     }
@@ -55,20 +46,18 @@ val BertaWiseExtrapolator = card("Berta, Wise Extrapolator") {
     // {X}, {T}: Create a 0/0 Fractal and put X +1/+1 counters on it.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{X}"), Costs.Tap)
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                power = 0,
-                toughness = 0,
-                colors = setOf(Color.GREEN, Color.BLUE),
-                creatureTypes = setOf("Fractal"),
-                imageUri = "https://cards.scryfall.io/normal/front/d/e/de564776-9d88-4533-8717-842eecdd0594.jpg?1775828279",
-            ),
+        effect = Effects.CreateToken(
+            power = 0,
+            toughness = 0,
+            colors = setOf(Color.GREEN, Color.BLUE),
+            creatureTypes = setOf("Fractal"),
+            imageUri = "https://cards.scryfall.io/normal/front/d/e/de564776-9d88-4533-8717-842eecdd0594.jpg?1775828279",
+        ) then
             Effects.AddDynamicCounters(
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
-                amount = DynamicAmount.XValue,
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
+                amount = DynamicAmounts.xValue(),
                 target = EffectTarget.PipelineTarget(CREATED_TOKENS, 0),
-            ),
-        )
+            )
         description = "{X}, {T}: Create a 0/0 green and blue Fractal creature token and put X +1/+1 counters on it."
     }
 

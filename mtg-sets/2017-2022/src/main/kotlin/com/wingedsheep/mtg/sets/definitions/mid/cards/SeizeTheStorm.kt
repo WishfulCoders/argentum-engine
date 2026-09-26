@@ -3,14 +3,15 @@ package com.wingedsheep.mtg.sets.definitions.mid.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.SetBasePowerToughnessDynamicStatic
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Seize the Storm
@@ -30,14 +31,12 @@ val SeizeTheStorm = card("Seize the Storm") {
         "the number of cards with flashback you own in exile.\"\n" +
         "Flashback {6}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
 
-    val stormCount = DynamicAmount.Add(
-        DynamicAmount.Count(Player.You, Zone.GRAVEYARD, GameObjectFilter.InstantOrSorcery),
-        DynamicAmount.Count(
+    val stormCount = DynamicAmounts.count(Player.You, Zone.GRAVEYARD, GameObjectFilter.InstantOrSorcery) +
+        DynamicAmounts.count(
             Player.You,
             Zone.EXILE,
             GameObjectFilter.Any.withKeyword(Keyword.FLASHBACK).ownedByYou()
         )
-    )
 
     spell {
         effect = Effects.CreateToken(

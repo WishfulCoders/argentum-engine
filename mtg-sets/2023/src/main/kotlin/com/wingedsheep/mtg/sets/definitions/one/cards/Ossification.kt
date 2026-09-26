@@ -7,7 +7,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Ossification
@@ -28,14 +28,11 @@ val Ossification = card("Ossification") {
     oracleText = "Enchant basic land you control\n" +
         "When this Aura enters, exile target creature or planeswalker an opponent controls until this Aura leaves the battlefield."
 
-    auraTarget = TargetPermanent(filter = TargetFilter(GameObjectFilter.BasicLand.youControl()))
+    auraTarget = TargetObject(filter = TargetFilter(GameObjectFilter.BasicLand.youControl()))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val victim = target(
-            "creature or planeswalker an opponent controls",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrPlaneswalker.opponentControls())),
-        )
+        trigger = Triggers.self.enters()
+        val victim = target(TargetFilter(GameObjectFilter.CreatureOrPlaneswalker.opponentControls()))
         effect = Effects.MoveUntilSourceLeaves(victim, Zone.EXILE)
     }
 

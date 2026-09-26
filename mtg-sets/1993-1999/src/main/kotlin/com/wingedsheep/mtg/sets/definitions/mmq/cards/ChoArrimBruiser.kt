@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Cho-Arrim Bruiser
@@ -25,9 +25,9 @@ val ChoArrimBruiser = card("Cho-Arrim Bruiser") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         optional = true
-        target("target", TargetCreature(count = 2, optional = true))
+        targets(TargetFilter.Creature, count = 2, optional = true)
         effect = Effects.TapEachTarget()
     }
 

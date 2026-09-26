@@ -1,16 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.drk.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * City of Shadows
@@ -41,7 +38,7 @@ val CityOfShadows = card("City of Shadows") {
             // enforces the printed "you control".
             Costs.ExilePermanentsFixed(1, GameObjectFilter.Creature.youControl()),
         )
-        effect = Effects.AddCounters(Counters.STORAGE, 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.STORAGE, 1, EffectTarget.Self)
         description = "{T}, Exile a creature you control: Put a storage counter on this land."
     }
 
@@ -49,10 +46,7 @@ val CityOfShadows = card("City of Shadows") {
         cost = Costs.Tap
         manaAbility = true
         effect = Effects.AddColorlessMana(
-            DynamicAmount.EntityProperty(
-                EntityReference.Source,
-                EntityNumericProperty.CounterCount(CounterTypeFilter.Named(Counters.STORAGE)),
-            )
+            DynamicAmounts.countersOnSelf(CounterType.STORAGE)
         )
         description = "{T}: Add {C} for each storage counter on this land."
     }

@@ -7,8 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.dsl.Effects
 
@@ -28,22 +26,16 @@ val PrimevalsGloriousRebirth = card("Primevals' Glorious Rebirth") {
 
     spell {
         castOnlyIf(Conditions.ControlLegendaryCreatureOrPlaneswalker)
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        zone = Zone.GRAVEYARD,
-                        player = Player.You,
-                        filter = GameObjectFilter.Permanent.legendary()
-                    ),
-                    storeAs = "legendaryPermanents"
-                ),
-                MoveCollectionEffect(
-                    from = "legendaryPermanents",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD)
+        effect = Effects.Pipeline {
+            val legendaryPermanents = gather(
+                CardSource.FromZone(
+                    zone = Zone.GRAVEYARD,
+                    player = Player.You,
+                    filter = GameObjectFilter.Permanent.legendary()
                 )
             )
-        )
+            move(legendaryPermanents, CardDestination.ToZone(Zone.BATTLEFIELD))
+        }
     }
 
     metadata {

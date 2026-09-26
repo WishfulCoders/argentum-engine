@@ -6,8 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Walk with the Ancestors
@@ -22,18 +20,8 @@ val WalkWithTheAncestors = card("Walk with the Ancestors") {
     typeLine = "Sorcery"
     oracleText = "Return up to one target permanent card from your graveyard to your hand.\nDiscover 4."
     spell {
-        target(
-            "up to one target permanent card from your graveyard",
-            TargetObject(
-                count = 1,
-                optional = true,
-                filter = TargetFilter(GameObjectFilter.Permanent.ownedByYou(), zone = Zone.GRAVEYARD)
-            )
-        )
-        effect = Effects.Composite(
-            Effects.ReturnToHand(EffectTarget.ContextTarget(0)),
-            Effects.Discover(4)
-        )
+        val permanent = target(TargetFilter(GameObjectFilter.Permanent.ownedByYou(), zone = Zone.GRAVEYARD), optional = true)
+        effect = Effects.ReturnToHand(permanent) then Effects.Discover(4)
     }
     metadata {
         rarity = Rarity.COMMON

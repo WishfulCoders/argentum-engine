@@ -4,15 +4,12 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedActivatedAbility
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.AbilityId
-import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantActivatedAbility
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Ghired, Mirror of the Wilds
@@ -44,16 +41,11 @@ val GhiredMirrorOfTheWilds = card("Ghired, Mirror of the Wilds") {
 
     staticAbility {
         ability = GrantActivatedAbility(
-            ability = ActivatedAbility(
-                id = AbilityId.generate(),
-                cost = Costs.Tap,
-                effect = Effects.CreateTokenCopyOfTarget(EffectTarget.ContextTarget(0)),
-                targetRequirement = TargetPermanent(
-                    filter = TargetFilter(
-                        GameObjectFilter.Token.youControl().enteredThisTurn(),
-                    ),
-                ),
-            ),
+            ability = grantedActivatedAbility {
+                cost = Costs.Tap
+                val token = target(TargetFilter(GameObjectFilter.Token.youControl().enteredThisTurn()))
+                effect = Effects.CreateTokenCopyOfTarget(token)
+            },
             filter = GroupFilter(GameObjectFilter.Creature.youControl().nontoken()),
         )
     }

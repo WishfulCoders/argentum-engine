@@ -8,11 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Vastlands Scavenger // Bind to Life — Secrets of Strixhaven #166
@@ -53,30 +48,18 @@ val VastlandsScavenger = card("Vastlands Scavenger") {
         typeLine = "Instant"
         oracleText = "Mill seven cards. Then put a creature card from among them onto the battlefield."
         spell {
-            effect = Effects.Composite(
-                listOf(
-                    GatherCardsEffect(
-                        source = CardSource.TopOfLibrary(DynamicAmount.Fixed(7)),
-                        storeAs = "milled",
-                    ),
-                    MoveCollectionEffect(
-                        from = "milled",
-                        destination = CardDestination.ToZone(Zone.GRAVEYARD),
-                    ),
-                    SelectFromCollectionEffect(
-                        from = "milled",
-                        selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                        filter = GameObjectFilter.Creature,
-                        storeSelected = "toBattlefield",
-                        showAllCards = true,
-                        prompt = "Put a creature card onto the battlefield",
-                    ),
-                    MoveCollectionEffect(
-                        from = "toBattlefield",
-                        destination = CardDestination.ToZone(Zone.BATTLEFIELD),
-                    ),
-                ),
-            )
+            effect = Effects.Pipeline {
+                val milled = gather(CardSource.TopOfLibrary(7))
+                toGraveyard(milled)
+                val toBattlefield = chooseExactly(
+                    1,
+                    from = milled,
+                    filter = GameObjectFilter.Creature,
+                    showAllCards = true,
+                    prompt = "Put a creature card onto the battlefield"
+                )
+                move(toBattlefield, CardDestination.ToZone(Zone.BATTLEFIELD))
+            }
         }
     }
 

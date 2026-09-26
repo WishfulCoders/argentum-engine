@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.atq.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ChoiceType
 import com.wingedsheep.sdk.scripting.EntersWithChoice
 import com.wingedsheep.sdk.scripting.SetMaximumHandSize
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Cursed Rack
@@ -33,7 +33,7 @@ val CursedRack = card("Cursed Rack") {
     replacementEffect(EntersWithChoice(ChoiceType.OPPONENT))
 
     staticAbility {
-        ability = SetMaximumHandSize(player = Player.ChosenOpponent, amount = DynamicAmount.Fixed(4))
+        ability = SetMaximumHandSize(player = Player.ChosenOpponent, amount = DynamicAmounts.fixed(4))
     }
 
     metadata {

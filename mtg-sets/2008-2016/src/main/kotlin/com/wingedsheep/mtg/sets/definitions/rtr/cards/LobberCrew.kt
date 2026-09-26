@@ -22,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Canonical printing: Return to Ravnica, the card's earliest real printing.
  *
- * The untapper is the guild payoff: [Triggers.youCastSpell] with a multicolored spell filter
+ * The untapper is the guild payoff: `Triggers.you.casts(spell, requires)` with a multicolored spell filter
  * already carries `TriggerBinding.ANY`, because the triggering object is the spell rather than
  * this permanent. The payoff still names the source, so it is [EffectTarget.Self].
  */
@@ -44,7 +44,7 @@ val LobberCrew = card("Lobber Crew") {
     }
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(GameObjectFilter.Multicolored)
+        trigger = Triggers.you.casts(GameObjectFilter.Multicolored)
         effect = Effects.Untap(EffectTarget.Self)
     }
 

@@ -29,7 +29,7 @@ val AvenTactician = card("Aven Tactician") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Mechanic.bolster(1)
     }
 

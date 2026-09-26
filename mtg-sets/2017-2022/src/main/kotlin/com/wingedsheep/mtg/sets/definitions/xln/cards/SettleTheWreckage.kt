@@ -10,8 +10,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -40,7 +38,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * the fetch would silently find nothing. Everything therefore stays in one pipeline scope, and the
  * target player is named explicitly instead: [Player.TargetPlayer] scopes the library gather, the
  * battlefield destination, and the shuffle, while [Chooser.TargetPlayer] makes *them* pick the
- * cards. The `may` is a [MayEffect] whose `decisionMaker` is the target player (only the prompt is
+ * cards. The `may` is a [Effects.May] whose `decisionMaker` is the target player (only the prompt is
  * delegated — the effect still resolves under the caster, which is why every step names its player).
  *
  * Deviation, deliberate: with zero attackers exiled the search is skipped instead of prompting.
@@ -56,31 +54,26 @@ val SettleTheWreckage = card("Settle the Wreckage") {
         "tapped, then shuffle."
 
     spell {
-        val player = target("target player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Effects.Pipeline {
-            val attackers = gather(
-                GameObjectFilter.Creature.attacking().targetPlayerControls(player),
-                name = "attackers"
-            )
+            val attackers = gather(GameObjectFilter.Creature.attacking().targetPlayerControls(player))
             exile(attackers)
             ifNotEmpty(attackers) {
                 run(
-                    MayEffect(
+                    Effects.May(
                         Effects.Pipeline {
                             val library = gather(
                                 CardSource.FromZone(
                                     Zone.LIBRARY,
                                     Player.TargetPlayer,
                                     GameObjectFilter.BasicLand
-                                ),
-                                name = "searchable"
+                                )
                             )
                             val found = chooseUpTo(
-                                DynamicAmounts.distinctEntitiesIn(attackers.key),
+                                DynamicAmounts.distinctEntitiesIn(attackers),
                                 from = library,
                                 chooser = Chooser.TargetPlayer,
-                                prompt = "Search your library for basic land cards",
-                                name = "found"
+                                prompt = "Search your library for basic land cards"
                             )
                             move(
                                 found,
@@ -90,7 +83,7 @@ val SettleTheWreckage = card("Settle the Wreckage") {
                                     ZonePlacement.Tapped
                                 )
                             )
-                            run(ShuffleLibraryEffect(EffectTarget.PlayerRef(Player.TargetPlayer)))
+                            run(Effects.ShuffleLibrary(EffectTarget.PlayerRef(Player.TargetPlayer)))
                         },
                         decisionMaker = EffectTarget.PlayerRef(Player.TargetPlayer),
                         descriptionOverride = "That player may search their library for that many " +

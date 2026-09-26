@@ -29,10 +29,8 @@ val HyalopterousLemure = card("Hyalopterous Lemure") {
 
     activatedAbility {
         cost = Costs.Mana("{0}")
-        effect = Effects.Composite(
-            Effects.ModifyStats(-1, 0, EffectTarget.Self),
+        effect = Effects.ModifyStats(-1, 0, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
-        )
     }
 
     metadata {

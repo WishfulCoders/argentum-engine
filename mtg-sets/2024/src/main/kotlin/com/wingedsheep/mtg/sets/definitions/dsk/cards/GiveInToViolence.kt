@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -24,11 +23,8 @@ val GiveInToViolence = card("Give In to Violence") {
     typeLine = "Instant"
     oracleText = "Target creature gets +2/+2 and gains lifelink until end of turn."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 2, t),
-            Effects.GrantKeyword(Keyword.LIFELINK, t)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 2, t) then Effects.GrantKeyword(Keyword.LIFELINK, t)
     }
     metadata {
         rarity = Rarity.COMMON

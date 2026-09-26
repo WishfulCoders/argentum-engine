@@ -1,7 +1,6 @@
 package com.wingedsheep.engine.mechanics
 
 import com.wingedsheep.engine.handlers.ConditionEvaluator
-import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.sdk.model.EntityId
@@ -67,7 +66,7 @@ object ModalChooseCounts {
             xValue = 0,
             declaredCostSlot = declaredCostSlot
         )
-        val evaluator = DynamicAmountEvaluator(conditionEvaluator = conditionEvaluator)
+        val evaluator = conditionEvaluator.amounts
         // The mode list caps the count only when each mode can be picked once. With
         // [ModalEffect.allowRepeat] the same mode stays on the menu for every pick (CR 700.2d), so
         // a three-mode spell can absorb any number of picks and clamping to `modes.size` would

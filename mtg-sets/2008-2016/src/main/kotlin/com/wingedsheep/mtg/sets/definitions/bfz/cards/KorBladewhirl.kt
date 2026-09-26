@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Kor Bladewhirl
@@ -30,10 +29,7 @@ val KorBladewhirl = card("Kor Bladewhirl") {
         "first strike until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Permanent.withSubtype("Ally").youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Permanent.withSubtype("Ally").youControl()).enters()
         effect = Patterns.Group.grantKeywordToAll(
             Keyword.FIRST_STRIKE,
             Filters.Group.creaturesYouControl,

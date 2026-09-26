@@ -29,7 +29,7 @@ val ExhibitionTidecaller = card("Exhibition Tidecaller") {
         "cards. If five or more mana was spent to cast that spell, that player mills ten cards instead."
 
     opus {
-        val player = target("player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Patterns.Library.mill(3, player)
         insteadIfFiveOrMore = Patterns.Library.mill(10, player)
         description = "Opus — Whenever you cast an instant or sorcery spell, target player mills " +

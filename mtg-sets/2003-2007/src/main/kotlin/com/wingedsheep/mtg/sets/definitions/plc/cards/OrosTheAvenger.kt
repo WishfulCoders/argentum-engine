@@ -2,17 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.plc.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.Gate
-import com.wingedsheep.sdk.scripting.effects.GatedEffect
-import com.wingedsheep.sdk.scripting.effects.PayManaCostEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Oros, the Avenger
@@ -37,12 +34,12 @@ val OrosTheAvenger = card("Oros, the Avenger") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = GatedEffect(
-            gate = Gate.MayPay(PayManaCostEffect(ManaCost.parse("{2}{W}"))),
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.MayPay(
+            cost = Effects.PayMana("{2}{W}"),
             then = Effects.ForEachInGroup(
                 GroupFilter(GameObjectFilter.Creature.notColor(Color.WHITE)),
-                Effects.DealDamage(3, EffectTarget.Self)
+                Effects.DealDamage(3, EffectTarget.IterationEntity)
             )
         )
     }

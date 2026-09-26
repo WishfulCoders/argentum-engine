@@ -30,7 +30,7 @@ val StormchaserDrake = card("Stormchaser Drake") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.BecomesTargetOfYourSpell
+        trigger = Triggers.self.becomesTarget(byYou = true, spellsOnly = true)
         effect = Effects.DrawCards(1)
         description = "Whenever this creature becomes the target of a spell you control, draw a card."
     }

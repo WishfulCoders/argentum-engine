@@ -28,7 +28,7 @@ val GildedGhoda = card("Gilded Ghoda") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         triggerRestriction = Conditions.SourceIsSaddled
         effect = Effects.CreateTreasure()
     }

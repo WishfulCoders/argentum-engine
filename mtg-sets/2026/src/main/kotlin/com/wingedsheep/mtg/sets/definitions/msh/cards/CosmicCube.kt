@@ -1,26 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CastFromCollectionWithoutPayingCostEffect
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.Aggregation
-import com.wingedsheep.sdk.scripting.values.CardNumericProperty
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Cosmic Cube — Marvel Super Heroes #245 (mythic)
@@ -49,7 +40,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *     library via a single-card play permission; if the cast pauses for targets, X, or modes, the
  *     pipeline pauses with it.
  *
- * "Whenever you attack" ([Triggers.YouAttack]) triggers once per combat in which you attack with
+ * "Whenever you attack" (`Triggers.you.attacks()`) triggers once per combat in which you attack with
  * one or more creatures — not once per attacker — and only on your turn, since only the attacking
  * player declares attackers.
  */
@@ -63,50 +54,36 @@ val CosmicCube = card("Cosmic Cube") {
         "creatures you control without paying its mana cost. Put the rest on the bottom of your " +
         "library in a random order."
 
-    keywordAbility(KeywordAbility.ward("{2}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
 
     triggeredAbility {
-        trigger = Triggers.YouAttack
-        val greatestAttackingPower = DynamicAmount.AggregateBattlefield(
-            player = Player.You,
-            filter = GameObjectFilter.Creature.attacking(),
-            aggregation = Aggregation.MAX,
-            property = CardNumericProperty.POWER
-        )
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(
-                        count = DynamicAmount.Fixed(6),
-                        player = Player.You
-                    ),
-                    storeAs = "cosmicCubeLooked"
-                ),
-                SelectFromCollectionEffect(
-                    from = "cosmicCubeLooked",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    chooser = Chooser.Controller,
-                    filter = GameObjectFilter.Nonland
-                        .manaValueAtMostDynamic(greatestAttackingPower),
-                    storeSelected = "cosmicCubeChosen",
-                    storeRemainder = "cosmicCubeToBottom",
-                    showAllCards = true,
-                    prompt = "You may cast a spell from among these cards without paying its " +
-                        "mana cost.",
-                    selectedLabel = "Cast for free",
-                    remainderLabel = "Put on the bottom"
-                ),
-                MoveCollectionEffect(
-                    from = "cosmicCubeToBottom",
-                    destination = CardDestination.ToZone(
-                        Zone.LIBRARY,
-                        placement = ZonePlacement.Bottom
-                    ),
-                    order = CardOrder.Random
-                ),
-                CastFromCollectionWithoutPayingCostEffect(from = "cosmicCubeChosen")
+        trigger = Triggers.you.attacks()
+        val greatestAttackingPower = DynamicAmounts.battlefield(
+            Player.You,
+            GameObjectFilter.Creature.attacking()
+        ).maxPower()
+        effect = Effects.Pipeline {
+            val cosmicCubeLooked = gather(
+                CardSource.TopOfLibrary(
+                    count = 6,
+                    player = Player.You
+                )
             )
-        )
+            val (cosmicCubeChosen, cosmicCubeToBottom) = chooseUpToSplit(
+                1,
+                from = cosmicCubeLooked,
+                chooser = Chooser.Controller,
+                filter = GameObjectFilter.Nonland
+                    .manaValueAtMostDynamic(greatestAttackingPower),
+                showAllCards = true,
+                prompt = "You may cast a spell from among these cards without paying its " +
+                    "mana cost.",
+                selectedLabel = "Cast for free",
+                remainderLabel = "Put on the bottom"
+            )
+            toLibraryBottom(cosmicCubeToBottom, order = CardOrder.Random)
+            run(Effects.CastFromCollectionWithoutPayingCost(from = cosmicCubeChosen))
+        }
     }
 
     metadata {

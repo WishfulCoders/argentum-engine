@@ -39,12 +39,12 @@ val TreeOfPerdition = card("Tree of Perdition") {
     keywords(Keyword.DEFENDER)
 
     activatedAbility {
+        val opponent = target(Targets.Opponent)
         cost = Costs.Tap
-        target = Targets.Opponent
         effect = Effects.ExchangeLifeAndStat(
             target = EffectTarget.Self,
             stat = CreatureStat.TOUGHNESS,
-            player = EffectTarget.ContextTarget(0)
+            player = opponent
         )
         description = "Exchange target opponent's life total with this creature's toughness"
     }

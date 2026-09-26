@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.m15.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Crowd's Favor
@@ -24,9 +24,8 @@ val CrowdsFavor = card("Crowd's Favor") {
     keywords(Keyword.CONVOKE)
 
     spell {
-        val t = target("target creature", Targets.Creature)
-        effect = Effects.ModifyStats(1, 0, t)
-            .then(Effects.GrantKeyword(Keyword.FIRST_STRIKE, t))
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(1, 0, t) then Effects.GrantKeyword(Keyword.FIRST_STRIKE, t)
     }
 
     metadata {

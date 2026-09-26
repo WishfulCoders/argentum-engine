@@ -6,10 +6,10 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Vile Consumption
@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.dsl.Costs
  *
  * Implemented as a [GrantTriggeredAbility] static ability over [GroupFilter.AllCreatures]: each
  * creature gains its own beginning-of-upkeep trigger that fires on its controller's upkeep
- * ([Triggers.YourUpkeep]). [PayOrSufferEffect] lets that controller (EffectTarget.Controller) pay 1
+ * (`Triggers.you.beginningOf(Step.UPKEEP)`). [PayOrSufferEffect] lets that controller (EffectTarget.Controller) pay 1
  * life; otherwise the granted creature itself (EffectTarget.Self) is sacrificed.
  */
 val VileConsumption = card("Vile Consumption") {
@@ -31,9 +31,8 @@ val VileConsumption = card("Vile Consumption") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.YourUpkeep.event,
-                binding = Triggers.YourUpkeep.binding,
-                effect = PayOrSufferEffect(
+                trigger = Triggers.you.beginningOf(Step.UPKEEP),
+                effect = Effects.PayOrSuffer(
                     cost = Costs.pay.PayLife(1),
                     suffer = Effects.SacrificeTarget(EffectTarget.Self)
                 )

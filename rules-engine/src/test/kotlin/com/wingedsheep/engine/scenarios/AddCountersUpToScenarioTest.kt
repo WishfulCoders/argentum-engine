@@ -4,16 +4,16 @@ import com.wingedsheep.engine.core.ChooseNumberDecision
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.CounterType
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Feature test for [com.wingedsheep.sdk.scripting.effects.AddCountersUpToEffect] — "Put up to N
@@ -34,8 +34,8 @@ class AddCountersUpToScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Put up to three +1/+1 counters on target creature."
         spell {
-            target = Targets.Creature
-            effect = Effects.AddCountersUpTo(Counters.PLUS_ONE_PLUS_ONE, 3, EffectTarget.ContextTarget(0))
+            target = TargetObject(filter = TargetFilter.Creature)
+            effect = Effects.AddCountersUpTo(CounterType.PLUS_ONE_PLUS_ONE, 3, EffectTarget.ContextTarget(0))
         }
     }
 

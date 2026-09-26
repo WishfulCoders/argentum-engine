@@ -10,6 +10,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 
 /**
@@ -24,7 +25,7 @@ val RiteOfTheDragoncaller = card("Rite of the Dragoncaller") {
     typeLine = "Enchantment"
     oracleText = "Whenever you cast an instant or sorcery spell, create a 5/5 red Dragon creature token with flying."
     triggeredAbility {
-        trigger = Triggers.YouCastInstantOrSorcery
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
         effect = Effects.CreateToken(
             power = 5,
             toughness = 5,

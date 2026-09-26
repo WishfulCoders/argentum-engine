@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Unnatural Growth
@@ -19,7 +20,7 @@ val UnnaturalGrowth = card("Unnatural Growth") {
     oracleText = "At the beginning of each combat, double the power and toughness of each creature you control until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.EachCombat
+        trigger = Triggers.anyPlayer.beginningOf(Step.BEGIN_COMBAT)
         effect = Patterns.Group.doublePowerAndToughnessForAll(Filters.Group.creaturesYouControl)
         description = "At the beginning of each combat, double the power and toughness of each creature you control until end of turn."
     }

@@ -5,11 +5,10 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -28,8 +27,8 @@ val WarTorchGoblin = card("War-Torch Goblin") {
     toughness = 1
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{R}"), Costs.SacrificeSelf)
-        val t = target("target", TargetCreature(filter = TargetFilter.BlockingCreature))
-        effect = DealDamageEffect(2, t)
+        val t = target(TargetFilter.BlockingCreature)
+        effect = Effects.DealDamage(2, t)
     }
     metadata {
         rarity = Rarity.COMMON

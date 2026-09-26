@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Hindering Touch
@@ -21,7 +21,7 @@ val HinderingTouch = card("Hindering Touch") {
     oracleText = "Counter target spell unless its controller pays {2}.\nStorm (When you cast this spell, copy it for each spell cast before it this turn. You may choose new targets for the copies.)"
 
     spell {
-        target = Targets.Spell
+        val spell = target(TargetFilter.SpellOnStack)
         effect = Effects.CounterUnlessPays("{2}")
     }
 

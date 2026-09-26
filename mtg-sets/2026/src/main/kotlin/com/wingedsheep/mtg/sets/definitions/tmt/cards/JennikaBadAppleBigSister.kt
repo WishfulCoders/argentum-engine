@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Jennika, Bad Apple Big Sister
@@ -25,8 +25,8 @@ val JennikaBadAppleBigSister = card("Jennika, Bad Apple Big Sister") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreateTokenEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateToken(
             power = 2,
             toughness = 2,
             colors = setOf(Color.RED),

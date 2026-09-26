@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBlock
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -25,7 +23,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * The Eerie ability triggers from the graveyard (CR 603.10a — a triggered ability that returns the
  * card from a graveyard functions there). Both halves of the Eerie keyword (an enchantment you
  * control entering, and fully unlocking a Room) are modeled as two `triggerZone = GRAVEYARD`
- * triggered abilities, each a [MayEffect] ("you may") wrapping [Effects.Move] of [EffectTarget.Self]
+ * triggered abilities, each a [Effects.May] ("you may") wrapping [Effects.Move] of [EffectTarget.Self]
  * to hand.
  */
 val FearOfInfinity = card("Fear of Infinity") {
@@ -46,21 +44,18 @@ val FearOfInfinity = card("Fear of Infinity") {
 
     // Eerie trigger — part 1: whenever an enchantment you control enters (functions from graveyard).
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Enchantment.youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Enchantment.youControl()).enters()
         triggerZone = Zone.GRAVEYARD
-        effect = MayEffect(Effects.Move(target = EffectTarget.Self, destination = Zone.HAND))
+        effect = Effects.May(Effects.Move(target = EffectTarget.Self, destination = Zone.HAND))
         description = "Eerie — Whenever an enchantment you control enters, you may return this card " +
             "from your graveyard to your hand."
     }
 
     // Eerie trigger — part 2: whenever you fully unlock a Room (functions from graveyard).
     triggeredAbility {
-        trigger = Triggers.RoomFullyUnlocked
+        trigger = Triggers.you.fullyUnlocksARoom()
         triggerZone = Zone.GRAVEYARD
-        effect = MayEffect(Effects.Move(target = EffectTarget.Self, destination = Zone.HAND))
+        effect = Effects.May(Effects.Move(target = EffectTarget.Self, destination = Zone.HAND))
         description = "Eerie — Whenever you fully unlock a Room, you may return this card from your " +
             "graveyard to your hand."
     }

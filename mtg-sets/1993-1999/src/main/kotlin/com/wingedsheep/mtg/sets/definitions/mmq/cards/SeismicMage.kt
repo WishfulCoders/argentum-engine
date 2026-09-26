@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.mmq.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Seismic Mage
@@ -22,7 +22,7 @@ val SeismicMage = card("Seismic Mage") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{R}"), Costs.Tap, Costs.DiscardCard)
-        val t = target("target", Targets.Land)
+        val t = target(TargetFilter.Land)
         effect = Effects.Destroy(t)
     }
 

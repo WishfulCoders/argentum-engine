@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CompositeStaticAbility
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.ReplaceDrawWithEffect
+import com.wingedsheep.sdk.scripting.ReplaceDrawWith
 import com.wingedsheep.sdk.scripting.SetBasePowerToughnessStatic
 import com.wingedsheep.sdk.scripting.conditions.Exists
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
@@ -42,8 +42,8 @@ val LivingConundrum = card("Living Conundrum") {
     keywords(Keyword.HEXPROOF)
 
     replacementEffect(
-        ReplaceDrawWithEffect(
-            replacementEffect = Effects.Composite(),
+        ReplaceDrawWith(
+            replacementEffect = Effects.Nothing,
             restrictions = listOf(emptyLibrary),
         )
     )

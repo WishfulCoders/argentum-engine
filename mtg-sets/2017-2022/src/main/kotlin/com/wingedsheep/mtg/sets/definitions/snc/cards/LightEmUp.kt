@@ -25,7 +25,7 @@ val LightEmUp = card("Light 'Em Up") {
     keywordAbility(KeywordAbility.casualty(2))
 
     spell {
-        val t = target("target", Targets.CreatureOrPlaneswalker)
+        val t = target(Targets.CreatureOrPlaneswalker)
         effect = Effects.DealDamage(2, t)
     }
 

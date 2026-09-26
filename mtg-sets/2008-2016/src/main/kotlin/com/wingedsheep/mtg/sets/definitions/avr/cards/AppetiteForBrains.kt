@@ -6,16 +6,8 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.RevealHandEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Appetite for Brains
@@ -36,32 +28,25 @@ val AppetiteForBrains = card("Appetite for Brains") {
         "4 or greater and exile that card."
 
     spell {
-        val opponent = target("target opponent", Targets.Opponent)
+        val opponent = target(Targets.Opponent)
 
-        effect = Effects.Composite(
-            listOf(
-                RevealHandEffect(opponent),
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        zone = Zone.HAND,
-                        player = Player.ContextPlayer(0),
-                        filter = GameObjectFilter.Any.manaValueAtLeast(4),
-                    ),
-                    storeAs = "mv4Plus",
-                ),
-                SelectFromCollectionEffect(
-                    from = "mv4Plus",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                    chooser = Chooser.Controller,
-                    storeSelected = "chosenCard",
-                    prompt = "Choose a card with mana value 4 or greater to exile",
-                ),
-                MoveCollectionEffect(
-                    from = "chosenCard",
-                    destination = CardDestination.ToZone(Zone.EXILE, Player.ContextPlayer(0)),
-                ),
-            ),
-        )
+        effect = Effects.Pipeline {
+            run(Effects.RevealHand(opponent))
+            val mv4Plus = gather(
+                CardSource.FromZone(
+                    zone = Zone.HAND,
+                    player = opponent.asPlayer,
+                    filter = GameObjectFilter.Any.manaValueAtLeast(4),
+                )
+            )
+            val chosenCard = chooseExactly(
+                1,
+                from = mv4Plus,
+                chooser = Chooser.Controller,
+                prompt = "Choose a card with mana value 4 or greater to exile"
+            )
+            exile(chosenCard, opponent.asPlayer)
+        }
     }
 
     metadata {

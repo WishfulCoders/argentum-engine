@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Summon: Esper Ramuh
@@ -41,7 +40,7 @@ val SummonEsperRamuh = card("Summon: Esper Ramuh") {
     // Chapter I — "Judgment Bolt": damage = noncreature, nonland cards in your graveyard, dealt by
     // this creature to a target creature an opponent controls.
     sagaChapter(1) {
-        val victim = target("creature", TargetObject(filter = TargetFilter.CreatureOpponentControls))
+        val victim = target(TargetFilter.CreatureOpponentControls)
         val noncreatureNonland = DynamicAmounts.zone(
             Player.You,
             Zone.GRAVEYARD,

@@ -4,12 +4,12 @@
 
 package com.wingedsheep.mtg.sets.definitions.jud.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -24,7 +24,7 @@ val KeepWatch = card("Keep Watch") {
     typeLine = "Instant"
     oracleText = "Draw a card for each attacking creature."
     spell {
-        effect = DrawCardsEffect(DynamicAmount.AggregateBattlefield(Player.Each, GameObjectFilter.Creature.attacking()))
+        effect = Effects.DrawCards(DynamicAmounts.battlefield(Player.Each, GameObjectFilter.Creature.attacking()).count())
     }
     metadata {
         rarity = Rarity.COMMON

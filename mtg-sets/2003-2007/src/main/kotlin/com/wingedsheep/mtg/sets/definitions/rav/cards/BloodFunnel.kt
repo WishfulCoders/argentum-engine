@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -8,9 +9,6 @@ import com.wingedsheep.sdk.scripting.CostModification
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
-import com.wingedsheep.sdk.scripting.effects.CounterEffect
-import com.wingedsheep.sdk.scripting.effects.CounterTargetSource
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 
 /**
  * Blood Funnel
@@ -49,10 +47,10 @@ val BloodFunnel = card("Blood Funnel") {
 
     // "Whenever you cast a noncreature spell, counter that spell unless you sacrifice a creature."
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
-        effect = PayOrSufferEffect(
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
+        effect = Effects.PayOrSuffer(
             cost = Costs.pay.Sacrifice(GameObjectFilter.Creature),
-            suffer = CounterEffect(targetSource = CounterTargetSource.TriggeringEntity),
+            suffer = Effects.CounterTriggeringSpell(),
             consequenceDescription = "counter that spell"
         )
         description = "Whenever you cast a noncreature spell, counter that spell unless you sacrifice a creature."

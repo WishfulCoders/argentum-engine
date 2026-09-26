@@ -9,7 +9,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.TargetOther
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Council of Echoes — {4}{U}{U}
@@ -41,11 +41,10 @@ val CouncilOfEchoes = card("Council of Echoes") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.CardsInGraveyardMatchingAtLeast(4, GameObjectFilter.Permanent)
         val permanent = target(
-            "up to one target nonland permanent other than this creature",
-            TargetOther(baseRequirement = TargetPermanent(count = 1, optional = true, filter = TargetFilter.NonlandPermanent))
+            TargetOther(baseRequirement = TargetObject(filter = TargetFilter.NonlandPermanent, optional = true)),
         )
         effect = Effects.ReturnToHand(permanent)
     }

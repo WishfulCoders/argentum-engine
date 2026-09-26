@@ -50,7 +50,7 @@ val SparkSpray = card("Spark Spray") {
     oracleText = "Spark Spray deals 1 damage to any target."
 
     spell {
-        val t = target("target", AnyTarget())
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
     }
 
@@ -74,7 +74,7 @@ val BellowingCrier = card("Bellowing Crier") {
     oracleText = "When Bellowing Crier enters the battlefield, draw a card, then discard a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Hand.loot()
     }
 
@@ -89,7 +89,7 @@ val BellowingCrier = card("Bellowing Crier") {
   `Costs.*`, `Conditions.*`, `Filters.*`. Raw data-class construction bypasses the curated API and
   ages badly when shapes change.
 - **Targets**: declare each target inside `spell { … }` / `triggeredAbility { … }` with
-  `val t = target("label", AnyTarget())`, then pass `t` to the effect (or reference it as
+  `val t = target(Targets.Any)`, then pass `t` to the effect (or reference it as
   `EffectTarget.ContextTarget(0)` in nested/modal shapes).
 - **Reprints**: if the card already exists as a `CardDefinition` in an earlier set, do **not**
   duplicate the file. Add a `Printing` row in the new set's `Reprints.kt` and wire it through
@@ -220,11 +220,11 @@ top-level facade) expose it
 through `Effects.kt`. See the language
 reference §5 for the full pipeline catalog.
 
-Chain effects with `.then(...)`:
+Chain effects with the infix `then`:
 
 ```kotlin
 spell {
-    effect = Patterns.Library.scry(1).then(Effects.DrawCards(1))   // Opt
+    effect = Patterns.Library.scry(1) then Effects.DrawCards(1)   // Opt
 }
 ```
 

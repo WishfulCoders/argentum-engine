@@ -11,6 +11,7 @@ import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeTargetEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * The Ring emblem's cumulative triggered abilities (CR 701.54c).
@@ -28,12 +29,9 @@ object TheRingAbilities {
     /** Tempted 2+ times: "Whenever your Ring-bearer attacks, draw a card, then discard a card." */
     val attackLoot: TriggeredAbility = TriggeredAbility(
         id = AbilityId("the_ring_attack_loot"),
-        trigger = Triggers.Attacks.event,
+        trigger = Triggers.self.attacks().event,
         binding = TriggerBinding.SELF,
-        effect = Effects.Composite(
-            Effects.DrawCards(1),
-            Effects.Discard(1, EffectTarget.Controller)
-        ),
+        effect = Effects.DrawCards(1) then Effects.Discard(1, EffectTarget.Controller),
         descriptionOverride = "Whenever your Ring-bearer attacks, draw a card, then discard a card."
     )
 
@@ -47,7 +45,7 @@ object TheRingAbilities {
      */
     val blockedSacrifice: TriggeredAbility = TriggeredAbility(
         id = AbilityId("the_ring_blocked_sacrifice"),
-        trigger = Triggers.becomesBlocked(filter = Filters.Creature, binding = TriggerBinding.SELF).event,
+        trigger = Triggers.self.matching(Filters.Creature).becomesBlocked().event,
         binding = TriggerBinding.SELF,
         effect = CreateDelayedTriggerEffect(
             step = Step.END_COMBAT,
@@ -59,7 +57,7 @@ object TheRingAbilities {
     /** Tempted 4+ times: "Whenever your Ring-bearer deals combat damage to a player, each opponent loses 3 life." */
     val combatDamageDrain: TriggeredAbility = TriggeredAbility(
         id = AbilityId("the_ring_combat_damage"),
-        trigger = Triggers.DealsCombatDamageToPlayer.event,
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer).event,
         binding = TriggerBinding.SELF,
         effect = Effects.LoseLife(3, EffectTarget.PlayerRef(Player.EachOpponent)),
         descriptionOverride = "Whenever your Ring-bearer deals combat damage to a player, each opponent loses 3 life."

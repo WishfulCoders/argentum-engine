@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever an artifact you control enters, this creature gets +1/+0 until end of turn.
  *
  * Perimeter Patrol's trigger in white with vigilance printed above it — the shared BRO
- * "artifact you control enters" shape: [Triggers.entersBattlefield] over `Artifact.youControl()`
+ * "artifact you control enters" shape: `Triggers.a(filter).enters()` over `Artifact.youControl()`
  * with [TriggerBinding.ANY], feeding a self-targeted [Effects.ModifyStats].
  */
 val PhalanxVanguard = card("Phalanx Vanguard") {
@@ -32,10 +32,7 @@ val PhalanxVanguard = card("Phalanx Vanguard") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Artifact.youControl()).enters()
         effect = Effects.ModifyStats(1, 0, EffectTarget.Self)
         description = "This creature gets +1/+0 until end of turn."
     }

@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 
 /**
  * Transluminant
@@ -38,7 +37,7 @@ val Transluminant = card("Transluminant") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{W}"), Costs.SacrificeSelf)
-        effect = CreateDelayedTriggerEffect(
+        effect = Effects.CreateDelayedTrigger(
             step = Step.END,
             effect = Effects.CreateToken(
                 power = 1,

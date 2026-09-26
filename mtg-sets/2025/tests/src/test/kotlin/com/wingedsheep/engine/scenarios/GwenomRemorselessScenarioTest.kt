@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.PaymentStrategy
 import com.wingedsheep.engine.legalactions.LegalActionEnumerator
@@ -101,7 +102,7 @@ class GwenomRemorselessScenarioTest : FunSpec({
         val beast = driver.putCardOnTopOfLibrary(you, "Top Beast")
 
         // Before the attack there is no look permission, so the top card stays hidden.
-        val before = ClientStateTransformer(driver.cardRegistry).transform(driver.state, viewingPlayerId = you)
+        val before = ClientStateTransformer(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)).transform(driver.state, viewingPlayerId = you)
         (beast in before.cards) shouldBe false
 
         driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
@@ -109,12 +110,12 @@ class GwenomRemorselessScenarioTest : FunSpec({
         resolveStack(driver)
 
         // The granted LookAtTopOfLibrary now reveals the top card to its controller.
-        val yourView = ClientStateTransformer(driver.cardRegistry).transform(driver.state, viewingPlayerId = you)
+        val yourView = ClientStateTransformer(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)).transform(driver.state, viewingPlayerId = you)
         (beast in yourView.cards) shouldBe true
         yourView.cards[beast]?.name shouldBe "Top Beast"
 
         // It is a private look, not a public reveal — the opponent still cannot see it.
-        val oppView = ClientStateTransformer(driver.cardRegistry).transform(driver.state, viewingPlayerId = opponent)
+        val oppView = ClientStateTransformer(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)).transform(driver.state, viewingPlayerId = opponent)
         (beast in oppView.cards) shouldBe false
     }
 
@@ -136,7 +137,7 @@ class GwenomRemorselessScenarioTest : FunSpec({
         // Active this turn: in the post-combat main the (sorcery-speed) top creature is castable, and
         // the top card is revealed to the controller.
         (beast in topOfLibraryCastCardIds(driver, you)) shouldBe true
-        val duringTurn = ClientStateTransformer(driver.cardRegistry).transform(driver.state, viewingPlayerId = you)
+        val duringTurn = ClientStateTransformer(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)).transform(driver.state, viewingPlayerId = you)
         (beast in duringTurn.cards) shouldBe true
 
         // Advance into the next turn; the EndOfTurn grant is dropped at cleanup. Stop in the
@@ -144,7 +145,7 @@ class GwenomRemorselessScenarioTest : FunSpec({
         driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
 
         (beast in topOfLibraryCastCardIds(driver, you)) shouldBe false
-        val nextTurn = ClientStateTransformer(driver.cardRegistry).transform(driver.state, viewingPlayerId = you)
+        val nextTurn = ClientStateTransformer(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)).transform(driver.state, viewingPlayerId = you)
         (beast in nextTurn.cards) shouldBe false
     }
 })

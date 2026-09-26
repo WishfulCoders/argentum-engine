@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Succumb to the Cold
@@ -31,19 +29,13 @@ val SuccumbToTheCold = card("Succumb to the Cold") {
         "from it instead.)"
 
     spell {
-        target = TargetCreature(
-            count = 2,
-            minCount = 1,
-            filter = TargetFilter.Creature.opponentControls()
-        )
-        effect = ForEachTargetEffect(
-            listOf(
-                Effects.Tap(EffectTarget.ContextTarget(0)),
-                AddCountersEffect(
-                    counterType = Counters.STUN,
-                    count = 1,
-                    target = EffectTarget.ContextTarget(0)
-                )
+        target = TargetObject(filter = TargetFilter.Creature.opponentControls(), count = 2, minCount = 1)
+        effect = Effects.ForEachTarget(
+            Effects.Tap(EffectTarget.ContextTarget(0)),
+            Effects.AddCounters(
+                counterType = CounterType.STUN,
+                count = 1,
+                target = EffectTarget.ContextTarget(0)
             )
         )
     }

@@ -2,11 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Surgespanner
@@ -17,7 +16,7 @@ import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
  * its owner's hand.
  *
  * "You may pay {1}{U}. If you do, …" is an optional cost rider on the triggered ability itself
- * ([MayPayManaEffect] → `Gate.MayPay`), not a reflexive trigger — the payment and the bounce both
+ * ([Effects.MayPay] → `Gate.MayPay`), not a reflexive trigger — the payment and the bounce both
  * happen as this one ability resolves. Customs Depot is the same shape.
  *
  * The target is chosen when the ability goes on the stack, before the payment is offered, which is
@@ -37,11 +36,11 @@ val Surgespanner = card("Surgespanner") {
         "target permanent to its owner's hand."
 
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
-        val permanent = target("target permanent", Targets.Permanent)
-        effect = MayPayManaEffect(
+        trigger = Triggers.self.becomesTapped()
+        val permanent = target(TargetFilter.Permanent)
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{1}{U}"),
-            effect = Effects.ReturnToHand(permanent),
+            then = Effects.ReturnToHand(permanent),
         )
         description = "you may pay {1}{U}. If you do, return target permanent to its owner's hand."
     }

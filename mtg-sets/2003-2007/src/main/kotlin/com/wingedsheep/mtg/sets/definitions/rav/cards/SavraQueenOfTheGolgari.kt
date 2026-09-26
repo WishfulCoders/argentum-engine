@@ -6,9 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.Gate
-import com.wingedsheep.sdk.scripting.effects.GatedEffect
-import com.wingedsheep.sdk.scripting.effects.PayLifeEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -21,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * sacrifices a creature of their choice.
  * Whenever you sacrifice a green creature, you may gain 2 life.
  *
- * Both triggers use the bare-article [Triggers.YouSacrificeA] template, which fires once per
+ * Both triggers use the bare-article `Triggers.you.sacrifices(filter)` template, which fires once per
  * matching creature sacrificed and counts Savra sacrificing *herself* — she is both black and
  * green, so sacrificing Savra triggers both abilities (her own ruling), and a black-green
  * creature likewise triggers both.
@@ -43,9 +40,9 @@ val SavraQueenOfTheGolgari = card("Savra, Queen of the Golgari") {
         "Whenever you sacrifice a green creature, you may gain 2 life."
 
     triggeredAbility {
-        trigger = Triggers.YouSacrificeA(GameObjectFilter.Creature.withColor(Color.BLACK))
-        effect = GatedEffect(
-            gate = Gate.MayPay(PayLifeEffect(2)),
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Creature.withColor(Color.BLACK))
+        effect = Effects.MayPay(
+            cost = Effects.PayLife(2),
             then = Effects.Sacrifice(
                 GameObjectFilter.Creature,
                 target = EffectTarget.PlayerRef(Player.EachOpponent)
@@ -54,7 +51,7 @@ val SavraQueenOfTheGolgari = card("Savra, Queen of the Golgari") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YouSacrificeA(GameObjectFilter.Creature.withColor(Color.GREEN))
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Creature.withColor(Color.GREEN))
         optional = true
         effect = Effects.GainLife(2)
     }

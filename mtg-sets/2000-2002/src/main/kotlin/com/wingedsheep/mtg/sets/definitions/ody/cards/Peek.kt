@@ -7,9 +7,7 @@ package com.wingedsheep.mtg.sets.definitions.ody.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.LookAtTargetHandEffect
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -25,11 +23,8 @@ val Peek = card("Peek") {
     typeLine = "Instant"
     oracleText = "Look at target player's hand.\nDraw a card."
     spell {
-        val t = target("target", TargetPlayer())
-        effect = Effects.Composite(
-            LookAtTargetHandEffect(t),
-            DrawCardsEffect(1)
-        )
+        val t = target(Targets.Player)
+        effect = Effects.LookAtHand(t) then Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.COMMON

@@ -1,20 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
-import com.wingedsheep.sdk.scripting.effects.GrantPlayWithoutPayingCostEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -38,31 +29,17 @@ val NarsetEnlightenedMaster = card("Narset, Enlightened Master") {
     keywords(Keyword.FIRST_STRIKE, Keyword.HEXPROOF)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(
-            listOf(
-                // Exile the top 4 cards of your library
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(4)),
-                    storeAs = "exiledCards"
-                ),
-                MoveCollectionEffect(
-                    from = "exiledCards",
-                    destination = CardDestination.ToZone(Zone.EXILE)
-                ),
-                // Filter to noncreature, nonland cards
-                FilterCollectionEffect(
-                    from = "exiledCards",
-                    filter = CollectionFilter.MatchesFilter(
-                        GameObjectFilter.Noncreature and GameObjectFilter.Nonland
-                    ),
-                    storeMatching = "castable"
-                ),
-                // Grant free casting permission until end of turn
-                GrantMayPlayFromExileEffect("castable"),
-                GrantPlayWithoutPayingCostEffect("castable")
-            )
-        )
+        trigger = Triggers.self.attacks()
+        effect = Effects.Pipeline {
+            // Exile the top 4 cards of your library
+            val exiledCards = gather(CardSource.TopOfLibrary(4))
+            exile(exiledCards)
+            // Filter to noncreature, nonland cards
+            val castable = filter(exiledCards, GameObjectFilter.Noncreature and GameObjectFilter.Nonland)
+            // Grant free casting permission until end of turn
+            run(Effects.GrantMayPlayFromExile(castable))
+            run(Effects.GrantPlayWithoutPayingCost(castable))
+        }
     }
 
     metadata {

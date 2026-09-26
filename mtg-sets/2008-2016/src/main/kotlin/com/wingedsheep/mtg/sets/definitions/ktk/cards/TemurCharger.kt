@@ -3,12 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.ktk.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 /**
  * Temur Charger
  * {1}{G}
@@ -28,8 +28,8 @@ val TemurCharger = card("Temur Charger") {
     morphCost = Costs.pay.RevealCard(filter = GameObjectFilter.Any.withColor(Color.GREEN))
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        val creature = target("creature", Targets.Creature)
+        trigger = Triggers.self.turnedFaceUp()
+        val creature = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(Keyword.TRAMPLE, creature)
     }
 

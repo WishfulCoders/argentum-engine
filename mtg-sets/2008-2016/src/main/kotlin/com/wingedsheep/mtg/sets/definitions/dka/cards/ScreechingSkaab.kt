@@ -21,7 +21,7 @@ val ScreechingSkaab = card("Screeching Skaab") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.mill(2)
     }
 

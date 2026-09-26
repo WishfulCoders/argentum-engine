@@ -33,7 +33,7 @@ val FireNationWarship = card("Fire Nation Warship") {
     keywords(Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateClue()
     }
 

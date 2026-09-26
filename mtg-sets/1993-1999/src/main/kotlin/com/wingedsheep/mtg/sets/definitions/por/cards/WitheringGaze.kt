@@ -7,15 +7,14 @@ package com.wingedsheep.mtg.sets.definitions.por.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.RevealHandEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -30,17 +29,15 @@ val WitheringGaze = card("Withering Gaze") {
     typeLine = "Sorcery"
     oracleText = "Target opponent reveals their hand. You draw a card for each Forest and green card in it."
     spell {
-        val t = target("target", TargetOpponent())
-        effect = Effects.Composite(
-            RevealHandEffect(t),
-            DrawCardsEffect(
-                DynamicAmount.Count(
+        val t = target(Targets.Opponent)
+        effect = Effects.RevealHand(t) then
+            Effects.DrawCards(
+                DynamicAmounts.count(
                     Player.TargetOpponent,
                     Zone.HAND,
                     (GameObjectFilter.Land.withSubtype(Subtype.FOREST) or GameObjectFilter.Any.withColor(Color.GREEN))
                 )
             )
-        )
     }
     metadata {
         rarity = Rarity.UNCOMMON

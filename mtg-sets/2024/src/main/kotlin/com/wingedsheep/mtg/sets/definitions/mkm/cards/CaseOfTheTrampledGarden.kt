@@ -1,7 +1,8 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -10,15 +11,10 @@ import com.wingedsheep.sdk.dsl.solvedTriggeredAbility
 import com.wingedsheep.sdk.dsl.toSolve
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.Aggregation
-import com.wingedsheep.sdk.scripting.values.CardNumericProperty
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Case of the Trampled Garden — Murders at Karlov Manor #156
@@ -55,35 +51,27 @@ val CaseOfTheTrampledGarden = card("Case of the Trampled Garden") {
         "trample until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = TargetCreature(
-            count = 2,
-            minCount = 1,
-            filter = TargetFilter.Creature.youControl()
-        )
-        effect = Effects.DistributeCountersAmongTargets(2, Counters.PLUS_ONE_PLUS_ONE)
+        trigger = Triggers.self.enters()
+        target = TargetObject(filter = TargetFilter.Creature.youControl(), count = 2, minCount = 1)
+        effect = Effects.DistributeCountersAmongTargets(2, CounterType.PLUS_ONE_PLUS_ONE)
     }
 
     toSolve(
-        Compare(
-            DynamicAmount.AggregateBattlefield(
-                player = Player.You,
-                filter = GameObjectFilter.Creature,
-                aggregation = Aggregation.SUM,
-                property = CardNumericProperty.POWER
-            ),
+        Conditions.CompareAmounts(
+            DynamicAmounts.battlefield(
+                Player.You,
+                GameObjectFilter.Creature
+            ).sumPower(),
             ComparisonOperator.GTE,
-            DynamicAmount.Fixed(8)
+            8
         )
     )
 
     solvedTriggeredAbility {
-        trigger = Triggers.YouAttack
-        target = TargetCreature(filter = TargetFilter.Creature.attacking())
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0)),
-            Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.ContextTarget(0))
-        )
+        val creature = target(TargetFilter.Creature.attacking())
+        trigger = Triggers.you.attacks()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature) then
+            Effects.GrantKeyword(Keyword.TRAMPLE, creature)
         description = "Solved — Whenever you attack, put a +1/+1 counter on target attacking " +
             "creature. It gains trample until end of turn."
     }

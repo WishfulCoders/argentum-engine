@@ -4,11 +4,10 @@
 
 package com.wingedsheep.mtg.sets.definitions.m10.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CounterEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
 
 
 /**
@@ -23,8 +22,8 @@ val EssenceScatter = card("Essence Scatter") {
     typeLine = "Instant"
     oracleText = "Counter target creature spell."
     spell {
-        val t = target("target", TargetSpell(filter = TargetFilter.CreatureSpellOnStack))
-        effect = CounterEffect()
+        val t = target(TargetFilter.CreatureSpellOnStack)
+        effect = Effects.CounterSpell()
     }
     metadata {
         rarity = Rarity.COMMON

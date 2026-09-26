@@ -20,7 +20,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  * Per the 2023-06-16 ruling, the damage half is a reflexive ability whose target is chosen
  * when the trigger goes on the stack — not at cast time. Verifies that the amass resolves
  * first, the just-amassed Orc Army survives the reflexive damage step, and the X value
- * reads the projected power of the chosen Army (`EntityReference.AmassedArmy`).
+ * reads the projected power of the chosen Army (`EffectTarget.AmassedArmy`).
  */
 class ForayOfOrcsScenarioTest : ScenarioTestBase() {
 

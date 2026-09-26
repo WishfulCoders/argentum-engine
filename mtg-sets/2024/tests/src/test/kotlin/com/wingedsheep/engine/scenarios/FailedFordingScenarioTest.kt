@@ -21,7 +21,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  *   "Return target nonland permanent to its owner's hand. If you control a Desert, surveil 1."
  *
  * Verifies the bounce always happens, and the surveil only triggers when the controller controls
- * a Desert (a one-shot resolution-time `ConditionalEffect`, not an intervening-if trigger).
+ * a Desert (a one-shot resolution-time `Effects.If`, not an intervening-if trigger).
  */
 class FailedFordingScenarioTest : FunSpec({
 

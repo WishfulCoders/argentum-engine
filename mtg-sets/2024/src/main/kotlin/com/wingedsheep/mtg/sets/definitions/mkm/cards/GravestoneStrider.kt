@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -39,7 +38,7 @@ val GravestoneStrider = card("Gravestone Strider") {
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.ExileSelf)
-        val t = target("target", TargetObject(filter = TargetFilter.CardInGraveyard))
+        val t = target(TargetFilter.CardInGraveyard)
         effect = Effects.Move(t, Zone.EXILE)
         activateFromZone = Zone.GRAVEYARD
     }

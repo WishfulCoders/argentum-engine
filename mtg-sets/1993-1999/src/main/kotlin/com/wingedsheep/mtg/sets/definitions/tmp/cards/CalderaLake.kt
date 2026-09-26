@@ -34,16 +34,14 @@ val CalderaLake = card("Caldera Lake") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.AddMana(Color.BLUE)
-            .then(Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You)))
+        effect = Effects.AddMana(Color.BLUE) then Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You))
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
 
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.AddMana(Color.RED)
-            .then(Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You)))
+        effect = Effects.AddMana(Color.RED) then Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You))
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

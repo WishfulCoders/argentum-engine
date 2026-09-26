@@ -7,13 +7,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.IterationSpace
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Frantic Scapegoat — Murders at Karlov Manor #126
@@ -32,7 +26,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *
  * - **"one or more other creatures you control enter"** is a batching trigger (CR 603.6a): a mass
  *   reanimation that returns four creatures fires this once, not four times.
- *   [Triggers.OneOrMorePermanentsEnter] with `excludeSource = true` is exactly that shape — the
+ *   `Triggers.oneOrMore(filter).enter()` with `excludeSource = true` is exactly that shape — the
  *   filter's default controller scope is "you control", and `excludeSource` realises "other" so the
  *   Goat's own entry can never feed its second ability. The matching members of the batch are
  *   seeded into the resolving trigger's pipeline as
@@ -77,36 +71,35 @@ val FranticScapegoat = card("Frantic Scapegoat") {
     keywords(Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Suspect(EffectTarget.Self)
         description = "When this creature enters, suspect it."
     }
 
     triggeredAbility {
-        trigger = Triggers.OneOrMorePermanentsEnter(GameObjectFilter.Creature, excludeSource = true)
+        trigger = Triggers.oneOrMoreOther(GameObjectFilter.Creature).enter()
         interveningIf = Conditions.SourceIsSuspected
-        effect = Effects.Composite(
-            SelectFromCollectionEffect(
-                from = IterationSpace.TRIGGER_CAPTURED_COLLECTION,
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "scapegoated",
+        effect = Effects.Pipeline {
+            val scapegoated = chooseUpTo(
+                1,
+                from = triggerCaptured,
                 useTargetingUI = true,
                 prompt = "You may suspect one of the creatures that entered. " +
                     "If you do, Frantic Scapegoat is no longer suspected."
-            ),
-            // Inside a ForEach over a collection, EffectTarget.Self rebinds to the iteration
+            )
+            // Inside a ForEach over a collection, EffectTarget.IterationEntity is the iteration
             // item — so this suspects the chosen creature, not the Goat.
-            ForEachInCollectionEffect(
-                collection = "scapegoated",
-                effect = Effects.Suspect(EffectTarget.Self)
-            ),
+            run(Effects.ForEachInCollection(
+                collection = scapegoated,
+                effect = Effects.Suspect(EffectTarget.IterationEntity)
+            ))
             // Back at the top level, Self is the source again: the Goat sheds its own suspicion,
             // but only if a creature was actually chosen ("If you do").
-            ConditionalEffect(
-                condition = Conditions.CollectionContainsMatch("scapegoated"),
-                effect = Effects.NoLongerSuspected(EffectTarget.Self)
-            ),
-        )
+            run(Effects.If(
+                condition = whenMatches(scapegoated),
+                then = Effects.NoLongerSuspected(EffectTarget.Self)
+            ))
+        }
         description = "Whenever one or more other creatures you control enter, if this creature " +
             "is suspected, you may suspect one of the other creatures. If you do, this creature " +
             "is no longer suspected."

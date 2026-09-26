@@ -9,13 +9,10 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.FeasibilityCheck
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * The Huntsman's Redemption
@@ -28,8 +25,8 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  *   card, reveal it, put it into your hand, then shuffle.
  * III — Up to two target creatures each get +2/+2 and gain trample until end of turn.
  *
- * Chapter II is the "you may X. If you do, Y" idiom (cf. Witherbloom Charm): a [MayEffect] for the
- * "you may", wrapping an [IfYouDoEffect] whose action is a gather → choose-one → sacrifice pipeline
+ * Chapter II is the "you may X. If you do, Y" idiom (cf. Witherbloom Charm): a [Effects.May] for the
+ * "you may", wrapping an [Effects.IfYouDo] whose action is a gather → choose-one → sacrifice pipeline
  * over the creatures you control, gating the tutor on the sacrifice actually happening. The
  * [FeasibilityCheck] suppresses the yes/no prompt entirely when you control no creature — the
  * chapter triggers on its own every turn, so an unanswerable prompt would be pure noise. The Beast
@@ -64,8 +61,8 @@ val TheHuntsmansRedemption = card("The Huntsman's Redemption") {
     }
 
     sagaChapter(2) {
-        effect = MayEffect(
-            effect = IfYouDoEffect(
+        effect = Effects.May(
+            effect = Effects.IfYouDo(
                 action = Effects.Pipeline {
                     val creatures = gather(GameObjectFilter.Creature, player = Player.You)
                     val chosen = chooseExactly(
@@ -76,7 +73,7 @@ val TheHuntsmansRedemption = card("The Huntsman's Redemption") {
                     )
                     sacrifice(chosen)
                 },
-                ifYouDo = Patterns.Library.searchLibrary(
+                then = Patterns.Library.searchLibrary(
                     filter = GameObjectFilter.Creature or GameObjectFilter.BasicLand,
                     count = 1,
                     destination = SearchDestination.HAND,
@@ -90,12 +87,10 @@ val TheHuntsmansRedemption = card("The Huntsman's Redemption") {
     }
 
     sagaChapter(3) {
-        target("up to two target creatures", TargetCreature(count = 2, optional = true))
-        effect = ForEachTargetEffect(
-            listOf(
-                Effects.ModifyStats(2, 2, EffectTarget.ContextTarget(0), Duration.EndOfTurn),
-                Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.ContextTarget(0), Duration.EndOfTurn),
-            )
+        targets(TargetFilter.Creature, count = 2, optional = true)
+        effect = Effects.ForEachTarget(
+            Effects.ModifyStats(2, 2, EffectTarget.ContextTarget(0), Duration.EndOfTurn),
+            Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.ContextTarget(0), Duration.EndOfTurn)
         )
     }
 

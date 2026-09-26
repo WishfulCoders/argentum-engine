@@ -9,15 +9,16 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.effects.MoveToZoneEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Regression test for Rule 608.2b as it applies to hexproof granted by an Aura's
@@ -38,10 +39,10 @@ class AuraEntersGrantsHexproofTest : FunSpec({
         typeLine = "Enchantment — Aura"
 
         keywords(Keyword.FLASH)
-        auraTarget = Targets.Creature
+        auraTarget = TargetObject(filter = TargetFilter.Creature)
 
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             effect = Effects.GrantHexproof(EffectTarget.EnchantedCreature)
         }
     }
@@ -52,7 +53,7 @@ class AuraEntersGrantsHexproofTest : FunSpec({
         typeLine = "Instant"
 
         spell {
-            val t = target("target creature", TargetCreature())
+            val t = target(TargetFilter.Creature)
             effect = MoveToZoneEffect(t, Zone.GRAVEYARD, byDestruction = true)
         }
     }
@@ -80,14 +81,14 @@ class AuraEntersGrantsHexproofTest : FunSpec({
         val removal = driver.putCardInHand(p2, "Test Doom Blade")
         driver.giveMana(p2, Color.BLACK, 2)
         driver.castSpellWithTargets(p2, removal, listOf(ChosenTarget.Permanent(creature)))
-            .isSuccess shouldBe true
+            .outcome shouldBe Outcome.Done
 
         // P2 passes → P1 gets priority, responds with the flash Aura on own creature.
         driver.passPriority(p2)
         val aura = driver.putCardInHand(p1, "Test Hexproof Aura")
         driver.giveMana(p1, Color.BLUE, 2)
         driver.castSpellWithTargets(p1, aura, listOf(ChosenTarget.Permanent(creature)))
-            .isSuccess shouldBe true
+            .outcome shouldBe Outcome.Done
 
         // Stack: [destroy (bottom), aura (top)]. Both pass → aura resolves first.
         driver.stackSize shouldBe 2

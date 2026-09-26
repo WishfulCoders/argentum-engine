@@ -10,7 +10,6 @@ import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
@@ -20,6 +19,8 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Wolverine, Fierce Fighter (MSH #240) — {2}{R}{G} 3/5 with three clauses:
@@ -27,7 +28,7 @@ import io.kotest.matchers.shouldBe
  *  - "When Wolverine enters, he fights up to one other target creature." (an optional-target
  *    `Effects.Fight` off an ETB trigger), and
  *  - "If damage would be dealt to Wolverine, instead that damage is dealt, but all other damage
- *    already dealt to him is healed." — the `RecipientFilter.Self` `HealOtherDamage` replacement
+ *    already dealt to him is healed." — the `Recipient.Self` `HealOtherDamage` replacement
  *    (CR 701.69a), wired on both creature-damage paths.
  *
  * Mechanism-level coverage of the replacement lives in `HealOtherDamageReplacementTest`; this file
@@ -42,7 +43,7 @@ class WolverineFierceFighterScenarioTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Test Meteor deals 5 damage to target creature."
         spell {
-            val t = target("target creature", Targets.Creature)
+            val t = target(TargetFilter.Creature)
             effect = Effects.DealDamage(5, t)
         }
     }
@@ -97,7 +98,7 @@ class WolverineFierceFighterScenarioTest : FunSpec({
         giveMana(player, Color.RED, 1)
         submit(
             CastSpell(playerId = player, cardId = wolverine, paymentStrategy = PaymentStrategy.AutoPay),
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         return wolverine
     }
 

@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
@@ -14,7 +15,7 @@ import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * The Wandering Minstrel — {G}{U} Legendary Creature — Human Bard (1/3).
@@ -43,7 +44,7 @@ val TheWanderingMinstrel = card("The Wandering Minstrel") {
         "the number of Towns you control."
 
     val townFilter = GameObjectFilter.Land.withSubtype("Town")
-    val townCount = DynamicAmount.Count(Player.You, Zone.BATTLEFIELD, townFilter)
+    val townCount = DynamicAmounts.count(Player.You, Zone.BATTLEFIELD, townFilter)
 
     // Lands you control enter untapped.
     replacementEffect(
@@ -58,7 +59,7 @@ val TheWanderingMinstrel = card("The Wandering Minstrel") {
     // The Minstrel's Ballad — At the beginning of combat on your turn, if you control five or
     // more Towns, create a 2/2 Elemental creature token that's all colors.
     triggeredAbility {
-        trigger = Triggers.BeginCombat
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
         interveningIf = Conditions.YouControlAtLeast(5, townFilter)
         effect = Effects.CreateToken(
             power = 2,

@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.iko.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Spontaneous Flight
@@ -23,11 +23,8 @@ val SpontaneousFlight = card("Spontaneous Flight") {
     oracleText = "Target creature gets +2/+2 until end of turn. Put a flying counter on it."
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 2, t),
-            Effects.AddCounters(Counters.FLYING, 1, t)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 2, t) then Effects.AddCounters(CounterType.FLYING, 1, t)
     }
 
     metadata {

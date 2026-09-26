@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Lightning-Rig Crew
@@ -28,7 +29,7 @@ val LightningRigCrew = card("Lightning-Rig Crew") {
     toughness = 5
 
     triggeredAbility {
-        trigger = Triggers.YouCastSubtype(Subtype.PIRATE)
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withSubtype(Subtype.PIRATE))
         effect = Effects.Untap(EffectTarget.Self)
     }
 

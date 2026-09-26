@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.permanent.types
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
@@ -15,7 +16,9 @@ import kotlin.reflect.KClass
  * Executor for ChangeGroupColorEffect.
  * "Each creature you control becomes black until end of turn" and similar group color effects.
  */
-class ChangeGroupColorExecutor : EffectExecutor<ChangeGroupColorEffect> {
+class ChangeGroupColorExecutor(
+    private val predicateEvaluator: PredicateEvaluator
+) : EffectExecutor<ChangeGroupColorEffect> {
 
     override val effectType: KClass<ChangeGroupColorEffect> = ChangeGroupColorEffect::class
 
@@ -27,7 +30,8 @@ class ChangeGroupColorExecutor : EffectExecutor<ChangeGroupColorEffect> {
         val filter = effect.filter
         val excludeSelfId = if (filter.excludeSelf) context.sourceId else null
         val affectedEntities = BattlefieldFilterUtils.findMatchingOnBattlefield(
-            state, filter.baseFilter, context, excludeSelfId
+            state, filter.baseFilter, context, excludeSelfId,
+            predicateEvaluator = predicateEvaluator
         ).toSet()
 
         if (affectedEntities.isEmpty()) {

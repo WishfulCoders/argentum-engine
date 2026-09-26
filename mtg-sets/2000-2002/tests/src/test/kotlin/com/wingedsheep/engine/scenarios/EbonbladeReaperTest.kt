@@ -11,6 +11,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.references.Player
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Tests for Ebonblade Reaper.
@@ -31,12 +32,12 @@ class EbonbladeReaperTest : FunSpec({
         toughness = 1
 
         triggeredAbility {
-            trigger = Triggers.Attacks
+            trigger = Triggers.self.attacks()
             effect = Effects.LoseHalfLife(roundUp = true, target = EffectTarget.Controller)
         }
 
         triggeredAbility {
-            trigger = Triggers.DealsCombatDamageToPlayer
+            trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
             effect = Effects.LoseHalfLife(
                 roundUp = true,
                 target = EffectTarget.PlayerRef(Player.DefendingPlayer),

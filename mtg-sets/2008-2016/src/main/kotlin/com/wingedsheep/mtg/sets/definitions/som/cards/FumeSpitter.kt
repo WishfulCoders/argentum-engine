@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.som.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Fume Spitter
@@ -25,8 +25,8 @@ val FumeSpitter = card("Fume Spitter") {
 
     activatedAbility {
         cost = Costs.SacrificeSelf
-        val t = target("target", Targets.Creature)
-        effect = Effects.AddCounters(Counters.MINUS_ONE_MINUS_ONE, 1, t)
+        val t = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(CounterType.MINUS_ONE_MINUS_ONE, 1, t)
         description = "Sacrifice this creature: Put a -1/-1 counter on target creature."
     }
 

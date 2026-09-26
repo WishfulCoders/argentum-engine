@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Ground Rift
@@ -30,10 +29,7 @@ val GroundRift = card("Ground Rift") {
         "Storm (When you cast this spell, copy it for each spell cast before it this turn. You may choose new targets for the copies.)"
 
     spell {
-        val t = target(
-            "target",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Creature.withoutKeyword(Keyword.FLYING)))
-        )
+        val t = target(TargetFilter(GameObjectFilter.Creature.withoutKeyword(Keyword.FLYING)))
         effect = Effects.CantBlock(t)
     }
 

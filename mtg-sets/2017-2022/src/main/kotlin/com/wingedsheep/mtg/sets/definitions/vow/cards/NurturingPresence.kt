@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -11,8 +10,9 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Nurturing Presence
@@ -43,22 +43,19 @@ val NurturingPresence = card("Nurturing Presence") {
         "until end of turn.\"\n" +
         "When this Aura enters, create a 1/1 white Spirit creature token with flying."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     // Enchanted creature has "Whenever a creature you control enters, this creature gets +1/+1
     // until end of turn."
-    val creatureEnters = Triggers.entersBattlefield(
-        filter = GameObjectFilter.Creature.youControl(),
-        binding = TriggerBinding.ANY
-    )
+    val creatureEnters = Triggers.a(GameObjectFilter.Creature.youControl()).enters()
     staticAbility {
         ability = GrantTriggeredAbility(
             TriggeredAbility.create(
                 trigger = creatureEnters.event,
                 binding = creatureEnters.binding,
-                effect = ModifyStatsEffect(
-                    powerModifier = 1,
-                    toughnessModifier = 1,
+                effect = Effects.ModifyStats(
+                    power = 1,
+                    toughness = 1,
                     target = EffectTarget.Self
                 )
             )
@@ -67,7 +64,7 @@ val NurturingPresence = card("Nurturing Presence") {
 
     // When this Aura enters, create a 1/1 white Spirit creature token with flying.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

@@ -15,7 +15,7 @@ import kotlin.reflect.KClass
  * "You gain X life" or "Target player gains X life"
  */
 class GainLifeExecutor(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<GainLifeEffect> {
 
     override val effectType: KClass<GainLifeEffect> = GainLifeEffect::class
@@ -36,7 +36,7 @@ class GainLifeExecutor(
         val events = mutableListOf<EngineGameEvent>()
 
         for (playerId in playerIds) {
-            val (gainedState, event) = DamageUtils.gainLife(newState, playerId, amount)
+            val (gainedState, event) = DamageUtils.gainLife(newState, playerId, amount, predicateEvaluator = amountEvaluator.predicates)
             newState = gainedState
             if (event != null) events.add(event)
         }

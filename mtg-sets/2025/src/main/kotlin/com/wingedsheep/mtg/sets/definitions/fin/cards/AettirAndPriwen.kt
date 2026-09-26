@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.SetBasePowerToughnessDynamicStatic
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Aettir and Priwen
@@ -26,8 +26,8 @@ val AettirAndPriwen = card("Aettir and Priwen") {
 
     staticAbility {
         ability = SetBasePowerToughnessDynamicStatic(
-            power = DynamicAmount.YourLifeTotal,
-            toughness = DynamicAmount.YourLifeTotal,
+            power = DynamicAmounts.yourLifeTotal(),
+            toughness = DynamicAmounts.yourLifeTotal(),
             filter = GroupFilter.attachedCreature(),
         )
     }

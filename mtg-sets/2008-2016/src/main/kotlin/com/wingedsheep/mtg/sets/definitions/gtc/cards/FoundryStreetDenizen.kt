@@ -30,10 +30,7 @@ val FoundryStreetDenizen = card("Foundry Street Denizen") {
     oracleText = "Whenever another red creature you control enters, this creature gets +1/+0 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.withColor(Color.RED).youControl(),
-            binding = TriggerBinding.OTHER
-        )
+        trigger = Triggers.another(GameObjectFilter.Creature.withColor(Color.RED).youControl()).enters()
         effect = Effects.ModifyStats(1, 0, EffectTarget.Self)
         description = "Whenever another red creature you control enters, this creature gets +1/+0 until end of turn."
     }

@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Slith Ascendant — Mirrodin #23
@@ -18,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * The white member of the Slith cycle (see [SlithBloodletter], [SlithFirewalker],
  * [SlithPredator]) — same growth trigger, with evasion instead of a mana rider. Flying is
  * what makes the compounding reliable: the +1/+1 counter only lands on a *connected* attack
- * ([Triggers.DealsCombatDamageToPlayer] is combat damage to a player, so a blocked Slith or a
+ * (`Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)` is combat damage to a player, so a blocked Slith or a
  * ping from an activated ability grows nothing), and a 1/1 flier connects far more often than
  * a ground body of the same size.
  */
@@ -34,8 +35,8 @@ val SlithAscendant = card("Slith Ascendant") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Whenever this creature deals combat damage to a player, put a +1/+1 counter on it."
     }
 

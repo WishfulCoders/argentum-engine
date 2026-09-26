@@ -35,7 +35,7 @@ val WallOfDistortion = card("Wall of Distortion") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{B}"), Costs.Tap)
-        val t = target("target", Targets.Player)
+        val t = target(Targets.Player)
         effect = Patterns.Hand.discardCards(1, t)
         timing = TimingRule.SorcerySpeed
     }

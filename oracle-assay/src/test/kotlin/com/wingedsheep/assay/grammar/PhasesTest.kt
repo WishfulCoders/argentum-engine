@@ -14,7 +14,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 
 /**
- * "At the beginning of …" — the step-trigger prefix as `Triggers.phase(step, player, binding)`'s
+ * "At the beginning of …" — the step-trigger prefix as `Triggers.<player>.beginningOf(step)`'s
  * own product.
  *
  * Every assertion here names the SDK call the sentence denotes rather than a shape of its own. That
@@ -51,28 +51,28 @@ class PhasesTest : StringSpec({
     // whose turn it is another, and nothing about the sentence is frozen.
     "the prefix denotes the SDK's own step-trigger factory, argument for argument" {
         ability("At the beginning of your upkeep, draw a card.").trigger shouldBe
-            SdkTriggers.phase(Step.UPKEEP, Player.You).event
+            SdkTriggers.you.beginningOf(Step.UPKEEP).event
         ability("At the beginning of each opponent's draw step, draw a card.").trigger shouldBe
-            SdkTriggers.phase(Step.DRAW, Player.EachOpponent).event
+            SdkTriggers.anOpponent.beginningOf(Step.DRAW).event
         ability("At the beginning of each player's first main phase, draw a card.").trigger shouldBe
-            SdkTriggers.phase(Step.PRECOMBAT_MAIN, Player.Each).event
+            SdkTriggers.anyPlayer.beginningOf(Step.PRECOMBAT_MAIN).event
         ability("At the beginning of the chosen player's upkeep, draw a card.").trigger shouldBe
-            SdkTriggers.phase(Step.UPKEEP, Player.ChosenOpponent).event
+            SdkTriggers.chosenOpponent.beginningOf(Step.UPKEEP).event
     }
 
     // The named constants are calls to the same factory with every argument frozen, so the rules
     // that used to spell them out have to keep producing them exactly.
     "the constants the rules used to name are the same values" {
         ability("At the beginning of your upkeep, draw a card.").trigger shouldBe
-            SdkTriggers.YourUpkeep.event
+            SdkTriggers.you.beginningOf(Step.UPKEEP).event
         ability("At the beginning of each end step, draw a card.").trigger shouldBe
-            SdkTriggers.EachEndStep.event
+            SdkTriggers.anyPlayer.beginningOf(Step.END).event
         ability("At the beginning of combat on your turn, draw a card.").trigger shouldBe
-            SdkTriggers.BeginCombat.event
+            SdkTriggers.you.beginningOf(Step.BEGIN_COMBAT).event
         ability("At the beginning of each opponent's upkeep, draw a card.").trigger shouldBe
-            SdkTriggers.EachOpponentUpkeep.event
+            SdkTriggers.anOpponent.beginningOf(Step.UPKEEP).event
         ability("At the beginning of the chosen player's upkeep, draw a card.").trigger shouldBe
-            SdkTriggers.ChosenOpponentUpkeep.event
+            SdkTriggers.chosenOpponent.beginningOf(Step.UPKEEP).event
     }
 
     // The binding is the factory's third argument, and it is what re-scopes "you" to the attached
@@ -81,7 +81,7 @@ class PhasesTest : StringSpec({
         ability("At the beginning of the upkeep of enchanted creature's controller, draw a card.")
             .binding shouldBe TriggerBinding.ATTACHED
         ability("At the beginning of the end step of enchanted creature's controller, draw a card.")
-            .trigger shouldBe SdkTriggers.phase(Step.END, Player.You, TriggerBinding.ATTACHED).event
+            .trigger shouldBe SdkTriggers.attached.beginningOf(Step.END).event
     }
 
     // Wizards templates the all-players steps several ways, and which is the majority flips with the
@@ -95,7 +95,7 @@ class PhasesTest : StringSpec({
             "At the beginning of each player's end step, draw a card.",
             "At the beginning of each end step, draw a card.",
         )
-        // Pre-2015 templating. Skizzik's golden reads it as `Triggers.EachEndStep`.
+        // Pre-2015 templating. Skizzik's golden reads it as `Triggers.anyPlayer.beginningOf(Step.END)`.
         spelledAlso(
             "At the beginning of the end step, draw a card.",
             "At the beginning of each end step, draw a card.",
@@ -148,7 +148,7 @@ class PhasesTest : StringSpec({
     // reaches the other. Ghastly Remains is the only card that prints this today.
     "the graveyard-zoned prefix takes the same step vocabulary" {
         ability("At the beginning of each end step, if ~ is in your graveyard, draw a card.")
-            .trigger shouldBe SdkTriggers.phase(Step.END, Player.Each).event
+            .trigger shouldBe SdkTriggers.anyPlayer.beginningOf(Step.END).event
     }
 
     // The band's write-offs, asserted so they stay declines rather than drifting into a half-reading.

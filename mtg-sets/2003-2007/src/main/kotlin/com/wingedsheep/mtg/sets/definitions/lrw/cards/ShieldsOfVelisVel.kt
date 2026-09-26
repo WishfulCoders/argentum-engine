@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * The toughness-side twin of Ego Erasure, and built the same way: the player is the only
  * *target*, and the creatures are a group resolved on resolution, so `targetPlayerControls`
  * binds the group's controller predicate to that target rather than to the spell's controller.
- * Both riders land on each member with [EffectTarget.Self] inside the iteration, so a creature
+ * Both riders land on each member with [EffectTarget.IterationEntity] inside the iteration, so a creature
  * that leaves mid-resolution simply drops out.
  *
  * "Gains all creature types" is modelled by granting Changeling — the engine expands that
@@ -38,13 +38,11 @@ val ShieldsOfVelisVel = card("Shields of Velis Vel") {
     keywords(Keyword.CHANGELING)
 
     spell {
-        val player = target("target player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.targetPlayerControls(player)),
-            Effects.Composite(
-                Effects.ModifyStats(0, 1, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.CHANGELING, EffectTarget.Self)
-            )
+            Effects.ModifyStats(0, 1, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.CHANGELING, EffectTarget.IterationEntity)
         )
     }
 

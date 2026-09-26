@@ -25,7 +25,7 @@ val GildedPinions = card("Gilded Pinions") {
     oracleText = "When this Equipment enters, create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")\nEquipped creature has flying.\nEquip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateTreasure(1)
         description = "When this Equipment enters, create a Treasure token."
     }

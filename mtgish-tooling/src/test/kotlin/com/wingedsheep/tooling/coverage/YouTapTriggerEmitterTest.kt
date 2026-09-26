@@ -18,7 +18,7 @@ import kotlinx.serialization.json.putJsonObject
  * Pins the emitter's recovery of `WhenAPlayerTapsAPermanent` — the tap-*attribution* trigger
  * ("Whenever you tap an untapped creature an opponent controls", Wilds of Eldraine's Hylda of the Icy
  * Crown / Icewrought Sentry / Solitary Sanctuary / Sharae of Numbing Depths) — onto
- * `Triggers.YouTap(filter)`.
+ * `Triggers.you.taps(filter)`.
  *
  * Two things are load-bearing and neither is visible in the corpus today (all four printed cards carry
  * payoffs the emitter still scaffolds on, so only a synthetic fixture exercises the trigger itself):
@@ -117,10 +117,10 @@ class YouTapTriggerEmitterTest : StringSpec({
             tapTriggerCard(playersScope, playerArg, includeIsUntapped), null, effects, keywords
         )
 
-    "the You scope maps to Triggers.YouTap with the recovered permanent filter" {
+    "the You scope maps to Triggers.you.taps with the recovered permanent filter" {
         val r = render("SinglePlayer", "You")
         r.complete shouldBe true
-        r.text shouldContain "trigger = Triggers.YouTap(GameObjectFilter.Creature.opponentControls())"
+        r.text shouldContain "trigger = Triggers.you.taps(GameObjectFilter.Creature.opponentControls())"
     }
 
     "the IR's IsUntapped clause is dropped — it would invert the filter at detection time" {
@@ -131,14 +131,14 @@ class YouTapTriggerEmitterTest : StringSpec({
     "the filter still renders when the IR omits IsUntapped" {
         val r = render("SinglePlayer", "You", includeIsUntapped = false)
         r.complete shouldBe true
-        r.text shouldContain "trigger = Triggers.YouTap(GameObjectFilter.Creature.opponentControls())"
+        r.text shouldContain "trigger = Triggers.you.taps(GameObjectFilter.Creature.opponentControls())"
     }
 
     "a non-You tapper scope declines to a scaffold rather than widening the trigger" {
         for (scope in listOf("AnyPlayer" to null, "Opponent" to null, "SinglePlayer" to "HostController")) {
             val r = render(scope.first, scope.second)
             r.complete shouldBe false
-            r.text shouldNotContain "Triggers.YouTap"
+            r.text shouldNotContain "Triggers.you.taps"
         }
     }
 })

@@ -54,7 +54,7 @@ object LinkedExileLookup {
 
     /**
      * The [index]-th card still exiled with [sourceId], or null when the pile is shorter than that.
-     * Backs [com.wingedsheep.sdk.scripting.values.EntityReference.LinkedExiledCard], whose default
+     * Backs [com.wingedsheep.sdk.scripting.targets.EffectTarget.LinkedExiledCard], whose default
      * index 0 is "the exiled card" of every Imprint permanent (Imprint exiles exactly one).
      */
     fun exiledCard(state: GameState, sourceId: EntityId?, index: Int = 0): EntityId? =

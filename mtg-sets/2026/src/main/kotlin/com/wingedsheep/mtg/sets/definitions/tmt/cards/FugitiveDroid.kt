@@ -13,7 +13,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Fugitive Droid
@@ -45,17 +44,14 @@ val FugitiveDroid = card("Fugitive Droid") {
         // "target spell that targets an artifact or creature you control" — a stack spell at
         // least one of whose chosen targets matches the subfilter (CardPredicate.TargetsMatching).
         val spell = target(
-            "target spell that targets an artifact or creature you control",
-            TargetObject(
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter(
-                        cardPredicates = listOf(
-                            CardPredicate.TargetsMatching(GameObjectFilter.CreatureOrArtifact.youControl())
-                        )
-                    ),
-                    zone = Zone.STACK
-                )
-            )
+            TargetFilter(
+                baseFilter = GameObjectFilter(
+                    cardPredicates = listOf(
+                        CardPredicate.TargetsMatching(GameObjectFilter.CreatureOrArtifact.youControl())
+                    )
+                ),
+                zone = Zone.STACK
+            ),
         )
         cost = Costs.Composite(Costs.Mana("{U}"), Costs.SacrificeSelf)
         effect = Effects.CounterSpell()

@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Whispering Wizard
@@ -23,7 +24,7 @@ val WhisperingWizard = card("Whispering Wizard") {
     power = 3
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
         oncePerTurn = true
         effect = Effects.CreateToken(
             power = 1,

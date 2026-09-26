@@ -34,7 +34,7 @@ val AkkiCoalflinger = card("Akki Coalflinger") {
         cost = Costs.Composite(Costs.Mana("{R}"), Costs.Tap)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.attacking()),
-            Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.Self)
+            Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.IterationEntity)
         )
     }
     metadata {

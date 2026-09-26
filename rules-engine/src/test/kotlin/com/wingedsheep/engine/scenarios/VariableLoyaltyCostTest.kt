@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.engine.core.ActivateAbility
@@ -19,6 +20,8 @@ import io.kotest.matchers.shouldBe
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import com.wingedsheep.engine.core.Outcome
+import io.kotest.matchers.shouldNotBe
 
 class VariableLoyaltyCostTest : FunSpec({
     val walker = card("Variable Loyalty Test") {
@@ -53,7 +56,7 @@ class VariableLoyaltyCostTest : FunSpec({
             action.maxAffordableX shouldBe 3
             action.minX shouldBe 0
             val hand = d.getHandSize(me)
-            d.submit(action.action).isPaused shouldBe true
+            (d.submit(action.action).outcome is Outcome.Paused) shouldBe true
             val question = d.pendingDecision as ChooseNumberDecision
             question.minValue shouldBe 0
             question.maxValue shouldBe 3
@@ -71,7 +74,7 @@ class VariableLoyaltyCostTest : FunSpec({
         val source = d.putPermanentOnBattlefield(me, walker.name).also {
             d.addComponent(it, CountersComponent(mapOf(CounterType.LOYALTY to 3)))
         }
-        val menu = ClientStateTransformer(cardRegistry = d.cardRegistry)
+        val menu = ClientStateTransformer(cardRegistry = d.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .transform(d.state, viewingPlayerId = me).cards[source]!!.planeswalkerAbilities!!
         menu.single().loyaltyX shouldBe true
         menu.single().description shouldBe "Draw X cards."
@@ -84,6 +87,6 @@ class VariableLoyaltyCostTest : FunSpec({
         val source = d.putPermanentOnBattlefield(opp, walker.name)
         d.passPriority(me)
         d.submit(ActivateAbility(opp, source, walker.script.activatedAbilities.single().id, xValue = 0))
-            .isSuccess shouldBe false
+            .outcome shouldNotBe Outcome.Done
     }
 })

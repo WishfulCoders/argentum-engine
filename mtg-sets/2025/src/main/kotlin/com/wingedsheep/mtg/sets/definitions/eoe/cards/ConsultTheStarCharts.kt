@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
@@ -10,7 +11,6 @@ import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Consult the Star Charts
@@ -36,8 +36,8 @@ val ConsultTheStarCharts = card("Consult the Star Charts") {
     spell {
         // Unkicked: look at top X (X = lands you control), keep one, rest on bottom in random order.
         effect = Patterns.Library.lookAtTopAndKeep(
-            count = DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land),
-            keepCount = DynamicAmount.Fixed(1),
+            count = DynamicAmounts.landsYouControl(),
+            keepCount = DynamicAmounts.fixed(1),
             keepDestination = CardDestination.ToZone(Zone.HAND),
             restDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
             restOrder = CardOrder.Random
@@ -45,8 +45,8 @@ val ConsultTheStarCharts = card("Consult the Star Charts") {
 
         // Kicked: keep two instead.
         kickerEffect = Patterns.Library.lookAtTopAndKeep(
-            count = DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land),
-            keepCount = DynamicAmount.Fixed(2),
+            count = DynamicAmounts.landsYouControl(),
+            keepCount = DynamicAmounts.fixed(2),
             keepDestination = CardDestination.ToZone(Zone.HAND),
             restDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
             restOrder = CardOrder.Random

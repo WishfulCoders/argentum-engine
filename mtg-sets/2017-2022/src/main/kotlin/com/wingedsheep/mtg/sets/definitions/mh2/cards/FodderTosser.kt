@@ -29,7 +29,7 @@ val FodderTosser = card("Fodder Tosser") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.DiscardCard)
-        val t = target("target player or planeswalker", Targets.PlayerOrPlaneswalker)
+        val t = target(Targets.PlayerOrPlaneswalker)
         effect = Effects.DealDamage(2, t)
         description = "{T}, Discard a card: This artifact deals 2 damage to target player or planeswalker."
     }

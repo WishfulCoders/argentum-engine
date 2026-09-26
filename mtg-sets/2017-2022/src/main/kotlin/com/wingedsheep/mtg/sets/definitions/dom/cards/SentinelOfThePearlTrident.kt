@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Sentinel of the Pearl Trident
@@ -31,11 +30,9 @@ val SentinelOfThePearlTrident = card("Sentinel of the Pearl Trident") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("historic", TargetPermanent(
-            filter = TargetFilter(GameObjectFilter.Historic.youControl())
-        ))
-        effect = MayEffect(Patterns.Exile.exileUntilEndStep(t))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter(GameObjectFilter.Historic.youControl()))
+        effect = Effects.May(Patterns.Exile.exileUntilEndStep(t))
     }
 
     metadata {

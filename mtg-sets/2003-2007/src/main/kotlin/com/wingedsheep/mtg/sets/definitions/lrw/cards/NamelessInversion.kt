@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Nameless Inversion
@@ -26,9 +26,8 @@ val NamelessInversion = card("Nameless Inversion") {
     keywords(Keyword.CHANGELING)
 
     spell {
-        val creature = target("creature", Targets.Creature)
-        effect = Effects.ModifyStats(3, -3, creature) then
-            Effects.LoseAllCreatureTypes(creature)
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(3, -3, creature) then Effects.LoseAllCreatureTypes(creature)
     }
 
     metadata {

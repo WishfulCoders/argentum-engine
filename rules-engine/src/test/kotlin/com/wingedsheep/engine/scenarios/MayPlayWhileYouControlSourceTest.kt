@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
@@ -24,6 +23,8 @@ import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Tests for [MayPlayExpiry.WhileYouControlSource] — the "you may cast it for as long as you
@@ -87,23 +88,19 @@ class MayPlayWhileYouControlSourceTest : FunSpec({
             "owner may play it for as long as you control this creature."
         activatedAbility {
             cost = Costs.Tap
-            effect = Effects.Composite(
-                listOf(
-                    GatherCardsEffect(
-                        source = CardSource.FromZone(Zone.HAND, Player.AnOpponent),
-                        storeAs = "theirs"
-                    ),
-                    MoveCollectionEffect(
-                        from = "theirs",
-                        destination = CardDestination.ToZone(Zone.EXILE, Player.AnOpponent)
-                    ),
-                    GrantMayPlayFromExileEffect(
-                        from = "theirs",
-                        expiry = MayPlayExpiry.WhileYouControlSource("this creature"),
-                        ownerControls = true
-                    )
+            effect = GatherCardsEffect(
+                source = CardSource.FromZone(Zone.HAND, Player.AnOpponent),
+                storeAs = "theirs"
+            ) then
+                MoveCollectionEffect(
+                    from = "theirs",
+                    destination = CardDestination.ToZone(Zone.EXILE, Player.AnOpponent)
+                ) then
+                GrantMayPlayFromExileEffect(
+                    from = "theirs",
+                    expiry = MayPlayExpiry.WhileYouControlSource("this creature"),
+                    ownerControls = true
                 )
-            )
         }
     }
 
@@ -112,7 +109,7 @@ class MayPlayWhileYouControlSourceTest : FunSpec({
         typeLine = "Sorcery"
         oracleText = "Destroy target permanent."
         spell {
-            val t = target("permanent", Targets.Permanent)
+            val t = target(TargetFilter.Permanent)
             effect = Effects.Destroy(t)
         }
     }
@@ -122,7 +119,7 @@ class MayPlayWhileYouControlSourceTest : FunSpec({
         typeLine = "Sorcery"
         oracleText = "Gain control of target permanent until end of turn."
         spell {
-            val t = target("permanent", Targets.Permanent)
+            val t = target(TargetFilter.Permanent)
             effect = Effects.GainControl(t, Duration.EndOfTurn)
         }
     }
@@ -150,7 +147,7 @@ class MayPlayWhileYouControlSourceTest : FunSpec({
                 abilityId = definition.activatedAbilities.first().id
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         bothPass()
         return exiler
     }
@@ -279,7 +276,7 @@ class MayPlayWhileYouControlSourceTest : FunSpec({
                 sourceId = exiler,
                 abilityId = OwnerControlsExiler.activatedAbilities.first().id
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         // The permission belongs to the OWNER of the exiled card (the opponent), but the "for as
@@ -316,12 +313,12 @@ class MayPlayWhileYouControlSourceTest : FunSpec({
                 sourceId = exiler,
                 abilityId = SourceBoundExiler.activatedAbilities.first().id
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
 
         // Kill the source with the ability still on the stack. The ability resolves (CR 608.2) and
         // still exiles the card, but its "for as long as you control this creature" duration is
         // already over, so the grant never happens — the Master Thief case in CR 611.2b.
-        val moved = ZoneMovementUtils.moveCardToZone(driver.state, exiler, Zone.GRAVEYARD)
+        val moved = ZoneMovementUtils.moveCardToZone(driver.zones, driver.state, exiler, Zone.GRAVEYARD)
         driver.replaceState(moved.state)
         driver.bothPass()
 

@@ -5,13 +5,12 @@
 package com.wingedsheep.mtg.sets.definitions.tmp.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-
 
 /**
  * Skyshroud Ranger
@@ -29,7 +28,7 @@ val SkyshroudRanger = card("Skyshroud Ranger") {
     toughness = 1
     activatedAbility {
         cost = Costs.Tap
-        effect = MayEffect(Patterns.Hand.putFromHand(filter = GameObjectFilter.Land))
+        effect = Effects.May(Patterns.Hand.putFromHand(filter = GameObjectFilter.Land))
         timing = TimingRule.SorcerySpeed
     }
     metadata {

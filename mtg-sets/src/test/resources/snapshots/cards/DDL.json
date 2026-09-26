@@ -11,7 +11,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Satyr Hedonist:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [

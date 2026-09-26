@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
@@ -8,6 +8,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ultros, Obnoxious Octopus
@@ -40,19 +42,16 @@ val UltrosObnoxiousOctopus = card("Ultros, Obnoxious Octopus") {
         "+1/+1 counters on Ultros."
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
         interveningIf = Conditions.TriggeringSpellManaSpentAtLeast(4)
-        val t = target("target", Targets.CreatureOpponentControls)
-        effect = Effects.Composite(
-            Effects.Tap(t),
-            Effects.AddCounters(Counters.STUN, 1, t),
-        )
+        val t = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.Tap(t) then Effects.AddCounters(CounterType.STUN, 1, t)
     }
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
         interveningIf = Conditions.TriggeringSpellManaSpentAtLeast(8)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 8, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 8, EffectTarget.Self)
     }
 
     metadata {

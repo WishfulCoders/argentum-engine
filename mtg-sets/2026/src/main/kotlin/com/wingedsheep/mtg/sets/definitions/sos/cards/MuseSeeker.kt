@@ -29,7 +29,7 @@ val MuseSeeker = card("Muse Seeker") {
         "a card unless five or more mana was spent to cast that spell."
 
     opus {
-        effect = Effects.DrawCards(1).then(Effects.Discard(1))
+        effect = Effects.DrawCards(1) then Effects.Discard(1)
         insteadIfFiveOrMore = Effects.DrawCards(1)
         description = "Opus — Whenever you cast an instant or sorcery spell, draw a card. Then " +
             "discard a card unless five or more mana was spent to cast that spell."

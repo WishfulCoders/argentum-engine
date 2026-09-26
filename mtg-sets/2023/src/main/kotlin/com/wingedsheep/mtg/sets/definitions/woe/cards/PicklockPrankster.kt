@@ -1,20 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Subtype
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Picklock Prankster // Free the Fae
@@ -60,42 +53,30 @@ val PicklockPrankster = card("Picklock Prankster") {
             "milled cards into your hand. (Then exile this card. You may cast the creature later from exile.)"
 
         spell {
-            effect = Effects.Composite(
-                listOf(
-                    GatherCardsEffect(
-                        source = CardSource.TopOfLibrary(DynamicAmount.Fixed(4)),
-                        storeAs = "milled",
-                    ),
-                    MoveCollectionEffect(
-                        from = "milled",
-                        destination = CardDestination.ToZone(Zone.GRAVEYARD),
-                    ),
-                    SelectFromCollectionEffect(
-                        from = "milled",
-                        selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                        filter = GameObjectFilter(
-                            cardPredicates = listOf(
-                                CardPredicate.Or(
-                                    listOf(
-                                        CardPredicate.IsInstant,
-                                        CardPredicate.IsSorcery,
-                                        CardPredicate.HasSubtype(Subtype("Faerie")),
-                                    ),
+            effect = Effects.Pipeline {
+                val milled = gather(CardSource.TopOfLibrary(4))
+                toGraveyard(milled)
+                val selected = chooseExactly(
+                    1,
+                    from = milled,
+                    filter = GameObjectFilter(
+                        cardPredicates = listOf(
+                            CardPredicate.Or(
+                                listOf(
+                                    CardPredicate.IsInstant,
+                                    CardPredicate.IsSorcery,
+                                    CardPredicate.HasSubtype(Subtype("Faerie")),
                                 ),
                             ),
                         ),
-                        storeSelected = "selected",
-                        showAllCards = true,
-                        prompt = "Put an instant, sorcery, or Faerie card into your hand",
-                        selectedLabel = "Put in hand",
-                        remainderLabel = "Leave in graveyard",
                     ),
-                    MoveCollectionEffect(
-                        from = "selected",
-                        destination = CardDestination.ToZone(Zone.HAND),
-                    ),
-                ),
-            )
+                    showAllCards = true,
+                    prompt = "Put an instant, sorcery, or Faerie card into your hand",
+                    selectedLabel = "Put in hand",
+                    remainderLabel = "Leave in graveyard"
+                )
+                toHand(selected)
+            }
         }
     }
 

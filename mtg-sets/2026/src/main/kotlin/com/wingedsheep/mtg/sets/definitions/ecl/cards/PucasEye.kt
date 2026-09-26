@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
+import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
@@ -9,10 +10,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GrantChosenColor
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Puca's Eye
@@ -30,11 +29,8 @@ val PucasEye = card("Puca's Eye") {
         "{3}, {T}: Draw a card. Activate only if there are five colors among permanents you control."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Effects.DrawCards(1),
-            Effects.ChooseColorForTarget(EffectTarget.Self)
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.DrawCards(1) then Effects.ChooseColorForTarget(EffectTarget.Self)
     }
 
     staticAbility {
@@ -46,10 +42,10 @@ val PucasEye = card("Puca's Eye") {
         effect = Effects.DrawCards(1)
         restrictions = listOf(
             ActivationRestriction.OnlyIfCondition(
-                Compare(
+                Conditions.CompareAmounts(
                     DynamicAmounts.colorsAmongPermanents(),
                     ComparisonOperator.GTE,
-                    DynamicAmount.Fixed(5)
+                    5
                 )
             )
         )

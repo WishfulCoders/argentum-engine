@@ -30,9 +30,7 @@ val RehearsedDebater = card("Rehearsed Debater") {
     toughness = 3
     keywords(Keyword.VIGILANCE)
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.InstantOrSorcery.targetsMatching(GameObjectFilter.Creature)
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery.targetsMatching(GameObjectFilter.Creature))
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }
     metadata {

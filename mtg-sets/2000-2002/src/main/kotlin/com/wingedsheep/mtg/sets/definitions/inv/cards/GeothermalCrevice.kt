@@ -31,10 +31,7 @@ val GeothermalCrevice = card("Geothermal Crevice") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.SacrificeSelf)
-        effect = Effects.Composite(
-            Effects.AddMana(Color.BLACK),
-            Effects.AddMana(Color.GREEN),
-        )
+        effect = Effects.AddMana(Color.BLACK) then Effects.AddMana(Color.GREEN)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

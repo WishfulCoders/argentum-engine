@@ -6,13 +6,13 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.unaryMinus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Specter of Mortality
@@ -53,7 +53,7 @@ val SpecterOfMortality = card("Specter of Mortality") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Pipeline(
             descriptionOverride = "You may exile one or more creature cards from your graveyard. " +
                 "When you do, each other creature gets -X/-X until end of turn, where X is the " +
@@ -74,15 +74,14 @@ val SpecterOfMortality = card("Specter of Mortality") {
             )
             val exiled = moveTracked(
                 from = chosen,
-                destination = CardDestination.ToZone(Zone.EXILE),
-                name = "exiledCreatures"
+                destination = CardDestination.ToZone(Zone.EXILE)
             )
             ifNotEmpty(exiled) {
-                val exiledCount = DynamicAmount.VariableReference("exiledCreatures_count")
+                val exiledCount = exiled.count
                 run(
                     Patterns.Group.modifyStatsForAll(
-                        power = DynamicAmount.Multiply(exiledCount, -1),
-                        toughness = DynamicAmount.Multiply(exiledCount, -1),
+                        power = -exiledCount,
+                        toughness = -exiledCount,
                         filter = GroupFilter(GameObjectFilter.Creature, excludeSelf = true)
                     )
                 )

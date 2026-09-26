@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Snow Villiers — Final Fantasy #33
@@ -24,7 +24,7 @@ val SnowVilliers = card("Snow Villiers") {
     colorIdentity = "W"
     typeLine = "Legendary Creature — Human Rebel Monk"
     dynamicPower(
-        DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Creature),
+        DynamicAmounts.creaturesYouControl(),
     )
     toughness = 3
     oracleText = "Vigilance\nSnow Villiers's power is equal to the number of creatures you control."

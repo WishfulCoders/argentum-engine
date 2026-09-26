@@ -8,9 +8,9 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Raiders' Spoils
@@ -37,13 +37,9 @@ val RaidersSpoils = card("Raiders' Spoils") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.DealsCombatDamageToPlayer.event,
-                binding = Triggers.DealsCombatDamageToPlayer.binding,
-                effect = MayEffect(
-                    effect = Effects.Composite(listOf(
-                        Effects.LoseLife(1, EffectTarget.Controller),
-                        Effects.DrawCards(1)
-                    ))
+                trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer),
+                effect = Effects.May(
+                    effect = Effects.LoseLife(1, EffectTarget.Controller) then Effects.DrawCards(1)
                 )
             ),
             filter = GroupFilter(GameObjectFilter.Creature.withSubtype("Warrior").youControl())

@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.m10.cards
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Seismic Strike
@@ -23,7 +23,7 @@ val SeismicStrike = card("Seismic Strike") {
     oracleText = "Seismic Strike deals damage to target creature equal to the number of Mountains you control."
 
     spell {
-        val t = target("target creature", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.DealDamage(DynamicAmounts.landsWithSubtype(Subtype.MOUNTAIN), t)
     }
 

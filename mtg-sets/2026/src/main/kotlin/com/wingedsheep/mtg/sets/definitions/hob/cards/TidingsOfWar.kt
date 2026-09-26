@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 
 /**
  * Tidings of War
@@ -25,10 +24,10 @@ val TidingsOfWar = card("Tidings of War") {
         "Flashback {3}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
 
     spell {
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.WasCastFromGraveyard,
-            effect = Effects.Amass(3, "Goblin"),
-            elseEffect = Effects.Amass(1, "Goblin"),
+            then = Effects.Amass(3, "Goblin"),
+            otherwise = Effects.Amass(1, "Goblin"),
         )
     }
 

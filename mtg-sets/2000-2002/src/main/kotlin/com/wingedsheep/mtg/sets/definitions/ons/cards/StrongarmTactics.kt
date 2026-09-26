@@ -1,8 +1,8 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.EachPlayerDiscardsOrLoseLifeEffect
 
 /**
  * Strongarm Tactics
@@ -17,7 +17,7 @@ val StrongarmTactics = card("Strongarm Tactics") {
     oracleText = "Each player discards a card. Then each player who didn't discard a creature card this way loses 4 life."
 
     spell {
-        effect = EachPlayerDiscardsOrLoseLifeEffect(lifeLoss = 4)
+        effect = Effects.EachPlayerDiscardsOrLosesLife(lifeLoss = 4)
     }
 
     metadata {

@@ -33,7 +33,7 @@ class RescueLeopardScenarioTest : ScenarioTestBase() {
                 game.declareAttackers(mapOf("Rescue Leopard" to 2))
                 game.resolveStack()
 
-                // The trigger is a MayEffect: answer yes, then choose the card to discard.
+                // The trigger is a Effects.May: answer yes, then choose the card to discard.
                 if (game.hasPendingDecision()) {
                     game.answerYesNo(true)
                     game.resolveStack()

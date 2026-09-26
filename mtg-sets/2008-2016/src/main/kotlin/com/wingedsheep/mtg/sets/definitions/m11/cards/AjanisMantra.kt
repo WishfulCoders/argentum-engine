@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Ajani's Mantra
@@ -12,7 +13,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * At the beginning of your upkeep, you may gain 1 life.
  *
- * [Triggers.YourUpkeep] is `StepEvent(Step.UPKEEP, Player.You)` with `TriggerBinding.ANY` — the
+ * `Triggers.you.beginningOf(Step.UPKEEP)` is `StepEvent(Step.UPKEEP, Player.You)` with `TriggerBinding.ANY` — the
  * enchantment's own controller's upkeep. The printed "you may" is the builder's `optional = true`,
  * which lowers to a `Gate.MayDecide` around the life gain rather than living beside it as a flag
  * (same shape as Angel's Feather). [Effects.GainLife]'s default recipient is the ability's
@@ -25,7 +26,7 @@ val AjanisMantra = card("Ajani's Mantra") {
     oracleText = "At the beginning of your upkeep, you may gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         optional = true
         effect = Effects.GainLife(1)
     }

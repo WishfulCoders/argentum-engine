@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Echocasting Symposium — Secrets of Strixhaven #44
@@ -29,8 +30,8 @@ val EchocastingSymposium = card("Echocasting Symposium") {
         "first main phases.)"
 
     spell {
-        val player = target("target player", Targets.Player)
-        val creature = target("target creature you control", Targets.CreatureYouControl)
+        val player = target(Targets.Player)
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.CreateTokenCopyOfTarget(
             target = creature,
             controller = player,

@@ -30,10 +30,7 @@ val SetessanSkirmisher = card("Setessan Skirmisher") {
     oracleText = "Constellation — Whenever an enchantment you control enters, this creature gets +1/+1 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Enchantment.youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Enchantment.youControl()).enters()
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
         description = "Constellation — Whenever an enchantment you control enters, this creature gets +1/+1 until end of turn."
     }

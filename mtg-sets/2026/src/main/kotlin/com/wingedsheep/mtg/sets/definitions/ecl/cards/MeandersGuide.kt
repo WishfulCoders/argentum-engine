@@ -6,10 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.SelectTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 val MeandersGuide = card("Meanders Guide") {
@@ -22,38 +19,35 @@ val MeandersGuide = card("Meanders Guide") {
         "When you do, return target creature card with mana value 3 or less from your graveyard to the battlefield."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         // The "may tap another untapped Merfolk" is not a target — it's a resolution-time
         // choice. Selecting the Merfolk happens via SelectTargetEffect after the player
         // accepts the optional, so declining the may does not force them to commit to one.
-        effect = ReflexiveTriggerEffect(
-            action = Effects.Composite(listOf(
-                SelectTargetEffect(
-                    requirement = TargetObject(
+        effect = Effects.ReflexiveTrigger(
+            action = Effects.Pipeline {
+                val merfolkToTap = selectTarget(
+                    TargetObject(
                         // Permanent (not Creature) so Kindred Artifacts with the Merfolk subtype qualify.
                         filter = TargetFilter.PermanentYouControl
                             .withSubtype("Merfolk")
                             .untapped()
                             .other()
-                    ),
-                    storeAs = "merfolkToTap"
-                ),
-                Effects.Tap(EffectTarget.PipelineTarget("merfolkToTap"))
-            )),
-            optional = true,
-            reflexiveEffect = Effects.Move(
-                target = EffectTarget.ContextTarget(0),
-                destination = Zone.BATTLEFIELD
-            ),
-            reflexiveTargetRequirements = listOf(
-                TargetObject(
-                    filter = TargetFilter(
-                        GameObjectFilter.Creature.ownedByYou().manaValueAtMost(3),
-                        zone = Zone.GRAVEYARD
                     )
                 )
+                run(Effects.Tap(merfolkToTap.asTarget))
+            },
+            optional = true) {
+            val creature = target(
+                TargetFilter(
+                    GameObjectFilter.Creature.ownedByYou().manaValueAtMost(3),
+                    zone = Zone.GRAVEYARD
+                ),
             )
-        )
+            effect = Effects.Move(
+                target = creature,
+                destination = Zone.BATTLEFIELD
+            )
+        }
     }
 
     metadata {

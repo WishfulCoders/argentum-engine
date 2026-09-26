@@ -7,7 +7,6 @@ import com.wingedsheep.engine.handlers.effects.KeywordActionReplacements
 import com.wingedsheep.engine.handlers.effects.ReplaceableKeywordAction
 import com.wingedsheep.engine.handlers.effects.ReplacementEffectUtils
 import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
-import com.wingedsheep.engine.handlers.effects.permanent.counters.counterTypeToString
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
@@ -35,16 +34,17 @@ import kotlin.reflect.KClass
  *
  * Before the explore proper, applicable [com.wingedsheep.sdk.scripting.ModifyKeywordAction]
  * replacements (CR 614) on the battlefield are consulted via [KeywordActionReplacements] — like
- * [com.wingedsheep.sdk.scripting.ReplaceDrawWithEffect], explore isn't a generic replaceable
+ * [com.wingedsheep.sdk.scripting.ReplaceDrawWith], explore isn't a generic replaceable
  * event, so it's checked here directly. A match re-issues the explore as
  * `Composite(prefixEffect, ExploreEffect(sameCreature, replacementsApplied = true))` through the
  * registry [recurse] runner, reusing the composite executor's pause-sequencing (a Scry prefix
  * finishes its top/bottom decision before the explore runs).
  *
- * @param recurse registry entry point for delegating the Composite (nullable-free; wired via
- *   `PermanentExecutors.initializeRecursion`).
+ * @param recurse registry entry point for delegating the Composite (handed to [PermanentExecutors]
+ *   by the registry at construction).
  */
 class ExploreEffectExecutor(
+    private val zones: ZoneTransitionService,
     private val recurse: (GameState, Effect, EffectContext) -> EffectResult
 ) : EffectExecutor<ExploreEffect> {
 
@@ -65,7 +65,8 @@ class ExploreEffectExecutor(
         // Composite ahead of the guarded explore so a pausing prefix (Scry) sequences correctly.
         if (!effect.replacementsApplied) {
             val prefixEffects = KeywordActionReplacements.collectPrefixes(
-                state, exploringCreatureId, ReplaceableKeywordAction.EXPLORE
+                state, exploringCreatureId, ReplaceableKeywordAction.EXPLORE,
+                predicateEvaluator = zones.predicateEvaluator
             )
             if (prefixEffects.isNotEmpty()) {
                 val composite = CompositeEffect(
@@ -113,7 +114,7 @@ class ExploreEffectExecutor(
 
         return if (topCardComponent.typeLine.isLand) {
             // Land: move directly to hand
-            val transition = ZoneTransitionService.moveToZone(state, topCardId, Zone.HAND)
+            val transition = zones.moveToZone(state, topCardId, Zone.HAND)
             EffectResult.success(
                 transition.state,
                 listOf(revealEvent) + transition.events + exploredEvent(true)
@@ -183,7 +184,8 @@ class ExploreEffectExecutor(
         }
         val current = state.getEntity(creatureId)?.get<CountersComponent>() ?: CountersComponent()
         val count = ReplacementEffectUtils.applyCounterPlacementModifiers(
-            state, creatureId, CounterType.PLUS_ONE_PLUS_ONE, 1, placerId = context.controllerId
+            state, creatureId, CounterType.PLUS_ONE_PLUS_ONE, 1, placerId = context.controllerId,
+            predicateEvaluator = zones.predicateEvaluator
         )
         val updated = state.updateEntity(creatureId) {
             it.with(current.withAdded(CounterType.PLUS_ONE_PLUS_ONE, count))
@@ -195,14 +197,14 @@ class ExploreEffectExecutor(
             com.wingedsheep.engine.handlers.effects.DamageUtils.recordCounterPlacement(
                 updated,
                 creatureId,
-                counterTypeToString(CounterType.PLUS_ONE_PLUS_ONE),
+                CounterType.PLUS_ONE_PLUS_ONE,
                 placerId = context.controllerId,
             )
         val name = state.getEntity(creatureId)?.get<CardComponent>()?.name ?: ""
         return newState to listOf(
             CountersAddedEvent(
                 creatureId,
-                counterTypeToString(CounterType.PLUS_ONE_PLUS_ONE),
+                CounterType.PLUS_ONE_PLUS_ONE,
                 count,
                 name,
                 firstThisTurn,

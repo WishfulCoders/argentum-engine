@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Coeurl
@@ -29,10 +28,7 @@ val Coeurl = card("Coeurl") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{W}"), Costs.Tap)
-        val t = target(
-            "target",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Creature and GameObjectFilter.Nonenchantment)),
-        )
+        val t = target(TargetFilter(GameObjectFilter.Creature and GameObjectFilter.Nonenchantment))
         effect = Effects.Tap(t)
     }
 

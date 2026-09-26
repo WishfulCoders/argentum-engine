@@ -4,10 +4,10 @@
 
 package com.wingedsheep.mtg.sets.definitions.por.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.SkipCombatPhasesEffect
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -22,8 +22,8 @@ val FalsePeace = card("False Peace") {
     typeLine = "Sorcery"
     oracleText = "Target player skips all combat phases of their next turn."
     spell {
-        val t = target("target", TargetPlayer())
-        effect = SkipCombatPhasesEffect(t)
+        val t = target(Targets.Player)
+        effect = Effects.SkipCombatPhases(t)
     }
     metadata {
         rarity = Rarity.COMMON

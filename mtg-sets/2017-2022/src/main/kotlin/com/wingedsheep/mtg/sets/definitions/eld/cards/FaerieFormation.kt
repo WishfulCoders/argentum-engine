@@ -34,7 +34,7 @@ val FaerieFormation = card("Faerie Formation") {
             creatureTypes = setOf("Faerie"),
             keywords = setOf(Keyword.FLYING),
             imageUri = "https://cards.scryfall.io/normal/front/d/1/d1c0556e-ba3c-4a8e-b704-8eaa7c4dba1c.jpg?1782727481",
-        ).then(Effects.DrawCards(1))
+        ) then Effects.DrawCards(1)
         description = "{3}{U}: Create a 1/1 blue Faerie creature token with flying. Draw a card."
     }
 

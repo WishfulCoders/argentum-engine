@@ -7,8 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -42,28 +40,21 @@ val SecondSunrise = card("Second Sunrise") {
         "land cards in their graveyard that were put there from the battlefield this turn."
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        zone = Zone.GRAVEYARD,
-                        player = Player.Each,
-                        filter = (
-                            GameObjectFilter.Artifact or
-                                GameObjectFilter.Creature or
-                                GameObjectFilter.Enchantment or
-                                GameObjectFilter.Land
-                            ).putIntoGraveyardFromBattlefieldThisTurn()
-                    ),
-                    storeAs = "returningCards"
-                ),
-                MoveCollectionEffect(
-                    from = "returningCards",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD),
-                    underOwnersControl = true
+        effect = Effects.Pipeline {
+            val returningCards = gather(
+                CardSource.FromZone(
+                    zone = Zone.GRAVEYARD,
+                    player = Player.Each,
+                    filter = (
+                        GameObjectFilter.Artifact or
+                            GameObjectFilter.Creature or
+                            GameObjectFilter.Enchantment or
+                            GameObjectFilter.Land
+                        ).putIntoGraveyardFromBattlefieldThisTurn()
                 )
             )
-        )
+            move(returningCards, CardDestination.ToZone(Zone.BATTLEFIELD), underOwnersControl = true)
+        }
     }
 
     metadata {

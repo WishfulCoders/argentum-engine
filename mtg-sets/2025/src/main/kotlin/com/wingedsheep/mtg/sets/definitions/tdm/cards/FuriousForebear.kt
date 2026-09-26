@@ -7,8 +7,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -22,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Modeled as a graveyard-zone triggered ability (triggerZone = GRAVEYARD), gated to fire only
  * while Furious Forebear sits in its owner's graveyard. The "you may pay {1}{W}" clause uses
- * [MayPayManaEffect]; on payment the card returns itself from the graveyard to hand.
+ * [Effects.MayPay]; on payment the card returns itself from the graveyard to hand.
  *
  * The engine evaluates graveyard triggers after the death move, so this uses OTHER binding to
  * preserve the printed timing: Forebear must already be in the graveyard before the creature dies.
@@ -37,15 +35,11 @@ val FuriousForebear = card("Furious Forebear") {
         "you may pay {1}{W}. If you do, return this card from your graveyard to your hand."
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.youControl(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.OTHER,
-        )
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).dies()
         triggerZone = Zone.GRAVEYARD
-        effect = MayPayManaEffect(
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{1}{W}"),
-            effect = Effects.ReturnToHand(EffectTarget.Self)
+            then = Effects.ReturnToHand(EffectTarget.Self)
         )
         description = "Whenever a creature you control dies while this card is in your graveyard, " +
             "you may pay {1}{W}. If you do, return this card from your graveyard to your hand."

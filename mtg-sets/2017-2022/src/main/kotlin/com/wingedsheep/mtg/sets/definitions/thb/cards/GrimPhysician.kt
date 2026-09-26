@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.thb.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Grim Physician
@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * When this creature dies, target creature an opponent controls gets -1/-1 until end of turn.
  *
- * A plain [Triggers.Dies] — no `triggerZone`, which would replace the default `{BATTLEFIELD}` and
+ * A plain `Triggers.self.dies()` — no `triggerZone`, which would replace the default `{BATTLEFIELD}` and
  * leave the trigger unindexed. [Effects.ModifyStats] already ends at end of turn, so the printed
  * duration needs no argument.
  */
@@ -27,8 +27,8 @@ val GrimPhysician = card("Grim Physician") {
     oracleText = "When this creature dies, target creature an opponent controls gets -1/-1 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val victim = target("target", Targets.CreatureOpponentControls)
+        trigger = Triggers.self.dies()
+        val victim = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.ModifyStats(-1, -1, victim)
         description = "When this creature dies, target creature an opponent controls gets -1/-1 " +
             "until end of turn."

@@ -1,26 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.minus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
-import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Jackdaw Savior
@@ -34,11 +22,13 @@ import com.wingedsheep.sdk.dsl.Effects
  * return another target creature card with lesser mana value from your
  * graveyard to the battlefield.
  *
- * The "lesser mana value" and "another" constraints are modeled using a pipeline:
- * Gather creature cards from graveyard → Exclude the triggering (dying) creature →
- * Filter by mana value less than the dying creature's → Select one → Move to
- * battlefield. This uses "choose" rather than "target" semantics, which is a minor
- * simplification.
+ * The return is a real target, chosen as the trigger is put on the stack (CR 603.3d): a
+ * creature card in your graveyard whose mana value is below the dying creature's. The cap is
+ * read off the triggering entity, which is the dead creature's card in the graveyard — the same
+ * mana value it had as it last existed on the battlefield, per the 2024-07-26 ruling. "Another"
+ * needs no separate exclusion: the dying creature's own card never has a mana value lower than
+ * itself. If the targeted card leaves the graveyard before the trigger resolves, the trigger has
+ * no legal target and does nothing (CR 608.2b).
  */
 val JackdawSavior = card("Jackdaw Savior") {
     manaCost = "{2}{W}"
@@ -50,50 +40,14 @@ val JackdawSavior = card("Jackdaw Savior") {
 
     keywords(Keyword.FLYING)
 
-    // Trigger: whenever a creature you control with flying dies (includes self)
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Creature.youControl().withKeyword(Keyword.FLYING),
-                from = Zone.BATTLEFIELD,
-                to = Zone.GRAVEYARD
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl().withKeyword(Keyword.FLYING)).dies()
+        val creatureCard = target(
+            TargetFilter.CreatureInYourGraveyard.manaValueAtMostDynamic(
+                DynamicAmounts.triggeringManaValue() - 1
             ),
-            binding = TriggerBinding.ANY
         )
-
-        // Pipeline: gather creature cards from graveyard, exclude dying creature ("another"), filter by lesser MV, select one, move to battlefield
-        effect = Effects.Composite(listOf(
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Creature),
-                storeAs = "graveyardCreatures"
-            ),
-            FilterCollectionEffect(
-                from = "graveyardCreatures",
-                filter = CollectionFilter.ExcludeEntity(EntityReference.Triggering),
-                storeMatching = "otherCreatures"
-            ),
-            FilterCollectionEffect(
-                from = "otherCreatures",
-                filter = CollectionFilter.ManaValueAtMost(
-                    DynamicAmount.Subtract(
-                        DynamicAmount.EntityProperty(EntityReference.Triggering, EntityNumericProperty.ManaValue),
-                        DynamicAmount.Fixed(1)
-                    )
-                ),
-                storeMatching = "validTargets"
-            ),
-            SelectFromCollectionEffect(
-                from = "validTargets",
-                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                storeSelected = "chosen",
-                selectedLabel = "Return to the battlefield"
-            ),
-            MoveCollectionEffect(
-                from = "chosen",
-                destination = CardDestination.ToZone(Zone.BATTLEFIELD)
-            )
-        ))
-
+        effect = Effects.PutOntoBattlefieldFromGraveyard(creatureCard)
     }
 
     metadata {

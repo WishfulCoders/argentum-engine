@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.DecisionPhase
 import com.wingedsheep.engine.core.SelectCardsDecision
 import com.wingedsheep.engine.mechanics.layers.StateProjector
@@ -74,7 +75,7 @@ class WitnessProtectionScenarioTest : FunSpec({
         projected.isLegendary(ragavan) shouldBe true
 
         // The rename is visible to the client, not just the rules-engine projection.
-        val view = ClientStateTransformer(cardRegistry = driver.cardRegistry)
+        val view = ClientStateTransformer(cardRegistry = driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .transform(driver.state, viewingPlayerId = player)
         view.cards[ragavan]?.name shouldBe "Legitimate Businessperson"
     }

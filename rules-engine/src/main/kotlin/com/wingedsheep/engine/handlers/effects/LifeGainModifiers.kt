@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.ReplacementEffectSourceComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
@@ -32,10 +33,10 @@ object LifeGainModifiers {
      * @param recipientId The player who is gaining life
      * @param originalAmount The life amount the event would normally apply
      */
-    fun apply(state: GameState, recipientId: EntityId, originalAmount: Int): Int {
+    fun apply(state: GameState, recipientId: EntityId, originalAmount: Int, predicateEvaluator: PredicateEvaluator): Int {
         if (originalAmount <= 0) return originalAmount
 
-        val conditionEvaluator = com.wingedsheep.engine.handlers.ConditionEvaluator()
+        val conditionEvaluator = predicateEvaluator.conditions
         var multiplier = 1
         var modifier = 0
 

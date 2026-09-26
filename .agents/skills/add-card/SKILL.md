@@ -194,7 +194,7 @@ a card in the right package with `val {CardName} = card("{Card Name}") { … }` 
 
 ## Step 4: New SDK vocabulary, only if needed
 
-Try composition first — `Effects.Composite` of existing effects, a `Patterns.*` recipe, or the
+Try composition first — a `then` sequence of existing effects, a `Patterns.*` recipe, or the
 Gather → Select → Move pipeline for anything touching zones or the library. Most "new" effects aren't.
 
 If the card genuinely needs new vocabulary, the bar and the wiring:

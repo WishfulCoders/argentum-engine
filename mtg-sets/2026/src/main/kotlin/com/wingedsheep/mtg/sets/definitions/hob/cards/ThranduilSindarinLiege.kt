@@ -2,7 +2,6 @@ package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Subtype
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
@@ -10,12 +9,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Thranduil, Sindarin Liege // Silvan Rally — The Hobbit #166
@@ -32,14 +26,14 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *  - The lord is `excludeSelf = true` on the [GroupFilter]: Thranduil is himself an Elf and the
  *    printed wording is "**Other** Elves", so he must not pump himself. Same shape as Mabel, Heir to
  *    Cragflame; see [ThranduilsCompany] for the sibling landfall wiring in this set.
- *  - **Landfall** is [Triggers.LandYouControlEnters] — every land entering under your control, not
+ *  - **Landfall** is `Triggers.a(GameObjectFilter.Land.youControl()).enters()` — every land entering under your control, not
  *    just the ones you play, so a land put onto the battlefield by another spell counts.
  *  - The Adventure is a mill → select → move pipeline over the *same* collection: the milled cards
  *    are already in the graveyard when the selection happens ("from among them" is a reference to
  *    those four specific cards, not to the graveyard at large), which is why the second step reads
- *    `from = "milled"` rather than re-gathering. `ChooseUpTo(2)` carries the "up to", so milling
+ *    the `milled` handle rather than re-gathering. `ChooseUpTo(2)` carries the "up to", so milling
  *    zero or one land — or choosing to take none — is legal.
- *  - `Patterns.Library.mill` is used rather than a hand-rolled gather so the move is flagged as a
+ *  - The pipeline's `mill` verb is used rather than a hand-rolled gather so the move is flagged as a
  *    real mill (`isMill = true`) and any "whenever you mill" watcher sees it.
  *  - (CR 715: Adventure cards. Casting the Adventure exiles the card on resolution and lets the
  *    caster cast it as the creature while it remains in exile.)
@@ -65,7 +59,7 @@ val ThranduilSindarinLiege = card("Thranduil, Sindarin Liege") {
     }
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
@@ -82,23 +76,19 @@ val ThranduilSindarinLiege = card("Thranduil, Sindarin Liege") {
         oracleText = "Mill four cards, then put up to two land cards from among them into your " +
             "hand. (Then exile this card. You may cast the creature later from exile.)"
         spell {
-            effect = Effects.Composite(
-                Patterns.Library.mill(4),
-                SelectFromCollectionEffect(
-                    from = "milled",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(2)),
+            effect = Effects.Pipeline {
+                val milled = mill(4)
+                val lands = chooseUpTo(
+                    2,
+                    from = milled,
                     filter = GameObjectFilter.Land,
-                    storeSelected = "toHand",
                     showAllCards = true,
                     prompt = "Put up to two land cards into your hand",
                     selectedLabel = "Put in hand",
                     remainderLabel = "Leave in graveyard"
-                ),
-                MoveCollectionEffect(
-                    from = "toHand",
-                    destination = CardDestination.ToZone(Zone.HAND)
                 )
-            )
+                toHand(lands)
+            }
         }
     }
 

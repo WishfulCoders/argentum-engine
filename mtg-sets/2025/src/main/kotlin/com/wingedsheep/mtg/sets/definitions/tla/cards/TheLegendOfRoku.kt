@@ -9,9 +9,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.firebending
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * The Legend of Roku // Avatar Roku
@@ -63,8 +61,8 @@ private val AvatarRoku = card("Avatar Roku") {
     // {8}: Create a 4/4 red Dragon creature token with flying and firebending 4.
     activatedAbility {
         cost = Costs.Mana("{8}")
-        effect = CreateTokenEffect(
-            count = DynamicAmount.Fixed(1),
+        effect = Effects.CreateToken(
+            count = 1,
             power = 4,
             toughness = 4,
             colors = setOf(Color.RED),

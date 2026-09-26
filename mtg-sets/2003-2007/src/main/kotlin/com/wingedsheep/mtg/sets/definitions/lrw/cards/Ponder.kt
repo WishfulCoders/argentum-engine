@@ -4,9 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 
 /**
  * Ponder
@@ -25,11 +22,9 @@ val Ponder = card("Ponder") {
     typeLine = "Sorcery"
     oracleText = "Look at the top three cards of your library, then put them back in any order. You may shuffle.\nDraw a card."
     spell {
-        effect = Effects.Composite(
-            Patterns.Library.lookAtTopAndReorder(count = 3),
-            MayEffect(ShuffleLibraryEffect()),
-            DrawCardsEffect(1)
-        )
+        effect = Patterns.Library.lookAtTopAndReorder(count = 3) then
+            Effects.May(Effects.ShuffleLibrary()) then
+            Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.COMMON

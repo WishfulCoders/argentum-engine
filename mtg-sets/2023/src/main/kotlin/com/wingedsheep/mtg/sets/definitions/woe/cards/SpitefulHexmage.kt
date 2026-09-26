@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Spiteful Hexmage
@@ -32,8 +33,8 @@ val SpitefulHexmage = card("Spiteful Hexmage") {
         "graveyard. Enchanted creature is 1/1.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target creature you control", Targets.CreatureYouControl)
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.CreatureYouControl)
         effect = Effects.CreateRoleToken("Cursed Role", t)
     }
 

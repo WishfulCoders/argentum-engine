@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.m20.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
@@ -10,11 +10,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.SelectTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
@@ -48,41 +44,32 @@ val SorinImperiousBloodlord = card("Sorin, Imperious Bloodlord") {
         "−3: You may put a Vampire creature card from your hand onto the battlefield."
 
     loyaltyAbility(+1) {
-        val t = target("creature you control", Targets.CreatureYouControl)
-        effect = Effects.GrantKeyword(Keyword.DEATHTOUCH, t, Duration.EndOfTurn)
-            .then(Effects.GrantKeyword(Keyword.LIFELINK, t, Duration.EndOfTurn))
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.withSubtype("Vampire")),
-                    effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, t),
-                )
+        val t = target(TargetFilter.CreatureYouControl)
+        effect = Effects.GrantKeyword(Keyword.DEATHTOUCH, t, Duration.EndOfTurn) then
+            Effects.GrantKeyword(Keyword.LIFELINK, t, Duration.EndOfTurn) then
+            Effects.If(
+                condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.withSubtype("Vampire"), t),
+                then = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, t),
             )
     }
 
     loyaltyAbility(+1) {
-        effect = ReflexiveTriggerEffect(
-            action = Effects.Composite(
-                listOf(
-                    SelectTargetEffect(
-                        requirement = TargetObject(
-                            filter = TargetFilter(GameObjectFilter.Creature.withSubtype("Vampire").youControl())
-                        ),
-                        storeAs = "vampireToSacrifice",
-                    ),
-                    Effects.SacrificeTarget(EffectTarget.PipelineTarget("vampireToSacrifice")),
+        effect = Effects.ReflexiveTrigger(
+            action = Effects.Pipeline {
+                val vampireToSacrifice = selectTarget(
+                    TargetObject(
+                        filter = TargetFilter(GameObjectFilter.Creature.withSubtype("Vampire").youControl())
+                    )
                 )
-            ),
+                run(Effects.SacrificeTarget(vampireToSacrifice.asTarget))
+            },
             optional = true,
-            reflexiveEffect = Effects.Composite(
-                listOf(
-                    Effects.DealDamage(3, EffectTarget.ContextTarget(0)),
-                    Effects.GainLife(3),
-                )
-            ),
-            reflexiveTargetRequirements = listOf(Targets.Any),
             descriptionOverride = "You may sacrifice a Vampire. When you do, Sorin deals 3 damage to " +
                 "any target and you gain 3 life.",
-        )
+        ) {
+            val anyTarget = target(Targets.Any)
+            effect = Effects.DealDamage(3, anyTarget) then Effects.GainLife(3)
+        }
     }
 
     loyaltyAbility(-3) {

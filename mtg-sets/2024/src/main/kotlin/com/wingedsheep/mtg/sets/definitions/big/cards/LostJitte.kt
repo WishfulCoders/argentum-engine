@@ -1,18 +1,18 @@
 package com.wingedsheep.mtg.sets.definitions.big.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Lost Jitte
@@ -28,7 +28,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * A pared-down Umezawa's Jitte. The combat-damage trigger binds to the equipped creature
  * ([TriggerBinding.ATTACHED]) and fires on any combat damage (player or creature,
- * [RecipientFilter.Any]); it places a charge counter on the Equipment itself
+ * [Recipient.Any]); it places a charge counter on the Equipment itself
  * ([EffectTarget.Self]). The activated ability has no mana cost — only the
  * remove-a-charge-counter cost — and resolves a [ModalEffect.chooseOne] over the three
  * printed modes, two of which carry their own per-mode target.
@@ -46,30 +46,24 @@ val LostJitte = card("Lost Jitte") {
 
     // Whenever equipped creature deals combat damage, put a charge counter on Lost Jitte.
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            damageType = DamageType.Combat,
-            recipient = RecipientFilter.Any,
-            binding = TriggerBinding.ATTACHED
-        )
-        effect = Effects.AddCounters(Counters.CHARGE, 1, EffectTarget.Self)
+        trigger = Triggers.attached.dealsCombatDamage()
+        effect = Effects.AddCounters(CounterType.CHARGE, 1, EffectTarget.Self)
     }
 
     // Remove a charge counter from Lost Jitte: Choose one —
     activatedAbility {
-        cost = Costs.RemoveCounterFromSelf(Counters.CHARGE)
+        cost = Costs.RemoveCounterFromSelf(CounterType.CHARGE)
         effect = ModalEffect.chooseOne(
-            Mode.withTarget(
-                Effects.Untap(EffectTarget.ContextTarget(0)),
-                Targets.Land,
-                "Untap target land"
-            ),
-            Mode.withTarget(
-                Effects.CantBlock(EffectTarget.ContextTarget(0)),
-                Targets.Creature,
-                "Target creature can't block this turn"
-            ),
+            mode("Untap target land") {
+                val land = target(TargetFilter.Land)
+                effect = Effects.Untap(land)
+            },
+            mode("Target creature can't block this turn") {
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.CantBlock(creature)
+            },
             Mode.noTarget(
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.EquippedCreature),
+                Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.EquippedCreature),
                 "Put a +1/+1 counter on equipped creature"
             ),
             countsAsModalSpell = false

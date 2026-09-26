@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.RevealTopOfLibrary
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 val CrownOfConvergence = card("Crown of Convergence") {
     manaCost = "{2}"
@@ -26,7 +25,7 @@ val CrownOfConvergence = card("Crown of Convergence") {
             powerBonus = 1,
             toughnessBonus = 1,
             filter = GroupFilter(GameObjectFilter.Creature.youControl()
-                .sharingColorWith(EntityReference.LibraryTop()))
+                .sharingColorWith(EffectTarget.LibraryTop()))
         )
     }
 

@@ -9,8 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Esika's Chariot
@@ -33,7 +31,7 @@ val EsikasChariot = card("Esika's Chariot") {
         "Crew 4"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 2,
             toughness = 2,
@@ -45,11 +43,8 @@ val EsikasChariot = card("Esika's Chariot") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val token = target(
-            "target token you control",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Token.youControl()))
-        )
+        trigger = Triggers.self.attacks()
+        val token = target(TargetFilter(GameObjectFilter.Token.youControl()))
         effect = Effects.CreateTokenCopyOfTarget(target = token)
     }
 

@@ -8,9 +8,8 @@ import com.wingedsheep.sdk.scripting.CreateAdditionalToken
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.events.ControllerFilter
+import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Worldwalker Helm
@@ -41,7 +40,7 @@ val WorldwalkerHelm = card("Worldwalker Helm") {
             // original tokens and the added Map.
             inheritTapped = true,
             appliesTo = EventPattern.TokenCreationEvent(
-                controller = ControllerFilter.You,
+                controller = Player.You,
                 tokenFilter = GameObjectFilter.Artifact,
             ),
         )
@@ -50,10 +49,7 @@ val WorldwalkerHelm = card("Worldwalker Helm") {
     // "{1}{U}, {T}: Create a token that's a copy of target artifact token you control."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{U}"), Costs.Tap)
-        val artifactToken = target(
-            "target artifact token you control",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Artifact.token().youControl())),
-        )
+        val artifactToken = target(TargetFilter(GameObjectFilter.Artifact.token().youControl()))
         effect = Effects.CreateTokenCopyOfTarget(artifactToken)
         timing = TimingRule.InstantSpeed
     }

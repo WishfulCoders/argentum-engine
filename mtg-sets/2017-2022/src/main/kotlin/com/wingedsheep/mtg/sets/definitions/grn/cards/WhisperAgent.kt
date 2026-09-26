@@ -25,7 +25,7 @@ val WhisperAgent = card("Whisper Agent") {
 
     keywords(Keyword.FLASH)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.surveil(1)
     }
 

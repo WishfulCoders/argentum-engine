@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -25,9 +25,9 @@ val ElvishHandservant = card("Elvish Handservant") {
     oracleText = "Whenever a player casts a Giant spell, you may put a +1/+1 counter on this creature."
 
     triggeredAbility {
-        trigger = Triggers.anyPlayerCasts(GameObjectFilter.Any.withSubtype(Subtype.GIANT))
+        trigger = Triggers.anyPlayer.casts(GameObjectFilter.Any.withSubtype(Subtype.GIANT))
         optional = true
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Whenever a player casts a Giant spell, you may put a +1/+1 counter on this creature."
     }
 

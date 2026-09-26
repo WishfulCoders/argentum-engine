@@ -22,8 +22,8 @@ val MudbuttonTorchrunner = card("Mudbutton Torchrunner") {
     oracleText = "When this creature dies, it deals 3 damage to any target."
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val damaged = target("any target", Targets.Any)
+        trigger = Triggers.self.dies()
+        val damaged = target(Targets.Any)
         effect = Effects.DealDamage(3, damaged)
     }
 

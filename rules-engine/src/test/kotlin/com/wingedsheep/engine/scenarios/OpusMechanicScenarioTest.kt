@@ -3,7 +3,6 @@ package com.wingedsheep.engine.scenarios
 import com.wingedsheep.engine.mechanics.layers.StateProjector
 import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.opus
 import com.wingedsheep.sdk.core.Phase
@@ -11,6 +10,7 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Scenario tests for the `opus { }` ability-word builder (Secrets of Strixhaven). Opus is an
@@ -52,7 +52,7 @@ class OpusMechanicScenarioTest : ScenarioTestBase() {
                 power = 1
                 toughness = 3
                 opus {
-                    val pick = target("creature", Targets.Creature)
+                    val pick = target(TargetFilter.Creature)
                     effect = Effects.ModifyStats(1, 1, pick)
                     insteadIfFiveOrMore = Effects.ModifyStats(2, 2, pick)
                 }

@@ -10,6 +10,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Denethor, Ruling Steward
@@ -30,7 +31,7 @@ val DenethorRulingSteward = card("Denethor, Ruling Steward") {
     oracleText = "At the beginning of your end step, if a creature died under your control this turn, create a 1/1 white Human Soldier creature token.\n{2}, Sacrifice another creature: Each opponent loses 1 life and you gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         // "if a creature died under your control this turn" — scoped to Denethor's controller,
         // not any player (CreatureDiedThisTurn would wrongly fire on an opponent's creature dying).
         interveningIf = Conditions.ControlledCreatureDiedThisTurn
@@ -45,8 +46,7 @@ val DenethorRulingSteward = card("Denethor, Ruling Steward") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.SacrificeAnother(GameObjectFilter.Creature))
-        effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)) then
-            Effects.GainLife(1)
+        effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(1)
     }
 
     metadata {

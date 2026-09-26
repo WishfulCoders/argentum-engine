@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -29,7 +28,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * source's point of view, so it is written as two triggers over the two distinct events. They are
  * mutually exclusive in any one combat, so the pump never doubles.
  *
- * The pump targets [EffectTarget.Self] rather than `TriggeringEntity` because [Triggers.Blocks] fires
+ * The pump targets [EffectTarget.Self] rather than `TriggeringEntity` because `Triggers.self.blocks()` fires
  * off a block event that does not bind the source as the triggering entity.
  */
 val NumaiOutcast = card("Numai Outcast") {
@@ -45,21 +44,21 @@ val NumaiOutcast = card("Numai Outcast") {
 
     // Bushido 2, half one: "Whenever this creature blocks …"
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
         description = "Bushido 2"
     }
 
     // Bushido 2, half two: "… or becomes blocked, it gets +2/+2 until end of turn."
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
+        trigger = Triggers.self.becomesBlocked()
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
         description = "Bushido 2"
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{B}"), Costs.PayLife(5))
-        effect = RegenerateEffect(EffectTarget.Self)
+        effect = Effects.Regenerate(EffectTarget.Self)
         description = "{B}, Pay 5 life: Regenerate this creature."
     }
 

@@ -22,7 +22,7 @@ import com.wingedsheep.sdk.scripting.events.SpellCastPredicate
  * Cascade is itself a "when you cast this spell" triggered ability (CR 702.85a), so both halves
  * are modelled as cast triggers feeding the shared [com.wingedsheep.sdk.scripting.effects.CascadeEffect]
  * executor (which reads the triggering spell's mana value to set the threshold):
- *  - Quandrix's own cascade fires on [Triggers.WhenYouCastThisSpell] (SELF), reading Quandrix's
+ *  - Quandrix's own cascade fires on `Triggers.self.isCast()` (SELF), reading Quandrix's
  *    mana value.
  *  - The granted cascade fires whenever the controller casts an instant or sorcery spell from
  *    their hand, mirroring Wildsear, Scouring Maw. Granting the trigger rather than literally
@@ -45,17 +45,14 @@ val QuandrixTheProof = card("Quandrix, the Proof") {
 
     // Cascade — Quandrix's own cast trigger.
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
+        trigger = Triggers.self.isCast()
         effect = Effects.Cascade
         description = "Cascade"
     }
 
     // Instant and sorcery spells you cast from your hand have cascade.
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.InstantOrSorcery,
-            requires = setOf(SpellCastPredicate.CastFromZone(Zone.HAND)),
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery, requires = setOf(SpellCastPredicate.CastFromZone(Zone.HAND)))
         effect = Effects.Cascade
         description = "Instant and sorcery spells you cast from your hand have cascade."
     }

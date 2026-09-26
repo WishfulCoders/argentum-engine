@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Ill-Gotten Inheritance — Ravnica Allegiance #77
@@ -25,19 +26,13 @@ val IllGottenInheritance = card("Ill-Gotten Inheritance") {
         "{5}{B}, Sacrifice this enchantment: It deals 4 damage to target opponent and you gain 4 life."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.Composite(listOf(
-            Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent)),
-            Effects.GainLife(1)
-        ))
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(1)
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{5}{B}"), Costs.SacrificeSelf)
-        val victim = target("target", Targets.Opponent)
-        effect = Effects.Composite(listOf(
-            Effects.DealDamage(4, victim),
-            Effects.GainLife(4)
-        ))
+        val victim = target(Targets.Opponent)
+        effect = Effects.DealDamage(4, victim) then Effects.GainLife(4)
     }
 
     metadata {

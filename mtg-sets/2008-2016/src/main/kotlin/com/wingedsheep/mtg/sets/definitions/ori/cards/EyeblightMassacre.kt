@@ -27,7 +27,7 @@ val EyeblightMassacre = card("Eyeblight Massacre") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.notSubtype(Subtype.ELF)),
-            Effects.ModifyStats(-2, -2, EffectTarget.Self)
+            Effects.ModifyStats(-2, -2, EffectTarget.IterationEntity)
         )
     }
     metadata {

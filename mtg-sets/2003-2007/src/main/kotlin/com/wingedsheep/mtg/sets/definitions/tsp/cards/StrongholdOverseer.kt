@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * One activation, two board-wide pumps in opposite directions — neither names a controller, so
  * both halves are [GroupFilter]s over every creature, split by the shadow keyword. Each half is an
- * [Effects.ForEachInGroup] whose body targets [EffectTarget.Self], i.e. the current iteration
+ * [Effects.ForEachInGroup] whose body targets [EffectTarget.IterationEntity], i.e. the current iteration
  * entity; the Overseer's own shadow puts it in the +1/+0 half.
  */
 val StrongholdOverseer = card("Stronghold Overseer") {
@@ -38,16 +38,14 @@ val StrongholdOverseer = card("Stronghold Overseer") {
 
     activatedAbility {
         cost = Costs.Mana("{B}{B}")
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(
-                GroupFilter(GameObjectFilter.Creature.withKeyword(Keyword.SHADOW)),
-                Effects.ModifyStats(1, 0, EffectTarget.Self)
-            ),
+        effect = Effects.ForEachInGroup(
+            GroupFilter(GameObjectFilter.Creature.withKeyword(Keyword.SHADOW)),
+            Effects.ModifyStats(1, 0, EffectTarget.IterationEntity)
+        ) then
             Effects.ForEachInGroup(
                 GroupFilter(GameObjectFilter.Creature.withoutKeyword(Keyword.SHADOW)),
-                Effects.ModifyStats(-1, 0, EffectTarget.Self)
+                Effects.ModifyStats(-1, 0, EffectTarget.IterationEntity)
             )
-        )
     }
 
     metadata {

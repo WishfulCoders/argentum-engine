@@ -46,7 +46,7 @@ val LoAndLiTwinTutors = card("Lo and Li, Twin Tutors") {
     // When Lo and Li enter, search your library for a Lesson or Noble card, reveal it, put it into
     // your hand, then shuffle.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Any.withAnySubtype("Lesson", "Noble"),
             count = 1,

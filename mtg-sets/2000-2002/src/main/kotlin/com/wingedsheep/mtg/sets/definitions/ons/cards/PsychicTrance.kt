@@ -1,16 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.ActivatedAbility
-import com.wingedsheep.sdk.scripting.effects.CounterEffect
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GrantActivatedAbilityToGroupEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Psychic Trance
@@ -25,12 +25,12 @@ val PsychicTrance = card("Psychic Trance") {
     oracleText = "Until end of turn, Wizards you control gain \"{T}: Counter target spell.\""
 
     spell {
-        effect = GrantActivatedAbilityToGroupEffect(
+        effect = Effects.GrantActivatedAbilityToGroup(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = AbilityCost.Tap,
-                effect = CounterEffect(),
-                targetRequirement = Targets.Spell
+                effect = Effects.CounterSpell(),
+                targetRequirement = TargetObject(filter = TargetFilter.SpellOnStack)
             ),
             filter = GroupFilter(GameObjectFilter.Creature.withSubtype("Wizard").youControl()),
             duration = Duration.EndOfTurn

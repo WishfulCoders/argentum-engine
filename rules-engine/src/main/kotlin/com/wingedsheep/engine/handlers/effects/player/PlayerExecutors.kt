@@ -1,10 +1,12 @@
 package com.wingedsheep.engine.handlers.effects.player
 
+import com.wingedsheep.engine.mechanics.cost.CostPaymentService
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.handlers.DecisionHandler
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
 import com.wingedsheep.engine.handlers.effects.ExecutorModule
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.sdk.scripting.effects.Effect
@@ -12,42 +14,38 @@ import com.wingedsheep.sdk.scripting.effects.Effect
 /**
  * Module providing all player-related effect executors.
  *
- * Uses deferred initialization to inject the parent registry's execute function
- * into PayOrSufferExecutor, which needs it for executing arbitrary suffer effects.
+ * PayOrSufferExecutor runs arbitrary suffer effects through the parent registry's execute
+ * function, which the registry hands in at construction.
  */
 class PlayerExecutors(
+    /** The registry's re-entrant entry point, for the executors that run sub-effects. */
+    private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult,
+    private val zones: ZoneTransitionService,
     private val decisionHandler: DecisionHandler = DecisionHandler(),
-    private val cardRegistry: CardRegistry
+    private val cardRegistry: CardRegistry,
+    private val costPaymentService: () -> CostPaymentService
 ) : ExecutorModule {
-    private lateinit var effectExecutor: (GameState, Effect, EffectContext) -> EffectResult
+    private val payOrSufferExecutor = PayOrSufferExecutor(
+        zones,
+        cardRegistry = cardRegistry,
+        executeEffect = effectExecutor,
+        costPaymentService = costPaymentService
+    )
 
-    private val payOrSufferExecutor by lazy {
-        PayOrSufferExecutor(cardRegistry = cardRegistry, executeEffect = effectExecutor)
-    }
-
-    private val openLifeBidExecutor by lazy {
-        OpenLifeBidExecutor(executeEffect = effectExecutor)
-    }
-
-    /**
-     * Initialize the module with the parent registry's execute function.
-     * Must be called before executors() is accessed.
-     */
-    fun initialize(executor: (GameState, Effect, EffectContext) -> EffectResult) {
-        this.effectExecutor = executor
-    }
+    private val openLifeBidExecutor = OpenLifeBidExecutor(executeEffect = effectExecutor)
 
     override fun executors(): List<EffectExecutor<*>> = listOf(
-        AmassExecutor(effectExecutor),
-        CollectEvidenceExecutor(decisionHandler),
-        CollectEvidenceChosenAmountExecutor(),
-        AddAdditionalUpkeepStepsExecutor(),
-        AddAdditionalEndStepsExecutor(),
+        AmassExecutor(effectExecutor, amountEvaluator = zones.predicateEvaluator.amounts),
+        CollectEvidenceExecutor(zones, decisionHandler),
+        CollectEvidenceChosenAmountExecutor(predicateEvaluator = zones.predicateEvaluator),
+        AddAdditionalUpkeepStepsExecutor(amountEvaluator = zones.predicateEvaluator.amounts),
+        AddAdditionalEndStepsExecutor(amountEvaluator = zones.predicateEvaluator.amounts),
         AddCombatPhaseExecutor(),
         AddMainPhaseExecutor(),
-        AnyPlayerMayPayExecutor(executeEffect = effectExecutor),
+        AnyPlayerMayPayExecutor(executeEffect = effectExecutor, predicateEvaluator = zones.predicateEvaluator),
         CantActivateLoyaltyAbilitiesExecutor(),
         CantCastSpellsExecutor(),
+        CantSearchLibrariesExecutor(),
         CantCastSpellsFromNonHandZonesExecutor(),
         CantPlayCardsFromHandExecutor(),
         ChooseNumberForSourceExecutor(decisionHandler),
@@ -58,23 +56,25 @@ class PlayerExecutors(
         EachPlayerChoosesCreatureTypeExecutor(),
         EndTheTurnExecutor(),
         GainCitysBlessingExecutor(),
-        ChangeSpeedExecutor(),
+        ChangeSpeedExecutor(amountEvaluator = zones.predicateEvaluator.amounts),
         RemoveMaximumHandSizeExecutor(),
-        ReduceMaximumHandSizeExecutor(),
+        ReduceMaximumHandSizeExecutor(amountEvaluator = zones.predicateEvaluator.amounts),
         GiftGivenExecutor(),
         ForagedExecutor(),
         GrantCastCreaturesFromGraveyardWithForageExecutor(),
         GrantFlashToSpellsExecutor(),
+        GrantInstantSpeedLoyaltyAbilitiesExecutor(),
         GrantSpellKeywordExecutor(),
         GrantSpellsCantBeCounteredExecutor(),
         GrantDamageBonusExecutor(),
         GrantEvasionKeywordExecutor(),
         GrantPlayerProtectionExecutor(),
         HijackNextTurnExecutor(),
+        ControlCombatDeclarationsExecutor(),
         LockLifeGainExecutor(),
         openLifeBidExecutor,
-        LoseGameExecutor(),
-        WinGameExecutor(),
+        LoseGameExecutor(predicateEvaluator = zones.predicateEvaluator),
+        WinGameExecutor(predicateEvaluator = zones.predicateEvaluator),
         payOrSufferExecutor,
         PlayAdditionalLandsExecutor(),
         PreventLandPlaysThisTurnExecutor(),
@@ -82,9 +82,10 @@ class PlayerExecutors(
         SetDayNightExecutor(cardRegistry),
         SkipCombatPhasesExecutor(),
         SkipNextDrawStepExecutor(),
+        SkipNextUntapStepExecutor(),
         SkipStepOrPhaseThisTurnExecutor(),
-        PayAnyAmountOfLifeAsEntersExecutor(),
-        SkipNextTurnExecutor(),
+        PayAnyAmountOfLifeAsEntersExecutor(amountEvaluator = zones.predicateEvaluator.amounts),
+        SkipNextTurnExecutor(amountEvaluator = zones.predicateEvaluator.amounts),
         SkipUntapExecutor(),
         TakeExtraTurnExecutor(),
         TheRingTemptsYouExecutor()

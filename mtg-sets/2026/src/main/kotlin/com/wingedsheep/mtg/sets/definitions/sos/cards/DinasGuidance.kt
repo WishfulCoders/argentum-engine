@@ -7,15 +7,13 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
  * Dina's Guidance — Secrets of Strixhaven #184
  * {1}{B}{G} · Instant
  *
- * Search your library for a creature card, reveal it, put it into your hand or graveyard, then
- * shuffle.
+ * Search your library for a creature card, reveal it, put it into your hand or graveyard, then * shuffle.
  *
  * A search tutor whose found card lands in a *player-chosen* zone (hand or graveyard). Modeled as
  * an atomic gather → choose → reveal → split-move pipeline:
@@ -38,7 +36,8 @@ val DinasGuidance = card("Dina's Guidance") {
     spell {
         effect = Effects.Pipeline {
             val pool = gather(
-                CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.Creature)
+                CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.Creature),
+                search = true
             )
             val found = chooseUpTo(
                 1,
@@ -55,7 +54,7 @@ val DinasGuidance = card("Dina's Guidance") {
             )
             move(placed.selected, CardDestination.ToZone(Zone.HAND))
             move(placed.remainder, CardDestination.ToZone(Zone.GRAVEYARD))
-            run(ShuffleLibraryEffect())
+            run(Effects.ShuffleLibrary())
         }
     }
 

@@ -12,8 +12,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -30,9 +29,9 @@ val SouredSprings = card("Soured Springs") {
     oracleText = "This land enters tapped.\nWhen this land enters, it deals 1 damage to target opponent.\n{T}: Add {U} or {B}."
     replacementEffect(EntersTapped())
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetOpponent())
-        effect = DealDamageEffect(1, t)
+        trigger = Triggers.self.enters()
+        val t = target(Targets.Opponent)
+        effect = Effects.DealDamage(1, t)
     }
     activatedAbility {
         cost = Costs.Tap

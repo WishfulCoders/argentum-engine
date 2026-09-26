@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Neck Snap
@@ -19,10 +18,7 @@ val NeckSnap = card("Neck Snap") {
     oracleText = "Destroy target attacking or blocking creature."
 
     spell {
-        val creature = target(
-            "target attacking or blocking creature",
-            TargetCreature(filter = TargetFilter.AttackingOrBlockingCreature)
-        )
+        val creature = target(TargetFilter.AttackingOrBlockingCreature)
         effect = Effects.Destroy(creature)
     }
 

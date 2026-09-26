@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -27,12 +26,12 @@ val Steamclaw = card("Steamclaw") {
     oracleText = "{3}, {T}: Exile target card from a graveyard.\n{1}, Sacrifice this artifact: Exile target card from a graveyard."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap)
-        val t = target("target", TargetObject(filter = TargetFilter.CardInGraveyard))
+        val t = target(TargetFilter.CardInGraveyard)
         effect = Effects.Move(t, Zone.EXILE)
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeSelf)
-        val t = target("target", TargetObject(filter = TargetFilter.CardInGraveyard))
+        val t = target(TargetFilter.CardInGraveyard)
         effect = Effects.Move(t, Zone.EXILE)
     }
     metadata {

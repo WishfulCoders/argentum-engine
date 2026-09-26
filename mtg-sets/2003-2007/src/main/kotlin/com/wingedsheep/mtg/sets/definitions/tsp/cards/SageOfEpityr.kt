@@ -22,7 +22,7 @@ val SageOfEpityr = card("Sage of Epityr") {
     oracleText = "When this creature enters, look at the top four cards of your library, then put them back in any order."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.lookAtTopAndReorder(4)
     }
 

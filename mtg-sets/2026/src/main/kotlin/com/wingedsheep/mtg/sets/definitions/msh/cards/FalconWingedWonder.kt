@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreatePredefinedTokenEffect
 
 /**
  * Falcon, Winged Wonder
@@ -35,8 +35,8 @@ val FalconWingedWonder = card("Falcon, Winged Wonder") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreatePredefinedTokenEffect("Redwing")
+        trigger = Triggers.self.enters()
+        effect = Effects.CreatePredefinedToken("Redwing")
         description = "Avian Telepathy — When Falcon enters, create Redwing, a legendary 1/1 blue " +
             "Bird Scout creature token with flying and \"Whenever Redwing attacks, surveil 1.\""
     }

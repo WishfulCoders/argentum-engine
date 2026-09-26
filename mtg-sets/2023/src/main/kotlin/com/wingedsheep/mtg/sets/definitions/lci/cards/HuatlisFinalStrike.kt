@@ -8,9 +8,7 @@ import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -25,12 +23,10 @@ val HuatlisFinalStrike = card("Huatli's Final Strike") {
     typeLine = "Instant"
     oracleText = "Target creature you control gets +1/+0 until end of turn. It deals damage equal to its power to target creature an opponent controls."
     spell {
-        val t1 = target("t1", TargetCreature(filter = TargetFilter.Creature.youControl()))
-        val t2 = target("t2", TargetCreature(filter = TargetFilter.Creature.opponentControls()))
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 0, t1),
-            DealDamageEffect(DynamicAmounts.targetPower(0), t2, damageSource = t1)
-        )
+        val t1 = target(TargetFilter.Creature.youControl())
+        val t2 = target(TargetFilter.Creature.opponentControls())
+        effect = Effects.ModifyStats(1, 0, t1) then
+            Effects.DealDamage(DynamicAmounts.powerOf(t1), t2, damageSource = t1)
     }
     metadata {
         rarity = Rarity.COMMON

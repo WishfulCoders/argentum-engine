@@ -23,6 +23,7 @@ import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.sdk.scripting.costs.CostAtom
 import com.wingedsheep.sdk.scripting.costs.PayCost
 import com.wingedsheep.sdk.scripting.effects.Effect
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Resumer for [CostPaymentContinuation] — the single resume path for every [PayCost] variant paid
@@ -37,7 +38,7 @@ class CostPaymentContinuationResumer(
     private val services: EngineServices
 ) : ContinuationResumerModule {
 
-    private val paymentService = CostPaymentService(services)
+    private val paymentService get() = services.costPaymentService
 
     override fun resumers(): List<ContinuationResumer<*>> = listOf(
         resumer(CostPaymentContinuation::class, ::resume),
@@ -71,6 +72,7 @@ class CostPaymentContinuationResumer(
                 else resumeSelection(state, continuation, cost, response, checkForMore)
             // Selection costs.
             is CostAtom.ExileFrom, is CostAtom.RevealFromHand, is CostAtom.Sacrifice,
+            is CostAtom.PutFromHandOnTopOfLibrary,
             is CostAtom.ReturnToHand, is CostAtom.TapPermanents,
             // Collect evidence is a selection cost too — the sum gate rides on the decision's
             // `minTotalManaValue`, so resuming it is the ordinary selection path.
@@ -99,6 +101,10 @@ class CostPaymentContinuationResumer(
             // Ability-scoped only (it reads the source's own attachment), and it takes no
             // selection — never reaches a PayCost prompt.
             is CostAtom.Unattach ->
+                resumeYesNo(state, continuation, cost, response, checkForMore)
+            // PayOrSuffer reports it unpayable, so it never reaches a PayCost prompt — but it takes
+            // no selection, so the yes/no path is the right one if it ever does.
+            is CostAtom.SacrificeAll ->
                 resumeYesNo(state, continuation, cost, response, checkForMore)
             // VariablePermanents is an activated-ability-only cost, never a PayCost — unreachable here.
             is CostAtom.VariablePermanents ->
@@ -155,7 +161,7 @@ class CostPaymentContinuationResumer(
                     phase = DecisionPhase.RESOLUTION
                 ),
                 canDecline = true,
-                cardRegistry = services.cardRegistry
+                manaSolver = services.manaSolver
             ) },
             answer = { decision -> CostPaymentManaSelectionContinuation(
                 inner = continuation,
@@ -180,6 +186,7 @@ class CostPaymentContinuationResumer(
         }
         val inner = continuation.inner
         val floated = ManaPaymentWindow.floatSelectedMana(
+            services.zones,
             state, inner.payerId, continuation.manaCost, response, continuation.availableSources, services
         )
         if (!floated.paid) return declined(floated.state, inner, checkForMore)
@@ -282,7 +289,7 @@ class CostPaymentContinuationResumer(
             .execute(state, followup, effectContext(state, continuation).authorizeObjectMoves(priorEvents))
             .toExecutionResult()
         val allEvents = priorEvents + result.events
-        return if (result.isPaused) {
+        return if (result.outcome is Outcome.Paused) {
             ExecutionResult.propagatePause(result.state, allEvents)
         } else {
             checkForMore(result.state, allEvents)

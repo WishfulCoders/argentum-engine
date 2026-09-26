@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.PaymentStrategy
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
@@ -13,6 +14,7 @@ import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Tests for mana sources that produce multiple mana per tap (e.g., Elvish Aberration {T}: Add {G}{G}{G}).
@@ -60,7 +62,7 @@ class MultiManaSourceTest : FunSpec({
                 )
             )
 
-            castResult.isSuccess shouldBe true
+            castResult.outcome shouldBe Outcome.Done
             driver.getTopOfStackName() shouldBe "Force of Nature"
         }
 
@@ -95,7 +97,7 @@ class MultiManaSourceTest : FunSpec({
             )
 
             // 3 (Aberration) + 4 (Forests) = 7 mana, Elvish Aberration costs {5}{G} = 6 CMC
-            castResult.isSuccess shouldBe true
+            castResult.outcome shouldBe Outcome.Done
             driver.getTopOfStackName() shouldBe "Elvish Aberration"
         }
 
@@ -124,7 +126,7 @@ class MultiManaSourceTest : FunSpec({
                 )
             )
 
-            castResult.isSuccess shouldBe false
+            castResult.outcome shouldNotBe Outcome.Done
         }
     }
 
@@ -151,7 +153,7 @@ class MultiManaSourceTest : FunSpec({
 
             val registry = CardRegistry()
             registry.register(TestCards.all)
-            val solver = ManaSolver(cardRegistry = registry)
+            val solver = ManaSolver(cardRegistry = registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             val solution = solver.solve(driver.state, activePlayer, ManaCost.parse("{3}{G}{G}"))
 
             solution shouldNotBe null
@@ -177,7 +179,7 @@ class MultiManaSourceTest : FunSpec({
 
             val registry = CardRegistry()
             registry.register(TestCards.all)
-            val solver = ManaSolver(cardRegistry = registry)
+            val solver = ManaSolver(cardRegistry = registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             val solution = solver.solve(driver.state, activePlayer, ManaCost.parse("{3}{G}{G}"))
 
             solution shouldNotBe null
@@ -205,7 +207,7 @@ class MultiManaSourceTest : FunSpec({
 
             val registry = CardRegistry()
             registry.register(TestCards.all)
-            val solver = ManaSolver(cardRegistry = registry)
+            val solver = ManaSolver(cardRegistry = registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             val count = solver.getAvailableManaCount(driver.state, activePlayer)
 
             // 3 (Aberration) + 2 (Forests) = 5
@@ -227,7 +229,7 @@ class MultiManaSourceTest : FunSpec({
 
             val registry = CardRegistry()
             registry.register(TestCards.all)
-            val solver = ManaSolver(cardRegistry = registry)
+            val solver = ManaSolver(cardRegistry = registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             val count = solver.getAvailableManaCount(driver.state, activePlayer)
 
             // Palladium Myr produces 2 colorless

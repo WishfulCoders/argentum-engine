@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.mor.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Disperse
@@ -19,7 +19,7 @@ val Disperse = card("Disperse") {
     oracleText = "Return target nonland permanent to its owner's hand."
 
     spell {
-        val t = target("target nonland permanent", Targets.NonlandPermanent)
+        val t = target(TargetFilter.NonlandPermanent)
         effect = Effects.ReturnToHand(t)
     }
 

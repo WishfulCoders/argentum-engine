@@ -4,14 +4,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.effects.Chooser
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.model.Rarity
 
 /**
@@ -44,37 +38,26 @@ val TrialOfAgony = card("Trial of Agony") {
         "the other can't block this turn."
 
     spell {
-        target = TargetCreature(
-            count = 2,
-            sameController = true,
-            filter = TargetFilter.CreatureOpponentControls
-        )
-        effect = Effects.Composite(
-            listOf(
-                // 1. Reference the two targeted creatures.
-                GatherCardsEffect(
-                    source = CardSource.ChosenTargets,
-                    storeAs = "trialCreatures"
-                ),
-                // 2. Their controller (the opponent) chooses one; the other is the remainder.
-                SelectFromCollectionEffect(
-                    from = "trialCreatures",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                    chooser = Chooser.ControllerOfSelection,
-                    storeSelected = "trialChosen",
-                    storeRemainder = "trialOther",
-                    useTargetingUI = true,
-                    prompt = "Choose one of the two creatures to take 5 damage"
-                ),
-                // 3. Trial of Agony deals 5 damage to the chosen creature.
-                Effects.DealDamage(5, EffectTarget.PipelineTarget("trialChosen", 0)),
-                // 4. The other can't block this turn.
-                ForEachInCollectionEffect(
-                    collection = "trialOther",
-                    effect = Effects.CantBlock(EffectTarget.Self)
-                )
+        targets(TargetFilter.CreatureOpponentControls, count = 2, sameController = true)
+        effect = Effects.Pipeline {
+            // 1. Reference the two targeted creatures.
+            val trialCreatures = gather(CardSource.ChosenTargets)
+            // 2. Their controller (the opponent) chooses one; the other is the remainder.
+            val (trialChosen, trialOther) = chooseExactlySplit(
+                1,
+                from = trialCreatures,
+                chooser = Chooser.ControllerOfSelection,
+                useTargetingUI = true,
+                prompt = "Choose one of the two creatures to take 5 damage"
             )
-        )
+            // 3. Trial of Agony deals 5 damage to the chosen creature.
+            run(Effects.DealDamage(5, trialChosen.asTarget))
+            // 4. The other can't block this turn.
+            run(Effects.ForEachInCollection(
+                collection = trialOther,
+                effect = Effects.CantBlock(EffectTarget.IterationEntity)
+            ))
+        }
     }
 
     metadata {

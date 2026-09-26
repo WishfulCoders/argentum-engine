@@ -24,7 +24,7 @@ val Morale = card("Morale") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter.AttackingCreatures,
-            Effects.ModifyStats(1, 1, EffectTarget.Self)
+            Effects.ModifyStats(1, 1, EffectTarget.IterationEntity)
         )
     }
 

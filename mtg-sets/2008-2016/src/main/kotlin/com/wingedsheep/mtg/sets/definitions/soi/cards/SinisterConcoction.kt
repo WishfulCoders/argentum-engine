@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.soi.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sinister Concoction (Shadows over Innistrad #135)
@@ -27,7 +27,7 @@ val SinisterConcoction = card("Sinister Concoction") {
             Costs.DiscardCard,
             Costs.SacrificeSelf
         )
-        val victim = target("target", Targets.Creature)
+        val victim = target(TargetFilter.Creature)
         effect = Effects.Destroy(victim)
     }
 

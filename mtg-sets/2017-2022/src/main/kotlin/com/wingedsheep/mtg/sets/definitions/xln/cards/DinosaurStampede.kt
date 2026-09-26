@@ -26,10 +26,10 @@ val DinosaurStampede = card("Dinosaur Stampede") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.attacking()),
-            Effects.ModifyStats(2, 0, EffectTarget.Self)
+            Effects.ModifyStats(2, 0, EffectTarget.IterationEntity)
         ) then Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Permanent.withSubtype("Dinosaur").youControl()),
-            Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
+            Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.IterationEntity)
         )
     }
 

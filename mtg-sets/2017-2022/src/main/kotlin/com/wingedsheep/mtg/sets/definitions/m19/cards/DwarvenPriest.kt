@@ -26,7 +26,7 @@ val DwarvenPriest = card("Dwarven Priest") {
     oracleText = "When this creature enters, you gain 1 life for each creature you control."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(DynamicAmounts.creaturesYouControl())
     }
 

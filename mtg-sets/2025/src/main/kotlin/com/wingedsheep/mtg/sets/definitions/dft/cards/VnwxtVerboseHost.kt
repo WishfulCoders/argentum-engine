@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.maxSpeed
 import com.wingedsheep.sdk.dsl.startYourEngines
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.NoMaximumHandSize
-import com.wingedsheep.sdk.scripting.ReplaceDrawWithEffect
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
+import com.wingedsheep.sdk.scripting.ReplaceDrawWith
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.scripting.references.Player
  * Max speed — If you would draw a card, draw two cards instead.
  *
  * The max-speed clause is a *replacement* effect, declared through `maxSpeed { replacementEffect(…) }`.
- * That path folds the gate into [ReplaceDrawWithEffect]'s own `restrictions` slot — evaluated in the
+ * That path folds the gate into [ReplaceDrawWith]'s own `restrictions` slot — evaluated in the
  * drawing player's context, which is this card's controller for a `Player.You` draw — because a
  * conditional wrapper would be invisible to the interception sites that read
  * `ReplacementEffectSourceComponent` directly.
@@ -56,8 +56,8 @@ val VnwxtVerboseHost = card("Vnwxt, Verbose Host") {
 
     maxSpeed {
         replacementEffect(
-            ReplaceDrawWithEffect(
-                replacementEffect = DrawCardsEffect(2),
+            ReplaceDrawWith(
+                replacementEffect = Effects.DrawCards(2),
                 appliesTo = EventPattern.DrawEvent(player = Player.You),
             )
         )

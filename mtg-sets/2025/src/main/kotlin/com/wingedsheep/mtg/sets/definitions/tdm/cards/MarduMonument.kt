@@ -41,7 +41,7 @@ val MarduMonument = card("Mardu Monument") {
         "gain menace and haste until end of turn. Activate only as a sorcery."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.BasicLand.withAnyOfSubtypes(
                 listOf(Subtype.MOUNTAIN, Subtype.PLAINS, Subtype.SWAMP)

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Ice Flan
@@ -33,15 +32,9 @@ val IceFlan = card("Ice Flan") {
         "reveal it, put it into your hand, then shuffle.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "target",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrArtifact.opponentControls()))
-        )
-        effect = Effects.Composite(
-            Effects.Tap(t),
-            Effects.AddCounters(Counters.STUN, 1, t),
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter(GameObjectFilter.CreatureOrArtifact.opponentControls()))
+        effect = Effects.Tap(t) then Effects.AddCounters(CounterType.STUN, 1, t)
     }
 
     keywordAbility(KeywordAbility.typecycling("Island", ManaCost.parse("{2}")))

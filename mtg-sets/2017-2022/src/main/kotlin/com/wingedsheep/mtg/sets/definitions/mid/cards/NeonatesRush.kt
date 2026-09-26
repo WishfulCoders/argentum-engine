@@ -2,7 +2,6 @@ package com.wingedsheep.mtg.sets.definitions.mid.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CostModification
@@ -11,6 +10,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Neonate's Rush
@@ -44,10 +44,10 @@ val NeonatesRush = card("Neonate's Rush") {
     }
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.DealDamage(1, creature)
-            .then(Effects.DealDamage(1, EffectTarget.TargetController))
-            .then(Effects.DrawCards(1))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.DealDamage(1, creature) then
+            Effects.DealDamage(1, EffectTarget.TargetController) then
+            Effects.DrawCards(1)
     }
 
     metadata {

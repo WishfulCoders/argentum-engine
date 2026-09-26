@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Spirit Weaver
@@ -26,10 +25,7 @@ val SpiritWeaver = card("Spirit Weaver") {
 
     activatedAbility {
         cost = Costs.Mana("{2}")
-        val t = target(
-            "target",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.withAnyColor(Color.GREEN, Color.BLUE)))
-        )
+        val t = target(TargetFilter(GameObjectFilter.Creature.withAnyColor(Color.GREEN, Color.BLUE)))
         effect = Effects.ModifyStats(power = 0, toughness = 1, target = t)
         description = "{2}: Target green or blue creature gets +0/+1 until end of turn."
     }

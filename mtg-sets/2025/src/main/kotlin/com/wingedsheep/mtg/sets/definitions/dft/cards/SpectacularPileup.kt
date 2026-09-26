@@ -41,9 +41,7 @@ val SpectacularPileup = card("Spectacular Pileup") {
         effect = Patterns.Group.removeKeywordFromAll(
             keyword = Keyword.INDESTRUCTIBLE,
             filter = GroupFilter(GameObjectFilter.CreatureOrVehicle),
-        ).then(
-            Effects.DestroyAll(GameObjectFilter.CreatureOrVehicle)
-        )
+        ) then Effects.DestroyAll(GameObjectFilter.CreatureOrVehicle)
     }
 
     keywordAbility(KeywordAbility.Cycling(ManaCost.parse("{2}")))

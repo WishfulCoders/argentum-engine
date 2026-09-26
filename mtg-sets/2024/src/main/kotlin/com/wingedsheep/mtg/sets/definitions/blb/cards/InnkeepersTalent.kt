@@ -1,8 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -11,9 +10,10 @@ import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantWard
 import com.wingedsheep.sdk.scripting.effects.WardCost
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Innkeeper's Talent {1}{G}
@@ -42,9 +42,9 @@ val InnkeepersTalent = card("Innkeeper's Talent") {
 
     // Level 1: At the beginning of combat on your turn, put a +1/+1 counter on target creature you control
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        val creature = target("creature you control", Targets.CreatureYouControl)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creature)
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature)
     }
 
     // Level 2: Permanents you control with counters on them have ward {1}
@@ -63,8 +63,8 @@ val InnkeepersTalent = card("Innkeeper's Talent") {
             DoubleCounterPlacement(
                 placedByYou = true,
                 appliesTo = EventPattern.CounterPlacementEvent(
-                    counterType = CounterTypeFilter.Any,
-                    recipient = RecipientFilter.Any
+                    counterType = null,
+                    recipient = Recipient.Any
                 )
             )
         )

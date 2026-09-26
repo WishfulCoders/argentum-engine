@@ -7,13 +7,12 @@ import com.wingedsheep.engine.mechanics.layers.Layer
 import com.wingedsheep.engine.mechanics.layers.SerializableModification
 import com.wingedsheep.engine.mechanics.layers.addFloatingEffect
 import com.wingedsheep.engine.state.GameState
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
 import com.wingedsheep.sdk.scripting.effects.Effect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Shared resolution for the back half of "amass [subtype] N" (CR 701.47a), after the Army has been
@@ -43,7 +42,7 @@ object AmassResolution {
         if (amount > 0) {
             val counterResult = executeEffect(
                 newState,
-                AddCountersEffect(Counters.PLUS_ONE_PLUS_ONE, amount, EffectTarget.SpecificEntity(armyId)),
+                AddCountersEffect(CounterType.PLUS_ONE_PLUS_ONE, amount, EffectTarget.SpecificEntity(armyId)),
                 context
             )
             newState = counterResult.state
@@ -64,11 +63,11 @@ object AmassResolution {
         // Expose the just-amassed Army to a follow-up sibling effect — Foray of Orcs and
         // Surrounded by Orcs read its power via `DynamicAmount.EntityProperty(AmassedArmy, …)`.
         // Stored under the shared key so the SDK reference and engine evaluator agree
-        // without a cross-module import (see EntityReference.AmassedArmy).
+        // without a cross-module import (see EffectTarget.AmassedArmy).
         return EffectResult(
             state = newState,
             events = events,
-            updatedCollections = mapOf(EntityReference.AmassedArmy.STORAGE_KEY to listOf(armyId))
+            updatedCollections = mapOf(EffectTarget.AmassedArmy.STORAGE_KEY to listOf(armyId))
         )
     }
 }

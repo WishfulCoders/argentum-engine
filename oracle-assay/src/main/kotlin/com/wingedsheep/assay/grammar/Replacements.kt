@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyLifeGain
 import com.wingedsheep.sdk.scripting.RedirectZoneChange
 import com.wingedsheep.sdk.scripting.ReplacementEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
@@ -257,16 +257,10 @@ object Replacements {
      * sentence and the reconstruct-and-compare refuses to print it. That last one matters here:
      * the kicker cards ("If ~ was kicked, it enters with two +1/+1 counters on it") carry a
      * `condition` and decline rather than losing the clause that makes them worth playing.
-     *
-     * ### The counter kind is a [CounterTypeFilter] here and a `String` on every effect
-     *
-     * Two SDK types for one concept, and `CounterTypeFilter.Named` can hold the same string the
-     * dedicated cases do — so the grammar emits exactly one of the two spellings and reports the
-     * other. [Primitives.counterFilter] and its inverse own that choice; the note is there.
      */
     private val entersWithCounters: List<Phrase<ReplacementEffect>> = run {
-        fun effectFor(kind: String, count: Int): ReplacementEffect = EntersWithCounters(
-            counterType = Primitives.counterFilter(kind),
+        fun effectFor(kind: CounterType, count: Int): ReplacementEffect = EntersWithCounters(
+            counterType = kind,
             count = count,
             selfOnly = true,
         )
@@ -278,7 +272,7 @@ object Replacements {
                 build { effectFor(it.value("kind"), if (quantity == null) 1 else it.int("n")) }
                 match { effect ->
                     val enters = effect as? EntersWithCounters ?: return@match null
-                    val kind = Primitives.counterKindOf(enters.counterType) ?: return@match null
+                    val kind = enters.counterType
                     if (quantity == null && enters.count != 1) return@match null
                     if (quantity != null && !(enters.count >= 2 && Cardinals.spellable(enters.count))) {
                         return@match null
@@ -317,14 +311,14 @@ object Replacements {
      * non-default `appliesTo`, an `otherOnly` or a condition declines rather than losing the field.
      */
     private val entersWithDynamicCounters: List<Phrase<ReplacementEffect>> = run {
-        fun effectFor(kind: String, amount: DynamicAmount): ReplacementEffect = EntersWithDynamicCounters(
-            counterType = Primitives.counterFilter(kind),
+        fun effectFor(kind: CounterType, amount: DynamicAmount): ReplacementEffect = EntersWithDynamicCounters(
+            counterType = kind,
             count = amount,
         )
         /** The shared reader: the kind and the amount, or null on any value this family cannot say. */
-        fun readAmount(effect: ReplacementEffect, allows: (DynamicAmount) -> Boolean): Pair<String, DynamicAmount>? {
+        fun readAmount(effect: ReplacementEffect, allows: (DynamicAmount) -> Boolean): Pair<CounterType, DynamicAmount>? {
             val enters = effect as? EntersWithDynamicCounters ?: return null
-            val kind = Primitives.counterKindOf(enters.counterType) ?: return null
+            val kind = enters.counterType
             if (!allows(enters.count)) return null
             if (enters != effectFor(kind, enters.count)) return null
             return kind to enters.count
@@ -410,9 +404,9 @@ object Replacements {
         fun tallyOf(filter: GameObjectFilter) =
             DynamicAmount.AggregateBattlefield(scope.player, filter, excludeSelf = other)
 
-        fun effectFor(kind: String, filter: GameObjectFilter, multiplier: Int): ReplacementEffect =
+        fun effectFor(kind: CounterType, filter: GameObjectFilter, multiplier: Int): ReplacementEffect =
             EntersWithDynamicCounters(
-                counterType = Primitives.counterFilter(kind),
+                counterType = kind,
                 count = Amounts.scaled(tallyOf(filter), multiplier),
             )
 
@@ -431,7 +425,7 @@ object Replacements {
             }
             match { effect ->
                 val enters = effect as? EntersWithDynamicCounters ?: return@match null
-                val kind = Primitives.counterKindOf(enters.counterType) ?: return@match null
+                val kind = enters.counterType
                 val tally = tallyIn(enters.count) ?: return@match null
                 if (tally != tallyOf(tally.filter)) return@match null
                 val multiplier = Amounts.multiplierOf(enters.count, tally) ?: return@match null

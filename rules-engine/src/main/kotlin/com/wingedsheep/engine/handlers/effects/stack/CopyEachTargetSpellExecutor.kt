@@ -4,7 +4,7 @@ import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.TargetFinder
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
-import com.wingedsheep.engine.mechanics.stack.StackResolver
+import com.wingedsheep.engine.mechanics.stack.StackPlacement
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.identity.CantBeCopiedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
@@ -29,8 +29,7 @@ import kotlin.reflect.KClass
  * targets for the copies." (Display of Power).
  */
 class CopyEachTargetSpellExecutor(
-    private val cardRegistry: com.wingedsheep.engine.registry.CardRegistry,
-    private val targetFinder: TargetFinder = TargetFinder()
+    private val targetFinder: TargetFinder
 ) : EffectExecutor<CopyEachTargetSpellEffect> {
 
     override val effectType: KClass<CopyEachTargetSpellEffect> = CopyEachTargetSpellEffect::class
@@ -46,11 +45,9 @@ class CopyEachTargetSpellExecutor(
             .map { it.spellEntityId }
             .distinct()
 
-        val stackResolver = StackResolver(cardRegistry = cardRegistry)
         return EffectResult.from(
             driveCopyEachSpell(
                 state = state,
-                stackResolver = stackResolver,
                 targetFinder = targetFinder,
                 controllerId = context.controllerId,
                 remainingSpellIds = spellIds,
@@ -69,7 +66,6 @@ class CopyEachTargetSpellExecutor(
          */
         fun driveCopyEachSpell(
             state: GameState,
-            stackResolver: StackResolver,
             targetFinder: TargetFinder,
             controllerId: EntityId,
             remainingSpellIds: List<EntityId>,
@@ -97,12 +93,12 @@ class CopyEachTargetSpellExecutor(
 
                 // No flat targets (untargeted or modal spell): copy verbatim now.
                 if (targetReqs.isEmpty()) {
-                    val copyResult = stackResolver.putSpellCopy(
+                    val copyResult = StackPlacement.putSpellCopy(
                         state = currentState,
                         sourceSpellId = spellId,
                         controllerId = controllerId
                     )
-                    if (!copyResult.isSuccess) return copyResult
+                    if (copyResult.outcome !is Outcome.Done) return copyResult
                     currentState = StormCopyEffectExecutor.applyCopyMutations(
                         copyResult.newState, copyResult.events, keywordsForCopy, removeLegendary
                     )
@@ -122,12 +118,12 @@ class CopyEachTargetSpellExecutor(
                 // 707.10c: no legal replacement — copy inherits the source's (now-illegal)
                 // targets and fizzles on resolution per 608.2b / 112.3b.
                 if (legalTargetsMap.any { (_, t) -> t.isEmpty() }) {
-                    val copyResult = stackResolver.putSpellCopy(
+                    val copyResult = StackPlacement.putSpellCopy(
                         state = currentState,
                         sourceSpellId = spellId,
                         controllerId = controllerId
                     )
-                    if (!copyResult.isSuccess) return copyResult
+                    if (copyResult.outcome !is Outcome.Done) return copyResult
                     currentState = StormCopyEffectExecutor.applyCopyMutations(
                         copyResult.newState, copyResult.events, keywordsForCopy, removeLegendary
                     )

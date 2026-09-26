@@ -32,9 +32,7 @@ val DoubleDown = card("Double Down") {
         "Pirates, Rogues, and Warlocks are outlaws. Copies of permanent spells become tokens.)"
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.Any.withAnyOfSubtypes(Subtype.OUTLAW_TYPES)
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withAnyOfSubtypes(Subtype.OUTLAW_TYPES))
         effect = Effects.CopyTargetSpell(target = EffectTarget.TriggeringEntity)
         description = "Whenever you cast an outlaw spell, copy that spell."
     }

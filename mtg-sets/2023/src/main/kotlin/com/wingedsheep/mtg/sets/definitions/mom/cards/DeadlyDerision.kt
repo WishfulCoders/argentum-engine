@@ -22,7 +22,7 @@ val DeadlyDerision = card("Deadly Derision") {
         "artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")"
 
     spell {
-        val victim = target("target creature or planeswalker", Targets.CreatureOrPlaneswalker)
+        val victim = target(Targets.CreatureOrPlaneswalker)
         effect = Effects.Destroy(victim) then Effects.CreateTreasure(1)
     }
 

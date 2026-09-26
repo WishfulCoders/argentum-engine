@@ -512,7 +512,7 @@ class CostPaymentServiceTest : ScenarioTestBase() {
             }
             val cost = PayCost.Atom(
                 CostAtom.RemoveCounters(
-                    counterType = "+1/+1",
+                    counterType = CounterType.PLUS_ONE_PLUS_ONE,
                     count = DynamicAmount.Fixed(1),
                     self = true
                 )

@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.gpt.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Wildsize
@@ -21,12 +21,10 @@ val Wildsize = card("Wildsize") {
     oracleText = "Target creature gets +2/+2 and gains trample until end of turn.\nDraw a card."
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 2, t),
-            Effects.GrantKeyword(Keyword.TRAMPLE, t),
-            Effects.DrawCards(1),
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 2, t) then
+            Effects.GrantKeyword(Keyword.TRAMPLE, t) then
+            Effects.DrawCards(1)
     }
 
     metadata {

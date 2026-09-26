@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Sliver Overlord
@@ -35,7 +34,7 @@ val SliverOverlord = card("Sliver Overlord") {
 
     activatedAbility {
         cost = Costs.Mana("{3}")
-        val t = target("target", TargetObject(filter = TargetFilter(GameObjectFilter.Permanent.withSubtype("Sliver"))))
+        val t = target(TargetFilter(GameObjectFilter.Permanent.withSubtype("Sliver")))
         effect = Effects.GainControl(t)
     }
 

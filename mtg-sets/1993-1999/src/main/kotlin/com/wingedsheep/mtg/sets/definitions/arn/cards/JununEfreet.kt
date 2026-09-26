@@ -2,12 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.arn.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Junún Efreet
@@ -28,8 +29,8 @@ val JununEfreet = card("Junún Efreet") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = PayOrSufferEffect(
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.PayOrSuffer(
             cost = Costs.pay.Mana(ManaCost.parse("{B}{B}")),
             suffer = SacrificeSelfEffect,
         )

@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.model.CreatureStats
 import com.wingedsheep.sdk.model.Deck
+import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.effects.AnyPlayerMayPayEffect
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.EventPattern
@@ -39,6 +40,7 @@ class ProwlingPangolinTest : FunSpec({
         creatureStats = CreatureStats(6, 5),
         script = CardScript.creature(
             TriggeredAbility.create(
+                id = AbilityId("ProwlingPangolinTest_1"),
                 trigger = EventPattern.ZoneChangeEvent(to = Zone.BATTLEFIELD),
                 binding = TriggerBinding.SELF,
                 effect = AnyPlayerMayPayEffect(

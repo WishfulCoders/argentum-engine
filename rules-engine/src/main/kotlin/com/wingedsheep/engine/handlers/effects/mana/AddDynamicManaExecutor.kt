@@ -26,8 +26,8 @@ import kotlin.reflect.KClass
  *    pips remain.
  */
 class AddDynamicManaExecutor(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator(),
-    private val decisionHandler: DecisionHandler = DecisionHandler()
+    private val decisionHandler: DecisionHandler = DecisionHandler(),
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<AddDynamicManaEffect> {
 
     override val effectType: KClass<AddDynamicManaEffect> = AddDynamicManaEffect::class

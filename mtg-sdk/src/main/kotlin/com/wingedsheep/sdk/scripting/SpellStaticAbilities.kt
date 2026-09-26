@@ -1,5 +1,6 @@
 package com.wingedsheep.sdk.scripting
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.scripting.conditions.Condition
@@ -234,7 +235,16 @@ data class GrantMayCastFromLinkedExile(
      * Intrepid Paleontologist: `entersWithCounter = CounterType.FINALITY` — "If you cast a spell this
      * way, that creature enters with a finality counter on it."
      */
-    val entersWithCounter: com.wingedsheep.sdk.core.CounterType? = null
+    val entersWithCounter: com.wingedsheep.sdk.core.CounterType? = null,
+    /**
+     * "…, and mana of any type can be spent to cast that spell" (CR 609.4b): when true, the colored
+     * requirements of a spell cast *through this grant* may be paid with mana of any type. Scoped to
+     * the permission rather than a blanket [SpendAnyManaTypeForSpells] for the same reason as
+     * [MayPlayCardsFromExile.withAnyManaType] — the relaxation belongs to spells cast this way, not
+     * to the card wherever it is cast from. Read by the linked-exile cast enumerator (cost display and
+     * affordability) and by the cast handler's payment. Null Summoner.
+     */
+    val withAnyManaType: Boolean = false
 ) : StaticAbility {
     override val description: String = buildString {
         // "pay life equal to its mana value rather than pay its mana cost" — Valgavoth, Terror Eater
@@ -265,10 +275,11 @@ data class GrantMayCastFromLinkedExile(
         if (exiledThisTurnOnly) append(" this turn")
         if (withoutPayingManaCost) append(" without paying its mana cost")
         if (additionalCost != null) append(" by ${additionalCost.description.lowercase()} in addition to paying their other costs")
+        if (withAnyManaType) append(", and mana of any type can be spent to cast those spells")
         if (oncePerTurn) append(". This ability may be used only once each turn")
         append(".")
         if (entersWithCounter != null) {
-            append(" If you cast a spell this way, that permanent enters with a ${entersWithCounter.name.lowercase()} counter on it.")
+            append(" If you cast a spell this way, that permanent enters with a ${entersWithCounter.printed} counter on it.")
         }
     }
     override fun applyTextReplacement(replacer: TextReplacer): StaticAbility {
@@ -307,6 +318,43 @@ data class GrantKeywordToOwnSpells(
     override val description: String =
         "${spellFilter.description.replaceFirstChar { it.uppercase() }} spells you cast have " +
             "${keyword.displayName.lowercase()}${keywordParameter?.let { " $it" } ?: ""}"
+    override fun applyTextReplacement(replacer: TextReplacer): StaticAbility {
+        val newFilter = spellFilter.applyTextReplacement(replacer)
+        return if (newFilter !== spellFilter) copy(spellFilter = newFilter) else this
+    }
+}
+
+/**
+ * "As an additional cost to cast [spellFilter] spells, you may pay any amount of mana. If you do,
+ * that creature enters with that many additional [counterType] counters on it." (Chorus of the
+ * Conclave.)
+ *
+ * While a permanent with this ability is on the battlefield, every matching spell its controller
+ * casts carries an optional *additional* cost of `{N}` generic mana, for an N the caster announces
+ * while casting (CR 601.2b) — zero declines it. The payment rides the cast action
+ * (`CastSpell.additionalManaForCounters`), is added on top of whatever else pays for the spell (an
+ * additional cost survives a free or alternative cast, CR 601.2f), and is recorded on the spell; the
+ * permanent the spell becomes enters with N more [counterType] counters.
+ *
+ * The ability matters only **as the spell is cast** (rulings): it does nothing for a creature put
+ * onto the battlefield by an effect, and the source must already be on the battlefield — it can't
+ * pay for itself. Once paid, the counters are the spell's: they arrive even if the source has left
+ * the battlefield by the time the spell resolves. Scoped to the source's controller ("you").
+ *
+ * @property spellFilter Which spells may take the payment (Chorus: creature spells).
+ * @property counterType The counter placed once per mana paid.
+ */
+@SerialName("AdditionalManaForEntryCounters")
+@Serializable
+data class AdditionalManaForEntryCounters(
+    val spellFilter: GameObjectFilter = GameObjectFilter.Creature,
+    val counterType: CounterType =
+        CounterType.PLUS_ONE_PLUS_ONE
+) : StaticAbility {
+    override val description: String =
+        "As an additional cost to cast ${spellFilter.description} spells, you may pay any amount of mana. " +
+            "If you do, that creature enters with that many additional ${counterType.printed} counters on it"
+
     override fun applyTextReplacement(replacer: TextReplacer): StaticAbility {
         val newFilter = spellFilter.applyTextReplacement(replacer)
         return if (newFilter !== spellFilter) copy(spellFilter = newFilter) else this
@@ -507,7 +555,7 @@ data class MayCastFromGraveyard(
         if (lifeCost > 0) append(" by paying $lifeCost life in addition to their other costs")
         if (entersWithCounter != null || addedSubtypeOnEntry != null) {
             append(". If you do, it enters")
-            if (entersWithCounter != null) append(" with a ${entersWithCounter.name.lowercase()} counter on it")
+            if (entersWithCounter != null) append(" with a ${entersWithCounter.printed} counter on it")
             if (entersWithCounter != null && addedSubtypeOnEntry != null) append(" and")
             if (addedSubtypeOnEntry != null) append(" is a $addedSubtypeOnEntry in addition to its other types")
         }
@@ -734,19 +782,35 @@ data class MayCastWithoutPayingManaCost(
      * true, oncePerTurn = true, fromExileOnly = true)`. The engine gates this on the cast's source
      * zone in `CostCalculator.hasFreeCastPermission` / `oncePerTurnFreeCastSourceToConsume`.
      */
-    val fromExileOnly: Boolean = false
+    val fromExileOnly: Boolean = false,
+    /**
+     * When true, the permission applies only to spells **cast from their caster's hand** — the
+     * "from your hand" wording. A cast from exile, a graveyard, the top of the library, or the
+     * command zone is withheld, including on the client-supplied validation path. Omnipresence:
+     * "You may cast spells with mana value less than or equal to the number of creatures you
+     * control from your hand without paying their mana costs." → `MayCastWithoutPayingManaCost(
+     * controllerOnly = true, fromHandOnly = true, spellFilter = GameObjectFilter.Any.manaValueAtMostDynamic(
+     * DynamicAmounts.creaturesYouControl()))`. The zone mirror of [fromExileOnly]; the two are
+     * mutually exclusive. The engine gates this on the cast's source zone in
+     * `CostCalculator.hasFreeCastPermission`.
+     */
+    val fromHandOnly: Boolean = false
 ) : StaticAbility {
+    init {
+        require(!(fromExileOnly && fromHandOnly)) { "fromExileOnly and fromHandOnly are mutually exclusive" }
+    }
+
     override val description: String = buildString {
         val noun = if (spellFilter == GameObjectFilter.Any) "spells" else "${spellFilter.description} spells"
         val singular = if (spellFilter == GameObjectFilter.Any) "spell" else "${spellFilter.description} spell"
-        val fromExile = if (fromExileOnly) " from exile" else ""
+        val fromExile = if (fromExileOnly) " from exile" else if (fromHandOnly) " from your hand" else ""
         if (oncePerTurn) {
             append("Once during each of your turns, you may cast a $singular$fromExile without paying its mana cost")
         } else if (firstSpellOfTurnOnly) {
             if (controllerOnly) append("The first spell you cast each turn may be cast without paying its mana cost")
             else append("The first spell each player casts during each of their turns may be cast without paying its mana cost")
         } else {
-            if (controllerOnly) append("You may cast $noun without paying their mana costs")
+            if (controllerOnly) append("You may cast $noun$fromExile without paying their mana costs")
             else append("Each player may cast $noun without paying their mana costs")
         }
     }
@@ -905,16 +969,30 @@ data class PlayersCantCastSpells(
  *    ("During your turn, your opponents can't activate abilities of artifacts, creatures, or
  *    enchantments.")
  *
+ * Two further axes, both off by default:
+ *  - [nonManaAbilitiesOnly] exempts mana abilities ("… abilities that aren't mana abilities").
+ *  - [anyZone] extends the prohibition past the battlefield to abilities of cards in any zone —
+ *    graveyard and hand abilities, cycling, and the crew/saddle actions — for the unqualified
+ *    "players can't activate abilities" wording. Off, it speaks of permanents only.
+ *
+ *  - Yuriko, Blade of the Mighty's activate clause: `PlayersCantActivateAbilities(Player.Each,
+ *    condition = IsInPhase(COMBAT, yoursOnly = false), nonManaAbilitiesOnly = true, anyZone = true)`
+ *    ("During combat, players can't … activate abilities that aren't mana abilities.")
+ *
  * @property affected Who is forbidden, relative to the source's controller.
  * @property permanentFilter Which permanents' abilities are forbidden (matched against the source).
  * @property condition Optional timing/state gate, evaluated in the controller's context; null = always.
+ * @property nonManaAbilitiesOnly When true, mana abilities stay activatable.
+ * @property anyZone When true, abilities of cards outside the battlefield are forbidden too.
  */
 @SerialName("PlayersCantActivateAbilities")
 @Serializable
 data class PlayersCantActivateAbilities(
     val affected: Player = Player.EachOpponent,
     val permanentFilter: GameObjectFilter = GameObjectFilter.Any,
-    val condition: Condition? = null
+    val condition: Condition? = null,
+    val nonManaAbilitiesOnly: Boolean = false,
+    val anyZone: Boolean = false
 ) : StaticAbility {
     override val description: String = buildString {
         when (condition) {
@@ -928,8 +1006,9 @@ data class PlayersCantActivateAbilities(
             else -> append("${affected.description} can't activate ")
         }
         append(
-            if (permanentFilter == GameObjectFilter.Any) "activated abilities"
-            else "abilities of ${permanentFilter.description}"
+            if (permanentFilter == GameObjectFilter.Any) {
+                if (nonManaAbilitiesOnly) "abilities that aren't mana abilities" else "activated abilities"
+            } else "abilities of ${permanentFilter.description}"
         )
         when (condition) {
             is IsYourTurn, is IsNotYourTurn, null -> {}

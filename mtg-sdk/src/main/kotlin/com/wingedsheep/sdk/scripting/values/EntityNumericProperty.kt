@@ -1,7 +1,8 @@
 package com.wingedsheep.sdk.scripting.values
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.core.Keyword
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -100,10 +101,12 @@ sealed interface EntityNumericProperty {
         override val description: String = "the amount chosen as it entered"
     }
 
+    /** The number of [counterType] counters on the entity — of every kind when `null`. */
     @SerialName("CounterCount")
     @Serializable
-    data class CounterCount(val counterType: CounterTypeFilter) : EntityNumericProperty {
-        override val description: String = "the number of ${counterType.description} counters"
+    data class CounterCount(val counterType: CounterType?) : EntityNumericProperty {
+        override val description: String =
+            counterType?.let { "the number of ${it.printed} counters" } ?: "the number of counters"
     }
 
     /**
@@ -151,7 +154,7 @@ sealed interface EntityNumericProperty {
      * five colors).
      *
      * Powers "for each color of [entity]" amounts — e.g. Dragonfire Blade's equip cost
-     * reduction reads `EntityProperty(EntityReference.Target(0), ColorCount)`.
+     * reduction reads `EntityProperty(EffectTarget.ContextTarget(0), ColorCount)`.
      */
     @SerialName("ColorCount")
     @Serializable
@@ -176,7 +179,7 @@ sealed interface EntityNumericProperty {
      *
      * Namor the Sub-Mariner: "Whenever you cast a noncreature spell with one or more blue mana
      * symbols in its mana cost, create that many 1/1 blue Merfolk creature tokens" is
-     * `EntityProperty(EntityReference.Triggering, ColoredManaSymbolCount(listOf(Color.BLUE)))`. The
+     * `EntityProperty(EffectTarget.TriggeringEntity, ColoredManaSymbolCount(listOf(Color.BLUE)))`. The
      * matching filter side is
      * [com.wingedsheep.sdk.scripting.predicates.CardPredicate.ColoredManaSymbolsAtLeast].
      */
@@ -196,7 +199,7 @@ sealed interface EntityNumericProperty {
      * Read it AFTER a deal-damage step in the same composite/pipeline resolution, so the marked
      * damage in scope is the damage that step just dealt — e.g. Hell to Pay: "deals X damage to
      * target creature. Create a number of tapped Treasure tokens equal to the amount of excess
-     * damage dealt to that creature this way." `EntityProperty(EntityReference.Target(0),
+     * damage dealt to that creature this way." `EntityProperty(EffectTarget.ContextTarget(0),
      * ExcessMarkedDamage)`. CompositeEffect resolves sub-effects sequentially with no interleaved
      * SBA pass, so for the canonical "deal N, then read excess" shape this equals "how much did
      * that deal-damage step push the target past lethal" — there is no other source of marked
@@ -206,6 +209,25 @@ sealed interface EntityNumericProperty {
     @Serializable
     data object ExcessMarkedDamage : EntityNumericProperty {
         override val description: String = "the excess damage dealt to it this way"
+    }
+
+    /**
+     * The total N across this entity's instances of a numeric keyword ("bushido N", "toxic N") —
+     * Takeno, Samurai General's "for each point of bushido it has". Instances add: a creature with
+     * bushido 1 and bushido 2 has three points of bushido.
+     *
+     * Reads the *printed* N values, gated on the keyword surviving projection: a permanent that has
+     * lost all abilities (layer 6) has no bushido and counts 0, and a face-down permanent counts 0.
+     * Numeric keywords granted in the projected `<KEYWORD>_<n>` form (granted toxic) add their N
+     * too. A keyword granted without an N carries no value — there is no such grant for bushido.
+     *
+     * Keywords are settled in layer 6, before every P/T layer, so a layer-7 static fed this
+     * amount (`EntityProperty(AffectedEntity, KeywordValue(BUSHIDO))`) never depends on itself.
+     */
+    @SerialName("KeywordValue")
+    @Serializable
+    data class KeywordValue(val keyword: Keyword) : EntityNumericProperty {
+        override val description: String = "points of ${keyword.displayName.lowercase()} it has"
     }
 }
 

@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Incite Hysteria
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * it gain "This creature can't block."
  *
  * Radiance: the target is restricted directly; every *other* creature sharing a color with it
- * (`sharingColorWith(EntityReference.Target(0))`, `otherThanTarget()`) is found as the spell
+ * (`sharingColorWith(EffectTarget.ContextTarget(0))`, `otherThanTarget()`) is found as the spell
  * resolves and restricted too. The restriction is stamped on the creatures at resolution, so a
  * creature that changes colour before blockers are declared still can't block (2005-11-01
  * ruling), and one that becomes the target's colour afterwards is unaffected. A colorless target
@@ -32,13 +31,13 @@ val InciteHysteria = card("Incite Hysteria") {
         "shares a color with it gain \"This creature can't block.\""
 
     spell {
-        val radiant = target("target creature", Targets.Creature)
+        val radiant = target(TargetFilter.Creature)
         effect = Effects.CantBlock(radiant) then
             Effects.ForEachInGroup(
                 GroupFilter(
-                    GameObjectFilter.Creature.sharingColorWith(EntityReference.Target(0))
+                    GameObjectFilter.Creature.sharingColorWith(radiant)
                 ).otherThanTarget(),
-                Effects.CantBlock(EffectTarget.Self)
+                Effects.CantBlock(EffectTarget.IterationEntity)
             )
     }
 

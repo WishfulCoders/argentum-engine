@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Lightning-Core Excavator
@@ -24,9 +23,9 @@ val LightningCoreExcavator = card("Lightning-Core Excavator") {
     toughness = 3
 
     activatedAbility {
+        val anyTarget = target(Targets.Any)
         cost = Costs.Composite(Costs.Mana("{5}"), Costs.Tap, Costs.SacrificeSelf)
-        target = Targets.Any
-        effect = Effects.DealDamage(3, EffectTarget.ContextTarget(0))
+        effect = Effects.DealDamage(3, anyTarget)
         description = "{5}, {T}, Sacrifice this creature: It deals 3 damage to any target."
     }
 

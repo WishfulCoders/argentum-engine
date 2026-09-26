@@ -47,12 +47,9 @@ val HighFaeNegotiator = card("High Fae Negotiator") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.WasBargained
-        effect = Effects.Composite(
-            Effects.LoseLife(3, EffectTarget.PlayerRef(Player.EachOpponent)),
-            Effects.GainLife(3),
-        )
+        effect = Effects.LoseLife(3, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(3)
         description = "When this creature enters, if it was bargained, each opponent loses 3 life " +
             "and you gain 3 life."
     }

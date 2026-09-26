@@ -33,7 +33,7 @@ val Ribskiff = card("Ribskiff") {
     keywordAbility(KeywordAbility.Numeric(Keyword.TOXIC, 2))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1)
     }
 

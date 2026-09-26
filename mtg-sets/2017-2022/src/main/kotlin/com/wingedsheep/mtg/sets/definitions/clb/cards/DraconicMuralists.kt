@@ -30,7 +30,7 @@ val DraconicMuralists = card("Draconic Muralists") {
     oracleText = "When this creature dies, you may search your library for a Dragon card, reveal it, put it into your hand, then shuffle."
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         optional = true
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Any.withSubtype(Subtype.DRAGON),

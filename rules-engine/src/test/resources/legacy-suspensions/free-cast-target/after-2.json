@@ -75,8 +75,8 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target",
-                        "description": "target"
+                        "name": "t0",
+                        "description": "target artifact or enchantment"
                     },
                     "destination": "Graveyard",
                     "placement": "Default",
@@ -196,7 +196,7 @@
                             "excludeTriggeringEntity": false,
                             "alternatives": []
                         },
-                        "id": "target",
+                        "id": "t0",
                         "dynamicMaxCount": null,
                         "sameController": false,
                         "sameOwner": false,
@@ -206,7 +206,7 @@
                         "differentNames": false,
                         "differentControllers": false,
                         "chooser": "Controller",
-                        "description": "target"
+                        "description": "target artifact or enchantment"
                     }
                 ],
                 "targetEntryStamps": {

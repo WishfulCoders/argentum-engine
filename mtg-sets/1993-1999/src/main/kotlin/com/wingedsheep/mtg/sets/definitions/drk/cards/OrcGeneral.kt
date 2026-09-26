@@ -42,7 +42,7 @@ val OrcGeneral = card("Orc General") {
         )
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withSubtype(Subtype.ORC), excludeSelf = true),
-            Effects.ModifyStats(1, 1, EffectTarget.Self),
+            Effects.ModifyStats(1, 1, EffectTarget.IterationEntity),
         )
         description = "{T}, Sacrifice another Orc or Goblin: Other Orc creatures get +1/+1 until end of turn."
     }

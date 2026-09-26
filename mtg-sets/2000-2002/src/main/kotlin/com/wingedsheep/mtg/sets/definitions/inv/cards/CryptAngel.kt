@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.ProtectionScope
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Crypt Angel
@@ -34,16 +33,13 @@ val CryptAngel = card("Crypt Angel") {
     keywordAbility(KeywordAbility.Protection(ProtectionScope.Color(Color.WHITE)))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val card = target(
-            "target blue or red creature card from your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter.Creature
-                        .ownedByYou()
-                        .withAnyColor(Color.BLUE, Color.RED),
-                    zone = Zone.GRAVEYARD,
-                ),
+            TargetFilter(
+                baseFilter = GameObjectFilter.Creature
+                    .ownedByYou()
+                    .withAnyColor(Color.BLUE, Color.RED),
+                zone = Zone.GRAVEYARD,
             ),
         )
         effect = Effects.ReturnToHand(card)

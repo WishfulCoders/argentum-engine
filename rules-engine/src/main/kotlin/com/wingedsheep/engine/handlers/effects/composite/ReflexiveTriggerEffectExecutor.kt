@@ -5,7 +5,6 @@ import com.wingedsheep.engine.handlers.DecisionHandler
 import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PredicateContext
-import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.TargetFinder
 import com.wingedsheep.engine.handlers.effects.BattlefieldFilterUtils
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
@@ -14,6 +13,7 @@ import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
@@ -60,12 +60,11 @@ class ReflexiveTriggerEffectExecutor(
     private val targetFinder: TargetFinder,
     private val decisionHandler: DecisionHandler,
     private val cardRegistry: CardRegistry,
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<ReflexiveTriggerEffect> {
+    private val predicateEvaluator = amountEvaluator.predicates
 
     override val effectType: KClass<ReflexiveTriggerEffect> = ReflexiveTriggerEffect::class
-
-    private val predicateEvaluator = PredicateEvaluator()
 
     override fun execute(
         state: GameState,
@@ -77,7 +76,7 @@ class ReflexiveTriggerEffectExecutor(
         // the "you may [action]" prompt is meaningless (saying yes would no-op the action while
         // still firing the payoff), and a mandatory [action] would otherwise resolve vacuously —
         // a discard pipeline on an empty hand auto-selects nothing and reports success, which
-        // `executeActionThenEmit`'s `result.isSuccess` check can't distinguish from a real discard.
+        // `executeActionThenEmit`'s `Outcome.Done` check can't distinguish from a real discard.
         if (!isActionFeasible(state, effect.action, context)) {
             return EffectResult.success(state)
         }
@@ -173,11 +172,12 @@ class ReflexiveTriggerEffectExecutor(
             // SacrificeExecutor.findValidPermanents). Fewer than `count` → can't pay → infeasible.
             val excludeId = if (action.excludeSource) context.sourceId else null
             BattlefieldFilterUtils.findMatchingOnBattlefield(
-                state, action.filter.youControl(), context, excludeSelfId = excludeId
+                state, action.filter.youControl(), context, excludeSelfId = excludeId,
+                predicateEvaluator = predicateEvaluator
             ).size >= action.count
         }
         is ChooseActionEffect -> action.choices.any { choice ->
-            checkFeasibility(state, context.controllerId, choice.feasibilityCheck)
+            checkFeasibility(state, context.controllerId, choice.feasibilityCheck, predicateEvaluator = predicateEvaluator)
         }
         is SelectFromCollectionEffect -> {
             val available = gathered?.get(action.from)
@@ -198,7 +198,7 @@ class ReflexiveTriggerEffectExecutor(
                 .resolvePlayerRef(action.player, context, state)
             val current = playerId
                 ?.let { state.getEntity(it)?.get<com.wingedsheep.engine.state.components.battlefield.CountersComponent>() }
-                ?.getCount(com.wingedsheep.engine.handlers.effects.permanent.counters.resolveCounterType(action.counterType))
+                ?.getCount(action.counterType)
                 ?: 0
             current >= action.amount
         }
@@ -222,7 +222,8 @@ class ReflexiveTriggerEffectExecutor(
         // prompt and then fail on every answer.
         is com.wingedsheep.sdk.scripting.effects.PayManaCostRepeatedlyEffect ->
             PayManaCostRepeatedlyExecutor.affordableRepetitions(
-                state, context.controllerId, action.cost, action.maxTimes, cardRegistry
+                state, context.controllerId, action.cost, action.maxTimes, cardRegistry,
+                predicateEvaluator = predicateEvaluator
             ) >= 1
         // "You may collect evidence 3" (Sample Collector) — CR 701.59b is explicit that a player
         // unable to exile cards totalling N *can't choose to collect evidence*, so the option must
@@ -232,7 +233,7 @@ class ReflexiveTriggerEffectExecutor(
             val playerId = com.wingedsheep.engine.handlers.effects.TargetResolutionUtils
                 .resolvePlayerRef(action.player, context, state)
             playerId != null && com.wingedsheep.engine.handlers.costs.CollectEvidenceResolver
-                .canCollect(state, playerId, action.amount)
+                .canCollect(state, playerId, action.amount, predicateEvaluator = predicateEvaluator)
         }
         // "You may collect evidence X" (Incinerator of the Guilty) — always feasible, unlike its
         // fixed-N sibling above. The player picks X themself and X = 0 is a legal collection that
@@ -260,7 +261,7 @@ class ReflexiveTriggerEffectExecutor(
         state: GameState,
         context: EffectContext,
         target: com.wingedsheep.sdk.scripting.targets.EffectTarget,
-        kind: String? = null
+        kind: CounterType? = null
     ): Int? {
         val targetId = context.resolveTarget(target, state) ?: return null
         val counters = state.getEntity(targetId)
@@ -269,9 +270,7 @@ class ReflexiveTriggerEffectExecutor(
         return if (kind == null) {
             counters.counters.values.sum()
         } else {
-            counters.getCount(
-                com.wingedsheep.engine.handlers.effects.permanent.counters.resolveCounterType(kind)
-            )
+            counters.getCount(kind)
         }
     }
 
@@ -399,7 +398,7 @@ class ReflexiveTriggerEffectExecutor(
         // Execute the action
         val result = effectExecutor(stateWithCont, effect.action, context)
 
-        if (result.isPaused) {
+        if (result.outcome is Outcome.Paused) {
             // Action paused for a decision — our continuation sits underneath
             return result
         }
@@ -407,13 +406,13 @@ class ReflexiveTriggerEffectExecutor(
         // Pop our continuation now that the action has finished (success or failure)
         val (_, stateWithoutCont) = result.state.popContinuation()
 
-        if (!result.isSuccess) {
+        if (result.outcome !is Outcome.Done) {
             // Action failed — skip the reflexive trigger entirely
             return EffectResult.success(stateWithoutCont, result.events.toList())
         }
 
         // Action succeeded synchronously — merge whatever it stashed in the pipeline (e.g.
-        // `EntityReference.AmassedArmy`, Foray of Orcs) into the context before emitting, mirroring
+        // `EffectTarget.AmassedArmy`, Foray of Orcs) into the context before emitting, mirroring
         // CompositeEffectExecutor's sibling-to-sibling propagation.
         val mergedContext = if (
             result.updatedCollections.isNotEmpty() || result.updatedSubtypeGroups.isNotEmpty() ||
@@ -468,36 +467,21 @@ class ReflexiveTriggerEffectExecutor(
                 descriptionOverride = descriptionOverride,
                 carriedPipeline = effectContext.pipeline,
                 carriedObjectReferences = effectContext.objectReferences,
-                carriedTriggerContext = com.wingedsheep.engine.event.TriggerContext(
-                    triggeringEntityId = effectContext.triggeringEntityId,
-                    triggeringPlayerId = effectContext.triggeringPlayerId,
-                    damageAmount = effectContext.triggerDamageAmount,
-                    xValue = effectContext.xValue,
-                    counterCount = effectContext.triggerCounterCount,
-                    totalCounterCount = effectContext.triggerTotalCounterCount,
-                    minusOneMinusOneCounterCount = effectContext.triggerMinusOneMinusOneCounterCount,
-                    targetingSourceEntityId = effectContext.targetingSourceEntityId,
-                    lastKnownPower = effectContext.triggerLastKnownPower,
-                    lastKnownToughness = effectContext.triggerLastKnownToughness,
-                    diedBatchTotalPower = effectContext.triggerDiedBatchTotalPower,
-                    lastKnownSubtypes = effectContext.triggerLastKnownSubtypes,
-                    lastKnownCardTypes = effectContext.triggerLastKnownCardTypes,
-                    lastKnownCounters = effectContext.triggerLastKnownCounters,
-                    lastKnownDamageDealtByPlayers = effectContext.triggerLastKnownDamageDealtByPlayers,
-                    lastKnownBlockingOrBlockedByIds = effectContext.triggerLastKnownBlockingOrBlockedByIds,
-                    modesChosenCount = effectContext.triggerModesChosenCount,
-                    manaSpentOnTriggeringSpell = effectContext.triggerManaSpentOnTriggeringSpell,
-                    colorsSpentOnTriggeringSpell = effectContext.triggerColorsSpentOnTriggeringSpell,
-                    manaValueOfTriggeringSpell = effectContext.triggerManaValueOfTriggeringSpell,
-                    xValueOfTriggeringSpell = effectContext.triggerXValueOfTriggeringSpell,
-                    enchantedCreatureLastKnownPower = effectContext.enchantedCreatureLastKnownPower,
-                    scryCount = effectContext.triggerScryCount,
-                    clashWon = effectContext.triggerClashWon,
-                    discardedCardCount = effectContext.triggerDiscardCount,
-                    discoverValue = effectContext.triggerDiscoverValue,
-                    excessDamageAmount = effectContext.triggerExcessDamageAmount,
-                    recipientToughnessAtDamage = effectContext.triggerRecipientToughness
-                )
+                // The reflexive ability fires *because of* the resolving one (CR 603.12), so it
+                // inherits that ability's whole trigger record. Only the three slots EffectContext
+                // keeps outside the record are re-read, since iteration may have rebound them. The
+                // event-identity fields (triggering origin/object/visit) are dropped: they locate the
+                // *original* event's objects at detection time, and the reflexive trigger's object
+                // references are already captured from the resolving ability.
+                carriedTriggerContext = (effectContext.triggerContext ?: com.wingedsheep.engine.event.TriggerContext())
+                    .copy(
+                        triggeringEntityId = effectContext.triggeringEntityId,
+                        triggeringPlayerId = effectContext.triggeringPlayerId,
+                        xValue = effectContext.xValue,
+                        triggeringOrigin = null,
+                        triggeringObject = null,
+                        triggeringBattlefieldTimestamp = null
+                    )
             )
         }
     }

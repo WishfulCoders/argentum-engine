@@ -10,11 +10,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Boseiju, Who Endures — Kamigawa: Neon Dynasty #266 (canonical printing)
@@ -60,20 +58,17 @@ val BoseijuWhoEndures = card("Boseiju, Who Endures") {
         activateFromZone = Zone.HAND
         genericCostReduction = DynamicAmounts.legendaryCreaturesYouControl()
         val t = target(
-            "target artifact, enchantment, or nonbasic land an opponent controls",
-            TargetPermanent(
-                filter = TargetFilter(
-                    (GameObjectFilter.Artifact or
-                        GameObjectFilter.Enchantment or
-                        GameObjectFilter.NonbasicLand).opponentControls()
-                )
-            )
+            TargetFilter(
+                (GameObjectFilter.Artifact or
+                    GameObjectFilter.Enchantment or
+                    GameObjectFilter.NonbasicLand).opponentControls()
+            ),
         )
         effect = Effects.Destroy(t) then
             Effects.ForEachPlayer(
                 Player.ControllerOf("the destroyed permanent"),
                 listOf(
-                    MayEffect(
+                    Effects.May(
                         Patterns.Library.searchLibrary(
                             filter = GameObjectFilter.LandWithBasicLandType,
                             count = 1,

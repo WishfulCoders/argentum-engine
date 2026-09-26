@@ -4,14 +4,12 @@
 
 package com.wingedsheep.mtg.sets.definitions.chk.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -26,10 +24,10 @@ val StrengthOfCedars = card("Strength of Cedars") {
     typeLine = "Instant — Arcane"
     oracleText = "Target creature gets +X/+X until end of turn, where X is the number of lands you control."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(
-            DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land),
-            DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land),
+            DynamicAmounts.landsYouControl(),
+            DynamicAmounts.landsYouControl(),
             t
         )
     }

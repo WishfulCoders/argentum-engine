@@ -37,7 +37,7 @@ internal val tapLayerStateHandlers: Map<String, ActionHandler> = actionHandlers 
         // controller picks tap vs untap at resolution, so it renders as a non-spell
         // `ModalEffect.chooseOne` of `Effects.Tap`/`Effects.Untap` over the SAME chosen permanent
         // (cf. Effects.Endure, which models "choose one" as a two-mode chooseOne). Wrapped in
-        // MayEffect by the MayAction handler when the oracle says "you may tap or untap".
+        // Effects.May by the MayAction handler when the oracle says "you may tap or untap".
         val tgt = refTarget(args, tvar) ?: return@on null
         call(
             "ModalEffect.chooseOne",
@@ -63,10 +63,10 @@ internal val tapLayerStateHandlers: Map<String, ActionHandler> = actionHandlers 
     }
     on("If") { node, args, tvar ->
         // Resolution-time intervening-if inside a spell/ability ActionList:
-        //   If[<condition>, [<then actions>]]  ->  ConditionalEffect(condition = …, effect = …)
+        //   If[<condition>, [<then actions>]]  ->  Effects.If(condition = …, effect = …)
         // (Foolish Fate's "if you gained life this turn, …", Burrog Barrage's "+1/+0 if you've cast
         // another instant or sorcery this turn"). An `If` with an else-branch (args[2]) declines —
-        // a resolution ConditionalEffect can carry an else, but no calibrated card needs it yet and a
+        // a resolution Effects.If can carry an else, but no calibrated card needs it yet and a
         // wrong else is worse than a scaffold. The condition must render exactly via actionConditionDsl
         // and the then-branch via the normal effect-list path; either declining scaffolds the card.
         val arr = args.asArr ?: return@on null
@@ -78,9 +78,9 @@ internal val tapLayerStateHandlers: Map<String, ActionHandler> = actionHandlers 
         val condDsl = actionConditionDsl(cond) ?: return@on null
         val thenEffect = renderEffectList(thenActions, tvar) ?: return@on null
         call(
-            "ConditionalEffect",
+            "Effects.If",
             arg("condition", Lit(condDsl)),
-            arg("effect", thenEffect),
+            arg("then", thenEffect),
         )
     }
     on("RegeneratePermanent") { _, args, tvar ->
@@ -99,7 +99,7 @@ internal val tapLayerStateHandlers: Map<String, ActionHandler> = actionHandlers 
             return@on call("Effects.${verb}EachTarget")
         }
         val filter = groupFilterExpr(args) ?: return@on null  // mass: tap/untap a group
-        call("Effects.ForEachInGroup", arg(filter), arg(call("Effects.$verb", arg("EffectTarget.Self"))))
+        call("Effects.ForEachInGroup", arg(filter), arg(call("Effects.$verb", arg("EffectTarget.IterationEntity"))))
     }
 
     on("PreparePermanent") { _, args, tvar ->
@@ -342,7 +342,7 @@ internal fun EmitCtx.renderPutCountersVariant(inner: JsonObject, tvar: String?):
             val filter = groupFilterExpr(arr.getOrNull(1)) ?: return null
             call(
                 "Effects.ForEachInGroup", arg(filter),
-                arg(call("AddCountersEffect", arg(Lit(counter)), arg("1"), arg("EffectTarget.Self"))),
+                arg(call("AddCountersEffect", arg(Lit(counter)), arg("1"), arg("EffectTarget.IterationEntity"))),
             )
         }
         // "Put N <counter> counters on <permanents>." — the mass / dynamic-count form. args = [<amount>,
@@ -409,15 +409,15 @@ private fun EmitCtx.renderNumberCountersOnEach(arr: JsonArray?): Dsl? {
     }
     val groupFilter = groupFilterExpr(recipient) ?: return null
     val perEntity = (findInteger(arr.getOrNull(0)) as? Int)?.let { count ->
-        call("AddCountersEffect", arg("counterType", counter), arg("count", "$count"), arg("target", "EffectTarget.Self"))
+        call("AddCountersEffect", arg("counterType", counter), arg("count", "$count"), arg("target", "EffectTarget.IterationEntity"))
     } ?: run {
         val amount = dynamicAmount(arr.getOrNull(0)) ?: return null
-        call("Effects.AddDynamicCounters", arg("counterType", counter), arg("amount", Lit(amount)), arg("target", "EffectTarget.Self"))
+        call("Effects.AddDynamicCounters", arg("counterType", counter), arg("amount", Lit(amount)), arg("target", "EffectTarget.IterationEntity"))
     }
     return call("Effects.ForEachInGroup", arg(groupFilter), arg(perEntity))
 }
 
-/** A mtgish `_CounterType` node -> the `Counters.*` constant the AddCountersEffect facade takes, or null
+/** A mtgish `_CounterType` node -> the `CounterType` constant the AddCountersEffect facade takes, or null
  *  for a counter kind we can't name (-> the caller scaffolds rather than guess). Shared by every "put a
  *  counter" handler (single / N / each). Only the bare ±1/±1 PTCounter, modeled keyword counters, and
  *  engine-wired utility counters render. */
@@ -427,49 +427,49 @@ internal fun counterTypeDsl(counterNode: JsonElement?): String? {
         "PTCounter" -> {
             val pt = node["args"].asArr ?: return null
             when (Pair(pt.getOrNull(0).asInt(), pt.getOrNull(1).asInt())) {
-                Pair(1, 1) -> "Counters.PLUS_ONE_PLUS_ONE"
-                Pair(-1, -1) -> "Counters.MINUS_ONE_MINUS_ONE"
+                Pair(1, 1) -> "CounterType.PLUS_ONE_PLUS_ONE"
+                Pair(-1, -1) -> "CounterType.MINUS_ONE_MINUS_ONE"
                 else -> null
             }
         }
         // Keyword counters (CR 122.1b) that grant their keyword via the engine's keyword-counter
         // projection. Only the ones we can name render; anything else scaffolds.
-        "FlyingCounter" -> "Counters.FLYING"
+        "FlyingCounter" -> "CounterType.FLYING"
         // Haste / menace counters (CR 122.1b): the last two keyword counters to be wired into
         // StateProjector.KEYWORD_COUNTER_MAP. Adding one is a plain AddCounters (Super-Adaptoid).
-        "HasteCounter" -> "Counters.HASTE"
-        "MenaceCounter" -> "Counters.MENACE"
+        "HasteCounter" -> "CounterType.HASTE"
+        "MenaceCounter" -> "CounterType.MENACE"
         // Deathtouch counter (CR 122.1b): grants the DEATHTOUCH keyword via the StateProjector's
-        // keyword-counter projection. Adding one is a plain AddCounters(Counters.DEATHTOUCH, …)
+        // keyword-counter projection. Adding one is a plain AddCounters(CounterType.DEATHTOUCH, …)
         // (Vraska Joins Up: "put a deathtouch counter on each creature you control").
-        "DeathtouchCounter" -> "Counters.DEATHTOUCH"
+        "DeathtouchCounter" -> "CounterType.DEATHTOUCH"
         // Stun counter (CR 122.1d): a built-in replacement ("if a permanent with a stun counter would
         // become untapped, instead remove a stun counter from it"), engine-wired via `untapOrConsumeStun`.
-        // Adding one is a plain AddCounters(Counters.STUN, …) (Rapier Wit, Fractal Mascot).
-        "StunCounter" -> "Counters.STUN"
+        // Adding one is a plain AddCounters(CounterType.STUN, …) (Rapier Wit, Fractal Mascot).
+        "StunCounter" -> "CounterType.STUN"
         // Shield counter (CR 122.1c): a built-in replacement + prevention pair ("if this permanent
         // would be destroyed as the result of an effect, instead remove a shield counter"; "if damage
         // would be dealt to this permanent, prevent it and remove a shield counter"), engine-wired via
-        // `consumeShieldCounter`. Adding one is a plain AddCounters(Counters.SHIELD, …) (Boon of
+        // `consumeShieldCounter`. Adding one is a plain AddCounters(CounterType.SHIELD, …) (Boon of
         // Safety, Brokers Veteran, Captain America, Super-Soldier).
-        "ShieldCounter" -> "Counters.SHIELD"
-        "FinalityCounter" -> "Counters.FINALITY"
+        "ShieldCounter" -> "CounterType.SHIELD"
+        "FinalityCounter" -> "CounterType.FINALITY"
         // Loot counter (OTJ — Bandit's Haul): a passive storage counter with no inherent rule; the
         // card's own abilities accumulate it and spend it. Adding one is a plain AddCounters.
-        "LootCounter" -> "Counters.LOOT"
+        "LootCounter" -> "CounterType.LOOT"
         // Growth counter (SOS — Comforting Counsel): another passive storage counter with no inherent
         // rule; the card's own static ability reads the count ("as long as there are five or more
-        // growth counters …"). Adding one is a plain AddCounters(Counters.GROWTH, …).
-        "GrowthCounter" -> "Counters.GROWTH"
+        // growth counters …"). Adding one is a plain AddCounters(CounterType.GROWTH, …).
+        "GrowthCounter" -> "CounterType.GROWTH"
         // Nest counter (DSK — Twitching Doll): a passive storage counter with no inherent rule; the
         // card's own abilities accumulate it and read the count to scale a token payoff. Adding one
-        // is a plain AddCounters(Counters.NEST, …).
-        "NestCounter" -> "Counters.NEST"
+        // is a plain AddCounters(CounterType.NEST, …).
+        "NestCounter" -> "CounterType.NEST"
         // Page counter (SOS — Diary of Dreams): a passive storage counter with no inherent rule; the
         // card's cast-an-instant-or-sorcery trigger accumulates it and its activated ability reads the
-        // count to reduce its own cost. Adding one is a plain AddCounters(Counters.PAGE, …).
-        "PageCounter" -> "Counters.PAGE"
-        "SporeCounter" -> "Counters.SPORE"
+        // count to reduce its own cost. Adding one is a plain AddCounters(CounterType.PAGE, …).
+        "PageCounter" -> "CounterType.PAGE"
+        "SporeCounter" -> "CounterType.SPORE"
         else -> null
     }
 }
@@ -558,13 +558,13 @@ internal fun EmitCtx.renderLayerEffect(node: JsonObject, action: String, tvar: S
     // engine models this as a ForEachTargetEffect over the bound targets, with each iteration's effect
     // bound to ContextTarget(0) — NOT a battlefield-filter ForEachInGroup (which would widen to every
     // permanent). Distinct from the filter form ("each creature you control gets …"), which keeps the
-    // ForEachInGroup-over-Self path below.
+    // ForEachInGroup-over-IterationEntity path below.
     val subjectArg = (node["args"].asArr)?.getOrNull(0)
     val overBoundTargets = mass && subjectArg != null &&
         jsonContains(subjectArg, "_Permanents", "Ref_TargetPermanents")
     val target = when {
         overBoundTargets -> "EffectTarget.ContextTarget(0)"
-        mass -> "EffectTarget.Self"
+        mass -> "EffectTarget.IterationEntity"
         else -> refTarget(node["args"], tvar)
     }
     if (target == null) return null

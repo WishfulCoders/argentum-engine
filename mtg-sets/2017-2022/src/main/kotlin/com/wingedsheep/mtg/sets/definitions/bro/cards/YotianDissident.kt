@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.bro.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Yotian Dissident
@@ -17,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * 1/1
  * Whenever an artifact you control enters, put a +1/+1 counter on target creature you control.
  *
- * The shared BRO "artifact you control enters" trigger — [Triggers.entersBattlefield] over
+ * The shared BRO "artifact you control enters" trigger — `Triggers.a(filter).enters()` over
  * `Artifact.youControl()` with [TriggerBinding.ANY] — feeding [Effects.AddCounters] on a
  * declared target slot restricted to creatures you control.
  */
@@ -30,12 +29,9 @@ val YotianDissident = card("Yotian Dissident") {
     oracleText = "Whenever an artifact you control enters, put a +1/+1 counter on target creature you control."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            binding = TriggerBinding.ANY
-        )
-        val creature = target("creature you control", TargetCreature(filter = TargetFilter.CreatureYouControl))
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creature)
+        trigger = Triggers.a(GameObjectFilter.Artifact.youControl()).enters()
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature)
         description = "Put a +1/+1 counter on target creature you control."
     }
 

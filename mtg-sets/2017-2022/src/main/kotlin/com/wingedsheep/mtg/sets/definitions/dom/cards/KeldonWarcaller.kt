@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Keldon Warcaller
@@ -25,11 +24,9 @@ val KeldonWarcaller = card("Keldon Warcaller") {
     oracleText = "Whenever Keldon Warcaller attacks, put a lore counter on target Saga you control."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val saga = target("Saga you control", TargetObject(
-            filter = TargetFilter(GameObjectFilter.Enchantment.withSubtype("Saga").youControl())
-        ))
-        effect = Effects.AddCounters(Counters.LORE, 1, saga)
+        trigger = Triggers.self.attacks()
+        val saga = target(TargetFilter(GameObjectFilter.Enchantment.withSubtype("Saga").youControl()))
+        effect = Effects.AddCounters(CounterType.LORE, 1, saga)
     }
 
     metadata {

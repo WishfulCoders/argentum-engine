@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -8,8 +9,7 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Jade Seedstones // Jadeheart Attendant (CR 702.167, The Lost Caverns of Ixalan)
@@ -49,8 +49,8 @@ private val JadeSeedstonesFront = card("Jade Seedstones") {
 
     // ETB: distribute three +1/+1 counters among one, two, or three target creatures you control.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = TargetCreature(count = 3, minCount = 1, filter = TargetFilter.CreatureYouControl)
+        trigger = Triggers.self.enters()
+        target = TargetObject(filter = TargetFilter.CreatureYouControl, count = 3, minCount = 1)
         effect = Effects.DistributeCountersAmongTargets(totalCounters = 3)
     }
 
@@ -81,8 +81,8 @@ private val JadeheartAttendant = card("Jadeheart Attendant") {
 
     // ETB: gain life equal to the mana value of the (exactly one) card exiled to craft it.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.GainLife(DynamicAmount.CraftedMaterialsTotalManaValue)
+        trigger = Triggers.self.enters()
+        effect = Effects.GainLife(DynamicAmounts.craftedMaterialsTotalManaValue())
     }
 
     metadata {

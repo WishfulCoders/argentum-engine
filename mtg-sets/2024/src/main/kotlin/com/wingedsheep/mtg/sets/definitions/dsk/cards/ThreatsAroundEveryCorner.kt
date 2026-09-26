@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 
 /**
@@ -35,17 +34,14 @@ val ThreatsAroundEveryCorner = card("Threats Around Every Corner") {
 
     // When this enchantment enters, manifest dread.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.manifestDread()
     }
 
     // Whenever a face-down permanent you control enters, search your library for a basic land
     // card, put it onto the battlefield tapped, then shuffle.
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Any.faceDown().youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Any.faceDown().youControl()).enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.BasicLand,
             destination = SearchDestination.BATTLEFIELD,

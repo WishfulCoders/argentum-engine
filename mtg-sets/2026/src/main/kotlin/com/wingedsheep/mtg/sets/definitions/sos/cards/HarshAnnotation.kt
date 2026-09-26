@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -27,9 +26,8 @@ val HarshAnnotation = card("Harsh Annotation") {
     typeLine = "Instant"
     oracleText = "Destroy target creature. Its controller creates a 1/1 white and black Inkling creature token with flying."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.Move(t, Zone.GRAVEYARD, byDestruction = true),
+        val t = target(TargetFilter.Creature)
+        effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true) then
             Effects.CreateToken(
                 power = 1,
                 toughness = 1,
@@ -39,7 +37,6 @@ val HarshAnnotation = card("Harsh Annotation") {
                 controller = EffectTarget.TargetController,
                 imageUri = "https://cards.scryfall.io/display/front/b/a/bab52920-9d67-4cd4-9015-6e645ff9764f.webp?1782723480"
             )
-        )
     }
     metadata {
         rarity = Rarity.UNCOMMON

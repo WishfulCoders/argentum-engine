@@ -6,9 +6,9 @@ package com.wingedsheep.mtg.sets.definitions.tor.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 
@@ -30,7 +30,7 @@ val CentaurVeteran = card("Centaur Veteran") {
     keywords(Keyword.TRAMPLE)
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{G}"), Costs.DiscardCard)
-        effect = RegenerateEffect(EffectTarget.Self)
+        effect = Effects.Regenerate(EffectTarget.Self)
     }
     metadata {
         rarity = Rarity.COMMON

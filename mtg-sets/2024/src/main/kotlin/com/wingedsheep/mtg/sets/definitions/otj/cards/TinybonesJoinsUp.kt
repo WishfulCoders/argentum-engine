@@ -6,8 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetPlayer
@@ -36,26 +34,19 @@ val TinybonesJoinsUp = card("Tinybones Joins Up") {
         "Whenever a legendary creature you control enters, any number of target players each mill a card and lose 1 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target("any number of target players", TargetPlayer(unlimited = true))
-        effect = ForEachTargetEffect(
-            listOf(
-                Effects.Discard(1, EffectTarget.PlayerRef(Player.ContextPlayer(0)))
-            )
+        trigger = Triggers.self.enters()
+        target(TargetPlayer(unlimited = true))
+        effect = Effects.ForEachTarget(
+            Effects.Discard(1, EffectTarget.PlayerRef(Player.ContextPlayer(0)))
         )
     }
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.legendary().youControl(),
-            binding = TriggerBinding.ANY
-        )
-        target("any number of target players", TargetPlayer(unlimited = true))
-        effect = ForEachTargetEffect(
-            listOf(
-                Patterns.Library.mill(1, EffectTarget.PlayerRef(Player.ContextPlayer(0))),
-                Effects.LoseLife(1, EffectTarget.PlayerRef(Player.ContextPlayer(0)))
-            )
+        trigger = Triggers.a(GameObjectFilter.Creature.legendary().youControl()).enters()
+        target(TargetPlayer(unlimited = true))
+        effect = Effects.ForEachTarget(
+            Patterns.Library.mill(1, EffectTarget.PlayerRef(Player.ContextPlayer(0))),
+            Effects.LoseLife(1, EffectTarget.PlayerRef(Player.ContextPlayer(0)))
         )
     }
 

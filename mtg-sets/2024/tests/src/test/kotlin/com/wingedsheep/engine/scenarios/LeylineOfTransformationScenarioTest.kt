@@ -40,7 +40,7 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 
 private val projector = StateProjector()
-private val predicateEvaluator = PredicateEvaluator()
+private val predicateEvaluator = PredicateEvaluator(cardRegistry = null)
 
 /**
  * Scenarios for Leyline of Transformation (DSK) — the new [com.wingedsheep.sdk.scripting.GrantChosenSubtype]

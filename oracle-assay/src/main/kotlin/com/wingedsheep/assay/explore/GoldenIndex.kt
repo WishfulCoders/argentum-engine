@@ -2,7 +2,7 @@ package com.wingedsheep.assay.explore
 
 import com.wingedsheep.assay.corpus.ImplementedCard
 import com.wingedsheep.assay.corpus.ImplementedCorpus
-import com.wingedsheep.sdk.serialization.CardLoader
+import com.wingedsheep.sdk.tooling.CardLoader
 import java.io.File
 import java.util.Locale
 

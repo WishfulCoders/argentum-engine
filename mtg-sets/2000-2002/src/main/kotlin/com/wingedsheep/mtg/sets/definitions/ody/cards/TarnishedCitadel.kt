@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -33,10 +32,7 @@ val TarnishedCitadel = card("Tarnished Citadel") {
     }
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.Composite(
-            Effects.AddManaOfChoice(),
-            DealDamageEffect(3, EffectTarget.PlayerRef(Player.You))
-        )
+        effect = Effects.AddManaOfChoice() then Effects.DealDamage(3, EffectTarget.PlayerRef(Player.You))
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Collateral Damage
@@ -25,8 +24,8 @@ val CollateralDamage = card("Collateral Damage") {
     additionalCost(Costs.additional.SacrificePermanent(GameObjectFilter.Creature))
 
     spell {
-        target = Targets.Any
-        effect = Effects.DealDamage(3, EffectTarget.ContextTarget(0))
+        val anyTarget = target(Targets.Any)
+        effect = Effects.DealDamage(3, anyTarget)
     }
 
     metadata {

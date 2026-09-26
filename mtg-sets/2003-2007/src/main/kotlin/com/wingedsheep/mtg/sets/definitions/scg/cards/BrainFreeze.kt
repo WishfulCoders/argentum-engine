@@ -21,7 +21,7 @@ val BrainFreeze = card("Brain Freeze") {
     oracleText = "Target player mills three cards.\nStorm (When you cast this spell, copy it for each spell cast before it this turn. You may choose new targets for the copies.)"
 
     spell {
-        val t = target("target player", Targets.Player)
+        val t = target(Targets.Player)
         effect = Patterns.Library.mill(3, t)
     }
 

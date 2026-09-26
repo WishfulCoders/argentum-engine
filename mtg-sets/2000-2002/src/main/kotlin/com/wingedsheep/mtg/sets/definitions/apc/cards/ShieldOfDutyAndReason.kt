@@ -5,10 +5,11 @@
 package com.wingedsheep.mtg.sets.definitions.apc.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantProtection
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -23,7 +24,7 @@ val ShieldOfDutyAndReason = card("Shield of Duty and Reason") {
     colorIdentity = "W"
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature\nEnchanted creature has protection from green and from blue."
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
     staticAbility {
         ability = GrantProtection(Color.GREEN)
     }

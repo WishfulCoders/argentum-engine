@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.mana.CostCalculator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
@@ -61,7 +62,7 @@ class SanguineIndulgenceScenarioTest : FunSpec({
 
     test("costs {3} less after gaining 3 or more life this turn") {
         val registry = createRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         val driver = createDriver()
         driver.initMirrorMatch(deck = Deck.of("Swamp" to 40), startingLife = 20)
@@ -83,7 +84,7 @@ class SanguineIndulgenceScenarioTest : FunSpec({
 
     test("gaining only 2 life this turn is not enough") {
         val registry = createRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         val driver = createDriver()
         driver.initMirrorMatch(deck = Deck.of("Swamp" to 40), startingLife = 20)

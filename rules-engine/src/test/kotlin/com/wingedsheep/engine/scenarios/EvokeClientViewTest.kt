@@ -20,7 +20,7 @@ import io.kotest.matchers.shouldBe
  */
 class EvokeClientViewTest : ScenarioTestBase() {
 
-    private val transformer = com.wingedsheep.engine.view.ClientStateTransformer(cardRegistry)
+    private val transformer = com.wingedsheep.engine.view.ClientStateTransformer(cardRegistry, predicateEvaluator = services.predicateEvaluator)
     private val p1 = EntityId.of("player-1")
 
     private fun clientCardInHand(name: String) = scenario()

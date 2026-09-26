@@ -20,7 +20,7 @@ import kotlin.reflect.KClass
  */
 class RepeatDynamicTimesExecutor(
     private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult,
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<RepeatDynamicTimesEffect> {
 
     override val effectType: KClass<RepeatDynamicTimesEffect> = RepeatDynamicTimesEffect::class

@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.spm.cards
 
 import com.wingedsheep.sdk.core.ManaCost
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 
 /**
@@ -29,10 +29,10 @@ val SubwayTrain = card("Subway Train") {
         "Crew 2 (Tap any number of creatures you control with total power 2 or more: This Vehicle becomes an artifact creature until end of turn.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayPayManaEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{G}"),
-            effect = Patterns.Library.searchLibrary(
+            then = Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.BasicLand,
                 count = 1,
                 destination = SearchDestination.HAND,

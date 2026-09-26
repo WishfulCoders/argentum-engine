@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.ManaCost
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 
 /**
  * Marchesa, Dealer of Death
@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
  *
  * "Look at the top two, keep one in hand, the other to graveyard" is the standard
  * [Patterns.Library.lookAtTopAndKeep] composition (gather top 2 → choose 1 → move kept to hand,
- * rest to graveyard). The optional {1} payment gates it via [MayPayManaEffect].
+ * rest to graveyard). The optional {1} payment gates it via [Effects.MayPay].
  */
 val MarchesaDealerOfDeath = card("Marchesa, Dealer of Death") {
     manaCost = "{U}{B}{R}"
@@ -31,10 +31,10 @@ val MarchesaDealerOfDeath = card("Marchesa, Dealer of Death") {
         "(Targeting opponents, anything they control, and/or cards in their graveyards is a crime.)"
 
     triggeredAbility {
-        trigger = Triggers.YouCommitCrime
-        effect = MayPayManaEffect(
+        trigger = Triggers.you.commitsCrime()
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{1}"),
-            effect = Patterns.Library.lookAtTopAndKeep(count = 2, keepCount = 1)
+            then = Patterns.Library.lookAtTopAndKeep(count = 2, keepCount = 1)
         )
         description = "Whenever you commit a crime, you may pay {1}. If you do, look at the top " +
             "two cards of your library. Put one of them into your hand and the other into your " +

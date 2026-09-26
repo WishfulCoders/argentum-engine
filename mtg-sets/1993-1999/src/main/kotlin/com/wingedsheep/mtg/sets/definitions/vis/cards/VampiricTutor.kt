@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -26,13 +25,11 @@ val VampiricTutor = card("Vampiric Tutor") {
     typeLine = "Instant"
     oracleText = "Search your library for a card, then shuffle and put that card on top. You lose 2 life."
     spell {
-        effect = Effects.Composite(
-            Patterns.Library.searchLibrary(
-                filter = GameObjectFilter.Any,
-                destination = SearchDestination.TOP_OF_LIBRARY
-            ),
-            LoseLifeEffect(2, EffectTarget.Controller)
-        )
+        effect = Patterns.Library.searchLibrary(
+            filter = GameObjectFilter.Any,
+            destination = SearchDestination.TOP_OF_LIBRARY
+        ) then
+            Effects.LoseLife(2, EffectTarget.Controller)
     }
     metadata {
         rarity = Rarity.RARE

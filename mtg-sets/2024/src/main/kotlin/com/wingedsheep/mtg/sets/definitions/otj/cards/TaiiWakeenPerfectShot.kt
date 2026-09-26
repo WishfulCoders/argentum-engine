@@ -2,17 +2,15 @@ package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Taii Wakeen, Perfect Shot
@@ -48,24 +46,19 @@ val TaiiWakeenPerfectShot = card("Taii Wakeen, Perfect Shot") {
         "this turn, it deals that much damage plus X instead."
 
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            damageType = DamageType.NonCombat,
-            recipient = RecipientFilter.AnyCreature,
-            sourceFilter = GameObjectFilter.Any.youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Any.youControl()).dealsDamage(Recipient.AnyCreature, damageType = DamageType.NonCombat)
         // Intervening-if: the damage dealt equals the recipient creature's toughness (LKI).
         triggerRestriction = Conditions.CompareAmounts(
-            DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_DAMAGE_AMOUNT),
+            DynamicAmounts.triggerDamageAmount(),
             ComparisonOperator.EQ,
-            DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_RECIPIENT_TOUGHNESS),
+            DynamicAmounts.triggerRecipientToughness(),
         )
         effect = Effects.DrawCards(1)
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{X}"), Costs.Tap)
-        effect = Effects.AmplifyNoncombatDamageThisTurn(DynamicAmount.XValue)
+        effect = Effects.AmplifyNoncombatDamageThisTurn(DynamicAmounts.xValue())
         description = "{X}, {T}: If a source you control would deal noncombat damage to a permanent " +
             "or player this turn, it deals that much damage plus X instead."
     }

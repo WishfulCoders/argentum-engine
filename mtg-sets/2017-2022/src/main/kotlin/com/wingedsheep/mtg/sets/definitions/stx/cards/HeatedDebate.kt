@@ -27,7 +27,7 @@ val HeatedDebate = card("Heated Debate") {
     cantBeCountered = true
 
     spell {
-        val victim = target("target", Targets.CreatureOrPlaneswalker)
+        val victim = target(Targets.CreatureOrPlaneswalker)
         effect = Effects.DealDamage(4, victim)
     }
 

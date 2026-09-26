@@ -28,7 +28,7 @@ val GempalmAvenger = card("Gempalm Avenger") {
     keywordAbility(KeywordAbility.cycling("{2}{W}"))
 
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
+        trigger = Triggers.self.isCycled()
         effect = Patterns.Group.pumpAndGrantToAll(
             1, 1, Keyword.FIRST_STRIKE, GroupFilter.allCreaturesWithSubtype("Soldier")
         )

@@ -20,7 +20,6 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
@@ -33,6 +32,8 @@ import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Scenario tests for Unstable Glyphbridge // Sandswirl Wanderglyph (LCI #41).
@@ -97,7 +98,7 @@ class UnstableGlyphbridgeScenarioTest : FunSpec({
         typeLine = "Sorcery"
         oracleText = "Return target card from a graveyard to the battlefield."
         spell {
-            val t = target("target card in a graveyard", Targets.CardInGraveyard)
+            val t = target(TargetFilter.CardInGraveyard)
             effect = Effects.PutOntoBattlefield(t)
         }
     }
@@ -235,7 +236,7 @@ class UnstableGlyphbridgeScenarioTest : FunSpec({
                     costPayment = AdditionalCostPayment(exiledCards = listOf(frogmite, myr))
                 )
             )
-            tooMany.isSuccess shouldBe false
+            tooMany.outcome shouldNotBe Outcome.Done
         }
 
         driver.submitSuccess(
@@ -329,7 +330,7 @@ class UnstableGlyphbridgeScenarioTest : FunSpec({
             driver.giveMana(p2, Color.WHITE, 1)
             val cast = driver.castSpell(p2, spell)
             withClue("the attacker is locked out of casting for the rest of the turn") {
-                cast.isSuccess shouldBe false
+                cast.outcome shouldNotBe Outcome.Done
                 cast.error shouldNotBe null
             }
         }

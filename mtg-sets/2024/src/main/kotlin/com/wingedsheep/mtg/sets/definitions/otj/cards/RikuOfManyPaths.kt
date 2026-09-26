@@ -1,26 +1,20 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.events.SpellCastPredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Riku of Many Paths
@@ -35,7 +29,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * • Create a 1/1 blue Bird creature token with flying.
  *
  * Implementation:
- * - Trigger: `Triggers.youCastSpell(requires = setOf(SpellCastPredicate.IsModal))`
+ * - Trigger: `Triggers.you.casts(requires = setOf(SpellCastPredicate.IsModal))`
  *   — fires only when the cast spell had at least one chosen mode.
  * - X plumbing: the engine's [com.wingedsheep.engine.core.SpellCastEvent] now carries
  *   `chosenModesCount`, which becomes [DynamicAmount.ContextProperty] with key
@@ -57,41 +51,25 @@ val RikuOfManyPaths = card("Riku of Many Paths") {
         "• Create a 1/1 blue Bird creature token with flying."
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            requires = setOf(SpellCastPredicate.IsModal)
-        )
+        trigger = Triggers.you.casts(requires = setOf(SpellCastPredicate.IsModal))
         effect = ModalEffect.chooseUpToDynamic(
-            dynamicMax = DynamicAmount.ContextProperty(
-                ContextPropertyKey.MODES_CHOSEN_ON_TRIGGERING_SPELL
-            ),
+            dynamicMax = DynamicAmounts.modesChosenOnTriggeringSpell(),
             // Mode 1 — impulse-draw with extended window.
             Mode.noTarget(
-                Effects.Composite(
-                    listOf(
-                        GatherCardsEffect(
-                            source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1)),
-                            storeAs = "rikuExile"
-                        ),
-                        MoveCollectionEffect(
-                            from = "rikuExile",
-                            destination = CardDestination.ToZone(Zone.EXILE)
-                        ),
-                        GrantMayPlayFromExileEffect(
-                            "rikuExile",
-                            MayPlayExpiry.UntilEndOfNextTurn
-                        )
-                    )
-                ),
+                Effects.Pipeline {
+                    val rikuExile = gather(CardSource.TopOfLibrary(1))
+                    exile(rikuExile)
+                    run(Effects.GrantMayPlayFromExile(
+                        rikuExile,
+                        MayPlayExpiry.UntilEndOfNextTurn
+                    ))
+                },
                 description = "Exile the top card of your library. Until the end of your next turn, you may play it."
             ),
             // Mode 2 — +1/+1 counter + trample until end of turn.
             Mode.noTarget(
-                Effects.Composite(
-                    listOf(
-                        Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
-                        Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self, Duration.EndOfTurn)
-                    )
-                ),
+                Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self) then
+                    Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self, Duration.EndOfTurn),
                 description = "Put a +1/+1 counter on Riku. It gains trample until end of turn."
             ),
             // Mode 3 — create a 1/1 blue Bird with flying.

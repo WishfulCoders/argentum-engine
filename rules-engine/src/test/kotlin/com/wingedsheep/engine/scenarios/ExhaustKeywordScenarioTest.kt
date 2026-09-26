@@ -4,12 +4,10 @@ import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.CounterType
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -17,6 +15,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldStartWith
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Feature tests for the **Exhaust** keyword (CR 702.177) — "Exhaust — [cost]: [effect]" means
@@ -42,7 +41,7 @@ class ExhaustKeywordScenarioTest : ScenarioTestBase() {
         activatedAbility {
             isExhaust = true
             cost = Costs.Mana("{1}")
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         }
     }
 
@@ -53,7 +52,7 @@ class ExhaustKeywordScenarioTest : ScenarioTestBase() {
         typeLine = "Sorcery"
         oracleText = "Return target creature to its owner's hand."
         spell {
-            val t = target("target creature", Targets.Creature)
+            val t = target(TargetFilter.Creature)
             effect = Effects.ReturnToHand(t)
         }
     }

@@ -26,15 +26,15 @@ import kotlin.reflect.KClass
  * spell/ability paths go through exactly the same code.
  */
 class DrawCardsExecutor(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator(),
+    private val amountEvaluator: DynamicAmountEvaluator,
     cardRegistry: CardRegistry,
     effectExecutor: ((GameState, Effect, EffectContext) -> EffectResult)? = null,
-    replacementProcessor: ReplacementEffectProcessor = ReplacementEffectProcessor()
+    replacementProcessor: ReplacementEffectProcessor
 ) : EffectExecutor<DrawCardsEffect> {
 
     override val effectType: KClass<DrawCardsEffect> = DrawCardsEffect::class
 
-    private val primitive = DrawCardPrimitive(cardRegistry)
+    private val primitive = DrawCardPrimitive(cardRegistry, predicateEvaluator = amountEvaluator.predicates)
     private val dispatcher = DrawReplacementDispatcher(effectExecutor, replacementProcessor)
 
     override fun execute(

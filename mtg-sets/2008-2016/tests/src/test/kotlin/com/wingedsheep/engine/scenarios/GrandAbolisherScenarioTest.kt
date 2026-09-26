@@ -1,8 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.ActivateAbility
-import com.wingedsheep.engine.handlers.ConditionEvaluator
-import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.legalactions.LegalActionEnumerator
 import com.wingedsheep.engine.legalactions.utils.CastPermissionUtils
 import com.wingedsheep.engine.support.ScenarioTestBase
@@ -159,7 +157,7 @@ class GrandAbolisherScenarioTest : ScenarioTestBase() {
                     com.wingedsheep.engine.state.ZoneKey(game.player1Id, com.wingedsheep.sdk.core.Zone.HAND)
                 ).first()
 
-                val utils = CastPermissionUtils(cardRegistry, PredicateEvaluator(), ConditionEvaluator())
+                val utils = CastPermissionUtils(cardRegistry, services.predicateEvaluator, services.conditionEvaluator)
                 withClue("Opponent is locked out of casting during Grand Abolisher's turn") {
                     utils.reasonCannotCast(game.state, game.player2Id, opponentBolt) shouldNotBe null
                 }
@@ -181,7 +179,7 @@ class GrandAbolisherScenarioTest : ScenarioTestBase() {
                     com.wingedsheep.engine.state.ZoneKey(game.player2Id, com.wingedsheep.sdk.core.Zone.HAND)
                 ).first()
 
-                val utils = CastPermissionUtils(cardRegistry, PredicateEvaluator(), ConditionEvaluator())
+                val utils = CastPermissionUtils(cardRegistry, services.predicateEvaluator, services.conditionEvaluator)
                 withClue("The cast lock is your-turn-only, so the opponent casts freely on their own turn") {
                     utils.reasonCannotCast(game.state, game.player2Id, opponentBolt) shouldBe null
                 }

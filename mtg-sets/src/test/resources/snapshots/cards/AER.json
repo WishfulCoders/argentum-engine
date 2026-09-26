@@ -55,7 +55,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Druid of the Cowl:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -220,7 +220,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Lifecrafter's Bestiary:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP"
@@ -232,7 +232,7 @@
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Lifecrafter's Bestiary:2",
                 "trigger": {
                     "type": "SpellCastEvent",
                     "spellFilter": {
@@ -347,7 +347,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Pendulum of Patterns:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -364,7 +364,7 @@
         ],
         "activatedAbilities": [
             {
-                "id": "ability_2",
+                "id": "Pendulum of Patterns:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -426,7 +426,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Universal Solvent:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -445,7 +445,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     },
                     "destination": "Graveyard",
                     "byDestruction": true
@@ -456,7 +456,7 @@
                         "filter": {
                             "baseFilter": "permanent"
                         },
-                        "id": "target"
+                        "id": "t0"
                     }
                 ]
             }

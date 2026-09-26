@@ -4,15 +4,12 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Phoenix Down
@@ -38,23 +35,19 @@ val PhoenixDown = card("Phoenix Down") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{W}"), Costs.Tap, Costs.ExileSelf)
         effect = ModalEffect.chooseOne(
-            Mode.withTarget(
-                Effects.Move(
-                    EffectTarget.ContextTarget(0),
+            mode("Return target creature card with mana value 4 or less from your graveyard to the battlefield tapped") {
+                val creatureInYourGraveyard = target(TargetFilter.CreatureInYourGraveyard.manaValueAtMost(4))
+                effect = Effects.Move(
+                    creatureInYourGraveyard,
                     Zone.BATTLEFIELD,
                     placement = ZonePlacement.Tapped,
                     fromZone = Zone.GRAVEYARD
-                ),
-                TargetObject(filter = TargetFilter.CreatureInYourGraveyard.manaValueAtMost(4)),
-                "Return target creature card with mana value 4 or less from your graveyard to the battlefield tapped"
-            ),
-            Mode.withTarget(
-                Effects.Exile(EffectTarget.ContextTarget(0)),
-                TargetCreature(
-                    filter = TargetFilter(GameObjectFilter.Creature.withAnySubtype("Skeleton", "Spirit", "Zombie"))
-                ),
-                "Exile target Skeleton, Spirit, or Zombie"
-            ),
+                )
+            },
+            mode("Exile target Skeleton, Spirit, or Zombie") {
+                val creature = target(TargetFilter(GameObjectFilter.Creature.withAnySubtype("Skeleton", "Spirit", "Zombie")))
+                effect = Effects.Exile(creature)
+            },
             countsAsModalSpell = false
         )
         description = "{1}{W}, {T}, Exile this artifact: Choose one — Return target creature card with mana value 4 or less from your graveyard to the battlefield tapped; or Exile target Skeleton, Spirit, or Zombie."

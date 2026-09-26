@@ -2,10 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Rampant Elephant
@@ -26,9 +25,9 @@ val RampantElephant = card("Rampant Elephant") {
     oracleText = "{G}: Target creature blocks this creature this turn if able."
 
     activatedAbility {
+        val creature = target(TargetFilter.Creature)
         cost = Costs.Mana("{G}")
-        target = Targets.Creature
-        effect = Effects.ForceBlock(EffectTarget.ContextTarget(0))
+        effect = Effects.ForceBlock(creature)
     }
 
     metadata {

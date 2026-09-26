@@ -41,7 +41,7 @@ import io.kotest.matchers.shouldBe
  */
 class ModifiedCreatureFilterEquipmentAurasCountersTest : FunSpec({
 
-    val evaluator = PredicateEvaluator()
+    val evaluator = PredicateEvaluator(cardRegistry = null)
     val playerA = EntityId.generate()
     val playerB = EntityId.generate()
 

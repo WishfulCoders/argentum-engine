@@ -34,14 +34,9 @@ val YellowjacketHeartlessMarauder = card("Yellowjacket, Heartless Marauder") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Permanent.withSubtype(Subtype.VILLAIN).youControl(),
-            binding = TriggerBinding.OTHER
-        )
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 0, EffectTarget.Self),
+        trigger = Triggers.another(GameObjectFilter.Permanent.withSubtype(Subtype.VILLAIN).youControl()).enters()
+        effect = Effects.ModifyStats(1, 0, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self)
-        )
     }
 
     metadata {

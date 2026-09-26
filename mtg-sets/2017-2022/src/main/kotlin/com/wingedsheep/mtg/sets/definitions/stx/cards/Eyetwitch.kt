@@ -31,7 +31,7 @@ val Eyetwitch = card("Eyetwitch") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Patterns.Mechanic.learn()
     }
 

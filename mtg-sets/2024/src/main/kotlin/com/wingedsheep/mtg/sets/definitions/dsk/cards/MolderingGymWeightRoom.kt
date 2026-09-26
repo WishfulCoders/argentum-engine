@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
@@ -9,9 +10,7 @@ import com.wingedsheep.sdk.model.CardLayout
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Moldering Gym // Weight Room (DSK 190) — split-layout Room (CR 709.5).
@@ -42,7 +41,7 @@ val MolderingGymWeightRoom = card("Moldering Gym // Weight Room") {
         oracleText = "When you unlock this door, search your library for a basic land card, put it onto the battlefield tapped, then shuffle."
 
         triggeredAbility {
-            trigger = Triggers.OnDoorUnlocked
+            trigger = Triggers.self.doorUnlocked()
             effect = Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.BasicLand,
                 destination = SearchDestination.BATTLEFIELD,
@@ -57,21 +56,16 @@ val MolderingGymWeightRoom = card("Moldering Gym // Weight Room") {
         oracleText = "When you unlock this door, manifest dread, then put three +1/+1 counters on that creature."
 
         triggeredAbility {
-            trigger = Triggers.OnDoorUnlocked
-            effect = Effects.Composite(
-                listOf(
-                    Patterns.Library.manifestDread(markEntered = true),
-                    GatherCardsEffect(
-                        source = CardSource.EnteredViaThisResolution,
-                        storeAs = "weightRoomManifested"
-                    ),
-                    Effects.AddCountersToCollection(
-                        collectionName = "weightRoomManifested",
-                        counterType = Counters.PLUS_ONE_PLUS_ONE,
-                        amount = DynamicAmount.Fixed(3)
-                    )
-                )
-            )
+            trigger = Triggers.self.doorUnlocked()
+            effect = Effects.Pipeline {
+                run(Patterns.Library.manifestDread(markEntered = true))
+                val weightRoomManifested = gather(CardSource.EnteredViaThisResolution)
+                run(Effects.AddCountersToCollection(
+                    collection = weightRoomManifested,
+                    counterType = CounterType.PLUS_ONE_PLUS_ONE,
+                    amount = DynamicAmounts.fixed(3)
+                ))
+            }
         }
     }
 

@@ -22,7 +22,7 @@ val FuturistForge = card("Futurist Forge") {
         "{3}{U}, Sacrifice this artifact: Draw two cards."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1)
     }
 

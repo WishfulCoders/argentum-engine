@@ -5,8 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Spreading Plague
@@ -23,12 +22,9 @@ val SpreadingPlague = card("Spreading Plague") {
         "with it. They can't be regenerated."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature,
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature).enters()
         effect = Effects.DestroyAll(
-            filter = GameObjectFilter.Creature.sharingColorWith(EntityReference.Triggering),
+            filter = GameObjectFilter.Creature.sharingColorWith(EffectTarget.TriggeringEntity),
             noRegenerate = true,
             excludeTriggering = true,
         )

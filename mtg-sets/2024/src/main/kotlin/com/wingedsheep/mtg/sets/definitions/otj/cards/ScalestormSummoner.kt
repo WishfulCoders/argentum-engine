@@ -27,7 +27,7 @@ val ScalestormSummoner = card("Scalestorm Summoner") {
         "control a creature with power 4 or greater."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         triggerRestriction = Conditions.YouControl(GameObjectFilter.Creature.powerAtLeast(4))
         effect = Effects.CreateToken(
             power = 3,

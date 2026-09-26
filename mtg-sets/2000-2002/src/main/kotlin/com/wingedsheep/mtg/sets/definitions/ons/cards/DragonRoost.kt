@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.ons.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Dragon Roost
@@ -21,7 +21,7 @@ val DragonRoost = card("Dragon Roost") {
 
     activatedAbility {
         cost = Costs.Mana("{5}{R}{R}")
-        effect = CreateTokenEffect(
+        effect = Effects.CreateToken(
             power = 5,
             toughness = 5,
             colors = setOf(Color.RED),

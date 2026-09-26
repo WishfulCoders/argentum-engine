@@ -1,6 +1,6 @@
 package com.wingedsheep.sdk.scripting
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.scripting.conditions.EntityMatches
 import com.wingedsheep.sdk.scripting.effects.RemoveCountersEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeTargetEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.predicates.StatePredicate
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -31,7 +30,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Parts 2 and 3 are deliberately **two abilities, not one fused countdown**. Suspend
  * ([Suspend.countdownAbility]) folds its "when the last is removed" clause into a
- * [com.wingedsheep.sdk.scripting.effects.ConditionalEffect] inside the upkeep trigger because
+ * [com.wingedsheep.sdk.dsl.Effects.If] inside the upkeep trigger because
  * nothing else ever removes a suspended card's time counters. A vanishing permanent sits on the
  * battlefield where Vampire Hexmage, Hex Parasite and friends can strip its counters at instant
  * speed — and CR 702.62c says it is sacrificed *whenever* the last one leaves, not only on an
@@ -53,7 +52,7 @@ object Vanishing {
     private val hasTimeCounter = EntityMatches(
         EffectTarget.Self,
         GameObjectFilter.Any.copy(
-            statePredicates = listOf(StatePredicate.HasCounter(Counters.TIME.uppercase()))
+            statePredicates = listOf(StatePredicate.HasCounter(CounterType.TIME))
         )
     )
 
@@ -67,7 +66,7 @@ object Vanishing {
         binding = TriggerBinding.SELF,
         activeZones = setOf(Zone.BATTLEFIELD),
         interveningIf = hasTimeCounter,
-        effect = RemoveCountersEffect(Counters.TIME, 1, EffectTarget.Self),
+        effect = RemoveCountersEffect(CounterType.TIME, 1, EffectTarget.Self),
         descriptionOverride = "At the beginning of your upkeep, remove a time counter from " +
             "this permanent.",
     )
@@ -82,7 +81,7 @@ object Vanishing {
     val lastCounterSacrifice: TriggeredAbility = TriggeredAbility(
         id = AbilityId("vanishing_sacrifice"),
         trigger = EventPattern.CountersRemovedEvent(
-            counterType = Counters.TIME,
+            counterType = CounterType.TIME,
             lastRemoved = true,
         ),
         binding = TriggerBinding.SELF,
@@ -99,7 +98,7 @@ object Vanishing {
      * other things entering under its controller.
      */
     fun entersWithCounters(n: Int): EntersWithCounters = EntersWithCounters(
-        counterType = CounterTypeFilter.Named(Counters.TIME),
+        counterType = CounterType.TIME,
         count = n,
         selfOnly = true,
     )

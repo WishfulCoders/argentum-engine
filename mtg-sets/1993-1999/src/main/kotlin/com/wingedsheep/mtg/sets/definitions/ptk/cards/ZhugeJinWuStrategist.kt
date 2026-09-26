@@ -4,10 +4,10 @@ import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Zhuge Jin, Wu Strategist
@@ -31,7 +31,7 @@ val ZhugeJinWuStrategist = card("Zhuge Jin, Wu Strategist") {
             ActivationRestriction.OnlyDuringYourTurn,
             ActivationRestriction.BeforeStep(Step.DECLARE_ATTACKERS)
         )
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, t)
     }
 

@@ -27,7 +27,7 @@ val SpontaneousCombustion = card("Spontaneous Combustion") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature),
-            Effects.DealDamage(3, EffectTarget.Self)
+            Effects.DealDamage(3, EffectTarget.IterationEntity)
         )
     }
 

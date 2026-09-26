@@ -2,26 +2,21 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GrantActivatedAbilityEffect
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Glorious Sunrise — Innistrad: Crimson Vow #200
@@ -34,14 +29,14 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  * • Draw a card if you control a creature with power 3 or greater.
  * • You gain 3 life.
  *
- * A [ModalEffect.chooseOne] inside a [Triggers.BeginCombat] triggered ability (same shape as
+ * A [ModalEffect.chooseOne] inside a `Triggers.you.beginningOf(Step.BEGIN_COMBAT)` triggered ability (same shape as
  * Manifold Mouse's combat modal). Mode breakdown:
  *  1. `noTarget` — two `ForEachInGroup` passes over `Creature.youControl()`, one [ModifyStatsEffect]
  *     (+1/+1) and one [GrantKeywordEffect] (trample), both until end of turn (Kamahl, Fist of Krosa
  *     overrun pattern).
  *  2. `withTarget` — a [TargetPermanent] land; [GrantActivatedAbilityEffect] grants a `{T}: Add {G}{G}{G}`
  *     activated ability until end of turn (Run Wild's grant pattern, land-typed target).
- *  3. `noTarget` — a [ConditionalEffect] gated on `Conditions.YouControl(Creature.powerAtLeast(3))`;
+ *  3. `noTarget` — a [Effects.If] gated on `Conditions.YouControl(Creature.powerAtLeast(3))`;
  *     draws a card only if the condition holds (no draw otherwise, matching "Draw a card if …").
  *  4. `noTarget` — plain gain 3 life.
  *
@@ -59,7 +54,7 @@ val GloriousSunrise = card("Glorious Sunrise") {
         "• You gain 3 life."
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
         effect = ModalEffect.chooseOne(
             Mode.noTarget(
                 Patterns.Group.pumpAndGrantToAll(
@@ -70,23 +65,22 @@ val GloriousSunrise = card("Glorious Sunrise") {
                 ),
                 "Creatures you control get +1/+1 and gain trample until end of turn"
             ),
-            Mode.withTarget(
-                effect = GrantActivatedAbilityEffect(
+            mode("Target land gains \"{T}: Add {G}{G}{G}\" until end of turn") {
+                val land = target(TargetFilter.Land)
+                effect = Effects.GrantActivatedAbility(
                     ability = ActivatedAbility(
-                        id = AbilityId.generate(),
+                        id = AbilityId.next(),
                         cost = com.wingedsheep.sdk.scripting.AbilityCost.Tap,
                         effect = Effects.AddMana(Color.GREEN, 3),
                         isManaAbility = true
                     ),
-                    target = EffectTarget.ContextTarget(0)
-                ),
-                target = TargetPermanent(filter = TargetFilter.Land),
-                description = "Target land gains \"{T}: Add {G}{G}{G}\" until end of turn"
-            ),
+                    target = land
+                )
+            },
             Mode.noTarget(
-                ConditionalEffect(
+                Effects.If(
                     condition = Conditions.YouControl(GameObjectFilter.Creature.powerAtLeast(3)),
-                    effect = Effects.DrawCards(1)
+                    then = Effects.DrawCards(1)
                 ),
                 "Draw a card if you control a creature with power 3 or greater"
             ),

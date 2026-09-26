@@ -5,8 +5,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Grixis Charm
@@ -36,11 +35,11 @@ val GrixisCharm = card("Grixis Charm") {
     spell {
         modal(chooseCount = 1) {
             mode("Return target permanent to its owner's hand") {
-                val t = target("target", TargetPermanent())
+                val t = target(TargetFilter.Permanent)
                 effect = Effects.ReturnToHand(t)
             }
             mode("Target creature gets -4/-4 until end of turn") {
-                val t = target("target", TargetCreature())
+                val t = target(TargetFilter.Creature)
                 effect = Effects.ModifyStats(-4, -4, t)
             }
             mode("Creatures you control get +2/+0 until end of turn") {

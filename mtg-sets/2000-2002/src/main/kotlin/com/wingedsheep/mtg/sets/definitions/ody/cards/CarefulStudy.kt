@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -23,10 +22,7 @@ val CarefulStudy = card("Careful Study") {
     typeLine = "Sorcery"
     oracleText = "Draw two cards, then discard two cards."
     spell {
-        effect = Effects.Composite(
-            DrawCardsEffect(2),
-            Patterns.Hand.discardCards(2)
-        )
+        effect = Effects.DrawCards(2) then Patterns.Hand.discardCards(2)
     }
     metadata {
         rarity = Rarity.COMMON

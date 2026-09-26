@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -23,7 +22,7 @@ val TerashisCry = card("Terashi's Cry") {
     typeLine = "Sorcery — Arcane"
     oracleText = "Tap up to three target creatures."
     spell {
-        val t = target("target", TargetCreature(optional = true, count = 3, filter = TargetFilter.Creature))
+        targets(TargetFilter.Creature, count = 3, optional = true)
         effect = Effects.TapEachTarget()
     }
     metadata {

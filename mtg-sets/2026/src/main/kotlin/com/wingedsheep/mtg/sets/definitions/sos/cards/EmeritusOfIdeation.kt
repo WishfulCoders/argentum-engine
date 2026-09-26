@@ -8,12 +8,11 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.SuccessCriterion
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.scripting.effects.WardCost
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Emeritus of Ideation // Ancestral Recall — Secrets of Strixhaven #45
@@ -29,7 +28,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPlayer
  *
  * Prepare (Secrets of Strixhaven): enters with the PREPARED keyword. The attack ability's optional
  * exile-eight-from-graveyard payment re-prepares it via [Effects.BecomePrepared] only if eight cards
- * are actually exiled (modeled as MayEffect → IfYouDo gated on the pipeline moving eight cards).
+ * are actually exiled (modeled as Effects.May → IfYouDo gated on the pipeline moving eight cards).
  * Becoming prepared creates a copy of its prepare spell ("Ancestral Recall") in exile that its
  * controller may cast for {U}; casting that copy unprepares the creature. Modeled via
  * [com.wingedsheep.sdk.model.CardLayout.PREPARE] + the `prepare(name) { }` DSL.
@@ -47,14 +46,14 @@ val EmeritusOfIdeation = card("Emeritus of Ideation") {
         "(While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)"
 
     keywords(Keyword.FLYING, Keyword.PREPARED)
-    keywordAbility(KeywordAbility.ward("{2}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
 
     // Whenever this creature attacks, you may exile eight cards from your graveyard.
     // If you do, this creature becomes prepared.
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = MayEffect(
-            effect = IfYouDoEffect(
+        trigger = Triggers.self.attacks()
+        effect = Effects.May(
+            effect = Effects.IfYouDo(
                 action = Effects.Pipeline {
                     val grave = gather(CardSource.FromZone(Zone.GRAVEYARD, Player.You))
                     val chosen = chooseExactly(
@@ -65,7 +64,7 @@ val EmeritusOfIdeation = card("Emeritus of Ideation") {
                     )
                     exile(chosen)
                 },
-                ifYouDo = Effects.BecomePrepared(EffectTarget.Self),
+                then = Effects.BecomePrepared(EffectTarget.Self),
                 successCriterion = SuccessCriterion.CollectionNonEmpty("ideationExile", min = 8),
             ),
             descriptionOverride = "You may exile eight cards from your graveyard. " +
@@ -79,7 +78,7 @@ val EmeritusOfIdeation = card("Emeritus of Ideation") {
         typeLine = "Instant"
         oracleText = "Target player draws three cards."
         spell {
-            val t = target("target", TargetPlayer())
+            val t = target(Targets.Player)
             effect = Effects.DrawCards(3, t)
         }
     }

@@ -32,12 +32,10 @@ val BrightfieldGlider = card("Brightfield Glider") {
     toughness = 1
     keywords(Keyword.VIGILANCE)
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         triggerRestriction = Conditions.SourceIsSaddled
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 2, EffectTarget.Self),
+        effect = Effects.ModifyStats(1, 2, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
-        )
     }
     keywordAbility(KeywordAbility.saddle(3))
     metadata {

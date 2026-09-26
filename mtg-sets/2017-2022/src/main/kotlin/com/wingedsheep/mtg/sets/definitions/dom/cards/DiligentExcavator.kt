@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Diligent Excavator
@@ -24,8 +24,8 @@ val DiligentExcavator = card("Diligent Excavator") {
     oracleText = "Whenever you cast a historic spell, target player mills two cards. (Artifacts, legendaries, and Sagas are historic.)"
 
     triggeredAbility {
-        trigger = Triggers.YouCastHistoric
-        val t = target("target", Targets.Player)
+        trigger = Triggers.you.casts(GameObjectFilter.Historic)
+        val t = target(Targets.Player)
         effect = Patterns.Library.mill(2, t)
     }
 

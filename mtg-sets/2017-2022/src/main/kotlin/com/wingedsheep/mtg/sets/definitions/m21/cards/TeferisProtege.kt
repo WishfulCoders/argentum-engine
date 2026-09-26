@@ -27,10 +27,7 @@ val TeferisProtege = card("Teferi's Protege") {
     // {1}{U}, {T}: Draw a card, then discard a card.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{U}"), Costs.Tap)
-        effect = Effects.Composite(
-            Effects.DrawCards(1),
-            Patterns.Hand.discardCards(1),
-        )
+        effect = Effects.DrawCards(1) then Patterns.Hand.discardCards(1)
     }
 
     metadata {

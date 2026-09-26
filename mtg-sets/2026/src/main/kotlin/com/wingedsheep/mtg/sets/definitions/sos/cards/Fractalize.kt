@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Fractalize
@@ -35,11 +36,11 @@ val Fractalize = card("Fractalize") {
         "power and toughness each equal to X plus 1. (It loses all other colors and creature types.)"
 
     spell {
-        val creature = target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.BecomeCreature(
             target = creature,
-            power = DynamicAmount.Add(DynamicAmount.XValue, DynamicAmount.Fixed(1)),
-            toughness = DynamicAmount.Add(DynamicAmount.XValue, DynamicAmount.Fixed(1)),
+            power = DynamicAmounts.xValue() + 1,
+            toughness = DynamicAmounts.xValue() + 1,
             creatureTypes = setOf("Fractal"),
             colors = setOf(Color.GREEN.name, Color.BLUE.name),
             imageUri = "https://cards.scryfall.io/normal/front/8/b/8b5f1fdb-04df-4224-acb4-7819c37565f5.jpg?1775828306",

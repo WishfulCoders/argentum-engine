@@ -1,10 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Grinning Demon
@@ -23,8 +24,8 @@ val GrinningDemon = card("Grinning Demon") {
     oracleText = "At the beginning of your upkeep, you lose 2 life.\nMorph {2}{B}{B}"
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = LoseLifeEffect(2, EffectTarget.Controller)
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.LoseLife(2, EffectTarget.Controller)
     }
 
     morph = "{2}{B}{B}"

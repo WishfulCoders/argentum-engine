@@ -4,10 +4,10 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Stegron the Dinosaur Man
@@ -47,11 +47,9 @@ val StegronTheDinosaurMan = card("Stegron the Dinosaur Man") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{R}"), Costs.DiscardSelf)
         activateFromZone = Zone.HAND
-        val creature = target("target creature you control", Targets.CreatureYouControl)
-        effect = Effects.Composite(
-            Effects.ModifyStats(3, 1, creature, Duration.EndOfTurn),
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.ModifyStats(3, 1, creature, Duration.EndOfTurn) then
             Effects.AddCreatureType("Dinosaur", creature, Duration.EndOfTurn)
-        )
     }
 
     metadata {

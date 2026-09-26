@@ -2,6 +2,7 @@ package com.wingedsheep.gameserver.ai
 
 import com.wingedsheep.ai.AiPlayerController
 import com.wingedsheep.ai.engine.AiProfile
+import com.wingedsheep.ai.jev.JevAiPlayerController
 import com.wingedsheep.ai.engine.EngineAiPlayerController
 import com.wingedsheep.ai.engine.profileFromTokens
 import com.wingedsheep.ai.llm.LlmAiPlayerController
@@ -271,6 +272,7 @@ class AiGameManager(
         onMulliganKeep = onMulliganKeep,
         onMulliganTake = onMulliganTake,
         onBottomCards = onBottomCards,
+        allowActionsOnlyFallback = controller is EngineAiPlayerController || controller is LlmAiPlayerController || controller is JevAiPlayerController,
         actionGate = gameSession?.let { aiInsightService.gateFor(it.sessionId) },
     )
 
@@ -355,7 +357,7 @@ class AiGameManager(
         require(isEnabled) { "AI is not enabled. Set game.ai.enabled=true." }
 
         val aiPlayerId = EntityId("ai-${UUID.randomUUID().toString().take(8)}")
-        val aiName = randomAiName()
+        val aiName = randomAiName() + if (gameProperties.ai.mode.trim().equals("jev", ignoreCase = true)) " (Jev)" else ""
 
         val controller = createController(aiPlayerId, gameSession)
 
@@ -470,7 +472,8 @@ class AiGameManager(
 
         val effectiveModel = modelOverride ?: if (gameProperties.ai.isLlmMode) gameProperties.ai.model else null
         val modelSuffix = effectiveModel?.substringAfterLast('/')?.let { " ($it)" } ?: ""
-        val aiName = randomAiName() + modelSuffix
+        val suffix = if (gameProperties.ai.mode.trim().equals("jev", ignoreCase = true) && modelOverride == null) " (Jev)" else modelSuffix
+        val aiName = randomAiName() + suffix
         val identity = PlayerIdentity(
             token = "ai-token-${UUID.randomUUID().toString().take(8)}",
             playerId = aiPlayerId,
@@ -589,6 +592,11 @@ class AiGameManager(
             )
             sessionRegistry.setPlayerSession(newSession.id, playerSession)
         }
+
+        // The transport delta cache belongs to the previous virtual session. A replacement
+        // AiWebSocketSession has no synchronized ClientGameState yet, so force its first update
+        // to be a full masked StateUpdate rather than a delta based on stale transport history.
+        gameSession.clearLastSentState(aiPlayerId)
 
         trackSession(gameSession.sessionId, aiPlayerId, newSession)
         logger.info("Wired AI {} for game {} [mode={}]", aiPlayerId.value, gameSession.sessionId, aiProperties.mode)

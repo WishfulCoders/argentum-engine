@@ -1,14 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantAttackOrBlockUnlessPay
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Myr Prototype — Mirrodin #214 (canonical printing)
@@ -37,14 +37,14 @@ val MyrPrototype = card("Myr Prototype") {
         "This creature can't attack or block unless you pay {1} for each +1/+1 counter on it."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "At the beginning of your upkeep, put a +1/+1 counter on this creature."
     }
 
     staticAbility {
         ability = CantAttackOrBlockUnlessPay(
-            amount = DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.PLUS_ONE_PLUS_ONE))
+            amount = DynamicAmounts.countersOnSelf(CounterType.PLUS_ONE_PLUS_ONE)
         )
     }
 

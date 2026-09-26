@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.transmute
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Dimir Machinations
@@ -32,10 +31,10 @@ val DimirMachinations = card("Dimir Machinations") {
         "Transmute {1}{B}{B} ({1}{B}{B}, Discard this card: Search your library for a card with the same mana value as this card, reveal it, put it into your hand, then shuffle. Transmute only as a sorcery.)"
 
     spell {
-        target("target player", Targets.Player)
+        target(Targets.Player)
         effect = Effects.Pipeline {
             val looked = gather(
-                CardSource.TopOfLibrary(DynamicAmount.Fixed(3), Player.TargetPlayer)
+                CardSource.TopOfLibrary(3, Player.TargetPlayer)
             )
             val (exiled, rest) = chooseAnyNumberSplit(
                 from = looked,

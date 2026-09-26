@@ -30,9 +30,7 @@ val FirespitterWhelp = card("Firespitter Whelp") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.Noncreature or GameObjectFilter.Any.withSubtype(Subtype.DRAGON)
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature or GameObjectFilter.Any.withSubtype(Subtype.DRAGON))
         effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent))
     }
 

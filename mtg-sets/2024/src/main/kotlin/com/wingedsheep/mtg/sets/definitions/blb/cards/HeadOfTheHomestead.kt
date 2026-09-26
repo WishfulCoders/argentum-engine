@@ -21,7 +21,7 @@ val HeadOfTheHomestead = card("Head of the Homestead") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             count = 2,
             power = 1,

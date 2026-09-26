@@ -2,13 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Mirror Entity
@@ -50,15 +50,13 @@ val MirrorEntity = card("Mirror Entity") {
         cost = Costs.Mana("{X}")
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreaturesYouControl,
-            Effects.Composite(
-                Effects.SetBasePowerAndToughness(
-                    power = DynamicAmount.XValue,
-                    toughness = DynamicAmount.XValue,
-                    target = EffectTarget.Self,
-                    duration = Duration.EndOfTurn
-                ),
-                Effects.GrantKeyword(Keyword.CHANGELING, EffectTarget.Self, Duration.EndOfTurn)
-            )
+            Effects.SetBasePowerAndToughness(
+                power = DynamicAmounts.xValue(),
+                toughness = DynamicAmounts.xValue(),
+                target = EffectTarget.IterationEntity,
+                duration = Duration.EndOfTurn
+            ) then
+                Effects.GrantKeyword(Keyword.CHANGELING, EffectTarget.IterationEntity, Duration.EndOfTurn)
         )
         description = "Until end of turn, creatures you control have base power and toughness " +
             "X/X and gain all creature types."

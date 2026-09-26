@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 
 /**
  * Plunder the Trollshaws — The Hobbit #51
@@ -14,7 +13,7 @@ import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
  * Draw a card. If this spell was cast from a graveyard, draw two cards instead.
  * Flashback {3}{U}
  *
- * "Instead" replaces the whole draw, so this is one branch or the other — a [ConditionalEffect] with
+ * "Instead" replaces the whole draw, so this is one branch or the other — a [Effects.If] with
  * an else branch (draw two / draw one), not "draw one, then draw one more". Flashback is the only
  * way this card is normally cast from a graveyard, but [Conditions.WasCastFromGraveyard] reads the
  * cast-time zone stamp rather than the flashback marker, so any other graveyard-cast permission
@@ -29,10 +28,10 @@ val PlunderTheTrollshaws = card("Plunder the Trollshaws") {
         "Then exile it.)"
 
     spell {
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.WasCastFromGraveyard,
-            effect = Effects.DrawCards(2),
-            elseEffect = Effects.DrawCards(1)
+            then = Effects.DrawCards(2),
+            otherwise = Effects.DrawCards(1)
         )
     }
 

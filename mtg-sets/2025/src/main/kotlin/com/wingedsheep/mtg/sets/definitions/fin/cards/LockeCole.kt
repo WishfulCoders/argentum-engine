@@ -10,7 +10,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 
 /**
@@ -30,11 +30,8 @@ val LockeCole = card("Locke Cole") {
     toughness = 3
     keywords(Keyword.DEATHTOUCH, Keyword.LIFELINK)
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = Effects.Composite(
-            DrawCardsEffect(1),
-            Patterns.Hand.discardCards(1)
-        )
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.DrawCards(1) then Patterns.Hand.discardCards(1)
     }
     metadata {
         rarity = Rarity.UNCOMMON

@@ -3,12 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.ltr.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Strider, Ranger of the North
@@ -29,14 +28,12 @@ val StriderRangerOfTheNorth = card("Strider, Ranger of the North") {
         "Then if that creature has power 4 or greater, it gains first strike until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
-        val creature = target("creature", Targets.Creature)
-        effect = Effects.ModifyStats(1, 1, creature)
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.powerAtLeast(4)),
-                    effect = Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature)
-                )
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(1, 1, creature) then
+            Effects.If(
+                condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.powerAtLeast(4), creature),
+                then = Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature)
             )
     }
 

@@ -7,9 +7,7 @@ package com.wingedsheep.mtg.sets.definitions.ody.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -25,11 +23,8 @@ val SecondThoughts = card("Second Thoughts") {
     typeLine = "Instant"
     oracleText = "Exile target attacking creature.\nDraw a card."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.attacking()))
-        effect = Effects.Composite(
-            Effects.Exile(t),
-            DrawCardsEffect(1)
-        )
+        val t = target(TargetFilter.Creature.attacking())
+        effect = Effects.Exile(t) then Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.COMMON

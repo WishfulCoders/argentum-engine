@@ -2,14 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.emn.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Spell Queller
@@ -32,7 +30,7 @@ import com.wingedsheep.sdk.scripting.references.Player
  * Queller's last ability. The player can't wait to cast it later in the turn. Timing permissions
  * based on the card's type are ignored." That is exactly
  * [Effects.CastFromCollectionWithoutPayingCost] — a synthesized cast during resolution, like
- * Cascade — wrapped in a [MayEffect] for "may".
+ * Cascade — wrapped in a [Effects.May] for "may".
  *
  * The chooser and caster is the exiled card's *owner*, not this creature's controller, so both run
  * inside [Effects.ForEachPlayer] over [Player.OwnersOfLinkedExile], which rebinds the controller to
@@ -55,23 +53,23 @@ val SpellQueller = card("Spell Queller") {
     keywords(Keyword.FLASH, Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target("target spell with mana value 4 or less", Targets.SpellWithManaValueAtMost(4))
+        trigger = Triggers.self.enters()
+        target(TargetFilter.SpellOnStack.manaValueAtMost(4))
         effect = Effects.ExileTargetSpell(linkToSource = true)
         description = "When this creature enters, exile target spell with mana value 4 or less."
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ForEachPlayer(
             players = Player.OwnersOfLinkedExile,
-            effects = listOf(
-                GatherCardsEffect(source = CardSource.FromLinkedExile(), storeAs = "quelledCard"),
-                MayEffect(
-                    Effects.CastFromCollectionWithoutPayingCost("quelledCard"),
+            Effects.Pipeline {
+                val quelledCard = gather(CardSource.FromLinkedExile())
+                run(Effects.May(
+                    Effects.CastFromCollectionWithoutPayingCost(quelledCard),
                     descriptionOverride = "Cast the exiled card without paying its mana cost"
-                )
-            )
+                ))
+            }
         )
         description = "When this creature leaves the battlefield, the exiled card's owner may " +
             "cast that card without paying its mana cost."

@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.rix.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Jadecraft Artisan
@@ -22,8 +22,8 @@ val JadecraftArtisan = card("Jadecraft Artisan") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val boosted = target("target creature", Targets.Creature)
+        trigger = Triggers.self.enters()
+        val boosted = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(2, 2, boosted)
     }
 

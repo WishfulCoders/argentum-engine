@@ -32,7 +32,7 @@ val AlacrianJaguar = card("Alacrian Jaguar") {
     toughness = 4
     keywords(Keyword.VIGILANCE)
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         triggerRestriction = Conditions.SourceIsSaddled
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
     }

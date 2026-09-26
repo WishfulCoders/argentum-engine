@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -28,9 +27,9 @@ val AshePrincessOfDalmasca = card("Ashe, Princess of Dalmasca") {
     power = 3
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Library.lookAtTopRevealMatchingToHand(
-            count = DynamicAmount.Fixed(5),
+            count = 5,
             filter = GameObjectFilter(cardPredicates = listOf(CardPredicate.IsArtifact)),
             prompt = "You may reveal an artifact card from among them and put it into your hand"
         )

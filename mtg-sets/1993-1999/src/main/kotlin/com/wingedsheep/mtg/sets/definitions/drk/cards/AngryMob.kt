@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Angry Mob
@@ -48,12 +47,12 @@ val AngryMob = card("Angry Mob") {
     keywords(Keyword.TRAMPLE)
 
     dynamicStats(
-        DynamicAmount.Conditional(
+        DynamicAmounts.conditional(
             condition = Conditions.IsYourTurn,
             ifTrue = DynamicAmounts
                 .battlefield(Player.EachOpponent, GameObjectFilter.Land.withSubtype(Subtype.SWAMP))
                 .count(),
-            ifFalse = DynamicAmount.Fixed(0),
+            ifFalse = DynamicAmounts.fixed(0),
         ),
         powerOffset = 2,
         toughnessOffset = 2,

@@ -2,7 +2,6 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.disturb
@@ -12,6 +11,9 @@ import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.RedirectZoneChange
 import com.wingedsheep.sdk.scripting.TriggeredAbility
+import com.wingedsheep.sdk.scripting.events.Recipient
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Mischievous Catgeist // Catlike Curiosity (Innistrad: Crimson Vow #69 — the card's earliest
@@ -30,7 +32,7 @@ import com.wingedsheep.sdk.scripting.TriggeredAbility
  * Implementation: the back face prints the front face's ability in quotation marks, which is the
  * SDK's [GrantTriggeredAbility] — the same ability the front face has as its own, rebuilt as a
  * granted one. `GrantTriggeredAbility`'s filter defaults to the attached creature, so the Aura
- * needs no explicit filter. The granted ability keeps `Triggers.DealsCombatDamageToPlayer`'s SELF
+ * needs no explicit filter. The granted ability keeps `Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)`'s SELF
  * binding: "this creature" inside the quotes is the creature that has the ability, i.e. the
  * enchanted creature, not the Aura. Disturb is CR 702.146; the exile-instead clause is
  * [RedirectZoneChange] with `selfOnly = true` so it functions in every zone (CR 614.12).
@@ -45,7 +47,7 @@ private val MischievousCatgeistFront = card("Mischievous Catgeist") {
         "Disturb {2}{U} (You may cast this card from your graveyard transformed for its disturb cost.)"
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         effect = Effects.DrawCards(1)
     }
 
@@ -71,13 +73,12 @@ private val CatlikeCuriosity = card("Catlike Curiosity") {
         "draw a card.\"\n" +
         "If Catlike Curiosity would be put into a graveyard from anywhere, exile it instead."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.DealsCombatDamageToPlayer.event,
-                binding = Triggers.DealsCombatDamageToPlayer.binding,
+                trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer),
                 effect = Effects.DrawCards(1),
             )
         )

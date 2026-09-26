@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.som.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Revoke Existence
@@ -19,7 +19,7 @@ val RevokeExistence = card("Revoke Existence") {
     oracleText = "Exile target artifact or enchantment."
 
     spell {
-        val t = target("target", Targets.ArtifactOrEnchantment)
+        val t = target(TargetFilter.ArtifactOrEnchantment)
         effect = Effects.Exile(t)
     }
 

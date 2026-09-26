@@ -2,18 +2,18 @@ package com.wingedsheep.mtg.sets.definitions.blc.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Rolling Hamsphere
@@ -37,14 +37,14 @@ val RollingHamsphere = card("Rolling Hamsphere") {
         "then it deals X damage to any target, where X is the number of Hamsters you control.\n" +
         "Crew 3"
 
-    val hamsterCount = DynamicAmount.AggregateBattlefield(
-        player = Player.You,
-        filter = GameObjectFilter.Creature.withSubtype("Hamster")
-    )
+    val hamsterCount = DynamicAmounts.battlefield(
+        Player.You,
+        GameObjectFilter.Creature.withSubtype("Hamster")
+    ).count()
 
     // This Vehicle gets +1/+1 for each Hamster you control.
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
             powerBonus = hamsterCount,
             toughnessBonus = hamsterCount
@@ -55,23 +55,21 @@ val RollingHamsphere = card("Rolling Hamsphere") {
     // damage to any target, where X is the number of Hamsters you control (counted after
     // the new tokens enter, per the Scryfall ruling — X is determined as the ability resolves).
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val anyTarget = target("any target", Targets.Any)
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                power = 1,
-                toughness = 1,
-                colors = setOf(Color.RED),
-                creatureTypes = setOf("Hamster"),
-                count = 3,
-                imageUri = "https://cards.scryfall.io/normal/front/7/1/711274ae-1a4e-491c-aa71-b2d29c890578.jpg?1721427571"
-            ),
+        trigger = Triggers.self.attacks()
+        val anyTarget = target(Targets.Any)
+        effect = Effects.CreateToken(
+            power = 1,
+            toughness = 1,
+            colors = setOf(Color.RED),
+            creatureTypes = setOf("Hamster"),
+            count = 3,
+            imageUri = "https://cards.scryfall.io/normal/front/7/1/711274ae-1a4e-491c-aa71-b2d29c890578.jpg?1721427571"
+        ) then
             Effects.DealDamage(
                 amount = hamsterCount,
                 target = anyTarget,
                 damageSource = EffectTarget.Self
             )
-        )
     }
 
     keywordAbility(KeywordAbility.Numeric(Keyword.CREW, 3))

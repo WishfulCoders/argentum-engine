@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ptk.cards
 
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MustBeBlockedEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Taunting Challenge
@@ -18,8 +18,8 @@ val TauntingChallenge = card("Taunting Challenge") {
     oracleText = "All creatures able to block target creature this turn do so."
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = MustBeBlockedEffect(t)
+        val t = target(TargetFilter.Creature)
+        effect = Effects.MustBeBlocked(t)
     }
 
     metadata {

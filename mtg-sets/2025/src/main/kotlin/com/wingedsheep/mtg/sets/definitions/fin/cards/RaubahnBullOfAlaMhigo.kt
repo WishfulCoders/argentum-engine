@@ -4,14 +4,13 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Raubahn, Bull of Ala Mhigo
@@ -22,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  * Whenever Raubahn attacks, attach up to one target Equipment you control to target attacking
  *   creature.
  *
- * The ward cost is a dynamic life cost: [KeywordAbility.wardLife] with
+ * The ward cost is a dynamic life cost: [WardCost.DynamicLife] with
  * [DynamicAmounts.sourcePower] models "Pay life equal to Raubahn's power". The amount is read
  * when the ward trigger resolves (CR 702.21b) — Raubahn's projected power then, or his
  * last-known power if he has already left the battlefield (CR 112.7a; Scryfall ruling
@@ -43,20 +42,15 @@ val RaubahnBullOfAlaMhigo = card("Raubahn, Bull of Ala Mhigo") {
         "attacking creature."
 
     keywords(Keyword.WARD)
-    keywordAbility(KeywordAbility.wardLife(DynamicAmounts.sourcePower()))
+    keywordAbility(KeywordAbility.Ward(WardCost.DynamicLife(DynamicAmounts.sourcePower())))
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         val equipment = target(
-            "up to one target Equipment you control",
-            TargetPermanent(
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl()
-                ),
-                optional = true
-            )
+            TargetFilter(baseFilter = GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl()),
+            optional = true,
         )
-        val creature = target("target attacking creature", Targets.AttackingCreature)
+        val creature = target(TargetFilter.AttackingCreature)
         effect = Effects.AttachTargetEquipmentToCreature(equipment, creature)
     }
 

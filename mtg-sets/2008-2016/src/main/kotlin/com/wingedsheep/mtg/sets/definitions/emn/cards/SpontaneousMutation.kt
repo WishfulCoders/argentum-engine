@@ -1,14 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.emn.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.unaryMinus
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Spontaneous Mutation
@@ -18,7 +19,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Enchant creature
  * Enchanted creature gets -X/-0, where X is the number of cards in your graveyard.
  *
- * The power penalty is a continuously recomputed [GrantDynamicStatsEffect] on the attached creature:
+ * The power penalty is a continuously recomputed [GrantDynamicStats] on the attached creature:
  * -(cards in your graveyard) power, +0 toughness. Modeled after Exotic Curse's negative dynamic buff.
  */
 val SpontaneousMutation = card("Spontaneous Mutation") {
@@ -31,13 +32,13 @@ val SpontaneousMutation = card("Spontaneous Mutation") {
 
     keywords(Keyword.FLASH)
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.attachedCreature(),
-            powerBonus = DynamicAmount.Multiply(DynamicAmount.Count(Player.You, Zone.GRAVEYARD), -1),
-            toughnessBonus = DynamicAmount.Fixed(0)
+            powerBonus = -DynamicAmounts.cardsInYourGraveyard(),
+            toughnessBonus = DynamicAmounts.fixed(0)
         )
     }
 

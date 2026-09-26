@@ -19,8 +19,13 @@ data class ObjectReferenceEnvironment(
     /** Stack object identity distinguishes separate resolutions of the same source/ability. */
     val resolutionKey: String? = null,
     val permittedMoves: List<PermittedObjectMove> = emptyList(),
-    /** A deliberately bound Self, independent of the ability’s originating source. */
-    val selfBinding: CapturedObjectBinding? = null,
+    /**
+     * The object an enclosing `ForEach` loop is visiting — what `EffectTarget.IterationEntity`
+     * names — captured with its identity when the loop bound it. Carried with the rest of the
+     * environment, so it survives every pause inside the loop body and is inherited by a delayed
+     * trigger the body creates.
+     */
+    val iteration: CapturedObjectBinding? = null,
 ) {
     fun followed(reference: ObjectRef): ObjectRef {
         var current = reference
@@ -32,9 +37,10 @@ data class ObjectReferenceEnvironment(
     fun isCurrent(reference: ObjectRef?, state: GameState): Boolean =
         if (reference == null) !captured else state.isCurrentObject(followed(reference))
 
-    fun isSelfCurrent(state: GameState): Boolean = selfBinding?.let { binding ->
+    /** Whether [iteration] still names the object the loop bound (a player always does). */
+    fun isIterationCurrent(state: GameState): Boolean = iteration?.let { binding ->
         binding.entityId in state.turnOrder || binding.objectRef?.let { state.isCurrentObject(followed(it)) } == true
-    } ?: isCurrent(source, state)
+    } ?: false
 
     fun authorize(events: List<GameEvent>): ObjectReferenceEnvironment {
         val moves = events.filterIsInstance<ZoneChangeEvent>().mapNotNull { event ->

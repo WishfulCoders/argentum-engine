@@ -33,7 +33,7 @@ val DrownerOfSecrets = card("Drowner of Secrets") {
             count = 1,
             filter = GameObjectFilter.Permanent.withSubtype(Subtype.MERFOLK)
         )
-        val player = target("target player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Patterns.Library.mill(1, player)
         description = "Tap an untapped Merfolk you control: Target player mills a card."
     }

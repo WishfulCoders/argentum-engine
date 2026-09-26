@@ -6,12 +6,13 @@ package com.wingedsheep.mtg.sets.definitions.usg.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
+import com.wingedsheep.sdk.core.Step
 
 
 /**
@@ -32,8 +33,8 @@ val DriftingDjinn = card("Drifting Djinn") {
     toughness = 5
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = PayOrSufferEffect(cost = Costs.pay.Mana("{1}{U}"), suffer = SacrificeSelfEffect)
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.PayOrSuffer(cost = Costs.pay.Mana("{1}{U}"), suffer = SacrificeSelfEffect)
     }
     keywordAbility(KeywordAbility.cycling("{2}"))
     metadata {

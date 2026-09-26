@@ -8,19 +8,10 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.ConditionalOnCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.LookAtTargetHandEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.WardCost
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Oildeep Gearhulk — Aetherdrift #215
@@ -59,35 +50,24 @@ val OildeepGearhulk = card("Oildeep Gearhulk") {
     keywordAbility(KeywordAbility.Ward(WardCost.Mana("{1}")))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val player = target("target player", Targets.Player)
-        effect = Effects.Composite(
-            LookAtTargetHandEffect(player),
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.HAND, Player.ContextPlayer(0)),
-                storeAs = "targetHand"
-            ),
-            SelectFromCollectionEffect(
-                from = "targetHand",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
+        trigger = Triggers.self.enters()
+        val player = target(Targets.Player)
+        effect = Effects.Pipeline {
+            run(Effects.LookAtHand(player))
+            val targetHand = gather(CardSource.FromZone(Zone.HAND, player.asPlayer))
+            val chosenCard = chooseUpTo(
+                1,
+                from = targetHand,
                 chooser = Chooser.Controller,
-                storeSelected = "chosenCard",
                 prompt = "You may choose a card for that player to discard",
                 alwaysPrompt = true,
                 showAllCards = true
-            ),
-            ConditionalOnCollectionEffect(
-                collection = "chosenCard",
-                ifNotEmpty = Effects.Composite(
-                    MoveCollectionEffect(
-                        from = "chosenCard",
-                        destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
-                        moveType = MoveType.Discard
-                    ),
-                    Effects.DrawCards(1, player)
-                )
             )
-        )
+            ifNotEmpty(chosenCard) {
+                discard(chosenCard, player.asPlayer)
+                run(Effects.DrawCards(1, player))
+            }
+        }
         description = "When this creature enters, look at target player's hand. You may choose a " +
             "card from it. If you do, that player discards that card, then draws a card."
     }

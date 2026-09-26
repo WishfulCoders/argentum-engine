@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Living Brain, Mechanical Marvel
@@ -28,22 +28,15 @@ val LivingBrainMechanicalMarvel = card("Living Brain, Mechanical Marvel") {
     oracleText = "At the beginning of combat on your turn, target non-Equipment artifact you control becomes an artifact creature with base power and toughness 3/3 until end of turn. Untap it."
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        val artifact = target(
-            "target non-Equipment artifact you control",
-            TargetPermanent(
-                filter = TargetFilter(GameObjectFilter.Artifact.notSubtype(Subtype.EQUIPMENT).youControl())
-            )
-        )
-        effect = Effects.Composite(
-            Effects.BecomeCreature(
-                target = artifact,
-                power = 3,
-                toughness = 3,
-                duration = Duration.EndOfTurn
-            ),
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        val artifact = target(TargetFilter(GameObjectFilter.Artifact.notSubtype(Subtype.EQUIPMENT).youControl()))
+        effect = Effects.BecomeCreature(
+            target = artifact,
+            power = 3,
+            toughness = 3,
+            duration = Duration.EndOfTurn
+        ) then
             Effects.Untap(artifact)
-        )
     }
 
     metadata {

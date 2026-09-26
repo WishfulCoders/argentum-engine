@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Guru Pathik
@@ -34,9 +32,9 @@ val GuruPathik = card("Guru Pathik") {
 
     // ETB: dig five, optionally reveal a Lesson/Saga/Shrine to hand, bottom the rest randomly.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.lookAtTopRevealMatchingToHand(
-            count = DynamicAmount.Fixed(5),
+            count = 5,
             filter = GameObjectFilter.Any.withAnySubtype("Lesson", "Saga", "Shrine"),
             prompt = "You may reveal a Lesson, Saga, or Shrine card to put into your hand"
         )
@@ -44,14 +42,9 @@ val GuruPathik = card("Guru Pathik") {
 
     // Whenever you cast a Lesson, Saga, or Shrine spell, put a +1/+1 counter on another target creature you control.
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.Any.withAnySubtype("Lesson", "Saga", "Shrine")
-        )
-        val creature = target(
-            "another target creature you control",
-            TargetCreature(filter = TargetFilter.OtherCreatureYouControl)
-        )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creature)
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withAnySubtype("Lesson", "Saga", "Shrine"))
+        val creature = target(TargetFilter.OtherCreatureYouControl)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature)
     }
 
     metadata {

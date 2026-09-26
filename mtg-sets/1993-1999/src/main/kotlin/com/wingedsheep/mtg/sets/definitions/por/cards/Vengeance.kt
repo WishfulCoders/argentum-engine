@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -24,7 +23,7 @@ val Vengeance = card("Vengeance") {
     typeLine = "Sorcery"
     oracleText = "Destroy target tapped creature."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.tapped()))
+        val t = target(TargetFilter.Creature.tapped())
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     metadata {

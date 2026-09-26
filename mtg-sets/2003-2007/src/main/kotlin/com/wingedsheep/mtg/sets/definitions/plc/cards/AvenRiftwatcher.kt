@@ -33,12 +33,12 @@ val AvenRiftwatcher = card("Aven Riftwatcher") {
     keywordAbility(KeywordAbility.vanishing(3))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(2)
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.GainLife(2)
     }
 

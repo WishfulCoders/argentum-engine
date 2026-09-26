@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Golgari Rot Farm
@@ -33,14 +32,14 @@ val GolgariRotFarm = card("Golgari Rot Farm") {
     replacementEffect(EntersTapped())
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val land = target("a land you control", TargetPermanent(filter = TargetFilter.Land.youControl()))
+        trigger = Triggers.self.enters()
+        val land = target(TargetFilter.Land.youControl())
         effect = Effects.ReturnToHand(land)
     }
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = Effects.AddMana(Color.BLACK).then(Effects.AddMana(Color.GREEN))
+        effect = Effects.AddMana(Color.BLACK) then Effects.AddMana(Color.GREEN)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

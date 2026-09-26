@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * 3/3
  * Whenever an artifact you control enters, this creature gets +1/+0 until end of turn.
  *
- * The Weldfast Wingsmith trigger shape — [Triggers.entersBattlefield] over
+ * The Weldfast Wingsmith trigger shape — `Triggers.a(filter).enters()` over
  * `Artifact.youControl()` with [TriggerBinding.ANY] — feeding a self-targeted
  * [Effects.ModifyStats] (default `Duration.EndOfTurn`).
  */
@@ -28,10 +28,7 @@ val PerimeterPatrol = card("Perimeter Patrol") {
     oracleText = "Whenever an artifact you control enters, this creature gets +1/+0 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Artifact.youControl()).enters()
         effect = Effects.ModifyStats(1, 0, EffectTarget.Self)
         description = "This creature gets +1/+0 until end of turn."
     }

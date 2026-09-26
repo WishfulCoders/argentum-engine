@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -9,8 +10,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Spellstutter Sprite
@@ -43,15 +42,15 @@ val SpellstutterSprite = card("Spellstutter Sprite") {
     keywords(Keyword.FLASH, Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = TargetSpell(
-            filter = TargetFilter.SpellOnStack.manaValueAtMostDynamic(
-                DynamicAmount.AggregateBattlefield(
-                    player = Player.You,
-                    filter = GameObjectFilter.Permanent.withSubtype(Subtype.FAERIE),
-                )
-            )
+        val spell = target(
+            TargetFilter.SpellOnStack.manaValueAtMostDynamic(
+                DynamicAmounts.battlefield(
+                    Player.You,
+                    GameObjectFilter.Permanent.withSubtype(Subtype.FAERIE),
+                ).count()
+            ),
         )
+        trigger = Triggers.self.enters()
         effect = Effects.CounterSpell()
     }
 

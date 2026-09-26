@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.view
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.PaymentStrategy
 import com.wingedsheep.engine.handlers.effects.FaceDownTurnUp
@@ -20,6 +21,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Which helper card a face-down object is *drawn* as.
@@ -62,7 +64,7 @@ class FaceDownHelperCardVisibilityTest : FunSpec({
     }
 
     fun transformer(d: GameTestDriver): ClientStateTransformer =
-        ClientStateTransformer(cardRegistry = d.cardRegistry)
+        ClientStateTransformer(cardRegistry = d.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
     /** Cast [cardName] face down for {3} and leave the spell on the stack. */
     fun GameTestDriver.castFaceDown(playerId: EntityId, cardName: String): EntityId {
@@ -75,7 +77,7 @@ class FaceDownHelperCardVisibilityTest : FunSpec({
                 castFaceDown = true,
                 paymentStrategy = PaymentStrategy.FromPool,
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         return card
     }
 

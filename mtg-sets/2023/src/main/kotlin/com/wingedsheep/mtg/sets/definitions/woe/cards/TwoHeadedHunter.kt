@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Two-Headed Hunter // Twice the Rage
@@ -36,7 +36,7 @@ val TwoHeadedHunter = card("Two-Headed Hunter") {
         oracleText = "Target creature gains double strike until end of turn. " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            val t = target("target creature", Targets.Creature)
+            val t = target(TargetFilter.Creature)
             effect = Effects.GrantKeyword(Keyword.DOUBLE_STRIKE, t)
         }
     }

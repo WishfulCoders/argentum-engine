@@ -1,13 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.emn.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.effects.GiveControlToTargetPlayerEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Harmless Offering
@@ -27,9 +24,9 @@ val HarmlessOffering = card("Harmless Offering") {
     oracleText = "Target opponent gains control of target permanent you control."
 
     spell {
-        val opponent = target("opponent", TargetOpponent())
-        val permanent = target("permanent", TargetPermanent(filter = TargetFilter.PermanentYouControl))
-        effect = GiveControlToTargetPlayerEffect(
+        val opponent = target(Targets.Opponent)
+        val permanent = target(TargetFilter.PermanentYouControl)
+        effect = Effects.GiveControl(
             permanent = permanent,
             newController = opponent
         )

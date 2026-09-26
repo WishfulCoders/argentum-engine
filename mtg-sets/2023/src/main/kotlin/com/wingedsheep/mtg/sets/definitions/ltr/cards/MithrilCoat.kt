@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Mithril Coat
@@ -32,16 +31,13 @@ val MithrilCoat = card("Mithril Coat") {
 
     // When Mithril Coat enters, attach it to target legendary creature you control.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val legendary = target(
-            "target legendary creature you control",
-            TargetCreature(
-                filter = TargetFilter(
-                    GameObjectFilter(
-                        cardPredicates = listOf(CardPredicate.IsCreature, CardPredicate.IsLegendary)
-                    ).youControl()
-                )
-            )
+            TargetFilter(
+                GameObjectFilter(
+                    cardPredicates = listOf(CardPredicate.IsCreature, CardPredicate.IsLegendary)
+                ).youControl()
+            ),
         )
         effect = Effects.AttachEquipment(legendary)
     }

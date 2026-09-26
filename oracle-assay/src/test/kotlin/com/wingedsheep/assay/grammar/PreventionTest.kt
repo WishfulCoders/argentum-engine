@@ -3,6 +3,7 @@ package com.wingedsheep.assay.grammar
 import com.wingedsheep.assay.syntax.ParseOutcome
 import com.wingedsheep.assay.syntax.parseLine
 import com.wingedsheep.assay.syntax.printLine
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.PreventDamageEffect
 import com.wingedsheep.sdk.scripting.effects.PreventionDirection
 import com.wingedsheep.sdk.scripting.effects.PreventionScope
@@ -129,20 +130,21 @@ class PreventionTest : StringSpec({
     "the source layer sets the source and leaves the recipient alone" {
         val bare = shield("Prevent all damage that would be dealt to you this turn.")
         val chosen = shield("Prevent all damage that would be dealt to you this turn by a source of your choice.")
-        chosen shouldBe bare.copy(sourceFilter = PreventionSourceFilter.ChosenSource)
+        chosen shouldBe bare.copy(sourceFilter = PreventionSourceFilter.Chosen())
     }
 
-    // "By attacking creatures" is spellable as the dedicated case and as a FromGroup over the same
-    // three words. The dedicated case is what the hand-written cards carry, so it wins and the
-    // group spelling of it has no printed form — otherwise one text has two models.
-    "attacking creatures is the dedicated source filter and not a group" {
-        shield("Prevent all damage that would be dealt to you this turn by attacking creatures.")
-            .sourceFilter shouldBe PreventionSourceFilter.AttackingCreatures
+    // "To you … by attacking creatures" is the controller-only group shield the hand-written cards
+    // carry (Deep Wood, Scarecrow): no permanent recipients, the controller flag, and the filter.
+    "a group source over you is the controller-only group shield" {
+        val deepWood = shield("Prevent all damage that would be dealt to you this turn by attacking creatures.")
+        deepWood.sourceFilter shouldBe PreventionSourceFilter.Matching(GameObjectFilter.Creature.attacking())
+        deepWood.recipientGroupIncludesController shouldBe true
+        deepWood.recipientGroup shouldBe null
     }
 
-    // The executor attaches an attacking-creatures shield to the ability's controller and ignores
-    // `target` entirely, so the layer may only wear a recipient clause that already said "you".
-    "an attacking-creatures shield refuses a recipient it could not protect" {
+    // The executor has no lowering for a Matching source over one object, so the layer may only
+    // wear a recipient clause that said "you" or named a group.
+    "a group-sourced shield refuses a single recipient it could not protect" {
         declines("Prevent all damage that would be dealt to ~ this turn by attacking creatures.")
         declines("Prevent all damage that would be dealt to target creature this turn by attacking creatures.")
     }

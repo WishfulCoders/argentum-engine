@@ -1,6 +1,5 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -25,11 +24,7 @@ val MikeyAndLeoChaosAndOrder = card("Mikey & Leo, Chaos & Order") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.countersPlacedOn(
-            filter = GameObjectFilter.Creature.youControl(),
-            counterType = Counters.ANY,
-            firstTimeEachTurn = false,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).getsCounters()
         oncePerTurn = true
         effect = Effects.DrawCards(1)
     }

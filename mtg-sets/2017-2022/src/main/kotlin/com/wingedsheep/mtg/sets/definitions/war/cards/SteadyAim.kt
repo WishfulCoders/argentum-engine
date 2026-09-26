@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Steady Aim
@@ -22,14 +22,10 @@ val SteadyAim = card("Steady Aim") {
     oracleText = "Untap target creature. It gets +1/+4 and gains reach until end of turn."
 
     spell {
-        val t = target("target", TargetCreature())
-        effect = Effects.Composite(
-            Effects.Untap(t),
-            Effects.Composite(
-                Effects.ModifyStats(1, 4, t),
+        val t = target(TargetFilter.Creature)
+        effect = Effects.Untap(t) then
+            Effects.ModifyStats(1, 4, t) then
                 Effects.GrantKeyword(Keyword.REACH, t)
-            )
-        )
     }
 
     metadata {

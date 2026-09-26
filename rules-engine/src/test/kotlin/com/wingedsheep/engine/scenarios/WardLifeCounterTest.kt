@@ -34,7 +34,7 @@ class WardLifeCounterTest : FunSpec({
         power = 2
         toughness = 2
         keywords(Keyword.WARD)
-        keywordAbility(KeywordAbility.wardLife(2))
+        keywordAbility(KeywordAbility.Ward(WardCost.Life(2)))
     }
 
     // Source of a static grant: gives every other creature its controller controls

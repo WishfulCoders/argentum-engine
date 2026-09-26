@@ -4,12 +4,12 @@
 
 package com.wingedsheep.mtg.sets.definitions.mmq.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -24,7 +24,7 @@ val CollectiveUnconscious = card("Collective Unconscious") {
     typeLine = "Sorcery"
     oracleText = "Draw a card for each creature you control."
     spell {
-        effect = DrawCardsEffect(DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Creature))
+        effect = Effects.DrawCards(DynamicAmounts.creaturesYouControl())
     }
     metadata {
         rarity = Rarity.RARE

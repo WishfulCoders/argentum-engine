@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -33,10 +32,7 @@ val TwitchingDoll = card("Twitching Doll") {
     // This is still a mana ability (CR 605.1a): no target, and it could add mana.
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.Composite(
-            Effects.AddManaOfChoice(),
-            Effects.AddCounters(Counters.NEST, 1, EffectTarget.Self)
-        )
+        effect = Effects.AddManaOfChoice() then Effects.AddCounters(CounterType.NEST, 1, EffectTarget.Self)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
@@ -48,12 +44,12 @@ val TwitchingDoll = card("Twitching Doll") {
     // resolves (CR 122.2). "for each counter on this creature" therefore reads the pre-cost
     // count as last-known information (CR 112.7a) — the engine snapshots the source's counters
     // at cost-payment time, read here via DynamicAmount.LastKnownSourceCounters over every
-    // counter kind (CounterTypeFilter.Any). This mirrors Lost Isle Calling.
+    // counter kind (null). This mirrors Lost Isle Calling.
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.SacrificeSelf)
         timing = TimingRule.SorcerySpeed
         effect = Effects.CreateToken(
-            count = DynamicAmounts.lastKnownSourceCounters(CounterTypeFilter.Any),
+            count = DynamicAmounts.lastKnownSourceCounters(null),
             power = 2,
             toughness = 2,
             colors = setOf(Color.GREEN),

@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Homarid Shaman
@@ -25,10 +24,7 @@ val HomaridShaman = card("Homarid Shaman") {
 
     activatedAbility {
         cost = Costs.Mana("{U}")
-        val t = target(
-            "target green creature",
-            TargetCreature(filter = TargetFilter.Creature.withColor(Color.GREEN))
-        )
+        val t = target(TargetFilter.Creature.withColor(Color.GREEN))
         effect = Effects.Tap(t)
     }
 

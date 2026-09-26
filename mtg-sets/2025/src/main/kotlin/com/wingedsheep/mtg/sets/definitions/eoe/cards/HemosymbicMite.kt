@@ -2,14 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Hemosymbic Mite
@@ -27,9 +23,9 @@ val HemosymbicMite = card("Hemosymbic Mite") {
 
     // Whenever this creature becomes tapped, another target creature you control gets +X/+X until end of turn, where X is this creature's power
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
-        val target = target("another target creature you control", Targets.OtherCreatureYouControl)
-        val powerBonus = DynamicAmount.EntityProperty(EntityReference.Source, EntityNumericProperty.Power)
+        trigger = Triggers.self.becomesTapped()
+        val target = target(TargetFilter.OtherCreatureYouControl)
+        val powerBonus = DynamicAmounts.sourcePower()
         effect = Effects.ModifyStats(powerBonus, powerBonus, target)
     }
 

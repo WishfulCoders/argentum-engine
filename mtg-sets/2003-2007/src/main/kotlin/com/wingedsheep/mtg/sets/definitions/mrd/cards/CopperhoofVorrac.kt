@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 
@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.references.Player
  * - "permanent", not "creature" — lands, artifacts, and enchantments all count, so the filter is
  *   the unrestricted [GameObjectFilter.Any] narrowed to untapped, counted over the battlefield of
  *   every opponent.
- * - [GrantDynamicStatsEffect] is a continuously-recomputed layer 7c bonus, which is what the card
+ * - [GrantDynamicStats] is a continuously-recomputed layer 7c bonus, which is what the card
  *   needs: the Vorrac shrinks the moment an opponent taps out and grows back on their untap step,
  *   including mid-combat.
  */
@@ -33,7 +33,7 @@ val CopperhoofVorrac = card("Copperhoof Vorrac") {
     staticAbility {
         val untappedOpponentPermanents =
             DynamicAmounts.battlefield(Player.EachOpponent, GameObjectFilter.Any.untapped()).count()
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
             powerBonus = untappedOpponentPermanents,
             toughnessBonus = untappedOpponentPermanents

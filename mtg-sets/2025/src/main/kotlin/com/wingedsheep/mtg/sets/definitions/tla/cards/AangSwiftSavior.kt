@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Conditions
@@ -11,8 +11,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -56,10 +54,10 @@ private val AangAndLaOceansFury = card("Aang and La, Ocean's Fury") {
     keywords(Keyword.REACH, Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl().tapped()),
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity)
         )
         description = "Whenever Aang and La attack, put a +1/+1 counter on each tapped creature you control."
     }
@@ -87,27 +85,24 @@ private val AangSwiftSaviorFront = card("Aang, Swift Savior") {
     keywords(Keyword.FLASH, Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target(
-            "up to one other target creature or spell",
-            TargetOther(
+        trigger = Triggers.self.enters()
+        target(TargetOther(
                 baseRequirement = TargetObject(
                     count = 1,
                     optional = true,
                     filter = TargetFilter.anyOf(TargetFilter.Creature, TargetFilter.SpellOnStack)
                 )
-            )
-        )
-        effect = ConditionalEffect(
+            ))
+        effect = Effects.If(
             condition = Conditions.TargetIsSpellOnStack(0),
             // Spell branch: airbend "exiles it" — this is NOT a counter (so it works on spells that
             // can't be countered and fires no "spell was countered" trigger). Exile the spell from
             // the stack; its owner may recast it for {2} via the same fixed-alternative-cost grant.
             // AirbendSpell also fires "whenever you airbend" once the spell is exiled (CR 701.65b),
             // so this counts toward Avatar Aang's four-bend trigger.
-            effect = Effects.AirbendSpell(ManaCost.parse("{2}")),
+            then = Effects.AirbendSpell(ManaCost.parse("{2}")),
             // Permanent branch: the normal airbend exile + {2}-recast-to-owner.
-            elseEffect = Effects.Airbend()
+            otherwise = Effects.Airbend()
         )
         description = "When Aang enters, airbend up to one other target creature or spell."
     }
@@ -116,7 +111,7 @@ private val AangSwiftSaviorFront = card("Aang, Swift Savior") {
     activatedAbility {
         cost = Costs.Mana("{8}")
         hasWaterbend = true
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
     }
 
     metadata {

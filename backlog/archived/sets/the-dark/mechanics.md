@@ -320,7 +320,7 @@ Cards: Marsh Viper
 City of Shadows exiles your own creatures to accumulate storage counters, then taps for one
 colorless mana per counter.
 
-**Engine support:** ✅ `Counters.STORAGE` + `AddMana(amount = DynamicAmounts.countersOnSelf(…))`.
+**Engine support:** ✅ `CounterType.STORAGE` + `AddMana(amount = DynamicAmounts.countersOnSelf(…))`.
 Confirm `Costs.pay.Exile` accepts the battlefield zone for the "exile a creature you control"
 activation cost — that's the only unproven piece.
 

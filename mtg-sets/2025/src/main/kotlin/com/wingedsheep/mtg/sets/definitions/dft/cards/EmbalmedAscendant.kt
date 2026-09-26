@@ -9,6 +9,7 @@ import com.wingedsheep.sdk.dsl.startYourEngines
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Embalmed Ascendant — Aetherdrift #201
@@ -20,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * The max-speed half is gated as a `triggerRestriction`: "Max speed — [ability]" is a functioning
  * condition (CR 702.178a), so it is read when a creature dies and never again, not as an
- * intervening "if". [Triggers.YourCreatureDies] is an ANY binding over creatures you control, which includes
+ * intervening "if". `Triggers.a(GameObjectFilter.Creature.youControl()).dies()` is an ANY binding over creatures you control, which includes
  * this creature itself: when it dies alongside another creature, both deaths see the ability.
  *
  * "Each opponent loses 1 life and you gain 1 life" is a two-part drain rather than life *lost* being
@@ -39,7 +40,7 @@ val EmbalmedAscendant = card("Embalmed Ascendant") {
     startYourEngines()
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 2,
             toughness = 2,
@@ -50,11 +51,8 @@ val EmbalmedAscendant = card("Embalmed Ascendant") {
 
     maxSpeed {
         triggeredAbility {
-            trigger = Triggers.YourCreatureDies
-            effect = Effects.Composite(
-                Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)),
-                Effects.GainLife(1)
-            )
+            trigger = Triggers.a(GameObjectFilter.Creature.youControl()).dies()
+            effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(1)
         }
     }
 

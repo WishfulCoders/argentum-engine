@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -29,7 +28,7 @@ val AlphaKavu = card("Alpha Kavu") {
     toughness = 2
     activatedAbility {
         cost = Costs.Mana("{1}{G}")
-        val t = target("target", TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.withSubtype("Kavu"))))
+        val t = target(TargetFilter(GameObjectFilter.Creature.withSubtype("Kavu")))
         effect = Effects.ModifyStats(-1, 1, t)
     }
     metadata {

@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Mistfire Weaver
@@ -29,8 +29,8 @@ val MistfireWeaver = card("Mistfire Weaver") {
     morph = "{2}{U}"
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        val t = target("target creature you control", Targets.CreatureYouControl)
+        trigger = Triggers.self.turnedFaceUp()
+        val t = target(TargetFilter.CreatureYouControl)
         effect = Effects.GrantKeyword(Keyword.HEXPROOF, t)
     }
 

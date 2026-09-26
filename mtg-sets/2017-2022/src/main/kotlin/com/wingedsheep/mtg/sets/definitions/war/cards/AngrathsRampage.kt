@@ -32,15 +32,15 @@ val AngrathsRampage = card("Angrath's Rampage") {
     spell {
         modal {
             mode("Target player sacrifices an artifact of their choice.") {
-                val player = target("target", Targets.Player)
+                val player = target(Targets.Player)
                 effect = Effects.Sacrifice(GameObjectFilter.Artifact, 1, player)
             }
             mode("Target player sacrifices a creature of their choice.") {
-                val player = target("target", Targets.Player)
+                val player = target(Targets.Player)
                 effect = Effects.Sacrifice(GameObjectFilter.Creature, 1, player)
             }
             mode("Target player sacrifices a planeswalker of their choice.") {
-                val player = target("target", Targets.Player)
+                val player = target(Targets.Player)
                 effect = Effects.Sacrifice(GameObjectFilter.Planeswalker, 1, player)
             }
         }

@@ -1,14 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Conclave's Blessing
@@ -36,22 +38,19 @@ val ConclavesBlessing = card("Conclave's Blessing") {
 
     keywords(Keyword.CONVOKE)
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = Filters.EnchantedCreature,
-            powerBonus = DynamicAmount.Fixed(0),
+            powerBonus = DynamicAmounts.fixed(0),
             // +2 per creature, not +1 — the printed bonus is +0/+2 *for each*, so the count has
             // to be doubled before it becomes the toughness bonus.
-            toughnessBonus = DynamicAmount.Multiply(
-                DynamicAmount.AggregateBattlefield(
-                    player = Player.You,
-                    filter = GameObjectFilter.Creature,
-                    excludeSelf = true
-                ),
-                multiplier = 2
-            )
+            toughnessBonus = DynamicAmounts.battlefield(
+                Player.You,
+                GameObjectFilter.Creature,
+                excludeSelf = true
+            ).count() * 2
         )
     }
 

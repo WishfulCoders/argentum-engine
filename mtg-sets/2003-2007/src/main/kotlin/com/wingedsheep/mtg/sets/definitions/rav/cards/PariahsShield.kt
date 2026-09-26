@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.RedirectDamage
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * [RedirectDamage] whose `redirectTo` is [EffectTarget.EquippedCreature], resolved by
  * `DamageUtils.resolveRedirectTarget` off the Equipment's own `AttachedToComponent`.
  *
- * `RecipientFilter.You` is the Shield's *controller*, so a control change moves the shield with
+ * `Recipient.You` is the Shield's *controller*, so a control change moves the shield with
  * the Equipment. With nothing attached the redirect target resolves to null and damage is dealt to
  * you normally — the card's own ruling.
  */
@@ -31,7 +31,7 @@ val PariahsShield = card("Pariah's Shield") {
     replacementEffect(
         RedirectDamage(
             redirectTo = EffectTarget.EquippedCreature,
-            appliesTo = EventPattern.DamageEvent(recipient = RecipientFilter.You)
+            appliesTo = EventPattern.DamageEvent(recipient = Recipient.You)
         )
     )
 

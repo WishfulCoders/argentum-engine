@@ -3,9 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.MarkExileOnDeathEffect
-import com.wingedsheep.sdk.scripting.targets.TargetCreatureOrPlaneswalker
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Flame-Blessed Bolt
@@ -20,11 +18,8 @@ val FlameBlessedBolt = card("Flame-Blessed Bolt") {
     typeLine = "Instant"
     oracleText = "Flame-Blessed Bolt deals 2 damage to target creature or planeswalker. If that creature or planeswalker would die this turn, exile it instead."
     spell {
-        val t = target("target", TargetCreatureOrPlaneswalker())
-        effect = Effects.Composite(
-            DealDamageEffect(2, t),
-            MarkExileOnDeathEffect(t)
-        )
+        val t = target(Targets.CreatureOrPlaneswalker)
+        effect = Effects.DealDamage(2, t) then Effects.MarkExileOnDeath(t)
     }
     metadata {
         rarity = Rarity.COMMON

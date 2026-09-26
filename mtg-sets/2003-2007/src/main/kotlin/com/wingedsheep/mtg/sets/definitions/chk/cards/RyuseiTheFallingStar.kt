@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  * Flying
  * When Ryusei dies, it deals 5 damage to each creature without flying.
  *
- * Thunder Dragon's sweeper moved from the enters slot to the dies slot: [Triggers.Dies] plus
+ * Thunder Dragon's sweeper moved from the enters slot to the dies slot: `Triggers.self.dies()` plus
  * [Patterns.Group.dealDamageToAll] over [GroupFilter.AllCreatures]`.withoutKeyword(FLYING)`. The
  * loop reads nothing off Ryusei itself — each damage instance targets the iterated creature — so
  * the ability needs no last-known information about the source that has already left the
@@ -33,7 +33,7 @@ val RyuseiTheFallingStar = card("Ryusei, the Falling Star") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Patterns.Group.dealDamageToAll(5, GroupFilter.AllCreatures.withoutKeyword(Keyword.FLYING))
         description = "When Ryusei dies, it deals 5 damage to each creature without flying."
     }

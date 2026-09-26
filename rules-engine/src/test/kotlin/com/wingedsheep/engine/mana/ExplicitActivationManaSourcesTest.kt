@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.mana
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
@@ -37,7 +38,7 @@ class ExplicitActivationManaSourcesTest : FunSpec({
         return driver
     }
 
-    fun solver(driver: GameTestDriver) = ManaSolver(driver.cardRegistry)
+    fun solver(driver: GameTestDriver) = ManaSolver(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
     test("Ashnod's Altar makes a cost affordable even though the solver can't tap it") {
         val driver = createDriver()

@@ -40,7 +40,7 @@ val NightfireGiant = card("Nightfire Giant") {
 
     activatedAbility {
         cost = Costs.Mana("{4}{R}")
-        val victim = target("any target", Targets.Any)
+        val victim = target(Targets.Any)
         effect = Effects.DealDamage(2, victim)
     }
 

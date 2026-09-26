@@ -6,7 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Scales of Shale
@@ -26,10 +26,10 @@ val ScalesOfShale = card("Scales of Shale") {
     keywordAbility(KeywordAbility.AffinityForSubtype(Subtype.LIZARD))
 
     spell {
-        val t = target("target creature to get +2/+0, lifelink, and indestructible", TargetCreature())
-        effect = Effects.ModifyStats(2, 0, t)
-            .then(Effects.GrantKeyword(Keyword.LIFELINK, t))
-            .then(Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t))
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 0, t) then
+            Effects.GrantKeyword(Keyword.LIFELINK, t) then
+            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t)
     }
 
     metadata {

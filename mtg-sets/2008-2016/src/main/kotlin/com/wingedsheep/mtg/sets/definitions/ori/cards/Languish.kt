@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.ori.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -23,7 +22,7 @@ val Languish = card("Languish") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreatures,
-            ModifyStatsEffect(-4, -4, EffectTarget.Self),
+            Effects.ModifyStats(-4, -4, EffectTarget.IterationEntity),
         )
     }
 

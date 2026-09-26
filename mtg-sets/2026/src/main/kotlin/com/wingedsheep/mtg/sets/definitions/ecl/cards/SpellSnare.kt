@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Spell Snare
@@ -18,7 +18,7 @@ val SpellSnare = card("Spell Snare") {
     oracleText = "Counter target spell with mana value 2."
 
     spell {
-        target = Targets.SpellWithManaValue(2)
+        val spellWithManaValue = target(TargetFilter.SpellOnStack.manaValue(2))
         effect = Effects.CounterSpell()
     }
 

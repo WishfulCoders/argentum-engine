@@ -5,9 +5,7 @@ import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Rootgrapple
@@ -22,17 +20,12 @@ val Rootgrapple = card("Rootgrapple") {
     oracleText = "Destroy target noncreature permanent. If you control a Treefolk, draw a card."
 
     spell {
-        val permanent = target(
-            "target noncreature permanent",
-            TargetPermanent(filter = TargetFilter.NoncreaturePermanent)
-        )
-        effect = Effects.Composite(
-            Effects.Destroy(permanent),
-            ConditionalEffect(
+        val permanent = target(TargetFilter.NoncreaturePermanent)
+        effect = Effects.Destroy(permanent) then
+            Effects.If(
                 condition = Conditions.ControlPermanentOfType(Subtype.TREEFOLK),
-                effect = Effects.DrawCards(1)
+                then = Effects.DrawCards(1)
             )
-        )
     }
 
     metadata {

@@ -31,7 +31,7 @@ val AgencyOutfitter = card("Agency Outfitter") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchMultipleZones(
             zones = listOf(Zone.GRAVEYARD, Zone.HAND, Zone.LIBRARY),
             filter = GameObjectFilter.Any.named("Magnifying Glass"),

@@ -47,6 +47,7 @@ import com.wingedsheep.engine.state.components.player.AdditionalEndStepsComponen
 import com.wingedsheep.engine.state.components.player.InAdditionalEndStepComponent
 import com.wingedsheep.engine.state.components.player.CantActivateLoyaltyAbilitiesComponent
 import com.wingedsheep.engine.state.components.player.CantCastSpellsComponent
+import com.wingedsheep.engine.state.components.player.CantSearchLibrariesComponent
 import com.wingedsheep.engine.state.components.player.CantCastFromNonHandZonesComponent
 import com.wingedsheep.engine.state.components.player.CantGainLifeComponent
 import com.wingedsheep.engine.state.components.player.DamageBonusComponent
@@ -59,6 +60,7 @@ import com.wingedsheep.engine.state.components.player.PlayerCantPlayFromHandComp
 import com.wingedsheep.engine.state.components.player.PlayerProtectionComponent
 import com.wingedsheep.engine.state.components.player.CardsLeftGraveyardThisTurnComponent
 import com.wingedsheep.engine.state.components.player.CreatureCardsPutIntoGraveyardThisTurnComponent
+import com.wingedsheep.engine.state.components.player.CardsPutIntoGraveyardFromLibraryThisTurnComponent
 import com.wingedsheep.engine.state.components.player.LandDropsComponent
 import com.wingedsheep.engine.state.components.player.PermanentsEnteredUnderControlThisTurnComponent
 import com.wingedsheep.engine.state.components.player.LifeGainedAmountThisTurnComponent
@@ -68,6 +70,7 @@ import com.wingedsheep.engine.state.components.player.LifeLostThisTurnComponent
 import com.wingedsheep.engine.state.components.player.PutCounterOnCreatureThisTurnComponent
 import com.wingedsheep.engine.state.components.player.SacrificedArtifactThisTurnComponent
 import com.wingedsheep.engine.state.components.player.SacrificedFoodThisTurnComponent
+import com.wingedsheep.engine.state.components.player.ScriedOrSurveiledThisTurnComponent
 import com.wingedsheep.engine.state.components.player.WasDealtCombatDamageByLegendaryCreatureThisTurnComponent
 import com.wingedsheep.engine.state.components.player.CombatDamageReceivedThisTurnComponent
 import com.wingedsheep.engine.state.components.player.WasDealtCombatDamageThisTurnComponent
@@ -90,7 +93,6 @@ import com.wingedsheep.engine.state.components.player.SpellsCantBeCounteredCompo
 import com.wingedsheep.engine.state.components.player.PlayerTurnHijackedComponent
 import com.wingedsheep.engine.state.components.player.SkippedTurnPartsComponent
 import com.wingedsheep.engine.handlers.ConditionEvaluator
-import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
@@ -115,13 +117,13 @@ import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
  */
 class CleanupPhaseManager(
     private val cardRegistry: CardRegistry,
-    private val decisionHandler: DecisionHandler
+    private val decisionHandler: DecisionHandler,
+    private val conditionEvaluator: ConditionEvaluator
 ) {
 
     // Stateless evaluators (default projection) used to read SetMaximumHandSize abilities and
     // their ConditionalStaticAbility gates at cleanup time (delegated to [MaximumHandSize]).
-    private val conditionEvaluator = ConditionEvaluator()
-    private val dynamicAmountEvaluator = DynamicAmountEvaluator(conditionEvaluator)
+    private val dynamicAmountEvaluator = conditionEvaluator.amounts
 
     /**
      * Perform cleanup step actions.
@@ -410,11 +412,16 @@ class CleanupPhaseManager(
      * These expire when any of the affected entities are controlled by the active player,
      * meaning the affected creature's controller just had their untap step.
      */
-    fun expireAffectedControllersNextUntapEffects(state: GameState, activePlayer: EntityId): GameState {
+    fun expireAffectedControllersNextUntapEffects(
+        state: GameState,
+        activePlayer: EntityId,
+        skippedUntapStep: Set<EntityId> = emptySet()
+    ): GameState {
         val projected = state.projectedState
         // Both heads untap on the team's turn (CR 805.4), so either head counts as "the
-        // affected creature's controller just had their untap step".
-        val activeTeam = state.sharedTurnTeam(activePlayer).toHashSet()
+        // affected creature's controller just had their untap step" — unless that head skipped
+        // it (CR 614.10a: the effect waits for the first untap step that isn't skipped).
+        val activeTeam = state.sharedTurnTeam(activePlayer).toHashSet() - skippedUntapStep
         val remaining = state.floatingEffects.filter { floatingEffect ->
             if (floatingEffect.duration !is Duration.UntilAfterAffectedControllersNextUntap) return@filter true
             // Expire if any affected entity is controlled by the active team
@@ -554,6 +561,9 @@ class CleanupPhaseManager(
                 is Duration.UntilYourNextUpkeep -> true  // Keep until upkeep
                 is Duration.UntilNextEndStep -> true  // Expired on entry to the next end step (performNextEndStepExpiry)
                 is Duration.Permanent -> true  // Never expires
+                // Event-bounded ("until this card is cast from exile"): never a turn boundary. Only
+                // the activated-ability grant store reads the ending event today (SpellCaster).
+                is Duration.UntilSourceCastFromExile -> true
                 is Duration.WhileSourceOnBattlefield -> {
                     // Keep if source is still on battlefield
                     val sourceId = floatingEffect.sourceId
@@ -685,6 +695,10 @@ class CleanupPhaseManager(
                 if (cantCast?.removeOn == PlayerEffectRemoval.EndOfTurn) {
                     result = result.without<CantCastSpellsComponent>()
                 }
+                val cantSearch = result.get<CantSearchLibrariesComponent>()
+                if (cantSearch?.removeOn == PlayerEffectRemoval.EndOfTurn) {
+                    result = result.without<CantSearchLibrariesComponent>()
+                }
                 val cantCastNonHand = result.get<CantCastFromNonHandZonesComponent>()
                 if (cantCastNonHand?.removeOn == PlayerEffectRemoval.EndOfTurn) {
                     result = result.without<CantCastFromNonHandZonesComponent>()
@@ -700,6 +714,10 @@ class CleanupPhaseManager(
                 val spellsUncounterable = result.get<SpellsCantBeCounteredComponent>()
                 if (spellsUncounterable?.removeOn == PlayerEffectRemoval.EndOfTurn) {
                     result = result.without<SpellsCantBeCounteredComponent>()
+                }
+                val loyaltyGrants = result.get<com.wingedsheep.engine.state.components.player.InstantSpeedLoyaltyGrantsComponent>()
+                if (loyaltyGrants?.removeOn == PlayerEffectRemoval.EndOfTurn) {
+                    result = result.without<com.wingedsheep.engine.state.components.player.InstantSpeedLoyaltyGrantsComponent>()
                 }
                 val flashGrants = result.get<FlashGrantsThisTurnComponent>()
                 if (flashGrants?.removeOn == PlayerEffectRemoval.EndOfTurn) {
@@ -752,6 +770,9 @@ class CleanupPhaseManager(
                 if (result.has<CreatureCardsPutIntoGraveyardThisTurnComponent>()) {
                     result = result.without<CreatureCardsPutIntoGraveyardThisTurnComponent>()
                 }
+                if (result.has<CardsPutIntoGraveyardFromLibraryThisTurnComponent>()) {
+                    result = result.without<CardsPutIntoGraveyardFromLibraryThisTurnComponent>()
+                }
                 if (result.has<FlippedCoinsThisTurnComponent>()) {
                     result = result.without<FlippedCoinsThisTurnComponent>()
                 }
@@ -787,6 +808,9 @@ class CleanupPhaseManager(
                 }
                 if (result.has<SacrificedFoodThisTurnComponent>()) {
                     result = result.without<SacrificedFoodThisTurnComponent>()
+                }
+                if (result.has<ScriedOrSurveiledThisTurnComponent>()) {
+                    result = result.without<ScriedOrSurveiledThisTurnComponent>()
                 }
                 if (result.has<SacrificedArtifactThisTurnComponent>()) {
                     result = result.without<SacrificedArtifactThisTurnComponent>()
@@ -868,6 +892,9 @@ class CleanupPhaseManager(
             if (container.has<BlockedOrWasBlockedByLegendaryThisTurnComponent>()) {
                 needsUpdate = true
             }
+            if (container.has<com.wingedsheep.engine.state.components.combat.CombatPartnersThisTurnComponent>()) {
+                needsUpdate = true
+            }
             if (container.has<DamageDealtByPlayersThisTurnComponent>()) {
                 needsUpdate = true
             }
@@ -905,6 +932,7 @@ class CleanupPhaseManager(
                         .without<DamageUnpreventableThisTurnComponent>()
                         .without<BlockedThisTurnComponent>()
                         .without<BlockedOrWasBlockedByLegendaryThisTurnComponent>()
+                        .without<com.wingedsheep.engine.state.components.combat.CombatPartnersThisTurnComponent>()
                         .without<DamageDealtByPlayersThisTurnComponent>()
                         .without<DamagedBySourcesThisTurnComponent>()
                         .without<DealtCombatDamageToPlayersThisTurnComponent>()

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.rix.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Deeproot Elite
@@ -32,19 +31,9 @@ val DeeprootElite = card("Deeproot Elite") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            GameObjectFilter.Permanent.withSubtype(Subtype.MERFOLK).youControl(),
-            TriggerBinding.OTHER
-        )
-        val merfolk = target(
-            "target Merfolk you control",
-            TargetPermanent(
-                filter = TargetFilter(
-                    GameObjectFilter.Permanent.withSubtype(Subtype.MERFOLK).youControl()
-                )
-            )
-        )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, merfolk)
+        trigger = Triggers.another(GameObjectFilter.Permanent.withSubtype(Subtype.MERFOLK).youControl()).enters()
+        val merfolk = target(TargetFilter(GameObjectFilter.Permanent.withSubtype(Subtype.MERFOLK).youControl()))
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, merfolk)
     }
 
     metadata {

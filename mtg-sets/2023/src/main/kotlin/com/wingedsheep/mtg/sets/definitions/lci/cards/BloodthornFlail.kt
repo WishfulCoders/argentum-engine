@@ -3,11 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.lci.cards
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Bloodthorn Flail (LCI #93) — {B} Artifact — Equipment (uncommon)
@@ -45,7 +45,7 @@ val BloodthornFlail = card("Bloodthorn Flail") {
         isEquipAbility = true
         cost = Costs.DiscardCard
         timing = TimingRule.SorcerySpeed
-        val creature = target("target creature you control", Targets.CreatureYouControl)
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.AttachEquipment(creature)
         description = "Equip—Discard a card."
     }

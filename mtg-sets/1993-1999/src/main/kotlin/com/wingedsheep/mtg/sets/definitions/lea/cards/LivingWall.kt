@@ -6,9 +6,9 @@ package com.wingedsheep.mtg.sets.definitions.lea.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 
@@ -30,7 +30,7 @@ val LivingWall = card("Living Wall") {
     keywords(Keyword.DEFENDER)
     activatedAbility {
         cost = Costs.Mana("{1}")
-        effect = RegenerateEffect(EffectTarget.Self)
+        effect = Effects.Regenerate(EffectTarget.Self)
     }
     metadata {
         rarity = Rarity.UNCOMMON

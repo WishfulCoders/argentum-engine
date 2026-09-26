@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.PlayAdditionalLandsEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 
 /**
@@ -42,7 +42,7 @@ val JourneyOfDiscovery = card("Journey of Discovery") {
             }
             mode(
                 "You may play up to two additional lands this turn",
-                PlayAdditionalLandsEffect(count = 2)
+                Effects.PlayAdditionalLands(count = 2)
             )
         }
     }

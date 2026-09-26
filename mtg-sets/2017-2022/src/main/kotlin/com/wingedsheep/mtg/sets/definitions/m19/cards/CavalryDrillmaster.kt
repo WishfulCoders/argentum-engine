@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.m19.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Cavalry Drillmaster
@@ -27,10 +27,9 @@ val CavalryDrillmaster = card("Cavalry Drillmaster") {
     oracleText = "When this creature enters, target creature gets +2/+0 and gains first strike until end of turn. (It deals combat damage before creatures without first strike.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("creature", Targets.Creature)
-        effect = Effects.ModifyStats(2, 0, creature)
-            .then(Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature))
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 0, creature) then Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature)
         description = "When this creature enters, target creature gets +2/+0 and gains first strike until end of turn."
     }
 

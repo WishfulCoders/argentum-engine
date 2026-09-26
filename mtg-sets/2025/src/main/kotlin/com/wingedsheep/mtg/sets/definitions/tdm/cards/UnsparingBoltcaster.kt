@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.StatePredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Unsparing Boltcaster — Tarkir: Dragonstorm #130
@@ -33,16 +32,13 @@ val UnsparingBoltcaster = card("Unsparing Boltcaster") {
         "controls that was dealt damage this turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val t = target(
-            "target",
-            TargetCreature(
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.opponentControls().copy(
-                        statePredicates = listOf(StatePredicate.WasDealtDamageThisTurn)
-                    )
+            TargetFilter(
+                GameObjectFilter.Creature.opponentControls().copy(
+                    statePredicates = listOf(StatePredicate.WasDealtDamageThisTurn)
                 )
-            )
+            ),
         )
         // The source itself deals the damage ("it deals 5 damage").
         effect = Effects.DealDamage(5, t, damageSource = EffectTarget.Self)

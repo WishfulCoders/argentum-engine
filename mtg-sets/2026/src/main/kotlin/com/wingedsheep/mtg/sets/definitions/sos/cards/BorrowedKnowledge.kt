@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Borrowed Knowledge
@@ -38,17 +38,12 @@ val BorrowedKnowledge = card("Borrowed Knowledge") {
     spell {
         modal(chooseCount = 1) {
             mode("Discard your hand, then draw cards equal to the number of cards in target opponent's hand") {
-                target = Targets.Opponent
-                effect = Effects.Composite(
-                    Patterns.Hand.discardHand(),
-                    Effects.DrawCards(DynamicAmount.Count(Player.TargetOpponent, Zone.HAND)),
-                )
+                val opponent = target(Targets.Opponent)
+                effect = Patterns.Hand.discardHand() then
+                    Effects.DrawCards(DynamicAmounts.count(Player.TargetOpponent, Zone.HAND))
             }
             mode("Discard your hand, then draw cards equal to the number of cards discarded this way") {
-                effect = Effects.Composite(
-                    Patterns.Hand.discardHand(),
-                    Effects.DrawCards(DynamicAmount.VariableReference("discardedHand_count")),
-                )
+                effect = Patterns.Hand.discardHand() then Effects.DrawCards(Patterns.Hand.discardedHand.count)
             }
         }
     }

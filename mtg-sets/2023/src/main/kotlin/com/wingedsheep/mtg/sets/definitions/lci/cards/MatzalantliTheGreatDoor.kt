@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
@@ -11,9 +12,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Matzalantli, the Great Door // The Core — The Lost Caverns of Ixalan #256
@@ -52,14 +51,14 @@ private val MatzalantliTheGreatDoorFront = card("Matzalantli, the Great Door") {
     // {T}: Draw a card, then discard a card.
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.Composite(Effects.DrawCards(1), Effects.Discard(1))
+        effect = Effects.DrawCards(1) then Effects.Discard(1)
     }
 
     // {4}, {T}: Transform Matzalantli. Activate only if there are four or more permanent types
     // among cards in your graveyard.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{4}"), Costs.Tap)
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
         restrictions = listOf(
             ActivationRestriction.OnlyIfCondition(
                 Conditions.DistinctPermanentTypesInGraveyard(4)
@@ -89,7 +88,7 @@ private val TheCore = card("The Core") {
     activatedAbility {
         cost = Costs.Tap
         effect = Effects.AddAnyColorMana(
-            DynamicAmount.Count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Permanent)
+            DynamicAmounts.count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Permanent)
         )
         manaAbility = true
         timing = TimingRule.ManaAbility

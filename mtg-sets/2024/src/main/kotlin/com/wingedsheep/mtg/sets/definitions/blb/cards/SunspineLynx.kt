@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -9,11 +10,9 @@ import com.wingedsheep.sdk.scripting.DamageCantBePrevented
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.PreventLifeGain
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Sunspine Lynx
@@ -37,23 +36,21 @@ val SunspineLynx = card("Sunspine Lynx") {
     replacementEffect(DamageCantBePrevented())
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ForEachPlayerEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.ForEachPlayer(
             players = Player.Each,
-            effects = listOf(
-                Effects.DealDamage(
-                    amount = DynamicAmount.Count(
-                        player = Player.You,
-                        zone = Zone.BATTLEFIELD,
-                        filter = GameObjectFilter(
-                            cardPredicates = listOf(
-                                CardPredicate.IsLand,
-                                CardPredicate.Not(CardPredicate.IsBasicLand)
-                            )
+            effect = Effects.DealDamage(
+                amount = DynamicAmounts.count(
+                    Player.You,
+                    Zone.BATTLEFIELD,
+                    GameObjectFilter(
+                        cardPredicates = listOf(
+                            CardPredicate.IsLand,
+                            CardPredicate.Not(CardPredicate.IsBasicLand)
                         )
-                    ),
-                    target = EffectTarget.Controller
-                )
+                    )
+                ),
+                target = EffectTarget.Controller
             )
         )
     }

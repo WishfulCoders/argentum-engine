@@ -6,7 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Smokespew Invoker
@@ -25,7 +25,7 @@ val SmokespewInvoker = card("Smokespew Invoker") {
 
     activatedAbility {
         cost = Costs.Mana(ManaCost.parse("{7}{B}"))
-        val t = target("target creature", TargetCreature())
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(-3, -3, t)
     }
 

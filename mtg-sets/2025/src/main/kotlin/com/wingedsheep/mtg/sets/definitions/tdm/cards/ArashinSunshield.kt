@@ -5,12 +5,8 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
-import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -33,26 +29,18 @@ val ArashinSunshield = card("Arashin Sunshield") {
 
     // ETB: exile up to two target cards, both from the same graveyard (sameOwner).
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target(
-            "up to two target cards from a single graveyard",
-            TargetObject(
-                count = 2,
-                optional = true,
-                filter = TargetFilter.CardInGraveyard,
-                sameOwner = true,
-            )
-        )
-        effect = ForEachTargetEffect(
-            effects = listOf(Effects.Move(EffectTarget.ContextTarget(0), Zone.EXILE))
+        trigger = Triggers.self.enters()
+        targets(TargetFilter.CardInGraveyard, count = 2, optional = true, sameOwner = true)
+        effect = Effects.ForEachTarget(
+            Effects.Move(EffectTarget.ContextTarget(0), Zone.EXILE)
         )
     }
 
     // {W}, {T}: Tap target creature.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{W}"), Costs.Tap)
-        val t = target("target creature", TargetCreature())
-        effect = TapUntapEffect(target = t, tap = true)
+        val t = target(TargetFilter.Creature)
+        effect = Effects.Tap(target = t)
     }
 
     metadata {

@@ -378,8 +378,8 @@ render.
 
 ### Scoped protection / ward variants
 
-`hexproofFrom`, `protectionFromSubtype`, `protectionFromSupertype`, `wardComposite`,
-`wardWaterbend`
+`hexproofFrom`, `protectionFromSubtype`, `protectionFromSupertype`, ward with a
+`WardCost.Composite` or waterbend `WardCost.Mana` cost
 
 ### No-arg but unbranched
 

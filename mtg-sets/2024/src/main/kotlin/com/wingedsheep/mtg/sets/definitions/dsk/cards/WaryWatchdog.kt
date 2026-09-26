@@ -25,11 +25,11 @@ val WaryWatchdog = card("Wary Watchdog") {
     power = 3
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.surveil(1)
     }
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Patterns.Library.surveil(1)
     }
     metadata {

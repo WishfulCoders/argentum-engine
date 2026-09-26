@@ -25,7 +25,7 @@ val RedcapThief = card("Redcap Thief") {
     power = 2
     toughness = 3
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateTreasure()
     }
     metadata {

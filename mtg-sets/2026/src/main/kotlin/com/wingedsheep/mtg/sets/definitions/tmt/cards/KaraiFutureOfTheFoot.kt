@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.sneak
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.scripting.events.Recipient
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Karai, Future of the Foot
@@ -22,7 +22,7 @@ import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
  * graveyard to your hand. If her sneak cost was paid this turn, instead return that card to
  * the battlefield.
  *
- * The combat-damage trigger composes a single [ConditionalEffect]: the default branch returns
+ * The combat-damage trigger composes a single [Effects.If]: the default branch returns
  * the chosen creature card to hand ([Effects.ReturnToHand]); when the "instead" condition holds
  * it goes to the battlefield ([Effects.PutOntoBattlefield] — it's your own graveyard card, so
  * with no controller override it enters under your control).
@@ -46,12 +46,12 @@ val KaraiFutureOfTheFoot = card("Karai, Future of the Foot") {
     sneak("{2}{W}{B}")
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        val creatureCard = target("target creature card in your graveyard", Targets.CreatureCardInYourGraveyard)
-        effect = ConditionalEffect(
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        val creatureCard = target(TargetFilter.CreatureInYourGraveyard)
+        effect = Effects.If(
             condition = Conditions.All(Conditions.SneakCostWasPaid, Conditions.SourceEnteredThisTurn),
-            effect = Effects.PutOntoBattlefield(creatureCard),
-            elseEffect = Effects.ReturnToHand(creatureCard)
+            then = Effects.PutOntoBattlefield(creatureCard),
+            otherwise = Effects.ReturnToHand(creatureCard)
         )
     }
 

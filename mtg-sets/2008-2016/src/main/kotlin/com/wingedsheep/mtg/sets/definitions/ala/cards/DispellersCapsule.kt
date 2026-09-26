@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -26,7 +25,7 @@ val DispellersCapsule = card("Dispeller's Capsule") {
     oracleText = "{2}{W}, {T}, Sacrifice this artifact: Destroy target artifact or enchantment."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{W}"), Costs.Tap, Costs.SacrificeSelf)
-        val t = target("target", TargetPermanent(filter = TargetFilter.ArtifactOrEnchantment))
+        val t = target(TargetFilter.ArtifactOrEnchantment)
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     metadata {

@@ -8,9 +8,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -22,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * {T}, Exile a card from your graveyard: Add {R}. When you do, this creature deals 1 damage to
  * each opponent.
  *
- * The ETB is the standard optional loot: [MayEffect] wrapping an [IfYouDoEffect] whose action is
+ * The ETB is the standard optional loot: [Effects.May] wrapping an [Effects.IfYouDo] whose action is
  * a single discard and whose payoff is a draw.
  *
  * The activated ability is a mana ability ({T} + exile a card from your graveyard) that adds {R}.
@@ -42,18 +39,18 @@ val RubbleRouser = card("Rubble Rouser") {
         "damage to each opponent."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(
-            effect = IfYouDoEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.May(
+            effect = Effects.IfYouDo(
                 action = Patterns.Hand.discardCards(1),
-                ifYouDo = Effects.DrawCards(1),
+                then = Effects.DrawCards(1),
             ),
         )
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.ExileFromGraveyard(1))
-        effect = ReflexiveTriggerEffect(
+        effect = Effects.ReflexiveTrigger(
             action = Effects.AddMana(Color.RED),
             optional = false,
             reflexiveEffect = Effects.DealDamage(

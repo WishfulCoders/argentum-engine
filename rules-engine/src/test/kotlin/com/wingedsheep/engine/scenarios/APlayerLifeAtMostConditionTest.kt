@@ -1,6 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.handlers.ConditionEvaluator
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
@@ -36,7 +36,7 @@ class APlayerLifeAtMostConditionTest : FunSpec({
             targets = emptyList(),
             xValue = 0
         )
-        return ConditionEvaluator().evaluate(state, APlayerLifeAtMost(threshold), context)
+        return PredicateEvaluator(cardRegistry = null).conditions.evaluate(state, APlayerLifeAtMost(threshold), context)
     }
 
     test("false when both players are at full life") {

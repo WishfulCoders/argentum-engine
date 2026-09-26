@@ -5,10 +5,10 @@
 package com.wingedsheep.mtg.sets.definitions.tor.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -25,13 +25,13 @@ val Pyromania = card("Pyromania") {
     oracleText = "{1}{R}, Discard a card at random: This enchantment deals 1 damage to any target.\n{1}{R}, Sacrifice this enchantment: It deals 1 damage to any target."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{R}"), Costs.DiscardAtRandom(1))
-        val t = target("target", AnyTarget())
-        effect = DealDamageEffect(1, t)
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(1, t)
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{R}"), Costs.SacrificeSelf)
-        val t = target("target", AnyTarget())
-        effect = DealDamageEffect(1, t)
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(1, t)
     }
     metadata {
         rarity = Rarity.UNCOMMON

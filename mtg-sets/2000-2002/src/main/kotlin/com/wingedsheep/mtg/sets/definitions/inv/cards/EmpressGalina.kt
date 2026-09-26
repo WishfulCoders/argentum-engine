@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GainControlEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Empress Galina
@@ -27,11 +26,8 @@ val EmpressGalina = card("Empress Galina") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{U}{U}"), Costs.Tap)
-        val t = target(
-            "target",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Permanent.legendary()))
-        )
-        effect = GainControlEffect(t)
+        val t = target(TargetFilter(GameObjectFilter.Permanent.legendary()))
+        effect = Effects.GainControl(t)
         description = "{U}{U}, {T}: Gain control of target legendary permanent."
     }
 

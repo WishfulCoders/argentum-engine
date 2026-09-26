@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  *
  * "Spirits you control" is a bare tribal noun, so the anthem is a static [ModifyStats] over
  * *permanents* with the Spirit subtype, not creatures. "One or more … leave" is CR 603.2c batch
- * wording, so [Triggers.CardsLeaveYourGraveyard] fires once per event batch however many cards
+ * wording, so `Triggers.oneOrMore(filter).leaveYourGraveyard()` fires once per event batch however many cards
  * moved.
  */
 val QuintoriusFieldHistorian = card("Quintorius, Field Historian") {
@@ -36,7 +36,7 @@ val QuintoriusFieldHistorian = card("Quintorius, Field Historian") {
     }
 
     triggeredAbility {
-        trigger = Triggers.CardsLeaveYourGraveyard()
+        trigger = Triggers.oneOrMore(GameObjectFilter.Any).leaveYourGraveyard()
         effect = Effects.CreateToken(
             power = 3,
             toughness = 2,

@@ -35,7 +35,7 @@ val TeachersPest = card("Teacher's Pest") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.GainLife(1)
         description = "Whenever this creature attacks, you gain 1 life."
     }

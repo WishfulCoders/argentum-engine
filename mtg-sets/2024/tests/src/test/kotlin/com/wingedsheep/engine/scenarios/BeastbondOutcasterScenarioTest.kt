@@ -7,12 +7,12 @@ import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import io.kotest.assertions.withClue
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Scenario tests for Beastbond Outcaster's enter-the-battlefield draw trigger.
@@ -80,7 +80,7 @@ class BeastbondOutcasterScenarioTest : ScenarioTestBase() {
                     manaCost = "{B}"
                     typeLine = "Instant"
                     spell {
-                        val t = target("target creature to destroy", Targets.Creature)
+                        val t = target(TargetFilter.Creature)
                         effect = Effects.Destroy(t)
                     }
                 }

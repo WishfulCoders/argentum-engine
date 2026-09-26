@@ -2,14 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CantBlockEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Horde Ambusher
@@ -29,16 +28,16 @@ val HordeAmbusher = card("Horde Ambusher") {
     oracleText = "Whenever Horde Ambusher blocks, it deals 1 damage to you.\nMorph—Reveal a red card in your hand. (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)\nWhen Horde Ambusher is turned face up, target creature can't block this turn."
 
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         effect = Effects.DealDamage(1, EffectTarget.Controller)
     }
 
     morphCost = Costs.pay.RevealCard(filter = GameObjectFilter.Any.withColor(Color.RED))
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        val creature = target("creature", Targets.Creature)
-        effect = CantBlockEffect(target = creature)
+        trigger = Triggers.self.turnedFaceUp()
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.CantBlock(target = creature)
     }
 
     metadata {

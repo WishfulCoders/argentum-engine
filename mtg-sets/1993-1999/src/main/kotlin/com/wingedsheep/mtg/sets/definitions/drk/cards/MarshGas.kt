@@ -21,7 +21,7 @@ val MarshGas = card("Marsh Gas") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreatures,
-            Effects.ModifyStats(-2, 0, EffectTarget.Self)
+            Effects.ModifyStats(-2, 0, EffectTarget.IterationEntity)
         )
     }
 

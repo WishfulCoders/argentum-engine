@@ -12,7 +12,7 @@ import com.wingedsheep.sdk.model.Rarity
  * 1/5
  * Whenever this creature is dealt damage, you gain 1 life.
  *
- * A flat 1 life however much damage arrived — [Triggers.TakesDamage] with a fixed amount, not the
+ * A flat 1 life however much damage arrived — `Triggers.self.isDealtDamage()` with a fixed amount, not the
  * `TRIGGER_DAMAGE_AMOUNT` context property Sunhome Enforcer reads.
  */
 val DromadPurebred = card("Dromad Purebred") {
@@ -24,7 +24,7 @@ val DromadPurebred = card("Dromad Purebred") {
     toughness = 5
 
     triggeredAbility {
-        trigger = Triggers.TakesDamage
+        trigger = Triggers.self.isDealtDamage()
         effect = Effects.GainLife(1)
     }
 

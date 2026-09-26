@@ -19,7 +19,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  *    target's *owner* (who need not be the spell's controller), so the shuffle and the discover
  *    are performed by, and the cast/hand decision is presented to, that owner;
  *  - `Effects.Discover` with the threshold read as the target's mana value
- *    (`EntityProperty(Target(0), ManaValue)`), which survives the shuffle because the entity keeps
+ *    (`EntityProperty(ContextTarget(0), ManaValue)`), which survives the shuffle because the entity keeps
  *    its id and CardComponent across the zone change.
  */
 class ZoyowasJusticeScenarioTest : ScenarioTestBase() {

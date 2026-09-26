@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.fem.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Armor Thrull
@@ -28,8 +27,8 @@ val ArmorThrull = card("Armor Thrull") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.SacrificeSelf)
-        val t = target("target creature", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_TWO, 1, t)
+        val t = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_TWO, 1, t)
     }
 
     metadata {

@@ -7,10 +7,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -37,18 +34,12 @@ val AngelOfFinality = card("Angel of Finality") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target("target player", Targets.Player)
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.GRAVEYARD, Player.TargetPlayer),
-                storeAs = "targetGraveyard",
-            ),
-            MoveCollectionEffect(
-                from = "targetGraveyard",
-                destination = CardDestination.ToZone(Zone.EXILE),
-            ),
-        )
+        trigger = Triggers.self.enters()
+        target(Targets.Player)
+        effect = Effects.Pipeline {
+            val targetGraveyard = gather(CardSource.FromZone(Zone.GRAVEYARD, Player.TargetPlayer))
+            exile(targetGraveyard)
+        }
     }
 
     metadata {

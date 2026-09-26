@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.avr.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Cursebreak
@@ -23,11 +23,8 @@ val Cursebreak = card("Cursebreak") {
     oracleText = "Destroy target enchantment. You gain 2 life."
 
     spell {
-        val enchantment = target("target", Targets.Enchantment)
-        effect = Effects.Composite(
-            Effects.Destroy(enchantment),
-            Effects.GainLife(2),
-        )
+        val enchantment = target(TargetFilter.Enchantment)
+        effect = Effects.Destroy(enchantment) then Effects.GainLife(2)
     }
 
     metadata {

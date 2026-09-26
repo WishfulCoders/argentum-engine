@@ -1,9 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -12,15 +13,10 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.MultiplyTokenCreation
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.events.ControllerFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Kaya, Geist Hunter — Innistrad: Crimson Vow #240
@@ -36,7 +32,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Modeling notes:
  *
  *  - **The +1 is two independent sentences.** The keyword grant is [Effects.ForEachInGroup] over
- *    `Creature.youControl()` with [EffectTarget.Self] naming the iteration entity — the group is
+ *    `Creature.youControl()` with [EffectTarget.IterationEntity] naming the iteration entity — the group is
  *    snapshotted as the ability resolves, so a creature that arrives afterwards does not gain
  *    deathtouch. The counter rides an **optional** ("up to one") target restricted to a creature
  *    *token* you control, so the ability resolves fine with nothing chosen.
@@ -74,20 +70,12 @@ val KayaGeistHunter = card("Kaya, Geist Hunter") {
     // +1: Creatures you control gain deathtouch until end of turn. Put a +1/+1 counter on up to
     //     one target creature token you control.
     loyaltyAbility(+1) {
-        val tokenCreature = target(
-            "up to one target creature token you control",
-            TargetCreature(
-                optional = true,
-                filter = TargetFilter(GameObjectFilter.Creature.token().youControl())
-            )
-        )
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(
-                GroupFilter(GameObjectFilter.Creature.youControl()),
-                Effects.GrantKeyword(Keyword.DEATHTOUCH, EffectTarget.Self)
-            ),
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, tokenCreature)
-        )
+        val tokenCreature = target(TargetFilter(GameObjectFilter.Creature.token().youControl()), optional = true)
+        effect = Effects.ForEachInGroup(
+            GroupFilter(GameObjectFilter.Creature.youControl()),
+            Effects.GrantKeyword(Keyword.DEATHTOUCH, EffectTarget.IterationEntity)
+        ) then
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, tokenCreature)
         description = "Creatures you control gain deathtouch until end of turn. Put a +1/+1 " +
             "counter on up to one target creature token you control."
     }
@@ -98,7 +86,7 @@ val KayaGeistHunter = card("Kaya, Geist Hunter") {
         effect = Effects.GrantReplacementEffect(
             MultiplyTokenCreation(
                 factor = 2,
-                appliesTo = EventPattern.TokenCreationEvent(controller = ControllerFilter.You)
+                appliesTo = EventPattern.TokenCreationEvent(controller = Player.You)
             )
         )
         description = "Until end of turn, if one or more tokens would be created under your " +
@@ -108,31 +96,24 @@ val KayaGeistHunter = card("Kaya, Geist Hunter") {
     // −6: Exile all cards from all graveyards, then create a 1/1 white Spirit creature token with
     //     flying for each card exiled this way.
     loyaltyAbility(-6) {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        zone = Zone.GRAVEYARD,
-                        player = Player.Each,
-                        filter = GameObjectFilter.Any
-                    ),
-                    storeAs = "kayaGraveyards"
-                ),
-                MoveCollectionEffect(
-                    from = "kayaGraveyards",
-                    destination = CardDestination.ToZone(Zone.EXILE),
-                    storeMovedAs = "kayaExiled"
-                ),
-                Effects.CreateToken(
-                    count = DynamicAmount.DistinctEntitiesInCollections(listOf("kayaExiled")),
-                    power = 1,
-                    toughness = 1,
-                    colors = setOf(Color.WHITE),
-                    creatureTypes = setOf("Spirit"),
-                    keywords = setOf(Keyword.FLYING)
+        effect = Effects.Pipeline {
+            val kayaGraveyards = gather(
+                CardSource.FromZone(
+                    zone = Zone.GRAVEYARD,
+                    player = Player.Each,
+                    filter = GameObjectFilter.Any
                 )
             )
-        )
+            val kayaExiled = moveTracked(kayaGraveyards, CardDestination.ToZone(Zone.EXILE))
+            run(Effects.CreateToken(
+                count = DynamicAmounts.distinctEntitiesIn(kayaExiled),
+                power = 1,
+                toughness = 1,
+                colors = setOf(Color.WHITE),
+                creatureTypes = setOf("Spirit"),
+                keywords = setOf(Keyword.FLYING)
+            ))
+        }
         description = "Exile all cards from all graveyards, then create a 1/1 white Spirit " +
             "creature token with flying for each card exiled this way."
     }

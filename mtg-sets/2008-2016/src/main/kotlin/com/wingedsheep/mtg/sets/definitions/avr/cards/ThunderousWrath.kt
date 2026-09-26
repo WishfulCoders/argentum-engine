@@ -27,7 +27,7 @@ val ThunderousWrath = card("Thunderous Wrath") {
         "card you drew this turn.)"
 
     spell {
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(5, t)
     }
 

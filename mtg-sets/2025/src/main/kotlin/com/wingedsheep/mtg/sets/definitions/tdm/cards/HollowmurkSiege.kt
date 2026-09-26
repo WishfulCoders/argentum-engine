@@ -1,9 +1,8 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -12,6 +11,7 @@ import com.wingedsheep.sdk.scripting.EntersWithChoice
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModeOption
 import com.wingedsheep.sdk.scripting.conditions.SourceChosenModeIs
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Hollowmurk Siege
@@ -26,7 +26,7 @@ import com.wingedsheep.sdk.scripting.conditions.SourceChosenModeIs
  *
  * Implementation: the cast-time choice is recorded via [EntersWithChoice] (ChoiceType.MODE).
  * Both modes are triggered abilities gated by [SourceChosenModeIs]. The Sultai trigger uses
- * [Triggers.countersPlacedOn] (any counter type, on a creature you control, not restricted to
+ * `Triggers.<subject>.getsCounters(type, by, firstTimeEachTurn, batch)` (any counter type, on a creature you control, not restricted to
  * a per-creature first time) plus `oncePerTurn = true` for the "triggers only once each turn"
  * clause.
  */
@@ -60,11 +60,7 @@ val HollowmurkSiege = card("Hollowmurk Siege") {
 
     // Sultai — Whenever a counter is put on a creature you control, draw a card. Once each turn.
     triggeredAbility {
-        trigger = Triggers.countersPlacedOn(
-            filter = GameObjectFilter.Creature.youControl(),
-            counterType = Counters.ANY,
-            firstTimeEachTurn = false,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).getsCounters()
         triggerRestriction = SourceChosenModeIs("sultai")
         oncePerTurn = true
         effect = Effects.DrawCards(1)
@@ -73,11 +69,11 @@ val HollowmurkSiege = card("Hollowmurk Siege") {
     // Abzan — Whenever you attack, put a +1/+1 counter on target attacking creature.
     // It gains menace until end of turn.
     triggeredAbility {
-        trigger = Triggers.YouAttack
+        trigger = Triggers.you.attacks()
         triggerRestriction = SourceChosenModeIs("abzan")
-        val attacker = target("target attacking creature", Targets.AttackingCreature)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, attacker)
-            .then(Effects.GrantKeyword(Keyword.MENACE, attacker))
+        val attacker = target(TargetFilter.AttackingCreature)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, attacker) then
+            Effects.GrantKeyword(Keyword.MENACE, attacker)
     }
 
     metadata {

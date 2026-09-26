@@ -25,7 +25,7 @@ val ElderfangDisciple = card("Elderfang Disciple") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.EachOpponentDiscards(1)
     }
 

@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.kld.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Disappearing Act
@@ -30,7 +30,7 @@ val DisappearingAct = card("Disappearing Act") {
     additionalCost(Costs.additional.ReturnToHand(GameObjectFilter.Permanent))
 
     spell {
-        target("target", Targets.Spell)
+        target(TargetFilter.SpellOnStack)
         effect = Effects.CounterSpell()
     }
 

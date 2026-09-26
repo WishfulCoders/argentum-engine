@@ -4,13 +4,12 @@
 
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 
@@ -31,8 +30,7 @@ val CameraLauncher = card("Camera Launcher") {
     activatedAbility {
         cost = Costs.Mana("{3}")
         isExhaust = true
-        effect = Effects.Composite(
-            AddCountersEffect(counterType = Counters.PLUS_ONE_PLUS_ONE, count = 1, target = EffectTarget.Self),
+        effect = Effects.AddCounters(counterType = CounterType.PLUS_ONE_PLUS_ONE, count = 1, target = EffectTarget.Self) then
             Effects.CreateToken(
                 power = 1,
                 toughness = 1,
@@ -40,7 +38,6 @@ val CameraLauncher = card("Camera Launcher") {
                 keywords = setOf(Keyword.FLYING),
                 artifactToken = true
             )
-        )
     }
     metadata {
         rarity = Rarity.COMMON

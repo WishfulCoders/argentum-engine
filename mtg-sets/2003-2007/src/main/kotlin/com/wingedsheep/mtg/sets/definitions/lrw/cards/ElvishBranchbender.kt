@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Elvish Branchbender
@@ -43,10 +42,7 @@ val ElvishBranchbender = card("Elvish Branchbender") {
 
     activatedAbility {
         cost = Costs.Tap
-        val forest = target(
-            "target Forest",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Land.withSubtype(Subtype.FOREST)))
-        )
+        val forest = target(TargetFilter(GameObjectFilter.Land.withSubtype(Subtype.FOREST)))
         val elves = DynamicAmounts.battlefield(
             Player.You,
             GameObjectFilter.Permanent.withSubtype(Subtype.ELF)

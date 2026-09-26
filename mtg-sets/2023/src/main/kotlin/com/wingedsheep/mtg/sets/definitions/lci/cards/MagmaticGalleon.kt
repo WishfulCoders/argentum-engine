@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Magmatic Galleon
@@ -22,8 +21,7 @@ import com.wingedsheep.sdk.scripting.events.RecipientFilter
  * Crew 2
  *
  * The excess-noncombat-damage payoff reuses the Gap 12 excess-damage trigger primitive
- * (`Triggers.dealsDamage(damageType = NonCombat, recipient = CreatureOpponentControls,
- * requireExcess = true)`, the same primitive Fall of Cair Andros composes) with `batch = true`
+ * (`Triggers.<subject>.dealsDamage(to, damageType, requireExcess, batch, requires)`, the same primitive Fall of Cair Andros composes) with `batch = true`
  * for the printed "one or more creatures" wording (CR 603.2c) — a sweeper dealing excess damage
  * to several opposing creatures simultaneously makes one Treasure, not one per creature —
  * and pairs it with `Effects.CreateTreasure()`. The Galleon's own ETB 5-damage strike is a
@@ -40,19 +38,13 @@ val MagmaticGalleon = card("Magmatic Galleon") {
         "Crew 2"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("target creature an opponent controls", Targets.CreatureOpponentControls)
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.DealDamage(5, creature)
     }
 
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            damageType = DamageType.NonCombat,
-            recipient = RecipientFilter.CreatureOpponentControls,
-            binding = TriggerBinding.ANY,
-            requireExcess = true,
-            batch = true,
-        )
+        trigger = Triggers.a().dealsDamage(Recipient.CreatureOpponentControls, damageType = DamageType.NonCombat, requireExcess = true, batch = true)
         effect = Effects.CreateTreasure()
     }
 

@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 
 /**
@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.effects.SearchDestination
  * then shuffle and put that card on top. If you control a Dragon, put that card onto the
  * battlefield tapped instead.
  *
- * Modeled as a [ConditionalEffect] on "you control a Dragon", checked at resolution. The
+ * Modeled as a [Effects.If] on "you control a Dragon", checked at resolution. The
  * search is a single optional library search (ChooseUpTo via [Patterns.Library.searchLibrary]);
  * only one destination branch runs:
  *  - Control a Dragon → put the basic land onto the battlefield tapped, then shuffle.
@@ -37,11 +37,11 @@ val EmbermouthSentinel = card("Embermouth Sentinel") {
         "card onto the battlefield tapped instead."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ConditionalEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.If(
             condition = Conditions.ControlCreatureOfType(Subtype.DRAGON),
             // Control a Dragon: put the basic land onto the battlefield tapped instead.
-            effect = Patterns.Library.searchLibrary(
+            then = Patterns.Library.searchLibrary(
                 filter = Filters.BasicLand,
                 count = 1,
                 destination = SearchDestination.BATTLEFIELD,
@@ -50,7 +50,7 @@ val EmbermouthSentinel = card("Embermouth Sentinel") {
                 reveal = true
             ),
             // Otherwise: shuffle and put the basic land on top of the library.
-            elseEffect = Patterns.Library.searchLibrary(
+            otherwise = Patterns.Library.searchLibrary(
                 filter = Filters.BasicLand,
                 count = 1,
                 destination = SearchDestination.TOP_OF_LIBRARY,

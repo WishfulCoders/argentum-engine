@@ -26,7 +26,7 @@ import kotlin.reflect.KClass
  * than silently fizzling on the first one (the trap behind the AddCounters player-target bug).
  */
 class ChangeSpeedExecutor(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<ChangeSpeedEffect> {
 
     override val effectType: KClass<ChangeSpeedEffect> = ChangeSpeedEffect::class

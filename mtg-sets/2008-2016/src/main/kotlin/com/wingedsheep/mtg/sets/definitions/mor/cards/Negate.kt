@@ -4,11 +4,10 @@
 
 package com.wingedsheep.mtg.sets.definitions.mor.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CounterEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
 
 
 /**
@@ -23,8 +22,8 @@ val Negate = card("Negate") {
     typeLine = "Instant"
     oracleText = "Counter target noncreature spell."
     spell {
-        val t = target("target", TargetSpell(filter = TargetFilter.NoncreatureSpellOnStack))
-        effect = CounterEffect()
+        val t = target(TargetFilter.NoncreatureSpellOnStack)
+        effect = Effects.CounterSpell()
     }
     metadata {
         rarity = Rarity.COMMON

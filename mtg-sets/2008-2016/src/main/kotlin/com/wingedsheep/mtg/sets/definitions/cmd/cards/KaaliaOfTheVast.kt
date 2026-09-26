@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.events.AttackPredicate
 
 /**
  * Kaalia of the Vast
@@ -23,8 +24,8 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  *   declared as attacking a player, a planeswalker, or a battle (CR 508.1); Kaalia's ability
  *   fires only for the *player* case. The 2024-06-07 ruling makes this explicit: "Kaalia's
  *   ability doesn't trigger if it attacks a planeswalker or battle." That gate is
- *   `Triggers.AttacksAnOpponent` (SELF + `AttackPredicate.DefenderIsPlayer`), NOT the
- *   unfiltered `Triggers.Attacks`.
+ *   `Triggers.self.attacks(setOf(AttackPredicate.DefenderIsPlayer))` (SELF + `AttackPredicate.DefenderIsPlayer`), NOT the
+ *   unfiltered `Triggers.self.attacks()`.
  * - "put an Angel, Demon, or Dragon creature card from your hand ... tapped and attacking"
  *   reuses `Patterns.Hand.putFromHand(entersAttacking = true)`: GatherCards (hand) →
  *   SelectFromCollection (ChooseUpTo 1 = "you may") → MoveCollection with
@@ -52,7 +53,7 @@ val KaaliaOfTheVast = card("Kaalia of the Vast") {
     // an Angel, Demon, or Dragon creature card from your hand onto the battlefield tapped and
     // attacking that opponent.
     triggeredAbility {
-        trigger = Triggers.AttacksAnOpponent
+        trigger = Triggers.self.attacks(setOf(AttackPredicate.DefenderIsPlayer))
         effect = Patterns.Hand.putFromHand(
             filter = GameObjectFilter.Creature.withAnySubtype("Angel", "Demon", "Dragon"),
             entersAttacking = true

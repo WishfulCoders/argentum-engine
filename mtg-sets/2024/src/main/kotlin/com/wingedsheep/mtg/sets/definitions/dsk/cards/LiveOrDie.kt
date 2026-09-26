@@ -9,8 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -29,11 +27,11 @@ val LiveOrDie = card("Live or Die") {
     spell {
         modal(chooseCount = 1) {
             mode("Return target creature card from your graveyard to the battlefield") {
-                val t = target("target", TargetObject(filter = TargetFilter.CreatureInYourGraveyard))
+                val t = target(TargetFilter.CreatureInYourGraveyard)
                 effect = Effects.Move(t, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)
             }
             mode("Destroy target creature") {
-                val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+                val t = target(TargetFilter.Creature)
                 effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
             }
         }

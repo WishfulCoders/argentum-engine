@@ -1,13 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.events.DamageType
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.PreventDamage
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
-import com.wingedsheep.sdk.scripting.events.SourceFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Sandskin
@@ -22,14 +23,14 @@ val Sandskin = card("Sandskin") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature\nPrevent all combat damage that would be dealt to and dealt by enchanted creature."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     // Prevent combat damage TO enchanted creature
     replacementEffect(
         PreventDamage(
             amount = null,
             appliesTo = EventPattern.DamageEvent(
-                recipient = RecipientFilter.EnchantedCreature,
+                recipient = Recipient.EnchantedCreature,
                 damageType = DamageType.Combat
             )
         )
@@ -40,7 +41,7 @@ val Sandskin = card("Sandskin") {
         PreventDamage(
             amount = null,
             appliesTo = EventPattern.DamageEvent(
-                source = SourceFilter.EnchantedCreature,
+                source = GameObjectFilter.Any.attachedToBySource(),
                 damageType = DamageType.Combat
             )
         )

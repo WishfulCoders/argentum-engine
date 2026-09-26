@@ -1,7 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.ActivateAbility
-import com.wingedsheep.engine.handlers.ConditionEvaluator
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.legalactions.utils.CastPermissionUtils
 import com.wingedsheep.engine.state.components.player.ManaPoolComponent
@@ -14,6 +13,8 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import io.kotest.matchers.shouldNotBe
 
 /**
  * Scenario tests for Resonating Lute (Secrets of Strixhaven #221).
@@ -44,7 +45,7 @@ class ResonatingLuteScenarioTest : FunSpec({
     }
 
     fun makeCastPermissionUtils(driver: GameTestDriver): CastPermissionUtils =
-        CastPermissionUtils(driver.cardRegistry, PredicateEvaluator(), ConditionEvaluator())
+        CastPermissionUtils(driver.cardRegistry, PredicateEvaluator(cardRegistry = null), PredicateEvaluator(cardRegistry = null).conditions)
 
     test("grants each land you control a {T}: add two mana of one color ability") {
         val driver = createDriver()
@@ -95,7 +96,7 @@ class ResonatingLuteScenarioTest : FunSpec({
         val result = driver.submit(
             ActivateAbility(playerId = p, sourceId = lute, abilityId = drawAbilityId),
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         driver.isTapped(lute) shouldBe true
     }
 
@@ -116,7 +117,7 @@ class ResonatingLuteScenarioTest : FunSpec({
         val result = driver.submit(
             ActivateAbility(playerId = p, sourceId = lute, abilityId = drawAbilityId),
         )
-        result.isSuccess shouldBe false
+        result.outcome shouldNotBe Outcome.Done
         driver.isTapped(lute) shouldBe false
     }
 })

@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.m12.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Alabaster Mage
@@ -25,7 +25,7 @@ val AlabasterMage = card("Alabaster Mage") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{W}")
-        val creature = target("target creature you control", Targets.CreatureYouControl)
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.GrantKeyword(Keyword.LIFELINK, creature)
         description = "{1}{W}: Target creature you control gains lifelink until end of turn."
     }

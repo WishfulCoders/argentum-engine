@@ -10,7 +10,6 @@ import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.CounterType
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
@@ -27,10 +26,12 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.sdk.scripting.events.SpellCastPredicate
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * "Whenever you cast a spell that targets one or more [filter], **those** … " — the trigger-time
- * capture behind `Triggers.youCastSpellTargeting(filter)`.
+ * capture behind `Triggers.you.casts(requires = setOf(SpellCastPredicate.TargetsMatching(filter)))`.
  *
  * `TriggerDetector` records exactly the targets that satisfied the trigger's own
  * `SpellCastPredicate.TargetsMatching` gate into `TriggerContext.capturedEntityIds`, which the
@@ -57,9 +58,9 @@ class SpellCastTargetCaptureTest : FunSpec({
         manaCost = "{G}"
         typeLine = "Instant"
         spell {
-            val a = target("first creature", Targets.Creature)
-            val b = target("second creature", Targets.Creature)
-            effect = Effects.ModifyStats(1, 1, a).then(Effects.ModifyStats(1, 1, b))
+            val a = target(TargetFilter.Creature)
+            val b = target(TargetFilter.Creature)
+            effect = Effects.ModifyStats(1, 1, a) then Effects.ModifyStats(1, 1, b)
         }
     }
 
@@ -68,9 +69,9 @@ class SpellCastTargetCaptureTest : FunSpec({
         manaCost = "{G}"
         typeLine = "Instant"
         spell {
-            val c = target("target creature", Targets.Creature)
-            val p = target("target player", Targets.Player)
-            effect = Effects.ModifyStats(1, 1, c).then(Effects.GainLife(1, p))
+            val c = target(TargetFilter.Creature)
+            val p = target(Targets.Player)
+            effect = Effects.ModifyStats(1, 1, c) then Effects.GainLife(1, p)
         }
     }
 
@@ -81,10 +82,10 @@ class SpellCastTargetCaptureTest : FunSpec({
         power = 2
         toughness = 2
         triggeredAbility {
-            trigger = Triggers.youCastSpellTargeting(GameObjectFilter.Creature)
+            trigger = Triggers.you.casts(requires = setOf(SpellCastPredicate.TargetsMatching(GameObjectFilter.Creature)))
             effect = ForEachInCollectionEffect(
                 collection = IterationSpace.TRIGGER_CAPTURED_COLLECTION,
-                effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+                effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity)
             )
             description = "Whenever you cast a spell that targets one or more creatures, put a " +
                 "+1/+1 counter on each of those creatures."
@@ -98,10 +99,10 @@ class SpellCastTargetCaptureTest : FunSpec({
         power = 2
         toughness = 2
         triggeredAbility {
-            trigger = Triggers.youCastSpellTargeting(GameObjectFilter.Creature.youControl())
+            trigger = Triggers.you.casts(requires = setOf(SpellCastPredicate.TargetsMatching(GameObjectFilter.Creature.youControl())))
             effect = ForEachInCollectionEffect(
                 collection = IterationSpace.TRIGGER_CAPTURED_COLLECTION,
-                effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+                effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity)
             )
             description = "Whenever you cast a spell that targets one or more creatures you " +
                 "control, put a +1/+1 counter on each of those creatures."
@@ -118,7 +119,7 @@ class SpellCastTargetCaptureTest : FunSpec({
         manaCost = "{U}"
         typeLine = "Instant"
         spell {
-            target("target spell", Targets.Spell)
+            target(TargetFilter.SpellOnStack)
             effect = Effects.GainLife(1)
         }
     }
@@ -130,10 +131,10 @@ class SpellCastTargetCaptureTest : FunSpec({
         power = 2
         toughness = 2
         triggeredAbility {
-            trigger = Triggers.youCastSpellTargeting(GameObjectFilter.Creature)
+            trigger = Triggers.you.casts(requires = setOf(SpellCastPredicate.TargetsMatching(GameObjectFilter.Creature)))
             effect = ForEachInCollectionEffect(
                 collection = IterationSpace.TRIGGER_CAPTURED_COLLECTION,
-                effect = Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
+                effect = Effects.GrantKeyword(Keyword.FLYING, EffectTarget.IterationEntity)
             )
             description = "Whenever you cast a spell that targets one or more creatures, those " +
                 "creatures gain flying until end of turn."
@@ -150,7 +151,7 @@ class SpellCastTargetCaptureTest : FunSpec({
         manaCost = "{U}"
         typeLine = "Instant"
         spell {
-            target("target spell with a single target", Targets.SpellOrAbilityWithSingleTarget)
+            target(TargetFilter.SpellOrAbilityOnStack)
             effect = Effects.ChangeTarget()
         }
     }

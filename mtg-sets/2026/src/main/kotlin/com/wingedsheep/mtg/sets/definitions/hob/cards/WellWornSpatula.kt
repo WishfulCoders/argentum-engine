@@ -4,11 +4,11 @@
 
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -25,8 +25,8 @@ val WellWornSpatula = card("Well-Worn Spatula") {
     typeLine = "Artifact — Equipment"
     oracleText = "When this Equipment enters, you gain 2 life.\nEquipped creature gets +1/+1.\nEquip {1} ({1}: Attach to target creature you control. Equip only as a sorcery.)"
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = GainLifeEffect(2)
+        trigger = Triggers.self.enters()
+        effect = Effects.GainLife(2)
     }
     staticAbility {
         ability = ModifyStats(1, 1)

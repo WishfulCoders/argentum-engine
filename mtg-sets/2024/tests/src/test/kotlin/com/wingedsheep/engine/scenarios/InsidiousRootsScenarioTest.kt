@@ -31,7 +31,7 @@ import io.kotest.matchers.shouldBe
  *    them must stay untouched, which a filter copied from the first ability would get wrong.
  *
  * The second trigger fires exactly once per batch (CR 603.2c) by construction — that is
- * `Triggers.CardsLeaveYourGraveyard`, shared with Chalk Outline and covered by its test — so this
+ * `Triggers.oneOrMore(filter).leaveYourGraveyard()`, shared with Chalk Outline and covered by its test — so this
  * file drives it once and spends its assertions on the payoff instead.
  */
 class InsidiousRootsScenarioTest : FunSpec({

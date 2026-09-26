@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
@@ -20,6 +19,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Verifies CR 302.6: a creature can't attack (or use tap/untap activated abilities)
@@ -54,8 +54,8 @@ class ControlChangeSummoningSicknessTest : FunSpec({
         typeLine = "Sorcery"
         oracleText = "Exchange control of target creature you control and target creature an opponent controls."
         spell {
-            val mine = target("yours", Targets.CreatureYouControl)
-            val theirs = target("theirs", Targets.CreatureOpponentControls)
+            val mine = target(TargetFilter.CreatureYouControl)
+            val theirs = target(TargetFilter.CreatureOpponentControls)
             effect = Effects.ExchangeControl(mine, theirs)
         }
     }

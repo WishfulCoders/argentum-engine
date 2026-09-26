@@ -4,8 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Wheel and Deal
@@ -20,14 +19,10 @@ val WheelAndDeal = card("Wheel and Deal") {
     oracleText = "Any number of target opponents each discard their hands, then draw seven cards. Draw a card."
 
     spell {
-        val t = target("target", TargetOpponent())
-        effect = Effects.Composite(
-            listOf(
-                Patterns.Hand.discardHand(t),
-                Effects.DrawCards(7, t),
-                Effects.DrawCards(1)
-            )
-        )
+        val t = target(Targets.Opponent)
+        effect = Patterns.Hand.discardHand(t) then
+            Effects.DrawCards(7, t) then
+            Effects.DrawCards(1)
     }
 
     metadata {

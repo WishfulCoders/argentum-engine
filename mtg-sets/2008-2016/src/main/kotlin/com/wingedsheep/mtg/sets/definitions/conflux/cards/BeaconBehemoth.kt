@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Beacon Behemoth
@@ -32,7 +31,7 @@ val BeaconBehemoth = card("Beacon Behemoth") {
 
     activatedAbility {
         cost = Costs.Mana("{1}")
-        val creature = target("target", TargetCreature(filter = TargetFilter.Creature.powerAtLeast(5)))
+        val creature = target(TargetFilter.Creature.powerAtLeast(5))
         effect = Effects.GrantKeyword(Keyword.VIGILANCE, creature)
     }
 

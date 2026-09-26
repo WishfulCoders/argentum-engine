@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Syndicate Guildmage — Ravnica Allegiance #211
@@ -27,12 +26,12 @@ val SyndicateGuildmage = card("Syndicate Guildmage") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{W}"), Costs.Tap)
-        val big = target("target", TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.powerAtLeast(4))))
+        val big = target(TargetFilter(GameObjectFilter.Creature.powerAtLeast(4)))
         effect = Effects.Tap(big)
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{4}{B}"), Costs.Tap)
-        val victim = target("target", Targets.OpponentOrPlaneswalker)
+        val victim = target(Targets.OpponentOrPlaneswalker)
         effect = Effects.DealDamage(2, victim)
     }
 

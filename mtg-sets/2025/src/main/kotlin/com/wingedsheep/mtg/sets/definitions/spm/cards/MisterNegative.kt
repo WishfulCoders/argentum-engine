@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 
 /**
  * Mister Negative — Marvel's Spider-Man #135
@@ -31,9 +30,9 @@ val MisterNegative = card("Mister Negative") {
     keywords(Keyword.VIGILANCE, Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val opponent = target("target opponent", Targets.Opponent)
-        effect = MayEffect(
+        trigger = Triggers.self.enters()
+        val opponent = target(Targets.Opponent)
+        effect = Effects.May(
             effect = Effects.ExchangeLifeTotals(target = opponent, drawEqualToLifeLost = true)
         )
     }

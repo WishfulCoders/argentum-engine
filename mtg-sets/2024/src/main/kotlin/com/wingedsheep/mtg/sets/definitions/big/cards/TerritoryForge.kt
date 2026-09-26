@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.big.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.DonorCards
 import com.wingedsheep.sdk.scripting.HasAllActivatedAbilitiesOfCards
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Territory Forge — {4}{R} Artifact (The Big Score, mythic).
@@ -37,9 +37,9 @@ val TerritoryForge = card("Territory Forge") {
         "This artifact has all activated abilities of the exiled card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.WasCast
-        val exiled = target("target artifact or land", Targets.ArtifactOrLand)
+        val exiled = target(TargetFilter.ArtifactOrLand)
         effect = Effects.ExileLinkedToSource(exiled)
     }
 

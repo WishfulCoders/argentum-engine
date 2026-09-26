@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -49,10 +48,7 @@ val VodalianWarMachine = card("Vodalian War Machine") {
             filter = GameObjectFilter.Creature.withSubtype(Subtype.MERFOLK).untapped().youControl(),
             excludeSelf = true,
         )
-        effect = Effects.Composite(
-            Effects.CanAttackDespiteDefenderThisTurn(EffectTarget.Self),
-            deathRevengeOn(),
-        )
+        effect = Effects.CanAttackDespiteDefenderThisTurn(EffectTarget.Self) then deathRevengeOn()
         description = "Tap an untapped Merfolk you control: This creature can attack this turn as though it didn't have defender."
     }
 
@@ -62,10 +58,7 @@ val VodalianWarMachine = card("Vodalian War Machine") {
             filter = GameObjectFilter.Creature.withSubtype(Subtype.MERFOLK).untapped().youControl(),
             excludeSelf = true,
         )
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 1, EffectTarget.Self),
-            deathRevengeOn(),
-        )
+        effect = Effects.ModifyStats(2, 1, EffectTarget.Self) then deathRevengeOn()
         description = "Tap an untapped Merfolk you control: This creature gets +2/+1 until end of turn."
     }
 
@@ -82,8 +75,8 @@ val VodalianWarMachine = card("Vodalian War Machine") {
  * per activation, watching the War Machine's own death. `fireOnce` keeps a single activation from
  * destroying its Merfolk twice; the end-of-turn expiry is the "this turn" in the printed text.
  */
-private fun deathRevengeOn() = CreateDelayedTriggerEffect(
-    trigger = Triggers.Dies,
+private fun deathRevengeOn() = Effects.CreateDelayedTrigger(
+    trigger = Triggers.self.dies(),
     watchedTarget = EffectTarget.Self,
     effect = Effects.Destroy(EffectTarget.TappedAsCost(0)),
     expiry = DelayedTriggerExpiry.EndOfTurn,

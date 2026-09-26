@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.events.AttackPredicate
  * Whenever a creature you control attacks alone, target opponent loses 1 life and you gain 1 life.
  *
  * Implementation notes:
- * - "Attacks alone" is the Grasping Shadows shape: [Triggers.attacks] over "creature you control"
+ * - "Attacks alone" is the Grasping Shadows shape: `Triggers.<subject>.attacks(requires)` over "creature you control"
  *   with [AttackPredicate.Alone] and a [TriggerBinding.ANY] binding, since the enchantment itself
  *   is never the attacker.
  * - The drain is two independent effects, not [Effects.DrainLife]: the oracle text gains a flat 1
@@ -33,23 +33,16 @@ val HydraInfiltration = card("HYDRA Infiltration") {
         "gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val victim = target("target opponent", Targets.Opponent)
+        trigger = Triggers.self.enters()
+        val victim = target(Targets.Opponent)
         effect = Effects.Discard(2, victim)
         description = "When this enchantment enters, target opponent discards two cards."
     }
 
     triggeredAbility {
-        trigger = Triggers.attacks(
-            filter = GameObjectFilter.Creature.youControl(),
-            requires = setOf(AttackPredicate.Alone),
-            binding = TriggerBinding.ANY,
-        )
-        val victim = target("target opponent", Targets.Opponent)
-        effect = Effects.Composite(
-            Effects.LoseLife(1, victim),
-            Effects.GainLife(1),
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).attacks(setOf(AttackPredicate.Alone))
+        val victim = target(Targets.Opponent)
+        effect = Effects.LoseLife(1, victim) then Effects.GainLife(1)
         description = "Whenever a creature you control attacks alone, target opponent loses 1 " +
             "life and you gain 1 life."
     }

@@ -7,7 +7,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Basilisk Collar:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -72,7 +72,7 @@
                     "baseFilter": "instant",
                     "zone": "Stack"
                 },
-                "id": "target instant spell"
+                "id": "t0"
             }
         ]
     },
@@ -100,7 +100,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Dragonmaster Outcast:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP"
@@ -177,7 +177,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Jace, the Mind Sculptor:1",
                 "cost": {
                     "type": "CostLoyalty",
                     "change": 2
@@ -194,8 +194,8 @@
                                     "amount": 1
                                 },
                                 "player": {
-                                    "type": "ContextPlayer",
-                                    "index": 0
+                                    "type": "BoundVariable",
+                                    "name": "t0"
                                 }
                             },
                             "storeAs": "gathered0"
@@ -221,8 +221,8 @@
                                 "type": "ToZone",
                                 "zone": "Library",
                                 "player": {
-                                    "type": "ContextPlayer",
-                                    "index": 0
+                                    "type": "BoundVariable",
+                                    "name": "t0"
                                 },
                                 "placement": "Bottom"
                             },
@@ -233,14 +233,14 @@
                 "targetRequirements": [
                     {
                         "type": "TargetPlayer",
-                        "id": "target player"
+                        "id": "t0"
                     }
                 ],
                 "timing": "SorcerySpeed",
                 "isPlaneswalkerAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Jace, the Mind Sculptor:2",
                 "cost": {
                     "type": "CostLoyalty",
                     "change": 0
@@ -297,7 +297,7 @@
                 "isPlaneswalkerAbility": true
             },
             {
-                "id": "ability_3",
+                "id": "Jace, the Mind Sculptor:3",
                 "cost": {
                     "type": "CostLoyalty",
                     "change": -1
@@ -306,7 +306,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "creature"
+                        "name": "t1"
                     },
                     "destination": "Hand"
                 },
@@ -316,14 +316,14 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "creature"
+                        "id": "t1"
                     }
                 ],
                 "timing": "SorcerySpeed",
                 "isPlaneswalkerAbility": true
             },
             {
-                "id": "ability_4",
+                "id": "Jace, the Mind Sculptor:4",
                 "cost": {
                     "type": "CostLoyalty",
                     "change": -12
@@ -337,8 +337,8 @@
                                 "type": "FromZone",
                                 "zone": "Library",
                                 "player": {
-                                    "type": "ContextPlayer",
-                                    "index": 0
+                                    "type": "BoundVariable",
+                                    "name": "t2"
                                 }
                             },
                             "storeAs": "gathered0"
@@ -350,8 +350,8 @@
                                 "type": "ToZone",
                                 "zone": "Exile",
                                 "player": {
-                                    "type": "ContextPlayer",
-                                    "index": 0
+                                    "type": "BoundVariable",
+                                    "name": "t2"
                                 }
                             }
                         },
@@ -361,8 +361,8 @@
                                 "type": "FromZone",
                                 "zone": "Hand",
                                 "player": {
-                                    "type": "ContextPlayer",
-                                    "index": 0
+                                    "type": "BoundVariable",
+                                    "name": "t2"
                                 }
                             },
                             "storeAs": "gathered2"
@@ -374,8 +374,8 @@
                                 "type": "ToZone",
                                 "zone": "Library",
                                 "player": {
-                                    "type": "ContextPlayer",
-                                    "index": 0
+                                    "type": "BoundVariable",
+                                    "name": "t2"
                                 },
                                 "placement": "Shuffled"
                             }
@@ -385,7 +385,7 @@
                 "targetRequirements": [
                     {
                         "type": "TargetPlayer",
-                        "id": "target player"
+                        "id": "t2"
                     }
                 ],
                 "timing": "SorcerySpeed",
@@ -428,7 +428,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Kalastria Highborn:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "permanent Vampire ctrl:you",
@@ -456,7 +456,7 @@
                                 },
                                 "target": {
                                     "type": "BoundVariable",
-                                    "name": "target player"
+                                    "name": "t0"
                                 }
                             },
                             {
@@ -471,7 +471,7 @@
                 },
                 "targetRequirement": {
                     "type": "TargetPlayer",
-                    "id": "target player"
+                    "id": "t0"
                 }
             }
         ]
@@ -497,7 +497,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Khalni Garden:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -517,7 +517,7 @@
         ],
         "activatedAbilities": [
             {
-                "id": "ability_2",
+                "id": "Khalni Garden:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -550,7 +550,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Kitesail:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -637,7 +637,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Pilgrim's Eye:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -655,7 +655,8 @@
                                     "zone": "Library",
                                     "filter": "basicland"
                                 },
-                                "storeAs": "searchable"
+                                "storeAs": "searchable",
+                                "search": true
                             },
                             {
                                 "type": "SelectFromCollection",
@@ -708,7 +709,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Pulse Tracker:1",
                 "trigger": "AttackEvent",
                 "effect": {
                     "type": "LoseLife",
@@ -744,7 +745,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Raging Ravine:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -754,7 +755,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Raging Ravine:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -764,7 +765,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_3",
+                "id": "Raging Ravine:4",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -796,11 +797,11 @@
                         {
                             "type": "GrantTriggeredAbility",
                             "ability": {
-                                "id": "ability_4",
+                                "id": "Raging Ravine:3",
                                 "trigger": "AttackEvent",
                                 "effect": {
                                     "type": "AddCounters",
-                                    "counterType": "+1/+1",
+                                    "counterType": "PLUS_ONE_PLUS_ONE",
                                     "count": 1,
                                     "target": "Self"
                                 },
@@ -851,7 +852,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Seer's Sundial:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "land ctrl:you",

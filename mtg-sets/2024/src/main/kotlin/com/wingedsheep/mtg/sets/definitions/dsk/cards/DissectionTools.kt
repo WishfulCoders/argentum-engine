@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -14,6 +13,7 @@ import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Dissection Tools
@@ -41,11 +41,9 @@ val DissectionTools = card("Dissection Tools") {
         "Equip—Sacrifice a creature."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Patterns.Library.manifestDread(),
+        trigger = Triggers.self.enters()
+        effect = Patterns.Library.manifestDread() then
             Effects.AttachEquipment(EffectTarget.PipelineTarget("manifestDreadManifested"))
-        )
     }
 
     staticAbility {
@@ -62,7 +60,7 @@ val DissectionTools = card("Dissection Tools") {
         cost = Costs.Sacrifice(GameObjectFilter.Creature)
         isEquipAbility = true
         timing = TimingRule.SorcerySpeed
-        val creature = target("creature you control", Targets.CreatureYouControl)
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.AttachEquipment(creature)
     }
 

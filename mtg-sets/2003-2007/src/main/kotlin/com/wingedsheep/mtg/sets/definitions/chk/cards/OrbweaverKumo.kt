@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever you cast a Spirit or Arcane spell, this creature gains forestwalk until end of turn.
  *
  * The same "Whenever you cast a Spirit or Arcane spell" trigger the rest of the CHK Spirit cycle
- * carries — [Triggers.youCastSpell] over a homogeneous OR of the two subtype filters, binding
+ * carries — `Triggers.you.casts(spell, requires)` over a homogeneous OR of the two subtype filters, binding
  * `ANY` — with the payoff pointed at the source rather than at a target.
  *
  * [EffectTarget.Self] is the right handle here, not `TriggeringEntity`: the entity bound by a
@@ -37,9 +37,7 @@ val OrbweaverKumo = card("Orbweaver Kumo") {
     keywords(Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.Any.withAnySubtype("Spirit", "Arcane")
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withAnySubtype("Spirit", "Arcane"))
         effect = Effects.GrantKeyword(Keyword.FORESTWALK, EffectTarget.Self)
         description = "Whenever you cast a Spirit or Arcane spell, this creature gains " +
             "forestwalk until end of turn."

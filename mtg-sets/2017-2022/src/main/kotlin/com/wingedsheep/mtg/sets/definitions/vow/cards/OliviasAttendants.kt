@@ -2,13 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Olivia's Attendants
@@ -20,7 +19,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Whenever this creature deals damage, create that many Blood tokens.
  * {2}{R}: This creature deals 1 damage to any target.
  *
- * The trigger is the *bare* [Triggers.DealsDamage] — any damage, of any type, to any recipient.
+ * The trigger is the *bare* `Triggers.self.dealsDamage()` — any damage, of any type, to any recipient.
  * That is wider than the usual combat-damage trigger on purpose: the Attendants' own pinger feeds
  * it, and so does a blocked creature's damage to a blocker, or damage a fight effect makes it deal.
  *
@@ -43,16 +42,16 @@ val OliviasAttendants = card("Olivia's Attendants") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.DealsDamage
+        trigger = Triggers.self.dealsDamage()
         effect = Effects.CreateBlood(
-            DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_DAMAGE_AMOUNT)
+            DynamicAmounts.triggerDamageAmount()
         )
         description = "Whenever this creature deals damage, create that many Blood tokens."
     }
 
     activatedAbility {
         cost = Costs.Mana("{2}{R}")
-        val anyTarget = target("any target", Targets.Any)
+        val anyTarget = target(Targets.Any)
         effect = Effects.DealDamage(1, anyTarget)
         description = "This creature deals 1 damage to any target."
     }

@@ -34,7 +34,7 @@ val OrneryDilophosaur = card("Ornery Dilophosaur") {
     keywords(Keyword.DEATHTOUCH)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         interveningIf = Conditions.YouControl(GameObjectFilter.Creature.powerAtLeast(4))
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
     }

@@ -28,7 +28,7 @@ val ScepterOfFugue = card("Scepter of Fugue") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{B}"), Costs.Tap)
-        val victim = target("target", Targets.Player)
+        val victim = target(Targets.Player)
         restrictions = listOf(ActivationRestriction.OnlyDuringYourTurn)
         effect = Patterns.Hand.discardCards(1, victim)
     }

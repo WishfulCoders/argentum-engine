@@ -4,9 +4,9 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -14,11 +14,10 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.effects.BecomeCreatureEffect
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * "+1/+1 for each artifact you control" — a dynamic base P/T recomputed every projection pass.
@@ -26,7 +25,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * file order).
  */
 private val IronManArmorArtifactCount: DynamicAmount =
-    DynamicAmount.Count(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Artifact)
+    DynamicAmounts.count(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Artifact)
 
 /**
  * Iron Man Armor — Marvel Super Heroes #248
@@ -76,8 +75,8 @@ val IronManArmor = card("Iron Man Armor") {
 
     // When this Equipment enters, attach it to target creature you control.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("target creature you control", Targets.CreatureYouControl)
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.AttachEquipment(creature)
         description = "When this Equipment enters, attach it to target creature you control."
     }
@@ -96,12 +95,12 @@ val IronManArmor = card("Iron Man Armor") {
     // with flying and "This creature gets +1/+1 for each artifact you control" until end of turn.
     activatedAbility {
         cost = Costs.Mana("{2}")
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.SourceMatches(GameObjectFilter.Noncreature),
-            effect = BecomeCreatureEffect(
+            then = Effects.BecomeCreature(
                 target = EffectTarget.Self,
-                power = DynamicAmount.Fixed(0),
-                toughness = DynamicAmount.Fixed(0),
+                power = DynamicAmounts.fixed(0),
+                toughness = DynamicAmounts.fixed(0),
                 keywords = setOf(Keyword.FLYING),
                 creatureTypes = setOf("Construct", "Hero"),
                 addTypes = setOf("ARTIFACT"),

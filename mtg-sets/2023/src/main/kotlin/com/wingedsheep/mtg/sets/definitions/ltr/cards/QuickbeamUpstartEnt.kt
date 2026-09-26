@@ -6,10 +6,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Quickbeam, Upstart Ent
@@ -29,16 +28,11 @@ val QuickbeamUpstartEnt = card("Quickbeam, Upstart Ent") {
     oracleText = "Whenever Quickbeam or another Treefolk you control enters, up to two target creatures each get +2/+2 and gain trample until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.youControl().withSubtype("Treefolk"),
-            binding = TriggerBinding.ANY
-        )
-        target = TargetCreature(count = 2, optional = true)
-        effect = ForEachTargetEffect(
-            effects = listOf(
-                Effects.ModifyStats(2, 2, EffectTarget.ContextTarget(0)),
-                Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.ContextTarget(0))
-            )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl().withSubtype("Treefolk")).enters()
+        target = TargetObject(filter = TargetFilter.Creature, count = 2, optional = true)
+        effect = Effects.ForEachTarget(
+            Effects.ModifyStats(2, 2, EffectTarget.ContextTarget(0)),
+            Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.ContextTarget(0))
         )
     }
 

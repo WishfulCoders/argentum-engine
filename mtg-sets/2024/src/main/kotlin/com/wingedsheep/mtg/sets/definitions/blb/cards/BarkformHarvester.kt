@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -35,10 +33,7 @@ val BarkformHarvester = card("Barkform Harvester") {
     // {2}: Put target card from your graveyard on the bottom of your library
     activatedAbility {
         cost = Costs.Mana("{2}")
-        val cardInGraveyard = target(
-            "card in your graveyard",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Any.ownedByYou(), zone = Zone.GRAVEYARD))
-        )
+        val cardInGraveyard = target(TargetFilter(GameObjectFilter.Any.ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.Move(
             target = cardInGraveyard,
             destination = Zone.LIBRARY,

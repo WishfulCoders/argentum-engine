@@ -5,18 +5,10 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.RevealHandEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Intimidation Tactics
@@ -33,28 +25,19 @@ val IntimidationTactics = card("Intimidation Tactics") {
         "Cycling {3} ({3}, Discard this card: Draw a card.)"
 
     spell {
-        val t = target("target", TargetOpponent())
-        effect = Effects.Composite(
-            listOf(
-                RevealHandEffect(t),
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.HAND, Player.ContextPlayer(0)),
-                    storeAs = "hand"
-                ),
-                SelectFromCollectionEffect(
-                    from = "hand",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                    chooser = Chooser.Controller,
-                    filter = GameObjectFilter.Artifact or GameObjectFilter.Creature,
-                    storeSelected = "toExile",
-                    prompt = "Choose an artifact or creature card to exile"
-                ),
-                MoveCollectionEffect(
-                    from = "toExile",
-                    destination = CardDestination.ToZone(Zone.EXILE, Player.ContextPlayer(0))
-                )
+        val t = target(Targets.Opponent)
+        effect = Effects.Pipeline {
+            run(Effects.RevealHand(t))
+            val hand = gather(CardSource.FromZone(Zone.HAND, t.asPlayer))
+            val toExile = chooseExactly(
+                1,
+                from = hand,
+                chooser = Chooser.Controller,
+                filter = GameObjectFilter.Artifact or GameObjectFilter.Creature,
+                prompt = "Choose an artifact or creature card to exile"
             )
-        )
+            exile(toExile, t.asPlayer)
+        }
     }
 
     keywordAbility(KeywordAbility.cycling("{3}"))

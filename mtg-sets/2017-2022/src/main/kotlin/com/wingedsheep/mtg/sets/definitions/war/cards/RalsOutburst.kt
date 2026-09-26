@@ -26,11 +26,9 @@ val RalsOutburst = card("Ral's Outburst") {
         "library. Put one of them into your hand and the other into your graveyard."
 
     spell {
-        val victim = target("target", Targets.Any)
-        effect = Effects.Composite(
-            Effects.DealDamage(3, victim),
+        val victim = target(Targets.Any)
+        effect = Effects.DealDamage(3, victim) then
             Patterns.Library.lookAtTopAndKeep(count = 2, keepCount = 1)
-        )
     }
 
     metadata {

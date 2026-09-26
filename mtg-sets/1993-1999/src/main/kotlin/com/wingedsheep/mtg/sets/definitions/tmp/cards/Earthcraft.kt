@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Earthcraft
@@ -22,7 +21,7 @@ val Earthcraft = card("Earthcraft") {
 
     activatedAbility {
         cost = Costs.TapPermanents(1, GameObjectFilter.Creature)
-        val land = target("target", TargetPermanent(filter = TargetFilter(GameObjectFilter.BasicLand)))
+        val land = target(TargetFilter(GameObjectFilter.BasicLand))
         effect = Effects.Untap(land)
     }
 

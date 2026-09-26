@@ -18,10 +18,7 @@ val Deduce = card("Deduce") {
         "\"{2}, Sacrifice this token: Draw a card.\")"
 
     spell {
-        effect = Effects.Composite(
-            Effects.DrawCards(1),
-            Effects.Investigate()
-        )
+        effect = Effects.DrawCards(1) then Effects.Investigate()
     }
 
     metadata {

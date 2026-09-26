@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -29,7 +28,7 @@ val LoreBroker = card("Lore Broker") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = ForEachPlayerEffect(Player.ActivePlayerFirst, listOf(Effects.DrawCards(1))) then
+        effect = Effects.ForEachPlayer(Player.ActivePlayerFirst, Effects.DrawCards(1)) then
             Patterns.Hand.eachPlayerDiscards(1)
     }
 

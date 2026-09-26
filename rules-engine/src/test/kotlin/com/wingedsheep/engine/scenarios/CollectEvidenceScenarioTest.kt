@@ -11,7 +11,6 @@ import com.wingedsheep.engine.state.components.battlefield.CastChoicesComponent
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.CounterType
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
@@ -28,16 +27,13 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
 import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Collect evidence N (CR 701.59, Murders at Karlov Manor) end to end.
@@ -104,9 +100,9 @@ class CollectEvidenceScenarioTest : ScenarioTestBase() {
         toughness = 3
         collectEvidence(6)
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             interveningIf = Conditions.WasEvidenceCollected
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
         }
     }
 
@@ -118,14 +114,12 @@ class CollectEvidenceScenarioTest : ScenarioTestBase() {
         toughness = 2
         collectEvidence(6)
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
-            effect = Effects.Composite(
-                Effects.GainLife(1),
-                ConditionalEffect(
+            trigger = Triggers.self.enters()
+            effect = Effects.GainLife(1) then
+                Effects.If(
                     condition = Conditions.WasEvidenceCollected,
-                    effect = Effects.GainLife(5),
-                ),
-            )
+                    then = Effects.GainLife(5),
+                )
         }
     }
 
@@ -152,15 +146,15 @@ class CollectEvidenceScenarioTest : ScenarioTestBase() {
         power = 2
         toughness = 3
         triggeredAbility {
-            trigger = Triggers.Attacks
+            trigger = Triggers.self.attacks()
             effect = ReflexiveTriggerEffect(
                 action = Effects.CollectEvidence(3),
                 optional = true,
                 reflexiveEffect = Effects.AddCounters(
-                    Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0)
+                    CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0)
                 ),
                 reflexiveTargetRequirements = listOf(
-                    TargetCreature(filter = TargetFilter.Creature.youControl())
+                    TargetObject(filter = TargetFilter.Creature.youControl())
                 ),
             )
         }
@@ -186,11 +180,11 @@ class CollectEvidenceScenarioTest : ScenarioTestBase() {
         power = 3
         toughness = 3
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
-            effect = MayEffect(Effects.CollectEvidence(4))
+            trigger = Triggers.self.enters()
+            effect = Effects.May(Effects.CollectEvidence(4))
         }
         triggeredAbility {
-            trigger = Triggers.WheneverYouCollectEvidence
+            trigger = Triggers.you.collectsEvidence()
             effect = Effects.GainLife(7)
         }
     }
@@ -202,10 +196,10 @@ class CollectEvidenceScenarioTest : ScenarioTestBase() {
         power = 1
         toughness = 1
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
-            effect = OptionalCostEffect(
+            trigger = Triggers.self.enters()
+            effect = Effects.MayPay(
                 cost = Effects.CollectEvidence(4),
-                ifPaid = Effects.GainLife(7),
+                then = Effects.GainLife(7),
             )
         }
     }
@@ -218,9 +212,9 @@ class CollectEvidenceScenarioTest : ScenarioTestBase() {
         toughness = 2
         keywordAbility(KeywordAbility.OptionalAdditionalCost(ManaCost.parse("{1}")))
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             interveningIf = Conditions.WasEvidenceCollected
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
         }
     }
 
@@ -231,9 +225,9 @@ class CollectEvidenceScenarioTest : ScenarioTestBase() {
         toughness = 2
         collectEvidence(6)
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             interveningIf = WasKicked
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
         }
     }
 

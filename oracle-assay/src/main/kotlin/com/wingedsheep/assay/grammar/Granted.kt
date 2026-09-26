@@ -14,12 +14,12 @@ import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.effects.Gate
 import com.wingedsheep.sdk.scripting.effects.GatedEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Triggers as SdkTriggers
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * "Whenever a Sliver deals combat damage to a player, its controller may draw a card." — a
@@ -76,7 +76,7 @@ object Granted {
         constantClause(
             "its controller may draw a card.",
             "its controller may draw a card",
-            MayEffect(Effects.DrawCards(1)),
+            Effects.May(Effects.DrawCards(1)),
         ),
     )
 
@@ -104,13 +104,13 @@ object Granted {
             slot("token", Tokens.clause)
             build { bindings ->
                 val inner = bindings.value<CardScript>("token").spellEffect ?: return@build null
-                CardScript(spellEffect = MayEffect(inner))
+                CardScript(spellEffect = Effects.May(inner))
             }
             match { script ->
                 val gated = script.spellEffect as? GatedEffect ?: return@match null
-                if (gated.gate !is Gate.MayDecide || gated != MayEffect(gated.then)) return@match null
+                if (gated.gate !is Gate.MayDecide || gated != Effects.May(gated.then)) return@match null
                 val inner = CardScript(spellEffect = gated.then)
-                if (script != CardScript(spellEffect = MayEffect(gated.then))) return@match null
+                if (script != CardScript(spellEffect = Effects.May(gated.then))) return@match null
                 bind("token" to inner)
             }
         }
@@ -177,16 +177,16 @@ object Granted {
     }
 
     val statics: List<Phrase<StaticAbility>> = listOf(
-        grantedTrigger("deals damage", "a group's damage trigger", SdkTriggers.DealsDamage),
+        grantedTrigger("deals damage", "a group's damage trigger", SdkTriggers.self.dealsDamage()),
         grantedTrigger(
             "deals combat damage to a player",
             "a group's combat-damage-to-a-player trigger",
-            SdkTriggers.DealsCombatDamageToPlayer,
+            SdkTriggers.self.dealsCombatDamage(Recipient.AnyPlayer),
         ),
         grantedTrigger(
             "deals combat damage to a creature",
             "a group's combat-damage-to-a-creature trigger",
-            SdkTriggers.DealsCombatDamageToCreature,
+            SdkTriggers.self.dealsCombatDamage(Recipient.AnyCreature),
         ),
     )
 }

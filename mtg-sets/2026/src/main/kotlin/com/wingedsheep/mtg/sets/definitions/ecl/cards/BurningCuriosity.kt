@@ -1,18 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.Effect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Costs
 
@@ -38,10 +31,10 @@ val BurningCuriosity = card("Burning Curiosity") {
     additionalCost(Costs.additional.BlightOrPay(blightAmount = 1, alternativeManaCost = ""))
 
     spell {
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.BlightWasPaid,
-            effect = exileTopAndMayPlay(3),
-            elseEffect = exileTopAndMayPlay(2)
+            then = exileTopAndMayPlay(3),
+            otherwise = exileTopAndMayPlay(2)
         )
     }
 
@@ -59,19 +52,11 @@ val BurningCuriosity = card("Burning Curiosity") {
     }
 }
 
-private fun exileTopAndMayPlay(count: Int): Effect = Effects.Composite(
-    listOf(
-        GatherCardsEffect(
-            source = CardSource.TopOfLibrary(DynamicAmount.Fixed(count)),
-            storeAs = "exiled"
-        ),
-        MoveCollectionEffect(
-            from = "exiled",
-            destination = CardDestination.ToZone(Zone.EXILE)
-        ),
-        GrantMayPlayFromExileEffect(
-            from = "exiled",
-            expiry = MayPlayExpiry.UntilEndOfNextTurn
-        )
-    )
-)
+private fun exileTopAndMayPlay(count: Int): Effect = Effects.Pipeline {
+    val exiled = gather(CardSource.TopOfLibrary(count))
+    exile(exiled)
+    run(Effects.GrantMayPlayFromExile(
+        from = exiled,
+        expiry = MayPlayExpiry.UntilEndOfNextTurn
+    ))
+}

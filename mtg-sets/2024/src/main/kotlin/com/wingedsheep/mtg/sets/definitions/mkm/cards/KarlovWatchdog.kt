@@ -9,10 +9,9 @@ import com.wingedsheep.sdk.scripting.CantBeTurnedFaceUp
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.EventPattern.YouAttackEvent
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Karlov Watchdog — Murders at Karlov Manor #20
@@ -61,10 +60,10 @@ val KarlovWatchdog = card("Karlov Watchdog") {
     }
 
     triggeredAbility {
-        trigger = TriggerSpec(YouAttackEvent(minAttackers = 3), TriggerBinding.ANY)
+        trigger = Triggers.you.attacks(minAttackers = 3)
         effect = Effects.ForEachInGroup(
             filter = GroupFilter.AllCreaturesYouControl,
-            effect = Effects.ModifyStats(1, 1, EffectTarget.Self, Duration.EndOfTurn),
+            effect = Effects.ModifyStats(1, 1, EffectTarget.IterationEntity, Duration.EndOfTurn),
         )
         description = "Whenever you attack with three or more creatures, creatures you control " +
             "get +1/+1 until end of turn."

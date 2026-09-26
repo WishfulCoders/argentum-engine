@@ -22,7 +22,7 @@ val VesselOfMalignity = card("Vessel of Malignity") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{B}"), Costs.SacrificeSelf)
-        val t = target("target", Targets.Opponent)
+        val t = target(Targets.Opponent)
         effect = Patterns.Hand.exileFromHand(2, t)
         timing = TimingRule.SorcerySpeed
     }

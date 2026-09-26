@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * the crime trigger only fires on your own turn. The payoff grants INDESTRUCTIBLE to this creature
  * until end of turn via [Effects.GrantKeyword] on [EffectTarget.Self]. The crime-this-turn tracker
  * is read at the trigger's emit site by the engine's `CrimeDetector`; this card only consumes
- * [Triggers.YouCommitCrime].
+ * `Triggers.you.commitsCrime()`.
  */
 val OverzealousMuscle = card("Overzealous Muscle") {
     manaCost = "{4}{B}"
@@ -33,7 +33,7 @@ val OverzealousMuscle = card("Overzealous Muscle") {
         "Damage and effects that say \"destroy\" don't destroy a creature with indestructible.)"
 
     triggeredAbility {
-        trigger = Triggers.YouCommitCrime
+        trigger = Triggers.you.commitsCrime()
         triggerRestriction = Conditions.IsYourTurn
         effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self, Duration.EndOfTurn)
         description = "Whenever you commit a crime during your turn, this creature gains indestructible until end of turn."

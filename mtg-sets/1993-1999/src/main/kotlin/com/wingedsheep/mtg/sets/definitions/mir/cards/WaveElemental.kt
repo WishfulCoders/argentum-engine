@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -29,10 +28,7 @@ val WaveElemental = card("Wave Elemental") {
     toughness = 3
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{U}"), Costs.Tap, Costs.SacrificeSelf)
-        val t = target(
-            "target",
-            TargetCreature(optional = true, count = 3, filter = TargetFilter.Creature.withoutKeyword(Keyword.FLYING))
-        )
+        targets(TargetFilter.Creature.withoutKeyword(Keyword.FLYING), count = 3, optional = true)
         effect = Effects.TapEachTarget()
     }
     metadata {

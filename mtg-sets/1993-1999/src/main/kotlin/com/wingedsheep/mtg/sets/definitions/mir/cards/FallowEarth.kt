@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -25,7 +24,7 @@ val FallowEarth = card("Fallow Earth") {
     typeLine = "Sorcery"
     oracleText = "Put target land on top of its owner's library."
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter.Land))
+        val t = target(TargetFilter.Land)
         effect = Effects.Move(t, Zone.LIBRARY, ZonePlacement.Top)
     }
     metadata {

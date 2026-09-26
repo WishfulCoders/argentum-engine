@@ -1,17 +1,17 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.support.ScenarioTestBase
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Feature test for the **haste** and **menace** keyword counters (CR 122.1b / 613.1f).
@@ -31,8 +31,8 @@ class HasteMenaceCounterScenarioTest : ScenarioTestBase() {
         typeLine = "Sorcery"
         oracleText = "Put a haste counter on target creature."
         spell {
-            val t = target("target creature", Targets.Creature)
-            effect = Effects.AddCounters(Counters.HASTE, 1, t)
+            val t = target(TargetFilter.Creature)
+            effect = Effects.AddCounters(CounterType.HASTE, 1, t)
         }
     }
 
@@ -41,8 +41,8 @@ class HasteMenaceCounterScenarioTest : ScenarioTestBase() {
         typeLine = "Sorcery"
         oracleText = "Put a menace counter on target creature."
         spell {
-            val t = target("target creature", Targets.Creature)
-            effect = Effects.AddCounters(Counters.MENACE, 1, t)
+            val t = target(TargetFilter.Creature)
+            effect = Effects.AddCounters(CounterType.MENACE, 1, t)
         }
     }
 

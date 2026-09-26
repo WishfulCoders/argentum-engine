@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 
@@ -25,18 +23,12 @@ val MephiticDraught = card("Mephitic Draught") {
     typeLine = "Artifact"
     oracleText = "When this artifact enters or is put into a graveyard from the battlefield, you draw a card and you lose 1 life."
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            DrawCardsEffect(1),
-            LoseLifeEffect(1, EffectTarget.Controller)
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.DrawCards(1) then Effects.LoseLife(1, EffectTarget.Controller)
     }
     triggeredAbility {
-        trigger = Triggers.PutIntoGraveyardFromBattlefield
-        effect = Effects.Composite(
-            DrawCardsEffect(1),
-            LoseLifeEffect(1, EffectTarget.Controller)
-        )
+        trigger = Triggers.self.dies()
+        effect = Effects.DrawCards(1) then Effects.LoseLife(1, EffectTarget.Controller)
     }
     metadata {
         rarity = Rarity.COMMON

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.LifeChangeReason
 import com.wingedsheep.engine.handlers.effects.DamageUtils
@@ -48,7 +49,7 @@ class RowanScionOfWarScenarioTest : FunSpec({
     }
 
     fun costOf(driver: GameTestDriver, cardName: String): Int {
-        val calculator = CostCalculator(driver.cardRegistry)
+        val calculator = CostCalculator(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val cardDef = driver.cardRegistry.requireCard(cardName)
         return calculator.calculateEffectiveCost(driver.state, cardDef, driver.player1).cmc
     }
@@ -58,7 +59,8 @@ class RowanScionOfWarScenarioTest : FunSpec({
 
     fun loseLife(driver: GameTestDriver, amount: Int) {
         val (newState, _) = DamageUtils.loseLife(
-            driver.state, driver.player1, amount, LifeChangeReason.LIFE_LOSS
+            driver.state, driver.player1, amount, LifeChangeReason.LIFE_LOSS,
+            predicateEvaluator = PredicateEvaluator(cardRegistry = null)
         )
         driver.replaceState(newState)
     }
@@ -105,7 +107,8 @@ class RowanScionOfWarScenarioTest : FunSpec({
             DamageUtils.trackDamageReceivedByPlayer(driver.state, driver.player1, 3)
         )
         val (afterPayment, _) = DamageUtils.loseLife(
-            driver.state, driver.player1, 1, LifeChangeReason.PAYMENT
+            driver.state, driver.player1, 1, LifeChangeReason.PAYMENT,
+            predicateEvaluator = PredicateEvaluator(cardRegistry = null)
         )
         driver.replaceState(afterPayment)
 

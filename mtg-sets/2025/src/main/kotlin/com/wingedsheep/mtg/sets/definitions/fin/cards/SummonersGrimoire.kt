@@ -54,8 +54,7 @@ val SummonersGrimoire = card("Summoner's Grimoire") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.Attacks.event,
-                binding = Triggers.Attacks.binding,
+                trigger = Triggers.self.attacks(),
                 effect = Effects.Pipeline {
                     val hand = gather(
                         CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Creature)

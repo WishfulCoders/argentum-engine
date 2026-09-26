@@ -1,16 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.CreateTokenCopyOfTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Devastating Onslaught
@@ -34,19 +33,15 @@ val DevastatingOnslaught = card("Devastating Onslaught") {
         "Those tokens gain haste until end of turn. Sacrifice them at the beginning of the next end step."
 
     val sacrificeAtEndStep = TriggeredAbility.create(
-        trigger = Triggers.EachEndStep.event,
-        binding = Triggers.EachEndStep.binding,
+        trigger = Triggers.anyPlayer.beginningOf(Step.END),
         effect = Effects.SacrificeTarget(EffectTarget.Self)
     )
 
     spell {
-        val t = target(
-            "target artifact or creature you control",
-            TargetPermanent(filter = TargetFilter.CreatureOrArtifact.youControl())
-        )
-        effect = CreateTokenCopyOfTargetEffect(
+        val t = target(TargetFilter.CreatureOrArtifact.youControl())
+        effect = Effects.CreateTokenCopyOfTarget(
             target = t,
-            count = DynamicAmount.XValue,
+            count = DynamicAmounts.xValue(),
             addedKeywords = setOf(Keyword.HASTE),
             triggeredAbilities = listOf(sacrificeAtEndStep)
         )

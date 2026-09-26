@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Fumigate
@@ -23,12 +22,10 @@ val Fumigate = card("Fumigate") {
     oracleText = "Destroy all creatures. You gain 1 life for each creature destroyed this way."
 
     spell {
-        effect = Effects.DestroyAll(
-            filter = GameObjectFilter.Creature,
-            storeDestroyedAs = "destroyed"
-        ).then(
-            Effects.GainLife(DynamicAmount.VariableReference("destroyed_count"))
-        )
+        effect = Effects.Pipeline {
+            val destroyed = runStoringCollection { Effects.DestroyAll(GameObjectFilter.Creature, storeDestroyedAs = it) }
+            run(Effects.GainLife(destroyed.count))
+        }
     }
 
     metadata {

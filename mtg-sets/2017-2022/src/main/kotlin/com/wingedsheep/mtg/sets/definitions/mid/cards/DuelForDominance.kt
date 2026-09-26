@@ -1,18 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.mid.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.Aggregation
 import com.wingedsheep.sdk.scripting.values.CardNumericProperty
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Duel for Dominance
@@ -37,22 +35,20 @@ val DuelForDominance = card("Duel for Dominance") {
         "equal to its power to the other.)"
 
     spell {
-        val mine = target("creature you control", Targets.CreatureYouControl)
-        val theirs = target("creature you don't control", Targets.CreatureOpponentControls)
+        val mine = target(TargetFilter.CreatureYouControl)
+        val theirs = target(TargetFilter.CreatureOpponentControls)
 
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.CompareAmounts(
-                left = DynamicAmount.AggregateBattlefield(
-                    player = Player.You,
-                    filter = GameObjectFilter.Creature,
-                    aggregation = Aggregation.DISTINCT_VALUES,
-                    property = CardNumericProperty.POWER,
-                ),
+                left = DynamicAmounts.battlefield(
+                    Player.You,
+                    GameObjectFilter.Creature,
+                ).distinctValues(CardNumericProperty.POWER),
                 operator = ComparisonOperator.GTE,
-                right = DynamicAmount.Fixed(3),
+                right = 3,
             ),
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, mine),
-        ).then(Effects.Fight(mine, theirs))
+            then = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, mine),
+        ) then Effects.Fight(mine, theirs)
     }
 
     metadata {

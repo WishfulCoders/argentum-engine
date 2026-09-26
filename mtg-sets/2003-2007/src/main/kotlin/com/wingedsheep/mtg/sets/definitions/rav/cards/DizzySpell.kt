@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.transmute
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 val DizzySpell = card("Dizzy Spell") {
     manaCost = "{U}"
@@ -13,7 +13,7 @@ val DizzySpell = card("Dizzy Spell") {
     colorIdentity = "U"
 
     spell {
-        val creature = target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(-3, 0, creature)
     }
     transmute("{1}{U}{U}")

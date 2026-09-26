@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.YouWereAttackedThisStep
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -32,7 +31,7 @@ val ScorchingWinds = card("Scorching Winds") {
         castOnlyIf(YouWereAttackedThisStep)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.attacking()),
-            DealDamageEffect(1, EffectTarget.Self)
+            Effects.DealDamage(1, EffectTarget.IterationEntity)
         )
     }
     metadata {

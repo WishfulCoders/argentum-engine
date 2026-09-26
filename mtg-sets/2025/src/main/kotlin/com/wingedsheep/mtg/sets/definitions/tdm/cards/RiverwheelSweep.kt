@@ -1,22 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
-import com.wingedsheep.sdk.core.Counters
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Riverwheel Sweep
@@ -43,33 +33,22 @@ val RiverwheelSweep = card("Riverwheel Sweep") {
         "you may play that card."
 
     spell {
-        val creature = target("target creature", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Tap(creature)
-            .then(Effects.AddCounters(Counters.STUN, 3, creature))
-            .then(
-                Effects.Composite(
-                    listOf(
-                        GatherCardsEffect(
-                            source = CardSource.TopOfLibrary(DynamicAmount.Fixed(2)),
-                            storeAs = "exiled"
-                        ),
-                        MoveCollectionEffect(
-                            from = "exiled",
-                            destination = CardDestination.ToZone(Zone.EXILE)
-                        ),
-                        SelectFromCollectionEffect(
-                            from = "exiled",
-                            selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                            storeSelected = "chosen",
-                            prompt = "Choose a card you may play until the end of your next turn"
-                        ),
-                        GrantMayPlayFromExileEffect(
-                            from = "chosen",
-                            expiry = MayPlayExpiry.UntilEndOfNextTurn
-                        )
-                    )
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.Tap(creature) then
+            Effects.AddCounters(CounterType.STUN, 3, creature) then
+            Effects.Pipeline {
+                val exiled = gather(CardSource.TopOfLibrary(2))
+                exile(exiled)
+                val chosen = chooseExactly(
+                    1,
+                    from = exiled,
+                    prompt = "Choose a card you may play until the end of your next turn"
                 )
-            )
+                run(Effects.GrantMayPlayFromExile(
+                    from = chosen,
+                    expiry = MayPlayExpiry.UntilEndOfNextTurn
+                ))
+            }
     }
 
     metadata {

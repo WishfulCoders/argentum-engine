@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Saruman's Trickery
@@ -22,9 +22,8 @@ val SarumansTrickery = card("Saruman's Trickery") {
         "control an Army, create a 0/0 black Orc Army creature token first.)"
 
     spell {
-        target("target spell", Targets.Spell)
-        effect = Effects.CounterSpell()
-            .then(Effects.Amass(1, "Orc"))
+        target(TargetFilter.SpellOnStack)
+        effect = Effects.CounterSpell() then Effects.Amass(1, "Orc")
     }
 
     metadata {

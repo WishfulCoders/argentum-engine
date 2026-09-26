@@ -20,7 +20,7 @@ import kotlin.reflect.KClass
  * out of the end step, redirecting back into a fresh end step (CR 513) instead of the cleanup step.
  */
 class AddAdditionalEndStepsExecutor(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<AddAdditionalEndStepsEffect> {
 
     override val effectType: KClass<AddAdditionalEndStepsEffect> =

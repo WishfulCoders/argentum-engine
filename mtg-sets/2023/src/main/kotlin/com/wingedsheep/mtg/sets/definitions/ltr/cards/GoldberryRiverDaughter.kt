@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Goldberry, River-Daughter
@@ -33,10 +32,7 @@ val GoldberryRiverDaughter = card("Goldberry, River-Daughter") {
     // {T}: Move a counter of each kind not on Goldberry from another target permanent you control onto Goldberry.
     activatedAbility {
         cost = Costs.Tap
-        val source = target(
-            "another target permanent you control",
-            TargetPermanent(filter = TargetFilter.PermanentYouControl.other())
-        )
+        val source = target(TargetFilter.PermanentYouControl.other())
         effect = Effects.MoveCountersEachKindMissing(
             source = source,
             destination = EffectTarget.Self
@@ -46,10 +42,7 @@ val GoldberryRiverDaughter = card("Goldberry, River-Daughter") {
     // {U}, {T}: Move one or more counters from Goldberry onto another target permanent you control. If you do, draw a card.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{U}"), Costs.Tap)
-        val destination = target(
-            "another target permanent you control",
-            TargetPermanent(filter = TargetFilter.PermanentYouControl.other())
-        )
+        val destination = target(TargetFilter.PermanentYouControl.other())
         effect = Effects.MoveChosenCountersToTarget(
             source = EffectTarget.Self,
             destination = destination,

@@ -1,8 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.effects.PreventionSourceFilter
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Deflecting Palm
@@ -21,7 +24,13 @@ val DeflectingPalm = card("Deflecting Palm") {
     oracleText = "The next time a source of your choice would deal damage to you this turn, prevent that damage. If damage is prevented this way, Deflecting Palm deals that much damage to that source's controller."
 
     spell {
-        effect = Effects.DeflectNextDamageFromChosenSource()
+        effect = Effects.PreventDamage(
+            sources = PreventionSourceFilter.Chosen(),
+            onPrevented = Effects.DealDamage(
+                amount = DynamicAmounts.preventedDamage(),
+                target = EffectTarget.ControllerOfTriggeringEntity
+            )
+        )
     }
 
     metadata {

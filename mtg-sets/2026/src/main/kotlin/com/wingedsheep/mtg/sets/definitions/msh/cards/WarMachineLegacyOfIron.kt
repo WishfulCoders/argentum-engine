@@ -7,7 +7,8 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * War Machine, Legacy of Iron — Marvel Super Heroes #238 (uncommon)
@@ -17,7 +18,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * At the beginning of combat on your turn, another target creature you control gets +X/+0 until
  * end of turn, where X is War Machine's power.
  *
- * [Triggers.BeginCombat] is the `StepEvent(BEGIN_COMBAT, Player.You)` shape — "on your turn" is
+ * `Triggers.you.beginningOf(Step.BEGIN_COMBAT)` is the `StepEvent(BEGIN_COMBAT, Player.You)` shape — "on your turn" is
  * baked into the trigger, so no extra condition is needed. "Another target creature you control"
  * is [Targets.OtherCreatureYouControl] (self-exclusion is part of the filter, so War Machine can
  * never pump himself, and the trigger simply has no legal target when he's your only creature).
@@ -40,11 +41,11 @@ val WarMachineLegacyOfIron = card("War Machine, Legacy of Iron") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        val boosted = target("another target creature you control", Targets.OtherCreatureYouControl)
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        val boosted = target(TargetFilter.OtherCreatureYouControl)
         effect = Effects.ModifyStats(
             DynamicAmounts.sourcePower(),
-            DynamicAmount.Fixed(0),
+            DynamicAmounts.fixed(0),
             boosted
         )
     }

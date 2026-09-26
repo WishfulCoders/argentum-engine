@@ -21,7 +21,7 @@ val UndercityDireRat = card("Undercity Dire Rat") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateTreasure(1)
     }
     metadata {

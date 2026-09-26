@@ -18,8 +18,8 @@ import io.kotest.matchers.shouldBe
  *
  * Bug surfaced in play: the may-sacrifice prompt fires and a land is sacrificed, but the
  * library-search payoff never delivers — no basic lands hit the battlefield and the library
- * is not shuffled. This is the "MayEffect(Sacrifice.then(search))" vs. correct
- * "IfYouDoEffect(Sacrifice, search)" mis-modeling: the whole composite gets gated as one
+ * is not shuffled. This is the "Effects.May(Sacrifice.then(search))" vs. correct
+ * "Effects.IfYouDo(Sacrifice, search)" mis-modeling: the whole composite gets gated as one
  * yes/no instead of the sacrifice acting as the action whose outcome gates the search.
  *
  * This test exercises the full flow Alice would experience and asserts on each visible

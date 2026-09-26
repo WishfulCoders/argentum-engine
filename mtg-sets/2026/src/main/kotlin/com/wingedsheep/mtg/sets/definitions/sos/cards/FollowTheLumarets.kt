@@ -1,20 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Follow the Lumarets — Secrets of Strixhaven #148
@@ -41,40 +34,23 @@ val FollowTheLumarets = card("Follow the Lumarets") {
         "Put the rest on the bottom of your library in a random order."
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(4)),
-                    storeAs = "looked"
-                ),
-                SelectFromCollectionEffect(
-                    from = "looked",
-                    // Infusion: up to two creature/land cards if you gained life this turn, else up to one.
-                    selection = SelectionMode.ChooseUpTo(
-                        DynamicAmount.Conditional(
-                            condition = Conditions.YouGainedLifeThisTurn,
-                            ifTrue = DynamicAmount.Fixed(2),
-                            ifFalse = DynamicAmount.Fixed(1)
-                        )
+        effect = Effects.Pipeline {
+            val looked = gather(CardSource.TopOfLibrary(4))
+            // Infusion: up to two creature/land cards if you gained life this turn, else up to one.
+            val (kept, rest) = chooseUpToSplit(
+                DynamicAmounts.conditional(
+                        condition = Conditions.YouGainedLifeThisTurn,
+                        ifTrue = 2,
+                        ifFalse = 1
                     ),
-                    filter = GameObjectFilter.CreatureOrLand,
-                    storeSelected = "kept",
-                    storeRemainder = "rest",
-                    prompt = "You may reveal creature and/or land cards to put into your hand.",
-                    showAllCards = true
-                ),
-                MoveCollectionEffect(
-                    from = "kept",
-                    destination = CardDestination.ToZone(Zone.HAND),
-                    revealed = true
-                ),
-                MoveCollectionEffect(
-                    from = "rest",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
-                    order = CardOrder.Random
-                )
+                from = looked,
+                filter = GameObjectFilter.CreatureOrLand,
+                prompt = "You may reveal creature and/or land cards to put into your hand.",
+                showAllCards = true
             )
-        )
+            toHand(kept, revealed = true)
+            toLibraryBottom(rest, order = CardOrder.Random)
+        }
     }
 
     metadata {

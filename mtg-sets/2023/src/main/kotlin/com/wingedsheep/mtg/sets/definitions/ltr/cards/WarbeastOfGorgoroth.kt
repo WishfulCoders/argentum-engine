@@ -1,12 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Warbeast of Gorgoroth
@@ -27,11 +25,7 @@ val WarbeastOfGorgoroth = card("Warbeast of Gorgoroth") {
         "control an Army, create a 0/0 black Orc Army creature token first.)"
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.youControl().powerAtLeast(4),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl().powerAtLeast(4)).dies()
         effect = Effects.Amass(2, "Orc")
     }
 

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.engine.view.ClientStateTransformer
@@ -30,7 +31,7 @@ class WizenedSnitchesScenarioTest : FunSpec({
         return d
     }
 
-    fun transformer(d: GameTestDriver) = ClientStateTransformer(cardRegistry = d.cardRegistry)
+    fun transformer(d: GameTestDriver) = ClientStateTransformer(cardRegistry = d.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
     test("one Snitches reveals both players' top cards to both players") {
         val d = driver()

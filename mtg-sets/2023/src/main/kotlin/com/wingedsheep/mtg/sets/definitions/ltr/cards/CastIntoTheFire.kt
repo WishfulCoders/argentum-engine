@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Cast into the Fire
@@ -26,13 +25,13 @@ val CastIntoTheFire = card("Cast into the Fire") {
     spell {
         modal(chooseCount = 1) {
             mode("Cast into the Fire deals 1 damage to each of up to two target creatures") {
-                target = TargetCreature(count = 2, optional = true)
-                effect = ForEachTargetEffect(
-                    effects = listOf(Effects.DealDamage(1, EffectTarget.ContextTarget(0)))
+                target = TargetObject(filter = TargetFilter.Creature, count = 2, optional = true)
+                effect = Effects.ForEachTarget(
+                    Effects.DealDamage(1, EffectTarget.ContextTarget(0))
                 )
             }
             mode("Exile target artifact") {
-                val artifact = target("target artifact", Targets.Artifact)
+                val artifact = target(TargetFilter.Artifact)
                 effect = Effects.Exile(artifact)
             }
         }

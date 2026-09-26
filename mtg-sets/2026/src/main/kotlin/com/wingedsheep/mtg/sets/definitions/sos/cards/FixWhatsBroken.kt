@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.references.Player
 
@@ -38,28 +36,21 @@ val FixWhatsBroken = card("Fix What's Broken") {
     additionalCost(Costs.additional.PayXLife())
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        zone = Zone.GRAVEYARD,
-                        player = Player.You,
-                        filter = GameObjectFilter(
-                            cardPredicates = listOf(
-                                CardPredicate.Or(listOf(CardPredicate.IsArtifact, CardPredicate.IsCreature)),
-                                CardPredicate.ManaValueEqualsX,
-                            ),
+        effect = Effects.Pipeline {
+            val reanimate = gather(
+                CardSource.FromZone(
+                    zone = Zone.GRAVEYARD,
+                    player = Player.You,
+                    filter = GameObjectFilter(
+                        cardPredicates = listOf(
+                            CardPredicate.Or(listOf(CardPredicate.IsArtifact, CardPredicate.IsCreature)),
+                            CardPredicate.ManaValueEqualsX,
                         ),
                     ),
-                    storeAs = "reanimate",
-                ),
-                MoveCollectionEffect(
-                    from = "reanimate",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD),
-                    underOwnersControl = true,
-                ),
-            ),
-        )
+                )
+            )
+            move(reanimate, CardDestination.ToZone(Zone.BATTLEFIELD), underOwnersControl = true)
+        }
     }
 
     metadata {

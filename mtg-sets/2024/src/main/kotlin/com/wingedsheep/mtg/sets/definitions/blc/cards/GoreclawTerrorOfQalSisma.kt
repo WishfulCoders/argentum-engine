@@ -38,7 +38,7 @@ val GoreclawTerrorOfQalSisma = card("Goreclaw, Terror of Qal Sisma") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Group.pumpAndGrantToAll(
             power = 1,
             toughness = 1,

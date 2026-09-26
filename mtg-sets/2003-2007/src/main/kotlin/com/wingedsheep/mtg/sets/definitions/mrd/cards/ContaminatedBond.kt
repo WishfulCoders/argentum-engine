@@ -2,13 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /** "its controller loses 3 life" — the granted ability is controlled by the enchanted creature's
  *  controller, so [EffectTarget.Controller] is exactly "its controller". */
@@ -26,8 +27,8 @@ private val controllerLosesThree = Effects.LoseLife(3, EffectTarget.Controller)
  * hit the creature's controller, never the Aura's.
  *
  * One printed ability with two trigger conditions, so it is the Super-Soldier Serum idiom: two
- * [GrantTriggeredAbility] statics over [Filters.EnchantedCreature], one for [Triggers.Attacks]
- * and one for [Triggers.Blocks]. Installing the triggers *on the creature* rather than keeping
+ * [GrantTriggeredAbility] statics over [Filters.EnchantedCreature], one for `Triggers.self.attacks()`
+ * and one for `Triggers.self.blocks()`. Installing the triggers *on the creature* rather than keeping
  * them on the Aura is required, not stylistic — the engine's `AttachmentTriggerDetector` has no
  * block branch, so an `ATTACHED`-bound blocks trigger would never fire. It also lands the
  * controller question on the right answer for free: the granted ability's controller is the
@@ -44,14 +45,13 @@ val ContaminatedBond = card("Contaminated Bond") {
     oracleText = "Enchant creature\n" +
         "Whenever enchanted creature attacks or blocks, its controller loses 3 life."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     // "Whenever enchanted creature attacks ..."
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.Attacks.event,
-                binding = Triggers.Attacks.binding,
+                trigger = Triggers.self.attacks(),
                 effect = controllerLosesThree,
                 descriptionOverride = "Whenever this creature attacks, its controller loses 3 life.",
             ),
@@ -63,8 +63,7 @@ val ContaminatedBond = card("Contaminated Bond") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.Blocks.event,
-                binding = Triggers.Blocks.binding,
+                trigger = Triggers.self.blocks(),
                 effect = controllerLosesThree,
                 descriptionOverride = "Whenever this creature blocks, its controller loses 3 life.",
             ),

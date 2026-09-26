@@ -34,7 +34,7 @@ val ItOfTheHorridSwarm = card("It of the Horrid Swarm") {
     emerge("{6}{G}")
 
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
+        trigger = Triggers.self.isCast()
         effect = Effects.CreateToken(
             count = 2,
             power = 1,

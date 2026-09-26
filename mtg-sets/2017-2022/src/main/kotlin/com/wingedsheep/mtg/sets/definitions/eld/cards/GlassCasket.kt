@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Glass Casket
@@ -31,16 +30,13 @@ val GlassCasket = card("Glass Casket") {
         "mana value 3 or less until this artifact leaves the battlefield."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "target",
-            TargetCreature(filter = TargetFilter.Creature.manaValueAtMost(3).opponentControls())
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature.manaValueAtMost(3).opponentControls())
         effect = Effects.ExileUntilLeaves(t)
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 

@@ -3,6 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.tla.cards
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -14,7 +15,6 @@ import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Gran-Gran
@@ -35,7 +35,7 @@ val GranGran = card("Gran-Gran") {
         "Noncreature spells you cast cost {1} less to cast as long as there are three or more Lesson cards in your graveyard."
 
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
+        trigger = Triggers.self.becomesTapped()
         effect = Patterns.Hand.loot(draw = 1, discard = 1)
     }
 
@@ -46,13 +46,13 @@ val GranGran = card("Gran-Gran") {
                 modification = CostModification.ReduceGeneric(1),
             ),
             condition = Conditions.CompareAmounts(
-                DynamicAmount.Count(
+                DynamicAmounts.count(
                     Player.You,
                     Zone.GRAVEYARD,
                     GameObjectFilter.Any.withSubtype(Subtype.LESSON),
                 ),
                 ComparisonOperator.GTE,
-                DynamicAmount.Fixed(3),
+                3,
             ),
         )
     }

@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.pz2.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddManaOfChoiceEffect
 import com.wingedsheep.sdk.scripting.effects.ManaSpellRider
 import com.wingedsheep.sdk.scripting.values.ManaColorSet
 
@@ -30,7 +30,7 @@ val PathOfAncestry = card("Path of Ancestry") {
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddManaOfChoiceEffect(
+        effect = Effects.AddManaOfChoice(
             colorSet = ManaColorSet.CommanderIdentity,
             riders = setOf(ManaSpellRider.ScryOnSharedTypeWithCommander(1)),
         )

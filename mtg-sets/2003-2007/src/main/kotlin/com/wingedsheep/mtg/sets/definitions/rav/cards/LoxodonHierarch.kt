@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -20,8 +19,8 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * {G}{W}, Sacrifice this creature: Regenerate each creature you control.
  *
  * "Regenerate each creature you control" is [Effects.ForEachInGroup] over the creatures you
- * control with a body of `RegenerateEffect(EffectTarget.Self)` — `IterationSpace.Group` binds the
- * current permanent as the body's `Self`, so the single-target regeneration facade applies once
+ * control with a body of `RegenerateEffect(EffectTarget.IterationEntity)` — `IterationSpace.Group` binds the
+ * current permanent as the body's `IterationEntity`, so the single-target regeneration facade applies once
  * per creature. That composition is what the ruling below describes: each creature gets its own
  * regeneration shield, spent independently and expiring at end of turn, rather than one shared
  * shield for the board.
@@ -39,7 +38,7 @@ val LoxodonHierarch = card("Loxodon Hierarch") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(4)
     }
 
@@ -47,7 +46,7 @@ val LoxodonHierarch = card("Loxodon Hierarch") {
         cost = Costs.Composite(Costs.Mana("{G}{W}"), Costs.SacrificeSelf)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            RegenerateEffect(EffectTarget.Self)
+            Effects.Regenerate(EffectTarget.IterationEntity)
         )
     }
 

@@ -25,7 +25,7 @@ val MindfulBiomancer = card("Mindful Biomancer") {
         "{2}{G}: This creature gets +2/+2 until end of turn. Activate only once each turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(1)
     }
 

@@ -1,24 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.Aggregation
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Haphazard Bombardment
@@ -40,55 +33,43 @@ val HaphazardBombardment = card("Haphazard Bombardment") {
 
     // ETB: Choose four nonenchantment permanents you don't control, put aim counters on them
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(listOf(
-            GatherCardsEffect(
-                source = CardSource.BattlefieldMatching(
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val candidates = gather(
+                CardSource.BattlefieldMatching(
                     filter = GameObjectFilter.Nonenchantment.opponentControls()
-                ),
-                storeAs = "candidates"
-            ),
-            SelectFromCollectionEffect(
-                from = "candidates",
-                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(4)),
-                storeSelected = "chosen",
+                )
+            )
+            val chosen = chooseExactly(
+                4,
+                from = candidates,
                 prompt = "Choose four nonenchantment permanents you don't control",
                 useTargetingUI = true
-            ),
-            Effects.AddCountersToCollection("chosen", Counters.AIM)
-        ))
+            )
+            run(Effects.AddCountersToCollection(chosen, CounterType.AIM))
+        }
     }
 
     // End step: If 2+ opponent permanents have aim counters, destroy one at random
     triggeredAbility {
-        trigger = Triggers.YourEndStep
-        interveningIf = Compare(
-            left = DynamicAmount.AggregateBattlefield(
-                player = Player.EachOpponent,
-                filter = GameObjectFilter.Any.withCounter(Counters.AIM),
-                aggregation = Aggregation.COUNT
-            ),
+        trigger = Triggers.you.beginningOf(Step.END)
+        interveningIf = Conditions.CompareAmounts(
+            left = DynamicAmounts.battlefield(
+                Player.EachOpponent,
+                GameObjectFilter.Any.withCounter(CounterType.AIM)
+            ).count(),
             operator = ComparisonOperator.GTE,
-            right = DynamicAmount.Fixed(2)
+            right = 2
         )
-        effect = Effects.Composite(listOf(
-            GatherCardsEffect(
-                source = CardSource.BattlefieldMatching(
-                    filter = GameObjectFilter.Any.withCounter(Counters.AIM).opponentControls()
-                ),
-                storeAs = "aim_permanents"
-            ),
-            SelectFromCollectionEffect(
-                from = "aim_permanents",
-                selection = SelectionMode.Random(DynamicAmount.Fixed(1)),
-                storeSelected = "to_destroy"
-            ),
-            MoveCollectionEffect(
-                from = "to_destroy",
-                destination = CardDestination.ToZone(Zone.GRAVEYARD),
-                moveType = MoveType.Destroy
+        effect = Effects.Pipeline {
+            val aimPermanents = gather(
+                CardSource.BattlefieldMatching(
+                    filter = GameObjectFilter.Any.withCounter(CounterType.AIM).opponentControls()
+                )
             )
-        ))
+            val toDestroy = chooseRandom(1, from = aimPermanents)
+            destroy(toDestroy)
+        }
     }
 
     metadata {

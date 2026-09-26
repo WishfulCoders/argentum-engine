@@ -25,7 +25,7 @@ val SibsigAppraiser = card("Sibsig Appraiser") {
         "of them into your hand and the other into your graveyard."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.lookAtTopAndKeep(count = 2, keepCount = 1)
     }
 

@@ -8,13 +8,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.LookAtTargetHandEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 val MindleechMass = card("Mindleech Mass") {
     manaCost = "{5}{U}{B}{B}"
@@ -27,25 +23,21 @@ val MindleechMass = card("Mindleech Mass") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         optional = true
-        effect = Effects.Composite(
-            LookAtTargetHandEffect(EffectTarget.PlayerRef(Player.TriggeringPlayer)),
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.HAND, Player.TriggeringPlayer),
-                storeAs = "opponentsHand"
-            ),
-            SelectFromCollectionEffect(
-                from = "opponentsHand",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
+        effect = Effects.Pipeline {
+            run(Effects.LookAtHand(EffectTarget.PlayerRef(Player.TriggeringPlayer)))
+            val opponentsHand = gather(CardSource.FromZone(Zone.HAND, Player.TriggeringPlayer))
+            val spellToCast = chooseUpTo(
+                1,
+                from = opponentsHand,
                 filter = GameObjectFilter.Nonland,
-                storeSelected = "spellToCast",
                 showAllCards = true,
                 prompt = "You may cast a nonland card without paying its mana cost",
                 selectedLabel = "Cast for free"
-            ),
-            Effects.CastFromCollectionWithoutPayingCost("spellToCast")
-        )
+            )
+            run(Effects.CastFromCollectionWithoutPayingCost(spellToCast))
+        }
     }
 
     metadata {

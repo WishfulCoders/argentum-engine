@@ -2,34 +2,20 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.minus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.ActivatedAbility
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantActivatedAbility
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.effects.AddDynamicManaEffect
-import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -57,58 +43,27 @@ val ClementTheWorrywort = card("Clement, the Worrywort") {
 
     keywords(Keyword.VIGILANCE)
 
-    // Whenever Clement or another creature you control enters, return up to one
-    // creature you control with lesser MV to hand.
-    // Uses a pipeline: gather creatures you control, filter by MV < triggering entity's MV,
-    // select up to one, return to hand.
+    // Whenever Clement or another creature you control enters, return up to one target creature
+    // you control with lesser mana value to its owner's hand. The target is chosen as the trigger
+    // goes on the stack (CR 603.3d), capped below the entering creature's mana value; the entering
+    // creature itself can never qualify, and a creature with shroud can't be chosen.
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Creature.youControl(),
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.ANY
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).enters()
+        val creature = target(
+            TargetFilter.CreatureYouControl.manaValueAtMostDynamic(DynamicAmounts.triggeringManaValue() - 1),
+            optional = true,
         )
-        effect = Effects.Composite(listOf(
-            // Gather all creatures you control on the battlefield
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.BATTLEFIELD, Player.You, GameObjectFilter.Creature),
-                storeAs = "myCreatures"
-            ),
-            // Filter to those with MV strictly less than the entering creature's MV
-            FilterCollectionEffect(
-                from = "myCreatures",
-                filter = CollectionFilter.ManaValueAtMost(
-                    DynamicAmount.Subtract(
-                        DynamicAmount.EntityProperty(EntityReference.Triggering, EntityNumericProperty.ManaValue),
-                        DynamicAmount.Fixed(1)
-                    )
-                ),
-                storeMatching = "eligible"
-            ),
-            // Select up to one to return to hand
-            SelectFromCollectionEffect(
-                from = "eligible",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "chosen",
-                selectedLabel = "Return to hand"
-            ),
-            // Move the chosen creature to its owner's hand
-            MoveCollectionEffect(
-                from = "chosen",
-                destination = CardDestination.ToZone(Zone.HAND)
-            )
-        ))
+        effect = Effects.ReturnToHand(creature)
     }
 
     // Frogs you control have "{T}: Add {G} or {U}. Spend this mana only to cast a creature spell."
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Tap,
-                effect = AddDynamicManaEffect(
-                    amountSource = DynamicAmount.Fixed(1),
+                effect = Effects.AddManaInAnyCombination(
+                    amount = 1,
                     allowedColors = setOf(Color.GREEN, Color.BLUE),
                     restriction = ManaRestriction.CreatureSpellsOnly
                 ),

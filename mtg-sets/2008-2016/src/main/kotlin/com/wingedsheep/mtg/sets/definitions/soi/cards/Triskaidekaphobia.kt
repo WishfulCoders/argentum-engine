@@ -1,18 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.soi.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Triskaidekaphobia
@@ -24,7 +23,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *
  * "Each player with exactly 13 life loses the game" is a [ForEachPlayerEffect] (APNAP order) whose
  * body rebinds the controller context to the iterated player, so [DynamicAmount.LifeTotal] of
- * [Player.You] reads *that* player's life (see Pox Plague) — a per-player [ConditionalEffect]
+ * [Player.You] reads *that* player's life (see Pox Plague) — a per-player [Effects.If]
  * makes them lose the game when it equals 13. Both modes share that clause; only the trailing
  * "each player gains / loses 1 life" differs.
  */
@@ -37,33 +36,27 @@ val Triskaidekaphobia = card("Triskaidekaphobia") {
         "• Each player with exactly 13 life loses the game, then each player loses 1 life."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
 
-        val eachPlayerWith13LosesTheGame = ForEachPlayerEffect(
+        val eachPlayerWith13LosesTheGame = Effects.ForEachPlayer(
             Player.ActivePlayerFirst,
-            listOf(
-                ConditionalEffect(
-                    condition = Conditions.CompareAmounts(
-                        DynamicAmount.LifeTotal(Player.You),
-                        ComparisonOperator.EQ,
-                        DynamicAmount.Fixed(13)
-                    ),
-                    effect = Effects.LoseGame()
-                )
+            Effects.If(
+                condition = Conditions.CompareAmounts(
+                    DynamicAmounts.lifeTotal(Player.You),
+                    ComparisonOperator.EQ,
+                    13
+                ),
+                then = Effects.LoseGame()
             )
         )
 
         effect = ModalEffect.chooseOne(
             Mode.noTarget(
-                eachPlayerWith13LosesTheGame.then(
-                    Effects.GainLife(1, EffectTarget.PlayerRef(Player.Each))
-                ),
+                eachPlayerWith13LosesTheGame then Effects.GainLife(1, EffectTarget.PlayerRef(Player.Each)),
                 "Each player with exactly 13 life loses the game, then each player gains 1 life."
             ),
             Mode.noTarget(
-                eachPlayerWith13LosesTheGame.then(
-                    Effects.LoseLife(1, EffectTarget.PlayerRef(Player.Each))
-                ),
+                eachPlayerWith13LosesTheGame then Effects.LoseLife(1, EffectTarget.PlayerRef(Player.Each)),
                 "Each player with exactly 13 life loses the game, then each player loses 1 life."
             )
         )

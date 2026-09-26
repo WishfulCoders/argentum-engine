@@ -137,6 +137,7 @@ object LandManaColorInspector {
             is ManaColorSet.SourceChosenColor -> {
                 sourceContainer.chosenColor()?.let { out.add(it) }
             }
+            is ManaColorSet.Union -> colorSet.members.forEach { collectChoiceColors(it, sourceContainer, out) }
             is ManaColorSet.CommanderIdentity,
             is ManaColorSet.AmongPermanents,
             is ManaColorSet.AmongCardsInGraveyard,

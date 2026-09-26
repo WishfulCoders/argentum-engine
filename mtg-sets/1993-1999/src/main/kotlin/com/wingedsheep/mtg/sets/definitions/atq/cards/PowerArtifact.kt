@@ -1,11 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.atq.cards
 
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ReduceActivatedAbilityCost
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Power Artifact
@@ -29,12 +30,12 @@ val PowerArtifact = card("Power Artifact") {
     oracleText = "Enchant artifact\n" +
         "Enchanted artifact's activated abilities cost {2} less to activate. This effect can't " +
         "reduce the mana in that cost to less than one mana."
-    auraTarget = Targets.Artifact
+    auraTarget = TargetObject(filter = TargetFilter.Artifact)
 
     staticAbility {
         ability = ReduceActivatedAbilityCost(
             filter = GroupFilter.attachedCreature(),
-            amount = DynamicAmount.Fixed(2),
+            amount = DynamicAmounts.fixed(2),
             manaFloor = 1
         )
     }

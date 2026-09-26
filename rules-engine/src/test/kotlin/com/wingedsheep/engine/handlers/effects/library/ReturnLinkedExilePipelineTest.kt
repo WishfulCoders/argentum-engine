@@ -21,7 +21,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.engine.core.Outcome
 
 class ReturnLinkedExilePipelineTest : FunSpec({
 
@@ -59,10 +59,8 @@ class ReturnLinkedExilePipelineTest : FunSpec({
     )
 
     fun createRegistry(): EffectExecutorRegistry {
-        val cardRegistry = com.wingedsheep.engine.registry.CardRegistry()
-        val registry = EffectExecutorRegistry(cardRegistry = cardRegistry)
-        registry.registerModule(LibraryExecutors(cardRegistry))
-        return registry
+        return com.wingedsheep.engine.core.EngineServices(com.wingedsheep.engine.registry.CardRegistry())
+            .effectExecutorRegistry
     }
 
     test("returnLinkedExile moves cards from exile to controller's battlefield") {
@@ -83,7 +81,7 @@ class ReturnLinkedExilePipelineTest : FunSpec({
         val effect = Patterns.Exile.returnLinkedExile()
         val result = registry.execute(state, effect, context())
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         // Cards should be on controller's battlefield
         val battlefield = result.state.getZone(ZoneKey(playerId, Zone.BATTLEFIELD))
@@ -123,7 +121,7 @@ class ReturnLinkedExilePipelineTest : FunSpec({
         val effect = Patterns.Exile.returnLinkedExile(underOwnersControl = true)
         val result = registry.execute(state, effect, context())
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         // Card 1 on player's battlefield (owned by player)
         result.state.getZone(ZoneKey(playerId, Zone.BATTLEFIELD)).shouldContainExactlyInAnyOrder(exiledCard1)
@@ -155,7 +153,7 @@ class ReturnLinkedExilePipelineTest : FunSpec({
         val effect = Patterns.Exile.returnLinkedExile(underOwnersControl = false)
         val result = registry.execute(state, effect, context())
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         // Both cards on controller's (player's) battlefield
         val battlefield = result.state.getZone(ZoneKey(playerId, Zone.BATTLEFIELD))
@@ -181,7 +179,7 @@ class ReturnLinkedExilePipelineTest : FunSpec({
         val effect = Patterns.Exile.returnLinkedExile()
         val result = registry.execute(state, effect, context())
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         result.events.filterIsInstance<ZoneChangeEvent>().shouldBeEmpty()
     }
 
@@ -204,7 +202,7 @@ class ReturnLinkedExilePipelineTest : FunSpec({
         val effect = Patterns.Exile.returnLinkedExile()
         val result = registry.execute(state, effect, context())
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         // Only card 1 should be on battlefield
         result.state.getZone(ZoneKey(playerId, Zone.BATTLEFIELD)).shouldContainExactlyInAnyOrder(exiledCard1)

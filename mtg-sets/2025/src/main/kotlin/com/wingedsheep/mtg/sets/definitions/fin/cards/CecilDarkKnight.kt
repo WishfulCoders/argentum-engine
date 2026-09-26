@@ -1,22 +1,19 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.dsl.div
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 
 /**
@@ -45,7 +42,7 @@ private val CecilRedeemedPaladin = card("Cecil, Redeemed Paladin") {
 
     // Protect — Whenever Cecil attacks, other attacking creatures gain indestructible until end of turn.
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Group.grantKeywordToAll(
             keyword = Keyword.INDESTRUCTIBLE,
             filter = GroupFilter(GameObjectFilter.Creature.attacking(), excludeSelf = true)
@@ -75,21 +72,16 @@ private val CecilDarkKnightFrontFace = card("Cecil, Dark Knight") {
     // Darkness — Whenever Cecil deals damage, you lose that much life. Then if your life
     // total is less than or equal to half your starting life total, untap Cecil and transform it.
     triggeredAbility {
-        trigger = Triggers.DealsDamage
-        effect = Effects.Composite(listOf(
-            Effects.LoseLife(DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_DAMAGE_AMOUNT), EffectTarget.Controller),
-            ConditionalEffect(
-                condition = Compare(
-                    DynamicAmount.LifeTotal(Player.You),
+        trigger = Triggers.self.dealsDamage()
+        effect = Effects.LoseLife(DynamicAmounts.triggerDamageAmount(), EffectTarget.Controller) then
+            Effects.If(
+                condition = Conditions.CompareAmounts(
+                    DynamicAmounts.lifeTotal(Player.You),
                     ComparisonOperator.LTE,
-                    DynamicAmount.Divide(DynamicAmounts.startingLifeTotal(Player.You), DynamicAmount.Fixed(2), roundUp = false)
+                    DynamicAmounts.startingLifeTotal(Player.You) / 2
                 ),
-                effect = Effects.Composite(listOf(
-                    Effects.Untap(EffectTarget.Self),
-                    TransformEffect(EffectTarget.Self)
-                ))
+                then = Effects.Untap(EffectTarget.Self) then Effects.Transform(EffectTarget.Self)
             )
-        ))
     }
 
     metadata {

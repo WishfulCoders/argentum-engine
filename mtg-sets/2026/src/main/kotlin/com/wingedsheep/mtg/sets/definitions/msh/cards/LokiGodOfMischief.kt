@@ -45,7 +45,7 @@ val LokiGodOfMischief = card("Loki, God of Mischief") {
         "draw a card. This ability triggers only once each turn."
 
     triggeredAbility {
-        trigger = Triggers.BecomesTargetOfAbility(byYou = true, includePlayerTargets = true)
+        trigger = Triggers.a().becomesTarget(byYou = true, abilitiesOnly = true, includePlayerTargets = true)
         oncePerTurn = true
         effect = Effects.DrawCards(1)
         description = "Whenever a player or permanent becomes the target of an ability you " +

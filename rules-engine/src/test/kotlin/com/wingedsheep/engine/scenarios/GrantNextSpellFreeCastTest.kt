@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.PaymentStrategy
 import com.wingedsheep.engine.mechanics.mana.CostCalculator
@@ -24,6 +25,7 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Tests for the one-shot "the next matching spell you cast this turn can be cast without paying its
@@ -105,7 +107,7 @@ class GrantNextSpellFreeCastTest : FunSpec({
     fun GameTestDriver.castRitual(player: EntityId, ritualName: String) {
         giveMana(player, Color.GREEN, 1)
         val ritual = putCardInHand(player, ritualName)
-        castSpell(player, ritual).isSuccess shouldBe true
+        castSpell(player, ritual).outcome shouldBe Outcome.Done
         bothPass()
         state.pendingFreeCastSpells shouldNotBe emptyList<Any>()
     }
@@ -123,7 +125,7 @@ class GrantNextSpellFreeCastTest : FunSpec({
         val fatty = driver.putCardInHand(player, "Force of Nature")
         driver.submit(
             CastSpell(player, fatty, useWithoutPayingManaCost = true, paymentStrategy = PaymentStrategy.FromPool)
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         driver.findPermanent(player, "Force of Nature") shouldNotBe null
@@ -133,13 +135,13 @@ class GrantNextSpellFreeCastTest : FunSpec({
     test("the rider is consumed by the next matching cast even when the free cast isn't taken") {
         val driver = createDriver()
         val player = driver.activePlayer!!
-        val costCalculator = CostCalculator(driver.cardRegistry)
+        val costCalculator = CostCalculator(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         driver.castRitual(player, "Free Cast Ritual")
 
         driver.giveMana(player, Color.GREEN, 2)
         val bears = driver.putCardInHand(player, "Grizzly Bears")
-        driver.castSpell(player, bears).isSuccess shouldBe true
+        driver.castSpell(player, bears).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         withClue("'the next spell you cast' names a spell — paying full price still spends it") {
@@ -161,7 +163,7 @@ class GrantNextSpellFreeCastTest : FunSpec({
         val driver = createDriver()
         val player = driver.activePlayer!!
         val opponent = driver.getOpponent(player)
-        val costCalculator = CostCalculator(driver.cardRegistry)
+        val costCalculator = CostCalculator(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         driver.castRitual(player, "Creature Free Cast Ritual")
 
@@ -184,7 +186,7 @@ class GrantNextSpellFreeCastTest : FunSpec({
         val bears = driver.putCardInHand(player, "Grizzly Bears")
         driver.submit(
             CastSpell(player, bears, useWithoutPayingManaCost = true, paymentStrategy = PaymentStrategy.FromPool)
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
         driver.findPermanent(player, "Grizzly Bears") shouldNotBe null
         driver.state.pendingFreeCastSpells.shouldBeEmpty()
@@ -200,7 +202,7 @@ class GrantNextSpellFreeCastTest : FunSpec({
         val bears = driver.putCardInHand(player, "Grizzly Bears")
         driver.submit(
             CastSpell(player, bears, useWithoutPayingManaCost = true, paymentStrategy = PaymentStrategy.FromPool)
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         withClue("the rider paid for this cast, so the once-per-turn source keeps its use") {
@@ -212,7 +214,7 @@ class GrantNextSpellFreeCastTest : FunSpec({
         val second = driver.putCardInHand(player, "Force of Nature")
         driver.submit(
             CastSpell(player, second, useWithoutPayingManaCost = true, paymentStrategy = PaymentStrategy.FromPool)
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
         driver.findPermanent(player, "Force of Nature") shouldNotBe null
     }
@@ -221,7 +223,7 @@ class GrantNextSpellFreeCastTest : FunSpec({
         val driver = createDriver()
         val player = driver.activePlayer!!
         val opponent = driver.getOpponent(player)
-        val costCalculator = CostCalculator(driver.cardRegistry)
+        val costCalculator = CostCalculator(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         driver.castRitual(player, "Free Cast Ritual")
 
@@ -239,7 +241,7 @@ class GrantNextSpellFreeCastTest : FunSpec({
         driver.priorityPlayer shouldBe opponent
         driver.giveMana(opponent, Color.RED, 1)
         val bolt = driver.putCardInHand(opponent, "Lightning Bolt")
-        driver.castSpellWithTargets(opponent, bolt, listOf(ChosenTarget.Player(player))).isSuccess shouldBe true
+        driver.castSpellWithTargets(opponent, bolt, listOf(ChosenTarget.Player(player))).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         withClue("a spell cast by the other player is not 'the next spell you cast'") {
@@ -270,7 +272,7 @@ class GrantNextSpellFreeCastTest : FunSpec({
             (freeCast.action as CastSpell).xValue shouldBe null
         }
 
-        driver.submit(freeCast.action).isSuccess shouldBe true
+        driver.submit(freeCast.action).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         withClue("'you gain X life' gained 0 life") {
@@ -289,7 +291,7 @@ class GrantNextSpellFreeCastTest : FunSpec({
         withClue("the free cast doesn't waive the sacrifice") {
             driver.submit(
                 CastSpell(player, golem, useWithoutPayingManaCost = true, paymentStrategy = PaymentStrategy.FromPool)
-            ).isSuccess shouldBe false
+            ).outcome shouldNotBe Outcome.Done
             driver.state.pendingFreeCastSpells.size shouldBe 1
         }
 
@@ -301,7 +303,7 @@ class GrantNextSpellFreeCastTest : FunSpec({
                 additionalCostPayment = AdditionalCostPayment(sacrificedPermanents = listOf(fodder)),
                 paymentStrategy = PaymentStrategy.FromPool
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         withClue("the mana cost was free, the sacrifice was not") {

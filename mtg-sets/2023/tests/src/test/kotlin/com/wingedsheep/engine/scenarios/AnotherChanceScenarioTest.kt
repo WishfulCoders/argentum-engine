@@ -62,7 +62,7 @@ class AnotherChanceScenarioTest : FunSpec({
         driver.giveMana(me, Color.BLACK, 1)
         driver.giveColorlessMana(me, 2)
         driver.castSpell(me, spell)
-        driver.drainStack() // spell resolves, pauses at MayEffect
+        driver.drainStack() // spell resolves, pauses at Effects.May
 
         // 1st pause: "You may mill two cards?" — answer yes.
         driver.pendingDecision.shouldBeInstanceOf<YesNoDecision>()
@@ -156,7 +156,7 @@ class AnotherChanceScenarioTest : FunSpec({
         driver.castSpell(me, spell)
         driver.drainStack()
 
-        // MayEffect yes/no.
+        // Effects.May yes/no.
         driver.pendingDecision.shouldBeInstanceOf<YesNoDecision>()
         driver.submitYesNo(me, true)
         driver.drainStack()

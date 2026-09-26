@@ -29,10 +29,7 @@ val VampireOpportunist = card("Vampire Opportunist") {
 
     activatedAbility {
         cost = Costs.Mana("{6}{B}")
-        effect = Effects.Composite(
-            Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent)),
-            Effects.GainLife(2)
-        )
+        effect = Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(2)
     }
 
     metadata {

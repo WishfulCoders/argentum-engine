@@ -1,20 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.FaceDownMode
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Decadent Dragon // Expensive Taste
@@ -55,7 +49,7 @@ val DecadentDragon = card("Decadent Dragon") {
     keywords(Keyword.FLYING, Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.CreateTreasure()
         description = "Whenever this creature attacks, create a Treasure token."
     }
@@ -67,24 +61,17 @@ val DecadentDragon = card("Decadent Dragon") {
             "at and play those cards for as long as they remain exiled. " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            target("target opponent", TargetOpponent())
-            effect = Effects.Composite(
-                listOf(
-                    GatherCardsEffect(
-                        source = CardSource.TopOfLibrary(
-                            DynamicAmount.Fixed(2),
-                            Player.ContextPlayer(0),
-                        ),
-                        storeAs = "stolen",
-                    ),
-                    MoveCollectionEffect(
-                        from = "stolen",
-                        destination = CardDestination.ToZone(Zone.EXILE),
-                        faceDown = FaceDownMode.HIDDEN,
-                    ),
-                    Effects.GrantMayPlayFromExile(from = "stolen", expiry = MayPlayExpiry.Permanent),
-                ),
-            )
+            val opponent = target(Targets.Opponent)
+            effect = Effects.Pipeline {
+                val stolen = gather(
+                    CardSource.TopOfLibrary(
+                        2,
+                        opponent.asPlayer,
+                    )
+                )
+                exile(stolen, faceDown = FaceDownMode.HIDDEN)
+                run(Effects.GrantMayPlayFromExile(from = stolen, expiry = MayPlayExpiry.Permanent))
+            }
         }
     }
 

@@ -2,12 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CantBeRegeneratedEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Plague Spores
@@ -23,13 +20,10 @@ val PlagueSpores = card("Plague Spores") {
     oracleText = "Destroy target nonblack creature and target land. They can't be regenerated."
 
     spell {
-        val creature = target(
-            "target nonblack creature",
-            TargetCreature(filter = TargetFilter.Creature.notColor(Color.BLACK))
-        )
-        val land = target("target land", Targets.Land)
-        effect = CantBeRegeneratedEffect(creature) then
-            CantBeRegeneratedEffect(land) then
+        val creature = target(TargetFilter.Creature.notColor(Color.BLACK))
+        val land = target(TargetFilter.Land)
+        effect = Effects.CantBeRegenerated(creature) then
+            Effects.CantBeRegenerated(land) then
             Effects.Destroy(creature) then
             Effects.Destroy(land)
     }

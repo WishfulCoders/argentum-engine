@@ -10,9 +10,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Lluwen, Exchange Student // Pest Friend — Secrets of Strixhaven #199
@@ -57,16 +55,15 @@ val LluwenExchangeStudent = card("Lluwen, Exchange Student") {
         oracleText = "Create a 1/1 black and green Pest creature token with \"Whenever this token " +
             "attacks, you gain 1 life.\""
         spell {
-            effect = CreateTokenEffect(
-                count = DynamicAmount.Fixed(1),
+            effect = Effects.CreateToken(
+                count = 1,
                 power = 1,
                 toughness = 1,
                 colors = setOf(Color.BLACK, Color.GREEN),
                 creatureTypes = setOf("Pest"),
                 triggeredAbilities = listOf(
                     TriggeredAbility.create(
-                        trigger = Triggers.Attacks.event,
-                        binding = Triggers.Attacks.binding,
+                        trigger = Triggers.self.attacks(),
                         effect = Effects.GainLife(1),
                     ),
                 ),

@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -28,16 +27,16 @@ val DwarvenBlastminer = card("Dwarven Blastminer") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{R}"), Costs.Tap)
-        val t = target("target", TargetPermanent(
-            filter = TargetFilter(
+        val t = target(
+            TargetFilter(
                 GameObjectFilter(
                     cardPredicates = listOf(
                         CardPredicate.IsLand,
                         CardPredicate.Not(CardPredicate.IsBasicLand)
                     )
                 )
-            )
-        ))
+            ),
+        )
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
 

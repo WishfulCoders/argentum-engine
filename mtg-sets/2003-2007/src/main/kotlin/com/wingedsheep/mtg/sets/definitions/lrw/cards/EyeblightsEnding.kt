@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Eyeblight's Ending
@@ -21,10 +20,7 @@ val EyeblightsEnding = card("Eyeblight's Ending") {
     oracleText = "Destroy target non-Elf creature."
 
     spell {
-        val creature = target(
-            "target non-Elf creature",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.notSubtype(Subtype.ELF)))
-        )
+        val creature = target(TargetFilter(GameObjectFilter.Creature.notSubtype(Subtype.ELF)))
         effect = Effects.Destroy(creature)
     }
 

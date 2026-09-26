@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.TimingRule
  *
  * The Zendikar "Refuge" cycle is the original gainland shape that Khans of Tarkir later
  * reprinted as [JungleHollow]: an [EntersTapped] replacement effect for the printed first
- * line, a [Triggers.EntersBattlefield] trigger carrying [Effects.GainLife](1), and the dual
+ * line, a `Triggers.self.enters()` trigger carrying [Effects.GainLife](1), and the dual
  * mana line spelled as **two** [Effects.AddMana] abilities sharing a [Costs.Tap] cost rather
  * than one choice effect — the majority SDK form for a plain "Add {U} or {B}." with no
  * rider on the ability. Both mana abilities are `manaAbility = true` with
@@ -37,7 +37,7 @@ val JwarIsleRefuge = card("Jwar Isle Refuge") {
     replacementEffect(EntersTapped())
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(1)
     }
 

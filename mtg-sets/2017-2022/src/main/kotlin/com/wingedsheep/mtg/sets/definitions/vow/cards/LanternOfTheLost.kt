@@ -3,16 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Lantern of the Lost
@@ -30,28 +27,24 @@ val LanternOfTheLost = card("Lantern of the Lost") {
         "{1}, {T}, Exile this artifact: Exile all cards from all graveyards, then draw a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val exiled = target("target card in a graveyard", Targets.CardInGraveyard)
+        trigger = Triggers.self.enters()
+        val exiled = target(TargetFilter.CardInGraveyard)
         effect = Effects.Move(exiled, Zone.EXILE)
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap, Costs.ExileSelf)
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.FromZone(
+        effect = Effects.Pipeline {
+            val allGraveyards = gather(
+                CardSource.FromZone(
                     zone = Zone.GRAVEYARD,
                     player = Player.Each,
                     filter = GameObjectFilter.Any,
-                ),
-                storeAs = "allGraveyards",
-            ),
-            MoveCollectionEffect(
-                from = "allGraveyards",
-                destination = CardDestination.ToZone(Zone.EXILE),
-            ),
-            Effects.DrawCards(1),
-        )
+                )
+            )
+            exile(allGraveyards)
+            run(Effects.DrawCards(1))
+        }
         description = "{1}, {T}, Exile this artifact: Exile all cards from all graveyards, then draw a card."
     }
 

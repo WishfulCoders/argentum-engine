@@ -2,6 +2,7 @@ package com.wingedsheep.sdk.dsl
 
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.conditions.Condition
+import com.wingedsheep.sdk.core.Step
 
 /**
  * The Case card mechanic (CR 719, Murders at Karlov Manor).
@@ -59,7 +60,7 @@ import com.wingedsheep.sdk.scripting.conditions.Condition
  */
 fun CardBuilder.toSolve(condition: Condition) {
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.All(condition, Conditions.Not(Conditions.SourceIsSolved))
         effect = Effects.BecomeSolved()
         description = "To solve — ${condition.description}"

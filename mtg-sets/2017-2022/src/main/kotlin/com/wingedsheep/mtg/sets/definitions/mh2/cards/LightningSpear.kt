@@ -53,7 +53,7 @@ val LightningSpear = card("Lightning Spear") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{R}"), Costs.SacrificeSelf)
-        val t = target("any target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(3, t)
         description = "{2}{R}, Sacrifice this Equipment: It deals 3 damage to any target."
     }

@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Shocker, Unshakable
@@ -45,10 +44,9 @@ val ShockerUnshakable = card("Shocker, Unshakable") {
     }
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("target creature", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.DealDamage(2, creature)
-            .then(Effects.DealDamage(2, EffectTarget.TargetController))
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.DealDamage(2, creature) then Effects.DealDamage(2, EffectTarget.TargetController)
     }
 
     metadata {

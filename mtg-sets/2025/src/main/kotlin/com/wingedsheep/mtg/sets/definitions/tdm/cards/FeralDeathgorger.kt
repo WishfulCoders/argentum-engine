@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.effects.MoveToZoneEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -44,18 +42,10 @@ val FeralDeathgorger = card("Feral Deathgorger") {
 
     // ETB: exile up to two target cards, both from the same graveyard (sameOwner).
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target(
-            "up to two target cards from a single graveyard",
-            TargetObject(
-                count = 2,
-                optional = true,
-                filter = TargetFilter.CardInGraveyard,
-                sameOwner = true,
-            )
-        )
-        effect = ForEachTargetEffect(
-            effects = listOf(Effects.Move(EffectTarget.ContextTarget(0), Zone.EXILE))
+        trigger = Triggers.self.enters()
+        targets(TargetFilter.CardInGraveyard, count = 2, optional = true, sameOwner = true)
+        effect = Effects.ForEachTarget(
+            Effects.Move(EffectTarget.ContextTarget(0), Zone.EXILE)
         )
     }
 
@@ -66,9 +56,8 @@ val FeralDeathgorger = card("Feral Deathgorger") {
         oracleText = "Put a +1/+1 counter on up to one target creature. Draw a card. " +
             "(Then shuffle this card into its owner's library.)"
         spell {
-            val creature = target("creature", Targets.UpToCreatures(1))
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creature)
-                .then(Effects.DrawCards(1))
+            val creature = target(TargetFilter.Creature, optional = true)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature) then Effects.DrawCards(1)
         }
     }
 

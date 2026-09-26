@@ -25,7 +25,7 @@ val BorosSignet = card("Boros Signet") {
     oracleText = "{1}, {T}: Add {R}{W}."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
-        effect = Effects.Composite(Effects.AddMana(Color.RED, 1), Effects.AddMana(Color.WHITE, 1))
+        effect = Effects.AddMana(Color.RED, 1) then Effects.AddMana(Color.WHITE, 1)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

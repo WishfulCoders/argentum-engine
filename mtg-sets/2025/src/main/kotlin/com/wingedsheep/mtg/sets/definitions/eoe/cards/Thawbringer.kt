@@ -22,13 +22,13 @@ val Thawbringer = card("Thawbringer") {
 
     // When this creature enters, surveil 1
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.surveil(1)
     }
 
     // When this creature dies, surveil 1
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Patterns.Library.surveil(1)
     }
 

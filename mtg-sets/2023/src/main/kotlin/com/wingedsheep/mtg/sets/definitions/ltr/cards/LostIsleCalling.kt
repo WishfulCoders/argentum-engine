@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
@@ -9,12 +9,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Lost Isle Calling
@@ -41,28 +37,24 @@ val LostIsleCalling = card("Lost Isle Calling") {
         "this one. Activate only as a sorcery."
 
     triggeredAbility {
-        trigger = Triggers.WheneverYouScry
-        effect = Effects.AddCounters(Counters.VERSE, 1, EffectTarget.Self)
+        trigger = Triggers.you.scries()
+        effect = Effects.AddCounters(CounterType.VERSE, 1, EffectTarget.Self)
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{4}{U}{U}"), Costs.ExileSelf)
         timing = TimingRule.SorcerySpeed
-        effect = Effects.Composite(
-            listOf(
-                Effects.DrawCards(
-                    DynamicAmounts.lastKnownSourceCounters(CounterTypeFilter.Named(Counters.VERSE))
+        effect = Effects.DrawCards(
+            DynamicAmounts.lastKnownSourceCounters(CounterType.VERSE)
+        ) then
+            Effects.If(
+                condition = Conditions.CompareAmounts(
+                    DynamicAmounts.lastKnownSourceCounters(CounterType.VERSE),
+                    ComparisonOperator.GTE,
+                    7
                 ),
-                ConditionalEffect(
-                    condition = Compare(
-                        DynamicAmounts.lastKnownSourceCounters(CounterTypeFilter.Named(Counters.VERSE)),
-                        ComparisonOperator.GTE,
-                        DynamicAmount.Fixed(7)
-                    ),
-                    effect = Effects.TakeExtraTurn()
-                )
+                then = Effects.TakeExtraTurn()
             )
-        )
     }
 
     metadata {

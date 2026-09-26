@@ -7,7 +7,6 @@ import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.CounterType
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.card
@@ -49,7 +48,7 @@ class WardPlayerCountersTest : FunSpec({
         power = 2
         toughness = 2
         keywords(Keyword.WARD)
-        keywordAbility(KeywordAbility.wardPlayerCounters(Counters.POISON, 5))
+        keywordAbility(KeywordAbility.Ward(WardCost.PlayerCounters(CounterType.POISON, 5)))
     }
 
     // "Ward—{1}, Get one poison counter" — the counter cost as one part of an AND.
@@ -60,10 +59,10 @@ class WardPlayerCountersTest : FunSpec({
         toughness = 2
         keywords(Keyword.WARD)
         keywordAbility(
-            KeywordAbility.wardComposite(
+            KeywordAbility.Ward(WardCost.Composite(listOf(
                 WardCost.Mana("{1}"),
-                WardCost.PlayerCounters(Counters.POISON, 1),
-            )
+                WardCost.PlayerCounters(CounterType.POISON, 1),
+            )))
         )
     }
 
@@ -74,7 +73,7 @@ class WardPlayerCountersTest : FunSpec({
         toughness = 2
         staticAbility {
             ability = GrantWard(
-                cost = WardCost.PlayerCounters(Counters.POISON, 5),
+                cost = WardCost.PlayerCounters(CounterType.POISON, 5),
                 filter = GroupFilter(GameObjectFilter.Creature.youControl()).other()
             )
         }
@@ -254,19 +253,19 @@ class WardPlayerCountersTest : FunSpec({
     }
 
     test("the printed wording renders as oracle text") {
-        KeywordAbility.wardPlayerCounters(Counters.POISON, 5).description shouldBe
+        KeywordAbility.Ward(WardCost.PlayerCounters(CounterType.POISON, 5)).description shouldBe
             "Ward—Get five poison counters"
-        KeywordAbility.wardPlayerCounters(Counters.POISON, 1).description shouldBe
+        KeywordAbility.Ward(WardCost.PlayerCounters(CounterType.POISON, 1)).description shouldBe
             "Ward—Get a poison counter"
     }
 
     test("the trigger's own effect and a static grant render the cost too") {
         // Three renderings share the WardCost taxonomy: the keyword line above, the third-person
         // "Counter it unless its controller ~" on the trigger's effect, and the granted-ward line.
-        WardCounterEffect(WardCost.PlayerCounters(Counters.POISON, 5)).description shouldBe
+        WardCounterEffect(WardCost.PlayerCounters(CounterType.POISON, 5)).description shouldBe
             "Counter it unless its controller gets five poison counters"
         GrantWard(
-            cost = WardCost.PlayerCounters(Counters.POISON, 5),
+            cost = WardCost.PlayerCounters(CounterType.POISON, 5),
             filter = GroupFilter(GameObjectFilter.Creature.youControl()).other()
         ).description shouldContain "have \"Ward—Get five poison counters.\""
     }

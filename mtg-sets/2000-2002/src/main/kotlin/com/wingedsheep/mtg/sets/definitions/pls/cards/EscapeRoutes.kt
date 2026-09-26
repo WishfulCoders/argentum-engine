@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -27,10 +26,7 @@ val EscapeRoutes = card("Escape Routes") {
     oracleText = "{2}{U}: Return target white or black creature you control to its owner's hand."
     activatedAbility {
         cost = Costs.Mana("{2}{U}")
-        val t = target(
-            "target",
-            TargetCreature(filter = TargetFilter.Creature.withAnyColor(Color.WHITE, Color.BLACK).youControl())
-        )
+        val t = target(TargetFilter.Creature.withAnyColor(Color.WHITE, Color.BLACK).youControl())
         effect = Effects.Move(t, Zone.HAND)
     }
     metadata {

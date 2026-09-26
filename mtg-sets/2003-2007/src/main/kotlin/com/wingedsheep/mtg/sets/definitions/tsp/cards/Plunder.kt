@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Plunder
@@ -24,7 +25,7 @@ val Plunder = card("Plunder") {
         "Suspend 4—{1}{R} (Rather than cast this card from your hand, you may pay {1}{R} and exile it with four time counters on it. At the beginning of your upkeep, remove a time counter. When the last is removed, you may cast it without paying its mana cost.)"
 
     spell {
-        val t = target("target", Targets.ArtifactOrLand)
+        val t = target(TargetFilter.ArtifactOrLand)
         effect = Effects.Destroy(t)
     }
 

@@ -7,9 +7,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Yip Yip!
@@ -26,14 +24,12 @@ val YipYip = card("Yip Yip!") {
         "it also gains flying until end of turn."
 
     spell {
-        val t = target("target creature you control", TargetCreature(filter = TargetFilter.Creature.youControl()))
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 2, t),
-            ConditionalEffect(
-                condition = Conditions.TargetMatchesFilter(GameObjectFilter.Any.withSubtype(Subtype.ALLY)),
-                effect = Effects.GrantKeyword(Keyword.FLYING, t),
-            ),
-        )
+        val t = target(TargetFilter.Creature.youControl())
+        effect = Effects.ModifyStats(2, 2, t) then
+            Effects.If(
+                condition = Conditions.TargetMatchesFilter(GameObjectFilter.Any.withSubtype(Subtype.ALLY), t),
+                then = Effects.GrantKeyword(Keyword.FLYING, t),
+            )
     }
 
     metadata {

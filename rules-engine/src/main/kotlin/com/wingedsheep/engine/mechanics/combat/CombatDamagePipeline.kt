@@ -7,7 +7,6 @@ import com.wingedsheep.engine.mechanics.layers.ProjectedState
 import com.wingedsheep.engine.mechanics.targeting.PlayerProtectionRules
 import com.wingedsheep.engine.mechanics.layers.SerializableModification
 import com.wingedsheep.engine.state.GameState
-import com.wingedsheep.engine.state.components.combat.AttackingComponent
 import com.wingedsheep.sdk.model.EntityId
 
 /**
@@ -64,8 +63,9 @@ internal class PreventCombatDamageToAndByModifier : CombatDamageModifier {
 }
 
 /** Prevents combat damage from creatures matching a group filter. */
-internal class PreventCombatDamageFromGroupModifier : CombatDamageModifier {
-    private val predicateEvaluator = PredicateEvaluator()
+internal class PreventCombatDamageFromGroupModifier(
+    private val predicateEvaluator: PredicateEvaluator
+) : CombatDamageModifier {
     override fun modify(state: GameState, projected: ProjectedState, assignments: List<CombatDamageAssignment>): List<CombatDamageAssignment> {
         val groupEffects = state.floatingEffects.filter { it.effect.modification is SerializableModification.PreventCombatDamageFromGroup }
         if (groupEffects.isEmpty()) return assignments
@@ -79,28 +79,17 @@ internal class PreventCombatDamageFromGroupModifier : CombatDamageModifier {
     }
 }
 
-/** Prevents damage from attacking creatures to protected players (Deep Wood). */
-internal class PreventDamageFromAttackingCreaturesModifier : CombatDamageModifier {
-    override fun modify(state: GameState, projected: ProjectedState, assignments: List<CombatDamageAssignment>): List<CombatDamageAssignment> {
-        val protectedPlayers = state.floatingEffects
-            .filter { it.effect.modification is SerializableModification.PreventDamageFromAttackingCreatures }
-            .flatMap { it.effect.affectedEntities }
-            .toSet()
-        if (protectedPlayers.isEmpty()) return assignments
-        val attackerIds = state.findEntitiesWith<AttackingComponent>().map { it.first }.toSet()
-        return assignments.filter { !(it.sourceId in attackerIds && it.targetId in protectedPlayers) }
-    }
-}
-
 /** Prevents damage blocked by protection from color/subtype (Rule 702.16). */
-internal class ProtectionModifier : CombatDamageModifier {
+internal class ProtectionModifier(
+    private val predicateEvaluator: PredicateEvaluator
+) : CombatDamageModifier {
     override fun modify(state: GameState, projected: ProjectedState, assignments: List<CombatDamageAssignment>): List<CombatDamageAssignment> {
         // Protection prevents damage (CR 702.16e), so it is skipped wherever prevention is off.
         // Checked *per assignment* rather than as an early-out, because the shutoff can be
         // per-recipient (Whippoorwill) as well as global (Sunspine Lynx): one marked creature must
         // take its damage in full without blanking protection for everyone else in the combat.
         return assignments.filter { assignment ->
-            if (DamageUtils.isDamagePreventionDisabled(state, assignment.targetId, assignment.sourceId)) {
+            if (DamageUtils.isDamagePreventionDisabled(state, assignment.targetId, assignment.sourceId, predicateEvaluator = predicateEvaluator)) {
                 return@filter true
             }
             val sourceColors = projected.getColors(assignment.sourceId)
@@ -130,27 +119,29 @@ internal class ProtectionModifier : CombatDamageModifier {
  * [DamageUtils.dealDamageToTarget] — the prevention has to happen here, by dropping the assignment.
  *
  * The protected player is the assignment target, the attacking creature its source; this mirrors
- * the keyword [ProtectionModifier] and the floating-effect [PreventDamageFromAttackingCreaturesModifier]
- * (Deep Wood). [PlayerProtectionRules.isProtectedFromSource] is false for any non-player or
+ * the keyword [ProtectionModifier]. [PlayerProtectionRules.isProtectedFromSource] is false for any non-player or
  * unprotected target, so creature assignments pass through untouched. Protection prevents damage
  * (CR 702.16e), but damage that simply can't be prevented still reduces life — so this is skipped
  * when prevention is globally disabled (Fear, Fire, Foes! / Sunspine Lynx); cf. The One Ring's
  * Gatherer ruling (2023-06-16).
  */
-internal class PlayerProtectionModifier : CombatDamageModifier {
+internal class PlayerProtectionModifier(
+    private val predicateEvaluator: PredicateEvaluator
+) : CombatDamageModifier {
     override fun modify(state: GameState, projected: ProjectedState, assignments: List<CombatDamageAssignment>): List<CombatDamageAssignment> {
         // Per assignment, not a global early-out: the shutoff can be scoped to the damage's
         // *source* (Excruciator), so one attacker's damage may ignore player protection while
         // another attacker's in the same combat does not.
         return assignments.filter { assignment ->
-            if (DamageUtils.isDamagePreventionDisabled(state, assignment.targetId, assignment.sourceId)) {
+            if (DamageUtils.isDamagePreventionDisabled(state, assignment.targetId, assignment.sourceId, predicateEvaluator = predicateEvaluator)) {
                 return@filter true
             }
             !PlayerProtectionRules.isProtectedFromSource(
                 state,
                 playerId = assignment.targetId,
                 sourceId = assignment.sourceId,
-                casterId = projected.getController(assignment.sourceId)
+                casterId = projected.getController(assignment.sourceId),
+                predicateEvaluator = predicateEvaluator
             )
         }
     }

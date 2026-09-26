@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Sun Ce, Young Conquerer
@@ -33,9 +32,9 @@ val SunCeYoungConquerer = card("Sun Ce, Young Conquerer") {
     keywords(Keyword.HORSEMANSHIP)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
-        val victim = target("target", TargetObject(filter = TargetFilter.Creature))
+        val victim = target(TargetFilter.Creature)
         effect = Effects.ReturnToHand(victim)
     }
 

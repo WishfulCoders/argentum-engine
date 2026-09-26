@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -27,7 +27,7 @@ val MasterHealer = card("Master Healer") {
     toughness = 4
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", AnyTarget())
+        val t = target(Targets.Any)
         effect = Effects.PreventNextDamage(4, t)
     }
     metadata {

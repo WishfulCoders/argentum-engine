@@ -6,6 +6,7 @@ import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
 import com.wingedsheep.engine.handlers.effects.DamageUtils.dealDamageToTarget
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.sdk.scripting.effects.FightEffect
 import kotlin.reflect.KClass
@@ -14,7 +15,7 @@ import kotlin.reflect.KClass
  * Executor for FightEffect.
  * Each creature deals damage equal to its power to the other creature.
  */
-class FightEffectExecutor : EffectExecutor<FightEffect> {
+class FightEffectExecutor(private val zones: ZoneTransitionService) : EffectExecutor<FightEffect> {
 
     override val effectType: KClass<FightEffect> = FightEffect::class
 
@@ -30,8 +31,20 @@ class FightEffectExecutor : EffectExecutor<FightEffect> {
         val target2Id = context.resolveTarget(effect.target2, state)
             ?: return EffectResult.error(state, "No valid second target for fight")
 
-        // Get projected power for each creature (projected state accounts for buffs/debuffs)
+        // CR 701.14b: if either creature is no longer on the battlefield or no longer a creature,
+        // neither fights or deals damage. "It fights" (Mind Meanderer) names the source, which may
+        // have left — or left and come back as a new object — before its trigger resolves.
         val projected = state.projectedState
+        val battlefield = state.getBattlefield()
+        val canFight = listOf(effect.target1 to target1Id, effect.target2 to target2Id).all { (ref, id) ->
+            id in battlefield && projected.isCreature(id) && !context.isUnavailableBattlefieldSource(ref, state)
+        }
+        if (!canFight) {
+            return EffectResult.success(state)
+                .copy(updatedStoredNumbers = effect.excessDamageVariable?.let { mapOf(it to 0) } ?: emptyMap())
+        }
+
+        // Get projected power for each creature (projected state accounts for buffs/debuffs)
         val power1 = projected.getPower(target1Id) ?: 0
         val power2 = projected.getPower(target2Id) ?: 0
 
@@ -60,7 +73,7 @@ class FightEffectExecutor : EffectExecutor<FightEffect> {
         var excessToTarget2 = 0
 
         if (power1 > 0) {
-            val result1 = dealDamageToTarget(currentState, target2Id, power1, target1Id)
+            val result1 = dealDamageToTarget(zones, currentState, target2Id, power1, target1Id)
             currentState = result1.newState
             allEvents.addAll(result1.events)
             excessToTarget2 = result1.events
@@ -71,7 +84,7 @@ class FightEffectExecutor : EffectExecutor<FightEffect> {
 
         // Creature 2 deals damage equal to its power to creature 1
         if (power2 > 0) {
-            val result2 = dealDamageToTarget(currentState, target1Id, power2, target2Id)
+            val result2 = dealDamageToTarget(zones, currentState, target1Id, power2, target2Id)
             currentState = result2.newState
             allEvents.addAll(result2.events)
         }

@@ -8,9 +8,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -26,11 +24,8 @@ val MorbidHunger = card("Morbid Hunger") {
     typeLine = "Sorcery"
     oracleText = "Morbid Hunger deals 3 damage to any target. You gain 3 life.\nFlashback {7}{B}{B} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
     spell {
-        val t = target("target", AnyTarget())
-        effect = Effects.Composite(
-            DealDamageEffect(3, t),
-            GainLifeEffect(3)
-        )
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(3, t) then Effects.GainLife(3)
     }
     keywordAbility(KeywordAbility.flashback("{7}{B}{B}"))
     metadata {

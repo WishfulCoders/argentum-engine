@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
 
 /**
  * Syphon Essence
@@ -23,9 +22,7 @@ val SyphonEssence = card("Syphon Essence") {
         "artifact with \"{1}, {T}, Discard a card, Sacrifice this token: Draw a card.\")"
 
     spell {
-        target = TargetSpell(
-            filter = TargetFilter(GameObjectFilter.CreatureOrPlaneswalker, zone = Zone.STACK)
-        )
+        val spell = target(TargetFilter(GameObjectFilter.CreatureOrPlaneswalker, zone = Zone.STACK))
         effect = Effects.CounterSpell() then Effects.CreateBlood(1)
     }
 

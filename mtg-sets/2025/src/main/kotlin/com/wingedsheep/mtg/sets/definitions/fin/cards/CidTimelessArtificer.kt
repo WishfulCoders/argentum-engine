@@ -2,14 +2,15 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Cid, Timeless Artificer — Final Fantasy #216
@@ -21,7 +22,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Cycling {W}{U}
  *
  * Modeling:
- * - The lord is a continuous static ([GrantDynamicStatsEffect]) over the union group
+ * - The lord is a continuous static ([GrantDynamicStats]) over the union group
  *   "artifact creatures you control OR Heroes you control" (Hero is a creature subtype, so the
  *   second branch is `Creature.withSubtype("Hero")`). The two homogeneous `youControl` branches
  *   flatten into one `CardPredicate.Or` via the `or` infix on [GameObjectFilter].
@@ -49,18 +50,16 @@ val CidTimelessArtificer = card("Cid, Timeless Artificer") {
     // Artifact creatures and Heroes you control get +1/+1 for each Artificer you control and each
     // Artificer card in your graveyard.
     staticAbility {
-        val artificerCount = DynamicAmount.Add(
-            DynamicAmount.AggregateBattlefield(
-                Player.You,
-                GameObjectFilter.Creature.withSubtype(Subtype.ARTIFICER),
-            ),
-            DynamicAmount.Count(
+        val artificerCount = DynamicAmounts.battlefield(
+            Player.You,
+            GameObjectFilter.Creature.withSubtype(Subtype.ARTIFICER),
+        ).count() +
+            DynamicAmounts.count(
                 Player.You,
                 Zone.GRAVEYARD,
                 GameObjectFilter.Any.withSubtype(Subtype.ARTIFICER),
-            ),
-        )
-        ability = GrantDynamicStatsEffect(
+            )
+        ability = GrantDynamicStats(
             filter = GroupFilter(
                 GameObjectFilter.ArtifactCreature.youControl() or
                     GameObjectFilter.Creature.withSubtype("Hero").youControl(),

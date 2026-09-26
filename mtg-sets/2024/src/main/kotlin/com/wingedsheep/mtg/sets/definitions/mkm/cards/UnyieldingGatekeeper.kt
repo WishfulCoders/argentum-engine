@@ -4,14 +4,13 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Unyielding Gatekeeper — Murders at Karlov Manor #35
@@ -31,7 +30,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * **The branch is decided before the exile, not after.** "If you controlled it" is read as the
  * ability resolves, and both printed rulings turn on that: controlling the permanent earlier in the
  * turn doesn't count, and one you *do* control returns under **your** control regardless of who
- * owns it. [ConditionalEffect] evaluates its condition up front as a synchronous state test, so
+ * owns it. [Effects.If] evaluates its condition up front as a synchronous state test, so
  * [Conditions.TargetMatchesFilter] still sees the permanent on the battlefield with its controller
  * intact. Each branch then does its own exile — hoisting the exile out of the conditional and
  * testing afterwards would be testing a controller that no longer exists.
@@ -62,23 +61,18 @@ val UnyieldingGatekeeper = card("Unyielding Gatekeeper") {
     disguise = "{1}{W}"
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        val permanent = target("another target nonland permanent", Targets.OtherNonlandPermanent)
-        effect = ConditionalEffect(
-            condition = Conditions.TargetMatchesFilter(
-                GameObjectFilter.NonlandPermanent.youControl()
-            ),
-            effect = Effects.Move(permanent, Zone.EXILE)
-                .then(
-                    Effects.Move(
-                        permanent,
-                        Zone.BATTLEFIELD,
-                        placement = ZonePlacement.Tapped,
-                        controllerOverride = EffectTarget.Controller,
-                    )
+        trigger = Triggers.self.turnedFaceUp()
+        val permanent = target(TargetFilter.OtherNonlandPermanent)
+        effect = Effects.If(
+            condition = Conditions.TargetMatchesFilter(GameObjectFilter.NonlandPermanent.youControl(), permanent),
+            then = Effects.Move(permanent, Zone.EXILE) then
+                Effects.Move(
+                    permanent,
+                    Zone.BATTLEFIELD,
+                    placement = ZonePlacement.Tapped,
+                    controllerOverride = EffectTarget.Controller,
                 ),
-            elseEffect = Effects.Composite(
-                Effects.Exile(permanent),
+            otherwise = Effects.Exile(permanent) then
                 Effects.CreateToken(
                     power = 2,
                     toughness = 2,
@@ -86,7 +80,6 @@ val UnyieldingGatekeeper = card("Unyielding Gatekeeper") {
                     creatureTypes = setOf("Detective"),
                     controller = EffectTarget.TargetController,
                 ),
-            ),
         )
         description = "When this creature is turned face up, exile another target nonland " +
             "permanent. If you controlled it, return it to the battlefield tapped. Otherwise, " +

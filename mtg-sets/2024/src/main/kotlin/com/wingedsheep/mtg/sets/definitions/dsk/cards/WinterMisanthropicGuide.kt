@@ -2,9 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.minus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -13,8 +15,7 @@ import com.wingedsheep.sdk.scripting.SetMaximumHandSize
 import com.wingedsheep.sdk.scripting.effects.WardCost
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.Aggregation
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Winter, Misanthropic Guide
@@ -42,7 +43,7 @@ val WinterMisanthropicGuide = card("Winter, Misanthropic Guide") {
 
     // At the beginning of your upkeep, each player draws two cards.
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.DrawCards(2, EffectTarget.PlayerRef(Player.Each))
     }
 
@@ -52,15 +53,10 @@ val WinterMisanthropicGuide = card("Winter, Misanthropic Guide") {
         ability = ConditionalStaticAbility(
             ability = SetMaximumHandSize(
                 player = Player.EachOpponent,
-                amount = DynamicAmount.Subtract(
-                    DynamicAmount.Fixed(7),
-                    DynamicAmount.AggregateZone(
-                        player = Player.You,
-                        zone = Zone.GRAVEYARD,
-                        filter = GameObjectFilter.Any,
-                        aggregation = Aggregation.DISTINCT_TYPES,
-                    ),
-                ),
+                amount = 7 - DynamicAmounts.zone(
+                    Player.You,
+                    Zone.GRAVEYARD,
+                ).distinctTypes(),
             ),
             condition = Conditions.Delirium(),
         )

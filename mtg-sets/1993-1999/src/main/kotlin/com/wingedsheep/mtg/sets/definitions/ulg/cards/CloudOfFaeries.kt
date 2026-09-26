@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -32,8 +31,8 @@ val CloudOfFaeries = card("Cloud of Faeries") {
     toughness = 1
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetPermanent(optional = true, count = 2, filter = TargetFilter.Land))
+        trigger = Triggers.self.enters()
+        targets(TargetFilter.Land, count = 2, optional = true)
         effect = Effects.UntapEachTarget()
     }
     keywordAbility(KeywordAbility.cycling("{2}"))

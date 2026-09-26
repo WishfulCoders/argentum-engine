@@ -3,12 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.tdm.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Runescale Stormbrood // Chilling Screech — Tarkir: Dragonstorm #221
@@ -37,9 +37,7 @@ val RunescaleStormbrood = card("Runescale Stormbrood") {
 
     // Whenever you cast a noncreature spell OR a Dragon spell, +2/+0 until end of turn.
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.Noncreature or GameObjectFilter.Any.withSubtype(Subtype.DRAGON)
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature or GameObjectFilter.Any.withSubtype(Subtype.DRAGON))
         effect = Effects.ModifyStats(2, 0, EffectTarget.Self)
     }
 
@@ -50,7 +48,7 @@ val RunescaleStormbrood = card("Runescale Stormbrood") {
         oracleText = "Counter target spell with mana value 2 or less. " +
             "(Then shuffle this card into its owner's library.)"
         spell {
-            target("spell with mana value 2 or less", Targets.SpellWithManaValueAtMost(2))
+            target(TargetFilter.SpellOnStack.manaValueAtMost(2))
             effect = Effects.CounterSpell()
         }
     }

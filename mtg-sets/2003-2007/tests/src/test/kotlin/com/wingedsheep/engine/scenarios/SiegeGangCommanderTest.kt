@@ -18,6 +18,8 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.targets.AnyTarget
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import io.kotest.matchers.shouldNotBe
 
 /**
  * Tests for Siege-Gang Commander.
@@ -39,7 +41,7 @@ class SiegeGangCommanderTest : FunSpec({
         oracleText = "When Siege-Gang Commander enters the battlefield, create three 1/1 red Goblin creature tokens.\n{1}{R}, Sacrifice a Goblin: Siege-Gang Commander deals 2 damage to any target."
 
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             effect = CreateTokenEffect(
                 count = 3,
                 power = 1,
@@ -128,7 +130,7 @@ class SiegeGangCommanderTest : FunSpec({
                 costPayment = AdditionalCostPayment(sacrificedPermanents = listOf(goblinToken))
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         // Resolve the ability
         driver.bothPass()
@@ -164,7 +166,7 @@ class SiegeGangCommanderTest : FunSpec({
                 costPayment = AdditionalCostPayment(sacrificedPermanents = listOf(commander))
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         driver.bothPass()
 
@@ -199,7 +201,7 @@ class SiegeGangCommanderTest : FunSpec({
                 costPayment = AdditionalCostPayment(sacrificedPermanents = listOf(bear))
             )
         )
-        result.isSuccess shouldBe false
+        result.outcome shouldNotBe Outcome.Done
 
         // Life should be unchanged
         driver.getLifeTotal(opponent) shouldBe 20

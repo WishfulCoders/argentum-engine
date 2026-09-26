@@ -9,8 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -28,13 +26,11 @@ val Disorder = card("Disorder") {
     typeLine = "Sorcery"
     oracleText = "Disorder deals 2 damage to each white creature and each player who controls a white creature."
     spell {
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(
-                GroupFilter(GameObjectFilter.Creature.withColor(Color.WHITE)),
-                DealDamageEffect(2, EffectTarget.Self)
-            ),
-            ForEachPlayerEffect(Player.Each, listOf(DealDamageEffect(2, EffectTarget.Controller)))
-        )
+        effect = Effects.ForEachInGroup(
+            GroupFilter(GameObjectFilter.Creature.withColor(Color.WHITE)),
+            Effects.DealDamage(2, EffectTarget.IterationEntity)
+        ) then
+            Effects.ForEachPlayer(Player.Each, Effects.DealDamage(2, EffectTarget.Controller))
     }
     metadata {
         rarity = Rarity.UNCOMMON

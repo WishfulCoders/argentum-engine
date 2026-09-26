@@ -8,17 +8,15 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedTriggeredAbility
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.effects.EffectChoice
 import com.wingedsheep.sdk.scripting.effects.FeasibilityCheck
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Chandra, Spark Hunter — Aetherdrift #116
@@ -34,7 +32,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  * Modeling notes:
  *
  *  - **The combat trigger** is a loyalty-independent triggered ability, not a loyalty ability, so
- *    it lives in a plain `triggeredAbility { }` on [Triggers.BeginCombat] ("at the beginning of
+ *    it lives in a plain `triggeredAbility { }` on `Triggers.you.beginningOf(Step.BEGIN_COMBAT)` ("at the beginning of
  *    combat on your turn"). "Up to one target" is `optional = true`; with no target chosen the
  *    ability still resolves and simply does nothing. The Vehicle filter is a bare subtype filter
  *    over `GameObjectFilter.Any`, not `Creature` — an uncrewed Vehicle is a *noncreature* artifact,
@@ -74,21 +72,15 @@ val ChandraSparkHunter = card("Chandra, Spark Hunter") {
     // At the beginning of combat on your turn, choose up to one target Vehicle you control.
     // Until end of turn, it becomes an artifact creature and gains haste.
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        val vehicle = target(
-            "up to one target Vehicle you control",
-            TargetPermanent(
-                optional = true,
-                filter = TargetFilter(GameObjectFilter.Any.withSubtype(Subtype.VEHICLE).youControl())
-            )
-        )
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        val vehicle = target(TargetFilter(GameObjectFilter.Any.withSubtype(Subtype.VEHICLE).youControl()), optional = true)
         effect = Effects.AddCardType("Creature", vehicle, Duration.EndOfTurn) then
             Effects.GrantKeyword(Keyword.HASTE, vehicle, Duration.EndOfTurn)
     }
 
     // +2: You may sacrifice an artifact or discard a card. If you do, draw a card.
     loyaltyAbility(+2) {
-        effect = MayEffect(
+        effect = Effects.May(
             effect = Effects.ChooseAction(
                 choices = listOf(
                     EffectChoice(
@@ -123,17 +115,13 @@ val ChandraSparkHunter = card("Chandra, Spark Hunter") {
     //     3 damage to any target."
     loyaltyAbility(-7) {
         effect = Effects.CreateGlobalTriggeredAbility(
-            ability = TriggeredAbility.create(
-                trigger = Triggers.entersBattlefield(
-                    filter = GameObjectFilter.Artifact.youControl(),
-                    binding = TriggerBinding.ANY
-                ).event,
-                binding = TriggerBinding.ANY,
-                effect = Effects.DealDamage(3, EffectTarget.ContextTarget(0)),
-                targetRequirement = Targets.Any,
-                descriptionOverride = "Whenever an artifact you control enters, this emblem deals " +
+            ability = grantedTriggeredAbility {
+                trigger = Triggers.a(GameObjectFilter.Artifact.youControl()).enters()
+                val anyTarget = target(Targets.Any)
+                effect = Effects.DealDamage(3, anyTarget)
+                description = "Whenever an artifact you control enters, this emblem deals " +
                     "3 damage to any target."
-            ),
+            },
             descriptionOverride = "Whenever an artifact you control enters, this emblem deals 3 " +
                 "damage to any target."
         )

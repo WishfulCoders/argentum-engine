@@ -3,11 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.ktk.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Goblinslide
@@ -23,10 +23,10 @@ val Goblinslide = card("Goblinslide") {
     oracleText = "Whenever you cast a noncreature spell, you may pay {1}. If you do, create a 1/1 red Goblin creature token with haste."
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
-        effect = MayPayManaEffect(
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{1}"),
-            effect = CreateTokenEffect(
+            then = Effects.CreateToken(
                 power = 1,
                 toughness = 1,
                 colors = setOf(Color.RED),

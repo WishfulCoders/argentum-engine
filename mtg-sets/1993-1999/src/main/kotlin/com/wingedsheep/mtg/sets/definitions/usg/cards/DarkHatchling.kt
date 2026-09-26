@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -31,8 +30,8 @@ val DarkHatchling = card("Dark Hatchling") {
     toughness = 3
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.notColor(Color.BLACK)))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature.notColor(Color.BLACK))
         effect = Effects.Destroy(t, noRegenerate = true)
     }
     metadata {

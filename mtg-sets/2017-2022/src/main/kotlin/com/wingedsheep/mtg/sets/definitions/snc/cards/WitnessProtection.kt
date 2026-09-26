@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.snc.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.LoseAllAbilities
 import com.wingedsheep.sdk.scripting.SetBasePowerToughnessStatic
 import com.wingedsheep.sdk.scripting.TransformPermanent
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Witness Protection
@@ -45,7 +46,7 @@ val WitnessProtection = card("Witness Protection") {
         "white Citizen creature with base power and toughness 1/1 named Legitimate " +
         "Businessperson. (It loses all other colors, card types, creature types, and names.)"
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = TransformPermanent(

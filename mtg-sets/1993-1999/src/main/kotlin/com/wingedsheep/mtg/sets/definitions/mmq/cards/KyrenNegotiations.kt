@@ -20,7 +20,7 @@ val KyrenNegotiations = card("Kyren Negotiations") {
 
     activatedAbility {
         cost = Costs.TapPermanents(count = 1, filter = GameObjectFilter.Creature)
-        val victim = target("target", Targets.PlayerOrPlaneswalker)
+        val victim = target(Targets.PlayerOrPlaneswalker)
         effect = Effects.DealDamage(1, victim)
     }
 

@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.bro.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Gnarlroot Pallbearer
@@ -32,8 +32,8 @@ val GnarlrootPallbearer = card("Gnarlroot Pallbearer") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("target", Targets.Creature)
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(
             DynamicAmounts.creatureCardsInYourGraveyard(),
             DynamicAmounts.creatureCardsInYourGraveyard(),

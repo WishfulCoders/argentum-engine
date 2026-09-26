@@ -1,6 +1,6 @@
 package com.wingedsheep.sdk.dsl
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.costs.CostAtom
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -45,7 +45,7 @@ class StationDslTest : DescribeSpec({
             station.timing shouldBe TimingRule.SorcerySpeed
 
             val effect = station.effect.shouldBeInstanceOf<AddDynamicCountersEffect>()
-            effect.counterType shouldBe Counters.CHARGE
+            effect.counterType shouldBe CounterType.CHARGE
             effect.amount shouldBe DynamicAmount.StationCharge
         }
 
@@ -62,7 +62,7 @@ class StationDslTest : DescribeSpec({
     describe("Conditions.SourceCounterCountAtLeast") {
 
         it("is the {N+} charge-counter threshold gate (CR 721.2a)") {
-            val cond = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 9)
+            val cond = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 9)
             val compare = cond.shouldBeInstanceOf<Compare>()
             compare.operator shouldBe ComparisonOperator.GTE
             compare.right shouldBe DynamicAmount.Fixed(9)

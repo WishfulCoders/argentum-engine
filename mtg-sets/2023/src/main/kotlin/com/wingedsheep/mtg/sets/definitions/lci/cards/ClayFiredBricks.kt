@@ -55,17 +55,15 @@ private val ClayFiredBricksFront = card("Clay-Fired Bricks") {
     // ETB: search your library for a basic Plains card, reveal it, put it into your hand,
     // then shuffle. You gain 2 life.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Patterns.Library.searchLibrary(
-                filter = GameObjectFilter.BasicLand.withSubtype(Subtype.PLAINS),
-                count = 1,
-                destination = SearchDestination.HAND,
-                reveal = true,
-                shuffleAfter = true
-            ),
+        trigger = Triggers.self.enters()
+        effect = Patterns.Library.searchLibrary(
+            filter = GameObjectFilter.BasicLand.withSubtype(Subtype.PLAINS),
+            count = 1,
+            destination = SearchDestination.HAND,
+            reveal = true,
+            shuffleAfter = true
+        ) then
             Effects.GainLife(2)
-        )
         description = "When this artifact enters, search your library for a basic Plains card, " +
             "reveal it, put it into your hand, then shuffle. You gain 2 life."
     }
@@ -96,7 +94,7 @@ private val CosmiumKiln = card("Cosmium Kiln") {
 
     // ETB: create two 1/1 colorless Gnome artifact creature tokens.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

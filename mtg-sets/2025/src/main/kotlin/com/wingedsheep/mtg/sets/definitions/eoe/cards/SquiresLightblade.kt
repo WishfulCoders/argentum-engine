@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Squire's Lightblade
@@ -28,10 +28,9 @@ val SquiresLightblade = card("Squire's Lightblade") {
 
     // ETB: attach to target creature you control, grant first strike until end of turn
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("creature you control", Targets.CreatureYouControl)
-        effect = Effects.AttachEquipment(creature)
-            .then(Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature))
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.AttachEquipment(creature) then Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature)
     }
 
     // Equipped creature gets +1/+0

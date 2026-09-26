@@ -25,7 +25,7 @@ import io.kotest.matchers.shouldBe
  *   - {4}{B}{B}, {T}: Put target creature card exiled with The Darkness Crystal onto the
  *     battlefield tapped under your control with two additional +1/+1 counters on it.
  *
- * Exercises the new engine capabilities: RedirectZoneChangeWithEffect(linkToSource) + the GainLife
+ * Exercises the new engine capabilities: RedirectZoneChangeWith(linkToSource) + the GainLife
  * replacement rider, and the ExiledWithSource target predicate driving the linked-exile reanimation
  * (entering tapped, under your control, with two +1/+1 counters).
  */

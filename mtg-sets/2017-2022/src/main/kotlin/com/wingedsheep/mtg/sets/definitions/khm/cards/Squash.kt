@@ -41,7 +41,7 @@ val Squash = card("Squash") {
     }
 
     spell {
-        val victim = target("target creature or planeswalker", Targets.CreatureOrPlaneswalker)
+        val victim = target(Targets.CreatureOrPlaneswalker)
         effect = Effects.DealDamage(6, victim)
     }
 

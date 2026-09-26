@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Voracious Vampire
@@ -34,17 +33,9 @@ val VoraciousVampire = card("Voracious Vampire") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val vampire = target(
-            "target Vampire you control",
-            TargetPermanent(
-                filter = TargetFilter(
-                    GameObjectFilter.Permanent.withSubtype(Subtype.VAMPIRE).youControl()
-                )
-            )
-        )
-        effect = Effects.ModifyStats(1, 1, vampire) then
-            Effects.GrantKeyword(Keyword.MENACE, vampire)
+        trigger = Triggers.self.enters()
+        val vampire = target(TargetFilter(GameObjectFilter.Permanent.withSubtype(Subtype.VAMPIRE).youControl()))
+        effect = Effects.ModifyStats(1, 1, vampire) then Effects.GrantKeyword(Keyword.MENACE, vampire)
     }
 
     metadata {

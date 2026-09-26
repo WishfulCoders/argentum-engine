@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
@@ -32,7 +31,7 @@ val CelestialGatekeeper = card("Celestial Gatekeeper") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         target = TargetObject(
             count = 2,
             optional = true,
@@ -50,8 +49,8 @@ val CelestialGatekeeper = card("Celestial Gatekeeper") {
             )
         )
         effect = Effects.Move(EffectTarget.Self, Zone.EXILE) then
-            ForEachTargetEffect(
-                effects = listOf(Effects.Move(EffectTarget.ContextTarget(0), Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD))
+            Effects.ForEachTarget(
+                Effects.Move(EffectTarget.ContextTarget(0), Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)
             )
     }
 

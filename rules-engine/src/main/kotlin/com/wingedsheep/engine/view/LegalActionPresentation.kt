@@ -49,7 +49,13 @@ data class LegalActionTargetInfo(
      * (`TargetObject.dynamicMaxCount == DynamicAmount.XValue`). The client must
      * cap selectable targets at the chosen X after the cast-time `xSelection` phase.
      */
-    val xConstrainsCount: Boolean = false
+    val xConstrainsCount: Boolean = false,
+    /**
+     * True when a target for this requirement must differ from every target chosen for an
+     * earlier requirement ("another target"). False lets separate "target" instances pick the
+     * same object (Seeds of Strength) — the client only strips earlier picks when this is set.
+     */
+    val mustDifferFromEarlier: Boolean = false
 )
 
 @Serializable
@@ -98,6 +104,12 @@ data class LegalActionInfo(
     val validBlockers: List<EntityId>? = null,
     val hasXCost: Boolean = false,
     val maxAffordableX: Int? = null,
+    /**
+     * Set when the caster may pay "any amount of mana" as an additional cost for this cast
+     * (Chorus of the Conclave): the upper bound for the amount picker. The chosen amount goes out
+     * as `CastSpell.additionalManaForCounters`; null means no such payment is offered.
+     */
+    val maxAdditionalManaForCounters: Int? = null,
     val minX: Int = 0,
     val isManaAbility: Boolean = false,
     val additionalCostInfo: AdditionalCostInfo? = null,

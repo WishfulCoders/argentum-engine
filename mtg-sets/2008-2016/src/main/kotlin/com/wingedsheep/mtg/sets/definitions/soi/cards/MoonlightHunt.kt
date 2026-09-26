@@ -1,15 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.soi.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Moonlight Hunt
@@ -22,8 +20,8 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * A one-sided gang-up: [Effects.ForEachInGroup] walks the Wolves and Werewolves you control at
  * resolution — an untargeted group, so a pack member entering or leaving between cast and
  * resolution is simply included or not — and each one deals damage *itself*
- * (`damageSource = EffectTarget.Self`, the iterated permanent) equal to its own power, read
- * per-iteration via [EntityReference.IterationEntity] so lords and pump are picked up individually.
+ * (`damageSource = EffectTarget.IterationEntity`, the iterated permanent) equal to its own power, read
+ * per-iteration via [EffectTarget.IterationEntity] so lords and pump are picked up individually.
  *
  * Two details the wording forces:
  * - The damage sources matter, not just the total: deathtouch, lifelink, and "damage dealt by a
@@ -41,19 +39,16 @@ val MoonlightHunt = card("Moonlight Hunt") {
         "Wolf or a Werewolf deals damage equal to its power to that creature."
 
     spell {
-        target("creature you don't control", Targets.CreatureOpponentControls)
+        val creatureYouDonTControl = target(TargetFilter.CreatureOpponentControls)
 
         effect = Effects.ForEachInGroup(
             filter = GroupFilter(
                 GameObjectFilter.Creature.withAnySubtype("Wolf", "Werewolf").youControl()
             ),
             effect = Effects.DealDamage(
-                amount = DynamicAmount.EntityProperty(
-                    EntityReference.IterationEntity,
-                    EntityNumericProperty.Power,
-                ),
-                target = EffectTarget.ContextTarget(0),
-                damageSource = EffectTarget.Self,
+                amount = DynamicAmounts.powerOf(EffectTarget.IterationEntity),
+                target = creatureYouDonTControl,
+                damageSource = EffectTarget.IterationEntity,
             ),
         )
     }

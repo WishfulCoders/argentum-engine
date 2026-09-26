@@ -13,7 +13,7 @@ import io.kotest.matchers.shouldBe
  *   Whenever you cast your second spell each turn, investigate.
  *
  * Exercises the new `Effects.Investigate()` / Clue predefined token via the
- * `Triggers.NthSpellCast(2, You)` trigger.
+ * `Triggers.player(You).castsNth(2)` trigger.
  */
 class MalcolmTheEyesScenarioTest : ScenarioTestBase() {
 

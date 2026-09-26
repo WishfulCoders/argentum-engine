@@ -6,17 +6,10 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
+import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Chimney Imp — Mirrodin #59
@@ -54,31 +47,18 @@ val ChimneyImp = card("Chimney Imp") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        target = TargetOpponent()
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.HAND, Player.ContextPlayer(0)),
-                    storeAs = "impHand"
-                ),
-                SelectFromCollectionEffect(
-                    from = "impHand",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                    chooser = Chooser.TargetPlayer,
-                    storeSelected = "impTucked",
-                    prompt = "Choose a card to put on top of your library"
-                ),
-                MoveCollectionEffect(
-                    from = "impTucked",
-                    destination = CardDestination.ToZone(
-                        Zone.LIBRARY,
-                        Player.ContextPlayer(0),
-                        ZonePlacement.Top
-                    )
-                )
+        val opponent = target(Targets.Opponent)
+        trigger = Triggers.self.dies()
+        effect = Effects.Pipeline {
+            val impHand = gather(CardSource.FromZone(Zone.HAND, opponent.asPlayer))
+            val impTucked = chooseExactly(
+                1,
+                from = impHand,
+                chooser = Chooser.TargetPlayer,
+                prompt = "Choose a card to put on top of your library"
             )
-        )
+            toLibraryTop(impTucked, opponent.asPlayer, order = CardOrder.Preserve)
+        }
         description = "When this creature dies, target opponent puts a card from their hand " +
             "on top of their library."
     }

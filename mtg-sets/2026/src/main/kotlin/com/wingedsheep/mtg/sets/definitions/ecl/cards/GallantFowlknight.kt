@@ -5,8 +5,6 @@ import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.Effects
@@ -21,13 +19,13 @@ val GallantFowlknight = card("Gallant Fowlknight") {
         "Kithkin creatures you control also gain first strike until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreaturesYouControl,
-            ModifyStatsEffect(1, 0, EffectTarget.Self)
+            Effects.ModifyStats(1, 0, EffectTarget.IterationEntity)
         ) then Effects.ForEachInGroup(
             GroupFilter.AllCreaturesYouControl.withSubtype(Subtype.KITHKIN),
-            GrantKeywordEffect(Keyword.FIRST_STRIKE, EffectTarget.Self)
+            Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.IterationEntity)
         )
     }
 

@@ -8,8 +8,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantAdditionalLandDrop
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
+import com.wingedsheep.sdk.core.Step
 
 /**
  * The Gitrog Monster
@@ -27,7 +27,7 @@ import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
  *   [SacrificeSelfEffect] as the punisher (same shape as Endless Wurm) — declining, or controlling
  *   no land at all, sacrifices the Frog.
  * - The extra land drop is the static [GrantAdditionalLandDrop] (cumulative with other such effects).
- * - The draw trigger is the **batched** [Triggers.CardsPutIntoYourGraveyard], so per the 2025-01-24
+ * - The draw trigger is the **batched** `Triggers.oneOrMore(filter).putIntoYourGraveyard()`, so per the 2025-01-24
  *   ruling several lands hitting the graveyard at once (a mill, or two land creatures dying together)
  *   draws one card, not one per land. "From anywhere" is intrinsic to that event — library, hand,
  *   and battlefield all count.
@@ -46,8 +46,8 @@ val TheGitrogMonster = card("The Gitrog Monster") {
     keywords(Keyword.DEATHTOUCH)
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = PayOrSufferEffect(
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.PayOrSuffer(
             cost = Costs.pay.Sacrifice(GameObjectFilter.Land),
             suffer = SacrificeSelfEffect
         )
@@ -59,7 +59,7 @@ val TheGitrogMonster = card("The Gitrog Monster") {
     }
 
     triggeredAbility {
-        trigger = Triggers.CardsPutIntoYourGraveyard(GameObjectFilter.Land)
+        trigger = Triggers.oneOrMore(GameObjectFilter.Land).putIntoYourGraveyard()
         effect = Effects.DrawCards(1)
         description = "Whenever one or more land cards are put into your graveyard from anywhere, draw a card."
     }

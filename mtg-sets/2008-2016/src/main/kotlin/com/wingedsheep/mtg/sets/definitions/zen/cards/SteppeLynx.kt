@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Steppe Lynx
@@ -23,7 +24,7 @@ val SteppeLynx = card("Steppe Lynx") {
 
     // Landfall — +2/+2 until end of turn whenever a land you control enters.
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
         description = "Landfall — Whenever a land you control enters, this creature gets +2/+2 until end of turn."
     }

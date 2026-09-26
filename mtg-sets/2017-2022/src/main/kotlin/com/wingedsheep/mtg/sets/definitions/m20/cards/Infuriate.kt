@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.m20.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Infuriate
@@ -23,7 +23,7 @@ val Infuriate = card("Infuriate") {
     oracleText = "Target creature gets +3/+2 until end of turn."
 
     spell {
-        val creature = target("target", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(3, 2, creature)
     }
 

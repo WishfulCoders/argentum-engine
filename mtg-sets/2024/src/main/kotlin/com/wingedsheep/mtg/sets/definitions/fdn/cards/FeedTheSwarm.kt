@@ -1,14 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.fdn.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Feed the Swarm
@@ -28,14 +25,12 @@ val FeedTheSwarm = card("Feed the Swarm") {
     oracleText = "Destroy target creature or enchantment an opponent controls. You lose life equal to that permanent's mana value."
 
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter.CreatureOrEnchantment.opponentControls()))
-        effect = Effects.Composite(
-            Effects.Destroy(t),
+        val t = target(TargetFilter.CreatureOrEnchantment.opponentControls())
+        effect = Effects.Destroy(t) then
             Effects.LoseLife(
-                DynamicAmount.EntityProperty(EntityReference.Target(0), EntityNumericProperty.ManaValue),
+                DynamicAmounts.manaValueOf(t),
                 EffectTarget.Controller
             )
-        )
     }
 
     metadata {

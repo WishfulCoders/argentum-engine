@@ -42,3 +42,21 @@ was adding `"triggerClashWon": null` — the field's default — alongside each 
 Schema-refreshed for immediate zone returns: current state captures now include the empty
 `zoneReturns` list alongside `departedLinkedExile`. Actions and events are unchanged; none
 of these suspension traces has an outstanding zone-return effect.
+
+Re-encoded on 2026-09-23 without defaults. Every `state.json` and `after-N.json` was decoded
+with the current reader and written back with `encodeDefaults = false` (and
+`SuspensionTraceTest` now encodes the same way), so a field added with a default no longer
+appears in these files and no longer requires a schema refresh like the two above. In the same
+change the per-fact trigger fields (`triggerScryCount`, `triggerClashWon`, `lastKnownPower`, …)
+on `EffectContext`, the triggered-ability stack object and its target-selection frames moved
+into one nested `triggerContext` record; every one of them was null in these traces, so they
+simply dropped out. No gameplay was rerun, and `actions.json` / `events-N.json` are unchanged.
+The replay in `SuspensionTraceTest` is the check. Each manifest records this as
+`representationEncodeDefaults: false` and `representationReencodedOn`.
+
+Representation-refreshed on 2026-09-25 when card target declarations stopped carrying
+author-written names: the DSL now mints each target's binding id (`t0`, `t1`, … unique per card)
+and the targeting prompt is derived from the requirement. The only edits were the recorded
+binding name `"target"` → `"t0"` (requirement `id` and the `BoundVariable` reading it) and the
+recorded prompt `"target"` → `"target artifact or enchantment"` (Naturalize's derived wording).
+No action or event payload changed, and no gameplay was rerun.

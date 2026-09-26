@@ -30,7 +30,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.GrantActivatedAbility
 import com.wingedsheep.sdk.scripting.GrantCantBeCountered
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.GrantFlashToSpellType
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.GrantProtectionFromChosenColorToGroup
@@ -933,7 +933,7 @@ object Statics {
      * The dynamic sibling of [attachedPump]: the bonus is a multiple of a battlefield count rather
      * than a number, which the SDK spells as a different static type. Both numbers are in the text —
      * "+2/+2" is a `Multiply(count, 2)` in each half, "+1/+0" is the bare tally beside a `Fixed(0)` —
-     * and `GrantDynamicStatsEffect` carries the halves separately, so [scaled] lowers each one on its
+     * and `GrantDynamicStats` carries the halves separately, so [scaled] lowers each one on its
      * own. The rule used to require the two to *agree*, on the reasoning that a printed pair can only
      * spell one multiplier; "+1/+0" spells two, and eleven of the family's twenty-one lines are
      * asymmetric, so it read none of them.
@@ -948,7 +948,7 @@ object Statics {
     private fun selfPumpPerCount(scope: Amounts.Scope): Phrase<StaticAbility> {
         fun abilityFor(mod: Pair<Int, Int>, counted: GameObjectFilter): StaticAbility {
             val count = DynamicAmount.AggregateBattlefield(scope.player, counted)
-            return GrantDynamicStatsEffect(GroupFilter.source(), scaled(count, mod.first), scaled(count, mod.second))
+            return GrantDynamicStats(GroupFilter.source(), scaled(count, mod.first), scaled(count, mod.second))
         }
         return phrase(
             "${Normalizer.SELF} gets {mod} for each {counted}${scope.surface}.",
@@ -963,7 +963,7 @@ object Statics {
                 abilityFor(mod, counted)
             }
             match { value ->
-                val stats = value as? GrantDynamicStatsEffect ?: return@match null
+                val stats = value as? GrantDynamicStats ?: return@match null
                 val aggregate = countedIn(stats.powerBonus) ?: countedIn(stats.toughnessBonus) ?: return@match null
                 if (aggregate.player != scope.player) return@match null
                 val power = multiplierOf(stats.powerBonus, aggregate) ?: return@match null

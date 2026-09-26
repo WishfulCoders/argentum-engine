@@ -23,12 +23,12 @@ val HowlingGolem = card("Howling Golem") {
     oracleText = "Whenever Howling Golem attacks or blocks, each player draws a card."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.DrawCards(1, EffectTarget.PlayerRef(Player.Each))
     }
 
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         effect = Effects.DrawCards(1, EffectTarget.PlayerRef(Player.Each))
     }
 

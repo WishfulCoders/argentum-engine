@@ -26,7 +26,7 @@ val Steadfastness = card("Steadfastness") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(0, 3, EffectTarget.Self)
+            Effects.ModifyStats(0, 3, EffectTarget.IterationEntity)
         )
     }
     metadata {

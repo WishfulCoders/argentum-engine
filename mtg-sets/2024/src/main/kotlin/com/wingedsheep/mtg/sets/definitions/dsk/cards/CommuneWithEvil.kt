@@ -20,10 +20,7 @@ val CommuneWithEvil = card("Commune with Evil") {
     oracleText = "Look at the top four cards of your library. Put one of them into your hand and the rest into your graveyard. You gain 3 life."
 
     spell {
-        effect = Effects.Composite(
-            Patterns.Library.lookAtTopAndKeep(count = 4, keepCount = 1),
-            Effects.GainLife(3),
-        )
+        effect = Patterns.Library.lookAtTopAndKeep(count = 4, keepCount = 1) then Effects.GainLife(3)
     }
 
     metadata {

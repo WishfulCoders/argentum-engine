@@ -17,7 +17,7 @@ val Omniscience = card("Omniscience") {
     oracleText = "You may cast spells from your hand without paying their mana costs."
 
     staticAbility {
-        ability = MayCastWithoutPayingManaCost(controllerOnly = true)
+        ability = MayCastWithoutPayingManaCost(controllerOnly = true, fromHandOnly = true)
     }
 
     metadata {

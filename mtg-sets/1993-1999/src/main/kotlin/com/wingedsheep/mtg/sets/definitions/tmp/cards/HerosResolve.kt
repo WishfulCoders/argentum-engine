@@ -1,9 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.tmp.cards
 
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Hero's Resolve
@@ -19,7 +20,7 @@ val HerosResolve = card("Hero's Resolve") {
     oracleText = "Enchant creature\n" +
         "Enchanted creature gets +1/+5."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = ModifyStats(1, 5)

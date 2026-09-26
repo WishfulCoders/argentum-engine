@@ -5,11 +5,9 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
-import com.wingedsheep.sdk.scripting.effects.AddColorlessManaEffect
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Contested Cliffs
@@ -24,7 +22,7 @@ val ContestedCliffs = card("Contested Cliffs") {
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddColorlessManaEffect(1)
+        effect = Effects.AddColorlessMana(1)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
@@ -34,12 +32,8 @@ val ContestedCliffs = card("Contested Cliffs") {
             Costs.Mana("{R}{G}"),
             Costs.Tap
         )
-        val beast = target("Beast creature you control", TargetCreature(
-            filter = TargetFilter(GameObjectFilter.Creature.withSubtype("Beast").youControl())
-        ))
-        val opponentCreature = target("creature an opponent controls", TargetCreature(
-            filter = TargetFilter(GameObjectFilter.Creature.opponentControls())
-        ))
+        val beast = target(TargetFilter(GameObjectFilter.Creature.withSubtype("Beast").youControl()))
+        val opponentCreature = target(TargetFilter(GameObjectFilter.Creature.opponentControls()))
         effect = Effects.Fight(beast, opponentCreature)
     }
 

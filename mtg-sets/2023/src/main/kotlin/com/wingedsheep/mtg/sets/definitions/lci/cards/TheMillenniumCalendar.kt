@@ -1,8 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -11,7 +12,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.IterationSpace
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * The Millennium Calendar
@@ -25,7 +25,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * opponent loses 1,000 life.
  *
  * Three abilities over the shared TIME counter type (reused from suspend/vanishing):
- *  - The untap payoff is a **batch** trigger ([Triggers.OneOrMoreBecomeUntapped], CR 603.2c): the
+ *  - The untap payoff is a **batch** trigger (`Triggers.oneOrMore(filter).becomeUntapped()`, CR 603.2c): the
  *    untap step untaps all your permanents at once but the ability fires a single time, with the
  *    untapped permanents exposed as the trigger's captured collection so "that many" is read with
  *    `DynamicAmount.DistinctEntitiesInCollections(TRIGGER_CAPTURED_COLLECTION)`. The "during your
@@ -50,12 +50,10 @@ val TheMillenniumCalendar = card("The Millennium Calendar") {
 
     // Whenever you untap one or more permanents during your untap step, put that many time counters.
     triggeredAbility {
-        trigger = Triggers.OneOrMoreBecomeUntapped(GameObjectFilter.Permanent.youControl())
+        trigger = Triggers.oneOrMore(GameObjectFilter.Permanent.youControl()).becomeUntapped()
         effect = Effects.AddDynamicCounters(
-            Counters.TIME,
-            DynamicAmount.DistinctEntitiesInCollections(
-                listOf(IterationSpace.TRIGGER_CAPTURED_COLLECTION)
-            ),
+            CounterType.TIME,
+            DynamicAmounts.distinctEntitiesIn(IterationSpace.TRIGGER_CAPTURED_COLLECTION),
             EffectTarget.Self
         )
     }
@@ -63,17 +61,15 @@ val TheMillenniumCalendar = card("The Millennium Calendar") {
     // {2}, {T}: Double the number of time counters on The Millennium Calendar.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        effect = Effects.DoubleCounters(Counters.TIME, EffectTarget.Self)
+        effect = Effects.DoubleCounters(CounterType.TIME, EffectTarget.Self)
         description = "Double the number of time counters on The Millennium Calendar."
     }
 
     // When there are 1,000 or more time counters on ~, sacrifice it and each opponent loses 1,000 life.
     stateTriggeredAbility {
-        condition = Conditions.SourceCounterCountAtLeast(Counters.TIME, 1000)
-        effect = Effects.Composite(
-            Effects.SacrificeTarget(EffectTarget.Self),
+        condition = Conditions.SourceCounterCountAtLeast(CounterType.TIME, 1000)
+        effect = Effects.SacrificeTarget(EffectTarget.Self) then
             Effects.LoseLife(1000, EffectTarget.PlayerRef(Player.EachOpponent))
-        )
         description = "When there are 1,000 or more time counters on The Millennium Calendar, " +
             "sacrifice it and each opponent loses 1,000 life."
     }

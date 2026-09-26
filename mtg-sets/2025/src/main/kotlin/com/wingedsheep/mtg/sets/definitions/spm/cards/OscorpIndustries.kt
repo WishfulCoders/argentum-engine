@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.mayhem
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -41,13 +40,13 @@ val OscorpIndustries = card("Oscorp Industries") {
     replacementEffect(EntersTapped())
 
     // When this land enters from a graveyard, you lose 2 life. The graveyard check runs at
-    // resolution (a ConditionalEffect), since TriggeringEntityEnteredOrWasCastFromGraveyard reads
+    // resolution (a Effects.If), since TriggeringEntityEnteredOrWasCastFromGraveyard reads
     // the EnteredFromGraveyardComponent only in resolution context.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ConditionalEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.If(
             condition = Conditions.TriggeringEntityEnteredOrWasCastFromGraveyard,
-            effect = Effects.LoseLife(2, EffectTarget.PlayerRef(Player.You))
+            then = Effects.LoseLife(2, EffectTarget.PlayerRef(Player.You))
         )
     }
 

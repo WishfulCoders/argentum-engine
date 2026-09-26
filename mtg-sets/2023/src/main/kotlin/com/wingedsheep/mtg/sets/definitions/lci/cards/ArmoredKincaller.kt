@@ -9,13 +9,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 // Filter for any card with the Dinosaur subtype (matches creature cards in hand by type line).
 private val DinosaurCardFilter = GameObjectFilter.Any.withSubtype(Subtype.DINOSAUR)
@@ -33,7 +27,7 @@ private val DinosaurCreatureFilter = GameObjectFilter.Creature.withSubtype(Subty
  * Implementation notes:
  *   The "if you do or if you control another Dinosaur" is modelled via a
  *   Gather → SelectUpTo(1) → Reveal pipeline over the controller's hand, storing the
- *   result in "kincallerRevealed". A ConditionalEffect then gates GainLife(3) on an
+ *   result in "kincallerRevealed". A Effects.If then gates GainLife(3) on an
  *   AnyCondition over two sub-checks:
  *     (1) CollectionContainsMatch("kincallerRevealed") — true iff the player actually
  *         selected a card to reveal.
@@ -59,40 +53,36 @@ val ArmoredKincaller = card("Armored Kincaller") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            listOf(
-                // Step 1: Collect all Dinosaur cards from the controller's hand.
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        zone = Zone.HAND,
-                        player = Player.You,
-                        filter = DinosaurCardFilter,
-                    ),
-                    storeAs = "kincallerDinos",
-                ),
-                // Step 2: Player may pick at most one to reveal (0 = decline / no eligible cards).
-                SelectFromCollectionEffect(
-                    from = "kincallerDinos",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    storeSelected = "kincallerRevealed",
-                    prompt = "You may reveal a Dinosaur card from your hand",
-                ),
-                // Step 3: Publicly reveal the selected card. No-op if empty.
-                RevealCollectionEffect(from = "kincallerRevealed", fromZone = Zone.HAND),
-                // Step 4: Gain 3 life if the player revealed a Dinosaur OR controls another one.
-                ConditionalEffect(
-                    condition = Conditions.Any(
-                        Conditions.CollectionContainsMatch("kincallerRevealed"),
-                        Conditions.YouControl(
-                            filter = DinosaurCreatureFilter,
-                            excludeSelf = true,
-                        ),
-                    ),
-                    effect = Effects.GainLife(3),
-                ),
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            // Step 1: Collect all Dinosaur cards from the controller's hand.
+            val kincallerDinos = gather(
+                CardSource.FromZone(
+                    zone = Zone.HAND,
+                    player = Player.You,
+                    filter = DinosaurCardFilter,
+                )
             )
-        )
+            // Step 2: Player may pick at most one to reveal (0 = decline / no eligible cards).
+            val kincallerRevealed = chooseUpTo(
+                1,
+                from = kincallerDinos,
+                prompt = "You may reveal a Dinosaur card from your hand"
+            )
+            // Step 3: Publicly reveal the selected card. No-op if empty.
+            reveal(kincallerRevealed, fromZone = Zone.HAND)
+            // Step 4: Gain 3 life if the player revealed a Dinosaur OR controls another one.
+            run(Effects.If(
+                condition = Conditions.Any(
+                    whenMatches(kincallerRevealed),
+                    Conditions.YouControl(
+                        filter = DinosaurCreatureFilter,
+                        excludeSelf = true,
+                    ),
+                ),
+                then = Effects.GainLife(3),
+            ))
+        }
     }
 
     metadata {

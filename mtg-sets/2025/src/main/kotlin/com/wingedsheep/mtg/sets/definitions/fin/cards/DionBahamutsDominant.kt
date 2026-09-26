@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
@@ -14,12 +14,10 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.effects.ReturnFace
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Dion, Bahamut's Dominant // Bahamut, Warden of Light — Final Fantasy #16
@@ -66,10 +64,8 @@ private val BahamutWardenOfLight = card("Bahamut, Warden of Light") {
     // Those creatures gain flying until end of turn.
     val wingsOfLight = Effects.ForEachInGroup(
         GroupFilter.OtherCreaturesYouControl,
-        Effects.Composite(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
-            Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self),
-        ),
+        Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity) then
+            Effects.GrantKeyword(Keyword.FLYING, EffectTarget.IterationEntity),
     )
     sagaChapter(1) {
         effect = wingsOfLight
@@ -81,11 +77,9 @@ private val BahamutWardenOfLight = card("Bahamut, Warden of Light") {
     // III — Gigaflare — Destroy target permanent. Exile Bahamut, then return it to the
     // battlefield (front face up).
     sagaChapter(3) {
-        val t = target("permanent", TargetObject(filter = TargetFilter(GameObjectFilter.Permanent)))
-        effect = Effects.Composite(
-            Effects.Destroy(t),
-            Effects.ExileAndReturnTransformed(EffectTarget.Self, ReturnFace.FRONT),
-        )
+        val t = target(TargetFilter(GameObjectFilter.Permanent))
+        effect = Effects.Destroy(t) then
+            Effects.ExileAndReturnTransformed(EffectTarget.Self, ReturnFace.FRONT)
     }
 
     metadata {
@@ -134,8 +128,8 @@ private val DionBahamutsDominantFront = card("Dion, Bahamut's Dominant") {
 
     // When Dion enters, create a 2/2 white Knight creature token.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreateTokenEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateToken(
             power = 2,
             toughness = 2,
             colors = setOf(Color.WHITE),

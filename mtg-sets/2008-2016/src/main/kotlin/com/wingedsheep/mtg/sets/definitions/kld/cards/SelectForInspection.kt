@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Select for Inspection
@@ -23,11 +24,8 @@ val SelectForInspection = card("Select for Inspection") {
     oracleText = "Return target tapped creature to its owner's hand. Scry 1. (Look at the top card of your library. You may put that card on the bottom.)"
 
     spell {
-        val t = target("target", Targets.TappedCreature)
-        effect = Effects.Composite(
-            Effects.ReturnToHand(t),
-            Effects.Scry(1)
-        )
+        val t = target(TargetFilter.TappedCreature)
+        effect = Effects.ReturnToHand(t) then Effects.Scry(1)
     }
 
     metadata {

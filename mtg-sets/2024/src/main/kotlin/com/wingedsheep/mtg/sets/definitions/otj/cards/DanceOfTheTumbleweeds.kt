@@ -2,16 +2,15 @@ package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Dance of the Tumbleweeds {1}{G}
@@ -35,7 +34,7 @@ val DanceOfTheTumbleweeds = card("Dance of the Tumbleweeds") {
         "+ {3} — Create an X/X green Elemental creature token, where X is the number of lands you control."
 
     spell {
-        effect = ModalEffect(
+        effect = Effects.Modal(
             modes = listOf(
                 Mode(
                     effect = Patterns.Library.searchLibrary(
@@ -50,8 +49,8 @@ val DanceOfTheTumbleweeds = card("Dance of the Tumbleweeds") {
                 ),
                 Mode(
                     effect = Effects.CreateDynamicToken(
-                        dynamicPower = DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land),
-                        dynamicToughness = DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land),
+                        dynamicPower = DynamicAmounts.landsYouControl(),
+                        dynamicToughness = DynamicAmounts.landsYouControl(),
                         colors = setOf(Color.GREEN),
                         creatureTypes = setOf("Elemental"),
                         imageUri = "https://cards.scryfall.io/normal/front/0/0/008695e6-6d6f-4c16-bf05-377e8cc5f5ff.jpg?1712316611"

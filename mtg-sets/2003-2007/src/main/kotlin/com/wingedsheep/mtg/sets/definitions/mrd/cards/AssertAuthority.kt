@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.core.CardType
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Assert Authority — Mirrodin #30
@@ -34,7 +34,7 @@ val AssertAuthority = card("Assert Authority") {
     keywordAbility(KeywordAbility.Affinity(CardType.ARTIFACT))
 
     spell {
-        target = Targets.Spell
+        val spell = target(TargetFilter.SpellOnStack)
         effect = Effects.CounterSpellToExile()
     }
 

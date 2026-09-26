@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Optimistic Scavenger
@@ -30,20 +30,17 @@ val OptimisticScavenger = card("Optimistic Scavenger") {
 
     // Eerie trigger — part 1: whenever an enchantment you control enters
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Enchantment.youControl(),
-            binding = TriggerBinding.ANY,
-        )
-        val targetCreature = target("target creature", Targets.Creature)
-        effect = Effects.AddCounters("+1/+1", 1, targetCreature)
+        trigger = Triggers.a(GameObjectFilter.Enchantment.youControl()).enters()
+        val targetCreature = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, targetCreature)
         description = "Eerie — Whenever an enchantment you control enters, put a +1/+1 counter on target creature."
     }
 
     // Eerie trigger — part 2: whenever you fully unlock a Room
     triggeredAbility {
-        trigger = Triggers.RoomFullyUnlocked
-        val targetCreature = target("target creature", Targets.Creature)
-        effect = Effects.AddCounters("+1/+1", 1, targetCreature)
+        trigger = Triggers.you.fullyUnlocksARoom()
+        val targetCreature = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, targetCreature)
         description = "Eerie — Whenever you fully unlock a Room, put a +1/+1 counter on target creature."
     }
 

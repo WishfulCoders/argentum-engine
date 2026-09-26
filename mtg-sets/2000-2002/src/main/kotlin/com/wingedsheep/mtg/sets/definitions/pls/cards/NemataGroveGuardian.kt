@@ -43,7 +43,7 @@ val NemataGroveGuardian = card("Nemata, Grove Guardian") {
         cost = Costs.Sacrifice(GameObjectFilter.Permanent.withSubtype("Saproling"))
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withSubtype(Subtype.SAPROLING)),
-            Effects.ModifyStats(1, 1, EffectTarget.Self)
+            Effects.ModifyStats(1, 1, EffectTarget.IterationEntity)
         )
     }
     metadata {

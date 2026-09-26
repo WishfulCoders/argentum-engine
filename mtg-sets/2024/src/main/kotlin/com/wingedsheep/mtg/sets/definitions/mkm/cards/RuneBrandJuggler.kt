@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Rune-Brand Juggler — Murders at Karlov Manor #229
@@ -49,14 +48,8 @@ val RuneBrandJuggler = card("Rune-Brand Juggler") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val victim = target(
-            "up to one other target creature you control",
-            TargetCreature(
-                filter = TargetFilter(GameObjectFilter.Creature.youControl()).other(),
-                optional = true
-            )
-        )
+        trigger = Triggers.self.enters()
+        val victim = target(TargetFilter(GameObjectFilter.Creature.youControl()).other(), optional = true)
         effect = Effects.Suspect(victim)
         description = "When this creature enters, suspect up to one other target creature you control."
     }
@@ -66,7 +59,7 @@ val RuneBrandJuggler = card("Rune-Brand Juggler") {
             Costs.Mana("{3}{B}{R}"),
             Costs.Sacrifice(GameObjectFilter.Creature.suspected())
         )
-        val victim = target("target creature", TargetCreature())
+        val victim = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(-5, -5, victim)
         description = "Target creature gets -5/-5 until end of turn."
     }

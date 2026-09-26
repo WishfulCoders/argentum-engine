@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Spring-Loaded Sawblades // Bladewheel Chariot (CR 702.167, The Lost Caverns of Ixalan)
@@ -30,7 +29,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  *   until end of turn.
  *   Crew 1
  *
- * Implementation: the front face's ETB is a targeted [Triggers.EntersBattlefield] trigger with a
+ * Implementation: the front face's ETB is a targeted `Triggers.self.enters()` trigger with a
  * tapped + opponent-controlled creature target ([TargetFilter.TappedCreature.opponentControls])
  * and [Effects.DealDamage] — the damage source defaults to the trigger's source, matching "it
  * deals 5 damage". The `craft(...)` helper wires the exactly-one-artifact material cost
@@ -55,11 +54,8 @@ private val SpringLoadedSawbladesFront = card("Spring-Loaded Sawblades") {
 
     // ETB: it deals 5 damage to target tapped creature an opponent controls.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target(
-            "target tapped creature an opponent controls",
-            TargetCreature(filter = TargetFilter.TappedCreature.opponentControls())
-        )
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.TappedCreature.opponentControls())
         effect = Effects.DealDamage(5, creature)
     }
 

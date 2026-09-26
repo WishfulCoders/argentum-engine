@@ -1,19 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.CREATED_TOKENS
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -47,33 +44,27 @@ val KrenkoBaronOfTinStreet = card("Krenko, Baron of Tin Street") {
         cost = Costs.Composite(Costs.Tap, Costs.Sacrifice(GameObjectFilter.Artifact))
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withSubtype("Goblin").youControl()),
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity),
         )
         description = "{T}, Sacrifice an artifact: Put a +1/+1 counter on each Goblin you control."
     }
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Artifact,
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY,
-        )
-        effect = MayPayManaEffect(
+        trigger = Triggers.a(GameObjectFilter.Artifact).dies()
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{R}"),
-            effect = Effects.Composite(
-                Effects.CreateToken(
-                    power = 1,
-                    toughness = 1,
-                    colors = setOf(Color.RED),
-                    creatureTypes = setOf("Goblin"),
-                    imageUri = "https://cards.scryfall.io/normal/front/c/d/" +
-                        "cd6cd0d3-7973-49e6-9c1c-6f516a5d5fe5.jpg?1783912608",
-                ),
+            then = Effects.CreateToken(
+                power = 1,
+                toughness = 1,
+                colors = setOf(Color.RED),
+                creatureTypes = setOf("Goblin"),
+                imageUri = "https://cards.scryfall.io/normal/front/c/d/" +
+                    "cd6cd0d3-7973-49e6-9c1c-6f516a5d5fe5.jpg?1783912608",
+            ) then
                 Effects.GrantKeyword(
                     Keyword.HASTE,
                     EffectTarget.PipelineTarget(CREATED_TOKENS, 0),
                 ),
-            ),
         )
         description = "Whenever an artifact is put into a graveyard from the battlefield, you may " +
             "pay {R}. If you do, create a 1/1 red Goblin creature token. It gains haste until end " +

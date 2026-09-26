@@ -17,7 +17,9 @@ import kotlin.reflect.KClass
  * Executor for AddDynamicCountersEffect.
  * "Put N counters on target, where N is a dynamic amount"
  */
-class AddDynamicCountersExecutor : EffectExecutor<AddDynamicCountersEffect> {
+class AddDynamicCountersExecutor(
+    private val amountEvaluator: DynamicAmountEvaluator
+) : EffectExecutor<AddDynamicCountersEffect> {
 
     override val effectType: KClass<AddDynamicCountersEffect> = AddDynamicCountersEffect::class
 
@@ -29,26 +31,27 @@ class AddDynamicCountersExecutor : EffectExecutor<AddDynamicCountersEffect> {
         val targetId = context.resolveTarget(effect.target)
             ?: return EffectResult.error(state, "No valid target for counters")
 
-        val evaluator = DynamicAmountEvaluator()
+        val evaluator = amountEvaluator
         val count = evaluator.evaluate(state, effect.amount, context)
 
         if (count <= 0) {
             return EffectResult.success(state, emptyList())
         }
 
-        val counterType = resolveCounterType(effect.counterType)
+        val counterType = effect.counterType
 
         val current = state.getEntity(targetId)?.get<CountersComponent>() ?: CountersComponent()
 
         val modifiedCount = ReplacementEffectUtils.applyCounterPlacementModifiers(
-            state, targetId, counterType, count, placerId = context.controllerId
+            state, targetId, counterType, count, placerId = context.controllerId,
+            predicateEvaluator = amountEvaluator.predicates
         )
 
         val firstThisTurn = DamageUtils.isFirstCounterThisTurn(state, targetId)
 
         val newState = state.updateEntity(targetId) { container ->
             container.with(current.withAdded(counterType, modifiedCount))
-        }.let { DamageUtils.markCounterPlacedOnCreature(it, context.controllerId, targetId, counterTypeToString(counterType)) }
+        }.let { DamageUtils.markCounterPlacedOnCreature(it, context.controllerId, targetId, counterType) }
 
         val entityName = state.getEntity(targetId)?.get<CardComponent>()?.name ?: ""
 

@@ -1,11 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ice.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Wings of Aesthir
@@ -26,7 +27,7 @@ val WingsOfAesthir = card("Wings of Aesthir") {
     oracleText = "Enchant creature\n" +
         "Enchanted creature gets +1/+0 and has flying and first strike."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = ModifyStats(1, 0)

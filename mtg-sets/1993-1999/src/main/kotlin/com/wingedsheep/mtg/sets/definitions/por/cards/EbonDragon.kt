@@ -9,7 +9,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -29,9 +29,9 @@ val EbonDragon = card("Ebon Dragon") {
     toughness = 4
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
-        val t = target("target", TargetOpponent())
+        val t = target(Targets.Opponent)
         effect = Patterns.Hand.discardCards(1, t)
     }
     metadata {

@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Dimensional Breach
@@ -25,14 +26,13 @@ val DimensionalBreach = card("Dimensional Breach") {
     oracleText = "Exile all permanents. For as long as any of those cards remain exiled, at the beginning of each player's upkeep, that player returns one of the exiled cards they own to the battlefield."
 
     spell {
-        effect = Effects.ExileGroupAndLink(GroupFilter(GameObjectFilter.Any))
-            .then(Effects.CreateGlobalTriggeredAbility(
+        effect = Effects.ExileGroupAndLink(GroupFilter(GameObjectFilter.Any)) then
+            Effects.CreateGlobalTriggeredAbility(
                 TriggeredAbility.create(
-                    trigger = Triggers.EachUpkeep.event,
-                    binding = Triggers.EachUpkeep.binding,
+                    trigger = Triggers.anyPlayer.beginningOf(Step.UPKEEP),
                     effect = Effects.ReturnOneFromLinkedExile()
                 )
-            ))
+            )
     }
 
     metadata {

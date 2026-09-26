@@ -30,7 +30,7 @@ val SkullCatapult = card("Skull Catapult") {
             Costs.Tap,
             Costs.Sacrifice(GameObjectFilter.Creature)
         )
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(2, t)
     }
 

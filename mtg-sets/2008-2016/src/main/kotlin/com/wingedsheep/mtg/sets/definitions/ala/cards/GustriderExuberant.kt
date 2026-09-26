@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * The cost is the bare [Costs.SacrificeSelf] atom — no mana, no tap — so the ability is usable at
  * instant speed even the turn it lands. The grant is [Effects.ForEachInGroup] over a snapshot of
- * `GameObjectFilter.Creature.youControl().powerAtLeast(5)`, with [EffectTarget.Self] inside the body
+ * `GameObjectFilter.Creature.youControl().powerAtLeast(5)`, with [EffectTarget.IterationEntity] inside the body
  * bound to the current iteration entity; each iteration is a separate
  * [Effects.GrantKeyword] whose default `Duration.EndOfTurn` is the printed duration. Snapshotting
  * before iteration is what makes the grant a one-shot on the creatures present at resolution rather
@@ -40,7 +40,7 @@ val GustriderExuberant = card("Gustrider Exuberant") {
         cost = Costs.SacrificeSelf
         effect = Effects.ForEachInGroup(
             filter = GroupFilter(GameObjectFilter.Creature.youControl().powerAtLeast(5)),
-            effect = Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
+            effect = Effects.GrantKeyword(Keyword.FLYING, EffectTarget.IterationEntity)
         )
     }
 

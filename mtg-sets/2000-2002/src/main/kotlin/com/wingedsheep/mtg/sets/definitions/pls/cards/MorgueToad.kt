@@ -28,7 +28,7 @@ val MorgueToad = card("Morgue Toad") {
     toughness = 2
     activatedAbility {
         cost = Costs.SacrificeSelf
-        effect = Effects.Composite(Effects.AddMana(Color.BLUE, 1), Effects.AddMana(Color.RED, 1))
+        effect = Effects.AddMana(Color.BLUE, 1) then Effects.AddMana(Color.RED, 1)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

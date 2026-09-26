@@ -28,11 +28,11 @@ val ConsultTheNecrosages = card("Consult the Necrosages") {
     spell {
         modal {
             mode("Target player draws two cards.") {
-                val p = target("target player", Targets.Player)
+                val p = target(Targets.Player)
                 effect = Effects.DrawCards(2, p)
             }
             mode("Target player discards two cards.") {
-                val p = target("target player", Targets.Player)
+                val p = target(Targets.Player)
                 effect = Patterns.Hand.discardCards(2, p)
             }
         }

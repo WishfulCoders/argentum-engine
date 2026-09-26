@@ -22,7 +22,7 @@ val ChamberedNautilus = card("Chambered Nautilus") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
+        trigger = Triggers.self.becomesBlocked()
         optional = true
         effect = Effects.DrawCards(1)
     }

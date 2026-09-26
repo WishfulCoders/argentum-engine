@@ -6,7 +6,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 val SpringjackKnight = card("Springjack Knight") {
     manaCost = "{2}{W}"
@@ -17,8 +17,8 @@ val SpringjackKnight = card("Springjack Knight") {
     oracleText = "Whenever this creature attacks, clash with an opponent. If you win, target creature gains double strike until end of turn. (Each clashing player reveals the top card of their library, then puts that card on their choice of the top or bottom. A player wins if their card had a greater mana value.)"
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val creature = target("creature", Targets.Creature)
+        trigger = Triggers.self.attacks()
+        val creature = target(TargetFilter.Creature)
         effect = Patterns.Mechanic.clash(Effects.GrantKeyword(Keyword.DOUBLE_STRIKE, creature))
         description = "Clash with an opponent. If you win, target creature gains double strike until end of turn."
     }

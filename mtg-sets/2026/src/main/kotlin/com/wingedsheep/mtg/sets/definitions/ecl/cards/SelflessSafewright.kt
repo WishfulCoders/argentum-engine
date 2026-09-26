@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.dsl.withChosenSubtype
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ChooseOptionEffect
 import com.wingedsheep.sdk.scripting.effects.OptionType
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -36,28 +36,16 @@ val SelflessSafewright = card("Selfless Safewright") {
     keywords(Keyword.FLASH, Keyword.CONVOKE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            listOf(
-                ChooseOptionEffect(
-                    optionType = OptionType.CREATURE_TYPE,
-                    storeAs = "chosenCreatureType"
-                ),
-                Effects.ForEachInGroup(
-                    filter = GroupFilter(
-                        baseFilter = GameObjectFilter.Permanent.youControl(),
-                        excludeSelf = true,
-                        chosenSubtypeKey = "chosenCreatureType"
-                    ),
-                    effect = Effects.Composite(
-                        listOf(
-                            Effects.GrantKeyword(Keyword.HEXPROOF, EffectTarget.Self, Duration.EndOfTurn),
-                            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self, Duration.EndOfTurn)
-                        )
-                    )
-                )
-            )
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val chosenCreatureType = chooseOption(OptionType.CREATURE_TYPE)
+            run(Effects.ForEachInGroup(
+                filter = GroupFilter(GameObjectFilter.Permanent.youControl(), excludeSelf = true)
+                    .withChosenSubtype(chosenCreatureType),
+                effect = Effects.GrantKeyword(Keyword.HEXPROOF, EffectTarget.IterationEntity, Duration.EndOfTurn) then
+                    Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.IterationEntity, Duration.EndOfTurn)
+            ))
+        }
     }
 
     metadata {

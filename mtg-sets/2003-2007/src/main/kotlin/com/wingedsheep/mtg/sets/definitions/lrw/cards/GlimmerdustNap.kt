@@ -1,10 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.AbilityFlag
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Glimmerdust Nap
@@ -24,7 +25,7 @@ val GlimmerdustNap = card("Glimmerdust Nap") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant tapped creature\nEnchanted creature doesn't untap during its controller's untap step."
 
-    auraTarget = Targets.TappedCreature
+    auraTarget = TargetObject(filter = TargetFilter.TappedCreature)
 
     staticAbility {
         ability = GrantKeyword(AbilityFlag.DOESNT_UNTAP.name)

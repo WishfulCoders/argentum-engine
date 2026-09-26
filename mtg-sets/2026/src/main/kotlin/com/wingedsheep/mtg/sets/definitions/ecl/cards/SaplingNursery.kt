@@ -33,7 +33,7 @@ val SaplingNursery = card("Sapling Nursery") {
     keywordAbility(KeywordAbility.AffinityForSubtype(Subtype.FOREST))
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.CreateToken(
             power = 3,
             toughness = 4,

@@ -42,7 +42,7 @@ val KyoshiIslandPlaza = card("Kyoshi Island Plaza") {
         .count()
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.BasicLand,
             count = shrinesYouControl,
@@ -52,10 +52,7 @@ val KyoshiIslandPlaza = card("Kyoshi Island Plaza") {
     }
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Any.withSubtype("Shrine").youControl(),
-            binding = TriggerBinding.OTHER,
-        )
+        trigger = Triggers.another(GameObjectFilter.Any.withSubtype("Shrine").youControl()).enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.BasicLand,
             count = 1,

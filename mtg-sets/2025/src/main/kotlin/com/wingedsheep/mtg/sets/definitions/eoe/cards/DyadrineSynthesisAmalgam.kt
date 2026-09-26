@@ -1,23 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.RemoveCountersEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -46,53 +39,49 @@ val DyadrineSynthesisAmalgam = card("Dyadrine, Synthesis Amalgam") {
 
     // Enters with +1/+1 counters equal to the total mana spent to cast it.
     replacementEffect(
-        EntersWithDynamicCounters(count = DynamicAmount.TotalManaSpent)
+        EntersWithDynamicCounters(count = DynamicAmounts.totalManaSpent())
     )
 
     // Whenever you attack, optionally remove a +1/+1 counter from each of two creatures
     // you control. If both removals happen, draw a card and create a 2/2 Robot token.
     triggeredAbility {
-        trigger = Triggers.YouAttack
-        effect = MayEffect(
-            effect = Effects.Composite(
-                listOf(
-                    GatherCardsEffect(
-                        source = CardSource.BattlefieldMatching(
-                            filter = GameObjectFilter.Creature
-                                .youControl()
-                                .withCounter(Counters.PLUS_ONE_PLUS_ONE),
-                            player = Player.You,
-                        ),
-                        storeAs = "candidates",
-                    ),
-                    SelectFromCollectionEffect(
-                        from = "candidates",
-                        selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(2)),
-                        storeSelected = "chosen",
-                        useTargetingUI = true,
-                        prompt = "Choose two creatures you control to remove a +1/+1 counter from",
-                    ),
-                    RemoveCountersEffect(
-                        counterType = Counters.PLUS_ONE_PLUS_ONE,
-                        count = 1,
-                        target = EffectTarget.PipelineTarget("chosen", 0),
-                    ),
-                    RemoveCountersEffect(
-                        counterType = Counters.PLUS_ONE_PLUS_ONE,
-                        count = 1,
-                        target = EffectTarget.PipelineTarget("chosen", 1),
-                    ),
-                    DrawCardsEffect(1, EffectTarget.Controller),
-                    CreateTokenEffect(
-                        power = 2,
-                        toughness = 2,
-                        colors = setOf(), // colorless
-                        creatureTypes = setOf("Robot"),
-                        artifactToken = true,
-                        imageUri = "https://cards.scryfall.io/normal/front/c/4/c46f9a07-005c-44b7-8057-b2f00b274dd6.jpg?1756281130",
-                    ),
+        trigger = Triggers.you.attacks()
+        effect = Effects.May(
+            effect = Effects.Pipeline {
+                val candidates = gather(
+                    CardSource.BattlefieldMatching(
+                        filter = GameObjectFilter.Creature
+                            .youControl()
+                            .withCounter(CounterType.PLUS_ONE_PLUS_ONE),
+                        player = Player.You,
+                    )
                 )
-            ),
+                val chosen = chooseExactly(
+                    2,
+                    from = candidates,
+                    useTargetingUI = true,
+                    prompt = "Choose two creatures you control to remove a +1/+1 counter from"
+                )
+                run(Effects.RemoveCounters(
+                    counterType = CounterType.PLUS_ONE_PLUS_ONE,
+                    count = 1,
+                    target = chosen.asTarget,
+                ))
+                run(Effects.RemoveCounters(
+                    counterType = CounterType.PLUS_ONE_PLUS_ONE,
+                    count = 1,
+                    target = chosen.asTarget(1),
+                ))
+                run(Effects.DrawCards(1, EffectTarget.Controller))
+                run(Effects.CreateToken(
+                    power = 2,
+                    toughness = 2,
+                    colors = setOf(), // colorless
+                    creatureTypes = setOf("Robot"),
+                    artifactToken = true,
+                    imageUri = "https://cards.scryfall.io/normal/front/c/4/c46f9a07-005c-44b7-8057-b2f00b274dd6.jpg?1756281130",
+                ))
+            },
             descriptionOverride = "You may remove a +1/+1 counter from each of two creatures you " +
                 "control. If you do, draw a card and create a 2/2 colorless Robot artifact creature token.",
         )

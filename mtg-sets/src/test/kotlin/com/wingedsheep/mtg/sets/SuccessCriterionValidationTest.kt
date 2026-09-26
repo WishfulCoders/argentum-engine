@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets
 
-import com.wingedsheep.sdk.serialization.CardValidationError
-import com.wingedsheep.sdk.serialization.CardValidator
+import com.wingedsheep.sdk.tooling.CardValidationError
+import com.wingedsheep.sdk.tooling.CardValidator
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 

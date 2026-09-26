@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Tunnel
@@ -21,7 +20,7 @@ val Tunnel = card("Tunnel") {
     typeLine = "Instant"
     oracleText = "Destroy target Wall. It can't be regenerated."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter(GameObjectFilter.Permanent.withSubtype("Wall"))))
+        val t = target(TargetFilter(GameObjectFilter.Permanent.withSubtype("Wall")))
         effect = Effects.Destroy(t, noRegenerate = true)
     }
     metadata {

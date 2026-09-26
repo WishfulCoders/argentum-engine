@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.rix.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Reaver Ambush
@@ -18,10 +18,7 @@ val ReaverAmbush = card("Reaver Ambush") {
     oracleText = "Exile target creature with power 3 or less."
 
     spell {
-        val victim = target(
-            "target creature with power 3 or less",
-            Targets.CreatureWithPowerAtMost(3)
-        )
+        val victim = target(TargetFilter.Creature.powerAtMost(3))
         effect = Effects.Exile(victim)
     }
 

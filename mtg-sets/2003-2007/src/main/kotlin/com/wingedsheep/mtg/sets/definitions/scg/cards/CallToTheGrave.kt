@@ -1,17 +1,18 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ForceSacrificeEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 val CallToTheGrave = card("Call to the Grave") {
     manaCost = "{4}{B}"
@@ -20,8 +21,8 @@ val CallToTheGrave = card("Call to the Grave") {
     oracleText = "At the beginning of each player's upkeep, that player sacrifices a non-Zombie creature.\nAt the beginning of the end step, if no creatures are on the battlefield, sacrifice Call to the Grave."
 
     triggeredAbility {
-        trigger = Triggers.EachUpkeep
-        effect = ForceSacrificeEffect(
+        trigger = Triggers.anyPlayer.beginningOf(Step.UPKEEP)
+        effect = Effects.Sacrifice(
             GameObjectFilter.Creature.notSubtype(Subtype("Zombie")),
             1,
             EffectTarget.PlayerRef(Player.TriggeringPlayer)
@@ -29,11 +30,11 @@ val CallToTheGrave = card("Call to the Grave") {
     }
 
     triggeredAbility {
-        trigger = Triggers.EachEndStep
-        interveningIf = Compare(
-            DynamicAmount.AggregateBattlefield(Player.Each, GameObjectFilter.Creature),
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
+        interveningIf = Conditions.CompareAmounts(
+            DynamicAmounts.allCreatures(),
             ComparisonOperator.EQ,
-            DynamicAmount.Fixed(0)
+            0
         )
         effect = SacrificeSelfEffect
     }

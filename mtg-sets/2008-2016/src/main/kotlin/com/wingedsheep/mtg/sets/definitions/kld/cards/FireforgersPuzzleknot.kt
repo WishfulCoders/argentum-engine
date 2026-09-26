@@ -28,14 +28,14 @@ val FireforgersPuzzleknot = card("Fireforger's Puzzleknot") {
         "{2}{R}, Sacrifice this artifact: It deals 1 damage to any target."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", Targets.Any)
+        trigger = Triggers.self.enters()
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{R}"), Costs.SacrificeSelf)
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
     }
 

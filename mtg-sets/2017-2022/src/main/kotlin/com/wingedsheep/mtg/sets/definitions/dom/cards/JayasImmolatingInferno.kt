@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.dom.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.targets.AnyTarget
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
@@ -23,9 +22,9 @@ val JayasImmolatingInferno = card("Jaya's Immolating Inferno") {
 
     spell {
         target = AnyTarget(count = 3, minCount = 1)
-        effect = ForEachTargetEffect(listOf(
-            Effects.DealXDamage(EffectTarget.ContextTarget(0))
-        ))
+        effect = Effects.ForEachTarget(
+        Effects.DealXDamage(EffectTarget.ContextTarget(0))
+    )
     }
 
     metadata {

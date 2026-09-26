@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Deadly Riposte
@@ -22,11 +21,8 @@ val DeadlyRiposte = card("Deadly Riposte") {
     typeLine = "Instant"
     oracleText = "Deadly Riposte deals 3 damage to target tapped creature and you gain 2 life."
     spell {
-        val tappedCreature = target("target", TargetCreature(filter = TargetFilter.Creature.tapped()))
-        effect = Effects.Composite(
-            Effects.DealDamage(3, tappedCreature),
-            Effects.GainLife(2)
-        )
+        val tappedCreature = target(TargetFilter.Creature.tapped())
+        effect = Effects.DealDamage(3, tappedCreature) then Effects.GainLife(2)
     }
     metadata {
         rarity = Rarity.COMMON

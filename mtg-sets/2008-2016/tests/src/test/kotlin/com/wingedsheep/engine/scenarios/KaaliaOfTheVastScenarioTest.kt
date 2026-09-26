@@ -20,7 +20,7 @@ import io.kotest.matchers.shouldBe
  *  creature card from your hand onto the battlefield tapped and attacking that opponent."
  *
  * This is the demonstration card for engine feature #1258: the trigger is gated on
- * `Triggers.AttacksAnOpponent` (SELF + `AttackPredicate.DefenderIsPlayer`), so per Kaalia's
+ * `Triggers.self.attacks(setOf(AttackPredicate.DefenderIsPlayer))` (SELF + `AttackPredicate.DefenderIsPlayer`), so per Kaalia's
  * 2024-06-07 ruling it fires only when she attacks a *player* — not a planeswalker (or battle).
  *
  * - attacks a player → the trigger fires; "you may put an Angel, Demon, or Dragon creature card"

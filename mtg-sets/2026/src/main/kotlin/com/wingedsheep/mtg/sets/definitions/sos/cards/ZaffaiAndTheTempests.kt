@@ -14,8 +14,8 @@ import com.wingedsheep.sdk.scripting.MayCastWithoutPayingManaCost
  *
  * Modeled as [MayCastWithoutPayingManaCost] with the `oncePerTurn` gate (one free cast per your
  * turn, not necessarily your first spell) and `controllerOnly` (only you), filtered to instant and
- * sorcery spells. The free-cast permission is only ever offered for cards in hand, matching "from
- * your hand". Each use marks the source until end of turn.
+ * sorcery spells, and `fromHandOnly` so the permission never reaches a card cast from another
+ * zone ("from your hand"). Each use marks the source until end of turn.
  */
 val ZaffaiAndTheTempests = card("Zaffai and the Tempests") {
     manaCost = "{5}{U}{R}"
@@ -31,6 +31,7 @@ val ZaffaiAndTheTempests = card("Zaffai and the Tempests") {
             controllerOnly = true,
             oncePerTurn = true,
             spellFilter = GameObjectFilter.InstantOrSorcery,
+            fromHandOnly = true,
         )
     }
 

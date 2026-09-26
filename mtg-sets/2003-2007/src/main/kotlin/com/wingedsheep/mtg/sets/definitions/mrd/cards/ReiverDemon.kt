@@ -39,7 +39,7 @@ val ReiverDemon = card("Reiver Demon") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.WasCastFromHand
         effect = Effects.DestroyAll(
             filter = GameObjectFilter.Creature.nonartifact().notColor(Color.BLACK),

@@ -31,6 +31,7 @@ import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Terra, Magical Adept // Esper Terra (FIN #245).
@@ -39,7 +40,7 @@ import io.kotest.matchers.shouldNotBe
  * exile-and-return-transformed into the Summon-Saga back (a new object, fresh lore); and — the
  * point of the accompanying engine work — Esper Terra's chapter I–III copy, where the "if it's a
  * Saga, put up to three lore counters on it" clause is composed as
- * `ConditionalEffect(CollectionContainsMatch(CREATED_TOKENS, Saga), AddCountersUpTo(LORE, 3, …))`.
+ * `Effects.If(CollectionContainsMatch(CREATED_TOKENS, Saga), AddCountersUpTo(LORE, 3, …))`.
  */
 class TerraMagicalAdeptScenarioTest : FunSpec({
 
@@ -127,7 +128,7 @@ class TerraMagicalAdeptScenarioTest : FunSpec({
         driver.giveColorlessMana(player, 4)
         val abilityId = TerraMagicalAdept.activatedAbilities.first().id
         driver.submit(ActivateAbility(playerId = player, sourceId = terra, abilityId = abilityId))
-            .isSuccess shouldBe true
+            .outcome shouldBe Outcome.Done
         driver.bothPass()
     }
 

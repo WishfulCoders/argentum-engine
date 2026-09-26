@@ -27,7 +27,7 @@ val TilonallisKnight = card("Tilonalli's Knight") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         interveningIf = Conditions.ControlPermanentOfType(Subtype.DINOSAUR)
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }

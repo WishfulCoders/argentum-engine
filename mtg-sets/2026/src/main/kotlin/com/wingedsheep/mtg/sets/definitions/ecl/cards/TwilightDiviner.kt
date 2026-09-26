@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenCopyOfTargetEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Twilight Diviner
@@ -33,15 +34,15 @@ val TwilightDiviner = card("Twilight Diviner") {
         "only once each turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.surveil(2)
     }
 
     triggeredAbility {
-        trigger = Triggers.OtherCreatureEnters
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
         interveningIf = Conditions.TriggeringEntityEnteredOrWasCastFromGraveyard
         oncePerTurn = true
-        effect = CreateTokenCopyOfTargetEffect(EffectTarget.TriggeringEntity)
+        effect = Effects.CreateTokenCopyOfTarget(EffectTarget.TriggeringEntity)
     }
 
     metadata {

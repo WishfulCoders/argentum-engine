@@ -22,7 +22,7 @@ val KrisMage = card("Kris Mage") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{R}"), Costs.Tap, Costs.DiscardCard)
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
     }
 

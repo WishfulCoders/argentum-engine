@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Cactuar
@@ -35,7 +36,7 @@ val Cactuar = card("Cactuar") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.Not(Conditions.SourceEnteredThisTurn)
         effect = Effects.ReturnToHand(EffectTarget.Self)
         description = "At the beginning of your end step, if this creature didn't enter the " +

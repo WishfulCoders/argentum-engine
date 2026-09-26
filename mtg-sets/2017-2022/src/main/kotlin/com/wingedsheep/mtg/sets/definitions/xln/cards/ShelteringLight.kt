@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.xln.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sheltering Light
@@ -21,7 +21,7 @@ val ShelteringLight = card("Sheltering Light") {
         "(Damage and effects that say \"destroy\" don't destroy the creature.)"
 
     spell {
-        val protege = target("target", Targets.Creature)
+        val protege = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, protege) then Effects.Scry(1)
     }
 

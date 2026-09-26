@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Wanderbrine Trapper
@@ -28,7 +28,7 @@ val WanderbrineTrapper = card("Wanderbrine Trapper") {
             Costs.Tap,
             Costs.TapAnotherPermanent(GameObjectFilter.Creature)
         )
-        val t = target("creature an opponent controls", Targets.CreatureOpponentControls)
+        val t = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.Tap(t)
     }
 

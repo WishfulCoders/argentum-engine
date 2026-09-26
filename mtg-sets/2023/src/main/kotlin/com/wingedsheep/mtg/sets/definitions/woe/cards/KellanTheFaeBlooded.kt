@@ -6,10 +6,9 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Kellan, the Fae-Blooded // Birthright Boon
@@ -38,10 +37,10 @@ val KellanTheFaeBlooded = card("Kellan, the Fae-Blooded") {
     keywords(Keyword.DOUBLE_STRIKE)
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.OtherCreaturesYouControl,
             powerBonus = DynamicAmounts.attachmentsOnSelf(),
-            toughnessBonus = DynamicAmount.Fixed(0),
+            toughnessBonus = DynamicAmounts.fixed(0),
         )
     }
 

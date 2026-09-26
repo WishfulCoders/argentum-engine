@@ -34,7 +34,7 @@ class CastModalContinuationResumer(
     private val services: EngineServices
 ) : ContinuationResumerModule {
 
-    private val castSpellHandler: CastSpellHandler by lazy { CastSpellHandler.create(services) }
+    private val castSpellHandler: CastSpellHandler get() = services.castSpellHandler
 
     override fun resumers(): List<ContinuationResumer<*>> = listOf(
         resumer(CastModalModeSelectionContinuation::class, ::resumeCastModalModeSelection),

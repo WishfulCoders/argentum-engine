@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.increment
@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern.CountersPlacedEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Pensive Professor — Secrets of Strixhaven #63
@@ -35,13 +35,7 @@ val PensiveProfessor = card("Pensive Professor") {
 
     // Whenever one or more +1/+1 counters are put on this creature, draw a card.
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = CountersPlacedEvent(
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
-                filter = GameObjectFilter.Any,
-            ),
-            binding = TriggerBinding.SELF,
-        )
+        trigger = Triggers.self.getsCounters(CounterType.PLUS_ONE_PLUS_ONE)
         effect = Effects.DrawCards(1)
         description = "Whenever one or more +1/+1 counters are put on this creature, draw a card."
     }

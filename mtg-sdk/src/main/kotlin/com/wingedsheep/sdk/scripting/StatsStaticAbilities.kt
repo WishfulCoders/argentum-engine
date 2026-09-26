@@ -38,7 +38,7 @@ data class ModifyStats(
  */
 @SerialName("GrantDynamicStats")
 @Serializable
-data class GrantDynamicStatsEffect(
+data class GrantDynamicStats(
     val filter: GroupFilter,
     val powerBonus: DynamicAmount,
     val toughnessBonus: DynamicAmount
@@ -65,7 +65,7 @@ data class GrantDynamicStatsEffect(
  * you control"), Tarmogoyf-style cards, Lhurgoyf, etc.
  *
  * This is a Layer 7b (POWER_TOUGHNESS, SET_VALUES) continuous effect — distinct from
- * [GrantDynamicStatsEffect], which is a Layer 7c *bonus* added on top of an existing base. Use
+ * [GrantDynamicStats], which is a Layer 7c *bonus* added on top of an existing base. Use
  * this when the dynamic value *is* the base P/T, so a later base-setting effect (e.g. "becomes
  * a 0/2") overwrites it rather than stacking on top of it.
  *

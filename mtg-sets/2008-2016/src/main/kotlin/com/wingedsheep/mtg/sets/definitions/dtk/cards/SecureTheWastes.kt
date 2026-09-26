@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.dtk.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Secure the Wastes
@@ -25,7 +25,7 @@ val SecureTheWastes = card("Secure the Wastes") {
 
     spell {
         effect = Effects.CreateToken(
-            count = DynamicAmount.XValue,
+            count = DynamicAmounts.xValue(),
             power = 1,
             toughness = 1,
             colors = setOf(Color.WHITE),

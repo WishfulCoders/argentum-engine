@@ -19,7 +19,7 @@ val OverflowingInsight = card("Overflowing Insight") {
     oracleText = "Target player draws seven cards."
 
     spell {
-        val player = target("target", Targets.Player)
+        val player = target(Targets.Player)
         effect = Effects.DrawCards(7, player)
     }
 

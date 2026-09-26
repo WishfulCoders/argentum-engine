@@ -24,7 +24,7 @@ val AgentsOfHydra = card("Agents of HYDRA") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateToken(
             power = 2,
             toughness = 1,

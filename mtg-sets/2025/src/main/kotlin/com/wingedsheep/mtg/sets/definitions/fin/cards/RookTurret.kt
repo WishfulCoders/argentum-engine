@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 
 /**
  * Rook Turret
@@ -28,12 +27,9 @@ val RookTurret = card("Rook Turret") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            binding = TriggerBinding.OTHER
-        )
-        // "you may draw a card. If you do, discard a card." — loot coupled draw+discard, gated by MayEffect.
-        effect = MayEffect(Patterns.Hand.loot())
+        trigger = Triggers.another(GameObjectFilter.Artifact.youControl()).enters()
+        // "you may draw a card. If you do, discard a card." — loot coupled draw+discard, gated by Effects.May.
+        effect = Effects.May(Patterns.Hand.loot())
     }
 
     metadata {

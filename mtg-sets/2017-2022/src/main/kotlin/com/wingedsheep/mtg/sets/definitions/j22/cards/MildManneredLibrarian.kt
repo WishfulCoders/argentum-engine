@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.j22.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
@@ -32,13 +32,9 @@ val MildManneredLibrarian = card("Mild-Mannered Librarian") {
 
     activatedAbility {
         cost = Costs.Mana("{3}{G}")
-        effect = Effects.Composite(
-            listOf(
-                Effects.SetCreatureSubtypes(setOf("Werewolf"), EffectTarget.Self, Duration.Permanent),
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self),
-                Effects.DrawCards(1)
-            )
-        )
+        effect = Effects.SetCreatureSubtypes(setOf("Werewolf"), EffectTarget.Self, Duration.Permanent) then
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self) then
+            Effects.DrawCards(1)
         restrictions = listOf(ActivationRestriction.Once)
     }
 

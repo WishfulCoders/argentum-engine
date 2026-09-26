@@ -47,7 +47,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Stratus Walk:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -129,7 +129,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Temple of Enlightenment:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -142,7 +142,7 @@
         ],
         "activatedAbilities": [
             {
-                "id": "ability_2",
+                "id": "Temple of Enlightenment:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -152,7 +152,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_3",
+                "id": "Temple of Enlightenment:3",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -187,7 +187,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Temple of Malice:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -200,7 +200,7 @@
         ],
         "activatedAbilities": [
             {
-                "id": "ability_2",
+                "id": "Temple of Malice:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -210,7 +210,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_3",
+                "id": "Temple of Malice:3",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -245,7 +245,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Temple of Plenty:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -258,7 +258,7 @@
         ],
         "activatedAbilities": [
             {
-                "id": "ability_2",
+                "id": "Temple of Plenty:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -268,7 +268,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_3",
+                "id": "Temple of Plenty:3",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",

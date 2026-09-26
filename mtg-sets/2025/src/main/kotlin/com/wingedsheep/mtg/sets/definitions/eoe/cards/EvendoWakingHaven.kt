@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
@@ -47,7 +47,7 @@ val EvendoWakingHaven = card("Evendo, Waking Haven") {
         effect = Effects.AddMana(Color.GREEN, DynamicAmounts.creaturesYouControl())
         restrictions = listOf(
             ActivationRestriction.OnlyIfCondition(
-                Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 12)
+                Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 12)
             )
         )
         manaAbility = true

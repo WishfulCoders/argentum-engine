@@ -3,16 +3,15 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Screaming Swarm — Innistrad: Crimson Vow #75
@@ -23,7 +22,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Whenever you attack with one or more creatures, target player mills that many cards.
  * {2}{U}: Put this card from your graveyard into your library second from the top.
  *
- * The attack trigger is [Triggers.YouAttack] — the batch "whenever you attack" shape that fires
+ * The attack trigger is `Triggers.you.attacks()` — the batch "whenever you attack" shape that fires
  * once per combat, not once per attacker. "That many" is the size of the batch, read as the
  * attacking creatures you control ([DynamicAmount.AggregateBattlefield] over
  * `Creature.attacking()`, which is evaluated under projected state). The target is a player, and
@@ -48,10 +47,10 @@ val ScreamingSwarm = card("Screaming Swarm") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YouAttack
-        val victim = target("target", Targets.Player)
+        trigger = Triggers.you.attacks()
+        val victim = target(Targets.Player)
         effect = Patterns.Library.mill(
-            DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Creature.attacking()),
+            DynamicAmounts.attackingCreaturesYouControl(),
             victim
         )
     }

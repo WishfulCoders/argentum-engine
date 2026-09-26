@@ -3,14 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.drk.cards
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Venom
@@ -22,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Serpentine Basilisk's shape moved onto an Aura: the combat trigger schedules a delayed
  * end-of-combat destroy aimed at the triggering entity, which for
- * [Triggers.BlocksOrBecomesBlockedBy] is the combat partner — "the *other* creature".
+ * `Triggers.<subject>.blocksOrBecomesBlocked(by, oncePerCombat)` is the combat partner — "the *other* creature".
  *
  * The kill is deliberately delayed rather than immediate, so the poisoned creature still deals and
  * receives combat damage first; that is what makes Venom a deterrent rather than a removal spell.
@@ -37,14 +36,11 @@ val Venom = card("Venom") {
     oracleText = "Enchant creature\n" +
         "Whenever enchanted creature blocks or becomes blocked by a non-Wall creature, destroy " +
         "the other creature at end of combat."
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.BlocksOrBecomesBlockedBy(
-            GameObjectFilter.Creature.notSubtype(Subtype.WALL),
-            binding = TriggerBinding.ATTACHED,
-        )
-        effect = CreateDelayedTriggerEffect(
+        trigger = Triggers.attached.blocksOrBecomesBlocked(GameObjectFilter.Creature.notSubtype(Subtype.WALL))
+        effect = Effects.CreateDelayedTrigger(
             step = Step.END_COMBAT,
             effect = Effects.Destroy(EffectTarget.TriggeringEntity),
         )

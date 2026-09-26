@@ -1,15 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Fear of Immobility
@@ -36,15 +34,13 @@ val FearOfImmobility = card("Fear of Immobility") {
         "untapped, remove one from it instead.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetCreature(optional = true))
-        effect = Effects.Composite(
-            Effects.Tap(t),
-            ConditionalEffect(
-                condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.opponentControls()),
-                effect = AddCountersEffect(counterType = Counters.STUN, count = 1, target = t),
-            ),
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature, optional = true)
+        effect = Effects.Tap(t) then
+            Effects.If(
+                condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.opponentControls(), t),
+                then = Effects.AddCounters(counterType = CounterType.STUN, count = 1, target = t),
+            )
         description = "When this creature enters, tap up to one target creature. If an opponent " +
             "controls that creature, put a stun counter on it."
     }

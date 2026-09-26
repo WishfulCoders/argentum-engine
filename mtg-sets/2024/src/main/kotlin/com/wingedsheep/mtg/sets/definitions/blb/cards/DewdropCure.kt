@@ -5,9 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
@@ -31,10 +28,8 @@ val DewdropCure = card("Dewdrop Cure") {
     oracleText = "Gift a card (You may promise an opponent a gift as you cast this spell. If you do, they draw a card before its other effects.)\nReturn up to two target creature cards each with mana value 2 or less from your graveyard to the battlefield. If the gift was promised, instead return up to three target creature cards each with mana value 2 or less from your graveyard to the battlefield."
 
     val graveyardFilter = TargetFilter.CreatureInYourGraveyard.manaValueAtMost(2)
-    val returnEffect = ForEachTargetEffect(
-        effects = listOf(
-            Effects.Move(EffectTarget.ContextTarget(0), Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)
-        )
+    val returnEffect = Effects.ForEachTarget(
+        Effects.Move(EffectTarget.ContextTarget(0), Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)
     )
 
     spell {
@@ -49,9 +44,9 @@ val DewdropCure = card("Dewdrop Cure") {
             ),
             // Mode 2: Gift a card — opponent draws, return up to 3 creature cards with MV ≤ 2
             Mode(
-                effect = DrawCardsEffect(1, EffectTarget.PlayerRef(Player.ChosenOpponent))
-                    .then(returnEffect)
-                    .then(Effects.GiftGiven()),
+                effect = Effects.DrawCards(1, EffectTarget.PlayerRef(Player.ChosenOpponent)) then
+                    returnEffect then
+                    Effects.GiftGiven(),
                 targetRequirements = listOf(
                     TargetObject(count = 3, optional = true, filter = graveyardFilter)
                 ),

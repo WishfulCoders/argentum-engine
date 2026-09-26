@@ -20,7 +20,7 @@ import io.kotest.matchers.shouldBe
  * those cards to the battlefield under their owner's control at the beginning of the next end step."
  *
  * The trigger is the source-filtered form of the "you activate an ability" event
- * ([com.wingedsheep.sdk.dsl.Triggers.activatesAbilityOf]) with `includeManaAbilities = true`. The
+ * (`Triggers.<player>.activatesAbility(of = filter, includeManaAbilities)`) with `includeManaAbilities = true`. The
  * Oracle text carries no "that isn't a mana ability" clause and a mana ability is still an
  * activated ability (CR 605.3), so a creature's "{T}: Add {G}" fires it — the card's own ruling
  * says so. That holds whether the player taps the mana creature by hand or the engine auto-taps it

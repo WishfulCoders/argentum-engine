@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Kill Shot
@@ -18,7 +18,7 @@ val KillShot = card("Kill Shot") {
     oracleText = "Destroy target attacking creature."
 
     spell {
-        val t = target("target", Targets.AttackingCreature)
+        val t = target(TargetFilter.AttackingCreature)
         effect = Effects.Destroy(t)
     }
 

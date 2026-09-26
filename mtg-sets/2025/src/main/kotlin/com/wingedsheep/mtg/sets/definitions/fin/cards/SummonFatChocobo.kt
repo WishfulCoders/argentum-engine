@@ -9,9 +9,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -42,7 +40,7 @@ val SummonFatChocobo = card("Summon: Fat Chocobo") {
     toughness = 4
 
     // I — Wark — create the 2/2 green Bird token with a land-enters self-pump trigger.
-    val wark = CreateTokenEffect(
+    val wark = Effects.CreateToken(
         power = 2,
         toughness = 2,
         colors = setOf(Color.GREEN),
@@ -50,14 +48,7 @@ val SummonFatChocobo = card("Summon: Fat Chocobo") {
         imageUri = "https://cards.scryfall.io/normal/front/1/f/1fbc471d-5948-47fc-b7cc-81cc13a4cd15.jpg?1748704082",
         triggeredAbilities = listOf(
             TriggeredAbility.create(
-                trigger = Triggers.entersBattlefield(
-                    filter = GameObjectFilter.Land.youControl(),
-                    binding = TriggerBinding.ANY
-                ).event,
-                binding = Triggers.entersBattlefield(
-                    filter = GameObjectFilter.Land.youControl(),
-                    binding = TriggerBinding.ANY
-                ).binding,
+                trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters(),
                 effect = Effects.ModifyStats(1, 0, EffectTarget.Self)
             )
         )

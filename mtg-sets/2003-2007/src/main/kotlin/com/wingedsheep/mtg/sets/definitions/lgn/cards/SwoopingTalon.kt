@@ -3,12 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.lgn.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Swooping Talon
@@ -38,10 +38,10 @@ val SwoopingTalon = card("Swooping Talon") {
 
     // Provoke
     triggeredAbility {
-        trigger = Triggers.Attacks
+        val creatureOpponentControls = target(TargetFilter.CreatureOpponentControls)
+        trigger = Triggers.self.attacks()
         optional = true
-        target = Targets.CreatureOpponentControls
-        effect = Effects.Provoke(EffectTarget.ContextTarget(0))
+        effect = Effects.Provoke(creatureOpponentControls)
     }
 
     metadata {

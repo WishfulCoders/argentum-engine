@@ -23,6 +23,7 @@ import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * CR 605.3a — "A player may activate an activated mana ability whenever they have priority,
@@ -69,7 +70,7 @@ class ManaAbilitiesDuringPaymentTest : FunSpec({
         typeLine = "Creature — Bear"
         power = 2
         toughness = 2
-        keywordAbility(KeywordAbility.ward("{1}"))
+        keywordAbility(KeywordAbility.Ward(WardCost.Mana("{1}")))
     }
 
     fun createDriver(): GameTestDriver {

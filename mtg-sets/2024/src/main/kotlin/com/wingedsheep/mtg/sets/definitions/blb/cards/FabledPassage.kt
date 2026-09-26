@@ -8,17 +8,9 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.Condition
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
-import com.wingedsheep.sdk.scripting.effects.TapUntapCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -46,33 +38,26 @@ val FabledPassage = card("Fabled Passage") {
             Costs.Tap,
             Costs.SacrificeSelf
         )
-        effect = Effects.Composite(
-            listOf(
-                // Search library for basic land
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.BasicLand),
-                    storeAs = "searchable"
-                ),
-                SelectFromCollectionEffect(
-                    from = "searchable",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    storeSelected = "found"
-                ),
-                // Put onto battlefield tapped, storing the moved entity for potential untap
-                MoveCollectionEffect(
-                    from = "found",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped),
-                    storeMovedAs = "movedLand"
-                ),
-                // Shuffle library
-                ShuffleLibraryEffect(),
-                // Then if you control 4+ lands, untap that land
-                ConditionalEffect(
-                    condition = Conditions.ControlLandsAtLeast(4),
-                    effect = TapUntapCollectionEffect(collectionName = "movedLand", tap = false)
-                )
+        effect = Effects.Pipeline {
+            // Search library for basic land
+            val searchable = gather(
+                CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.BasicLand),
+                search = true
             )
-        )
+            val found = chooseUpTo(1, from = searchable)
+            // Put onto battlefield tapped, storing the moved entity for potential untap
+            val movedLand = moveTracked(
+                found,
+                CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped)
+            )
+            // Shuffle library
+            run(Effects.ShuffleLibrary())
+            // Then if you control 4+ lands, untap that land
+            run(Effects.If(
+                condition = Conditions.ControlLandsAtLeast(4),
+                then = Effects.TapCollection(collection = movedLand, tap = false)
+            ))
+        }
         manaAbility = false
     }
 

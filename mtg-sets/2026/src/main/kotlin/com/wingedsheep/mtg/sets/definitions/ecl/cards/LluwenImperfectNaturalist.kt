@@ -3,20 +3,14 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
+import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -39,33 +33,21 @@ val LluwenImperfectNaturalist = card("Lluwen, Imperfect Naturalist") {
     oracleText = "When Lluwen enters, mill four cards, then you may put a creature or land card from among the milled cards on top of your library.\n{2}{B/G}{B/G}{B/G}, {T}, Discard a land card: Create a 1/1 black and green Worm creature token for each land card in your graveyard."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(4)),
-                    storeAs = "milled"
-                ),
-                MoveCollectionEffect(
-                    from = "milled",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD)
-                ),
-                SelectFromCollectionEffect(
-                    from = "milled",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    filter = GameObjectFilter.Creature or GameObjectFilter.Land,
-                    storeSelected = "kept",
-                    showAllCards = true,
-                    prompt = "You may put a creature or land card on top of your library",
-                    selectedLabel = "Put on top of library",
-                    remainderLabel = "Leave in graveyard"
-                ),
-                MoveCollectionEffect(
-                    from = "kept",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Top)
-                )
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val milled = gather(CardSource.TopOfLibrary(4))
+            toGraveyard(milled)
+            val kept = chooseUpTo(
+                1,
+                from = milled,
+                filter = GameObjectFilter.Creature or GameObjectFilter.Land,
+                showAllCards = true,
+                prompt = "You may put a creature or land card on top of your library",
+                selectedLabel = "Put on top of library",
+                remainderLabel = "Leave in graveyard"
             )
-        )
+            toLibraryTop(kept, order = CardOrder.Preserve)
+        }
     }
 
     activatedAbility {
@@ -74,8 +56,8 @@ val LluwenImperfectNaturalist = card("Lluwen, Imperfect Naturalist") {
             Costs.Tap,
             Costs.Discard(GameObjectFilter.Land)
         )
-        effect = CreateTokenEffect(
-            count = DynamicAmount.Count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Land),
+        effect = Effects.CreateToken(
+            count = DynamicAmounts.count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Land),
             power = 1,
             toughness = 1,
             colors = setOf(Color.BLACK, Color.GREEN),

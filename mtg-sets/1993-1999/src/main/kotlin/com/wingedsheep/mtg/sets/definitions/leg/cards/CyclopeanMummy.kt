@@ -27,7 +27,7 @@ val CyclopeanMummy = card("Cyclopean Mummy") {
     oracleText = "When this creature dies, exile it."
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.Exile(EffectTarget.Self)
     }
 

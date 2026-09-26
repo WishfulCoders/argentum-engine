@@ -34,7 +34,7 @@ val VindictiveMob = card("Vindictive Mob") {
     toughness = 5
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.SacrificeOwn(GameObjectFilter.Creature)
     }
 

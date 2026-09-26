@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.station
 
@@ -42,11 +41,8 @@ val RescueSkiff = card("Rescue Skiff") {
     // When this Spacecraft enters, return target creature or enchantment card from your graveyard
     // to the battlefield.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "target creature or enchantment card from your graveyard",
-            TargetObject(filter = TargetFilter(GameObjectFilter.CreatureOrEnchantment.ownedByYou(), zone = Zone.GRAVEYARD))
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter(GameObjectFilter.CreatureOrEnchantment.ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.Move(target = t, destination = Zone.BATTLEFIELD)
         description = "return target creature or enchantment card from your graveyard to the battlefield"
     }
@@ -56,13 +52,13 @@ val RescueSkiff = card("Rescue Skiff") {
 
     // Conditional type change: artifact creature at 10+ charge counters
     staticAbility {
-        condition = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 10)
+        condition = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 10)
         ability = GrantCardType("CREATURE", GroupFilter.source())
     }
 
     // Conditional keyword: flying at 10+ charge counters
     staticAbility {
-        condition = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 10)
+        condition = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 10)
         ability = GrantKeyword(Keyword.FLYING.name, GroupFilter.source())
     }
 

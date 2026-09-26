@@ -47,10 +47,8 @@ val SurtlandFrostpyre = card("Surtland Frostpyre") {
             Costs.Tap,
             Costs.SacrificeSelf
         )
-        effect = Effects.Composite(
-            Effects.Scry(2),
+        effect = Effects.Scry(2) then
             Patterns.Group.dealDamageToAll(2, GroupFilter(GameObjectFilter.Creature))
-        )
         timing = TimingRule.SorcerySpeed
     }
 

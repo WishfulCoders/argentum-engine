@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.references.Player
  * 2/2
  * Whenever you cast your second spell each turn, create a 1/1 white Spirit creature token with flying.
  *
- * "Whenever you cast your second spell each turn" is [Triggers.NthSpellCast] with n = 2 scoped to
+ * "Whenever you cast your second spell each turn" is `Triggers.<player>.castsNth(n, spell)` with n = 2 scoped to
  * [Player.You] — the engine already tracks each player's per-turn cast count, so the ordinal needs
  * no bookkeeping on the card.
  */
@@ -28,7 +28,7 @@ val ClarionSpirit = card("Clarion Spirit") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.NthSpellCast(2, Player.You)
+        trigger = Triggers.you.castsNth(2)
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

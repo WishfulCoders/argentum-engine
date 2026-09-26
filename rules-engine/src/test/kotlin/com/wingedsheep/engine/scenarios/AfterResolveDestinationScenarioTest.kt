@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
@@ -27,6 +26,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * The **cast-this-way destination rider** — `CastFromCollectionWithoutPayingCostEffect
@@ -66,7 +66,7 @@ class AfterResolveDestinationScenarioTest : FunSpec({
         manaCost = "{1}"
         typeLine = "Instant"
         spell {
-            target("target creature", Targets.Creature)
+            target(TargetFilter.Creature)
             effect = Effects.DealDamage(1, EffectTarget.ContextTarget(0))
         }
     }
@@ -80,24 +80,22 @@ class AfterResolveDestinationScenarioTest : FunSpec({
         manaCost = "{1}"
         typeLine = "Sorcery"
         spell {
-            effect = Effects.Composite(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        zone = Zone.GRAVEYARD,
-                        filter = GameObjectFilter.InstantOrSorcery
-                    ),
-                    storeAs = "pool"
+            effect = GatherCardsEffect(
+                source = CardSource.FromZone(
+                    zone = Zone.GRAVEYARD,
+                    filter = GameObjectFilter.InstantOrSorcery
                 ),
+                storeAs = "pool"
+            ) then
                 SelectFromCollectionEffect(
                     from = "pool",
                     selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
                     storeSelected = "pick"
-                ),
+                ) then
                 Effects.CastFromCollectionWithoutPayingCost(
                     from = "pick",
                     insteadOfGraveyard = destination
                 )
-            )
         }
     }
 

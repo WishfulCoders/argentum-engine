@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBlock
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Hagra Crocodile
@@ -15,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * This creature can't block.
  * Landfall — Whenever a land you control enters, this creature gets +2/+2 until end of turn.
  *
- * Landfall is [Triggers.LandYouControlEnters] — the `ZoneChangeEvent` over
+ * Landfall is `Triggers.a(GameObjectFilter.Land.youControl()).enters()` — the `ZoneChangeEvent` over
  * `GameObjectFilter.Land.youControl()` with `TriggerBinding.ANY`.
  */
 val HagraCrocodile = card("Hagra Crocodile") {
@@ -32,7 +33,7 @@ val HagraCrocodile = card("Hagra Crocodile") {
     }
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
     }
 

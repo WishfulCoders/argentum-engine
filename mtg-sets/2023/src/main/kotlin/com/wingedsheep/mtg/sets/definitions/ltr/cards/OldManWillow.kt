@@ -1,16 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Old Man Willow
@@ -29,21 +25,21 @@ val OldManWillow = card("Old Man Willow") {
     oracleText = "Old Man Willow's power and toughness are each equal to the number of lands you control.\n" +
         "Whenever Old Man Willow attacks, you may sacrifice another creature or a token. When you do, target creature an opponent controls gets -2/-2 until end of turn."
 
-    dynamicStats(DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land))
+    dynamicStats(DynamicAmounts.landsYouControl())
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = ReflexiveTriggerEffect(
+        trigger = Triggers.self.attacks()
+        effect = Effects.ReflexiveTrigger(
             // "you may sacrifice another creature or a token"
-            action = SacrificeEffect(
+            action = Effects.SacrificeOwn(
                 filter = GameObjectFilter.Creature.youControl() or GameObjectFilter.Token.youControl(),
                 excludeSource = true
             ),
-            optional = true,
+            optional = true) {
             // "When you do, target creature an opponent controls gets -2/-2 until end of turn."
-            reflexiveEffect = Effects.ModifyStats(-2, -2, EffectTarget.ContextTarget(0)),
-            reflexiveTargetRequirements = listOf(Targets.CreatureOpponentControls)
-        )
+            val creatureOpponentControls = target(TargetFilter.CreatureOpponentControls)
+            effect = Effects.ModifyStats(-2, -2, creatureOpponentControls)
+        }
     }
 
     metadata {

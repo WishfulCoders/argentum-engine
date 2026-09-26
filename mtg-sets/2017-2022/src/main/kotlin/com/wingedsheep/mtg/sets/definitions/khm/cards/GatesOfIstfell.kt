@@ -42,10 +42,7 @@ val GatesOfIstfell = card("Gates of Istfell") {
             Costs.Tap,
             Costs.SacrificeSelf
         )
-        effect = Effects.Composite(
-            Effects.GainLife(2),
-            Effects.DrawCards(2)
-        )
+        effect = Effects.GainLife(2) then Effects.DrawCards(2)
     }
 
     metadata {

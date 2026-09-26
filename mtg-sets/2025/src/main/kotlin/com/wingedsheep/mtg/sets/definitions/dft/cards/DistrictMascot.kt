@@ -4,7 +4,7 @@
 
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
@@ -14,10 +14,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -39,14 +37,14 @@ val DistrictMascot = card("District Mascot") {
     toughness = 0
     replacementEffect(EntersWithCounters(count = 1, selfOnly = true))
     activatedAbility {
-        cost = Costs.Composite(Costs.Mana("{1}{G}"), Costs.RemoveCounterFromSelf(Counters.PLUS_ONE_PLUS_ONE, 2))
-        val t = target("target", TargetPermanent(filter = TargetFilter.Artifact))
+        cost = Costs.Composite(Costs.Mana("{1}{G}"), Costs.RemoveCounterFromSelf(CounterType.PLUS_ONE_PLUS_ONE, 2))
+        val t = target(TargetFilter.Artifact)
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         triggerRestriction = Conditions.SourceIsSaddled
-        effect = AddCountersEffect(counterType = Counters.PLUS_ONE_PLUS_ONE, count = 1, target = EffectTarget.Self)
+        effect = Effects.AddCounters(counterType = CounterType.PLUS_ONE_PLUS_ONE, count = 1, target = EffectTarget.Self)
     }
     keywordAbility(KeywordAbility.saddle(1))
     metadata {

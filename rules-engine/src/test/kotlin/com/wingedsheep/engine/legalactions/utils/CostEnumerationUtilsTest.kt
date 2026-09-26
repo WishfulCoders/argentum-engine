@@ -45,10 +45,10 @@ class CostEnumerationUtilsTest : FunSpec({
      */
     fun utils(driver: com.wingedsheep.engine.legalactions.support.EnumerationTestDriver): CostEnumerationUtils {
         val registry = driver.game.cardRegistry
-        val predicateEvaluator = PredicateEvaluator()
+        val predicateEvaluator = PredicateEvaluator(cardRegistry = null)
         return CostEnumerationUtils(
-            manaSolver = ManaSolver(registry),
-            costCalculator = CostCalculator(registry),
+            manaSolver = ManaSolver(registry, predicateEvaluator = predicateEvaluator),
+            costCalculator = CostCalculator(registry, predicateEvaluator = predicateEvaluator),
             predicateEvaluator = predicateEvaluator,
             cardRegistry = registry
         )

@@ -7,13 +7,12 @@ import com.wingedsheep.engine.handlers.effects.permanent.stats.SetBaseStatsExecu
 import com.wingedsheep.sdk.scripting.values.contextScopedReferenceIn
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.support.ScenarioTestBase
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.Duration
@@ -21,11 +20,11 @@ import com.wingedsheep.sdk.scripting.effects.SetBaseStatsEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * `SetBaseStatsEffect(reevaluateContinuously = true)` — the layer 7b base-P/T *set* whose
@@ -66,7 +65,7 @@ class SetBaseStatsContinuousScenarioTest : ScenarioTestBase() {
         oracleText = "Until end of turn, target creature you control gains \"This creature's base " +
             "power is equal to the number of cards in your hand.\""
         spell {
-            val creature = target("creature", Targets.CreatureYouControl)
+            val creature = target(TargetFilter.CreatureYouControl)
             effect = Effects.SetBasePower(
                 creature,
                 DynamicAmounts.cardsInYourHand(),
@@ -82,7 +81,7 @@ class SetBaseStatsContinuousScenarioTest : ScenarioTestBase() {
         oracleText = "Target creature's base power becomes the number of cards in your hand " +
             "until end of turn."
         spell {
-            val creature = target("creature", Targets.Creature)
+            val creature = target(TargetFilter.Creature)
             effect = Effects.SetBasePower(
                 creature,
                 DynamicAmounts.cardsInYourHand(),
@@ -97,7 +96,7 @@ class SetBaseStatsContinuousScenarioTest : ScenarioTestBase() {
         oracleText = "Until end of turn, target creature you control gains \"This creature's base " +
             "toughness is equal to the number of cards in your hand.\""
         spell {
-            val creature = target("creature", Targets.CreatureYouControl)
+            val creature = target(TargetFilter.CreatureYouControl)
             effect = Effects.SetBaseToughness(
                 creature,
                 DynamicAmounts.cardsInYourHand(),
@@ -121,8 +120,8 @@ class SetBaseStatsContinuousScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Put a +1/+1 counter on target creature."
         spell {
-            val creature = target("creature", Targets.Creature)
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creature)
+            val creature = target(TargetFilter.Creature)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature)
         }
     }
 
@@ -131,7 +130,7 @@ class SetBaseStatsContinuousScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Target creature gets +2/+2 until end of turn."
         spell {
-            val creature = target("creature", Targets.Creature)
+            val creature = target(TargetFilter.Creature)
             effect = Effects.ModifyStats(2, 2, creature)
         }
     }
@@ -150,7 +149,7 @@ class SetBaseStatsContinuousScenarioTest : ScenarioTestBase() {
             "gains \"This creature's base power is equal to the number of cards in your hand.\""
         activatedAbility {
             cost = Costs.SacrificeSelf
-            val creature = target("creature", Targets.CreatureYouControl)
+            val creature = target(TargetFilter.CreatureYouControl)
             effect = Effects.SetBasePower(
                 creature,
                 DynamicAmounts.cardsInYourHand(),
@@ -429,13 +428,13 @@ class SetBaseStatsContinuousScenarioTest : ScenarioTestBase() {
             // triggering object — the exact shape Belligerent Yearling uses in snapshot mode —
             // has nothing to resolve against and would read 0 on every pass forever.
             val triggeringPower = DynamicAmount.EntityProperty(
-                EntityReference.Triggering,
+                EffectTarget.TriggeringEntity,
                 EntityNumericProperty.Power,
             )
 
             withClue("the scan finds a context-scoped reference at any depth, and only there") {
                 contextScopedReferenceIn(DynamicAmounts.cardsInYourHand()) shouldBe null
-                contextScopedReferenceIn(triggeringPower) shouldBe "Triggering"
+                contextScopedReferenceIn(triggeringPower) shouldBe "TriggeringEntity"
                 contextScopedReferenceIn(DynamicAmount.XValue) shouldBe "XValue"
                 contextScopedReferenceIn(
                     DynamicAmount.Add(DynamicAmounts.cardsInYourHand(), DynamicAmount.XValue)
@@ -445,13 +444,13 @@ class SetBaseStatsContinuousScenarioTest : ScenarioTestBase() {
                         DynamicAmounts.cardsInYourHand(),
                         DynamicAmount.Multiply(triggeringPower, 2),
                     )
-                ) shouldBe "Triggering"
+                ) shouldBe "TriggeringEntity"
             }
 
             val game = build("Hill Giant")
             val bear = game.findPermanent("Grizzly Bears")!!
             val context = EffectContext(sourceId = bear, controllerId = game.player1Id)
-            val executor = SetBaseStatsExecutor()
+            val executor = SetBaseStatsExecutor(amountEvaluator = services.dynamicAmountEvaluator)
 
             withClue("snapshot mode still accepts it — it is evaluated here, against a real context") {
                 val snapshot = Effects.SetBasePower(
@@ -469,7 +468,7 @@ class SetBaseStatsContinuousScenarioTest : ScenarioTestBase() {
                     reevaluateContinuously = true
                 )
             }
-            thrown.message!! shouldContain "Triggering"
+            thrown.message!! shouldContain "TriggeringEntity"
 
             withClue("the check is on the flag, not the amount: a nested one is caught too") {
                 shouldThrow<IllegalArgumentException> {
@@ -483,7 +482,7 @@ class SetBaseStatsContinuousScenarioTest : ScenarioTestBase() {
                         duration = Duration.EndOfTurn,
                         reevaluateContinuously = true,
                     )
-                }.message!! shouldContain "Triggering"
+                }.message!! shouldContain "TriggeringEntity"
             }
         }
     }

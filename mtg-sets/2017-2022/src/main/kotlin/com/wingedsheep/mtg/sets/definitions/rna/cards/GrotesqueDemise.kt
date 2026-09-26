@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Grotesque Demise — Ravnica Allegiance #75
@@ -21,7 +20,7 @@ val GrotesqueDemise = card("Grotesque Demise") {
     oracleText = "Exile target creature with power 3 or less."
 
     spell {
-        val small = target("target", TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.powerAtMost(3))))
+        val small = target(TargetFilter(GameObjectFilter.Creature.powerAtMost(3)))
         effect = Effects.Exile(small)
     }
 

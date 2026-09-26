@@ -14,7 +14,6 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -41,14 +40,8 @@ val SalvationEngine = card("Salvation Engine") {
         )
     }
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val t = target(
-            "target",
-            TargetObject(
-                optional = true,
-                filter = TargetFilter.ArtifactInYourGraveyard
-            )
-        )
+        trigger = Triggers.self.attacks()
+        val t = target(TargetFilter.ArtifactInYourGraveyard, optional = true)
         effect = Effects.Move(t, Zone.BATTLEFIELD)
     }
     keywordAbility(KeywordAbility.crew(6))

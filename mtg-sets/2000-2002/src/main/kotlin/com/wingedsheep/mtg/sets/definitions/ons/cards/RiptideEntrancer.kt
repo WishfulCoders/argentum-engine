@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GainControlEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
+import com.wingedsheep.sdk.scripting.events.Recipient
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Riptide Entrancer
@@ -27,10 +27,10 @@ val RiptideEntrancer = card("Riptide Entrancer") {
     oracleText = "Whenever Riptide Entrancer deals combat damage to a player, you may sacrifice it. If you do, gain control of target creature that player controls. (This effect lasts indefinitely.)\nMorph {U}{U}"
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        val t = target("target", Targets.CreatureOpponentControls)
-        effect = MayEffect(
-            SacrificeSelfEffect then GainControlEffect(t)
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        val t = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.May(
+            SacrificeSelfEffect then Effects.GainControl(t)
         )
     }
 

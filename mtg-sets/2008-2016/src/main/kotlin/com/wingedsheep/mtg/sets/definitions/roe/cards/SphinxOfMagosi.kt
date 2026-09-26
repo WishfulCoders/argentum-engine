@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.roe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -41,10 +41,8 @@ val SphinxOfMagosi = card("Sphinx of Magosi") {
 
     activatedAbility {
         cost = Costs.Mana("{2}{U}")
-        effect = Effects.Composite(
-            Effects.DrawCards(1),
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
-        )
+        effect = Effects.DrawCards(1) then
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     metadata {

@@ -22,7 +22,7 @@ val SaprazzanHeir = card("Saprazzan Heir") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
+        trigger = Triggers.self.becomesBlocked()
         optional = true
         effect = Effects.DrawCards(3)
     }

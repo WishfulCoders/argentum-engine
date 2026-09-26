@@ -1,7 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
@@ -61,11 +60,7 @@ val ZahurGlorysPast = card("Zahur, Glory's Past") {
 
     maxSpeed {
         triggeredAbility {
-            trigger = Triggers.leavesBattlefield(
-                filter = GameObjectFilter.Creature.youControl().nontoken(),
-                to = Zone.GRAVEYARD,
-                binding = TriggerBinding.ANY,
-            )
+            trigger = Triggers.a(GameObjectFilter.Creature.youControl().nontoken()).dies()
             effect = Effects.CreateToken(
                 power = 2,
                 toughness = 2,

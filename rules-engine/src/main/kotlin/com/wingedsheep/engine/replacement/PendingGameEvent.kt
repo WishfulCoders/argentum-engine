@@ -147,7 +147,7 @@ sealed interface PendingGameEvent {
         override fun applyReplacement(effect: ReplacementEffect, state: GameState): ReplacementOutcome {
             return when (effect) {
                 is PreventDraw -> ReplacementOutcome.Consumed
-                is ReplaceDrawWithEffect -> ReplacementOutcome.Replaced(effect.replacementEffect)
+                is ReplaceDrawWith -> ReplacementOutcome.Replaced(effect.replacementEffect)
                 else -> error("Unsupported replacement effect type '${effect::class.simpleName}' for ${this::class.simpleName}")
             }
         }
@@ -171,7 +171,7 @@ sealed interface PendingGameEvent {
             state: GameState,
             context: EffectContext?
         ): OptionalPromptResult? {
-            val replaceEffect = gathered.effect as? ReplaceDrawWithEffect ?: return null
+            val replaceEffect = gathered.effect as? ReplaceDrawWith ?: return null
             val sourceEntityId = gathered.sourceEntityId(state)
             val sourceEntity = sourceEntityId?.let { state.getEntity(it) }
             val card = sourceEntity?.get<com.wingedsheep.engine.state.components.identity.CardComponent>()
@@ -261,7 +261,7 @@ sealed interface PendingGameEvent {
                     )
                 )
                 is PreventDraw -> ReplacementOutcome.Consumed
-                is ReplaceDrawWithEffect -> ReplacementOutcome.Replaced(effect.replacementEffect)
+                is ReplaceDrawWith -> ReplacementOutcome.Replaced(effect.replacementEffect)
                 else -> error("Unsupported replacement effect type '${effect::class.simpleName}' for ${this::class.simpleName}")
             }
         }

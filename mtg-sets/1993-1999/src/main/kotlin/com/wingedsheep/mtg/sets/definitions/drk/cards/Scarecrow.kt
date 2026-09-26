@@ -6,7 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.effects.PreventionSourceFilter
 
 /**
  * Scarecrow
@@ -30,8 +30,9 @@ val Scarecrow = card("Scarecrow") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{6}"), Costs.Tap)
-        effect = Effects.PreventAllDamageToYouFrom(
-            GroupFilter(GameObjectFilter.Creature.withKeyword(Keyword.FLYING))
+        effect = Effects.PreventDamage(
+            alsoToYou = true,
+            sources = PreventionSourceFilter.Matching(GameObjectFilter.Creature.withKeyword(Keyword.FLYING))
         )
     }
 

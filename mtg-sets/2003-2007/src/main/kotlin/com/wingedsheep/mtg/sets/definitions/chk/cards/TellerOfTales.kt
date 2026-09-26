@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.chk.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Teller of Tales
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
  * Flying
  * Whenever you cast a Spirit or Arcane spell, you may tap or untap target creature.
  *
- * The shared CHK "Whenever you cast a Spirit or Arcane spell" trigger — [Triggers.youCastSpell]
+ * The shared CHK "Whenever you cast a Spirit or Arcane spell" trigger — `Triggers.you.casts(spell, requires)`
  * over a homogeneous OR of the two subtype filters, binding `ANY`.
  *
  * "You may tap or untap target creature" is the corpus' Granite Witness idiom: the printed
@@ -44,14 +43,12 @@ val TellerOfTales = card("Teller of Tales") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.Any.withAnySubtype("Spirit", "Arcane")
-        )
-        val creature = target("target", Targets.Creature)
-        effect = ModalEffect(
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withAnySubtype("Spirit", "Arcane"))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.Modal(
             modes = listOf(
-                Mode.noTarget(TapUntapEffect(creature, tap = true)),
-                Mode.noTarget(TapUntapEffect(creature, tap = false))
+                Mode.noTarget(Effects.Tap(creature)),
+                Mode.noTarget(Effects.Untap(creature))
             ),
             chooseCount = 1,
             countsAsModalSpell = false

@@ -4,10 +4,10 @@
 
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -26,9 +26,9 @@ val CentaurSafeguard = card("Centaur Safeguard") {
     power = 3
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         optional = true
-        effect = GainLifeEffect(3)
+        effect = Effects.GainLife(3)
     }
     metadata {
         rarity = Rarity.COMMON

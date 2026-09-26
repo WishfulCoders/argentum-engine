@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -29,11 +28,8 @@ val WildheartInvoker = card("Wildheart Invoker") {
     toughness = 3
     activatedAbility {
         cost = Costs.Mana("{8}")
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.ModifyStats(5, 5, t),
-            Effects.GrantKeyword(Keyword.TRAMPLE, t)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(5, 5, t) then Effects.GrantKeyword(Keyword.TRAMPLE, t)
     }
     metadata {
         rarity = Rarity.COMMON

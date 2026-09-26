@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.atq.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Grapeshot Catapult
@@ -24,7 +24,7 @@ val GrapeshotCatapult = card("Grapeshot Catapult") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target creature with flying", Targets.CreatureWithKeyword(Keyword.FLYING))
+        val t = target(TargetFilter.Creature.withKeyword(Keyword.FLYING))
         effect = Effects.DealDamage(1, t)
     }
 

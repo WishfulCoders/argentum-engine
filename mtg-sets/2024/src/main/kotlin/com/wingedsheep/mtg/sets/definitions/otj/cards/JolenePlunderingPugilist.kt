@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  * {1}{R}, Sacrifice a Treasure: Jolene deals 1 damage to any target.
  *
  * Modeling notes:
- * - The attack trigger is [Triggers.YouAttackWithFilter] over `Creature.powerAtLeast(4)`. It fires
+ * - The attack trigger is `Triggers.you.attacks(with)` over `Creature.powerAtLeast(4)`. It fires
  *   once per combat when at least one declared attacker has power ≥ 4 (evaluated under projected
  *   state, so pumps/anthems count). Jolene herself qualifies (4 power).
  * - The activated ability sacrifices a Treasure as part of its cost and deals 1 damage to any target.
@@ -33,7 +33,7 @@ val JolenePlunderingPugilist = card("Jolene, Plundering Pugilist") {
         "{1}{R}, Sacrifice a Treasure: Jolene deals 1 damage to any target."
 
     triggeredAbility {
-        trigger = Triggers.YouAttackWithFilter(GameObjectFilter.Creature.powerAtLeast(4))
+        trigger = Triggers.you.attacks(GameObjectFilter.Creature.powerAtLeast(4))
         effect = Effects.CreateTreasure(1)
     }
 
@@ -42,7 +42,7 @@ val JolenePlunderingPugilist = card("Jolene, Plundering Pugilist") {
             Costs.Mana("{1}{R}"),
             Costs.Sacrifice(GameObjectFilter.Artifact.withSubtype("Treasure"))
         )
-        val damageTarget = target("any target", Targets.Any)
+        val damageTarget = target(Targets.Any)
         effect = Effects.DealDamage(1, damageTarget)
         description = "{1}{R}, Sacrifice a Treasure: Jolene deals 1 damage to any target."
     }

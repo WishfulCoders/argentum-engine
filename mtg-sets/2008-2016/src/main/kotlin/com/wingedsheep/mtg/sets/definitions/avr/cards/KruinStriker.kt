@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Kruin Striker
@@ -16,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever another creature you control enters, this creature gets +1/+0 and gains trample until
  * end of turn.
  *
- * [Triggers.OtherCreatureEnters] carries both halves of "another creature you control" — the
+ * `Triggers.another(GameObjectFilter.Creature.youControl()).enters()` carries both halves of "another creature you control" — the
  * `Creature.youControl()` filter and the OTHER binding that excludes the Striker itself. The two
  * riders are one [Effects.Composite] on [EffectTarget.Self]; both default to
  * [com.wingedsheep.sdk.scripting.Duration.EndOfTurn], which is the printed duration.
@@ -31,11 +32,9 @@ val KruinStriker = card("Kruin Striker") {
         "end of turn. (It can deal excess combat damage to the player or planeswalker it's attacking.)"
 
     triggeredAbility {
-        trigger = Triggers.OtherCreatureEnters
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 0, EffectTarget.Self),
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
+        effect = Effects.ModifyStats(1, 0, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
-        )
     }
 
     metadata {

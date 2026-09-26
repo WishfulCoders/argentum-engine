@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Host of the Hereafter — Tarkir: Dragonstorm #193
@@ -19,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * Whenever this creature or another creature you control dies, if it had counters on it,
  * put its counters on up to one target creature you control.
  *
- * "This creature or another creature you control dies" is `Triggers.YourCreatureDies`
+ * "This creature or another creature you control dies" is `Triggers.a(GameObjectFilter.Creature.youControl()).dies()`
  * (ANY binding, creatures-you-control filter — which includes Host itself). The intervening
  * "if it had counters on it" (CR 603.4) is `Conditions.TriggeringEntityHadCounters`, reading
  * the dying creature's last-known total counter count. `Effects.MoveAllLastKnownCounters`
@@ -39,13 +37,10 @@ val HostOfTheHereafter = card("Host of the Hereafter") {
     replacementEffect(EntersWithCounters(count = 2, selfOnly = true))
 
     triggeredAbility {
-        trigger = Triggers.YourCreatureDies
+        val creature = target(TargetFilter(GameObjectFilter.Creature.youControl()), optional = true)
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).dies()
         interveningIf = Conditions.TriggeringEntityHadCounters
-        target = TargetCreature(
-            optional = true,
-            filter = TargetFilter(GameObjectFilter.Creature.youControl())
-        )
-        effect = Effects.MoveAllLastKnownCounters(EffectTarget.ContextTarget(0))
+        effect = Effects.MoveAllLastKnownCounters(creature)
         description = "Whenever this creature or another creature you control dies, if it had " +
             "counters on it, put its counters on up to one target creature you control."
     }

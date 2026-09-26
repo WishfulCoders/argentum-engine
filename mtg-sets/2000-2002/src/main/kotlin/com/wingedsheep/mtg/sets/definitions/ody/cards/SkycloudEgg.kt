@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -31,10 +30,7 @@ val SkycloudEgg = card("Skycloud Egg") {
     oracleText = "{2}, {T}, Sacrifice this artifact: Add {W}{U}. Draw a card."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap, Costs.SacrificeSelf)
-        effect = Effects.Composite(
-            Effects.Composite(Effects.AddMana(Color.WHITE, 1), Effects.AddMana(Color.BLUE, 1)),
-            DrawCardsEffect(1)
-        )
+        effect = Effects.AddMana(Color.WHITE, 1) then Effects.AddMana(Color.BLUE, 1) then Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.UNCOMMON

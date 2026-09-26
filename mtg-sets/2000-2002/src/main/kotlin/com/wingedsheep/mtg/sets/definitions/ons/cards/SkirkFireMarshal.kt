@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -33,7 +32,7 @@ val SkirkFireMarshal = card("Skirk Fire Marshal") {
 
     activatedAbility {
         cost = Costs.TapPermanents(5, GameObjectFilter.Permanent.withSubtype("Goblin"))
-        effect = Effects.ForEachInGroup(GroupFilter.AllCreatures, DealDamageEffect(10, EffectTarget.Self)) then Effects.ForEachPlayer(Player.Each, listOf(Effects.DealDamage(10, EffectTarget.Controller)))
+        effect = Effects.ForEachInGroup(GroupFilter.AllCreatures, Effects.DealDamage(10, EffectTarget.IterationEntity)) then Effects.ForEachPlayer(Player.Each, listOf(Effects.DealDamage(10, EffectTarget.Controller)))
     }
 
     metadata {

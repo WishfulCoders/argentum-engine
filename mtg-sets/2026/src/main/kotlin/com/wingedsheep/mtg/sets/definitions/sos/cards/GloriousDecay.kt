@@ -9,12 +9,7 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -34,19 +29,16 @@ val GloriousDecay = card("Glorious Decay") {
     spell {
         modal(chooseCount = 1) {
             mode("Destroy target artifact") {
-                val t = target("target", TargetPermanent(filter = TargetFilter.Artifact))
+                val t = target(TargetFilter.Artifact)
                 effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
             }
             mode("Glorious Decay deals 4 damage to target creature with flying") {
-                val t = target("target", TargetCreature(filter = TargetFilter.Creature.withKeyword(Keyword.FLYING)))
-                effect = DealDamageEffect(4, t)
+                val t = target(TargetFilter.Creature.withKeyword(Keyword.FLYING))
+                effect = Effects.DealDamage(4, t)
             }
             mode("Exile target card from a graveyard. Draw a card") {
-                val t = target("target", TargetObject(filter = TargetFilter.CardInGraveyard))
-                effect = Effects.Composite(
-                    Effects.Move(t, Zone.EXILE),
-                    DrawCardsEffect(1)
-                )
+                val t = target(TargetFilter.CardInGraveyard)
+                effect = Effects.Move(t, Zone.EXILE) then Effects.DrawCards(1)
             }
         }
     }

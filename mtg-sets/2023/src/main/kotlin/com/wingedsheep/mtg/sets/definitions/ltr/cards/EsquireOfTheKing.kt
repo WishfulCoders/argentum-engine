@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
@@ -9,7 +10,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.Exists
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Esquire of the King
@@ -35,10 +35,10 @@ val EsquireOfTheKing = card("Esquire of the King") {
             GroupFilter(GameObjectFilter.Creature.youControl())
         )
         // "costs {2} less to activate if you control a legendary creature"
-        genericCostReduction = DynamicAmount.Conditional(
+        genericCostReduction = DynamicAmounts.conditional(
             condition = Exists(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature.legendary()),
-            ifTrue = DynamicAmount.Fixed(2),
-            ifFalse = DynamicAmount.Fixed(0)
+            ifTrue = 2,
+            ifFalse = 0
         )
     }
 

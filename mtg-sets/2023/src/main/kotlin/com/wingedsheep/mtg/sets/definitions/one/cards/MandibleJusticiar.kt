@@ -32,10 +32,7 @@ val MandibleJusticiar = card("Mandible Justiciar") {
     keywords(Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            binding = TriggerBinding.OTHER,
-        )
+        trigger = Triggers.another(GameObjectFilter.Artifact.youControl()).enters()
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }
 

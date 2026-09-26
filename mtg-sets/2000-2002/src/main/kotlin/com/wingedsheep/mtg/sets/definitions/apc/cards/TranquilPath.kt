@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -27,14 +26,12 @@ val TranquilPath = card("Tranquil Path") {
     typeLine = "Sorcery"
     oracleText = "Destroy all enchantments.\nDraw a card."
     spell {
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(
-                GroupFilter(GameObjectFilter.Enchantment),
-                Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true),
-                noRegenerate = false
-            ),
-            DrawCardsEffect(1)
-        )
+        effect = Effects.ForEachInGroup(
+            GroupFilter(GameObjectFilter.Enchantment),
+            Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true),
+            noRegenerate = false
+        ) then
+            Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.COMMON

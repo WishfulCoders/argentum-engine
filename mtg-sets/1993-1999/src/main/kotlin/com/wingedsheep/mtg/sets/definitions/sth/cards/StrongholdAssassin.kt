@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Stronghold Assassin
@@ -32,7 +31,7 @@ val StrongholdAssassin = card("Stronghold Assassin") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.Sacrifice(GameObjectFilter.Creature))
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.notColor(Color.BLACK)))
+        val t = target(TargetFilter.Creature.notColor(Color.BLACK))
         effect = Effects.Destroy(t)
     }
 

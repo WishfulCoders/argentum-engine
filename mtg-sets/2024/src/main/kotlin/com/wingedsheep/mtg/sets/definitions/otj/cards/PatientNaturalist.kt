@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Patient Naturalist
@@ -36,9 +35,9 @@ val PatientNaturalist = card("Patient Naturalist") {
         "cards, put the top three cards of your library into your graveyard.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Pipeline {
-            val milled = gather(CardSource.TopOfLibrary(DynamicAmount.Fixed(3), Player.You))
+            val milled = gather(CardSource.TopOfLibrary(3, Player.You))
             toGraveyard(milled)
             ifNotEmpty(milled, filter = GameObjectFilter.Land) {
                 val lands = filter(milled, GameObjectFilter.Land)

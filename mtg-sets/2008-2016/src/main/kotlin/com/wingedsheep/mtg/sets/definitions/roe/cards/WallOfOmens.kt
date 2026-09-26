@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.model.Rarity
  *  - Defender is the bare keyword — the engine's combat code reads `Keyword.DEFENDER` off the card,
  *    so `keywords(...)` alone is the whole ability (the corpus convention; a separate
  *    `keywordAbility` row would only duplicate it).
- *  - "**When** this creature enters" is the one-shot [Triggers.EntersBattlefield].
+ *  - "**When** this creature enters" is the one-shot `Triggers.self.enters()`.
  *  - "Draw a card" is untargeted and drawn by the controller, which is [Effects.DrawCards]'s
  *    default recipient, so no target argument is written.
  */
@@ -35,7 +35,7 @@ val WallOfOmens = card("Wall of Omens") {
     keywords(Keyword.DEFENDER)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1)
         description = "When this creature enters, draw a card."
     }

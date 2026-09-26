@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -25,11 +24,8 @@ val Deconstruct = card("Deconstruct") {
     typeLine = "Sorcery"
     oracleText = "Destroy target artifact. Add {G}{G}{G}."
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter.Artifact))
-        effect = Effects.Composite(
-            Effects.Move(t, Zone.GRAVEYARD, byDestruction = true),
-            Effects.AddMana(Color.GREEN, 3)
-        )
+        val t = target(TargetFilter.Artifact)
+        effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true) then Effects.AddMana(Color.GREEN, 3)
     }
     metadata {
         rarity = Rarity.COMMON

@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 
 /**
  * Nantuko Husk
@@ -26,9 +26,9 @@ val NantukoHusk = card("Nantuko Husk") {
 
     activatedAbility {
         cost = Costs.Sacrifice(GameObjectFilter.Creature)
-        effect = ModifyStatsEffect(
-            powerModifier = 2,
-            toughnessModifier = 2,
+        effect = Effects.ModifyStats(
+            power = 2,
+            toughness = 2,
             target = EffectTarget.Self,
             duration = Duration.EndOfTurn
         )

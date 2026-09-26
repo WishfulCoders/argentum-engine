@@ -4,12 +4,12 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Looming Spires
@@ -29,12 +29,9 @@ val LoomingSpires = card("Looming Spires") {
     replacementEffect(EntersTapped())
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 1, creature),
-            Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature),
-        )
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(1, 1, creature) then Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature)
     }
 
     activatedAbility {

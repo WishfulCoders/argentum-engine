@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  * Whenever a player casts a red spell, you may gain 1 life.
  *
  * The red member of Darksteel's "Feather/Horn/Claw/Eye/Tooth" cycle — see [AngelsFeather] for the
- * shared shape. "A player" is every player, so the trigger is [Triggers.anyPlayerCasts] (binding
+ * shared shape. "A player" is every player, so the trigger is `Triggers.anyPlayer.casts(spell, requires)` (binding
  * ANY, `Player.Each`) over a colour filter, and the printed "you may" is `optional = true`, which
  * lowers to a `Gate.MayDecide` around the life gain.
  */
@@ -26,7 +26,7 @@ val DragonsClaw = card("Dragon's Claw") {
     oracleText = "Whenever a player casts a red spell, you may gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.anyPlayerCasts(GameObjectFilter.Any.withColor(Color.RED))
+        trigger = Triggers.anyPlayer.casts(GameObjectFilter.Any.withColor(Color.RED))
         optional = true
         effect = Effects.GainLife(1)
     }

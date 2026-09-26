@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Goblin Plate Mail
@@ -22,11 +21,10 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  *
  * Modeling notes:
  *  - "Then attach … to the amassed Army" is not a target — it is the Army the Amass step
- *    chose (CR 701.47c), whether or not counters actually landed on it. The engine writes
- *    that id into `EntityReference.AmassedArmy.STORAGE_KEY` on the resolution pipeline, so
- *    the follow-up attach reads it back as `EffectTarget.PipelineTarget(STORAGE_KEY)`. That
- *    slot survives the multi-Army choice continuation, so attaching still lands on the right
- *    Army when the player had to pick between several.
+ *    chose (CR 701.47c), whether or not counters actually landed on it —
+ *    `EffectTarget.AmassedArmy`. The engine records that Army on the resolution pipeline and
+ *    carries it across the multi-Army choice continuation, so attaching still lands on the
+ *    right Army when the player had to pick between several.
  *  - A plain [Effects.Composite] is right here (not a reflexive trigger): "amass … , then
  *    attach" is one resolution with no second trigger and nothing to respond to in between —
  *    unlike Foray of Orcs' "When you do".
@@ -43,13 +41,8 @@ val GoblinPlateMail = card("Goblin Plate Mail") {
         "Equip {4}"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Effects.Amass(1, "Goblin"),
-            Effects.AttachEquipment(
-                EffectTarget.PipelineTarget(EntityReference.AmassedArmy.STORAGE_KEY)
-            ),
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.Amass(1, "Goblin") then Effects.AttachEquipment(EffectTarget.AmassedArmy)
         description = "When this Equipment enters, amass Goblins 1, then attach this Equipment " +
             "to the amassed Army."
     }

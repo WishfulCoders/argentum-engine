@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Ancestral Vision
@@ -38,7 +38,7 @@ val AncestralVision = card("Ancestral Vision") {
         "Target player draws three cards."
 
     spell {
-        val t = target("target", TargetPlayer())
+        val t = target(Targets.Player)
         effect = Effects.DrawCards(3, t)
     }
 

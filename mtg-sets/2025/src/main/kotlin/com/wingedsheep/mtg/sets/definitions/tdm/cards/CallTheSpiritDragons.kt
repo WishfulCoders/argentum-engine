@@ -1,9 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -11,14 +12,11 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Call the Spirit Dragons
@@ -57,39 +55,30 @@ val CallTheSpiritDragons = card("Call the Spirit Dragons") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
 
-        // One choice per color (WUBRG). Each stores its picked Dragon under a distinct key.
-        val perColor = listOf(
-            Color.WHITE to "spiritDragonW",
-            Color.BLUE to "spiritDragonU",
-            Color.BLACK to "spiritDragonB",
-            Color.RED to "spiritDragonR",
-            Color.GREEN to "spiritDragonG"
-        )
-        val counterSteps = perColor.flatMap { (color, key) ->
-            val dragonOfColor = TargetCreature(
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.youControl().withSubtype(Subtype.DRAGON).withColor(color)
+        effect = Effects.Pipeline {
+            // One choice per color (WUBRG), each picked Dragon kept in its own collection.
+            val chosenDragons = listOf(Color.WHITE, Color.BLUE, Color.BLACK, Color.RED, Color.GREEN).map { color ->
+                val dragon = selectTarget(
+                    TargetObject(filter = TargetFilter(
+                            GameObjectFilter.Creature.youControl().withSubtype(Subtype.DRAGON).withColor(color)
+                        ))
                 )
-            )
-            listOf(
-                Effects.SelectTarget(dragonOfColor, key),
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.PipelineTarget(key))
-            )
+                run(Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, dragon.asTarget))
+                dragon
+            }
+
+            // If five different Dragons received a +1/+1 counter this way, you win the game.
+            run(Effects.If(
+                condition = Conditions.CompareAmounts(
+                    DynamicAmounts.distinctEntitiesIn(chosenDragons),
+                    ComparisonOperator.GTE,
+                    5
+                ),
+                then = Effects.WinGame(message = "Five spirit Dragons answered the call.")
+            ))
         }
-
-        // If five different Dragons received a +1/+1 counter this way, you win the game.
-        val winIfFiveDistinct = ConditionalEffect(
-            condition = Compare(
-                DynamicAmounts.distinctEntitiesIn(*perColor.map { it.second }.toTypedArray()),
-                ComparisonOperator.GTE,
-                DynamicAmount.Fixed(5)
-            ),
-            effect = Effects.WinGame(message = "Five spirit Dragons answered the call.")
-        )
-
-        effect = Effects.Composite(counterSteps + winIfFiveDistinct)
     }
 
     metadata {

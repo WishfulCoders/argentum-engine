@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Psychic Whorl
@@ -21,12 +21,12 @@ val PsychicWhorl = card("Psychic Whorl") {
     oracleText = "Target opponent discards two cards. Then if you control a Rat, surveil 2."
 
     spell {
-        val t = target("target opponent", TargetOpponent())
-        effect = Patterns.Hand.discardCards(2, t)
-            .then(ConditionalEffect(
+        val t = target(Targets.Opponent)
+        effect = Patterns.Hand.discardCards(2, t) then
+            Effects.If(
                 condition = Conditions.ControlCreatureOfType(Subtype("Rat")),
-                effect = Patterns.Library.surveil(2)
-            ))
+                then = Patterns.Library.surveil(2)
+            )
     }
 
     metadata {

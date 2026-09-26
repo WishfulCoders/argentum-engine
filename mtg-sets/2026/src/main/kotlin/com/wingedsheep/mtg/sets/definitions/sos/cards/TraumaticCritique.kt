@@ -4,14 +4,12 @@
 
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -26,12 +24,10 @@ val TraumaticCritique = card("Traumatic Critique") {
     typeLine = "Instant"
     oracleText = "Traumatic Critique deals X damage to any target. Draw two cards, then discard a card."
     spell {
-        val t = target("target", AnyTarget())
-        effect = Effects.Composite(
-            DealDamageEffect(DynamicAmount.XValue, t),
-            DrawCardsEffect(2),
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(DynamicAmounts.xValue(), t) then
+            Effects.DrawCards(2) then
             Patterns.Hand.discardCards(1)
-        )
     }
     metadata {
         rarity = Rarity.RARE

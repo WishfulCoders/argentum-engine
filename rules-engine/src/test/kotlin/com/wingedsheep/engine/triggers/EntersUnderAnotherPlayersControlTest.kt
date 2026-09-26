@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.triggers
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ZoneChangeEvent
 import com.wingedsheep.engine.event.TriggerDetector
 import com.wingedsheep.engine.state.components.identity.CardComponent
@@ -18,6 +19,7 @@ import com.wingedsheep.sdk.model.EntityId
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * "Whenever another creature **you control** enters" must read the entering permanent's
@@ -41,7 +43,7 @@ class EntersUnderAnotherPlayersControlTest : FunSpec({
         power = 0
         toughness = 1
         triggeredAbility {
-            trigger = Triggers.OtherCreatureEnters
+            trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
             effect = Effects.GainLife(1)
         }
     }
@@ -80,7 +82,7 @@ class EntersUnderAnotherPlayersControlTest : FunSpec({
     }
 
     fun lifeObserverTriggers(driver: GameTestDriver, event: ZoneChangeEvent) =
-        TriggerDetector(driver.cardRegistry)
+        TriggerDetector(driver.cardRegistry, conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .detectTriggers(driver.state, listOf(event))
             .filter { it.sourceName == "Life Observer" }
 

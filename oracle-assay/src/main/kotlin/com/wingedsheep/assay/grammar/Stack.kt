@@ -9,7 +9,7 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.scripting.effects.CounterEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Clauses about the stack — countering a spell.
@@ -47,7 +47,7 @@ object Stack {
     private val counter: Phrase<CardScript> = run {
         fun scriptFor(filter: TargetFilter) = CardScript(
             spellEffect = CounterEffect(),
-            targetRequirements = listOf(TargetSpell(filter = filter, id = Targets.SLOT)),
+            targetRequirements = listOf(TargetObject(filter = filter, id = Targets.SLOT)),
         )
         phrase("counter target {filter}", name = "counter a spell") {
             slot("filter", spellFilter)

@@ -24,14 +24,17 @@ the transport in its own module means:
 
 ## Endpoints
 
-Default port **8081** so it coexists with the game server on 8080.
+Default port **8081** so it coexists with the game server on 8080. The server binds to
+**127.0.0.1** by default because it is unauthenticated; set `GYM_SERVER_BIND_ADDRESS=0.0.0.0`
+(e.g. in a container) to listen on every interface.
 
 | Method & path | Wraps | Body / query |
 |---|---|---|
 | `POST /envs` | `MultiEnvService.create` | `EnvConfig` JSON |
+| `POST /envs/create-batch` | `createBatch` (parallel, request order) | `[EnvConfig, ...]` |
 | `GET /envs` | `listEnvs` | — |
 | `DELETE /envs` | `dispose` | `{ "envIds": [...] }` |
-| `GET /envs/{id}` | `observe` | `?revealAll=true` optional |
+| `GET /envs/{id}` | `observe` | Optional `perspectivePlayerId` and `revealAll` query parameters |
 | `POST /envs/{id}/reset` | `reset` | `EnvConfig` JSON |
 | `POST /envs/{id}/step` | `step` | `{ "actionId": 3 }`, plus optional `params` — `attackers` / `blockers` / `targets` / `xValue` (see below) |
 | `POST /envs/step-batch` | `stepBatch` (parallel) | `[ { envId, actionId, params? }, ...]` |
@@ -39,8 +42,31 @@ Default port **8081** so it coexists with the game server on 8080.
 | `POST /envs/{id}/fork` | `fork` | `?count=N` |
 | `POST /envs/{id}/snapshot` | `snapshot` | — |
 | `POST /envs/{id}/restore` | `restore` | `SnapshotHandle` JSON |
+| `DELETE /snapshots` | `disposeSnapshot` | `SnapshotHandle` JSON |
+| `DELETE /snapshots/batch` | `disposeSnapshot` for each handle | `[SnapshotHandle, ...]` |
 | `GET /schema-hash` | constant | returns `{ schemaHash }` for drift-check |
 | `GET /health` | constant | returns `{ status: "ok" }` |
+| `GET /status` | constant | returns `{ status, service, schemaHash, buildRevision }` — see below |
+| `GET /actuator/metrics/http.server.requests` | Spring Actuator | request count / timing — see below |
+
+### Multi-seat observations and lifecycle
+
+Masked observations contain actions and pending decisions only for the selected seat when that
+seat is the current `agentToAct`. Read `agentToAct`, then request
+`GET /envs/{id}?perspectivePlayerId=<playerId>` before acting for that player. This also applies
+before submitting a structured decision. Observing a non-acting seat clears the environment's
+current action registry and decision permission. Step responses return to the configured default
+perspective, so repeat this selection when another seat acts. The server serializes concurrent calls
+naming the same environment, but a client acting for several seats must still order its
+observe-then-act pairs itself; seat selection is an information-set convention, not authentication.
+
+`revealAll=true` retains the debug view of every seat's choices. Unknown player IDs return 400.
+The observation contract hash is `argentum-gym-contract@v1.6-multi-seat-observation`.
+
+Batch creation returns results in request order and disposes successful siblings when an item fails.
+An interrupted batch waits for every submitted worker to settle, then disposes what they created. Snapshot disposal is idempotent:
+empty batches, duplicate handles and previously disposed handles are safe. Disposing a snapshot does
+not dispose its source environment; restoring a disposed handle returns 404.
 
 ### `params`: the choices an action ID can't carry
 
@@ -97,7 +123,7 @@ operator mistakes from server faults:
 | Exception | HTTP | When |
 |---|---|---|
 | `NoSuchElementException` | 404 | Unknown envId, missing snapshot |
-| `IllegalArgumentException` | 400 | Bad deck, stale action ID, unknown set code |
+| `IllegalArgumentException` | 400 | Bad deck, stale action ID, unknown set code, action or decision rejected by the engine |
 | `IllegalStateException` | 409 | `submitDecision` when no decision is pending |
 
 Anything else propagates as 500.
@@ -110,20 +136,39 @@ become invalid. This matches the `:gym` contract — see its README
 for the rationale — and the test suite exercises the failure mode so a
 trainer that holds onto stale IDs fails loudly (400).
 
-### No authentication, no TTLs, no metrics
+### Build identity and request metrics
+
+`GET /status` adds the running build to what `/schema-hash` reports, so a long-running or remote
+trainer can tell "the service is up" from "this is the engine build I meant to exercise". The
+revision comes from `ARGENTUM_BUILD_REVISION` (or `argentum.build-revision`) and reads `unknown`
+when the deployment doesn't supply one — the server never guesses.
+
+Spring Actuator exposes the standard Micrometer HTTP metrics (`health` and `metrics` endpoints
+only), on the same listener as the gym API:
+
+```bash
+curl localhost:8081/actuator/metrics/http.server.requests
+curl 'localhost:8081/actuator/metrics/http.server.requests?tag=method:POST&tag=uri:/envs/{id}/step'
+```
+
+`COUNT`, `TOTAL_TIME` and `MAX`, split by the method/uri/status/outcome tags, separate server-side
+lifecycle cost and failures from trainer/model time. The counters are process-local and reset on
+restart.
+
+### No authentication, no TTLs
 
 Deliberately out of scope for the current scaffold, flagged in
 `GymServerApplication.kt`:
 
-- **Auth.** Bind to localhost until you add a bearer-token filter or
-  network ACL.
+- **Auth.** Keep the default loopback bind until you add a bearer-token
+  filter or network ACL.
 - **Env lifetime / TTLs.** A crashed trainer leaks envs forever — the
   natural next step is a reaper thread + heartbeat header.
 - **Byte-based snapshots.** `SnapshotHandle.Slot` is in-process only;
   the sealed interface has room for a `Bytes` variant once cross-process
   MCTS workers become a thing.
-- **Metrics / structured logs.** Add Prometheus or similar at the Spring
-  level when you need them.
+- **Structured logs / Prometheus.** Request metrics are available through
+  Actuator (above); a Prometheus registry is a dependency away when needed.
 
 ### Set catalogue is configurable
 

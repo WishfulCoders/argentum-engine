@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -8,8 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Burdened Stoneback
@@ -32,7 +31,7 @@ val BurdenedStoneback = card("Burdened Stoneback") {
         "until end of turn. Activate only as a sorcery."
 
     replacementEffect(EntersWithCounters(
-        counterType = CounterTypeFilter.MinusOneMinusOne,
+        counterType = CounterType.MINUS_ONE_MINUS_ONE,
         count = 2,
         selfOnly = true
     ))
@@ -40,9 +39,9 @@ val BurdenedStoneback = card("Burdened Stoneback") {
     activatedAbility {
         cost = Costs.Composite(
             Costs.Mana("{1}{W}"),
-            Costs.RemoveCounterFromSelf(Counters.MINUS_ONE_MINUS_ONE)
+            Costs.RemoveCounterFromSelf(CounterType.MINUS_ONE_MINUS_ONE)
         )
-        val creature = target("target creature to gain indestructible", TargetCreature())
+        val creature = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, creature)
         timing = TimingRule.SorcerySpeed
     }

@@ -39,7 +39,7 @@ val ThousandYearStorm = card("Thousand-Year Storm") {
         "sorcery spell you've cast before it this turn. You may choose new targets for the copies."
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(spellFilter = GameObjectFilter.InstantOrSorcery)
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
         effect = Effects.CopyTargetSpell(
             target = EffectTarget.TriggeringEntity,
             copies = DynamicAmounts.spellsCastThisTurn(

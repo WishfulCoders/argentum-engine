@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Reach
  * Whenever this creature blocks or becomes blocked by a creature, this creature deals 1 damage to that creature.
  *
- * The single trigger covers both halves of "blocks or becomes blocked": [Triggers.BlocksOrBecomesBlockedBy]
+ * The single trigger covers both halves of "blocks or becomes blocked": `Triggers.<subject>.blocksOrBecomesBlocked(by, oncePerCombat)`
  * exposes the combat partner (the blocked attacker, or the creature blocking it) as
  * [EffectTarget.TriggeringEntity]. "That creature" is not a target — it's the combat partner.
  */
@@ -32,7 +32,7 @@ val SkewerSlinger = card("Skewer Slinger") {
     keywords(Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.BlocksOrBecomesBlockedBy(Filters.Creature)
+        trigger = Triggers.self.blocksOrBecomesBlocked(Filters.Creature)
         effect = Effects.DealDamage(1, EffectTarget.TriggeringEntity, damageSource = EffectTarget.Self)
     }
 

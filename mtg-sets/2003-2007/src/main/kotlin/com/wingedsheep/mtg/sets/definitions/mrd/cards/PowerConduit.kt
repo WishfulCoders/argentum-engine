@@ -1,15 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Power Conduit — Mirrodin #229
@@ -42,16 +41,14 @@ val PowerConduit = card("Power Conduit") {
             Costs.RemoveCounters(count = 1, counterType = null, filter = GameObjectFilter.Permanent)
         )
         effect = ModalEffect.chooseOne(
-            Mode.withTarget(
-                Effects.AddCounters(Counters.CHARGE, 1, EffectTarget.ContextTarget(0)),
-                Targets.Artifact,
-                "Put a charge counter on target artifact"
-            ),
-            Mode.withTarget(
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0)),
-                Targets.Creature,
-                "Put a +1/+1 counter on target creature"
-            )
+            mode("Put a charge counter on target artifact") {
+                val artifact = target(TargetFilter.Artifact)
+                effect = Effects.AddCounters(CounterType.CHARGE, 1, artifact)
+            },
+            mode("Put a +1/+1 counter on target creature") {
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature)
+            }
         )
         description = "{T}, Remove a counter from a permanent you control: Choose one — " +
             "Put a charge counter on target artifact; or put a +1/+1 counter on target creature."

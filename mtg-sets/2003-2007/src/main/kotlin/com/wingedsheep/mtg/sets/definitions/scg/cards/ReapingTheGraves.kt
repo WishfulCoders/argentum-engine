@@ -5,8 +5,6 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -24,8 +22,8 @@ val ReapingTheGraves = card("Reaping the Graves") {
     oracleText = "Return target creature card from your graveyard to your hand.\nStorm (When you cast this spell, copy it for each spell cast before it this turn. You may choose new targets for the copies.)"
 
     spell {
-        target = TargetObject(filter = TargetFilter.CreatureInYourGraveyard)
-        effect = Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND)
+        val target = target(TargetFilter.CreatureInYourGraveyard)
+        effect = Effects.Move(target, Zone.HAND)
     }
 
     keywords(Keyword.STORM)

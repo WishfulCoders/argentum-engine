@@ -23,7 +23,7 @@ val NagaOracle = card("Naga Oracle") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Surveil(3)
     }
 

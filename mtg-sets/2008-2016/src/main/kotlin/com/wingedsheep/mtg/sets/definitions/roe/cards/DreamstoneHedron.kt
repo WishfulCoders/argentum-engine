@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -32,7 +31,7 @@ val DreamstoneHedron = card("Dreamstone Hedron") {
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap, Costs.SacrificeSelf)
-        effect = DrawCardsEffect(3)
+        effect = Effects.DrawCards(3)
     }
     metadata {
         rarity = Rarity.UNCOMMON

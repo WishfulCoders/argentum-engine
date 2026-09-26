@@ -2,14 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Teysa, Opulent Oligarch — Murders at Karlov Manor #234
@@ -34,16 +33,12 @@ val TeysaOpulentOligarch = card("Teysa, Opulent Oligarch") {
     keywords(Keyword.DEATHTOUCH)
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         effect = Effects.Investigate(DynamicAmounts.opponentsWhoLostLifeThisTurn())
     }
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Artifact.withSubtype("Clue").youControl(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Artifact.withSubtype("Clue").youControl()).dies()
         oncePerTurn = true
         effect = Effects.CreateToken(
             power = 1,

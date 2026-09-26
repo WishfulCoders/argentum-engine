@@ -28,7 +28,7 @@ val ImperiousInkmage = card("Imperious Inkmage") {
     toughness = 3
     keywords(Keyword.VIGILANCE)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.surveil(2)
     }
     metadata {

@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Whenever a creature dealt damage by this creature this turn dies, you gain life equal to that
  * creature's toughness.
  *
- * Canonical ISD printing. Uses [Triggers.CreatureDealtDamageByThisDies] (same shape as Predator Ooze)
+ * Canonical ISD printing. Uses `Triggers.self.damagedCreatureDies()` (same shape as Predator Ooze)
  * with [DynamicAmounts.triggeringToughness] for last-known toughness.
  */
 val AbattoirGhoul = card("Abattoir Ghoul") {
@@ -31,7 +31,7 @@ val AbattoirGhoul = card("Abattoir Ghoul") {
     keywords(Keyword.FIRST_STRIKE)
 
     triggeredAbility {
-        trigger = Triggers.CreatureDealtDamageByThisDies
+        trigger = Triggers.self.damagedCreatureDies()
         effect = Effects.GainLife(DynamicAmounts.triggeringToughness())
         description =
             "Whenever a creature dealt damage by this creature this turn dies, you gain life " +

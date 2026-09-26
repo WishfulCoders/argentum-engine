@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantAttackUnless
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Mouser Mark III
@@ -27,10 +27,10 @@ val MouserMarkIii = card("Mouser Mark III") {
 
     staticAbility {
         ability = CantAttackUnless(
-            condition = Compare(
-                DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Artifact),
+            condition = Conditions.CompareAmounts(
+                DynamicAmounts.battlefield(Player.You, GameObjectFilter.Artifact).count(),
                 ComparisonOperator.GTE,
-                DynamicAmount.Fixed(2)
+                2
             )
         )
     }

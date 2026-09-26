@@ -1,13 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.chk.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.splice
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Psychic Puppetry
@@ -16,7 +14,7 @@ import com.wingedsheep.sdk.scripting.effects.ModalEffect
  * You may tap or untap target permanent.
  * Splice onto Arcane {U}
  *
- * The Pestermite idiom: a [MayEffect] (the printed "you may") wrapped around a two-[Mode]
+ * The Pestermite idiom: a [Effects.May] (the printed "you may") wrapped around a two-[Mode]
  * [ModalEffect] over the one declared target, with `countsAsModalSpell = false` so the tap/untap
  * choice isn't read as a modal *spell* — it's a choice made on resolution, after the target is
  * locked in. That ordering matters: if an opponent taps the permanent in response, you simply pick
@@ -33,9 +31,9 @@ val PsychicPuppetry = card("Psychic Puppetry") {
     splice("{U}")
 
     spell {
-        val permanent = target("target", Targets.Permanent)
-        effect = MayEffect(
-            ModalEffect(
+        val permanent = target(TargetFilter.Permanent)
+        effect = Effects.May(
+            Effects.Modal(
                 modes = listOf(
                     Mode.noTarget(Effects.Tap(permanent)),
                     Mode.noTarget(Effects.Untap(permanent))

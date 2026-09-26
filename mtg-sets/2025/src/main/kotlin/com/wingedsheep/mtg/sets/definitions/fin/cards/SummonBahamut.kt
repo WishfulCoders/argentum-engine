@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -8,10 +9,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.Aggregation
-import com.wingedsheep.sdk.scripting.values.CardNumericProperty
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Summon: Bahamut
@@ -41,11 +38,11 @@ val SummonBahamut = card("Summon: Bahamut") {
 
     // I, II — Destroy up to one target nonland permanent. ("up to one" → optional target.)
     sagaChapter(1) {
-        val t = target("target", TargetObject(optional = true, filter = TargetFilter.NonlandPermanent))
+        val t = target(TargetFilter.NonlandPermanent, optional = true)
         effect = Effects.Destroy(t)
     }
     sagaChapter(2) {
-        val t = target("target", TargetObject(optional = true, filter = TargetFilter.NonlandPermanent))
+        val t = target(TargetFilter.NonlandPermanent, optional = true)
         effect = Effects.Destroy(t)
     }
 
@@ -58,13 +55,11 @@ val SummonBahamut = card("Summon: Bahamut") {
     //       to each opponent. excludeSelf drops Bahamut itself from the sum ("other permanents").
     sagaChapter(4) {
         effect = Effects.DealDamage(
-            amount = DynamicAmount.AggregateBattlefield(
-                player = Player.You,
-                filter = GameObjectFilter.Any,
-                aggregation = Aggregation.SUM,
-                property = CardNumericProperty.MANA_VALUE,
+            amount = DynamicAmounts.battlefield(
+                Player.You,
+                GameObjectFilter.Any,
                 excludeSelf = true,
-            ),
+            ).sumManaValue(),
             target = EffectTarget.PlayerRef(Player.EachOpponent),
             damageSource = EffectTarget.Self,
         )

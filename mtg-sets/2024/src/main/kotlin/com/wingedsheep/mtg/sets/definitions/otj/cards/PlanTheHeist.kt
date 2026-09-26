@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 
 /**
  * Plan the Heist
@@ -32,9 +31,9 @@ val PlanTheHeist = card("Plan the Heist") {
         "sorcery on a later turn without paying its mana cost. Plot only as a sorcery.)"
 
     spell {
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.EmptyHand,
-            effect = Patterns.Library.surveil(3)
+            then = Patterns.Library.surveil(3)
         ) then Effects.DrawCards(3)
     }
 

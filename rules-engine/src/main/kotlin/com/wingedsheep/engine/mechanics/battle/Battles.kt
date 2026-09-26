@@ -2,12 +2,11 @@ package com.wingedsheep.engine.mechanics.battle
 
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
+import com.wingedsheep.engine.state.components.battlefield.DefeatTriggerArmedComponent
 import com.wingedsheep.engine.state.components.battlefield.ProtectorComponent
 import com.wingedsheep.sdk.core.CounterType
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.model.EntityId
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 
 /**
  * The battle card type (CR 310) in one place: its defense, its protector, and who may attack it.
@@ -31,7 +30,7 @@ object Battles {
      * The counter kind a battle's defense is made of. Used by the intrinsic entry ability
      * (CR 310.4b), by damage (CR 120.3h), and by the defeat trigger (CR 310.12b).
      */
-    val DEFENSE_COUNTER: CounterTypeFilter = CounterTypeFilter.Named(Counters.DEFENSE)
+    val DEFENSE_COUNTER: CounterType = CounterType.DEFENSE
 
     /** True if [entityId] is a battle on the battlefield, per projected types (CR 310). */
     fun isBattle(state: GameState, entityId: EntityId): Boolean =
@@ -72,11 +71,29 @@ object Battles {
      */
     fun eligibleProtectors(state: GameState, battleId: EntityId): List<EntityId> {
         val controller = state.projectedState.getController(battleId) ?: return emptyList()
+        // Only players still in the game qualify: `turnOrder` keeps players who have lost, and a
+        // departed protector must be replaced (CR 704.5y), not re-offered. "Opponent" is the team-
+        // aware one (CR 102.3), so a Two-Headed Giant teammate can't protect your Siege.
         return if (isSiege(state, battleId)) {
-            state.turnOrder.filter { it != controller }
+            state.getOpponents(controller)
         } else {
-            listOf(controller).filter { it in state.turnOrder }
+            listOf(controller).filter { it in state.activePlayers }
         }
+    }
+
+    /**
+     * Clears every [DefeatTriggerArmedComponent]. Called by the Settler once it has detected the
+     * triggers an action caused: a Siege defeated in combat is then spared by its queued defeat
+     * trigger (CR 704.5v), so the marker that bridged the gap before detection is no longer needed.
+     */
+    fun disarmDefeatTriggers(state: GameState): GameState {
+        var newState = state
+        for (entityId in state.getBattlefield()) {
+            if (state.getEntity(entityId)?.has<DefeatTriggerArmedComponent>() == true) {
+                newState = newState.updateEntity(entityId) { it.without<DefeatTriggerArmedComponent>() }
+            }
+        }
+        return newState
     }
 
     /**

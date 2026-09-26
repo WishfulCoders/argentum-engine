@@ -1,16 +1,15 @@
 package com.wingedsheep.sdk.scripting
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.scripting.conditions.EntityMatches
 import com.wingedsheep.sdk.scripting.conditions.NotCondition
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.CastFromCollectionWithoutPayingCostEffect
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.RemoveCountersEffect
 import com.wingedsheep.sdk.scripting.predicates.StatePredicate
 import com.wingedsheep.sdk.scripting.references.Player
@@ -48,7 +47,7 @@ object Suspend {
     /** "this card has a time counter on it" — used as the intervening-if gate and the cast condition. */
     private val hasTimeCounter = EntityMatches(
         EffectTarget.Self,
-        GameObjectFilter.Any.copy(statePredicates = listOf(StatePredicate.HasCounter("TIME")))
+        GameObjectFilter.Any.copy(statePredicates = listOf(StatePredicate.HasCounter(CounterType.TIME)))
     )
 
     /**
@@ -64,14 +63,14 @@ object Suspend {
         interveningIf = hasTimeCounter,
         effect = CompositeEffect(
             listOf(
-                RemoveCountersEffect(Counters.TIME, 1, EffectTarget.Self),
-                ConditionalEffect(
+                RemoveCountersEffect(CounterType.TIME, 1, EffectTarget.Self),
+                Effects.If(
                     condition = NotCondition(hasTimeCounter),
                     // CR 702.62f — "they may play it without paying its mana cost." The optional
-                    // play is wrapped in [MayEffect] (both faithful to the rule and the proven
+                    // play is wrapped in [Effects.May] (both faithful to the rule and the proven
                     // cast-from-exile path used by Shiko, Paragon of the Way). Haste (CR 702.62g)
                     // is pre-armed by the suspended marker, not granted here — see GrantSuspend.
-                    effect = MayEffect(
+                    then = Effects.May(
                         CompositeEffect(
                             listOf(
                                 GatherCardsEffect(CardSource.Self, storeAs = PLAY_COLLECTION),

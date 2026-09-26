@@ -15,7 +15,7 @@ import io.kotest.matchers.shouldBe
  * Oracle: "Whenever this creature attacks while saddled, exile the top card of your library.
  * Until the end of your next turn, you may play that card. Saddle 1"
  *
- * Composes the "attacks while saddled" trigger gate (Triggers.Attacks + Conditions.SourceIsSaddled)
+ * Composes the "attacks while saddled" trigger gate (Triggers.self.attacks() + Conditions.SourceIsSaddled)
  * with the impulse-exile body (GatherCards → MoveCollection(EXILE) → GrantMayPlayFromExile,
  * MayPlayExpiry.UntilEndOfNextTurn). No new SDK surface.
  */

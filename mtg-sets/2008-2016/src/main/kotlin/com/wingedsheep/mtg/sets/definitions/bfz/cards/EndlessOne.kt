@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.bfz.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Endless One
@@ -23,7 +23,7 @@ val EndlessOne = card("Endless One") {
     toughness = 0
     oracleText = "This creature enters with X +1/+1 counters on it."
 
-    replacementEffect(EntersWithDynamicCounters(count = DynamicAmount.XValue))
+    replacementEffect(EntersWithDynamicCounters(count = DynamicAmounts.xValue()))
 
     metadata {
         rarity = Rarity.RARE

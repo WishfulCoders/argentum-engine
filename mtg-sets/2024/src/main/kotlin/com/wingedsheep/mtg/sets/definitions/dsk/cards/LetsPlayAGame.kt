@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Patterns
@@ -9,7 +10,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Let's Play a Game
@@ -43,10 +43,10 @@ val LetsPlayAGame = card("Let's Play a Game") {
         modal(
             chooseCount = 1,
             minChooseCount = 1,
-            dynamicChooseCount = DynamicAmount.Conditional(
+            dynamicChooseCount = DynamicAmounts.conditional(
                 condition = Conditions.Delirium(),
-                ifTrue = DynamicAmount.Fixed(3),
-                ifFalse = DynamicAmount.Fixed(1)
+                ifTrue = 3,
+                ifFalse = 1
             )
         ) {
             mode(
@@ -59,10 +59,7 @@ val LetsPlayAGame = card("Let's Play a Game") {
             )
             mode(
                 "Each opponent loses 3 life and you gain 3 life.",
-                Effects.Composite(
-                    Effects.LoseLife(3, EffectTarget.PlayerRef(Player.EachOpponent)),
-                    Effects.GainLife(3)
-                )
+                Effects.LoseLife(3, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(3)
             )
         }
     }

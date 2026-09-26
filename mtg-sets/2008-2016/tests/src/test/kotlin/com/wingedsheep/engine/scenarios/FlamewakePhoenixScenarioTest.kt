@@ -17,7 +17,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  *
  * Covers the graveyard-zone combat trigger, the Ferocious intervening-if gate, and the optional
  * {R} payment that returns the phoenix. All primitives already exist (BeginCombat trigger,
- * YouControl condition, MayPayManaEffect, Move to battlefield).
+ * YouControl condition, Effects.MayPay, Move to battlefield).
  */
 class FlamewakePhoenixScenarioTest : ScenarioTestBase() {
 

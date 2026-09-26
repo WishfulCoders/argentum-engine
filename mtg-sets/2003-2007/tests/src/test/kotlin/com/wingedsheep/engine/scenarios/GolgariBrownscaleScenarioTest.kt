@@ -6,9 +6,9 @@ import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 class GolgariBrownscaleScenarioTest : ScenarioTestBase() {
     init {
@@ -16,7 +16,7 @@ class GolgariBrownscaleScenarioTest : ScenarioTestBase() {
             manaCost = "{B}"
             typeLine = "Instant"
             spell {
-                val creature = target("creature", Targets.CreatureCardInGraveyard)
+                val creature = target(TargetFilter.CreatureInGraveyard)
                 effect = Effects.ReturnToHand(creature)
             }
         })
@@ -24,7 +24,7 @@ class GolgariBrownscaleScenarioTest : ScenarioTestBase() {
             manaCost = "{B}"
             typeLine = "Sorcery"
             spell {
-                val creature = target("creature", Targets.CreatureCardInYourGraveyard)
+                val creature = target(TargetFilter.CreatureInYourGraveyard)
                 effect = Effects.ReturnToHand(creature) then Patterns.Hand.discardHand()
             }
         })

@@ -44,7 +44,7 @@ val AlchemistsTalent = card("Alchemist's Talent") {
 
     // Level 1: ETB — create two tapped Treasure tokens.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateTreasure(count = 2, tapped = true)
     }
 
@@ -72,9 +72,7 @@ val AlchemistsTalent = card("Alchemist's Talent") {
     // [ManaPoolComponent.treasureMana] counter is decremented during payment.
     classLevel(3, "{4}{R}") {
         triggeredAbility {
-            trigger = Triggers.youCastSpell(
-                requires = setOf(SpellCastPredicate.PaidWithManaFromSubtype(Subtype.TREASURE)),
-            )
+            trigger = Triggers.you.casts(requires = setOf(SpellCastPredicate.PaidWithManaFromSubtype(Subtype.TREASURE)))
             effect = Effects.DealDamage(
                 DynamicAmounts.triggeringManaValue(),
                 EffectTarget.PlayerRef(Player.EachOpponent)

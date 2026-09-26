@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -28,8 +27,8 @@ val GoblinGardener = card("Goblin Gardener") {
     power = 2
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.Dies
-        val t = target("target", TargetPermanent(filter = TargetFilter.Land))
+        trigger = Triggers.self.dies()
+        val t = target(TargetFilter.Land)
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     metadata {

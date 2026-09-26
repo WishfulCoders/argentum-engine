@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 
 /**
  * Fallowsage
@@ -13,7 +12,7 @@ import com.wingedsheep.sdk.scripting.effects.MayEffect
  * 2/2
  * Whenever this creature becomes tapped, you may draw a card.
  *
- * [Triggers.BecomesTapped] is the SELF binding, so it fires however Fallowsage became tapped —
+ * `Triggers.self.becomesTapped()` is the SELF binding, so it fires however Fallowsage became tapped —
  * attacking, an activation cost, or another player's effect.
  */
 val Fallowsage = card("Fallowsage") {
@@ -25,8 +24,8 @@ val Fallowsage = card("Fallowsage") {
     oracleText = "Whenever this creature becomes tapped, you may draw a card."
 
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
-        effect = MayEffect(Effects.DrawCards(1))
+        trigger = Triggers.self.becomesTapped()
+        effect = Effects.May(Effects.DrawCards(1))
         description = "Whenever this creature becomes tapped, you may draw a card."
     }
 

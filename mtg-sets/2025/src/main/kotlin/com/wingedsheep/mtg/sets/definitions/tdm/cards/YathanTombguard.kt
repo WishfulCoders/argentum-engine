@@ -7,11 +7,10 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern.DealsDamageEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Yathan Tombguard
@@ -42,18 +41,8 @@ val YathanTombguard = card("Yathan Tombguard") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            DealsDamageEvent(
-                damageType = DamageType.Combat,
-                recipient = RecipientFilter.AnyPlayer,
-                sourceFilter = GameObjectFilter.Creature.youControl().withAnyCounter(),
-            ),
-            TriggerBinding.ANY,
-        )
-        effect = Effects.Composite(
-            Effects.DrawCards(1),
-            Effects.LoseLife(1, EffectTarget.PlayerRef(Player.You)),
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl().withAnyCounter()).dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.DrawCards(1) then Effects.LoseLife(1, EffectTarget.PlayerRef(Player.You))
     }
 
     metadata {

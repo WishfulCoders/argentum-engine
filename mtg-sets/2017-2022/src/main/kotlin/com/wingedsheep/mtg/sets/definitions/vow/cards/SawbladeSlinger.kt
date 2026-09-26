@@ -3,14 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Sawblade Slinger
@@ -39,21 +36,17 @@ val SawbladeSlinger = card("Sawblade Slinger") {
         "• This creature fights target Zombie an opponent controls."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ModalEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.Modal(
             modes = listOf(
-                Mode.withTarget(
-                    Effects.Destroy(EffectTarget.ContextTarget(0)),
-                    TargetPermanent(filter = TargetFilter(GameObjectFilter.Artifact.opponentControls())),
-                    "Destroy target artifact an opponent controls"
-                ),
-                Mode.withTarget(
-                    Effects.Fight(EffectTarget.Self, EffectTarget.ContextTarget(0)),
-                    TargetCreature(
-                        filter = TargetFilter(GameObjectFilter.Creature.withSubtype("Zombie").opponentControls())
-                    ),
-                    "This creature fights target Zombie an opponent controls"
-                )
+                mode("Destroy target artifact an opponent controls") {
+                    val artifact = target(TargetFilter(GameObjectFilter.Artifact.opponentControls()))
+                    effect = Effects.Destroy(artifact)
+                },
+                mode("This creature fights target Zombie an opponent controls") {
+                    val creature = target(TargetFilter(GameObjectFilter.Creature.withSubtype("Zombie").opponentControls()))
+                    effect = Effects.Fight(EffectTarget.Self, creature)
+                }
             ),
             chooseCount = 1,
             minChooseCount = 0,

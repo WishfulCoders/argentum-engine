@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * **"As … is turned face up" is a replacement, not a trigger.** It applies as part of the special
  * action that flips the permanent, so it doesn't use the stack and can't be responded to: an
  * opponent holding a 4-damage burn spell never gets a window against the 2/1 body. That is the
- * whole difference between this and the `Triggers.TurnedFaceUp` shape used by [GraniteWitness] and
+ * whole difference between this and the `Triggers.self.turnedFaceUp()` shape used by [GraniteWitness] and
  * [ExitSpecialist] — modelling it as a triggered ability would hand the opponent a response window
  * the card doesn't give them.
  *
@@ -41,7 +41,7 @@ val BubbleSmuggler = card("Bubble Smuggler") {
     toughness = 1
 
     disguise = "{5}{U}"
-    disguiseFaceUpEffect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 4, EffectTarget.Self)
+    disguiseFaceUpEffect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 4, EffectTarget.Self)
 
     metadata {
         rarity = Rarity.COMMON

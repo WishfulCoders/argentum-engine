@@ -9,7 +9,6 @@ import com.wingedsheep.mtg.sets.definitions.dsk.cards.EnduringInnocence
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.effects.MoveToZoneEffect
@@ -17,6 +16,8 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Scenario tests for the Duskmourn "Enduring" mechanic (the Glimmer cycle).
@@ -36,7 +37,7 @@ class EnduringMechanicTest : FunSpec({
         manaCost = "{1}{W}"
         typeLine = "Instant"
         spell {
-            val t = target("permanent", Targets.Permanent)
+            val t = target(TargetFilter.Permanent)
             effect = MoveToZoneEffect(t, Zone.GRAVEYARD, byDestruction = true)
         }
     }
@@ -64,7 +65,7 @@ class EnduringMechanicTest : FunSpec({
         // Kill it with a Lightning Bolt (2/1 dies to 3 damage).
         val bolt = driver.putCardInHand(caster, "Lightning Bolt")
         driver.giveMana(caster, Color.RED, 1)
-        driver.castSpell(caster, bolt, listOf(innocence)).isSuccess shouldBe true
+        driver.castSpell(caster, bolt, listOf(innocence)).outcome shouldBe Outcome.Done
         driver.bothPass() // resolve Lightning Bolt → dies
         driver.bothPass() // resolve the Enduring return trigger
 
@@ -107,7 +108,7 @@ class EnduringMechanicTest : FunSpec({
         // Destroy the enchantment. It is not a creature, so the Enduring trigger must NOT fire.
         val unmake = driver.putCardInHand(caster, "Unmaking")
         driver.giveMana(caster, Color.WHITE, 2)
-        driver.castSpell(caster, unmake, listOf(returned)).isSuccess shouldBe true
+        driver.castSpell(caster, unmake, listOf(returned)).outcome shouldBe Outcome.Done
         driver.bothPass() // resolve Unmaking → enchantment to graveyard
         driver.bothPass() // settle any triggers (there should be none from Enduring)
 
@@ -128,7 +129,7 @@ class EnduringMechanicTest : FunSpec({
 
         val bolt = driver.putCardInHand(caster, "Lightning Bolt")
         driver.giveMana(caster, Color.RED, 1)
-        driver.castSpell(caster, bolt, listOf(tokenId)).isSuccess shouldBe true
+        driver.castSpell(caster, bolt, listOf(tokenId)).outcome shouldBe Outcome.Done
         driver.bothPass() // resolve Lightning Bolt → token dies and ceases to exist
 
         driver.findPermanent(caster, "Enduring Innocence") shouldBe null

@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.lgn.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AttackTax
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Windborn Muse
@@ -26,7 +26,7 @@ val WindbornMuse = card("Windborn Muse") {
     keywords(Keyword.FLYING)
 
     staticAbility {
-        ability = AttackTax(amountPerAttacker = DynamicAmount.Fixed(2))
+        ability = AttackTax(amountPerAttacker = DynamicAmounts.fixed(2))
     }
 
     metadata {

@@ -42,7 +42,7 @@ val ElvenChorus = card("Elven Chorus") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = AbilityCost.Tap,
                 effect = Effects.AddAnyColorMana(1),
                 isManaAbility = true,

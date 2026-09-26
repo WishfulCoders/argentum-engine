@@ -3,12 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.mkm.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Felonious Rage — Murders at Karlov Manor #125
@@ -17,7 +16,7 @@ import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
  * Target creature you control gets +2/+0 and gains haste until end of turn. When that creature
  * dies this turn, create a 2/2 white and blue Detective creature token.
  *
- * The death clause is an entity-scoped delayed triggered ability (`Triggers.Dies` with
+ * The death clause is an entity-scoped delayed triggered ability (`Triggers.self.dies()` with
  * `watchedTarget` bound to the chosen creature), not a rider on the pump — so it still fires if
  * the +2/+0 has been overwritten, if the creature dies after combat, or if it dies to something
  * other than damage. `fireOnce` matches the printed "When", not "Whenever": one token even if the
@@ -34,23 +33,21 @@ val FeloniousRage = card("Felonious Rage") {
         "When that creature dies this turn, create a 2/2 white and blue Detective creature token."
 
     spell {
-        val t = target("target creature you control", Targets.CreatureYouControl)
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 0, t),
-            Effects.GrantKeyword(Keyword.HASTE, t),
-            CreateDelayedTriggerEffect(
+        val t = target(TargetFilter.CreatureYouControl)
+        effect = Effects.ModifyStats(2, 0, t) then
+            Effects.GrantKeyword(Keyword.HASTE, t) then
+            Effects.CreateDelayedTrigger(
                 effect = Effects.CreateToken(
                     power = 2,
                     toughness = 2,
                     colors = setOf(Color.WHITE, Color.BLUE),
                     creatureTypes = setOf("Detective")
                 ),
-                trigger = Triggers.Dies,
+                trigger = Triggers.self.dies(),
                 watchedTarget = t,
                 fireOnce = true,
                 expiry = DelayedTriggerExpiry.EndOfTurn
             )
-        )
     }
 
     metadata {

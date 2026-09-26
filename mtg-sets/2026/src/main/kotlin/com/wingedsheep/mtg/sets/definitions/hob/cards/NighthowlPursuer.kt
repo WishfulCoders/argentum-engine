@@ -31,7 +31,7 @@ val NighthowlPursuer = card("Nighthowl Pursuer") {
     toughness = 1
     keywords(Keyword.MENACE)
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         triggerRestriction = Conditions.YouControl(GameObjectFilter.Creature.powerAtLeast(4))
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
     }

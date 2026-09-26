@@ -27,7 +27,7 @@ import io.kotest.matchers.shouldBe
  *  - With four or more permanent cards in the graveyard: applies -10/-10 instead (Descend 4).
  *    The same 7/7 creature dies (projected -3/-3 triggers lethal SBA).
  *
- * The distinction proves the ConditionalEffect selects the correct branch: the two outcomes
+ * The distinction proves the Effects.If selects the correct branch: the two outcomes
  * are mutually exclusive and produce clearly different projected stats.
  */
 class JoinTheDeadScenarioTest : FunSpec({

@@ -19,7 +19,7 @@ val CartographersCompanion = card("Cartographer's Companion") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateMapToken()
     }
 

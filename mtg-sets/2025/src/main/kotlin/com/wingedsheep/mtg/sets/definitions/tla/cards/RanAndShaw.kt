@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.firebending
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -45,7 +44,7 @@ val RanAndShaw = card("Ran and Shaw") {
     firebending(2)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.All(
             Conditions.WasCast,
             Conditions.CardsInGraveyardMatchingAtLeast(3, GameObjectFilter.Any.withAnySubtype("Dragon", "Lesson")),
@@ -60,7 +59,7 @@ val RanAndShaw = card("Ran and Shaw") {
         cost = Costs.Mana("{3}{R}")
         effect = Effects.ForEachInGroup(
             filter = GroupFilter(GameObjectFilter.Creature.withSubtype("Dragon").youControl()),
-            effect = ModifyStatsEffect(2, 0, EffectTarget.Self),
+            effect = Effects.ModifyStats(2, 0, EffectTarget.IterationEntity),
         )
         description = "{3}{R}: Dragons you control get +2/+0 until end of turn."
     }

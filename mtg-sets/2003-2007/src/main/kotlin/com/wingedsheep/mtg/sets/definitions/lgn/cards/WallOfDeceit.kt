@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.lgn.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.TurnFaceDownEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -28,7 +28,7 @@ val WallOfDeceit = card("Wall of Deceit") {
 
     activatedAbility {
         cost = Costs.Mana("{3}")
-        effect = TurnFaceDownEffect(target = EffectTarget.Self)
+        effect = Effects.TurnFaceDown(target = EffectTarget.Self)
     }
 
     morph = "{U}"

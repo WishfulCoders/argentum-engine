@@ -40,9 +40,8 @@ import com.wingedsheep.sdk.scripting.StaticAbility
 class Visibility(
     private val cardRegistry: CardRegistry,
     private val debugMode: Boolean = false,
+    private val conditionEvaluator: ConditionEvaluator
 ) {
-    private val conditionEvaluator = ConditionEvaluator()
-
     fun isZoneVisibleTo(
         state: GameState,
         zoneKey: ZoneKey,

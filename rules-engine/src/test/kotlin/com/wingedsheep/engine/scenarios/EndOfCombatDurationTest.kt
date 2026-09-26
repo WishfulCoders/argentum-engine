@@ -5,11 +5,13 @@ import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.Duration
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Engine-level tests for [Duration.EndOfCombat].
@@ -33,8 +35,8 @@ class EndOfCombatDurationTest : ScenarioTestBase() {
         colorIdentity = "G"
         oracleText = "Target creature gets +2/+0 until end of combat."
         spell {
-            target = Targets.Creature
-            effect = Effects.ModifyStats(2, 0, duration = Duration.EndOfCombat)
+            target = TargetObject(filter = TargetFilter.Creature)
+            effect = Effects.ModifyStats(2, 0, duration = Duration.EndOfCombat, target = EffectTarget.ContextTarget(0))
         }
     }
 
@@ -45,8 +47,8 @@ class EndOfCombatDurationTest : ScenarioTestBase() {
         colorIdentity = "G"
         oracleText = "Target creature gets +2/+0 until end of turn."
         spell {
-            target = Targets.Creature
-            effect = Effects.ModifyStats(2, 0, duration = Duration.EndOfTurn)
+            target = TargetObject(filter = TargetFilter.Creature)
+            effect = Effects.ModifyStats(2, 0, duration = Duration.EndOfTurn, target = EffectTarget.ContextTarget(0))
         }
     }
 

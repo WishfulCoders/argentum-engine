@@ -7,7 +7,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Skywise Teachings
@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
  * Whenever you cast a noncreature spell, you may pay {1}{U}. If you do, create a 2/2 blue Djinn
  * Monk creature token with flying.
  *
- * "You may pay {1}{U}. If you do, ..." is [MayPayManaEffect] — a gate whose payment is the
+ * "You may pay {1}{U}. If you do, ..." is [Effects.MayPay] — a gate whose payment is the
  * condition, so the token is only minted when the mana is actually paid. The token's art comes from
  * the set's token sheet, so no `imageUri` is spelled here.
  */
@@ -28,10 +28,10 @@ val SkywiseTeachings = card("Skywise Teachings") {
     oracleText = "Whenever you cast a noncreature spell, you may pay {1}{U}. If you do, create a 2/2 blue Djinn Monk creature token with flying."
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
-        effect = MayPayManaEffect(
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{1}{U}"),
-            effect = Effects.CreateToken(
+            then = Effects.CreateToken(
                 power = 2,
                 toughness = 2,
                 colors = setOf(Color.BLUE),

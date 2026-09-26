@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Unnerving Grasp
@@ -30,14 +29,8 @@ val UnnervingGrasp = card("Unnerving Grasp") {
         "cost if it's a creature card.)"
 
     spell {
-        val permanent = target(
-            "up to one target nonland permanent",
-            TargetPermanent(optional = true, filter = TargetFilter.NonlandPermanent),
-        )
-        effect = Effects.Composite(
-            Effects.ReturnToHand(permanent),
-            Patterns.Library.manifestDread(),
-        )
+        val permanent = target(TargetFilter.NonlandPermanent, optional = true)
+        effect = Effects.ReturnToHand(permanent) then Patterns.Library.manifestDread()
     }
 
     metadata {

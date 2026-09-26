@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -28,7 +26,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *   {6}: Creatures your opponents control attack this turn if able.
  *
  * Implementation:
- *  - The front's tap ability is [Patterns.Library.mill] (2) followed by a [ConditionalEffect] on
+ *  - The front's tap ability is [Patterns.Library.mill] (2) followed by a [Effects.If] on
  *    [Conditions.CardsInGraveyardMatchingAtLeast]`(1, colorless creature)` that flips the permanent
  *    with [TransformEffect] — the Treasure Map "do a thing, then conditionally transform" shape. The
  *    condition is re-read *after* the mill, so cards milled by this very activation count, and the
@@ -38,7 +36,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *    a graveyard-zone read, so base characteristics are the right source (no projection needed).
  *  - The back's {6} ability marks every creature your opponents control with
  *    [Effects.MarkMustAttackThisTurn] via [Effects.ForEachInGroup] over
- *    [GroupFilter.AllCreaturesOpponentsControl] — `EffectTarget.Self` inside the ForEach body is
+ *    [GroupFilter.AllCreaturesOpponentsControl] — `EffectTarget.IterationEntity` inside the ForEach body is
  *    the iterated creature. The marker is per-creature and this-turn only, and the engine's
  *    attack-requirement check already honours the printed rulings: a creature that can't attack
  *    (summoning sick, tapped, an attack restriction) doesn't, a cost to attack is never forced,
@@ -60,13 +58,11 @@ private val GrizzledAnglerFront = card("Grizzled Angler") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.Composite(
-            Patterns.Library.mill(2),
-            ConditionalEffect(
+        effect = Patterns.Library.mill(2) then
+            Effects.If(
                 condition = Conditions.CardsInGraveyardMatchingAtLeast(1, ColorlessCreatureCard),
-                effect = TransformEffect(EffectTarget.Self),
-            ),
-        )
+                then = Effects.Transform(EffectTarget.Self),
+            )
         description = "Mill two cards. Then if there is a colorless creature card in your " +
             "graveyard, transform this creature."
     }
@@ -113,7 +109,7 @@ private val GrislyAnglerfish = card("Grisly Anglerfish") {
         cost = Costs.Mana("{6}")
         effect = Effects.ForEachInGroup(
             filter = GroupFilter.AllCreaturesOpponentsControl,
-            effect = Effects.MarkMustAttackThisTurn(EffectTarget.Self),
+            effect = Effects.MarkMustAttackThisTurn(EffectTarget.IterationEntity),
         )
         description = "Creatures your opponents control attack this turn if able."
     }

@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CrewSaddleContribution
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Valor's Flagship — Aetherdrift #35
@@ -43,9 +43,9 @@ val ValorsFlagship = card("Valor's Flagship") {
     keywordAbility(KeywordAbility.cycling("{X}{2}{W}"))
 
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
+        trigger = Triggers.self.isCycled()
         effect = Effects.CreateToken(
-            count = DynamicAmount.XValue,
+            count = DynamicAmounts.xValue(),
             power = 1,
             toughness = 1,
             creatureTypes = setOf("Pilot"),

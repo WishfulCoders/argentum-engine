@@ -35,7 +35,7 @@ val HauntOfTheDeadMarshes = card("Haunt of the Dead Marshes") {
     oracleText = "When this creature enters, scry 1.\n{2}{B}: Return this card from your graveyard to the battlefield tapped. Activate only if you control a legendary creature."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.scry(1)
     }
 

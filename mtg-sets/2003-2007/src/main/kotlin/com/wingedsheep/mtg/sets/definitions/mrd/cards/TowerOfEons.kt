@@ -5,9 +5,9 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -23,7 +23,7 @@ val TowerOfEons = card("Tower of Eons") {
     oracleText = "{8}, {T}: You gain 10 life."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{8}"), Costs.Tap)
-        effect = GainLifeEffect(10)
+        effect = Effects.GainLife(10)
     }
     metadata {
         rarity = Rarity.RARE

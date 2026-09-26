@@ -15,7 +15,7 @@ import io.kotest.matchers.shouldBe
  *  When this creature enters, draw a card if you control a creature with a counter on it.
  *  If you don't draw a card this way, put a +1/+1 counter on this creature."
  *
- * Exercises both branches of the ETB [com.wingedsheep.sdk.scripting.effects.ConditionalEffect]:
+ * Exercises both branches of the ETB [com.wingedsheep.sdk.dsl.Effects.If]:
  *  - With a counter-bearing creature already in play, the controller draws a card and the Envoy
  *    gains no counter.
  *  - With no counter-bearing creature, the controller draws nothing and the Envoy gains a +1/+1

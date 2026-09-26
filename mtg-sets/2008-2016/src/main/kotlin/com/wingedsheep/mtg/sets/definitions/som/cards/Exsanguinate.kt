@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.som.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Exsanguinate
@@ -18,7 +18,7 @@ val Exsanguinate = card("Exsanguinate") {
     oracleText = "Each opponent loses X life. You gain life equal to the life lost this way."
 
     spell {
-        effect = Effects.DrainLife(DynamicAmount.XValue)
+        effect = Effects.DrainLife(DynamicAmounts.xValue())
     }
 
     metadata {

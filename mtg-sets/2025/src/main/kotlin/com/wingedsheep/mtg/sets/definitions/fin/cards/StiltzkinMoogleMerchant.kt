@@ -6,12 +6,9 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GiveControlToTargetPlayerEffect
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
 import com.wingedsheep.sdk.scripting.effects.SuccessCriterion
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Stiltzkin, Moogle Merchant
@@ -39,19 +36,14 @@ val StiltzkinMoogleMerchant = card("Stiltzkin, Moogle Merchant") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        val opponent = target("target opponent", TargetOpponent())
-        val permanent = target(
-            "another target permanent you control",
-            TargetPermanent(
-                filter = TargetFilter(GameObjectFilter.Permanent.youControl(), excludeSelf = true),
-            ),
-        )
-        effect = IfYouDoEffect(
-            action = GiveControlToTargetPlayerEffect(
+        val opponent = target(Targets.Opponent)
+        val permanent = target(TargetFilter(GameObjectFilter.Permanent.youControl(), excludeSelf = true))
+        effect = Effects.IfYouDo(
+            action = Effects.GiveControl(
                 permanent = permanent,
                 newController = opponent,
             ),
-            ifYouDo = Effects.DrawCards(1),
+            then = Effects.DrawCards(1),
             successCriterion = SuccessCriterion.ControlChanged,
         )
     }

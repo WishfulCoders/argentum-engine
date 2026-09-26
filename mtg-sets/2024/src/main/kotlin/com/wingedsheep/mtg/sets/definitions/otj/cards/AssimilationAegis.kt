@@ -4,10 +4,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Assimilation Aegis
@@ -24,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * - The ETB exile reuses the linked-exile machinery ([Effects.ExileUntilLeaves] + a
  *   LeavesBattlefield trigger returning the linked card). "Up to one target creature" is an
  *   optional single target over any creature.
- * - The attach trigger is [Triggers.becomesAttached] with a SELF binding (it fires only when *this*
+ * - The attach trigger is `Triggers.<subject>.becomesAttached(to, controller)` with a SELF binding (it fires only when *this*
  *   Equipment becomes attached). Its payoff is [Effects.BecomeCopyOfLinkedExile]: the creature it
  *   just attached to ([EffectTarget.AttachedToTriggeringPermanent]) becomes a copy of the creature
  *   card exiled with this Equipment, lasting only for as long as the Equipment stays attached to it
@@ -45,23 +43,20 @@ val AssimilationAegis = card("Assimilation Aegis") {
 
     // ETB: exile up to one target creature until this Equipment leaves the battlefield.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target(
-            "up to one target creature",
-            TargetCreature(count = 1, optional = true, filter = TargetFilter.Creature)
-        )
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature, optional = true)
         effect = Effects.ExileUntilLeaves(creature)
     }
 
     // LTB: return the exiled card to its owner's control.
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 
     // On attach: the equipped creature becomes a copy of the exiled creature card while attached.
     triggeredAbility {
-        trigger = Triggers.becomesAttached(binding = TriggerBinding.SELF)
+        trigger = Triggers.self.becomesAttached()
         effect = Effects.BecomeCopyOfLinkedExile(EffectTarget.AttachedToTriggeringPermanent)
     }
 

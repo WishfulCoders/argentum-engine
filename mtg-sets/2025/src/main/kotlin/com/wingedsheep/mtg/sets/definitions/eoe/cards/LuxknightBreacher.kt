@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Luxknight Breacher
@@ -25,11 +25,11 @@ val LuxknightBreacher = card("Luxknight Breacher") {
 
     replacementEffect(
         EntersWithDynamicCounters(
-            count = DynamicAmount.AggregateBattlefield(
-                player = Player.You,
-                filter = GameObjectFilter.CreatureOrArtifact,
+            count = DynamicAmounts.battlefield(
+                Player.You,
+                GameObjectFilter.CreatureOrArtifact,
                 excludeSelf = true
-            )
+            ).count()
         )
     )
 

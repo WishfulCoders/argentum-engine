@@ -23,7 +23,7 @@ val BrindleShoat = card("Brindle Shoat") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateToken(
             power = 3,
             toughness = 3,

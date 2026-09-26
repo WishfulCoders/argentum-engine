@@ -41,8 +41,9 @@ class LegacySuspensionMigrationTest : ScenarioTestBase() {
 
                 // The reader changes only suspension representation. Entity state, RNG, counters,
                 // permissions, and all other saved fields are retained exactly on initial load.
-                // Object identity and zone returns postdate these captures. Compare the saved
-                // fields after checking that the new return bookkeeping starts empty.
+                // Object identity, zone returns and the waiting-trigger queue postdate these
+                // captures. Compare the saved fields after checking that the new return
+                // bookkeeping starts empty.
                 val encoded = encodeState(state)
                 JsonObject(encoded - "continuationStack" - POST_CAPTURE_FIELDS) shouldBe
                     JsonObject(original - "continuationStack" - "pendingDecision")
@@ -140,11 +141,15 @@ class LegacySuspensionMigrationTest : ScenarioTestBase() {
             )
             // Every field the legacy frame carried survives untouched. Fields added since the
             // capture (object identity's, and anything later) decode to their defaults and are
-            // not the reader's doing, so the comparison is restricted to the captured shape.
-            val capturedAnswer = JsonObject(original[0].jsonObject - "decisionId")
+            // not the reader's doing, so the comparison is restricted to the captured shape. The
+            // capture predates the trigger-fact record, so its flat trigger keys are compared as the
+            // reader lifts them (LegacyTriggerContextLift) — all null here, so they simply fold away.
+            val capturedAnswer = LegacyTriggerContextLift.lift(JsonObject(original[0].jsonObject - "decisionId")).jsonObject
             restrictTo(saved.getValue("answer"), capturedAnswer) shouldBe capturedAnswer
-            migrated.last().jsonObject.getValue("question") shouldBe
-                fixtureObject("suspended-mana-window", "state.json").getValue("pendingDecision")
+            // Same rule for the pending question: fields added to the decision since the capture
+            // (ChooseColorDecision.maxColors) decode to their defaults, so compare the captured shape.
+            val capturedQuestion = fixtureObject("suspended-mana-window", "state.json").getValue("pendingDecision")
+            restrictTo(migrated.last().jsonObject.getValue("question"), capturedQuestion) shouldBe capturedQuestion
         }
 
         test("legacy combat question is retained once and the duplicate answer shape is removed") {
@@ -303,6 +308,10 @@ class LegacySuspensionMigrationTest : ScenarioTestBase() {
         private const val CORE = "com.wingedsheep.engine.core."
 
         /** Fields introduced after these captures; decoding supplies their defaults. */
-        private val POST_CAPTURE_FIELDS = setOf("objectIdentities", "nextObjectGeneration", "zoneReturns")
+        private val POST_CAPTURE_FIELDS = setOf(
+            "objectIdentities", "nextObjectGeneration", "zoneReturns", "pendingTriggers",
+            "playersDealtNoncombatDamageThisTurn", "playersDealtNoncombatDamageLastTurn",
+            "pendingReplacementRiders",
+        )
     }
 }

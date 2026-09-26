@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ptk.cards
 
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Sima Yi, Wei Field Marshal
@@ -22,10 +22,10 @@ val SimaYiWeiFieldMarshal = card("Sima Yi, Wei Field Marshal") {
     colorIdentity = "B"
     typeLine = "Legendary Creature — Human Soldier"
     dynamicPower(
-        DynamicAmount.AggregateBattlefield(
+        DynamicAmounts.battlefield(
             Player.You,
             GameObjectFilter.Land.withSubtype(Subtype.SWAMP)
-        )
+        ).count()
     )
     toughness = 4
     oracleText = "Sima Yi's power is equal to the number of Swamps you control."

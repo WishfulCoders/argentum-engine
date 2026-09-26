@@ -22,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *    timing restriction — so it is repeatable and usable at instant speed.
  *  - "Creatures you control" is a **group**, not a target: [Effects.ForEachInGroup] over
  *    [GroupFilter.AllCreaturesYouControl] grants the keyword once per member, with
- *    [EffectTarget.Self] naming the current iteration entity. That matches Assay's `ForEach` over
+ *    [EffectTarget.IterationEntity] naming the current iteration entity. That matches Assay's `ForEach` over
  *    an `IterationSpace.Group` whose filter is `IsCreature` + `ControlledByYou`.
  *  - The group is evaluated on resolution, so creatures that arrive later this turn do not gain
  *    flying — which is what "creatures you control gain flying until end of turn" says (a one-shot
@@ -45,7 +45,7 @@ val FrostwindInvoker = card("Frostwind Invoker") {
         cost = Costs.Mana("{8}")
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreaturesYouControl,
-            Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
+            Effects.GrantKeyword(Keyword.FLYING, EffectTarget.IterationEntity)
         )
     }
 

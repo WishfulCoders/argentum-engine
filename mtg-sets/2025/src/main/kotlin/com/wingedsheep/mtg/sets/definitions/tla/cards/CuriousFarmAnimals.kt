@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Curious Farm Animals
@@ -26,16 +25,13 @@ val CuriousFarmAnimals = card("Curious Farm Animals") {
         "{2}, Sacrifice this creature: Destroy up to one target artifact or enchantment."
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.GainLife(3)
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.SacrificeSelf)
-        val t = target(
-            "artifact or enchantment",
-            TargetPermanent(optional = true, filter = TargetFilter.ArtifactOrEnchantment),
-        )
+        val t = target(TargetFilter.ArtifactOrEnchantment, optional = true)
         effect = Effects.Destroy(t)
     }
 

@@ -7,9 +7,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Jecht, Reluctant Guardian // Braska's Final Aeon
@@ -41,10 +41,7 @@ private val BraskasFinalAeon = card("Braska's Final Aeon") {
     keywords(Keyword.MENACE)
 
     // I, II — Jecht Beam — Each opponent discards a card and you draw a card.
-    val jechtBeam = Effects.Composite(
-        Effects.Discard(1, EffectTarget.PlayerRef(Player.EachOpponent)),
-        Effects.DrawCards(1),
-    )
+    val jechtBeam = Effects.Discard(1, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.DrawCards(1)
     sagaChapter(1) { effect = jechtBeam }
     sagaChapter(2) { effect = jechtBeam }
 
@@ -79,8 +76,8 @@ private val JechtReluctantGuardianFront = card("Jecht, Reluctant Guardian") {
 
     // Whenever Jecht deals combat damage to a player, you may exile-and-return-transformed.
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = MayEffect(Effects.ExileAndReturnTransformed())
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.May(Effects.ExileAndReturnTransformed())
     }
 
     metadata {

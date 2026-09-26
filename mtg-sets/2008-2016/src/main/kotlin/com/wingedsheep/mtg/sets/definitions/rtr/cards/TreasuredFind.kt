@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Treasured Find
@@ -29,14 +28,8 @@ val TreasuredFind = card("Treasured Find") {
     oracleText = "Return target card from your graveyard to your hand. Exile Treasured Find."
 
     spell {
-        val c = target(
-            "target card in your graveyard",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Any.ownedByYou(), zone = Zone.GRAVEYARD))
-        )
-        effect = Effects.Composite(
-            Effects.ReturnToHand(c),
-            Effects.Exile(EffectTarget.Self),
-        )
+        val c = target(TargetFilter(GameObjectFilter.Any.ownedByYou(), zone = Zone.GRAVEYARD))
+        effect = Effects.ReturnToHand(c) then Effects.Exile(EffectTarget.Self)
     }
 
     metadata {

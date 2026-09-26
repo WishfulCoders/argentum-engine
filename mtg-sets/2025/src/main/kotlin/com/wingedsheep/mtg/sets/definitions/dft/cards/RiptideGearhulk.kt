@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Riptide Gearhulk — Aetherdrift #219
@@ -38,14 +37,13 @@ val RiptideGearhulk = card("Riptide Gearhulk") {
         "When this creature enters, for each opponent, put up to one target nonland permanent that " +
         "player controls into its owner's library third from the top."
 
-    keywords(Keyword.DOUBLE_STRIKE, Keyword.PROWESS)
+    keywords(Keyword.DOUBLE_STRIKE)
+
+    prowess()
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val victim = target(
-            "target nonland permanent that player controls",
-            TargetPermanent(optional = true, filter = TargetFilter.NonlandPermanentOpponentControls)
-        )
+        trigger = Triggers.self.enters()
+        val victim = target(TargetFilter.NonlandPermanentOpponentControls, optional = true)
         effect = Effects.PutIntoLibraryNthFromTop(victim, positionFromTop = 2)
         description = "When this creature enters, for each opponent, put up to one target nonland " +
             "permanent that player controls into its owner's library third from the top."

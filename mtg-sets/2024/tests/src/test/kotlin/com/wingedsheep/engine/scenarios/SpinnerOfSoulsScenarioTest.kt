@@ -4,9 +4,9 @@ import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Spinner of Souls — "{2}{G} 4/3 Reach. Whenever another nontoken creature you control dies, you may
@@ -25,7 +25,7 @@ class SpinnerOfSoulsScenarioTest : ScenarioTestBase() {
             manaCost = "{0}"
             typeLine = "Sorcery"
             spell {
-                val c = target("target creature", Targets.Creature)
+                val c = target(TargetFilter.Creature)
                 effect = Effects.Destroy(c)
             }
         }

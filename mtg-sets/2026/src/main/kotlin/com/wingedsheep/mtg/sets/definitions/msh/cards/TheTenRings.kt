@@ -1,14 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.minus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.SetMaximumHandSize
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * The Ten Rings — Marvel Super Heroes #251
@@ -43,20 +44,17 @@ val TheTenRings = card("The Ten Rings") {
     staticAbility {
         ability = SetMaximumHandSize(
             player = Player.You,
-            amount = DynamicAmount.Fixed(10)
+            amount = DynamicAmounts.fixed(10)
         )
     }
 
     // At the beginning of your end step, if you have fewer than ten cards in hand,
     // draw cards equal to the difference.
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.CardsInHandAtMost(9)
         effect = Effects.DrawCards(
-            DynamicAmount.Subtract(
-                DynamicAmount.Fixed(10),
-                DynamicAmount.Count(Player.You, Zone.HAND)
-            )
+            10 - DynamicAmounts.cardsInYourHand()
         )
         description = "At the beginning of your end step, if you have fewer than ten cards in " +
             "hand, draw cards equal to the difference."

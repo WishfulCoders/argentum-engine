@@ -9,20 +9,12 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalOnCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Glamdring — The Lord of the Rings: Tales of Middle-earth #239
@@ -36,9 +28,9 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Equip {3}
  *
  * Composed entirely from existing primitives:
- *   1. [GrantKeyword] first strike + [GrantDynamicStatsEffect] +X/+0 on [Filters.EquippedCreature],
+ *   1. [GrantKeyword] first strike + [GrantDynamicStats] +X/+0 on [Filters.EquippedCreature],
  *      where X is a graveyard-count [DynamicAmount] over instant/sorcery cards in your graveyard.
- *   2. A [Triggers.DealsCombatDamageToPlayer]-shaped trigger bound to the equipped creature
+ *   2. A `Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)`-shaped trigger bound to the equipped creature
  *      ([TriggerBinding.ATTACHED]). "That damage" is read from the triggering damage event via
  *      [ContextPropertyKey.TRIGGER_DAMAGE_AMOUNT] and stored as the free-cast mana-value cap, then
  *      the same Press-the-Enemy free-cast pipeline (gather hand instants/sorceries → keep MV ≤ cap
@@ -62,51 +54,38 @@ val Glamdring = card("Glamdring") {
 
     // ...and gets +1/+0 for each instant and sorcery card in your graveyard.
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = Filters.EquippedCreature,
             powerBonus = DynamicAmounts.zone(
                 Player.You,
                 Zone.GRAVEYARD,
                 GameObjectFilter.InstantOrSorcery
             ).count(),
-            toughnessBonus = DynamicAmount.Fixed(0)
+            toughnessBonus = DynamicAmounts.fixed(0)
         )
     }
 
     // Whenever equipped creature deals combat damage to a player, you may cast an instant or
     // sorcery spell from your hand with MV ≤ that damage without paying its mana cost.
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            damageType = DamageType.Combat,
-            recipient = RecipientFilter.AnyPlayer,
-            binding = TriggerBinding.ATTACHED
-        )
-        effect = Effects.Composite(
+        trigger = Triggers.attached.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.Pipeline {
             // Capture "that damage" — the combat damage just dealt to the player.
-            Effects.StoreNumber(
-                "combatDamage",
-                DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_DAMAGE_AMOUNT)
-            ),
+            val combatDamage = storeNumber(DynamicAmounts.triggerDamageAmount())
             // Gather instant/sorcery cards from your hand with MV ≤ that damage.
-            GatherCardsEffect(
-                source = CardSource.FromZone(
+            val handSpells = gather(
+                CardSource.FromZone(
                     zone = Zone.HAND,
                     player = Player.You,
                     filter = GameObjectFilter.InstantOrSorcery
-                ),
-                storeAs = "handSpells"
-            ),
-            FilterCollectionEffect(
-                from = "handSpells",
-                filter = CollectionFilter.ManaValueAtMost(DynamicAmount.VariableReference("combatDamage")),
-                storeMatching = "castable"
-            ),
-            // You may cast one of them without paying its mana cost.
-            ConditionalOnCollectionEffect(
-                collection = "castable",
-                ifNotEmpty = MayEffect(Effects.CastFromCollectionWithoutPayingCost("castable"))
+                )
             )
-        )
+            val castable = filter(handSpells, GameObjectFilter.Any.manaValueAtMostDynamic(combatDamage.amount))
+            // You may cast one of them without paying its mana cost.
+            ifNotEmpty(castable) {
+                run(Effects.May(Effects.CastFromCollectionWithoutPayingCost(castable)))
+            }
+        }
     }
 
     equipAbility("{3}")

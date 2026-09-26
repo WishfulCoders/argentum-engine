@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -34,14 +33,12 @@ val SpiritWaterRevival = card("Spirit Water Revival") {
 
     spell {
         selfExile()
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.WaterbendWasPaid,
-            effect = Effects.Composite(
-                Patterns.Library.shuffleGraveyardIntoLibrary(EffectTarget.Controller),
-                Effects.DrawCards(7),
-                Effects.RemoveMaximumHandSize()
-            ),
-            elseEffect = Effects.DrawCards(2)
+            then = Patterns.Library.shuffleGraveyardIntoLibrary(EffectTarget.Controller) then
+                Effects.DrawCards(7) then
+                Effects.RemoveMaximumHandSize(),
+            otherwise = Effects.DrawCards(2)
         )
     }
 

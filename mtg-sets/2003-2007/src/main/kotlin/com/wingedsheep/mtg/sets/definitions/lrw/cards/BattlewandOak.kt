@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Battlewand Oak
@@ -31,16 +32,13 @@ val BattlewandOak = card("Battlewand Oak") {
         "Whenever you cast a Treefolk spell, this creature gets +2/+2 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = Filters.ForestCard.youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(Filters.ForestCard.youControl()).enters()
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
         description = "Whenever a Forest you control enters, this creature gets +2/+2 until end of turn."
     }
 
     triggeredAbility {
-        trigger = Triggers.YouCastSubtype(Subtype.TREEFOLK)
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withSubtype(Subtype.TREEFOLK))
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
         description = "Whenever you cast a Treefolk spell, this creature gets +2/+2 until end of turn."
     }

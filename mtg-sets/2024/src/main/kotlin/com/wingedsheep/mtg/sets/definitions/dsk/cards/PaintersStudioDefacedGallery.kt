@@ -35,7 +35,7 @@ val PaintersStudioDefacedGallery = card("Painter's Studio // Defaced Gallery") {
             "play them until the end of your next turn."
 
         triggeredAbility {
-            trigger = Triggers.OnDoorUnlocked
+            trigger = Triggers.self.doorUnlocked()
             effect = Patterns.Exile.impulse(count = 2, expiry = MayPlayExpiry.UntilEndOfNextTurn)
             description = "When you unlock this door, exile the top two cards of your library. You " +
                 "may play them until the end of your next turn."
@@ -48,7 +48,7 @@ val PaintersStudioDefacedGallery = card("Painter's Studio // Defaced Gallery") {
         oracleText = "Whenever you attack, attacking creatures you control get +1/+0 until end of turn."
 
         triggeredAbility {
-            trigger = Triggers.YouAttack
+            trigger = Triggers.you.attacks()
             effect = Patterns.Group.modifyStatsForAll(
                 power = 1,
                 toughness = 0,

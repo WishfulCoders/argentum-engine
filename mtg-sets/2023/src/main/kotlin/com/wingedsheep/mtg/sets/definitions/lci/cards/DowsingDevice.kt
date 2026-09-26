@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -11,14 +12,9 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Dowsing Device // Geode Grotto (The Lost Caverns of Ixalan)
@@ -36,11 +32,11 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *   number of artifacts you control. Activate only as a sorcery.
  *
  * Implementation:
- *  - Front trigger is [Triggers.entersBattlefield]`(Artifact.youControl(), binding = ANY)` — the
+ *  - Front trigger is `Triggers.a(filter).enters()``(Artifact.youControl(), binding = ANY)` — the
  *    ANY binding fires for the device itself and every other artifact you control. The optional
  *    target ("up to one") is a [TargetCreature]`(optional = true)`; the effect pumps +1/+0
  *    ([Effects.ModifyStats]) and grants haste ([Effects.GrantKeyword]) until end of turn, then a
- *    [ConditionalEffect] on [Conditions.YouControlAtLeast]`(4, Artifact)` flips the device. The
+ *    [Effects.If] on [Conditions.YouControlAtLeast]`(4, Artifact)` flips the device. The
  *    transform is gated only on the artifact count, so it still happens when no creature is chosen.
  *  - Back's activated ability grants haste and a dynamic +X/+0 where X counts your artifacts
  *    ([DynamicAmount.AggregateBattlefield]), at sorcery speed ([TimingRule.SorcerySpeed]).
@@ -55,22 +51,14 @@ private val DowsingDeviceFront = card("Dowsing Device") {
         "transform this artifact if you control four or more artifacts."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            binding = TriggerBinding.ANY,
-        )
-        val creature = target(
-            "up to one target creature you control",
-            TargetCreature(optional = true, filter = TargetFilter.Creature.youControl()),
-        )
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 0, creature),
-            Effects.GrantKeyword(Keyword.HASTE, creature),
-            ConditionalEffect(
+        trigger = Triggers.a(GameObjectFilter.Artifact.youControl()).enters()
+        val creature = target(TargetFilter.Creature.youControl(), optional = true)
+        effect = Effects.ModifyStats(1, 0, creature) then
+            Effects.GrantKeyword(Keyword.HASTE, creature) then
+            Effects.If(
                 condition = Conditions.YouControlAtLeast(4, GameObjectFilter.Artifact),
-                effect = TransformEffect(EffectTarget.Self),
-            ),
-        )
+                then = Effects.Transform(EffectTarget.Self),
+            )
     }
 
     metadata {
@@ -100,15 +88,13 @@ private val GeodeGrotto = card("Geode Grotto") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{R}"), Costs.Tap)
         timing = TimingRule.SorcerySpeed
-        val creature = target("target creature", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.HASTE, creature),
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.GrantKeyword(Keyword.HASTE, creature) then
             Effects.ModifyStats(
-                DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Artifact),
-                DynamicAmount.Fixed(0),
+                DynamicAmounts.battlefield(Player.You, GameObjectFilter.Artifact).count(),
+                DynamicAmounts.fixed(0),
                 creature,
-            ),
-        )
+            )
     }
 
     metadata {

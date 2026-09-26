@@ -1,21 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.spm.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Pictures of Spider-Man
@@ -47,34 +39,21 @@ val PicturesOfSpiderMan = card("Pictures of Spider-Man") {
         "Sacrifice this token: Add one mana of any color.\")"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(5)),
-                storeAs = "looked"
-            ),
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val looked = gather(CardSource.TopOfLibrary(5))
             // You may reveal up to two creature cards from among them and put them into your hand.
-            SelectFromCollectionEffect(
-                from = "looked",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(2)),
+            val (kept, rest) = chooseUpToSplit(
+                2,
+                from = looked,
                 filter = GameObjectFilter.Creature,
-                storeSelected = "kept",
-                storeRemainder = "rest",
                 prompt = "You may reveal up to two creature cards to put into your hand.",
                 showAllCards = true
-            ),
-            MoveCollectionEffect(
-                from = "kept",
-                destination = CardDestination.ToZone(Zone.HAND),
-                revealed = true
-            ),
-            // Put the rest on the bottom of your library in a random order.
-            MoveCollectionEffect(
-                from = "rest",
-                destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
-                order = CardOrder.Random
             )
-        )
+            toHand(kept, revealed = true)
+            // Put the rest on the bottom of your library in a random order.
+            toLibraryBottom(rest, order = CardOrder.Random)
+        }
         description = "When this artifact enters, look at the top five cards of your library. You " +
             "may reveal up to two creature cards from among them and put them into your hand. Put " +
             "the rest on the bottom of your library in a random order."

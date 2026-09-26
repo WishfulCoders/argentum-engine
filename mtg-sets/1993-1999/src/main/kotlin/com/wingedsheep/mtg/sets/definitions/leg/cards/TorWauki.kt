@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Tor Wauki
@@ -25,10 +24,7 @@ val TorWauki = card("Tor Wauki") {
 
     activatedAbility {
         cost = Costs.Tap
-        val creature = target(
-            "target attacking or blocking creature",
-            TargetPermanent(filter = TargetFilter.AttackingOrBlockingCreature),
-        )
+        val creature = target(TargetFilter.AttackingOrBlockingCreature)
         effect = Effects.DealDamage(2, creature)
     }
 

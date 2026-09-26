@@ -24,7 +24,7 @@ val TirelessMissionaries = card("Tireless Missionaries") {
     oracleText = "When this creature enters, you gain 3 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(3)
         description = "When this creature enters, you gain 3 life."
     }

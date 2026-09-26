@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 
 /**
  * Projektor Inspector — Murders at Karlov Manor #68
@@ -34,7 +34,7 @@ import com.wingedsheep.sdk.scripting.effects.MayEffect
  * Detective loots as well.
  *
  * "You may draw a card. If you do, discard a card." is the coupled loot, so declining draws nothing
- * *and* discards nothing — [MayEffect] over `Patterns.Hand.loot()`, never two independent effects.
+ * *and* discards nothing — [Effects.May] over `Patterns.Hand.loot()`, never two independent effects.
  */
 val ProjektorInspector = card("Projektor Inspector") {
     manaCost = "{2}{U}"
@@ -47,21 +47,16 @@ val ProjektorInspector = card("Projektor Inspector") {
 
     // Whenever this creature or another Detective you control enters …
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.withSubtype(Subtype.DETECTIVE).youControl(),
-            binding = TriggerBinding.ANY
-        )
-        effect = MayEffect(Patterns.Hand.loot())
+        trigger = Triggers.a(GameObjectFilter.Creature.withSubtype(Subtype.DETECTIVE).youControl()).enters()
+        effect = Effects.May(Patterns.Hand.loot())
         description = "Whenever this creature or another Detective you control enters, you may " +
             "draw a card. If you do, discard a card."
     }
 
     // … and whenever a Detective you control is turned face up.
     triggeredAbility {
-        trigger = Triggers.CreatureTurnedFaceUp(
-            filter = GameObjectFilter.Creature.withSubtype(Subtype.DETECTIVE)
-        )
-        effect = MayEffect(Patterns.Hand.loot())
+        trigger = Triggers.you.permanentTurnedFaceUp(GameObjectFilter.Creature.withSubtype(Subtype.DETECTIVE))
+        effect = Effects.May(Patterns.Hand.loot())
         description = "Whenever a Detective you control is turned face up, you may draw a card. " +
             "If you do, discard a card."
     }

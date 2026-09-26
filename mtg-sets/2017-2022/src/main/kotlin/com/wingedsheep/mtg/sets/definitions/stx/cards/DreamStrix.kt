@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern.BecomesTargetEvent
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -25,7 +24,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Two rules details the wording pins down:
  * - **Spells only.** Abilities that target it do not fire the sacrifice, so it survives a tap
- *   ability or an equip. [Triggers.BecomesTargetOfSpell] is the filter-scoped ANY-bound version of
+ *   ability or an equip. `Triggers.a(filter).becomesTarget(spellsOnly = true)` is the filter-scoped ANY-bound version of
  *   this wording; Dream Strix's is self-bound, so the spec is built inline from the same
  *   `BecomesTargetEvent(spellsOnly = true)` with `TriggerBinding.SELF` rather than re-deriving a
  *   filter that means "this permanent".
@@ -48,15 +47,12 @@ val DreamStrix = card("Dream Strix") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = BecomesTargetEvent(spellsOnly = true),
-            binding = TriggerBinding.SELF
-        )
+        trigger = Triggers.self.becomesTarget(spellsOnly = true)
         effect = Effects.SacrificeTarget(EffectTarget.Self)
     }
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Patterns.Mechanic.learn()
     }
 

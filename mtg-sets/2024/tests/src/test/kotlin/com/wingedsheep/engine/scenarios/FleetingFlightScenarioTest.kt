@@ -20,7 +20,7 @@ import io.kotest.matchers.shouldBe
  * "Put a +1/+1 counter on target creature. It gains flying until end of turn.
  *  Prevent all combat damage that would be dealt to it this turn."
  *
- * Exercises [com.wingedsheep.sdk.dsl.Effects.PreventAllCombatDamageTo]: the shield is
+ * Exercises a targeted combat-only [com.wingedsheep.sdk.dsl.Effects.PreventDamage]: the shield is
  * combat-only (noncombat damage still lands) and one-sided (the shielded creature still
  * deals its own combat damage).
  */

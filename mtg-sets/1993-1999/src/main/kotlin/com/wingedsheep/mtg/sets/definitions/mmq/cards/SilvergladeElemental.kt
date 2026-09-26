@@ -27,7 +27,7 @@ val SilvergladeElemental = card("Silverglade Elemental") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Land.withSubtype(Subtype.FOREST),

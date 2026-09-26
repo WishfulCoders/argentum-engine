@@ -9,13 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Wickerfolk Thresher
@@ -46,47 +39,26 @@ val WickerfolkThresher = card("Wickerfolk Thresher") {
         "it into your hand."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         interveningIf = Conditions.Delirium()
-        effect = Effects.Composite(
-            listOf(
-                // Look at the top card of your library.
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1)),
-                    storeAs = "looked",
-                ),
-                // Split into land and non-land.
-                FilterCollectionEffect(
-                    from = "looked",
-                    filter = CollectionFilter.MatchesFilter(GameObjectFilter.Land),
-                    storeMatching = "landCards",
-                    storeNonMatching = "nonLandCards"
-                ),
-                // If it's a land, you may put it onto the battlefield; else it stays for hand.
-                SelectFromCollectionEffect(
-                    from = "landCards",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    storeSelected = "toBattlefield",
-                    storeRemainder = "landToHand",
-                    selectedLabel = "Put onto the battlefield",
-                    remainderLabel = "Put into your hand"
-                ),
-                MoveCollectionEffect(
-                    from = "toBattlefield",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD)
-                ),
-                // If you don't put the card onto the battlefield, put it into your hand
-                // (both the declined land and any non-land top card).
-                MoveCollectionEffect(
-                    from = "landToHand",
-                    destination = CardDestination.ToZone(Zone.HAND)
-                ),
-                MoveCollectionEffect(
-                    from = "nonLandCards",
-                    destination = CardDestination.ToZone(Zone.HAND)
-                )
+        effect = Effects.Pipeline {
+            // Look at the top card of your library.
+            val looked = gather(CardSource.TopOfLibrary(1))
+            // Split into land and non-land.
+            val (landCards, nonLandCards) = filterSplit(looked, GameObjectFilter.Land)
+            // If it's a land, you may put it onto the battlefield; else it stays for hand.
+            val (toBattlefield, landToHand) = chooseUpToSplit(
+                1,
+                from = landCards,
+                selectedLabel = "Put onto the battlefield",
+                remainderLabel = "Put into your hand"
             )
-        )
+            move(toBattlefield, CardDestination.ToZone(Zone.BATTLEFIELD))
+            // If you don't put the card onto the battlefield, put it into your hand
+            // (both the declined land and any non-land top card).
+            toHand(landToHand)
+            toHand(nonLandCards)
+        }
     }
 
     metadata {

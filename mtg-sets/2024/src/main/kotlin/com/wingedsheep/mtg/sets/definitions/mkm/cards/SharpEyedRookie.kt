@@ -1,20 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Sharp-Eyed Rookie — Murders at Karlov Manor #176
@@ -29,7 +25,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * you a Clue, until it has outgrown the rest of your board.
  *
  * The trigger is `ANY`-bound with a `Creature.youControl()` filter rather than
- * [Triggers.OtherCreatureEnters] — the printed text says "a creature you control", not "another",
+ * `Triggers.another(GameObjectFilter.Creature.youControl()).enters()` — the printed text says "a creature you control", not "another",
  * so the Rookie's own arrival does check itself. It never fires from that, because a creature's
  * power is never greater than its own.
  *
@@ -42,7 +38,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  *
  * Both sides read projected power/toughness, so +1/+1 counters an entering creature brings with
  * it, and lords on either side, count. If the entering creature has left by resolution the
- * comparison uses last-known information (CR 608.2h) — the same [EntityReference.Triggering] read
+ * comparison uses last-known information (CR 608.2h) — the same [EffectTarget.TriggeringEntity] read
  * [HulklingBurgeoningBruiser] relies on.
  *
  * The counter and the Clue are one effect, not two abilities: they succeed or fail together.
@@ -62,24 +58,21 @@ val SharpEyedRookie = card("Sharp-Eyed Rookie") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).enters()
         interveningIf = Conditions.Any(
-            Compare(
-                DynamicAmount.EntityProperty(EntityReference.Triggering, EntityNumericProperty.Power),
+            Conditions.CompareAmounts(
+                DynamicAmounts.triggeringPower(),
                 ComparisonOperator.GT,
-                DynamicAmount.EntityProperty(EntityReference.Source, EntityNumericProperty.Power)
+                DynamicAmounts.sourcePower()
             ),
-            Compare(
-                DynamicAmount.EntityProperty(EntityReference.Triggering, EntityNumericProperty.Toughness),
+            Conditions.CompareAmounts(
+                DynamicAmounts.triggeringToughness(),
                 ComparisonOperator.GT,
-                DynamicAmount.EntityProperty(EntityReference.Source, EntityNumericProperty.Toughness)
+                DynamicAmounts.sourceToughness()
             )
         )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
-            .then(Effects.Investigate())
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self) then
+            Effects.Investigate()
         description = "Whenever a creature you control enters, if its power is greater than this " +
             "creature's power or its toughness is greater than this creature's toughness, put a " +
             "+1/+1 counter on this creature and investigate."

@@ -15,7 +15,7 @@ import io.kotest.matchers.shouldBe
  * "{T}, Sacrifice an artifact: Add an amount of {B} equal to the sacrificed artifact's mana value."
  *
  * Composes entirely from existing primitives (no engine work): the sacrifice cost binds the
- * sacrificed artifact to EntityReference.Sacrificed(0); AddMana reads its mana value via
+ * sacrificed artifact to EffectTarget.SacrificedAsCost(0); AddMana reads its mana value via
  * DynamicAmount.EntityProperty. Pins that the {B} produced equals the sacrificed artifact's MV
  * across {0} (no mana), a mid-MV artifact, and a high-MV artifact.
  */

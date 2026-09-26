@@ -5,8 +5,6 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Glen Elendra's Answer
@@ -29,10 +27,11 @@ val GlenElendrasAnswer = card("Glen Elendra's Answer") {
     cantBeCountered = true
 
     spell {
-        effect = Effects.CounterAllOpponentStackObjects(storeCountAs = "countered")
-            .then(
-                CreateTokenEffect(
-                    count = DynamicAmount.VariableReference("countered_count"),
+        effect = Effects.Pipeline {
+            val countered = runStoringCollection { Effects.CounterAllOpponentStackObjects(storeCountAs = it) }
+            run(
+                Effects.CreateToken(
+                    count = countered.count,
                     power = 1,
                     toughness = 1,
                     colors = setOf(Color.BLUE, Color.BLACK),
@@ -41,6 +40,7 @@ val GlenElendrasAnswer = card("Glen Elendra's Answer") {
                     imageUri = "https://cards.scryfall.io/normal/front/0/1/01524db2-c96f-4902-8394-bc7a7128e573.jpg?1767956498"
                 )
             )
+        }
     }
 
     metadata {

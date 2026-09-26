@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Fight as One
@@ -33,32 +32,12 @@ val FightAsOne = card("Fight as One") {
     spell {
         modal(chooseCount = 2, minChooseCount = 1) {
             mode("Target Human creature you control gets +1/+1 and gains indestructible until end of turn.") {
-                val t = target(
-                    "target",
-                    TargetCreature(
-                        filter = TargetFilter(
-                            GameObjectFilter.Creature.withSubtype(Subtype.HUMAN).youControl()
-                        )
-                    )
-                )
-                effect = Effects.Composite(
-                    Effects.ModifyStats(1, 1, t),
-                    Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t)
-                )
+                val t = target(TargetFilter(GameObjectFilter.Creature.withSubtype(Subtype.HUMAN).youControl()))
+                effect = Effects.ModifyStats(1, 1, t) then Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t)
             }
             mode("Target non-Human creature you control gets +1/+1 and gains indestructible until end of turn.") {
-                val t = target(
-                    "target",
-                    TargetCreature(
-                        filter = TargetFilter(
-                            GameObjectFilter.Creature.notSubtype(Subtype.HUMAN).youControl()
-                        )
-                    )
-                )
-                effect = Effects.Composite(
-                    Effects.ModifyStats(1, 1, t),
-                    Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t)
-                )
+                val t = target(TargetFilter(GameObjectFilter.Creature.notSubtype(Subtype.HUMAN).youControl()))
+                effect = Effects.ModifyStats(1, 1, t) then Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t)
             }
         }
     }

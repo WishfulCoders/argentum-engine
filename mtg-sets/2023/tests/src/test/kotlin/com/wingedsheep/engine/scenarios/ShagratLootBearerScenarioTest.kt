@@ -1,6 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.state.components.battlefield.AttachedToComponent
 import com.wingedsheep.engine.state.components.battlefield.AttachmentsComponent
@@ -60,7 +60,7 @@ class ShagratLootBearerScenarioTest : FunSpec({
         driver.state.getEntity(aura)?.get<CardComponent>()?.typeLine?.isAura shouldBe true
 
         val ctx = EffectContext(sourceId = shagrat, controllerId = you)
-        val evaluator = DynamicAmountEvaluator()
+        val evaluator = PredicateEvaluator(cardRegistry = null).amounts
         // Equipment-filtered count excludes the Aura …
         evaluator.evaluate(driver.state, DynamicAmounts.equipmentAttachedToSelf(), ctx) shouldBe 1
         // … while the unfiltered count includes both.

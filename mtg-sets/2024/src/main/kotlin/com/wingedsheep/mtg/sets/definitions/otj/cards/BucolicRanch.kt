@@ -1,7 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.Subtype
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
@@ -9,16 +8,10 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.CardDestination
+import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Bucolic Ranch
@@ -69,45 +62,29 @@ val BucolicRanch = card("Bucolic Ranch") {
     // your library.
     activatedAbility {
         cost = AbilityCost.Composite(listOf(Costs.Mana("{3}"), AbilityCost.Tap))
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1)),
-                    storeAs = "looked"
+        effect = Effects.Pipeline {
+            val looked = gather(CardSource.TopOfLibrary(1))
+            // If it's a Mount card, you may reveal it and put it into your hand.
+            val (kept, rest) = chooseUpToSplit(
+                1,
+                from = looked,
+                filter = GameObjectFilter(
+                    cardPredicates = listOf(CardPredicate.HasSubtype(Subtype("Mount")))
                 ),
-                // If it's a Mount card, you may reveal it and put it into your hand.
-                SelectFromCollectionEffect(
-                    from = "looked",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    filter = GameObjectFilter(
-                        cardPredicates = listOf(CardPredicate.HasSubtype(Subtype("Mount")))
-                    ),
-                    storeSelected = "kept",
-                    storeRemainder = "rest",
-                    selectedLabel = "Put in hand",
-                    remainderLabel = "Leave"
-                ),
-                MoveCollectionEffect(
-                    from = "kept",
-                    destination = CardDestination.ToZone(Zone.HAND),
-                    revealed = true
-                ),
-                // If you don't put it into your hand, you may put it on the bottom of your library
-                // (otherwise it stays on top — unselected cards are left in place).
-                SelectFromCollectionEffect(
-                    from = "rest",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    storeSelected = "toBottom",
-                    storeRemainder = "stayOnTop",
-                    selectedLabel = "Put on bottom",
-                    remainderLabel = "Leave on top"
-                ),
-                MoveCollectionEffect(
-                    from = "toBottom",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom)
-                )
+                selectedLabel = "Put in hand",
+                remainderLabel = "Leave"
             )
-        )
+            toHand(kept, revealed = true)
+            // If you don't put it into your hand, you may put it on the bottom of your library
+            // (otherwise it stays on top — unselected cards are left in place).
+            val toBottom = chooseUpTo(
+                1,
+                from = rest,
+                selectedLabel = "Put on bottom",
+                remainderLabel = "Leave on top"
+            )
+            toLibraryBottom(toBottom, order = CardOrder.Preserve)
+        }
     }
 
     metadata {

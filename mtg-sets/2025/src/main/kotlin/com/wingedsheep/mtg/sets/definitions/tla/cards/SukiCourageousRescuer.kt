@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
 /**
@@ -23,7 +22,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  *
  * The anthem is a static [ModifyStats] over [GroupFilter] creatures-you-control with
  * `excludeSelf` (so Suki doesn't pump herself). The leave-the-battlefield trigger reuses the
- * generic [Triggers.leavesBattlefield] factory with an `OTHER` binding ("another permanent you
+ * generic `Triggers.<subject>.leaves(to, excludeTo, excludeSacrifice)` factory with an `OTHER` binding ("another permanent you
  * control"), gated to your turn via [Conditions.IsYourTurn] and limited to a single firing per
  * turn with `oncePerTurn` (same shell as Moonstone Harbinger).
  */
@@ -49,10 +48,7 @@ val SukiCourageousRescuer = card("Suki, Courageous Rescuer") {
     // Whenever another permanent you control leaves the battlefield during your turn, create a
     // 1/1 white Ally creature token. This ability triggers only once each turn.
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Permanent.youControl(),
-            binding = TriggerBinding.OTHER,
-        )
+        trigger = Triggers.another(GameObjectFilter.Permanent.youControl()).leaves()
         triggerRestriction = Conditions.IsYourTurn
         oncePerTurn = true
         effect = Effects.CreateToken(

@@ -2,14 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Bosh, Iron Golem — Mirrodin #147
@@ -20,7 +19,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * to any target.
  *
  * The textbook sacrifice-cost-feeds-the-effect shape, and it needs no engine work: the
- * [Costs.Sacrifice] cost binds the sacrificed artifact to [EntityReference.Sacrificed], whose
+ * [Costs.Sacrifice] cost binds the sacrificed artifact to [EffectTarget.SacrificedAsCost], whose
  * last-known information is captured at cost payment, and the damage amount reads
  * [EntityNumericProperty.ManaValue] off that snapshot (same wiring as Priest of Yawgmoth).
  *
@@ -45,12 +44,9 @@ val BoshIronGolem = card("Bosh, Iron Golem") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}{R}"), Costs.Sacrifice(GameObjectFilter.Artifact))
-        val t = target("any target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(
-            DynamicAmount.EntityProperty(
-                EntityReference.Sacrificed(0),
-                EntityNumericProperty.ManaValue
-            ),
+            DynamicAmounts.manaValueOf(EffectTarget.SacrificedAsCost(0)),
             t
         )
         description = "{3}{R}, Sacrifice an artifact: Bosh deals damage equal to the sacrificed " +

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.combat
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
@@ -19,7 +20,9 @@ import kotlin.reflect.KClass
  * as only blockable by creatures of the specified color. The CombatManager checks
  * for this restriction during declare blockers validation.
  */
-class GrantCantBeBlockedExceptByColorExecutor : EffectExecutor<GrantCantBeBlockedExceptByColorEffect> {
+class GrantCantBeBlockedExceptByColorExecutor(
+    private val predicateEvaluator: PredicateEvaluator
+) : EffectExecutor<GrantCantBeBlockedExceptByColorEffect> {
 
     override val effectType: KClass<GrantCantBeBlockedExceptByColorEffect> = GrantCantBeBlockedExceptByColorEffect::class
 
@@ -31,7 +34,8 @@ class GrantCantBeBlockedExceptByColorExecutor : EffectExecutor<GrantCantBeBlocke
         val filter = effect.filter
         val excludeSelfId = if (filter.excludeSelf) context.sourceId else null
         val affectedEntities = BattlefieldFilterUtils.findMatchingOnBattlefield(
-            state, filter.baseFilter, context, excludeSelfId
+            state, filter.baseFilter, context, excludeSelfId,
+            predicateEvaluator = predicateEvaluator
         ).toSet()
 
         if (affectedEntities.isEmpty()) {

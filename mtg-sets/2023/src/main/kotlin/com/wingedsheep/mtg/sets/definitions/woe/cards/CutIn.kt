@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Cut In
@@ -30,15 +29,9 @@ val CutIn = card("Cut In") {
         "\"Whenever this creature attacks, if its toughness is 3 or less, put a +1/+1 counter on it.\")"
 
     spell {
-        val damaged = target("target creature", TargetCreature())
-        val roleTarget = target(
-            "creature you control",
-            TargetCreature(optional = true, filter = TargetFilter.CreatureYouControl)
-        )
-        effect = Effects.Composite(
-            Effects.DealDamage(4, damaged),
-            Effects.CreateRoleToken("Young Hero Role", roleTarget)
-        )
+        val damaged = target(TargetFilter.Creature)
+        val roleTarget = target(TargetFilter.CreatureYouControl, optional = true)
+        effect = Effects.DealDamage(4, damaged) then Effects.CreateRoleToken("Young Hero Role", roleTarget)
     }
 
     metadata {

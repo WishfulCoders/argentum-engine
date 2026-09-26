@@ -2,9 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
@@ -51,17 +53,17 @@ val OdricBloodCursed = card("Odric, Blood-Cursed") {
         "each ability only once.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateBlood(
             COUNTED_KEYWORDS
                 .map<Keyword, DynamicAmount> { keyword ->
-                    DynamicAmount.Conditional(
+                    DynamicAmounts.conditional(
                         condition = Conditions.ControlCreatureWithKeyword(keyword),
-                        ifTrue = DynamicAmount.Fixed(1),
-                        ifFalse = DynamicAmount.Fixed(0),
+                        ifTrue = 1,
+                        ifFalse = 0,
                     )
                 }
-                .reduce { acc, term -> DynamicAmount.Add(acc, term) }
+                .reduce { acc, term -> acc + term }
         )
         description = "When Odric enters, create X Blood tokens, where X is the number of abilities " +
             "from among flying, first strike, double strike, deathtouch, haste, hexproof, " +

@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CREATED_TOKENS
-import com.wingedsheep.sdk.scripting.effects.CreatePredefinedTokenEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -37,14 +36,12 @@ val UsAgentJohnWalker = card("U.S.Agent, John Walker") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            CreatePredefinedTokenEffect("Sturdy Shield"),
+        trigger = Triggers.self.enters()
+        effect = Effects.CreatePredefinedToken("Sturdy Shield") then
             Effects.AttachTargetEquipmentToCreature(
                 equipmentTarget = EffectTarget.PipelineTarget(CREATED_TOKENS, 0),
                 creatureTarget = EffectTarget.Self,
-            ),
-        )
+            )
         description = "When U.S.Agent enters, create a colorless Equipment artifact token named " +
             "Sturdy Shield with \"Equipped creature gets +1/+2\" and equip {2}. Attach it to U.S.Agent."
     }

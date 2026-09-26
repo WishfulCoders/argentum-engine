@@ -34,7 +34,7 @@ import io.kotest.matchers.shouldBe
  *     combat damage must produce nothing.
  *
  * Turning face up is a special action (CR 701.34c), not an enters-the-battlefield event, so the
- * ability hangs off `Triggers.TurnedFaceUp`.
+ * ability hangs off `Triggers.self.turnedFaceUp()`.
  */
 class MistwaySpyScenarioTest : FunSpec({
 

@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.teamwork
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * We Say Thee Nay! — Marvel Super Heroes #82
@@ -36,12 +36,12 @@ val WeSayTheeNay = card("We Say Thee Nay!") {
     teamwork(2)
 
     spell {
-        target = Targets.Spell
+        val spell = target(TargetFilter.SpellOnStack)
         effect = Effects.CounterUnlessDynamicPays(
-            DynamicAmount.Conditional(
+            DynamicAmounts.conditional(
                 condition = Conditions.TeamworkWasPaid,
-                ifTrue = DynamicAmount.Fixed(4),
-                ifFalse = DynamicAmount.Fixed(2),
+                ifTrue = 4,
+                ifFalse = 2,
             ),
         )
     }

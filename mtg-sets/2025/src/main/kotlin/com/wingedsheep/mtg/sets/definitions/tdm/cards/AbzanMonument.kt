@@ -38,7 +38,7 @@ val AbzanMonument = card("Abzan Monument") {
         "is the greatest toughness among creatures you control. Activate only as a sorcery."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.BasicLand.withAnyOfSubtypes(
                 listOf(Subtype.PLAINS, Subtype.SWAMP, Subtype.FOREST)

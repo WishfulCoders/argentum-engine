@@ -2,12 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.scg.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.TurnFaceDownEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Mischievous Quanar
@@ -30,16 +29,16 @@ val MischievousQuanar = card("Mischievous Quanar") {
     // {3}{U}{U}: Turn this creature face down.
     activatedAbility {
         cost = Costs.Mana("{3}{U}{U}")
-        effect = TurnFaceDownEffect(target = EffectTarget.Self)
+        effect = Effects.TurnFaceDown(target = EffectTarget.Self)
     }
 
     morph = "{1}{U}{U}"
 
     // When turned face up, copy target instant or sorcery spell
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        target = Targets.InstantOrSorcerySpell
-        effect = Effects.CopyTargetSpell()
+        val instantOrSorcerySpell = target(TargetFilter.InstantOrSorcerySpellOnStack)
+        trigger = Triggers.self.turnedFaceUp()
+        effect = Effects.CopyTargetSpell(target = instantOrSorcerySpell)
     }
 
     metadata {

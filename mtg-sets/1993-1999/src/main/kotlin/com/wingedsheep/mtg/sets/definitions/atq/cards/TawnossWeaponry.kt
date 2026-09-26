@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.atq.cards
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Tawnos's Weaponry
@@ -31,7 +31,7 @@ val TawnossWeaponry = card("Tawnos's Weaponry") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        val creature = target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(1, 1, creature, Duration.WhileSourceTapped("Tawnos's Weaponry"))
         description = "{2}, {T}: Target creature gets +1/+1 for as long as this artifact remains tapped."
     }

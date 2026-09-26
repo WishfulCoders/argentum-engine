@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.handlers.effects.permanent.types
 
+import com.wingedsheep.engine.state.components.identity.copiableCardComponent
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.event.GrantedActivatedAbility
 import com.wingedsheep.engine.handlers.EffectContext
@@ -43,7 +45,9 @@ import kotlin.reflect.KClass
  * copies. Likeness Looter's "{X}: … becomes a copy of target creature card in your graveyard with
  * mana value X, except it has flying and this ability" is both riders at once.
  */
-class EachPermanentBecomesCopyOfTargetExecutor : EffectExecutor<EachPermanentBecomesCopyOfTargetEffect> {
+class EachPermanentBecomesCopyOfTargetExecutor(
+    private val predicateEvaluator: PredicateEvaluator
+) : EffectExecutor<EachPermanentBecomesCopyOfTargetEffect> {
 
     override val effectType: KClass<EachPermanentBecomesCopyOfTargetEffect> =
         EachPermanentBecomesCopyOfTargetEffect::class
@@ -56,7 +60,7 @@ class EachPermanentBecomesCopyOfTargetExecutor : EffectExecutor<EachPermanentBec
         val targetId = context.resolveTarget(effect.target, state)
             ?: return EffectResult.success(state)
 
-        val targetCard = state.getEntity(targetId)?.get<CardComponent>()
+        val targetCard = state.getEntity(targetId)?.copiableCardComponent()
             ?: return EffectResult.success(state)
 
         // Target must still be on the battlefield to serve as a copy source — unless the effect
@@ -82,7 +86,8 @@ class EachPermanentBecomesCopyOfTargetExecutor : EffectExecutor<EachPermanentBec
                 state,
                 effect.filter.baseFilter,
                 context,
-                excludeSelfId = if (effect.filter.excludeSelf) context.sourceId else null
+                excludeSelfId = if (effect.filter.excludeSelf) context.sourceId else null,
+                predicateEvaluator = predicateEvaluator
             )
                 // "each OTHER … becomes a copy of that …" — the copy source keeps its own identity
                 // (and any counter just placed on it), so exclude the target from the affected set.

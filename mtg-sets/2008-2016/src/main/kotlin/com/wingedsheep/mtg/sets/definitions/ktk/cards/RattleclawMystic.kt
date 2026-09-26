@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddManaEffect
 
 /**
  * Rattleclaw Mystic
@@ -29,7 +28,7 @@ val RattleclawMystic = card("Rattleclaw Mystic") {
     // {T}: Add {G}
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddManaEffect(Color.GREEN)
+        effect = Effects.AddMana(Color.GREEN)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
@@ -37,7 +36,7 @@ val RattleclawMystic = card("Rattleclaw Mystic") {
     // {T}: Add {U}
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddManaEffect(Color.BLUE)
+        effect = Effects.AddMana(Color.BLUE)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
@@ -45,7 +44,7 @@ val RattleclawMystic = card("Rattleclaw Mystic") {
     // {T}: Add {R}
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddManaEffect(Color.RED)
+        effect = Effects.AddMana(Color.RED)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
@@ -54,12 +53,10 @@ val RattleclawMystic = card("Rattleclaw Mystic") {
 
     // When Rattleclaw Mystic is turned face up, add {G}{U}{R}.
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        effect = Effects.Composite(
-            Effects.AddMana(Color.GREEN),
-            Effects.AddMana(Color.BLUE),
+        trigger = Triggers.self.turnedFaceUp()
+        effect = Effects.AddMana(Color.GREEN) then
+            Effects.AddMana(Color.BLUE) then
             Effects.AddMana(Color.RED)
-        )
     }
 
     metadata {

@@ -32,7 +32,7 @@ val BasalSliver = card("Basal Sliver") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.SacrificeSelf,
                 effect = Effects.AddMana(Color.BLACK, 2),
                 timing = TimingRule.ManaAbility,

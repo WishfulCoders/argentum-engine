@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.spm.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -26,7 +26,7 @@ val MercilessEnforcers = card("Merciless Enforcers") {
     keywords(Keyword.LIFELINK)
     activatedAbility {
         cost = Costs.Mana("{3}{B}")
-        effect = DealDamageEffect(1, EffectTarget.PlayerRef(Player.EachOpponent))
+        effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent))
     }
     metadata {
         rarity = Rarity.COMMON

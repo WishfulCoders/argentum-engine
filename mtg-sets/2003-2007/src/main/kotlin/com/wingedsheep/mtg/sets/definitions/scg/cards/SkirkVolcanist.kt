@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DividedDamageEffect
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Skirk Volcanist
@@ -26,10 +27,10 @@ val SkirkVolcanist = card("Skirk Volcanist") {
     oracleText = "Morph—Sacrifice two Mountains. (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)\nWhen Skirk Volcanist is turned face up, it deals 3 damage divided as you choose among one, two, or three target creatures."
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        target = TargetCreature(count = 3, minCount = 1)
-        effect = DividedDamageEffect(
-            totalDamage = 3,
+        trigger = Triggers.self.turnedFaceUp()
+        target = TargetObject(filter = TargetFilter.Creature, count = 3, minCount = 1)
+        effect = Effects.DividedDamage(
+            total = 3,
             minTargets = 1,
             maxTargets = 3
         )

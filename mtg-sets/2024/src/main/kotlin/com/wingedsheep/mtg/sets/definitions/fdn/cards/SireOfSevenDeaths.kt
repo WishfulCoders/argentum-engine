@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 
 /**
@@ -28,7 +29,7 @@ val SireOfSevenDeaths = card("Sire of Seven Deaths") {
     power = 7
     toughness = 7
     keywords(Keyword.FIRST_STRIKE, Keyword.VIGILANCE, Keyword.MENACE, Keyword.TRAMPLE, Keyword.REACH, Keyword.LIFELINK)
-    keywordAbility(KeywordAbility.wardLife(7))
+    keywordAbility(KeywordAbility.Ward(WardCost.Life(7)))
     metadata {
         rarity = Rarity.MYTHIC
         collectorNumber = "1"

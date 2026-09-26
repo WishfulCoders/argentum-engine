@@ -1,10 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Reckless Ransacking
@@ -20,9 +19,8 @@ val RecklessRansacking = card("Reckless Ransacking") {
     oracleText = "Target creature gets +3/+2 until end of turn. Create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")"
 
     spell {
-        val creature = target("creature", Targets.Creature)
-        effect = Effects.ModifyStats(3, 2, EffectTarget.ContextTarget(0))
-            .then(Effects.CreateTreasure())
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(3, 2, creature) then Effects.CreateTreasure()
     }
 
     metadata {

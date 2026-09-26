@@ -2,17 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.StatePredicate
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Downwind Ambusher
@@ -38,26 +35,24 @@ val DownwindAmbusher = card("Downwind Ambusher") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseOne(
             // Mode 1: Target creature an opponent controls gets -1/-1 until end of turn
-            Mode.withTarget(
-                Effects.ModifyStats(-1, -1, EffectTarget.ContextTarget(0)),
-                Targets.CreatureOpponentControls,
-                "Target creature an opponent controls gets -1/-1 until end of turn"
-            ),
+            mode("Target creature an opponent controls gets -1/-1 until end of turn") {
+                val creatureOpponentControls = target(TargetFilter.CreatureOpponentControls)
+                effect = Effects.ModifyStats(-1, -1, creatureOpponentControls)
+            },
             // Mode 2: Destroy target creature an opponent controls that was dealt damage this turn
-            Mode.withTarget(
-                Effects.Destroy(EffectTarget.ContextTarget(0)),
-                TargetCreature(
-                    filter = TargetFilter(
+            mode("Destroy target creature an opponent controls that was dealt damage this turn") {
+                val creature = target(
+                    TargetFilter(
                         GameObjectFilter.Creature.opponentControls().copy(
                             statePredicates = listOf(StatePredicate.WasDealtDamageThisTurn)
                         )
-                    )
-                ),
-                "Destroy target creature an opponent controls that was dealt damage this turn"
-            )
+                    ),
+                )
+                effect = Effects.Destroy(creature)
+            }
         )
     }
 

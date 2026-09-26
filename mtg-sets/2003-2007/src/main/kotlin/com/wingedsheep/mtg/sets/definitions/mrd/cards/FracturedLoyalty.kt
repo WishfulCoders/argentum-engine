@@ -1,13 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GiveControlToTargetPlayerEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Fractured Loyalty — Mirrodin #93 (canonical printing)
@@ -19,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * The Aura punishes *attention*, not damage: any targeting at all — a removal spell, a pump spell,
  * an equip-style ability — hands the creature to whoever pointed at it. That is why the trigger is
- * the plain [Triggers.BecomesTarget] with no spell/ability narrowing and no "an opponent controls"
+ * the plain `Triggers.self.becomesTarget()` with no spell/ability narrowing and no "an opponent controls"
  * clause: targeting your own enchanted creature gives it to *you*, which is the card's whole
  * bargaining position.
  *
@@ -47,11 +48,11 @@ val FracturedLoyalty = card("Fractured Loyalty") {
         "Whenever enchanted creature becomes the target of a spell or ability, that spell or " +
         "ability's controller gains control of that creature. (This effect lasts indefinitely.)"
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.BecomesTarget(GameObjectFilter.Creature.attachedToBySource())
-        effect = GiveControlToTargetPlayerEffect(
+        trigger = Triggers.a(GameObjectFilter.Creature.attachedToBySource()).becomesTarget()
+        effect = Effects.GiveControl(
             permanent = EffectTarget.TriggeringEntity,
             newController = EffectTarget.PlayerRef(Player.ControllerOfTargetingSource)
         )

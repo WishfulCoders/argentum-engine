@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardOrder
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Merfolk Wayfinder
@@ -32,9 +31,9 @@ val MerfolkWayfinder = card("Merfolk Wayfinder") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.revealTopPutAllMatchingToHand(
-            count = DynamicAmount.Fixed(3),
+            count = 3,
             filter = GameObjectFilter.Land.withSubtype("Island"),
             restOrder = CardOrder.ControllerChooses,
         )

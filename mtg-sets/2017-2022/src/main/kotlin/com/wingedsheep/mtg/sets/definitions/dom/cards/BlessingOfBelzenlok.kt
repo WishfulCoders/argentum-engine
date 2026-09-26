@@ -2,11 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.dom.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Blessing of Belzenlok
@@ -22,13 +21,11 @@ val BlessingOfBelzenlok = card("Blessing of Belzenlok") {
     oracleText = "Target creature gets +2/+1 until end of turn. If it's legendary, it also gains lifelink until end of turn."
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = Effects.ModifyStats(2, 1, t)
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.TargetMatchesFilter(GameObjectFilter.Any.legendary()),
-                    effect = Effects.GrantKeyword(com.wingedsheep.sdk.core.Keyword.LIFELINK, t)
-                )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 1, t) then
+            Effects.If(
+                condition = Conditions.TargetMatchesFilter(GameObjectFilter.Any.legendary(), t),
+                then = Effects.GrantKeyword(com.wingedsheep.sdk.core.Keyword.LIFELINK, t)
             )
     }
 

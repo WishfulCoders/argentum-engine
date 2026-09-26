@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.WardCost
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Dirgur Island Dragon // Skimming Strike — Tarkir: Dragonstorm #40
@@ -41,8 +41,8 @@ val DirgurIslandDragon = card("Dirgur Island Dragon") {
         oracleText = "Tap up to one target creature. Draw a card. " +
             "(Then shuffle this card into its owner's library.)"
         spell {
-            val creature = target("creature", Targets.UpToCreatures(1))
-            effect = Effects.Tap(creature).then(Effects.DrawCards(1))
+            val creature = target(TargetFilter.Creature, optional = true)
+            effect = Effects.Tap(creature) then Effects.DrawCards(1)
         }
     }
 

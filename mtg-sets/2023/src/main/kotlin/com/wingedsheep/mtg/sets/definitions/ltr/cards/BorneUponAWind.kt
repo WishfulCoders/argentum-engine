@@ -29,7 +29,7 @@ val BorneUponAWind = card("Borne Upon a Wind") {
         effect = Effects.GrantFlashToSpells(
             spellFilter = GameObjectFilter.Any,
             duration = Duration.EndOfTurn
-        ).then(Effects.DrawCards(1))
+        ) then Effects.DrawCards(1)
     }
 
     metadata {

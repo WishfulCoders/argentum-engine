@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -31,17 +30,17 @@ val TrostaniThreeWhispers = card("Trostani, Three Whispers") {
     toughness = 4
     activatedAbility {
         cost = Costs.Mana("{1}{G}")
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+        val t = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(Keyword.DEATHTOUCH, t)
     }
     activatedAbility {
         cost = Costs.Mana("{G/W}")
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+        val t = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(Keyword.VIGILANCE, t)
     }
     activatedAbility {
         cost = Costs.Mana("{2}{W}")
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+        val t = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(Keyword.DOUBLE_STRIKE, t)
     }
     metadata {

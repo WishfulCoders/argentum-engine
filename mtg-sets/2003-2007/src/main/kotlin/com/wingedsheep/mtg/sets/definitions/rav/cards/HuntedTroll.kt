@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -38,8 +37,8 @@ val HuntedTroll = card("Hunted Troll") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val opponent = target("target opponent", Targets.Opponent)
+        trigger = Triggers.self.enters()
+        val opponent = target(Targets.Opponent)
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
@@ -55,7 +54,7 @@ val HuntedTroll = card("Hunted Troll") {
 
     activatedAbility {
         cost = Costs.Mana("{G}")
-        effect = RegenerateEffect(EffectTarget.Self)
+        effect = Effects.Regenerate(EffectTarget.Self)
         description = "{G}: Regenerate this creature."
     }
 

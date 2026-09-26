@@ -69,7 +69,7 @@ class ReplacementEffectProcessorTest : ScenarioTestBase() {
             driver.initMirrorMatch(deck = Deck.of("Plains" to 20))
             val playerId = driver.activePlayer!!
 
-            val processor = ReplacementEffectProcessor()
+            val processor = ReplacementEffectProcessor(conditionEvaluator = services.conditionEvaluator)
             val event = PendingGameEvent.DrawPending(playerId, 1)
 
             val result = processor.process(driver.state, event)
@@ -88,7 +88,7 @@ class ReplacementEffectProcessorTest : ScenarioTestBase() {
                 ModifyDrawAmount(modifier = 1, appliesTo = EventPattern.DrawCardsEvent(Player.You))
             )
 
-            val processor = ReplacementEffectProcessor()
+            val processor = ReplacementEffectProcessor(conditionEvaluator = services.conditionEvaluator)
             val event = PendingGameEvent.DrawAmountPending(playerId, 1)
 
             val result = processor.process(driver.state, event)
@@ -108,7 +108,7 @@ class ReplacementEffectProcessorTest : ScenarioTestBase() {
                 PreventDraw(appliesTo = EventPattern.DrawEvent(Player.You))
             )
 
-            val processor = ReplacementEffectProcessor()
+            val processor = ReplacementEffectProcessor(conditionEvaluator = services.conditionEvaluator)
             val event = PendingGameEvent.DrawPending(playerId, 1)
 
             val result = processor.process(driver.state, event)
@@ -143,7 +143,7 @@ class ReplacementEffectProcessorTest : ScenarioTestBase() {
                 PreventDraw(appliesTo = EventPattern.DrawCardsEvent(Player.You))
             )
 
-            val processor = ReplacementEffectProcessor()
+            val processor = ReplacementEffectProcessor(conditionEvaluator = services.conditionEvaluator)
             val event = PendingGameEvent.DrawAmountPending(playerId, totalCount = 1)
 
             // Full process: both match → Paused with choice (CR 616.1e)
@@ -184,7 +184,7 @@ class ReplacementEffectProcessorTest : ScenarioTestBase() {
                 ModifyDrawAmount(modifier = 1, appliesTo = EventPattern.DrawCardsEvent(Player.You))
             )
 
-            val processor = ReplacementEffectProcessor()
+            val processor = ReplacementEffectProcessor(conditionEvaluator = services.conditionEvaluator)
             val event = PendingGameEvent.DrawAmountPending(playerId, totalCount = 1)
 
             val result = processor.process(driver.state, event)
@@ -205,7 +205,7 @@ class ReplacementEffectProcessorTest : ScenarioTestBase() {
                 ModifyDrawAmount(modifier = 1, appliesTo = EventPattern.DrawCardsEvent(Player.You))
             )
 
-            val processor = ReplacementEffectProcessor()
+            val processor = ReplacementEffectProcessor(conditionEvaluator = services.conditionEvaluator)
             val event = PendingGameEvent.DrawAmountPending(playerId, 1)
 
             val gathered = processor.gatherReplacements(driver.state, event)
@@ -223,7 +223,7 @@ class ReplacementEffectProcessorTest : ScenarioTestBase() {
                 ModifyDrawAmount(modifier = 1, appliesTo = EventPattern.DrawCardsEvent(Player.EachOpponent))
             )
 
-            val processor = ReplacementEffectProcessor()
+            val processor = ReplacementEffectProcessor(conditionEvaluator = services.conditionEvaluator)
             // Active player draws → opponent's EachOpponent matches
             val gathered = processor.gatherReplacements(
                 driver.state, PendingGameEvent.DrawAmountPending(playerId, 1)
@@ -295,7 +295,7 @@ class ReplacementEffectProcessorTest : ScenarioTestBase() {
                 ModifyDrawAmount(modifier = 1, appliesTo = EventPattern.DrawCardsEvent(Player.You))
             )
 
-            val processor = ReplacementEffectProcessor()
+            val processor = ReplacementEffectProcessor(conditionEvaluator = services.conditionEvaluator)
             val event = PendingGameEvent.DrawAmountPending(playerId, totalCount = 1)
 
             // First pass: Modifier applies
@@ -317,7 +317,7 @@ class ReplacementEffectProcessorTest : ScenarioTestBase() {
 
         test("Multiple draw effect replacements") {
             // Quantum Riddler (ModifyDrawAmount +1 on EventPattern.DrawCardsEvent)
-            // and Phial of Galadriel (ReplaceDrawWithEffect on EventPattern.DrawEvent)
+            // and Phial of Galadriel (ReplaceDrawWith on EventPattern.DrawEvent)
             // coexist: Quantum Riddler fires at announcement level (DrawAmountPending
             // matches DrawCardsEvent), and Phial fires per-card (DrawPending matches
             // DrawEvent). Both are mandatory, so no player choice is needed.

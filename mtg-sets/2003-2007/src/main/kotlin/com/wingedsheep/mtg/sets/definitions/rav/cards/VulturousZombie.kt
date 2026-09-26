@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
@@ -9,9 +9,9 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Vulturous Zombie — Ravnica: City of Guilds #238
@@ -52,16 +52,10 @@ val VulturousZombie = card("Vulturous Zombie") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = EventPattern.ZoneChangeEvent(
-                filter = GameObjectFilter.Any
+        trigger = Triggers.a(GameObjectFilter.Any
                     .withCardPredicate(CardPredicate.IsNontoken)
-                    .ownedByOpponent(),
-                to = Zone.GRAVEYARD,
-            ),
-            binding = TriggerBinding.ANY,
-        )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+                    .ownedByOpponent()).changesZone(to = Zone.GRAVEYARD)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Whenever a card is put into an opponent's graveyard from anywhere, put a " +
             "+1/+1 counter on this creature."
     }

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Zone
@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -26,10 +24,10 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Implementation notes:
  *  - The recursion ability fires from the graveyard via [triggerZone] = [Zone.GRAVEYARD], the same
  *    shape as Invasion's Pyre Zombie.
- *  - "your second card each turn" is [Triggers.NthCardDrawn] (n = 2, Player.You).
- *  - "you may pay {B}. If you do, ..." is a [MayPayManaEffect]; the payoff returns this card from
+ *  - "your second card each turn" is `Triggers.<player>.drawsNth(n)` (n = 2, Player.You).
+ *  - "you may pay {B}. If you do, ..." is a [Effects.MayPay]; the payoff returns this card from
  *    the graveyard to the battlefield ([EffectTarget.Self]) and stamps a finality counter on it
- *    via [AddCountersEffect] / [Counters.FINALITY] (death replacement handled engine-side).
+ *    via [AddCountersEffect] / [CounterType.FINALITY] (death replacement handled engine-side).
  */
 val Wolfbat = card("Wolfbat") {
     manaCost = "{2}{B}"
@@ -45,14 +43,12 @@ val Wolfbat = card("Wolfbat") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.NthCardDrawn(2)
+        trigger = Triggers.you.drawsNth(2)
         triggerZone = Zone.GRAVEYARD
-        effect = MayPayManaEffect(
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{B}"),
-            effect = Effects.Composite(
-                Effects.Move(EffectTarget.Self, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD),
-                AddCountersEffect(counterType = Counters.FINALITY, count = 1, target = EffectTarget.Self),
-            ),
+            then = Effects.Move(EffectTarget.Self, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD) then
+                Effects.AddCounters(counterType = CounterType.FINALITY, count = 1, target = EffectTarget.Self),
         )
         description = "Whenever you draw your second card each turn, you may pay {B}. If you do, " +
             "return this card from your graveyard to the battlefield with a finality counter on it."

@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever this creature deals damage to a Vampire, destroy that creature.
  *
  * The East-Mark Cavalier shape with the subtype swapped: a SELF-bound
- * [Triggers.dealsDamage] whose recipient is a [RecipientFilter.Matching] over Vampire permanents.
+ * `Triggers.<subject>.dealsDamage(to, damageType, requireExcess, batch, requires)` whose recipient is a [Recipient.Object] over Vampire permanents.
  * The default `damageType` is `Any`, which is what the printed text says — combat damage in the
  * usual case, but also the damage from a fight or a "this creature deals damage to target
  * creature" ability. `EffectTarget.TriggeringEntity` on a recipient-filtered damage trigger is the
@@ -39,11 +39,9 @@ val VampireSlayer = card("Vampire Slayer") {
     oracleText = "Whenever this creature deals damage to a Vampire, destroy that creature."
 
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            recipient = RecipientFilter.Matching(
+        trigger = Triggers.self.dealsDamage(Recipient.Object(
                 GameObjectFilter.Permanent.withSubtype("Vampire")
-            )
-        )
+            ))
         effect = Effects.Destroy(EffectTarget.TriggeringEntity)
         description = "Whenever this creature deals damage to a Vampire, destroy that creature."
     }

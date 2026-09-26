@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.RedirectZoneChangeWithEffect
+import com.wingedsheep.sdk.scripting.RedirectZoneChangeWith
 
 /**
  * Head of the Hunt — The Hobbit #75
@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.RedirectZoneChangeWithEffect
  * If a creature an opponent controls would die, exile it instead. When you do, create a 2/2 green
  * Wolf creature token.
  *
- * The whole clause is one replacement effect with a rider ([RedirectZoneChangeWithEffect], The
+ * The whole clause is one replacement effect with a rider ([RedirectZoneChangeWith], The
  * Darkness Crystal) rather than a redirect plus a separate trigger: "when you do" is reflexive on
  * the replacement, so the Wolf is minted once per creature actually redirected. A standalone dies
  * trigger would never fire — the redirect means those creatures never die at all, and neither do
@@ -42,7 +42,7 @@ val HeadOfTheHunt = card("Head of the Hunt") {
     keywords(Keyword.FLASH)
 
     replacementEffect(
-        RedirectZoneChangeWithEffect(
+        RedirectZoneChangeWith(
             newDestination = Zone.EXILE,
             additionalEffect = Effects.CreateToken(
                 power = 2,

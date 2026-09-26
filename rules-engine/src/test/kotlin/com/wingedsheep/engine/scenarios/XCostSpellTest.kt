@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.support.GameTestDriver
@@ -106,7 +107,7 @@ class XCostSpellTest : FunSpec({
         // Create a ManaSolver and check available mana count
         val registry = CardRegistry()
         registry.register(TestCards.all)
-        val manaSolver = ManaSolver(registry)
+        val manaSolver = ManaSolver(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         val count = manaSolver.getAvailableManaCount(driver.state, activePlayer)
         count shouldBe 5
@@ -132,7 +133,7 @@ class XCostSpellTest : FunSpec({
         // Create a ManaSolver and calculate max X for Hurricane ({X}{G})
         val registry = CardRegistry()
         registry.register(TestCards.all)
-        val manaSolver = ManaSolver(registry)
+        val manaSolver = ManaSolver(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         val availableSources = manaSolver.getAvailableManaCount(driver.state, activePlayer)
         val hurricaneCost = ManaCost.parse("{X}{G}")

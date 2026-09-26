@@ -2,13 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.msh.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ronin, Shadow Stalker — Marvel Super Heroes #112 (uncommon)
@@ -71,7 +71,7 @@ val RoninShadowStalker = card("Ronin, Shadow Stalker") {
             Costs.Tap,
             Costs.Sacrifice(GameObjectFilter.Artifact.withSubtype("Equipment").attachedToSource())
         )
-        val creature = target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(-4, -4, creature)
         timing = TimingRule.SorcerySpeed
         description = "{T}, Sacrifice an Equipment attached to Ronin: Target creature gets -4/-4 " +

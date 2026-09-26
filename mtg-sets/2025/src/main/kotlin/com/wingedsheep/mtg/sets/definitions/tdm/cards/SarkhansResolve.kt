@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sarkhan's Resolve — Tarkir: Dragonstorm #158
@@ -25,11 +25,11 @@ val SarkhansResolve = card("Sarkhan's Resolve") {
     spell {
         modal(chooseCount = 1) {
             mode("Target creature gets +3/+3 until end of turn") {
-                val t = target("target creature", Targets.Creature)
+                val t = target(TargetFilter.Creature)
                 effect = Effects.ModifyStats(3, 3, t)
             }
             mode("Destroy target creature with flying") {
-                val t = target("target creature with flying", Targets.CreatureWithKeyword(Keyword.FLYING))
+                val t = target(TargetFilter.Creature.withKeyword(Keyword.FLYING))
                 effect = Effects.Destroy(t)
             }
         }

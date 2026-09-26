@@ -5,9 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Traveling Minister
@@ -25,11 +23,8 @@ val TravelingMinister = card("Traveling Minister") {
     toughness = 1
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 0, t),
-            GainLifeEffect(1)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(1, 0, t) then Effects.GainLife(1)
         timing = TimingRule.SorcerySpeed
     }
     metadata {

@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
@@ -21,6 +20,8 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Magmatic Galleon (LCI #157) — {3}{R}{R} Artifact — Vehicle, 5/5, Crew 2.
@@ -30,8 +31,7 @@ import io.kotest.matchers.shouldBe
  *    create a Treasure token."
  *
  * VERIFY focus: the second ability is the Gap 12 excess-damage trigger primitive
- * (`Triggers.dealsDamage(damageType = NonCombat, recipient = CreatureOpponentControls,
- * requireExcess = true)`, ANY binding — same primitive Fall of Cair Andros composes) with
+ * (`Triggers.<subject>.dealsDamage(to, damageType, requireExcess, batch, requires)`, ANY binding — same primitive Fall of Cair Andros composes) with
  * `batch = true` for the "one or more creatures" wording, paired with
  * `Effects.CreateTreasure()`. Tests prove: (a) the Galleon's own ETB 5-damage strike that
  * exceeds lethal makes a Treasure, (b) the `requireExcess` gate suppresses the Treasure when the
@@ -66,7 +66,7 @@ class MagmaticGalleonScenarioTest : FunSpec({
         typeLine = "Sorcery"
         oracleText = "This deals 5 damage to target creature."
         spell {
-            val creature = target("target creature", Targets.Creature)
+            val creature = target(TargetFilter.Creature)
             effect = Effects.DealDamage(5, creature)
         }
     }
@@ -79,7 +79,7 @@ class MagmaticGalleonScenarioTest : FunSpec({
         spell {
             effect = Effects.ForEachInGroup(
                 GroupFilter(GameObjectFilter.Creature),
-                DealDamageEffect(5, EffectTarget.Self)
+                DealDamageEffect(5, EffectTarget.IterationEntity)
             )
         }
     }
@@ -117,7 +117,7 @@ class MagmaticGalleonScenarioTest : FunSpec({
         // Resolve the Galleon; its ETB trigger goes on the stack and asks for a target.
         var guard = 0
         while (driver.pendingDecision == null && guard++ < 20) driver.bothPass()
-        driver.submitTargetSelection(active, listOf(bear)).isSuccess shouldBe true
+        driver.submitTargetSelection(active, listOf(bear)).outcome shouldBe Outcome.Done
 
         // Resolve the ETB damage (kills the bear with 3 excess) and the resulting Treasure trigger.
         driver.drainStack()
@@ -140,7 +140,7 @@ class MagmaticGalleonScenarioTest : FunSpec({
 
         var guard = 0
         while (driver.pendingDecision == null && guard++ < 20) driver.bothPass()
-        driver.submitTargetSelection(active, listOf(wall)).isSuccess shouldBe true
+        driver.submitTargetSelection(active, listOf(wall)).outcome shouldBe Outcome.Done
         driver.drainStack()
 
         // 5 damage to a 5-toughness creature = exactly lethal, 0 excess → requireExcess gate blocks.

@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Surly Farrier {1}{G}
@@ -26,9 +26,8 @@ val SurlyFarrier = card("Surly Farrier") {
 
     activatedAbility {
         cost = Costs.Tap
-        val creature = target("target creature you control", Targets.CreatureYouControl)
-        effect = Effects.ModifyStats(1, 1, creature)
-            .then(Effects.GrantKeyword(Keyword.VIGILANCE, creature))
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.ModifyStats(1, 1, creature) then Effects.GrantKeyword(Keyword.VIGILANCE, creature)
         timing = TimingRule.SorcerySpeed
     }
 

@@ -1,25 +1,18 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Stillness in Motion — Tarkir: Dragonstorm #59
@@ -43,34 +36,19 @@ val StillnessInMotion = card("Stillness in Motion") {
         "library in any order."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Patterns.Library.mill(3).then(
-            ConditionalEffect(
-                condition = Compare(
-                    DynamicAmount.Count(Player.You, Zone.LIBRARY),
-                    ComparisonOperator.EQ,
-                    DynamicAmount.Fixed(0)
-                ),
-                effect = Effects.Composite(
-                    listOf(
-                        Effects.Exile(EffectTarget.Self),
-                        GatherCardsEffect(
-                            source = CardSource.FromZone(Zone.GRAVEYARD, Player.You),
-                            storeAs = "graveyardCards"
-                        ),
-                        SelectFromCollectionEffect(
-                            from = "graveyardCards",
-                            selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(5)),
-                            storeSelected = "toTop"
-                        ),
-                        MoveCollectionEffect(
-                            from = "toTop",
-                            destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Top),
-                            order = CardOrder.ControllerChooses
-                        )
-                    )
-                )
-            )
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Patterns.Library.mill(3) then Effects.If(
+            condition = Conditions.CompareAmounts(
+                DynamicAmounts.count(Player.You, Zone.LIBRARY),
+                ComparisonOperator.EQ,
+                0
+            ),
+            then = Effects.Pipeline {
+                run(Effects.Exile(EffectTarget.Self))
+                val graveyardCards = gather(CardSource.FromZone(Zone.GRAVEYARD, Player.You))
+                val toTop = chooseExactly(5, from = graveyardCards)
+                toLibraryTop(toTop)
+            }
         )
         description = "At the beginning of your upkeep, mill three cards. Then if your library has " +
             "no cards in it, exile this enchantment and put five cards from your graveyard on top of " +

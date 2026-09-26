@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 
 /**
  * Agency Coroner — Murders at Karlov Manor #75
@@ -25,7 +24,7 @@ import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
  * therefore reads the flag frozen onto the cost-time `EntitySnapshot`, the same mechanism
  * `SacrificedWasLegendary` (Nasty End) uses for supertypes.
  *
- * The branch is a [ConditionalEffect] over "draw two" / "draw one", never "draw one, then draw one
+ * The branch is a [Effects.If] over "draw two" / "draw one", never "draw one, then draw one
  * more if …". The printed word is *instead*: this is a single draw event of one size or the other,
  * which matters to anything watching draws.
  *
@@ -46,10 +45,10 @@ val AgencyCoroner = card("Agency Coroner") {
             Costs.Mana("{2}{B}"),
             Costs.SacrificeAnother(GameObjectFilter.Creature)
         )
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.SacrificedWasSuspected,
-            effect = Effects.DrawCards(2),
-            elseEffect = Effects.DrawCards(1)
+            then = Effects.DrawCards(2),
+            otherwise = Effects.DrawCards(1)
         )
         description = "Draw a card. If the sacrificed creature was suspected, draw two cards instead."
     }

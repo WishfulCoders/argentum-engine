@@ -7,7 +7,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Banishing Light:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -16,7 +16,7 @@
                     "type": "ExileUntilLeaves",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirement": {
@@ -24,11 +24,11 @@
                     "filter": {
                         "baseFilter": "nonland permanent ctrl:opponent"
                     },
-                    "id": "target"
+                    "id": "t0"
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Banishing Light:2",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield"
@@ -78,7 +78,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Dictate of Kruphix:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "DRAW",
@@ -208,7 +208,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Heroes' Bane:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -218,10 +218,10 @@
                 },
                 "effect": {
                     "type": "AddDynamicCounters",
-                    "counterType": "+1/+1",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
                     "amount": {
                         "type": "EntityProperty",
-                        "entity": "Source",
+                        "entity": "Self",
                         "numericProperty": "Power"
                     },
                     "target": "Self"
@@ -257,7 +257,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Lightning Diadem:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -270,12 +270,12 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "any target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirement": {
                     "type": "AnyTarget",
-                    "id": "any target"
+                    "id": "t0"
                 },
                 "descriptionOverride": "When this Aura enters, it deals 2 damage to any target."
             }
@@ -314,7 +314,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Mana Confluence:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -417,7 +417,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Sigiled Starfish:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "Scry",
@@ -447,7 +447,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Temple of Epiphany:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -460,7 +460,7 @@
         ],
         "activatedAbilities": [
             {
-                "id": "ability_2",
+                "id": "Temple of Epiphany:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -470,7 +470,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_3",
+                "id": "Temple of Epiphany:3",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -505,7 +505,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Temple of Malady:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -518,7 +518,7 @@
         ],
         "activatedAbilities": [
             {
-                "id": "ability_2",
+                "id": "Temple of Malady:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -528,7 +528,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_3",
+                "id": "Temple of Malady:3",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",

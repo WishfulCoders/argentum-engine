@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.CardsSelectedResponse
 import com.wingedsheep.engine.core.CombatResolutionDecision
 import com.wingedsheep.engine.core.SelectCardsDecision
@@ -12,7 +13,6 @@ import com.wingedsheep.engine.view.ClientStateTransformer
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
@@ -22,6 +22,7 @@ import com.wingedsheep.sdk.scripting.Duration
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Substrate tests for The Ring mechanic (CR 701.54): the "the Ring tempts you" effect, the
@@ -46,7 +47,7 @@ class TheRingScenarioTest : FunSpec({
         typeLine = "Enchantment"
         oracleText = "Whenever the Ring tempts you, you gain 2 life."
         triggeredAbility {
-            trigger = Triggers.RingTemptsYou
+            trigger = Triggers.you.isTemptedByTheRing()
             effect = Effects.GainLife(2)
         }
     }
@@ -65,7 +66,7 @@ class TheRingScenarioTest : FunSpec({
         typeLine = "Sorcery"
         oracleText = "Gain control of target creature until end of turn."
         spell {
-            val t = target("creature", Targets.Creature)
+            val t = target(TargetFilter.Creature)
             effect = Effects.GainControl(t, Duration.EndOfTurn)
         }
     }
@@ -113,7 +114,7 @@ class TheRingScenarioTest : FunSpec({
         val ogre = driver.putCreatureOnBattlefield(active, "Big Ogre")
         driver.tempt(active, bear)
 
-        val view = ClientStateTransformer(cardRegistry = driver.cardRegistry)
+        val view = ClientStateTransformer(cardRegistry = driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .transform(driver.state, viewingPlayerId = active)
         view.cards[bear]?.isRingBearer shouldBe true
         view.cards[ogre]?.isRingBearer shouldBe false

@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Elvish Mariner
@@ -31,19 +29,16 @@ val ElvishMariner = card("Elvish Mariner") {
         "number of cards looked at while scrying this way."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Library.scry(1)
     }
 
     triggeredAbility {
-        trigger = Triggers.WheneverYouScry
-        target(
-            "up to X target nonland permanents",
-            TargetPermanent(
-                optional = true,
-                filter = TargetFilter.NonlandPermanent,
-                dynamicMaxCount = DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_SCRY_COUNT)
-            )
+        trigger = Triggers.you.scries()
+        targets(
+            TargetFilter.NonlandPermanent,
+            optional = true,
+            dynamicMaxCount = DynamicAmounts.triggerScryCount(),
         )
         effect = Effects.TapEachTarget()
     }

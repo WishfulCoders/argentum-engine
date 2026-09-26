@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -12,19 +13,11 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayPayXForEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.events.Recipient
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * The Rise of Sozin // Fire Lord Sozin (TLA #117)
@@ -56,7 +49,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * The back face reuses [firebending] (the display keyword + attack-triggered "add {R}{R}{R} until end
  * of combat") and [Keyword.MENACE], plus a pay-{X} *targeted* reflexive reanimation. Because the
  * reanimation targets "any number of target creature cards with total mana value X or less"
- * (CR 115.1a / 601.2c), the targets are chosen after X is paid: [MayPayXForEffect] gates on paying X,
+ * (CR 115.1a / 601.2c), the targets are chosen after X is paid: [Effects.MayPayX] gates on paying X,
  * and its post-payment `then` is a [ReflexiveTriggerEffect] whose [TargetObject] is `unlimited` (any
  * number) with the new [TargetObject.totalManaValueAtMost]` = DynamicAmount.XValue` aggregate cap —
  * resolved against the X in scope, and scoped to the damaged player's graveyard via the new
@@ -85,16 +78,16 @@ private val FireLordSozin = card("Fire Lord Sozin") {
     //
     // The reflexive ability is *targeted* (CR 115.1a / 601.2c): once you pay {X}, you announce which
     // creature cards you're reanimating, subject to their combined mana value not exceeding X. We
-    // model this by nesting the target selection inside [MayPayXForEffect]'s post-payment `then`, so
+    // model this by nesting the target selection inside [Effects.MayPayX]'s post-payment `then`, so
     // the `X` just paid is in scope when the reflexive [TargetObject.totalManaValueAtMost] cap
     // resolves. The [ReflexiveTriggerEffect] wrapper is borrowed only for its mid-resolution target
     // selection — its `action` is an empty composite because the "when you do" is already the pay-{X}
     // gate. `ownedByTriggeringPlayer()` scopes the graveyard to the player Sozin just damaged.
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = MayPayXForEffect(
-            effect = ReflexiveTriggerEffect(
-                action = Effects.Composite(emptyList()),
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.MayPayX(
+            then = Effects.ReflexiveTrigger(
+                action = Effects.Nothing,
                 optional = false,
                 reflexiveTargetRequirements = listOf(
                     TargetObject(
@@ -103,18 +96,15 @@ private val FireLordSozin = card("Fire Lord Sozin") {
                             GameObjectFilter.Creature.ownedByTriggeringPlayer(),
                             zone = Zone.GRAVEYARD
                         ),
-                        totalManaValueAtMost = DynamicAmount.XValue
+                        totalManaValueAtMost = DynamicAmounts.xValue()
                     )
                 ),
                 // Put the chosen cards onto the battlefield under your control (owner stays the
                 // damaged player).
-                reflexiveEffect = Effects.Composite(
-                    GatherCardsEffect(source = CardSource.ChosenTargets, storeAs = "sozinReanimated"),
-                    MoveCollectionEffect(
-                        from = "sozinReanimated",
-                        destination = CardDestination.ToZone(Zone.BATTLEFIELD, Player.You)
-                    )
-                ),
+                reflexiveEffect = Effects.Pipeline {
+                    val sozinReanimated = gather(CardSource.ChosenTargets)
+                    move(sozinReanimated, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You))
+                },
                 descriptionOverride = "put any number of target creature cards with total mana " +
                     "value X or less from that player's graveyard onto the battlefield under your control"
             )
@@ -147,40 +137,31 @@ private val TheRiseOfSozinFront = card("The Rise of Sozin") {
     // II — Choose a card name. Search target opponent's graveyard, hand, and library for up to four
     // cards with that name and exile them. Then that player shuffles.
     sagaChapter(2) {
-        target("target opponent", TargetOpponent())
-        effect = Effects.Composite(
-            listOf(
-                // Choose a card name.
-                Effects.ChooseCardName(
-                    storeAs = "sozinChosenName",
-                    prompt = "Choose a card name"
+        val opponent = target(Targets.Opponent)
+        effect = Effects.Pipeline {
+            // Choose a card name.
+            val sozinChosenName = chooseCardName(prompt = "Choose a card name")
+            // Search the target opponent's graveyard, hand, and library for cards with that name.
+            val sozinMatches = gather(
+                CardSource.FromMultipleZones(
+                    zones = listOf(Zone.GRAVEYARD, Zone.HAND, Zone.LIBRARY),
+                    player = opponent.asPlayer,
+                    filter = GameObjectFilter.Any.namedFromVariable(sozinChosenName)
                 ),
-                // Search the target opponent's graveyard, hand, and library for cards with that name.
-                GatherCardsEffect(
-                    source = CardSource.FromMultipleZones(
-                        zones = listOf(Zone.GRAVEYARD, Zone.HAND, Zone.LIBRARY),
-                        player = Player.ContextPlayer(0),
-                        filter = GameObjectFilter.Any.namedFromVariable("sozinChosenName")
-                    ),
-                    storeAs = "sozinMatches"
-                ),
-                // Up to four of them.
-                SelectFromCollectionEffect(
-                    from = "sozinMatches",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(4)),
-                    storeSelected = "sozinToExile",
-                    prompt = "Choose up to four cards to exile",
-                    selectedLabel = "Exile"
-                ),
-                // Exile them.
-                MoveCollectionEffect(
-                    from = "sozinToExile",
-                    destination = CardDestination.ToZone(Zone.EXILE, Player.ContextPlayer(0))
-                ),
-                // Then that player shuffles.
-                ShuffleLibraryEffect(target = EffectTarget.ContextTarget(0))
+                search = true
             )
-        )
+            // Up to four of them.
+            val sozinToExile = chooseUpTo(
+                4,
+                from = sozinMatches,
+                prompt = "Choose up to four cards to exile",
+                selectedLabel = "Exile"
+            )
+            // Exile them.
+            exile(sozinToExile, opponent.asPlayer)
+            // Then that player shuffles.
+            run(Effects.ShuffleLibrary(target = opponent))
+        }
     }
 
     // III — Exile this Saga, then return it to the battlefield transformed under your control.

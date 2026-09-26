@@ -2,7 +2,6 @@ package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.bargain
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -10,6 +9,7 @@ import com.wingedsheep.sdk.scripting.CostGating
 import com.wingedsheep.sdk.scripting.CostModification
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Johann's Stopgap
@@ -50,11 +50,8 @@ val JohannsStopgap = card("Johann's Stopgap") {
     }
 
     spell {
-        val permanent = target("target nonland permanent", Targets.NonlandPermanent)
-        effect = Effects.Composite(
-            Effects.ReturnToHand(permanent),
-            Effects.DrawCards(1),
-        )
+        val permanent = target(TargetFilter.NonlandPermanent)
+        effect = Effects.ReturnToHand(permanent) then Effects.DrawCards(1)
     }
 
     metadata {

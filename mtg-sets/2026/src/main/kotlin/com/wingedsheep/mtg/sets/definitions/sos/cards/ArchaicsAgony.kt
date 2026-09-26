@@ -1,19 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Archaic's Agony
@@ -28,7 +24,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * ([com.wingedsheep.sdk.dsl.DynamicAmounts.colorsOfManaSpent]). Composed from existing atoms:
  *  1. [Effects.DealDamage] deals that color-count to the target and marks the damage.
  *  2. The exile count reads the post-damage excess via
- *     `EntityProperty(Target(0), ExcessMarkedDamage)` — `max(0, marked − toughness)` (CR 120.4a),
+ *     `EntityProperty(ContextTarget(0), ExcessMarkedDamage)` — `max(0, marked − toughness)` (CR 120.4a),
  *     the same amount Hell to Pay reads. CompositeEffect resolves steps sequentially with no
  *     interleaved SBA pass, so the marked damage in scope is exactly what this spell just dealt.
  *  3. Gather that many cards off the top of your library → move them to exile → grant
@@ -47,25 +43,18 @@ val ArchaicsAgony = card("Archaic's Agony") {
         "cards until the end of your next turn."
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.DealDamage(DynamicAmount.DistinctColorsManaSpent, creature),
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(
-                    count = DynamicAmount.EntityProperty(
-                        EntityReference.Target(0),
-                        EntityNumericProperty.ExcessMarkedDamage,
-                    ),
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.Pipeline {
+            run(Effects.DealDamage(DynamicAmounts.colorsOfManaSpent(), creature))
+            val exiledByAgony = gather(
+                CardSource.TopOfLibrary(
+                    count = DynamicAmounts.propertyOf(creature, EntityNumericProperty.ExcessMarkedDamage),
                     player = Player.You,
-                ),
-                storeAs = "exiledByAgony",
-            ),
-            MoveCollectionEffect(
-                from = "exiledByAgony",
-                destination = CardDestination.ToZone(com.wingedsheep.sdk.core.Zone.EXILE),
-            ),
-            GrantMayPlayFromExileEffect("exiledByAgony", MayPlayExpiry.UntilEndOfNextTurn),
-        )
+                )
+            )
+            move(exiledByAgony, CardDestination.ToZone(com.wingedsheep.sdk.core.Zone.EXILE))
+            run(Effects.GrantMayPlayFromExile(exiledByAgony, MayPlayExpiry.UntilEndOfNextTurn))
+        }
     }
 
     metadata {

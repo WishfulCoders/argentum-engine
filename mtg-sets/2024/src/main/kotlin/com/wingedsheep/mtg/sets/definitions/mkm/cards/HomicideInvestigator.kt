@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  *
  * - **"one or more … die"** is a *batched* death trigger, not a per-creature one. A board wipe that
  *   kills four of your creatures fires this once (CR 603.3b). Using the per-creature
- *   [Triggers.YourCreatureDies] would fire four times and over-produce Clues even before the
+ *   `Triggers.a(GameObjectFilter.Creature.youControl()).dies()` would fire four times and over-produce Clues even before the
  *   once-per-turn cap kicked in.
  * - **"nontoken"** filters the batch, not the trigger's aftermath: a batch containing only tokens
  *   never fires at all, while a mixed batch fires once. `GameObjectFilter.Creature.nontoken()`
@@ -40,7 +40,7 @@ val HomicideInvestigator = card("Homicide Investigator") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.OneOrMoreCreaturesYouControlDie(GameObjectFilter.Creature.nontoken())
+        trigger = Triggers.oneOrMore(GameObjectFilter.Creature.nontoken()).die()
         oncePerTurn = true
         effect = Effects.Investigate()
         description = "Whenever one or more nontoken creatures you control die, investigate. " +

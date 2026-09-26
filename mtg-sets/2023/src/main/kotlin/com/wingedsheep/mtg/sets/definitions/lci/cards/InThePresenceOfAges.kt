@@ -1,18 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * In the Presence of Ages
@@ -45,49 +37,29 @@ val InThePresenceOfAges = card("In the Presence of Ages") {
         "land card from among them into your hand. Put the rest into your graveyard."
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(4)),
-                    storeAs = "top4"
-                ),
-                RevealCollectionEffect(from = "top4"),
-                // Step 1 of 2: optionally take one creature card.
-                SelectFromCollectionEffect(
-                    from = "top4",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    filter = GameObjectFilter.Creature,
-                    storeSelected = "chosenCreature",
-                    storeRemainder = "afterCreature",
-                    prompt = "You may put a creature card into your hand",
-                    showAllCards = true
-                ),
-                // Step 2 of 2: optionally take one land card from whatever is left.
-                SelectFromCollectionEffect(
-                    from = "afterCreature",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    filter = GameObjectFilter.Land,
-                    storeSelected = "chosenLand",
-                    storeRemainder = "rest",
-                    prompt = "You may put a land card into your hand",
-                    showAllCards = true
-                ),
-                MoveCollectionEffect(
-                    from = "chosenCreature",
-                    destination = CardDestination.ToZone(Zone.HAND),
-                    revealed = true
-                ),
-                MoveCollectionEffect(
-                    from = "chosenLand",
-                    destination = CardDestination.ToZone(Zone.HAND),
-                    revealed = true
-                ),
-                MoveCollectionEffect(
-                    from = "rest",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD)
-                )
+        effect = Effects.Pipeline {
+            val top4 = gather(CardSource.TopOfLibrary(4))
+            reveal(top4)
+            // Step 1 of 2: optionally take one creature card.
+            val (chosenCreature, afterCreature) = chooseUpToSplit(
+                1,
+                from = top4,
+                filter = GameObjectFilter.Creature,
+                prompt = "You may put a creature card into your hand",
+                showAllCards = true
             )
-        )
+            // Step 2 of 2: optionally take one land card from whatever is left.
+            val (chosenLand, rest) = chooseUpToSplit(
+                1,
+                from = afterCreature,
+                filter = GameObjectFilter.Land,
+                prompt = "You may put a land card into your hand",
+                showAllCards = true
+            )
+            toHand(chosenCreature, revealed = true)
+            toHand(chosenLand, revealed = true)
+            toGraveyard(rest)
+        }
     }
 
     metadata {

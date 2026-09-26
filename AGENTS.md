@@ -66,6 +66,7 @@ docs it points at; load those when the work needs them.
 | Module | Purpose | Deps |
 |--------|---------|------|
 | `mtg-sdk` | DSLs, data models, primitives — pure data, no logic | — |
+| `mtg-sdk-tooling` | Tooling over SDK data: card-JSON load/export + compact form, filter query language, `CardValidator`, `CardLinter` | sdk |
 | `mtg-sets` | Aggregator — re-exports the whole card corpus; catalog, Scryfall sync, corpus-wide tests | sdk, sets/* |
 | `mtg-sets/core` | `CardDiscovery`, token art, the setless `custom/` cards | sdk |
 | `mtg-sets/<era>` | Card definitions, one module per fixed release-year range, chained oldest→newest | sdk, sets/core |
@@ -119,7 +120,7 @@ These are the ones that have actually caused bugs here.
 - **Events, not silent mutations** — every state change emits a `GameEvent` so triggers and animations
   can react.
 - **Server is authoritative** — never compute legal actions in the client; the server sends them.
-- **Last-known information** — dies/leaves triggers read `triggerLastKnownPower`,
+- **Last-known information** — dies/leaves triggers read `triggerContext.lastKnownPower`,
   `lastKnownCardDefinitionId`, and `lastKnownCounters` off the `ZoneChangeEvent`; the entity is already
   gone when the trigger resolves.
 

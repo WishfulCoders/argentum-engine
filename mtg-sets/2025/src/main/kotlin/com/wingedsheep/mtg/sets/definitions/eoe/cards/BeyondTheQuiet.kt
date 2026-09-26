@@ -32,7 +32,7 @@ val BeyondTheQuiet = card("Beyond the Quiet") {
 
         effect = Effects.ForEachInGroup(
             filter = GroupFilter(creatureOrSpacecraft),
-            effect = Effects.Move(EffectTarget.Self, Zone.EXILE)
+            effect = Effects.Move(EffectTarget.IterationEntity, Zone.EXILE)
         )
     }
 

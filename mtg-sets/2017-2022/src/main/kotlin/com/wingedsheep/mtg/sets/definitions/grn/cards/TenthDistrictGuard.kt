@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.grn.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Tenth District Guard
@@ -22,8 +22,8 @@ val TenthDistrictGuard = card("Tenth District Guard") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("target", Targets.Creature)
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(0, 1, creature)
     }
 

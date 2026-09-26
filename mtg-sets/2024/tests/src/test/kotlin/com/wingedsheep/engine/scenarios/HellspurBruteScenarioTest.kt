@@ -26,7 +26,7 @@ class HellspurBruteScenarioTest : ScenarioTestBase() {
                     .withCardInHand(1, "Hellspur Brute")
                     .build()
 
-                val calculator = CostCalculator(cardRegistry)
+                val calculator = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator)
                 val cost = calculator.calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Hellspur Brute"),
@@ -48,7 +48,7 @@ class HellspurBruteScenarioTest : ScenarioTestBase() {
                     .withCardOnBattlefield(1, "Outlaw Medic")
                     .build()
 
-                val calculator = CostCalculator(cardRegistry)
+                val calculator = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator)
                 val cost = calculator.calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Hellspur Brute"),
@@ -67,7 +67,7 @@ class HellspurBruteScenarioTest : ScenarioTestBase() {
                     .withCardOnBattlefield(2, "Reckless Lackey") // opponent's outlaw — must NOT count
                     .build()
 
-                val calculator = CostCalculator(cardRegistry)
+                val calculator = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator)
                 val cost = calculator.calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Hellspur Brute"),

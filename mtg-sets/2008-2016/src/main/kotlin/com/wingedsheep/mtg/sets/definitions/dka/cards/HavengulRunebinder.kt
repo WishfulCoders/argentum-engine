@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.dka.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
@@ -39,24 +39,22 @@ val HavengulRunebinder = card("Havengul Runebinder") {
                 Costs.ExileFromGraveyard(count = 1, filter = GameObjectFilter.Creature),
             ),
         )
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                power = 2,
-                toughness = 2,
-                colors = setOf(Color.BLACK),
-                creatureTypes = setOf("Zombie"),
-            ),
+        effect = Effects.CreateToken(
+            power = 2,
+            toughness = 2,
+            colors = setOf(Color.BLACK),
+            creatureTypes = setOf("Zombie"),
+        ) then
             Effects.ForEachInGroup(
                 filter = GroupFilter(
                     GameObjectFilter.Creature.withSubtype(Subtype.ZOMBIE).youControl(),
                 ),
                 effect = Effects.AddCounters(
-                    Counters.PLUS_ONE_PLUS_ONE,
+                    CounterType.PLUS_ONE_PLUS_ONE,
                     1,
-                    EffectTarget.Self,
+                    EffectTarget.IterationEntity,
                 ),
-            ),
-        )
+            )
     }
 
     metadata {

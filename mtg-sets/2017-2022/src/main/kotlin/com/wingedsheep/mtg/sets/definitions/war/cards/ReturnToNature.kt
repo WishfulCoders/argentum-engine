@@ -1,13 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.war.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.withId
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Return to Nature
@@ -19,9 +17,8 @@ import com.wingedsheep.sdk.scripting.targets.withId
  * • Destroy target enchantment.
  * • Exile target card from a graveyard.
  *
- * Three modes, each with its own single target. Every mode binds its requirement under the same
- * name, so each mode's effect reads its own chosen object; the modes are deliberately left without
- * hand-written descriptions so each one's text derives from its effect.
+ * Three modes, each with its own single target; a mode's targets belong to the mode, so each
+ * mode's effect reads its own chosen object.
  */
 val ReturnToNature = card("Return to Nature") {
     manaCost = "{1}{G}"
@@ -33,20 +30,16 @@ val ReturnToNature = card("Return to Nature") {
         "• Exile target card from a graveyard."
 
     spell {
-        val chosen = EffectTarget.BoundVariable("target")
         effect = ModalEffect.chooseOne(
-            Mode.withTarget(
-                effect = Effects.Destroy(chosen),
-                target = Targets.Artifact.withId("target")
-            ),
-            Mode.withTarget(
-                effect = Effects.Destroy(chosen),
-                target = Targets.Enchantment.withId("target")
-            ),
-            Mode.withTarget(
-                effect = Effects.Exile(chosen),
-                target = Targets.CardInGraveyard.withId("target")
-            )
+            mode("Destroy target artifact.") {
+                effect = Effects.Destroy(target(TargetFilter.Artifact))
+            },
+            mode("Destroy target enchantment.") {
+                effect = Effects.Destroy(target(TargetFilter.Enchantment))
+            },
+            mode("Exile target card from a graveyard.") {
+                effect = Effects.Exile(target(TargetFilter.CardInGraveyard))
+            },
         )
     }
 

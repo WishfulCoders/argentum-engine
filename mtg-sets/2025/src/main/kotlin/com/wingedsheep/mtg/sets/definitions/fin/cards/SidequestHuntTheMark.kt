@@ -3,21 +3,18 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.values.TurnTracker
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Sidequest: Hunt the Mark // Yiazmat, Ultimate Mark — Final Fantasy #119
@@ -35,7 +32,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *
  * The end-step trigger's intervening-"if" reads the opponents' creatures-died-this-turn
  * tracker ([DynamicAmount.TurnTracking] over [Player.EachOpponent] sums across opponents);
- * the "Then if" Treasure-count check is a resolution-time [ConditionalEffect], evaluated
+ * the "Then if" Treasure-count check is a resolution-time [Effects.If], evaluated
  * after the Treasure is created.
  */
 private val YiazmatUltimateMark = card("Yiazmat, Ultimate Mark") {
@@ -54,10 +51,8 @@ private val YiazmatUltimateMark = card("Yiazmat, Ultimate Mark") {
             Costs.Mana("{1}{B}"),
             Costs.SacrificeAnother(GameObjectFilter.Creature or GameObjectFilter.Artifact),
         )
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self),
-            Effects.Tap(EffectTarget.Self),
-        )
+        effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self) then
+            Effects.Tap(EffectTarget.Self)
     }
 
     metadata {
@@ -82,11 +77,8 @@ private val SidequestHuntTheMarkFront = card("Sidequest: Hunt the Mark") {
 
     // When this enchantment enters, destroy up to one target creature.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "creature",
-            TargetObject(optional = true, filter = TargetFilter.Creature),
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature, optional = true)
         effect = Effects.Destroy(t)
     }
 
@@ -94,19 +86,17 @@ private val SidequestHuntTheMarkFront = card("Sidequest: Hunt the Mark") {
     // turn, create a Treasure token. Then if you control three or more Treasures, transform
     // this enchantment.
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.CompareAmounts(
-            DynamicAmount.TurnTracking(Player.EachOpponent, TurnTracker.CREATURES_DIED),
+            DynamicAmounts.creaturesDiedThisTurn(Player.EachOpponent),
             ComparisonOperator.GTE,
-            DynamicAmount.Fixed(1),
+            1,
         )
-        effect = Effects.Composite(
-            Effects.CreateTreasure(1),
-            ConditionalEffect(
+        effect = Effects.CreateTreasure(1) then
+            Effects.If(
                 condition = Conditions.YouControlAtLeast(3, GameObjectFilter.Artifact.withSubtype("Treasure")),
-                effect = TransformEffect(EffectTarget.Self),
-            ),
-        )
+                then = Effects.Transform(EffectTarget.Self),
+            )
     }
 
     metadata {

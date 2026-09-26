@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Villainous Hideout
@@ -57,10 +56,7 @@ val VillainousHideout = card("Villainous Hideout") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap)
-        val villain = target(
-            "target Villain you control",
-            TargetPermanent(filter = TargetFilter.PermanentYouControl.withSubtype(Subtype.VILLAIN))
-        )
+        val villain = target(TargetFilter.PermanentYouControl.withSubtype(Subtype.VILLAIN))
         effect = Effects.Connive(target = villain)
         timing = TimingRule.SorcerySpeed
         description = "{3}, {T}: Target Villain you control connives. Activate only as a sorcery."

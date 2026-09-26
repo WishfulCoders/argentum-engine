@@ -1,12 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Rabid Gnaw
@@ -23,18 +21,14 @@ val RabidGnaw = card("Rabid Gnaw") {
     oracleText = "Target creature you control gets +1/+0 until end of turn. Then it deals damage equal to its power to target creature you don't control."
 
     spell {
-        val myCreature = target("creature you control", Targets.CreatureYouControl)
-        val theirCreature = target("creature you don't control", Targets.CreatureOpponentControls)
-        effect = Effects.Composite(
-            listOf(
-                Effects.ModifyStats(1, 0, myCreature),
-                Effects.DealDamage(
-                    amount = DynamicAmount.EntityProperty(EntityReference.Target(0), EntityNumericProperty.Power),
-                    target = theirCreature,
-                    damageSource = myCreature
-                )
+        val myCreature = target(TargetFilter.CreatureYouControl)
+        val theirCreature = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.ModifyStats(1, 0, myCreature) then
+            Effects.DealDamage(
+                amount = DynamicAmounts.powerOf(myCreature),
+                target = theirCreature,
+                damageSource = myCreature
             )
-        )
     }
 
     metadata {

@@ -18,7 +18,6 @@ import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
@@ -60,10 +59,7 @@ class CamelScenarioTest : FunSpec({
         colorIdentity = ""
         activatedAbility {
             cost = Costs.Tap
-            val creature = target(
-                "target attacking creature",
-                TargetObject(filter = TargetFilter(GameObjectFilter.Creature.attacking())),
-            )
+            val creature = target(TargetFilter(GameObjectFilter.Creature.attacking()))
             effect = Effects.DealDamage(1, creature)
         }
     }

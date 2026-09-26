@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.exploit
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Fell Stinger
@@ -36,13 +35,10 @@ val FellStinger = card("Fell Stinger") {
 
     keywords(Keyword.DEATHTOUCH)
 
-    exploit(
-        onExploit = Effects.Composite(
-            Effects.DrawCards(2, EffectTarget.ContextTarget(0)),
-            Effects.LoseLife(2, EffectTarget.ContextTarget(0))
-        ),
-        onExploitTargets = listOf(Targets.Player)
-    )
+    exploit {
+        val player = target(Targets.Player)
+        effect = Effects.DrawCards(2, player) then Effects.LoseLife(2, player)
+    }
 
     metadata {
         rarity = Rarity.UNCOMMON

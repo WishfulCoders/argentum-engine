@@ -33,7 +33,7 @@ val LeechCollector = card("Leech Collector") {
 
     // Whenever you gain life for the first time each turn, this creature becomes prepared.
     triggeredAbility {
-        trigger = Triggers.YouGainLifeFirstTimeEachTurn
+        trigger = Triggers.you.gainsLife(true)
         effect = Effects.BecomePrepared(EffectTarget.Self)
     }
 

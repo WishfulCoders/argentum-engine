@@ -40,10 +40,7 @@ val WildsearScouringMaw = card("Wildsear, Scouring Maw") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.Enchantment,
-            requires = setOf(SpellCastPredicate.CastFromZone(Zone.HAND)),
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.Enchantment, requires = setOf(SpellCastPredicate.CastFromZone(Zone.HAND)))
         effect = Effects.Cascade
     }
 

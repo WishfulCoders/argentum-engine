@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever one or more creatures attack you, those creatures get -1/-0 until end of turn.
  * Exhaust — {5}{U}{U}: Put three +1/+1 counters on this creature.
  *
- * [Triggers.CreaturesAttackYou] already applies the CR 509.1b scoping the trigger needs: it only
+ * `Triggers.you.isAttacked()` already applies the CR 509.1b scoping the trigger needs: it only
  * fires for attackers declared against the controller themself, not against a planeswalker they
  * control. "Those creatures" is then resolved the way the rest of the codebase models "creatures
  * attacking you" (Blessed Reversal, `DynamicAmounts.creaturesAttackingYou`) — attacking creatures
@@ -44,10 +44,10 @@ val SabotageStrategist = card("Sabotage Strategist") {
     keywords(Keyword.FLYING, Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.CreaturesAttackYou
+        trigger = Triggers.you.isAttacked()
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.attacking().opponentControls()),
-            Effects.ModifyStats(-1, 0, EffectTarget.Self)
+            Effects.ModifyStats(-1, 0, EffectTarget.IterationEntity)
         )
         description = "Whenever one or more creatures attack you, those creatures get -1/-0 until " +
             "end of turn."
@@ -56,7 +56,7 @@ val SabotageStrategist = card("Sabotage Strategist") {
     activatedAbility {
         cost = Costs.Mana("{5}{U}{U}")
         isExhaust = true
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 3, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 3, EffectTarget.Self)
     }
 
     metadata {

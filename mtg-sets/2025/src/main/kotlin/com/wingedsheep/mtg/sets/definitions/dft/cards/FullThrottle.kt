@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
@@ -30,24 +28,22 @@ val FullThrottle = card("Full Throttle") {
         "At the beginning of each combat this turn, untap all creatures that attacked this turn."
 
     spell {
-        effect = Effects.Composite(
-            ConditionalEffect(
-                condition = Conditions.IsInPhase(
-                    Phase.PRECOMBAT_MAIN,
-                    Phase.POSTCOMBAT_MAIN,
-                    yoursOnly = false,
-                ),
-                effect = Effects.Composite(Effects.AddCombatPhase, Effects.AddCombatPhase),
+        effect = Effects.If(
+            condition = Conditions.IsInPhase(
+                Phase.PRECOMBAT_MAIN,
+                Phase.POSTCOMBAT_MAIN,
+                yoursOnly = false,
             ),
-            CreateDelayedTriggerEffect(
+            then = Effects.AddCombatPhase then Effects.AddCombatPhase,
+        ) then
+            Effects.CreateDelayedTrigger(
                 step = Step.BEGIN_COMBAT,
                 effect = Patterns.Group.untapGroup(
                     GroupFilter(GameObjectFilter.Creature.attackedThisTurn())
                 ),
                 repeatAtEachMatchingStep = true,
                 expiry = DelayedTriggerExpiry.EndOfTurn,
-            ),
-        )
+            )
     }
 
     metadata {

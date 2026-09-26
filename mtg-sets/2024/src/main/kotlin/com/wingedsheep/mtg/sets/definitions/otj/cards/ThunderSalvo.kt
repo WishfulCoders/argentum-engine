@@ -1,11 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Thunder Salvo {1}{R}
@@ -27,12 +28,9 @@ val ThunderSalvo = card("Thunder Salvo") {
         "the number of other spells you've cast this turn."
 
     spell {
-        val creature = target("creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.DealDamage(
-            amount = DynamicAmount.Add(
-                left = DynamicAmount.Fixed(2),
-                right = DynamicAmount.SpellsCastThisTurn(Player.You, excludeSelf = true)
-            ),
+            amount = 2 + DynamicAmounts.spellsCastThisTurn(Player.You, excludeSelf = true),
             target = creature
         )
     }

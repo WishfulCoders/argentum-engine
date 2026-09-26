@@ -5,8 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.madness
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Murderous Compulsion (Shadows over Innistrad #126)
@@ -31,8 +29,8 @@ val MurderousCompulsion = card("Murderous Compulsion") {
         "for its madness cost or put it into your graveyard.)"
 
     spell {
-        target = TargetCreature(filter = TargetFilter.TappedCreature)
-        effect = Effects.Destroy(EffectTarget.ContextTarget(0))
+        val creature = target(TargetFilter.TappedCreature)
+        effect = Effects.Destroy(creature)
     }
 
     madness("{1}{B}")

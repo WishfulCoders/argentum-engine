@@ -35,12 +35,12 @@ class CounterTypeClientMirrorTest : DescribeSpec({
         }
 
         it("declares every engine counter type") {
-            val engineTypes = CounterType.entries.map { it.name }
+            val engineTypes = CounterType.KNOWN.map { it.name }
             engineTypes.filterNot { it in clientTypes }.shouldBeEmpty()
         }
 
         it("declares no counter type the engine does not have") {
-            val engineTypes = CounterType.entries.map { it.name }.toSet()
+            val engineTypes = CounterType.KNOWN.map { it.name }.toSet()
             clientTypes.filterNot { it in engineTypes }.shouldBeEmpty()
         }
 

@@ -4,10 +4,9 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Appeal to Eirdu
@@ -28,9 +27,9 @@ val AppealToEirdu = card("Appeal to Eirdu") {
     keywords(Keyword.CONVOKE)
 
     spell {
-        target = TargetCreature(count = 2, minCount = 1, filter = TargetFilter.Creature)
-        effect = ForEachTargetEffect(
-            listOf(Effects.ModifyStats(2, 1, EffectTarget.ContextTarget(0)))
+        target = TargetObject(filter = TargetFilter.Creature, count = 2, minCount = 1)
+        effect = Effects.ForEachTarget(
+            Effects.ModifyStats(2, 1, EffectTarget.ContextTarget(0))
         )
     }
 

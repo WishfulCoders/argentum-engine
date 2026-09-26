@@ -27,7 +27,7 @@ val AngelOfRenewal = card("Angel of Renewal") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(DynamicAmounts.creaturesYouControl())
     }
 

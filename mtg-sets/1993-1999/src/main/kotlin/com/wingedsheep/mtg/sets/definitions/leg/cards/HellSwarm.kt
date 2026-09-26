@@ -22,7 +22,7 @@ val HellSwarm = card("Hell Swarm") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreatures,
-            Effects.ModifyStats(-1, 0, EffectTarget.Self),
+            Effects.ModifyStats(-1, 0, EffectTarget.IterationEntity),
         )
     }
 

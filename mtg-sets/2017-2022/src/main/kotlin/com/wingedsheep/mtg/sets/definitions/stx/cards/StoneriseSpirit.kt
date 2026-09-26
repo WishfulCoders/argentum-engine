@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Stonerise Spirit — Strixhaven: School of Mages #32 (canonical printing)
@@ -33,7 +34,7 @@ val StoneriseSpirit = card("Stonerise Spirit") {
     // {4}, Exile a card from your graveyard: Target creature gains flying until end of turn.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{4}"), Costs.ExileFromGraveyard(1))
-        val creature = target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(Keyword.FLYING, creature)
     }
 

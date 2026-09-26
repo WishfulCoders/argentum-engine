@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardOrder
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Adventurous Impulse
@@ -23,7 +22,7 @@ val AdventurousImpulse = card("Adventurous Impulse") {
 
     spell {
         effect = Patterns.Library.lookAtTopRevealMatchingToHand(
-            count = DynamicAmount.Fixed(3),
+            count = 3,
             filter = GameObjectFilter.Creature or GameObjectFilter.Land,
             prompt = "You may reveal a creature or land card and put it into your hand",
             restOrder = CardOrder.ControllerChooses

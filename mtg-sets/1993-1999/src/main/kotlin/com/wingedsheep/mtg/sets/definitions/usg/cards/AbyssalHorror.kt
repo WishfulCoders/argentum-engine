@@ -9,7 +9,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -29,8 +29,8 @@ val AbyssalHorror = card("Abyssal Horror") {
     toughness = 2
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetPlayer())
+        trigger = Triggers.self.enters()
+        val t = target(Targets.Player)
         effect = Patterns.Hand.discardCards(2, t)
     }
     metadata {

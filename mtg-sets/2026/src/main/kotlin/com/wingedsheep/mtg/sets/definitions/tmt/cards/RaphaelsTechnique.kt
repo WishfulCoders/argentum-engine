@@ -5,8 +5,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.sneak
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -22,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * A per-player optional wheel, in APNAP order: [ForEachPlayerEffect] over [Player.Each] iterates
  * every player and rebinds the body's controller to the current player, so `Patterns.Hand.discardHand`
  * (of `EffectTarget.Controller`) and [Effects.DrawCards] act on them. Each player's body is wrapped
- * in [MayEffect] with `decisionMaker = Controller`, so every player independently chooses yes/no;
+ * in [Effects.May] with `decisionMaker = Controller`, so every player independently chooses yes/no;
  * declining means no discard and no draw, honoring "may … and …" as one combined optional action.
  * Same shape as Step Between Worlds.
  */
@@ -35,16 +33,11 @@ val RaphaelsTechnique = card("Raphael's Technique") {
     sneak("{2}{R}")
 
     spell {
-        effect = ForEachPlayerEffect(
+        effect = Effects.ForEachPlayer(
             players = Player.Each,
-            effects = listOf(
-                MayEffect(
-                    decisionMaker = EffectTarget.Controller,
-                    effect = Effects.Composite(
-                        Patterns.Hand.discardHand(EffectTarget.Controller),
-                        Effects.DrawCards(7)
-                    )
-                )
+            effect = Effects.May(
+                decisionMaker = EffectTarget.Controller,
+                effect = Patterns.Hand.discardHand(EffectTarget.Controller) then Effects.DrawCards(7)
             )
         )
     }

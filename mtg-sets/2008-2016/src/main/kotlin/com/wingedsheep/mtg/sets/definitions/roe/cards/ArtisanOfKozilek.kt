@@ -7,11 +7,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Artisan of Kozilek
@@ -24,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  * Annihilator 2
  *
  * Modeling notes:
- *  - The reanimation is a **cast trigger** ([Triggers.WhenYouCastThisSpell]), not an enters
+ *  - The reanimation is a **cast trigger** (`Triggers.self.isCast()`), not an enters
  *    trigger — it resolves before Artisan itself, and it still resolves if Artisan is countered.
  *  - Annihilator is a display-only [KeywordAbility.Numeric] in the SDK, so the behaviour is
  *    lowered here as the triggered ability the keyword abbreviates: on attack, the defending
@@ -46,19 +44,16 @@ val ArtisanOfKozilek = card("Artisan of Kozilek") {
     keywordAbility(KeywordAbility.annihilator(2))
 
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
-        val creatureCard = target(
-            "target creature card from your graveyard",
-            TargetObject(filter = TargetFilter.CreatureInYourGraveyard)
-        )
-        effect = MayEffect(Effects.Move(creatureCard, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD))
+        trigger = Triggers.self.isCast()
+        val creatureCard = target(TargetFilter.CreatureInYourGraveyard)
+        effect = Effects.May(Effects.Move(creatureCard, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD))
         description = "When you cast this spell, you may return target creature card from your " +
             "graveyard to the battlefield."
     }
 
     // Annihilator 2 — the lowering of the display-only keyword ability above.
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.Sacrifice(
             GameObjectFilter.Permanent,
             2,

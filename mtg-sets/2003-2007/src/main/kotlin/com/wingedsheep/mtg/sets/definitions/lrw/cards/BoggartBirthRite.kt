@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Boggart Birth Rite
@@ -26,13 +25,10 @@ val BoggartBirthRite = card("Boggart Birth Rite") {
 
     spell {
         val goblinCard = target(
-            "target Goblin card from your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter.Any.withSubtype(Subtype.GOBLIN).ownedByYou(),
-                    zone = Zone.GRAVEYARD
-                )
-            )
+            TargetFilter(
+                baseFilter = GameObjectFilter.Any.withSubtype(Subtype.GOBLIN).ownedByYou(),
+                zone = Zone.GRAVEYARD
+            ),
         )
         effect = Effects.ReturnToHand(goblinCard)
     }

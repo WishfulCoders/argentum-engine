@@ -1,16 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Distorting Wake
@@ -31,18 +26,11 @@ val DistortingWake = card("Distorting Wake") {
     oracleText = "Return X target nonland permanents to their owners' hands."
 
     spell {
-        target = TargetPermanent(
-            optional = true,
-            filter = TargetFilter.NonlandPermanent,
-            dynamicMaxCount = DynamicAmount.XValue,
-        )
-        effect = Effects.Composite(
-            GatherCardsEffect(source = CardSource.ChosenTargets, storeAs = "distortingWake_targets"),
-            MoveCollectionEffect(
-                from = "distortingWake_targets",
-                destination = CardDestination.ToZone(Zone.HAND),
-            ),
-        )
+        targets(TargetFilter.NonlandPermanent, optional = true, dynamicMaxCount = DynamicAmounts.xValue())
+        effect = Effects.Pipeline {
+            val distortingWakeTargets = gather(CardSource.ChosenTargets)
+            toHand(distortingWakeTargets)
+        }
     }
 
     metadata {

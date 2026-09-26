@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.dtk.cards
 
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Commune with Lava
@@ -29,7 +29,7 @@ val CommuneWithLava = card("Commune with Lava") {
 
     spell {
         effect = Patterns.Exile.impulse(
-            count = DynamicAmount.XValue,
+            count = DynamicAmounts.xValue(),
             expiry = MayPlayExpiry.UntilControllerStep(Step.CLEANUP, includeCurrentTurn = false)
         )
     }

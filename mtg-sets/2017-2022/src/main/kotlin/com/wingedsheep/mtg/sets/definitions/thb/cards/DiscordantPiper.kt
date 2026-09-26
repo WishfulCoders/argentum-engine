@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * When this creature dies, create a 0/1 white Goat creature token.
  *
- * A plain [Triggers.Dies] over a single [Effects.CreateToken]. No `triggerZone` — setting one
+ * A plain `Triggers.self.dies()` over a single [Effects.CreateToken]. No `triggerZone` — setting one
  * replaces the default `{BATTLEFIELD}` and the trigger is then never indexed. THB ships the Goat
  * token art, so the token resolves its image from the set's own printing.
  */
@@ -27,7 +27,7 @@ val DiscordantPiper = card("Discordant Piper") {
     oracleText = "When this creature dies, create a 0/1 white Goat creature token."
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateToken(
             power = 0,
             toughness = 1,

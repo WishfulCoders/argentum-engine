@@ -57,7 +57,7 @@ class TheSkullsporeNexusScenarioTest : ScenarioTestBase() {
 
         context("Cost reduction — {X} less where X is greatest power among creatures you control") {
             fun effectiveCmc(game: TestGame): Int =
-                CostCalculator(cardRegistry).calculateEffectiveCost(
+                CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state, cardRegistry.getCard("The Skullspore Nexus")!!, game.player1Id
                 ).cmc
 

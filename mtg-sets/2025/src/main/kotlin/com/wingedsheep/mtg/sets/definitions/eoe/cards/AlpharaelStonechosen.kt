@@ -9,6 +9,7 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Alpharael, Stonechosen
@@ -28,10 +29,10 @@ val AlpharaelStonechosen = card("Alpharael, Stonechosen") {
     toughness = 3
     oracleText = "Ward—Discard a card at random.\nVoid — Whenever Alpharael attacks, if a nonland permanent left the battlefield this turn or a spell was warped this turn, defending player loses half their life, rounded up."
 
-    keywordAbility(KeywordAbility.wardDiscard(count = 1, random = true))
+    keywordAbility(KeywordAbility.Ward(WardCost.Discard(count = 1, random = true)))
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         interveningIf = Conditions.Void
         effect = Effects.LoseHalfLife(
             roundUp = true,

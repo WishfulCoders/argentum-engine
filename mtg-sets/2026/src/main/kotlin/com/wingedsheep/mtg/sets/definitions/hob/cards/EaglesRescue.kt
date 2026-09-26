@@ -5,15 +5,13 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Eagle's Rescue
@@ -46,7 +44,7 @@ val EaglesRescue = card("Eagle's Rescue") {
         "{2}{W/U}{W/U}: Return this card from your graveyard to the battlefield attached to " +
         "target creature you control with power 1 or less. Activate only as a sorcery."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = ModifyStats(+2, +2, Filters.EnchantedCreature)
@@ -57,9 +55,9 @@ val EaglesRescue = card("Eagle's Rescue") {
     }
 
     activatedAbility {
+        val creature = target(TargetFilter.CreatureYouControl.powerAtMost(1))
         cost = Costs.Mana("{2}{W/U}{W/U}")
-        target = TargetCreature(filter = TargetFilter.CreatureYouControl.powerAtMost(1))
-        effect = Effects.ReturnSelfToBattlefieldAttached(EffectTarget.ContextTarget(0))
+        effect = Effects.ReturnSelfToBattlefieldAttached(creature)
         activateFromZone = Zone.GRAVEYARD
         timing = TimingRule.SorcerySpeed
         description = "Return this card from your graveyard to the battlefield attached to " +

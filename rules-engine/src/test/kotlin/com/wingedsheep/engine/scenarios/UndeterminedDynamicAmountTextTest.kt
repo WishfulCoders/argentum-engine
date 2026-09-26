@@ -1,12 +1,13 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.engine.view.ClientStateTransformer
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
@@ -16,12 +17,13 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Regression for World War Hulk's chapter III rendering as "target gets +0/+0 until end of turn".
  *
  * An ability that pumps a creature by *its own* stats ("double its power and toughness") reads
- * [com.wingedsheep.sdk.scripting.values.EntityReference.Target], so its amount is only knowable once
+ * [com.wingedsheep.sdk.scripting.targets.EffectTarget.ContextTarget], so its amount is only knowable once
  * a target exists. Two surfaces render such an ability, and they sat on opposite sides of one bug:
  *
  *  1. **The targeting banner**, drawn *before* the player chooses. No target exists by construction,
@@ -46,8 +48,8 @@ class UndeterminedDynamicAmountTextTest : FunSpec({
         power = 1
         toughness = 1
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
-            val tgt = target("target creature you control", Targets.CreatureYouControl)
+            trigger = Triggers.self.enters()
+            val tgt = target(TargetFilter.CreatureYouControl)
             effect = Effects.ModifyStats(DynamicAmounts.targetPower(), DynamicAmounts.targetToughness(), tgt)
         }
     }
@@ -91,7 +93,7 @@ class UndeterminedDynamicAmountTextTest : FunSpec({
         d.submitTargetSelection(active, listOf(bruiser))
 
         val stackId = d.state.stack.first()
-        val stackCard = ClientStateTransformer(cardRegistry = d.cardRegistry)
+        val stackCard = ClientStateTransformer(cardRegistry = d.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .transform(d.state, viewingPlayerId = active)
             .cards[stackId]
         stackCard.shouldNotBeNull()
@@ -130,7 +132,7 @@ class UndeterminedDynamicAmountTextTest : FunSpec({
         d.submitTargetSelection(active, listOf(zeroPower))
 
         val stackId = d.state.stack.first()
-        val stackCard = ClientStateTransformer(cardRegistry = d.cardRegistry)
+        val stackCard = ClientStateTransformer(cardRegistry = d.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .transform(d.state, viewingPlayerId = active)
             .cards[stackId]
         stackCard.shouldNotBeNull()

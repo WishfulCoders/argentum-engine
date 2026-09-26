@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
@@ -8,18 +8,15 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.effects.FeasibilityCheck
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.SelectTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Winter Soldier, Icy Assassin — Marvel Super Heroes #239 (rare)
@@ -32,19 +29,19 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *
  * Two pieces, both assembled from existing primitives:
  *
- *  - **The buff** is the With Great Power shape — [GrantDynamicStatsEffect] over
+ *  - **The buff** is the With Great Power shape — [GrantDynamicStats] over
  *    [GroupFilter.source] with `DynamicAmount.Multiply(equipmentAttachedToSelf(), 2)`. The
  *    attachment count is read off *projected* subtypes, so a permanent that becomes (or stops
  *    being) an Equipment is counted correctly, and the bonus recomputes continuously as Equipment
  *    is attached or falls off.
  *  - **The graveyard reanimation** is the Uchbenbak shape — a graveyard-zone activated ability
  *    (`activateFromZone = Zone.GRAVEYARD`) that moves this card GRAVEYARD → BATTLEFIELD and then
- *    drops a [Counters.FINALITY] counter on it; the "exile it instead of dying" replacement is the
+ *    drops a [CounterType.FINALITY] counter on it; the "exile it instead of dying" replacement is the
  *    engine-wide behavior of that counter. No sorcery-speed restriction is printed, so none is
  *    modelled.
  *
  * The "Then you may attach an Equipment you control to him" tail is a *resolution-time* choice, not
- * a cast-time target: [MayEffect] asks the yes/no (skipped outright via [FeasibilityCheck] when you
+ * a cast-time target: [Effects.May] asks the yes/no (skipped outright via [FeasibilityCheck] when you
  * control no Equipment, so a player who can't attach anything is never asked), then
  * [SelectTargetEffect] picks the Equipment and [Effects.AttachTargetEquipmentToCreature] moves it
  * onto Winter Soldier ([EffectTarget.Self], which is the permanent that just entered). Attaching an
@@ -66,40 +63,37 @@ val WinterSoldierIcyAssassin = card("Winter Soldier, Icy Assassin") {
     keywords(Keyword.VIGILANCE, Keyword.MENACE)
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
-            powerBonus = DynamicAmount.Multiply(DynamicAmounts.equipmentAttachedToSelf(), 2),
-            toughnessBonus = DynamicAmount.Fixed(0)
+            powerBonus = DynamicAmounts.equipmentAttachedToSelf() * 2,
+            toughnessBonus = DynamicAmounts.fixed(0)
         )
     }
 
     activatedAbility {
         cost = Costs.Mana("{3}{W}{B}")
         activateFromZone = Zone.GRAVEYARD
-        effect = Effects.Composite(
-            Effects.Move(EffectTarget.Self, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD),
-            AddCountersEffect(counterType = Counters.FINALITY, count = 1, target = EffectTarget.Self),
-            MayEffect(
-                effect = Effects.Composite(
-                    SelectTargetEffect(
-                        requirement = TargetObject(
+        effect = Effects.Move(EffectTarget.Self, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD) then
+            Effects.AddCounters(counterType = CounterType.FINALITY, count = 1, target = EffectTarget.Self) then
+            Effects.May(
+                effect = Effects.Pipeline {
+                    val winterSoldierEquipment = selectTarget(
+                        TargetObject(
                             filter = TargetFilter(
                                 GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl()
                             )
-                        ),
-                        storeAs = "winterSoldierEquipment"
-                    ),
-                    Effects.AttachTargetEquipmentToCreature(
-                        equipmentTarget = EffectTarget.PipelineTarget("winterSoldierEquipment"),
-                        creatureTarget = EffectTarget.Self
+                        )
                     )
-                ),
+                    run(Effects.AttachTargetEquipmentToCreature(
+                        equipmentTarget = winterSoldierEquipment.asTarget,
+                        creatureTarget = EffectTarget.Self
+                    ))
+                },
                 descriptionOverride = "You may attach an Equipment you control to Winter Soldier.",
                 feasibility = FeasibilityCheck.ControlsPermanentMatching(
                     GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT)
                 )
             )
-        )
         description = "{3}{W}{B}: Return this card from your graveyard to the battlefield with a " +
             "finality counter on him. Then you may attach an Equipment you control to him."
     }

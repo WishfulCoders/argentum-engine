@@ -6,7 +6,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Stormscape Master
@@ -27,17 +27,14 @@ val StormscapeMaster = card("Stormscape Master") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{W}{W}"), Costs.Tap)
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.ChooseColorThen(Effects.GrantProtectionFromChosenColor(t))
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{B}{B}"), Costs.Tap)
-        val t = target("target", TargetPlayer())
-        effect = Effects.Composite(
-            Effects.LoseLife(2, t),
-            Effects.GainLife(2, EffectTarget.Controller)
-        )
+        val t = target(Targets.Player)
+        effect = Effects.LoseLife(2, t) then Effects.GainLife(2, EffectTarget.Controller)
     }
 
     metadata {

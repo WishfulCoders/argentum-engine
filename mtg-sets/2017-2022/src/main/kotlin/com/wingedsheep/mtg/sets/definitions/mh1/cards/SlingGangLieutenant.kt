@@ -30,7 +30,7 @@ val SlingGangLieutenant = card("Sling-Gang Lieutenant") {
     oracleText = "When this creature enters, create two 1/1 red Goblin creature tokens.\nSacrifice a Goblin: Target player loses 1 life and you gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             count = 2,
             power = 1,
@@ -44,11 +44,8 @@ val SlingGangLieutenant = card("Sling-Gang Lieutenant") {
 
     activatedAbility {
         cost = Costs.Sacrifice(GameObjectFilter.Permanent.withSubtype("Goblin"))
-        val player = target("target player", Targets.Player)
-        effect = Effects.Composite(
-            Effects.LoseLife(1, player),
-            Effects.GainLife(1),
-        )
+        val player = target(Targets.Player)
+        effect = Effects.LoseLife(1, player) then Effects.GainLife(1)
         description = "Sacrifice a Goblin: Target player loses 1 life and you gain 1 life."
     }
 

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -31,7 +30,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * to sorcery speed ([TimingRule.SorcerySpeed]). It returns this card to the battlefield and drops a
  * finality counter on it, mirroring Balustrade Wurm's Delirium reanimation (Move Self
  * GRAVEYARD→BATTLEFIELD, then [AddCountersEffect] on Self). The finality counter's die-replacement
- * (exile instead) is the engine-wide behavior of [Counters.FINALITY].
+ * (exile instead) is the engine-wide behavior of [CounterType.FINALITY].
  */
 val UchbenbakTheGreatMistake = card("Uchbenbak, the Great Mistake") {
     manaCost = "{3}{U}{B}"
@@ -56,10 +55,8 @@ val UchbenbakTheGreatMistake = card("Uchbenbak, the Great Mistake") {
                 Conditions.CardsInGraveyardMatchingAtLeast(8, GameObjectFilter.Permanent)
             )
         )
-        effect = Effects.Composite(
-            Effects.Move(EffectTarget.Self, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD),
-            AddCountersEffect(counterType = Counters.FINALITY, count = 1, target = EffectTarget.Self)
-        )
+        effect = Effects.Move(EffectTarget.Self, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD) then
+            Effects.AddCounters(counterType = CounterType.FINALITY, count = 1, target = EffectTarget.Self)
     }
 
     metadata {

@@ -7,15 +7,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Nexus of Becoming
@@ -42,37 +36,32 @@ val NexusOfBecoming = card("Nexus of Becoming") {
         "the exiled card, except it's a 3/3 Golem artifact creature in addition to its other types."
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        effect = Effects.Composite(listOf(
-            Effects.DrawCards(1),
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        effect = Effects.Pipeline {
+            run(Effects.DrawCards(1))
             // You may exile an artifact or creature card from your hand.
-            GatherCardsEffect(
-                source = CardSource.FromZone(
+            val candidates = gather(
+                CardSource.FromZone(
                     zone = Zone.HAND,
                     player = Player.You,
                     filter = GameObjectFilter.CreatureOrArtifact
-                ),
-                storeAs = "candidates"
-            ),
-            SelectFromCollectionEffect(
-                from = "candidates",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "exiledCard",
+                )
+            )
+            val exiledCard = chooseUpTo(
+                1,
+                from = candidates,
                 prompt = "You may exile an artifact or creature card from your hand"
-            ),
-            MoveCollectionEffect(
-                from = "exiledCard",
-                destination = CardDestination.ToZone(Zone.EXILE)
-            ),
+            )
+            exile(exiledCard)
             // If you did, create a 3/3 Golem artifact creature token copy of the exiled card.
-            Effects.CreateTokenCopyOfTarget(
-                target = EffectTarget.PipelineTarget("exiledCard"),
+            run(Effects.CreateTokenCopyOfTarget(
+                target = exiledCard.asTarget,
                 overridePower = 3,
                 overrideToughness = 3,
                 addedSubtypes = setOf(Subtype("Golem")),
                 addCardTypes = setOf("ARTIFACT", "CREATURE")
-            )
-        ))
+            ))
+        }
     }
 
     metadata {

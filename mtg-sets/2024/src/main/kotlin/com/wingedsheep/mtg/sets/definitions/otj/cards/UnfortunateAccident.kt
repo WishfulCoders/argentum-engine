@@ -2,17 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedActivatedAbility
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
-import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Unfortunate Accident {B}
@@ -38,28 +35,27 @@ val UnfortunateAccident = card("Unfortunate Accident") {
         "control gets +1/+0 until end of turn. Activate only as a sorcery.\""
 
     spell {
-        effect = ModalEffect(
+        effect = Effects.Modal(
             modes = listOf(
-                Mode(
-                    effect = Effects.Destroy(EffectTarget.ContextTarget(0)),
-                    targetRequirements = listOf(Targets.Creature),
-                    description = "+ {2}{B} — Destroy target creature.",
+                mode("+ {2}{B} — Destroy target creature.") {
+                    val creature = target(TargetFilter.Creature)
                     additionalManaCost = "{2}{B}"
-                ),
+                    effect = Effects.Destroy(creature)
+                },
                 Mode(
-                    effect = CreateTokenEffect(
-                        count = DynamicAmount.Fixed(1),
+                    effect = Effects.CreateToken(
+                        count = 1,
                         power = 1,
                         toughness = 1,
                         colors = setOf(Color.RED),
                         creatureTypes = setOf("Mercenary"),
                         activatedAbilities = listOf(
-                            ActivatedAbility(
-                                cost = AbilityCost.Tap,
-                                effect = Effects.ModifyStats(1, 0, EffectTarget.ContextTarget(0)),
-                                targetRequirements = listOf(Targets.CreatureYouControl),
+                            grantedActivatedAbility {
+                                cost = AbilityCost.Tap
+                                val creatureYouControl = target(TargetFilter.CreatureYouControl)
+                                effect = Effects.ModifyStats(1, 0, creatureYouControl)
                                 timing = TimingRule.SorcerySpeed
-                            )
+                            }
                         ),
                         imageUri = "https://cards.scryfall.io/normal/front/5/f/5f04607f-eed2-462e-897f-82e41e5f7049.jpg?1712316319"
                     ),

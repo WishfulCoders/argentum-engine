@@ -26,7 +26,7 @@ val ColdCaseCracker = card("Cold Case Cracker") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.Investigate()
     }
 

@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.m20.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -35,11 +35,11 @@ val SquadCaptain = card("Squad Captain") {
     keywords(Keyword.VIGILANCE)
     replacementEffect(
         EntersWithDynamicCounters(
-            count = DynamicAmount.AggregateBattlefield(
-                player = Player.You,
-                filter = GameObjectFilter.Creature,
+            count = DynamicAmounts.battlefield(
+                Player.You,
+                GameObjectFilter.Creature,
                 excludeSelf = true,
-            )
+            ).count()
         )
     )
     metadata {

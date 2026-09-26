@@ -4,11 +4,10 @@ import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Failed Fording
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
  * Return target nonland permanent to its owner's hand. If you control a Desert, surveil 1.
  *
  * The "If you control a Desert, surveil 1" clause is a one-shot resolution-time state test, not
- * an intervening-if trigger — modeled as a [ConditionalEffect] (lowers to a `Gate.WhenCondition`)
+ * an intervening-if trigger — modeled as a [Effects.If] (lowers to a `Gate.WhenCondition`)
  * chained after the bounce. The Desert check uses [Conditions.YouControl] over Lands with the
  * Desert subtype.
  */
@@ -30,15 +29,13 @@ val FailedFording = card("Failed Fording") {
         "surveil 1. (Look at the top card of your library. You may put it into your graveyard.)"
 
     spell {
-        val permanent = target("target nonland permanent", Targets.NonlandPermanent)
-        effect = Effects.ReturnToHand(permanent)
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.YouControl(
-                        GameObjectFilter.Land.withSubtype(Subtype.DESERT)
-                    ),
-                    effect = Patterns.Library.surveil(1)
-                )
+        val permanent = target(TargetFilter.NonlandPermanent)
+        effect = Effects.ReturnToHand(permanent) then
+            Effects.If(
+                condition = Conditions.YouControl(
+                    GameObjectFilter.Land.withSubtype(Subtype.DESERT)
+                ),
+                then = Patterns.Library.surveil(1)
             )
     }
 

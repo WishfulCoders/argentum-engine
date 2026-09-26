@@ -26,7 +26,7 @@ val MoonriseCleric = card("Moonrise Cleric") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.GainLife(1)
     }
 

@@ -1,11 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Trap Essence
@@ -24,10 +23,9 @@ val TrapEssence = card("Trap Essence") {
     oracleText = "Counter target creature spell. Put two +1/+1 counters on up to one target creature."
 
     spell {
-        target("creature spell", Targets.CreatureSpell)
-        val creature = target("creature", TargetCreature(optional = true))
-        effect = Effects.CounterSpell()
-            .then(Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, creature))
+        target(TargetFilter.CreatureSpellOnStack)
+        val creature = target(TargetFilter.Creature, optional = true)
+        effect = Effects.CounterSpell() then Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, creature)
     }
 
     metadata {

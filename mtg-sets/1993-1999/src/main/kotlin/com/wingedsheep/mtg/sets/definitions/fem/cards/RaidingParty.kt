@@ -2,28 +2,17 @@ package com.wingedsheep.mtg.sets.definitions.fem.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Subtype
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerCollectingEffect
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Raiding Party
@@ -60,68 +49,39 @@ val RaidingParty = card("Raiding Party") {
 
     activatedAbility {
         cost = Costs.Sacrifice(GameObjectFilter.Permanent.withSubtype(Subtype.ORC))
-        effect = Effects.Composite(
-            ForEachPlayerCollectingEffect(
-                players = Player.ActivePlayerFirst,
-                effects = listOf(
-                    GatherCardsEffect(
-                        source = CardSource.ControlledPermanents(
-                            player = Player.You,
-                            filter = GameObjectFilter.Creature.withColor(Color.WHITE).untapped()
-                        ),
-                        storeAs = "tappable"
-                    ),
-                    SelectFromCollectionEffect(
-                        from = "tappable",
-                        selection = SelectionMode.ChooseAnyNumber,
-                        chooser = Chooser.Controller,
-                        storeSelected = "tapped",
-                        useTargetingUI = true,
-                        prompt = "Tap any number of untapped white creatures you control (each spares two Plains)"
-                    ),
-                    ForEachInCollectionEffect(
-                        collection = "tapped",
-                        effect = Effects.Tap(EffectTarget.Self)
-                    ),
-                    GatherCardsEffect(
-                        source = CardSource.BattlefieldMatching(
-                            filter = GameObjectFilter.Land.withSubtype(Subtype.PLAINS)
-                        ),
-                        storeAs = "plains"
-                    ),
-                    SelectFromCollectionEffect(
-                        from = "plains",
-                        selection = SelectionMode.ChooseUpTo(
-                            DynamicAmount.Multiply(DynamicAmount.VariableReference("tapped_count"), 2)
-                        ),
-                        chooser = Chooser.Controller,
-                        storeSelected = "spared",
-                        useTargetingUI = true,
-                        prompt = "Choose up to two Plains for each creature you tapped"
-                    ),
-                ),
-                collectCollections = mapOf("spared" to "allSpared"),
-            ),
+        effect = Effects.Pipeline {
+            val (allSpared) = forEachPlayerCollecting(Player.ActivePlayerFirst) {
+                val tappable = gather(
+                    CardSource.ControlledPermanents(
+                        player = Player.You,
+                        filter = GameObjectFilter.Creature.withColor(Color.WHITE).untapped()
+                    )
+                )
+                val tapped = chooseAnyNumber(
+                    from = tappable,
+                    chooser = Chooser.Controller,
+                    useTargetingUI = true,
+                    prompt = "Tap any number of untapped white creatures you control (each spares two Plains)"
+                )
+                run(Effects.ForEachInCollection(tapped, Effects.Tap(EffectTarget.IterationEntity)))
+                val plains = gather(
+                    CardSource.BattlefieldMatching(filter = GameObjectFilter.Land.withSubtype(Subtype.PLAINS))
+                )
+                val spared = chooseUpTo(
+                    tapped.count * 2,
+                    from = plains,
+                    chooser = Chooser.Controller,
+                    useTargetingUI = true,
+                    prompt = "Choose up to two Plains for each creature you tapped"
+                )
+                listOf(spared)
+            }
             // Everything left over — the complement of what every player spared between them.
-            // Gather every Plains, then subtract the accumulated picks: the set difference is
-            // `CollectionFilter.ExcludeOtherCollection`, which is what that filter exists for.
-            GatherCardsEffect(
-                source = CardSource.BattlefieldMatching(
-                    filter = GameObjectFilter.Land.withSubtype(Subtype.PLAINS)
-                ),
-                storeAs = "allPlains",
-            ),
-            FilterCollectionEffect(
-                from = "allPlains",
-                filter = CollectionFilter.ExcludeOtherCollection("allSpared"),
-                storeMatching = "doomed",
-            ),
-            MoveCollectionEffect(
-                from = "doomed",
-                destination = CardDestination.ToZone(Zone.GRAVEYARD),
-                moveType = MoveType.Destroy,
-            ),
-        )
+            val allPlains = gather(
+                CardSource.BattlefieldMatching(filter = GameObjectFilter.Land.withSubtype(Subtype.PLAINS))
+            )
+            destroy(exclude(allPlains, allSpared))
+        }
         description = "Sacrifice an Orc: Each player may tap any number of untapped white creatures they control. For each creature tapped this way, that player chooses up to two Plains. Then destroy all Plains that weren't chosen this way by any player."
     }
 

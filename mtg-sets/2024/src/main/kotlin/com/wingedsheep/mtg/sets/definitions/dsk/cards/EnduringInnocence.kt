@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.enduring
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Enduring Innocence
@@ -44,10 +43,7 @@ val EnduringInnocence = card("Enduring Innocence") {
     enduring()
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.powerAtMost(2).youControl(),
-            binding = TriggerBinding.OTHER
-        )
+        trigger = Triggers.another(GameObjectFilter.Creature.powerAtMost(2).youControl()).enters()
         oncePerTurn = true
         effect = Effects.DrawCards(1)
     }

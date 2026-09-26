@@ -2,17 +2,15 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 
@@ -28,27 +26,19 @@ val LumraBellowOfTheWoods = card("Lumra, Bellow of the Woods") {
     typeLine = "Legendary Creature — Elemental Bear"
     oracleText = "Reach, vigilance\nLumra, Bellow of the Woods's power and toughness are each equal to the number of lands you control.\nWhen Lumra, Bellow of the Woods enters, mill four cards. Then return all land cards from your graveyard to the battlefield tapped."
 
-    dynamicStats(DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land))
+    dynamicStats(DynamicAmounts.landsYouControl())
 
     keywords(Keyword.REACH, Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Patterns.Library.mill(4)
-            .then(
-                Effects.Composite(
-                    listOf(
-                        GatherCardsEffect(
-                            source = CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Land),
-                            storeAs = "graveyard_lands"
-                        ),
-                        MoveCollectionEffect(
-                            from = "graveyard_lands",
-                            destination = CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped)
-                        )
-                    )
+        trigger = Triggers.self.enters()
+        effect = Patterns.Library.mill(4) then
+            Effects.Pipeline {
+                val graveyardLands = gather(
+                    CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Land)
                 )
-            )
+                move(graveyardLands, CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped))
+            }
     }
 
     metadata {

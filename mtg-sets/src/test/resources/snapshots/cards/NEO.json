@@ -15,7 +15,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Atsushi, the Blazing Sky:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield",
@@ -98,7 +98,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Automated Artificer:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddColorlessMana",
@@ -173,7 +173,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Boseiju, Who Endures:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -183,7 +183,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Boseiju, Who Endures:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -204,7 +204,7 @@
                             "type": "MoveToZone",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target artifact, enchantment, or nonbasic land an opponent controls"
+                                "name": "t0"
                             },
                             "destination": "Graveyard",
                             "byDestruction": true
@@ -260,7 +260,8 @@
                                                     ]
                                                 }
                                             },
-                                            "storeAs": "searchable"
+                                            "storeAs": "searchable",
+                                            "search": true
                                         },
                                         {
                                             "type": "SelectFromCollection",
@@ -322,7 +323,7 @@
                                 "controllerPredicate": "ControlledByOpponent"
                             }
                         },
-                        "id": "target artifact, enchantment, or nonbasic land an opponent controls"
+                        "id": "t0"
                     }
                 ],
                 "activateFromZone": "Hand",
@@ -393,7 +394,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Circuit Mender:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -408,7 +409,7 @@
                 "descriptionOverride": "When this creature enters, you gain 2 life."
             },
             {
-                "id": "ability_2",
+                "id": "Circuit Mender:2",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield"
@@ -505,7 +506,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Ecologist's Terrarium:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -523,7 +524,8 @@
                                     "zone": "Library",
                                     "filter": "basicland"
                                 },
-                                "storeAs": "searchable"
+                                "storeAs": "searchable",
+                                "search": true
                             },
                             {
                                 "type": "SelectFromCollection",
@@ -557,7 +559,7 @@
         ],
         "activatedAbilities": [
             {
-                "id": "ability_2",
+                "id": "Ecologist's Terrarium:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -574,11 +576,11 @@
                 },
                 "effect": {
                     "type": "AddCounters",
-                    "counterType": "+1/+1",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
                     "count": 1,
                     "target": {
                         "type": "BoundVariable",
-                        "name": "creature to grow"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -587,7 +589,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "creature to grow"
+                        "id": "t0"
                     }
                 ],
                 "timing": "SorcerySpeed",
@@ -612,7 +614,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Eiganjo, Seat of the Empire:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -622,7 +624,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Eiganjo, Seat of the Empire:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -644,7 +646,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target attacking or blocking creature"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -666,7 +668,7 @@
                                 ]
                             }
                         },
-                        "id": "target attacking or blocking creature"
+                        "id": "t0"
                     }
                 ],
                 "activateFromZone": "Hand",
@@ -744,7 +746,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Experimental Synthesizer:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -779,7 +781,7 @@
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Experimental Synthesizer:2",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield"
@@ -816,7 +818,7 @@
         ],
         "activatedAbilities": [
             {
-                "id": "ability_3",
+                "id": "Experimental Synthesizer:3",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -875,18 +877,18 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "artifact to destroy"
+                        "name": "t0"
                     },
                     "destination": "Graveyard",
                     "byDestruction": true
                 },
                 {
                     "type": "AddCounters",
-                    "counterType": "+1/+1",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
                     "count": 1,
                     "target": {
                         "type": "BoundVariable",
-                        "name": "creature to grow"
+                        "name": "t1"
                     }
                 }
             ]
@@ -898,7 +900,7 @@
                 "filter": {
                     "baseFilter": "artifact"
                 },
-                "id": "artifact to destroy"
+                "id": "t0"
             },
             {
                 "type": "TargetObject",
@@ -906,7 +908,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "creature to grow"
+                "id": "t1"
             }
         ]
     },
@@ -989,7 +991,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Generous Visitor:1",
                 "trigger": {
                     "type": "SpellCastEvent",
                     "spellFilter": {
@@ -1001,11 +1003,11 @@
                 "binding": "ANY",
                 "effect": {
                     "type": "AddCounters",
-                    "counterType": "+1/+1",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
                     "count": 1,
                     "target": {
                         "type": "BoundVariable",
-                        "name": "creature to grow"
+                        "name": "t0"
                     }
                 },
                 "targetRequirement": {
@@ -1013,7 +1015,7 @@
                     "filter": {
                         "baseFilter": "creature"
                     },
-                    "id": "creature to grow"
+                    "id": "t0"
                 },
                 "descriptionOverride": "Whenever you cast an enchantment spell, put a +1/+1 counter on target creature."
             }
@@ -1080,7 +1082,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "High-Speed Hoverbike:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -1089,7 +1091,7 @@
                     "type": "TapUntap",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "creature to tap"
+                        "name": "t0"
                     }
                 },
                 "targetRequirement": {
@@ -1098,7 +1100,7 @@
                     "filter": {
                         "baseFilter": "creature"
                     },
-                    "id": "creature to tap"
+                    "id": "t0"
                 },
                 "descriptionOverride": "When this Vehicle enters, tap up to one target creature."
             }
@@ -1175,7 +1177,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Inkrise Infiltrator:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -1265,7 +1267,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "cheap artifact"
+                        "name": "t0"
                     },
                     "destination": "Graveyard",
                     "byDestruction": true
@@ -1285,7 +1287,7 @@
                 "filter": {
                     "baseFilter": "artifact mv<=3"
                 },
-                "id": "cheap artifact"
+                "id": "t0"
             }
         ]
     },
@@ -1322,7 +1324,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Moonsnare Specialist:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -1331,7 +1333,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "creature to bounce"
+                        "name": "t0"
                     },
                     "destination": "Hand"
                 },
@@ -1341,7 +1343,7 @@
                     "filter": {
                         "baseFilter": "creature"
                     },
-                    "id": "creature to bounce"
+                    "id": "t0"
                 },
                 "descriptionOverride": "When this creature enters, return up to one target creature to its owner's hand."
             }
@@ -1373,7 +1375,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Mothrider Patrol:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -1391,7 +1393,7 @@
                     "type": "TapUntap",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "creature to tap"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -1400,7 +1402,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "creature to tap"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{3}{W}, {T}: Tap target creature."
@@ -1465,7 +1467,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Network Disruptor:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -1474,7 +1476,7 @@
                     "type": "TapUntap",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "permanent to tap"
+                        "name": "t0"
                     }
                 },
                 "targetRequirement": {
@@ -1482,7 +1484,7 @@
                     "filter": {
                         "baseFilter": "permanent"
                     },
-                    "id": "permanent to tap"
+                    "id": "t0"
                 },
                 "descriptionOverride": "When this creature enters, tap target permanent."
             }
@@ -1508,7 +1510,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Network Terminal:1",
                 "cost": "CostTap",
                 "effect": "AddManaOfChoice",
                 "timing": "ManaAbility",
@@ -1516,7 +1518,7 @@
                 "descriptionOverride": "{T}: Add one mana of any color."
             },
             {
-                "id": "ability_2",
+                "id": "Network Terminal:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -1679,7 +1681,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Nezumi Prowler:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -1692,7 +1694,7 @@
                             "keyword": "DEATHTOUCH",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "creature you control"
+                                "name": "t0"
                             }
                         },
                         {
@@ -1700,7 +1702,7 @@
                             "keyword": "LIFELINK",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "creature you control"
+                                "name": "t0"
                             }
                         }
                     ]
@@ -1710,7 +1712,7 @@
                     "filter": {
                         "baseFilter": "creature ctrl:you"
                     },
-                    "id": "creature you control"
+                    "id": "t0"
                 },
                 "descriptionOverride": "When this creature enters, target creature you control gains deathtouch and lifelink until end of turn."
             }
@@ -1736,7 +1738,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Otawara, Soaring City:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -1746,7 +1748,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Otawara, Soaring City:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -1764,7 +1766,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target artifact, creature, enchantment, or planeswalker"
+                        "name": "t0"
                     },
                     "destination": "Hand"
                 },
@@ -1774,7 +1776,7 @@
                         "filter": {
                             "baseFilter": "artifact|creature|enchantment|planeswalker"
                         },
-                        "id": "target artifact, creature, enchantment, or planeswalker"
+                        "id": "t0"
                     }
                 ],
                 "activateFromZone": "Hand",
@@ -1815,7 +1817,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Papercraft Decoy:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield"
@@ -1875,7 +1877,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Patchwork Automaton:1",
                 "trigger": {
                     "type": "SpellCastEvent",
                     "spellFilter": {
@@ -1887,7 +1889,7 @@
                 "binding": "ANY",
                 "effect": {
                     "type": "AddCounters",
-                    "counterType": "+1/+1",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
                     "count": 1,
                     "target": "Self"
                 },
@@ -1920,7 +1922,7 @@
                         "type": "MoveToZone",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "big creature"
+                            "name": "t0"
                         },
                         "destination": "Exile"
                     },
@@ -1930,7 +1932,7 @@
                             "filter": {
                                 "baseFilter": "creature pow>=4"
                             },
-                            "id": "big creature"
+                            "id": "t0"
                         }
                     ],
                     "description": "Exile target creature with power 4 or greater."
@@ -1940,7 +1942,7 @@
                         "type": "MoveToZone",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "enchantment"
+                            "name": "t1"
                         },
                         "destination": "Exile"
                     },
@@ -1950,7 +1952,7 @@
                             "filter": {
                                 "baseFilter": "enchantment"
                             },
-                            "id": "enchantment"
+                            "id": "t1"
                         }
                     ],
                     "description": "Exile target enchantment."
@@ -1982,7 +1984,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Scrapyard Steelbreaker:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -2046,7 +2048,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Searchlight Companion:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -2088,7 +2090,7 @@
                         "type": "MoveToZone",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "creature card in your graveyard"
+                            "name": "t0"
                         },
                         "destination": "Hand"
                     },
@@ -2099,7 +2101,7 @@
                                 "baseFilter": "creature own:you",
                                 "zone": "Graveyard"
                             },
-                            "id": "creature card in your graveyard"
+                            "id": "t0"
                         }
                     ],
                     "description": "Return target creature card from your graveyard to your hand."
@@ -2109,7 +2111,7 @@
                         "type": "MoveToZone",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "enchantment card in your graveyard"
+                            "name": "t1"
                         },
                         "destination": "Hand"
                     },
@@ -2120,7 +2122,7 @@
                                 "baseFilter": "enchantment own:you",
                                 "zone": "Graveyard"
                             },
-                            "id": "enchantment card in your graveyard"
+                            "id": "t1"
                         }
                     ],
                     "description": "Return target enchantment card from your graveyard to your hand."
@@ -2150,7 +2152,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Secluded Courtyard:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddColorlessMana",
@@ -2163,7 +2165,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Secluded Courtyard:2",
                 "cost": "CostTap",
                 "effect": "AddAnyColorManaSpendOnChosenType",
                 "timing": "ManaAbility",
@@ -2227,7 +2229,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Sokenzan, Crucible of Defiance:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -2237,7 +2239,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Sokenzan, Crucible of Defiance:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -2277,7 +2279,7 @@
                             "body": {
                                 "type": "GrantKeyword",
                                 "keyword": "HASTE",
-                                "target": "Self"
+                                "target": "IterationEntity"
                             }
                         }
                     ]
@@ -2320,7 +2322,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Spirited Companion:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -2368,17 +2370,20 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Spring-Leaf Avenger:1",
                 "trigger": {
                     "type": "DealsDamageEvent",
                     "damageType": "DamageCombat",
-                    "recipient": "AnyPlayer"
+                    "recipient": {
+                        "type": "RecipientPlayer",
+                        "player": "Any"
+                    }
                 },
                 "effect": {
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "permanent card in your graveyard"
+                        "name": "t0"
                     },
                     "destination": "Hand"
                 },
@@ -2388,7 +2393,7 @@
                         "baseFilter": "permanent own:you",
                         "zone": "Graveyard"
                     },
-                    "id": "permanent card in your graveyard"
+                    "id": "t0"
                 },
                 "descriptionOverride": "Whenever this creature deals combat damage to a player, return target permanent card from your graveyard to your hand."
             }
@@ -2414,7 +2419,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Takenuma, Abandoned Mire:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -2424,7 +2429,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Takenuma, Abandoned Mire:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -2473,11 +2478,11 @@
                                 "zone": "Graveyard",
                                 "filter": "creature|planeswalker"
                             },
-                            "storeAs": "takenumaGraveyard"
+                            "storeAs": "gathered1"
                         },
                         {
                             "type": "SelectFromCollection",
-                            "from": "takenumaGraveyard",
+                            "from": "gathered1",
                             "selection": {
                                 "type": "ChooseExactly",
                                 "count": {
@@ -2485,13 +2490,13 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "takenumaReturned",
+                            "storeSelected": "selected2",
                             "prompt": "Choose a creature or planeswalker card to return to your hand",
                             "showAllCards": true
                         },
                         {
                             "type": "MoveCollection",
-                            "from": "takenumaReturned",
+                            "from": "selected2",
                             "destination": {
                                 "type": "ToZone",
                                 "zone": "Hand"
@@ -2539,7 +2544,7 @@
                     "keyword": "HEXPROOF",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "permanent you control"
+                        "name": "t0"
                     }
                 },
                 {
@@ -2547,7 +2552,7 @@
                     "keyword": "INDESTRUCTIBLE",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "permanent you control"
+                        "name": "t0"
                     }
                 },
                 {
@@ -2565,7 +2570,7 @@
                 "filter": {
                     "baseFilter": "permanent ctrl:you"
                 },
-                "id": "permanent you control"
+                "id": "t0"
             }
         ]
     },
@@ -2624,7 +2629,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Towashi Songshaper:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "artifact ctrl:you",
@@ -2667,7 +2672,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Uncharted Haven:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddManaOfChoice",
@@ -2707,7 +2712,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Unstoppable Ogre:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -2716,7 +2721,7 @@
                     "type": "CantBlockTargetCreatures",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "creature that can't block"
+                        "name": "t0"
                     }
                 },
                 "targetRequirement": {
@@ -2724,7 +2729,7 @@
                     "filter": {
                         "baseFilter": "creature"
                     },
-                    "id": "creature that can't block"
+                    "id": "t0"
                 },
                 "descriptionOverride": "When this creature enters, target creature can't block this turn."
             }
@@ -2754,7 +2759,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Virus Beetle:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -2830,7 +2835,7 @@
             },
             "target": {
                 "type": "BoundVariable",
-                "name": "attacking or blocking creature"
+                "name": "t0"
             }
         },
         "targetRequirements": [
@@ -2852,7 +2857,7 @@
                         ]
                     }
                 },
-                "id": "attacking or blocking creature"
+                "id": "t0"
             }
         ]
     },

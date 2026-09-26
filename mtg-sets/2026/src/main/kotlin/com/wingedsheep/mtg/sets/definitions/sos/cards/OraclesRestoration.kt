@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Oracle's Restoration
@@ -18,10 +17,10 @@ val OraclesRestoration = card("Oracle's Restoration") {
     typeLine = "Sorcery"
     oracleText = "Target creature you control gets +1/+1 until end of turn. You draw a card and gain 1 life."
     spell {
-        val t = target("target creature you control", TargetCreature(filter = TargetFilter.Creature.youControl()))
-        effect = Effects.ModifyStats(1, 1, t)
-            .then(Effects.DrawCards(1))
-            .then(Effects.GainLife(1))
+        val t = target(TargetFilter.Creature.youControl())
+        effect = Effects.ModifyStats(1, 1, t) then
+            Effects.DrawCards(1) then
+            Effects.GainLife(1)
     }
     metadata {
         rarity = Rarity.COMMON

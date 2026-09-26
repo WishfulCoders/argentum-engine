@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.plc.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantActivatedAbility
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -35,7 +35,7 @@ val PoulticeSliver = card("Poultice Sliver") {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
                 cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap),
-                effect = RegenerateEffect(EffectTarget.BoundVariable("target")),
+                effect = Effects.Regenerate(EffectTarget.BoundVariable("target")),
                 targetRequirements = listOf(
                     TargetObject(
                         filter = TargetFilter(GameObjectFilter.Permanent.withSubtype(Subtype.SLIVER)),

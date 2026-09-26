@@ -13,7 +13,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * When this creature dies, draw two cards.
  *
- * [Triggers.Dies] is the whole card: the battlefield → graveyard zone change with the default
+ * `Triggers.self.dies()` is the whole card: the battlefield → graveyard zone change with the default
  * battlefield `activeZones`, so the trigger is indexed while the creature is still on the
  * battlefield. The draw goes to the controller, which is the default and therefore unwritten.
  */
@@ -26,7 +26,7 @@ val YouthfulScholar = card("Youthful Scholar") {
     oracleText = "When this creature dies, draw two cards."
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.DrawCards(2)
     }
 

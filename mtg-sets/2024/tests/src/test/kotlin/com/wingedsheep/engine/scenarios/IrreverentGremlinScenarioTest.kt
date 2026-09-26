@@ -13,7 +13,7 @@ import io.kotest.matchers.shouldBe
  * "Whenever another creature you control with power 2 or less enters, you may discard a card.
  *  If you do, draw a card. Do this only once each turn."
  *
- * The rummage is MayEffect(IfYouDoEffect(discard, draw)); "Do this only once each turn" is the
+ * The rummage is Effects.May(Effects.IfYouDo(discard, draw)); "Do this only once each turn" is the
  * trigger-level oncePerTurn cap (CR 603.3b).
  */
 class IrreverentGremlinScenarioTest : ScenarioTestBase() {

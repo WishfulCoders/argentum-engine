@@ -28,7 +28,7 @@ val DeathcapMarionette = card("Deathcap Marionette") {
     toughness = 1
     keywords(Keyword.DEATHTOUCH)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         effect = Patterns.Library.mill(2)
     }

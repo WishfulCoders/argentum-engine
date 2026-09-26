@@ -6,8 +6,6 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Crosis's Charm
@@ -37,15 +35,15 @@ val CrosisSCharm = card("Crosis's Charm") {
     spell {
         modal(chooseCount = 1) {
             mode("Return target permanent to its owner's hand") {
-                val t = target("target", TargetPermanent())
+                val t = target(TargetFilter.Permanent)
                 effect = Effects.ReturnToHand(t)
             }
             mode("Destroy target nonblack creature. It can't be regenerated") {
-                val t = target("target", TargetCreature(filter = TargetFilter.Creature.notColor(Color.BLACK)))
+                val t = target(TargetFilter.Creature.notColor(Color.BLACK))
                 effect = Effects.Destroy(t, noRegenerate = true)
             }
             mode("Destroy target artifact") {
-                val t = target("target", Targets.Artifact)
+                val t = target(TargetFilter.Artifact)
                 effect = Effects.Destroy(t)
             }
         }

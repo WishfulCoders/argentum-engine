@@ -5,8 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
 import com.wingedsheep.sdk.scripting.effects.Gate
 import com.wingedsheep.sdk.scripting.effects.GatedEffect
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
 import com.wingedsheep.sdk.scripting.effects.PayLifeEffect
 import com.wingedsheep.sdk.scripting.effects.PayManaCostEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -18,7 +16,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 
 /**
  * Pins the recognition boundary of [asOptionalManaPayment] — the one piece of new logic introduced
- * when `MayPayManaEffect` migrated from a bespoke wrapper+executor onto the [GatedEffect] frame.
+ * when `Effects.MayPay` migrated from a bespoke wrapper+executor onto the [GatedEffect] frame.
  * The engine keys the optional-mana-payment UX (manual mana-source selection at resolution; the
  * pay-then-target order for targeted triggers) off this matcher, so its exactness is load-bearing.
  */
@@ -27,8 +25,8 @@ class OptionalManaPaymentTest : FunSpec({
     val inner = Effects.DrawCards(1)
     val cost = ManaCost.parse("{1}")
 
-    test("the MayPayManaEffect facade lowers to a flat mana Gate.MayPay") {
-        val lowered = MayPayManaEffect(cost, inner)
+    test("the Effects.MayPay facade lowers to a flat mana Gate.MayPay") {
+        val lowered = Effects.MayPay(cost, inner)
         lowered.shouldBeInstanceOf<GatedEffect>()
         val gate = lowered.gate
         gate.shouldBeInstanceOf<Gate.MayPay>()
@@ -37,33 +35,33 @@ class OptionalManaPaymentTest : FunSpec({
         lowered.then shouldBe inner
     }
 
-    test("asOptionalManaPayment matches the lowered MayPayManaEffect shape") {
-        val match = MayPayManaEffect(cost, inner).asOptionalManaPayment()
+    test("asOptionalManaPayment matches the lowered Effects.MayPay shape") {
+        val match = Effects.MayPay(cost, inner).asOptionalManaPayment()
         match.shouldNotBeNull()
         match.cost shouldBe cost
         match.then shouldBe inner
     }
 
-    test("asOptionalManaPayment also matches an OptionalCostEffect over a bare mana cost") {
-        // Descendant of Storms authors "you may pay {1}{W}. If you do, ..." via OptionalCostEffect;
-        // post-migration it is structurally identical to a lowered MayPayManaEffect and so shares
+    test("asOptionalManaPayment also matches an Effects.MayPay over a bare mana cost") {
+        // Descendant of Storms authors "you may pay {1}{W}. If you do, ..." via Effects.MayPay;
+        // post-migration it is structurally identical to a lowered Effects.MayPay and so shares
         // the optional-mana-payment UX (source selection) — the runtime cannot, and need not,
         // distinguish the two authoring facades.
-        val match = OptionalCostEffect(cost = PayManaCostEffect(cost), ifPaid = inner).asOptionalManaPayment()
+        val match = Effects.MayPay(cost = PayManaCostEffect(cost), then = inner).asOptionalManaPayment()
         match.shouldNotBeNull()
         match.cost shouldBe cost
         match.then shouldBe inner
     }
 
     test("a MayPay with an otherwise branch does NOT match (keeps the generic gated path)") {
-        OptionalCostEffect(cost = PayManaCostEffect(cost), ifPaid = inner, ifNotPaid = Effects.DrawCards(2))
+        Effects.MayPay(cost = PayManaCostEffect(cost), then = inner, otherwise = Effects.DrawCards(2))
             .asOptionalManaPayment().shouldBeNull()
     }
 
     test("a composite (mana + life) cost does NOT match — only a flat mana cost qualifies") {
-        OptionalCostEffect(
+        Effects.MayPay(
             cost = CompositeEffect(listOf(PayManaCostEffect(cost), PayLifeEffect(2))),
-            ifPaid = inner
+            then = inner
         ).asOptionalManaPayment().shouldBeNull()
     }
 

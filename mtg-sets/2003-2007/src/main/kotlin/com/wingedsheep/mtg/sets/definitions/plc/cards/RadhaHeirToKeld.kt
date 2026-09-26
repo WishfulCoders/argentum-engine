@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 
 /**
  * Radha, Heir to Keld
@@ -30,8 +29,8 @@ val RadhaHeirToKeld = card("Radha, Heir to Keld") {
         "{T}: Add {G}."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = MayEffect(Effects.AddMana(Color.RED, 2))
+        trigger = Triggers.self.attacks()
+        effect = Effects.May(Effects.AddMana(Color.RED, 2))
     }
 
     activatedAbility {

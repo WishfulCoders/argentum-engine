@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Zephyr Scribe
@@ -18,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever you cast a noncreature spell, untap this creature.
  *
  * "Draw a card, then discard a card" is the loot recipe ([Patterns.Hand.loot], draw 1 then the
- * gather/select/discard pipeline), and the untap trigger is a plain [Triggers.YouCastNoncreature] —
+ * gather/select/discard pipeline), and the untap trigger is a plain `Triggers.you.casts(GameObjectFilter.Noncreature)` —
  * not prowess, which would add a +1/+1 the card doesn't print. Together they let each noncreature
  * spell refund the tap cost, so the ability can be activated once per spell.
  */
@@ -37,7 +38,7 @@ val ZephyrScribe = card("Zephyr Scribe") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
         effect = Effects.Untap(EffectTarget.Self)
     }
 

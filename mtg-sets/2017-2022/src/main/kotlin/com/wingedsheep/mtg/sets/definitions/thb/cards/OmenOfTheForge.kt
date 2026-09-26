@@ -33,8 +33,8 @@ val OmenOfTheForge = card("Omen of the Forge") {
 
     // When this enchantment enters, it deals 2 damage to any target.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val victim = target("target", Targets.Any)
+        trigger = Triggers.self.enters()
+        val victim = target(Targets.Any)
         effect = Effects.DealDamage(2, victim)
     }
 

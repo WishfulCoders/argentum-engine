@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Roxxon Brutes — Marvel Super Heroes #113
@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
  * Whenever you draw your second card each turn, put a +1/+1 counter on target creature.
  * Basic landcycling {2}
  *
- * The draw trigger is [Triggers.NthCardDrawn] (CR 121.2) — it reads the per-player draw counter and
+ * The draw trigger is `Triggers.<player>.drawsNth(n)` (CR 121.2) — it reads the per-player draw counter and
  * fires exactly once per turn, on the crossing into the second draw, so a single two-card draw fires
  * it once rather than twice. Unlike Atlantean Cavalry's self-buff, the counter here goes on a
  * declared *target* creature (any creature, either controller), so the ability needs a target on the
@@ -41,9 +41,9 @@ val RoxxonBrutes = card("Roxxon Brutes") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.NthCardDrawn(2)
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creature)
+        trigger = Triggers.you.drawsNth(2)
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature)
     }
 
     keywordAbility(KeywordAbility.basicLandcycling("{2}"))

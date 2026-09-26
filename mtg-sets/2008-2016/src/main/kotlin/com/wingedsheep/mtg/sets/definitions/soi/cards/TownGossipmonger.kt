@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.MustAttack
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /** Town Gossipmonger // Incited Rabble (Shadows over Innistrad). */
@@ -24,7 +23,7 @@ private val TownGossipmongerFront = card("Town Gossipmonger") {
             Costs.Tap,
             Costs.TapAnotherPermanent(GameObjectFilter.Creature)
         )
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
         description = "Transform this creature."
     }
 

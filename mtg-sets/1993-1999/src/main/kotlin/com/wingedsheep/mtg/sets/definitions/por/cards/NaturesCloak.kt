@@ -28,7 +28,7 @@ val NaturesCloak = card("Nature's Cloak") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withColor(Color.GREEN).youControl()),
-            Effects.GrantKeyword(Keyword.FORESTWALK, EffectTarget.Self)
+            Effects.GrantKeyword(Keyword.FORESTWALK, EffectTarget.IterationEntity)
         )
     }
     metadata {

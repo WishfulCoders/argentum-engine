@@ -13,7 +13,6 @@ import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * The Legend of Kyoshi // Avatar Kyoshi
@@ -97,11 +96,9 @@ private val TheLegendOfKyoshiFront = card("The Legend of Kyoshi") {
     // II — Earthbend X (X = cards in your hand). That land becomes an Island in addition to its
     // other types.
     sagaChapter(2) {
-        val land = target("target land you control", TargetObject(filter = TargetFilter.Land.youControl()))
-        effect = Effects.Composite(
-            Effects.Earthbend(DynamicAmounts.cardsInYourHand(), land),
+        val land = target(TargetFilter.Land.youControl())
+        effect = Effects.Earthbend(DynamicAmounts.cardsInYourHand(), land) then
             Effects.AddSubtype("Island", land, Duration.Permanent)
-        )
     }
 
     // III — Exile this Saga, then return it to the battlefield transformed under your control.

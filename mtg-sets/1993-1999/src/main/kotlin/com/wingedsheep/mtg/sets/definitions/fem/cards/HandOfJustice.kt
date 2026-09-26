@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Hand of Justice
@@ -36,7 +35,7 @@ val HandOfJustice = card("Hand of Justice") {
                 excludeSelf = true
             )
         )
-        val t = target("target creature", TargetCreature(filter = TargetFilter.Creature))
+        val t = target(TargetFilter.Creature)
         effect = Effects.Destroy(t)
         description = "{T}, Tap three untapped white creatures you control: Destroy target creature."
     }

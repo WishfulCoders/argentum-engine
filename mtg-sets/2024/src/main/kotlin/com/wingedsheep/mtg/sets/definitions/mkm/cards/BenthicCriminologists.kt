@@ -6,8 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
 
 /**
  * Benthic Criminologists — Murders at Karlov Manor #40
@@ -19,8 +17,8 @@ import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
  * combined trigger, and modelling it as two abilities is also what the rules describe (each
  * condition puts its own copy of the ability on the stack).
  *
- * "You may sacrifice an artifact. If you do, draw a card" is an [OptionalCostEffect], not a
- * `MayEffect` around a composite: the draw is gated on the sacrifice actually happening, so
+ * "You may sacrifice an artifact. If you do, draw a card" is an [Effects.MayPay], not a
+ * `Effects.May` around a composite: the draw is gated on the sacrifice actually happening, so
  * declining — or controlling no artifact at all — draws nothing. The Clue tokens this set showers
  * on a blue deck are the intended fuel, and sacrificing a Clue this way is a sacrifice for *this*
  * ability's cost, not an activation of the Clue's own draw ability.
@@ -35,12 +33,12 @@ val BenthicCriminologists = card("Benthic Criminologists") {
     toughness = 5
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         sacrificeAnArtifactToDraw()
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         sacrificeAnArtifactToDraw()
     }
 
@@ -57,9 +55,9 @@ val BenthicCriminologists = card("Benthic Criminologists") {
 
 /** The rider shared by the enters and attacks triggers. */
 private fun TriggeredAbilityBuilder.sacrificeAnArtifactToDraw() {
-    effect = OptionalCostEffect(
-        cost = SacrificeEffect(filter = GameObjectFilter.Artifact),
-        ifPaid = Effects.DrawCards(1)
+    effect = Effects.MayPay(
+        cost = Effects.SacrificeOwn(filter = GameObjectFilter.Artifact),
+        then = Effects.DrawCards(1)
     )
     description = "You may sacrifice an artifact. If you do, draw a card."
 }

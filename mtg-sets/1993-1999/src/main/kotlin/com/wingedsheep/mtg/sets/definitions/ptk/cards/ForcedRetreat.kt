@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Forced Retreat
@@ -20,7 +20,7 @@ val ForcedRetreat = card("Forced Retreat") {
     oracleText = "Put target creature on top of its owner's library."
 
     spell {
-        val t = target("target", TargetCreature())
+        val t = target(TargetFilter.Creature)
         effect = Effects.Move(t, Zone.LIBRARY, ZonePlacement.Top)
     }
 

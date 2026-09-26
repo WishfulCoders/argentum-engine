@@ -3,17 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.tla.cards
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.firebending
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Boiling Rock Rioter
@@ -51,26 +47,22 @@ val BoilingRockRioter = card("Boiling Rock Rioter") {
             filter = GameObjectFilter.Creature.withSubtype(Subtype.ALLY).youControl(),
             excludeSelf = false,
         )
-        val t = target("target", Targets.CardInGraveyard)
+        val t = target(TargetFilter.CardInGraveyard)
         effect = Effects.ExileLinkedToSource(t)
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.FromLinkedExile(),
-                storeAs = "exiledWithThis",
-            ),
-            SelectFromCollectionEffect(
-                from = "exiledWithThis",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
+        trigger = Triggers.self.attacks()
+        effect = Effects.Pipeline {
+            val exiledWithThis = gather(CardSource.FromLinkedExile())
+            val chosenAlly = chooseUpTo(
+                1,
+                from = exiledWithThis,
                 filter = GameObjectFilter.Creature.withSubtype(Subtype.ALLY).ownedByYou(),
-                storeSelected = "chosenAlly",
-                prompt = "Choose an Ally spell to cast",
-            ),
-            Effects.CastFromCollection(from = "chosenAlly"),
-        )
+                prompt = "Choose an Ally spell to cast"
+            )
+            run(Effects.CastFromCollection(from = chosenAlly))
+        }
         description = "Whenever this creature attacks, you may cast an Ally spell from among cards " +
             "you own exiled with this creature."
     }

@@ -6,16 +6,9 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.BudgetModalEffect
 import com.wingedsheep.sdk.scripting.effects.BudgetMode
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
-import com.wingedsheep.sdk.scripting.effects.ForceSacrificeEffect
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.TurnTracker
 
 
 /**
@@ -38,35 +31,33 @@ val SeasonOfLoss = card("Season of Loss") {
         "{P}{P}{P} — Each opponent loses X life, where X is the number of creature cards in your graveyard."
 
     spell {
-        effect = BudgetModalEffect(
+        effect = Effects.BudgetModal(
             budget = 5,
             modes = listOf(
                 BudgetMode(
                     cost = 1,
-                    effect = ForEachPlayerEffect(
+                    effect = Effects.ForEachPlayer(
                         players = Player.Each,
-                        effects = listOf(
-                            ForceSacrificeEffect(
-                                filter = GameObjectFilter.Creature,
-                                count = 1,
-                                target = EffectTarget.Controller
-                            )
+                        effect = Effects.Sacrifice(
+                            filter = GameObjectFilter.Creature,
+                            count = 1,
+                            target = EffectTarget.Controller
                         )
                     ),
                     description = "Each player sacrifices a creature"
                 ),
                 BudgetMode(
                     cost = 2,
-                    effect = DrawCardsEffect(
-                        count = DynamicAmount.TurnTracking(Player.You, TurnTracker.CREATURES_DIED),
+                    effect = Effects.DrawCards(
+                        count = DynamicAmounts.creaturesDiedThisTurn(Player.You),
                         target = EffectTarget.Controller
                     ),
                     description = "Draw a card for each creature that died under your control this turn"
                 ),
                 BudgetMode(
                     cost = 3,
-                    effect = LoseLifeEffect(
-                        amount = DynamicAmount.Count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Creature),
+                    effect = Effects.LoseLife(
+                        amount = DynamicAmounts.creatureCardsInYourGraveyard(),
                         target = EffectTarget.PlayerRef(Player.EachOpponent)
                     ),
                     description = "Each opponent loses X life, where X is the number of creature cards in your graveyard"

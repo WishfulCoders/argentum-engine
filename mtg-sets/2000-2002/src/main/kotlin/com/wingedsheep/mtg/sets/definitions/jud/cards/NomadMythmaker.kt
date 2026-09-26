@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -28,7 +27,7 @@ val NomadMythmaker = card("Nomad Mythmaker") {
     toughness = 2
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{W}"), Costs.Tap)
-        val t = target("target", TargetObject(filter = TargetFilter.CardInGraveyard))
+        val t = target(TargetFilter.CardInGraveyard)
         effect = Effects.PutOntoBattlefieldUnderYourControl(t)
     }
     metadata {

@@ -9,11 +9,8 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -28,13 +25,11 @@ val WickedPact = card("Wicked Pact") {
     typeLine = "Sorcery"
     oracleText = "Destroy two target nonblack creatures. You lose 5 life."
     spell {
-        val t = target("target", TargetCreature(count = 2, filter = TargetFilter.Creature.notColor(Color.BLACK)))
-        effect = Effects.Composite(
-            ForEachTargetEffect(
-                listOf(Effects.Move(EffectTarget.ContextTarget(0), Zone.GRAVEYARD, byDestruction = true))
-            ),
-            LoseLifeEffect(5, EffectTarget.Controller)
-        )
+        targets(TargetFilter.Creature.notColor(Color.BLACK), count = 2)
+        effect = Effects.ForEachTarget(
+            Effects.Move(EffectTarget.ContextTarget(0), Zone.GRAVEYARD, byDestruction = true)
+        ) then
+            Effects.LoseLife(5, EffectTarget.Controller)
     }
     metadata {
         rarity = Rarity.RARE

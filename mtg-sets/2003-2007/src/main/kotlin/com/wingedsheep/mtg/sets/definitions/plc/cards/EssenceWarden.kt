@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Essence Warden
@@ -15,8 +14,8 @@ import com.wingedsheep.sdk.scripting.TriggerBinding
  * Whenever another creature enters, you gain 1 life.
  *
  * "Another creature", with no "you control" — every player's creatures trigger it, so this is
- * [Triggers.entersBattlefield] with a bare Creature filter rather than
- * [Triggers.OtherCreatureEnters], whose filter is scoped to your side.
+ * `Triggers.a(filter).enters()` with a bare Creature filter rather than
+ * `Triggers.another(GameObjectFilter.Creature.youControl()).enters()`, whose filter is scoped to your side.
  */
 val EssenceWarden = card("Essence Warden") {
     manaCost = "{G}"
@@ -27,10 +26,7 @@ val EssenceWarden = card("Essence Warden") {
     oracleText = "Whenever another creature enters, you gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature,
-            binding = TriggerBinding.OTHER
-        )
+        trigger = Triggers.another(GameObjectFilter.Creature).enters()
         effect = Effects.GainLife(1)
     }
 

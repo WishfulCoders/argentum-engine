@@ -35,8 +35,8 @@ val MongooseLizard = card("Mongoose Lizard") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", Targets.Any)
+        trigger = Triggers.self.enters()
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
     }
 

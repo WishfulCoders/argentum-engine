@@ -30,6 +30,7 @@ import com.wingedsheep.engine.state.components.battlefield.AttachedToComponent
 import com.wingedsheep.engine.state.components.battlefield.ClassLevelComponent
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.battlefield.SagaComponent
+import com.wingedsheep.engine.state.components.combat.BlockingComponent
 import com.wingedsheep.engine.state.components.battlefield.TriggeredAbilityFiredEverComponent
 import com.wingedsheep.engine.state.components.battlefield.TriggeredAbilityFiredThisTurnComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
@@ -56,7 +57,7 @@ import com.wingedsheep.sdk.scripting.predicates.ControllerPredicate
 import com.wingedsheep.sdk.scripting.*
 import com.wingedsheep.sdk.scripting.predicates.evaluateWith
 import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.dsl.decayed
 
@@ -74,14 +75,13 @@ import com.wingedsheep.sdk.dsl.decayed
 class TriggerDetector(
     private val cardRegistry: CardRegistry,
     private val abilityRegistry: AbilityRegistry = AbilityRegistry(),
-    private val conditionEvaluator: ConditionEvaluator = ConditionEvaluator(),
-    private val predicateEvaluator: PredicateEvaluator = PredicateEvaluator()
+    private val predicateEvaluator: PredicateEvaluator,
+    private val conditionEvaluator: ConditionEvaluator
 ) {
-
     private val matcher = TriggerMatcher(predicateEvaluator, conditionEvaluator)
-    private val abilityResolver = TriggerAbilityResolver(cardRegistry, abilityRegistry)
+    private val abilityResolver = TriggerAbilityResolver(cardRegistry, abilityRegistry, predicateEvaluator = predicateEvaluator)
     private val deathAndLeaveDetector = DeathAndLeaveTriggerDetector(abilityResolver, matcher)
-    private val damageDetector = DamageTriggerDetector(abilityResolver, matcher)
+    private val damageDetector = DamageTriggerDetector(abilityResolver, matcher, predicateEvaluator = predicateEvaluator)
     private val attachmentDetector = AttachmentTriggerDetector(abilityResolver, matcher)
 
     /**
@@ -104,7 +104,7 @@ class TriggerDetector(
         // needs — the grant providers it already collected, plus the ward grants, ward suppressors
         // and attachments-by-target that each of the N calls used to re-scan for individually
         // (see BattlefieldStaticsIndex).
-        val statics = BattlefieldStaticsIndex.build(state, cardRegistry)
+        val statics = BattlefieldStaticsIndex.build(state, cardRegistry, predicateEvaluator = predicateEvaluator)
         val grantProviders = statics.triggerGrantProviders
 
         // Phase 2: Index each battlefield entity by trigger categories
@@ -147,14 +147,13 @@ class TriggerDetector(
                     val trigger = ability.trigger
                     if (trigger is EventPattern.DealsDamageEvent && ability.binding == TriggerBinding.ANY) {
                         // Every "… deals damage to you" observer goes to the damage-to-you index,
-                        // with or without a sourceFilter — `RecipientFilter.You` is unmatchable in
-                        // the general observer path (TriggerMatcher.matchesDealsDamageTrigger
-                        // returns false for it), so a source-filtered one routed anywhere else
-                        // would silently never fire (Farsight Mask).
-                        if (trigger.recipient == RecipientFilter.You) {
+                        // with or without a sourceFilter, and only there: that path binds the
+                        // damage *source* as the triggering entity ("…exile it", Farsight Mask), and
+                        // routing it to the general observers as well would fire it twice.
+                        if (trigger.recipient == Recipient.You) {
                             damageToYou.add(entry)
                         } else if (trigger.damageType == DamageType.Combat &&
-                            trigger.recipient == RecipientFilter.AnyPlayer &&
+                            trigger.recipient == Recipient.AnyPlayer &&
                             trigger.sourceFilter != null &&
                             trigger.sourceFilter is GameObjectFilter &&
                             (trigger.sourceFilter as GameObjectFilter).cardPredicates.any {
@@ -549,6 +548,7 @@ class TriggerDetector(
         val triggers = matching.map { delayed ->
             PendingTrigger(
                 ability = TriggeredAbility.create(
+                    id = AbilityId("delayed_${delayed.id}"),
                     trigger = EventPattern.StepEvent(Step.END, Player.Each),
                     binding = TriggerBinding.ANY,
                     effect = delayed.effect,
@@ -561,9 +561,14 @@ class TriggerDetector(
                 controllerId = delayed.controllerId,
                 triggerContext = TriggerContext(
                     step = step,
-                    triggeringEntityId = delayed.fireOnPlayerId,
+                    // A step-based trigger has no event to name a triggering entity, so the one it
+                    // was told to watch stands in — "destroy all creatures that blocked or were
+                    // blocked by *it* this turn" (Gaze of the Gorgon) reads the watched creature
+                    // through EffectTarget.TriggeringEntity.
+                    triggeringEntityId = delayed.fireOnPlayerId ?: delayed.watchedEntityId,
                     triggeringPlayerId = delayed.fireOnPlayerId
-                )
+                ),
+                carriedPipeline = delayed.carriedPipelineFor(state)
             )
         }
         val consumedIds = matching.filterNot { it.repeatAtEachMatchingStep }.map { it.id }.toSet()
@@ -721,6 +726,7 @@ class TriggerDetector(
 
             // Create a sacrifice-self trigger
             val sacrificeAbility = TriggeredAbility.create(
+                id = AbilityId("evoke_sacrifice"),
                 trigger = com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent(to = Zone.BATTLEFIELD),
                 binding = TriggerBinding.SELF,
                 effect = com.wingedsheep.sdk.dsl.Effects.SacrificeTarget(
@@ -769,6 +775,7 @@ class TriggerDetector(
                 ?.playerId ?: continue
 
             val sacrificeAtEndOfCombat = TriggeredAbility.create(
+                id = AbilityId("decayed_sacrifice"),
                 trigger = com.wingedsheep.sdk.scripting.EventPattern.AttackEvent(),
                 binding = TriggerBinding.SELF,
                 effect = com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect(
@@ -934,6 +941,7 @@ class TriggerDetector(
                         triggers.add(
                             PendingTrigger(
                                 ability = TriggeredAbility.create(
+                                    id = AbilityId("delayed_${delayed.id}"),
                                     trigger = spec.event,
                                     binding = spec.binding,
                                     effect = delayed.effect,
@@ -945,7 +953,8 @@ class TriggerDetector(
                                 sourceName = delayed.sourceName,
                                 controllerId = delayed.controllerId,
                                 triggerContext = TriggerContext.fromEvent(event).copy(triggeringEntityId = attackerId),
-                                consumesDelayedTriggerId = if (delayed.fireOnce) delayed.id else null
+                                consumesDelayedTriggerId = if (delayed.fireOnce) delayed.id else null,
+                                carriedPipeline = delayed.carriedPipelineFor(state)
                             )
                         )
                     }
@@ -979,6 +988,7 @@ class TriggerDetector(
                         triggers.add(
                             PendingTrigger(
                                 ability = TriggeredAbility.create(
+                                    id = AbilityId("delayed_${delayed.id}"),
                                     trigger = spec.event,
                                     binding = spec.binding,
                                     effect = delayed.effect,
@@ -990,7 +1000,8 @@ class TriggerDetector(
                                 sourceName = delayed.sourceName,
                                 controllerId = delayed.controllerId,
                                 triggerContext = TriggerContext(triggeringEntityId = partnerId),
-                                consumesDelayedTriggerId = if (delayed.fireOnce) delayed.id else null
+                                consumesDelayedTriggerId = if (delayed.fireOnce) delayed.id else null,
+                                carriedPipeline = delayed.carriedPipelineFor(state)
                             )
                         )
                     }
@@ -1001,6 +1012,7 @@ class TriggerDetector(
                 triggers.add(
                     PendingTrigger(
                         ability = TriggeredAbility.create(
+                            id = AbilityId("delayed_${delayed.id}"),
                             trigger = spec.event,
                             binding = spec.binding,
                             effect = delayed.effect,
@@ -1015,7 +1027,8 @@ class TriggerDetector(
                             triggeringEntityId = delayed.watchedEntityId
                                 ?: TriggerContext.fromEvent(event).triggeringEntityId
                         ),
-                        consumesDelayedTriggerId = if (delayed.fireOnce) delayed.id else null
+                        consumesDelayedTriggerId = if (delayed.fireOnce) delayed.id else null,
+                        carriedPipeline = delayed.carriedPipelineFor(state)
                     )
                 )
             }
@@ -1050,9 +1063,13 @@ class TriggerDetector(
             // Attack-declaration triggers are player-/filter-scoped, not entity-scoped, so they
             // reuse the canonical matcher rather than the watched-entity narrowing above.
             // Powers "when you next attack this turn, …" (YouAttackEvent) and the general
-            // "when a [filtered] creature next attacks" (AttackEvent).
+            // "when a [filtered] creature next attacks" (AttackEvent), and the defender-side
+            // "until your next turn, whenever one or more creatures attack one of your opponents"
+            // (Garruk, Curse Breaker) / "…attack you" batch forms.
             is com.wingedsheep.sdk.scripting.EventPattern.YouAttackEvent,
-            is com.wingedsheep.sdk.scripting.EventPattern.AttackEvent ->
+            is com.wingedsheep.sdk.scripting.EventPattern.AttackEvent,
+            is com.wingedsheep.sdk.scripting.EventPattern.CreaturesAttackYouEvent,
+            is com.wingedsheep.sdk.scripting.EventPattern.CreaturesAttackYourOpponentEvent ->
                 matcher.matchesTrigger(specEvent, spec.binding, event, sourceId, controllerId, state)
             // Spell-cast delayed triggers ("whenever you cast a [filtered] spell this turn, …",
             // Rediscover the Way chapter III) are filter-scoped: delegate to the canonical
@@ -1072,7 +1089,7 @@ class TriggerDetector(
                 // Recipient-scoped ("…to *that player* this turn"): the damaged entity must be
                 // the baked recipient. The spec's recipient filter still applies on top.
                 if (watchedRecipientId != null && event.targetId != watchedRecipientId) return false
-                matcher.matchesDealsDamageTrigger(specEvent, event, state, controllerId)
+                matcher.matchesDealsDamageTrigger(specEvent, event, state, controllerId, sourceId)
             }
             // "When damage is prevented this way": fires only for this delayed trigger's own
             // shield, matched by the linkId echoed back on the DamagePreventedEvent.
@@ -1243,8 +1260,41 @@ class TriggerDetector(
                     // create one trigger per matching blocker.
                     else if (ability.trigger is EventPattern.BlockEvent && ability.binding == TriggerBinding.ANY &&
                         event is com.wingedsheep.engine.core.BlockersDeclaredEvent) {
-                        val blockFilter = (ability.trigger as EventPattern.BlockEvent).filter
-                        for (blockerId in event.blockers.keys) {
+                        val blockTrigger = ability.trigger as EventPattern.BlockEvent
+                        val blockFilter = blockTrigger.filter
+                        // "one or more … block" (batch): a block declaration is one simultaneous
+                        // event, so fire once if any declared blocker matches, and never on a
+                        // declaration with no matching blocker (CR 603.2c). No single blocker is
+                        // "the" triggering creature. With several defending players each declares
+                        // in turn (CR 802.4), but the step's blocks are still one "creatures block"
+                        // — so a matching creature already blocking from an earlier declaration
+                        // means this ability has already triggered this step.
+                        val blockerIds = if (!blockTrigger.batch) event.blockers.keys else {
+                            val blockerMatches = { blockerId: EntityId ->
+                                blockFilter == null || predicateEvaluator.matches(
+                                    state, projected, blockerId, blockFilter,
+                                    PredicateContext(controllerId = controllerId, sourceId = entityId)
+                                )
+                            }
+                            val alreadyTriggered = state.getBattlefield().any { id ->
+                                id !in event.blockers &&
+                                    state.getEntity(id)?.has<BlockingComponent>() == true &&
+                                    blockerMatches(id)
+                            }
+                            if (!alreadyTriggered && event.blockers.keys.any(blockerMatches)) {
+                                triggers.add(
+                                    PendingTrigger(
+                                        ability = ability,
+                                        sourceId = entityId,
+                                        sourceName = cardComponent.name,
+                                        controllerId = controllerId,
+                                        triggerContext = TriggerContext()
+                                    )
+                                )
+                            }
+                            emptySet()
+                        }
+                        for (blockerId in blockerIds) {
                             if (blockFilter != null) {
                                 if (predicateEvaluator.matches(
                                         state, projected, blockerId, blockFilter,
@@ -1709,10 +1759,9 @@ class TriggerDetector(
             detectOpponentGainsControlTriggers(state, index.statics, event, triggers)
         }
 
-        // Handle self-cast triggers on the spell currently being cast — both NthSpellCast
-        // (e.g. Hearthborn Battler cast as the second spell of the turn) and "when you cast
-        // this spell" cast triggers (e.g. Sage of the Skies). The spell is on the stack, not
-        // the battlefield, so the main index scan above skips it.
+        // Handle "when you cast this spell" cast triggers on the spell currently being cast
+        // (e.g. Sage of the Skies). The spell is on the stack, not the battlefield, so the main
+        // index scan above skips it.
         if (event is SpellCastEvent) {
             detectSelfCastTriggers(state, index.statics, event, triggers)
         }
@@ -1834,18 +1883,14 @@ class TriggerDetector(
     }
 
     /**
-     * Detect self-cast triggers on the spell currently being cast — triggers whose event keys off
-     * the spell's own casting and travels with it onto the stack.
+     * Detect self-cast triggers on the spell currently being cast — a "when you cast this spell"
+     * cast trigger ([EventPattern.CastThisSpellEvent], Sage of the Skies). These are never indexed
+     * against battlefield permanents, so this is the only path that fires them.
      *
-     * Two kinds qualify:
-     *  - [EventPattern.NthSpellCastEvent] — when a card like Hearthborn Battler is itself the Nth
-     *    spell cast this turn ("whenever a player casts their second spell each turn").
-     *  - [EventPattern.CastThisSpellEvent] — a "when you cast this spell" cast trigger (Sage of the
-     *    Skies). These are never indexed against battlefield permanents, so this is the only path
-     *    that fires them.
-     *
-     * The spell is on the stack rather than the battlefield, so the main index scan skips it; this
-     * pass reads the cast spell's own triggered abilities and matches them against the cast event.
+     * A permanent card's *other* triggered abilities — including [EventPattern.NthSpellCastEvent]
+     * ("whenever a player casts their second spell each turn") — function only on the battlefield
+     * (CR 113.6), so a Hearthborn Battler or Plan for All Outcomes that is itself the Nth spell
+     * cast does **not** trigger off its own cast.
      */
     private fun detectSelfCastTriggers(
         state: GameState,
@@ -1862,9 +1907,7 @@ class TriggerDetector(
         val controllerId = event.casterId
 
         for (ability in abilities) {
-            if (ability.trigger !is EventPattern.NthSpellCastEvent &&
-                ability.trigger !is EventPattern.CastThisSpellEvent
-            ) continue
+            if (ability.trigger !is EventPattern.CastThisSpellEvent) continue
             if (matcher.matchesTrigger(ability.trigger, ability.binding, event, entityId, controllerId, state)) {
                 triggers.add(
                     PendingTrigger(
@@ -2457,6 +2500,7 @@ class TriggerDetector(
             if (event !is ReflexiveAbilityTriggeredEvent) continue
             val reqs = event.reflexiveTargetRequirements
             val syntheticAbility = TriggeredAbility.create(
+                id = AbilityId("reflexive"),
                 // Never re-matched — this PendingTrigger is constructed directly, bypassing the
                 // usual TriggerIndex scan, so the trigger pattern itself is inert.
                 trigger = EventPattern.DamageEvent(),
@@ -2985,6 +3029,28 @@ class TriggerDetector(
                     continue
                 }
 
+                // "One or more of your opponents are dealt combat damage" — keyed on the damaged
+                // players, any source: one trigger per batch however many opponents were hit.
+                if (trigger is EventPattern.OpponentsDealtCombatDamageEvent) {
+                    val controllerId = entry.controllerId
+                    val hit = combatDamageByDamagedPlayer.entries
+                        .firstOrNull { (playerId, _) -> state.isOpponentOf(playerId, controllerId) }
+                        ?: continue
+                    triggers.add(
+                        PendingTrigger(
+                            ability = ability,
+                            sourceId = entry.entityId,
+                            sourceName = entry.cardComponent.name,
+                            controllerId = controllerId,
+                            triggerContext = TriggerContext(
+                                triggeringEntityId = hit.value.first().sourceId,
+                                triggeringPlayerId = hit.key
+                            )
+                        )
+                    )
+                    continue
+                }
+
                 if (trigger !is EventPattern.OneOrMoreDealCombatDamageToPlayerEvent) continue
 
                 val controllerId = entry.controllerId
@@ -3472,7 +3538,7 @@ class TriggerDetector(
         val registry = cardRegistry
 
         // Find all LORE counter addition events
-        val loreEvents = events.filterIsInstance<CountersAddedEvent>().filter { it.counterType == "LORE" }
+        val loreEvents = events.filterIsInstance<CountersAddedEvent>().filter { it.counterType == CounterType.LORE }
         if (loreEvents.isEmpty()) return
 
         for (event in loreEvents) {
@@ -3500,6 +3566,7 @@ class TriggerDetector(
                 if (loreCount >= chapter.chapter && previousLoreCount < chapter.chapter) {
                     // Create a triggered ability for this chapter
                     val chapterAbility = TriggeredAbility.create(
+                        id = AbilityId("saga_chapter_${chapter.chapter}"),
                         trigger = EventPattern.StepEvent(Step.PRECOMBAT_MAIN, Player.You),
                         binding = TriggerBinding.SELF,
                         effect = chapter.effect,

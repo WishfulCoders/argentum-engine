@@ -9,16 +9,10 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Smuggler's Surprise
@@ -54,60 +48,41 @@ val SmugglersSurprise = card("Smuggler's Surprise") {
         "indestructible until end of turn."
 
     spell {
-        effect = ModalEffect(
+        effect = Effects.Modal(
             modes = listOf(
                 // + {2} — Mill four; put up to two creature/land cards from milled into hand.
                 Mode(
-                    effect = Effects.Composite(
-                        listOf(
-                            GatherCardsEffect(
-                                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(4)),
-                                storeAs = "smuggler_milled"
-                            ),
-                            MoveCollectionEffect(
-                                from = "smuggler_milled",
-                                destination = CardDestination.ToZone(Zone.GRAVEYARD)
-                            ),
-                            SelectFromCollectionEffect(
-                                from = "smuggler_milled",
-                                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(2)),
-                                filter = GameObjectFilter.CreatureOrLand,
-                                storeSelected = "smuggler_to_hand",
-                                showAllCards = true,
-                                prompt = "You may put up to two creature and/or land cards into your hand",
-                                selectedLabel = "Put in hand",
-                                remainderLabel = "Leave in graveyard"
-                            ),
-                            MoveCollectionEffect(
-                                from = "smuggler_to_hand",
-                                destination = CardDestination.ToZone(Zone.HAND)
-                            )
+                    effect = Effects.Pipeline {
+                        val smugglerMilled = gather(CardSource.TopOfLibrary(4))
+                        toGraveyard(smugglerMilled)
+                        val smugglerToHand = chooseUpTo(
+                            2,
+                            from = smugglerMilled,
+                            filter = GameObjectFilter.CreatureOrLand,
+                            showAllCards = true,
+                            prompt = "You may put up to two creature and/or land cards into your hand",
+                            selectedLabel = "Put in hand",
+                            remainderLabel = "Leave in graveyard"
                         )
-                    ),
+                        toHand(smugglerToHand)
+                    },
                     description = "+ {2} — Mill four cards. You may put up to two creature and/or " +
                         "land cards from among the milled cards into your hand.",
                     additionalManaCost = "{2}"
                 ),
                 // + {4}{G} — Put up to two creature cards from your hand onto the battlefield.
                 Mode(
-                    effect = Effects.Composite(
-                        listOf(
-                            GatherCardsEffect(
-                                source = CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Creature),
-                                storeAs = "smuggler_hand_candidates"
-                            ),
-                            SelectFromCollectionEffect(
-                                from = "smuggler_hand_candidates",
-                                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(2)),
-                                storeSelected = "smuggler_to_battlefield",
-                                prompt = "You may put up to two creature cards onto the battlefield"
-                            ),
-                            MoveCollectionEffect(
-                                from = "smuggler_to_battlefield",
-                                destination = CardDestination.ToZone(Zone.BATTLEFIELD, Player.You)
-                            )
+                    effect = Effects.Pipeline {
+                        val smugglerHandCandidates = gather(
+                            CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Creature)
                         )
-                    ),
+                        val smugglerToBattlefield = chooseUpTo(
+                            2,
+                            from = smugglerHandCandidates,
+                            prompt = "You may put up to two creature cards onto the battlefield"
+                        )
+                        move(smugglerToBattlefield, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You))
+                    },
                     description = "+ {4}{G} — You may put up to two creature cards from your hand " +
                         "onto the battlefield.",
                     additionalManaCost = "{4}{G}"
@@ -118,12 +93,8 @@ val SmugglersSurprise = card("Smuggler's Surprise") {
                         filter = GroupFilter(
                             baseFilter = GameObjectFilter.Creature.youControl().powerAtLeast(4)
                         ),
-                        effect = Effects.Composite(
-                            listOf(
-                                Effects.GrantKeyword(Keyword.HEXPROOF, EffectTarget.Self, Duration.EndOfTurn),
-                                Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self, Duration.EndOfTurn)
-                            )
-                        )
+                        effect = Effects.GrantKeyword(Keyword.HEXPROOF, EffectTarget.IterationEntity, Duration.EndOfTurn) then
+                            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.IterationEntity, Duration.EndOfTurn)
                     ),
                     description = "+ {1} — Creatures you control with power 4 or greater gain " +
                         "hexproof and indestructible until end of turn.",

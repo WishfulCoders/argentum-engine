@@ -350,7 +350,7 @@ data class GrantEmbalmEffect(
  * to the entity and read at the point of use — e.g. the combat blocker validation consults
  * granted [com.wingedsheep.sdk.scripting.CantBeBlockedByMoreThan] alongside the creature's
  * printed static abilities. Compose inside [com.wingedsheep.sdk.dsl.Effects.ForEachInGroup]
- * with [EffectTarget.Self] to grant it to each creature in a group (Full Steam Ahead).
+ * with [EffectTarget.IterationEntity] to grant it to each creature in a group (Full Steam Ahead).
  *
  * @property ability The static ability to grant
  * @property target The permanent to grant the ability to

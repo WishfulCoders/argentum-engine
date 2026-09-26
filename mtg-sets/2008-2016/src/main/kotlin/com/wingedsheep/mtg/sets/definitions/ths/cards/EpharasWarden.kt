@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.ths.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ephara's Warden
@@ -24,7 +24,7 @@ val EpharasWarden = card("Ephara's Warden") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", Targets.CreatureWithPowerAtMost(3))
+        val t = target(TargetFilter.Creature.powerAtMost(3))
         effect = Effects.Tap(t)
     }
 

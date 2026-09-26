@@ -127,6 +127,22 @@ export function CardSelectionDecision({
     return types
   }, [decision.onePerCardType, decision.cardInfo, selectedCards, gameState?.cards])
 
+  /** A card's name, from the decision's card info (hidden zones) or gameState. */
+  const nameForCard = (cardId: EntityId): string | null =>
+    decision.cardInfo?.[cardId]?.name ?? gameState?.cards[cardId]?.name ?? null
+
+  // OnePerCardName: the names already claimed by selected cards.
+  const claimedNames = useMemo(() => {
+    if (!decision.onePerCardName) return new Set<string>()
+    const names = new Set<string>()
+    for (const id of selectedCards) {
+      const name = nameForCard(id)
+      if (name != null) names.add(name)
+    }
+    return names
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [decision.onePerCardName, decision.cardInfo, selectedCards, gameState?.cards])
+
   /** Resolve a card's colour identity from cardInfo, gameState, or its mana cost. */
   const colorsForCard = (cardId: EntityId): string[] => {
     const fromInfo = decision.cardInfo?.[cardId]?.colors
@@ -224,6 +240,10 @@ export function CardSelectionDecision({
       const typeLine = decision.cardInfo?.[cardId]?.typeLine ?? gameState?.cards[cardId]?.typeLine ?? ''
       const types = extractCardTypes(typeLine)
       if (types.length > 0 && types.some((t) => claimedTypes.has(t))) return true
+    }
+    if (decision.onePerCardName) {
+      const name = nameForCard(cardId)
+      if (name != null && claimedNames.has(name)) return true
     }
     if (decision.onePerColor) {
       const colors = colorsForCard(cardId)

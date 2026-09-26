@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.IncreaseActivatedAbilityCost
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Suppression Field
@@ -33,7 +33,7 @@ val SuppressionField = card("Suppression Field") {
     staticAbility {
         ability = IncreaseActivatedAbilityCost(
             filter = GroupFilter(GameObjectFilter.Any),
-            amount = DynamicAmount.Fixed(2),
+            amount = DynamicAmounts.fixed(2),
             excludeManaAbilities = true,
         )
     }

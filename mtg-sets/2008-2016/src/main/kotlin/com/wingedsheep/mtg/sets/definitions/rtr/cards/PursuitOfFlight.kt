@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.rtr.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityId
@@ -11,6 +10,8 @@ import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.GrantActivatedAbility
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Pursuit of Flight
@@ -32,7 +33,7 @@ val PursuitOfFlight = card("Pursuit of Flight") {
     oracleText = "Enchant creature\n" +
         "Enchanted creature gets +2/+2 and has \"{U}: This creature gains flying until end of turn.\""
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = ModifyStats(2, 2)
@@ -41,7 +42,7 @@ val PursuitOfFlight = card("Pursuit of Flight") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Mana("{U}"),
                 effect = Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self),
             )

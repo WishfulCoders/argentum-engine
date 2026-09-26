@@ -29,7 +29,7 @@ val NurturingBristleback = card("Nurturing Bristleback") {
     power = 5
     toughness = 5
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 3,
             toughness = 3,

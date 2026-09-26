@@ -1,15 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Fungal Fortitude
@@ -30,7 +30,7 @@ val FungalFortitude = card("Fungal Fortitude") {
 
     keywords(Keyword.FLASH)
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     // "Enchanted creature gets +2/+0" — Layer 7c (POWER_TOUGHNESS, MODIFY)
     staticAbility {
@@ -41,7 +41,7 @@ val FungalFortitude = card("Fungal Fortitude") {
     // trigger: enchanted creature leaves battlefield to graveyard (TriggerBinding.ATTACHED watches the host)
     // effect: PutOntoBattlefield without controllerOverride defaults to the card's owner's control
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(to = Zone.GRAVEYARD, binding = TriggerBinding.ATTACHED)
+        trigger = Triggers.attached.dies()
         effect = Effects.PutOntoBattlefield(EffectTarget.TriggeringEntity, tapped = true)
     }
 

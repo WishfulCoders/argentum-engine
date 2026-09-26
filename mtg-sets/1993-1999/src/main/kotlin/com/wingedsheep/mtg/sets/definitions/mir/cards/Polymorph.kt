@@ -4,16 +4,11 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CantBeRegeneratedEffect
 import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.GatherUntilMatchEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Polymorph
@@ -30,34 +25,20 @@ val Polymorph = card("Polymorph") {
     oracleText = "Destroy target creature. It can't be regenerated. Its controller reveals cards from the top of their library until they reveal a creature card. The player puts that card onto the battlefield, then shuffles all other cards revealed this way into their library."
 
     spell {
-        val t = target("target creature", TargetCreature())
+        val t = target(TargetFilter.Creature)
         val controllerOfTarget = Player.ControllerOf("target creature")
-        effect = Effects.Composite(
-            listOf(
-                CantBeRegeneratedEffect(t),
-                Effects.Move(t, Zone.GRAVEYARD, byDestruction = true),
-                GatherUntilMatchEffect(
-                    player = controllerOfTarget,
-                    filter = GameObjectFilter.Creature,
-                    storeMatch = "found",
-                    storeRevealed = "allRevealed"
-                ),
-                // fromZone/toZone tag this as a zone-transition reveal so the client shows
-                // the full reveal overlay including the matched creature (which lands on the
-                // battlefield in the same update and would otherwise be filtered out as
-                // public info — see web-client gameplayHandlers `isZoneTransitionReveal`).
-                RevealCollectionEffect(
-                    from = "allRevealed",
-                    fromZone = Zone.LIBRARY,
-                    toZone = Zone.BATTLEFIELD
-                ),
-                MoveCollectionEffect(
-                    from = "found",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD, player = controllerOfTarget)
-                ),
-                ShuffleLibraryEffect(EffectTarget.TargetController)
-            )
-        )
+        effect = Effects.Pipeline {
+            run(Effects.CantBeRegenerated(t))
+            run(Effects.Move(t, Zone.GRAVEYARD, byDestruction = true))
+            val (found, allRevealed) = gatherUntilMatch(GameObjectFilter.Creature, player = controllerOfTarget)
+            // fromZone/toZone tag this as a zone-transition reveal so the client shows
+            // the full reveal overlay including the matched creature (which lands on the
+            // battlefield in the same update and would otherwise be filtered out as
+            // public info — see web-client gameplayHandlers `isZoneTransitionReveal`).
+            reveal(allRevealed, fromZone = Zone.LIBRARY, toZone = Zone.BATTLEFIELD)
+            move(found, CardDestination.ToZone(Zone.BATTLEFIELD, player = controllerOfTarget))
+            run(Effects.ShuffleLibrary(EffectTarget.TargetController))
+        }
     }
 
     metadata {

@@ -116,7 +116,7 @@ class DeterminizerInvariantsTest : ScenarioTestBase() {
                 ids.shouldContainExactlyInAnyOrder(before.zones.getValue(key))
             }
 
-            val transformer = ClientStateTransformer(cardRegistry)
+            val transformer = ClientStateTransformer(cardRegistry, predicateEvaluator = services.predicateEvaluator)
             val visibleBefore = transformer.transform(before, game.player1Id)
             val visibleAfter = transformer.transform(sampled, game.player1Id)
             visibleAfter.cards shouldBe visibleBefore.cards
@@ -327,7 +327,7 @@ class DeterminizerInvariantsTest : ScenarioTestBase() {
                 source.getEntity(it)!!.require<CardComponent>()
             }
             var analyses = 0
-            val determinizer = Determinizer(cardRegistry, Visibility(cardRegistry)) {
+            val determinizer = Determinizer(cardRegistry, Visibility(cardRegistry, conditionEvaluator = services.conditionEvaluator)) {
                 analyses++
                 HiddenSlotRewrite.IdentitySensitiveInFlightPins.Incomplete("forced for test")
             }
@@ -355,7 +355,7 @@ class DeterminizerInvariantsTest : ScenarioTestBase() {
                 .withCardInLibrary(2, "Hill Giant")
                 .build()
             var analyses = 0
-            val determinizer = Determinizer(cardRegistry, Visibility(cardRegistry)) { state ->
+            val determinizer = Determinizer(cardRegistry, Visibility(cardRegistry, conditionEvaluator = services.conditionEvaluator)) { state ->
                 analyses++
                 HiddenSlotRewrite.identitySensitiveInFlightPins(state)
             }
@@ -369,7 +369,7 @@ class DeterminizerInvariantsTest : ScenarioTestBase() {
         test("a position without players does not analyze in-flight references") {
             val game = scenario().withPlayers().build()
             val source = game.state.copy(turnOrder = emptyList())
-            val determinizer = Determinizer(cardRegistry, Visibility(cardRegistry)) {
+            val determinizer = Determinizer(cardRegistry, Visibility(cardRegistry, conditionEvaluator = services.conditionEvaluator)) {
                 error("There are no players to sample")
             }
 

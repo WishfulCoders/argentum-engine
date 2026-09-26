@@ -15,7 +15,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Edgar Markov:1",
                 "trigger": {
                     "type": "SpellCastEvent",
                     "spellFilter": {
@@ -53,7 +53,7 @@
                 "descriptionOverride": "Eminence — Whenever you cast another Vampire spell, if Edgar is in the command zone or on the battlefield, create a 1/1 black Vampire creature token."
             },
             {
-                "id": "ability_2",
+                "id": "Edgar Markov:2",
                 "trigger": "AttackEvent",
                 "effect": {
                     "type": "ForEach",
@@ -65,9 +65,9 @@
                     },
                     "body": {
                         "type": "AddCounters",
-                        "counterType": "+1/+1",
+                        "counterType": "PLUS_ONE_PLUS_ONE",
                         "count": 1,
-                        "target": "Self"
+                        "target": "IterationEntity"
                     }
                 },
                 "descriptionOverride": "Whenever Edgar attacks, put a +1/+1 counter on each Vampire you control."
@@ -113,15 +113,15 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Ramos, Dragon Engine:1",
                 "trigger": "SpellCastEvent",
                 "binding": "ANY",
                 "effect": {
                     "type": "AddDynamicCounters",
-                    "counterType": "+1/+1",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
                     "amount": {
                         "type": "EntityProperty",
-                        "entity": "Triggering",
+                        "entity": "TriggeringEntity",
                         "numericProperty": "ColorCount"
                     },
                     "target": "Self"
@@ -130,12 +130,12 @@
         ],
         "activatedAbilities": [
             {
-                "id": "ability_2",
+                "id": "Ramos, Dragon Engine:2",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
                         "type": "AtomRemoveCounters",
-                        "counterType": "+1/+1",
+                        "counterType": "PLUS_ONE_PLUS_ONE",
                         "count": {
                             "type": "Fixed",
                             "amount": 5

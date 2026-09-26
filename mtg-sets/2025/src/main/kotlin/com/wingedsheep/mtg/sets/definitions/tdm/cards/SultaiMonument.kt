@@ -39,7 +39,7 @@ val SultaiMonument = card("Sultai Monument") {
         "Activate only as a sorcery."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.BasicLand.withAnyOfSubtypes(
                 listOf(Subtype.SWAMP, Subtype.FOREST, Subtype.ISLAND)

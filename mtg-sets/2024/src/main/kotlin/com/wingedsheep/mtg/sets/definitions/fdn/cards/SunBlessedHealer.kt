@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Sun-Blessed Healer
@@ -36,16 +35,13 @@ val SunBlessedHealer = card("Sun-Blessed Healer") {
     keywords(Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = WasKicked
         val t = target(
-            "target",
-            TargetObject(
-                filter = TargetFilter(
+            TargetFilter(
                     GameObjectFilter.NonlandPermanent.ownedByYou(),
                     zone = Zone.GRAVEYARD
-                ).manaValueAtMost(2)
-            )
+                ).manaValueAtMost(2),
         )
         effect = Effects.Move(t, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)
     }

@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
 import com.wingedsheep.sdk.scripting.references.Player
@@ -172,10 +171,7 @@ class ThunderOfUnityTest : FunSpec({
 
         val delayed = driver.state.delayedTriggers
         delayed.size shouldBe 1
-        delayed.first().trigger shouldBe Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.youControl(),
-            binding = TriggerBinding.ANY
-        )
+        delayed.first().trigger shouldBe Triggers.a(GameObjectFilter.Creature.youControl()).enters()
         // Fires on *every* matching enter (not one-shot) and lasts until end of turn.
         delayed.first().fireOnce shouldBe false
         delayed.first().expiry shouldBe DelayedTriggerExpiry.EndOfTurn

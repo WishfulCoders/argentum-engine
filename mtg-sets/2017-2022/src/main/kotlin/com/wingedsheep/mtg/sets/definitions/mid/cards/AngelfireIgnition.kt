@@ -4,15 +4,13 @@
 
 package com.wingedsheep.mtg.sets.definitions.mid.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -28,15 +26,13 @@ val AngelfireIgnition = card("Angelfire Ignition") {
     typeLine = "Sorcery"
     oracleText = "Put two +1/+1 counters on target creature. It gains vigilance, trample, lifelink, indestructible, and haste until end of turn.\nFlashback {2}{R}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            AddCountersEffect(counterType = Counters.PLUS_ONE_PLUS_ONE, count = 2, target = t),
-            Effects.GrantKeyword(Keyword.VIGILANCE, t),
-            Effects.GrantKeyword(Keyword.TRAMPLE, t),
-            Effects.GrantKeyword(Keyword.LIFELINK, t),
-            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t),
+        val t = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(counterType = CounterType.PLUS_ONE_PLUS_ONE, count = 2, target = t) then
+            Effects.GrantKeyword(Keyword.VIGILANCE, t) then
+            Effects.GrantKeyword(Keyword.TRAMPLE, t) then
+            Effects.GrantKeyword(Keyword.LIFELINK, t) then
+            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t) then
             Effects.GrantKeyword(Keyword.HASTE, t)
-        )
     }
     keywordAbility(KeywordAbility.flashback("{2}{R}{W}"))
     metadata {

@@ -25,11 +25,9 @@ val VoldarenEpicure = card("Voldaren Epicure") {
         "token. (It's an artifact with \"{1}, {T}, Discard a card, Sacrifice this token: Draw a card.\")"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent)),
+        trigger = Triggers.self.enters()
+        effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent)) then
             Effects.CreateBlood(1)
-        )
     }
 
     metadata {

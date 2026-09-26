@@ -32,7 +32,7 @@ class ObekaSplitterOfSecondsScenarioTest : FunSpec({
         typeLine = "Enchantment"
         oracleText = "At the beginning of your upkeep, you gain 1 life."
         triggeredAbility {
-            trigger = Triggers.YourUpkeep
+            trigger = Triggers.you.beginningOf(Step.UPKEEP)
             effect = Effects.GainLife(1)
         }
     }

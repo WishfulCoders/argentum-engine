@@ -36,7 +36,7 @@ val PoetsQuill = card("Poet's Quill") {
         "Equip {1}{B}"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Mechanic.learn()
     }
 

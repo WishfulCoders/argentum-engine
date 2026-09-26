@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.references.Player
  * Whenever you cast your second spell each turn, you gain 2 life.
  * Foretell {W} (During your turn, you may pay {2} and exile this card from your hand face down. Cast it on a later turn for its foretell cost.)
  *
- * The second-spell ordinal is [Triggers.NthSpellCast] with n = 2 scoped to [Player.You]; the
+ * The second-spell ordinal is `Triggers.<player>.castsNth(n, spell)` with n = 2 scoped to [Player.You]; the
  * engine tracks each player's per-turn cast count, so no bookkeeping lives on the card. Foretell
  * is lowered into [KeywordAbility.foretell] — it is a real cast, so it advances that count.
  */
@@ -29,7 +29,7 @@ val DoomskarOracle = card("Doomskar Oracle") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.NthSpellCast(2, Player.You)
+        trigger = Triggers.you.castsNth(2)
         effect = Effects.GainLife(2)
     }
 

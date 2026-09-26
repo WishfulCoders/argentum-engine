@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Aim for the Head
@@ -38,15 +37,12 @@ val AimForTheHead = card("Aim for the Head") {
     spell {
         modal(chooseCount = 1) {
             mode("Exile target Zombie") {
-                val zombie = target(
-                    "target Zombie",
-                    TargetPermanent(filter = TargetFilter(GameObjectFilter.Permanent.withSubtype("Zombie")))
-                )
+                val zombie = target(TargetFilter(GameObjectFilter.Permanent.withSubtype("Zombie")))
                 effect = Effects.Exile(zombie)
             }
             mode("Target opponent exiles two cards from their hand") {
-                target("opponent", Targets.Opponent)
-                effect = Patterns.Hand.exileFromHand(2)
+                val opponent = target(Targets.Opponent)
+                effect = Patterns.Hand.exileFromHand(2, target = opponent)
             }
         }
     }

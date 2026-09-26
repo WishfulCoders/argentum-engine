@@ -2,13 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Turn Inside Out
@@ -20,7 +18,7 @@ import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
  * card.)
  *
  * Modeled like Desperate Measures: a +3/+0 stat change until end of turn plus a watched-entity
- * delayed [Triggers.Dies] trigger scoped to the buffed creature via `watchedTarget`, expiring at
+ * delayed `Triggers.self.dies()` trigger scoped to the buffed creature via `watchedTarget`, expiring at
  * end of turn. When the creature dies this turn, the delayed trigger runs the shared
  * [Patterns.Library.manifestDread] recipe for the spell's controller. The trigger is scoped by
  * entity id, so it fires regardless of who controlled the creature when it died — matching the
@@ -36,16 +34,14 @@ val TurnInsideOut = card("Turn Inside Out") {
         "mana cost if it's a creature card.)"
 
     spell {
-        val t = target("target creature", Targets.Creature)
-        effect = Effects.Composite(
-            ModifyStatsEffect(3, 0, t),
-            CreateDelayedTriggerEffect(
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(3, 0, t) then
+            Effects.CreateDelayedTrigger(
                 effect = Patterns.Library.manifestDread(),
-                trigger = Triggers.Dies,
+                trigger = Triggers.self.dies(),
                 watchedTarget = t,
                 expiry = DelayedTriggerExpiry.EndOfTurn,
-            ),
-        )
+            )
     }
 
     metadata {

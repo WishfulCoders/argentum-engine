@@ -5,11 +5,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.AttackEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * J. Jonah Jameson
@@ -31,19 +28,13 @@ val JJonahJameson = card("J. Jonah Jameson") {
         "Whenever a creature you control with menace attacks, create a Treasure token."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "up to one target creature",
-            TargetCreature(count = 1, optional = true)
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature, optional = true)
         effect = Effects.Suspect(t)
     }
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            AttackEvent(filter = GameObjectFilter.Creature.withKeyword(Keyword.MENACE).youControl()),
-            TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.withKeyword(Keyword.MENACE).youControl()).attacks()
         effect = Effects.CreateTreasure()
     }
 

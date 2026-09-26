@@ -25,7 +25,7 @@ val LongBodiedGreyDog = card("Long-Bodied Grey Dog") {
     toughness = 2
     keywords(Keyword.FLASH, Keyword.REACH)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateTreasure(tapped = true)
     }
     metadata {

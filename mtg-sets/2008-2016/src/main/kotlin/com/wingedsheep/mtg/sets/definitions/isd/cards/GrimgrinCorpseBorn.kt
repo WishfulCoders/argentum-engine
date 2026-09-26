@@ -1,16 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.isd.cards
 
 import com.wingedsheep.sdk.core.AbilityFlag
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Grimgrin, Corpse-Born
@@ -40,24 +40,16 @@ val GrimgrinCorpseBorn = card("Grimgrin, Corpse-Born") {
 
     activatedAbility {
         cost = Costs.SacrificeAnother(GameObjectFilter.Creature)
-        effect = Effects.Composite(
-            listOf(
-                Effects.Untap(EffectTarget.Self),
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
-            )
-        )
+        effect = Effects.Untap(EffectTarget.Self) then
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Sacrifice another creature: Untap Grimgrin and put a +1/+1 counter on it."
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val creature = target("creature defending player controls", Targets.CreatureOpponentControls)
-        effect = Effects.Composite(
-            listOf(
-                Effects.Destroy(creature),
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
-            )
-        )
+        trigger = Triggers.self.attacks()
+        val creature = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.Destroy(creature) then
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     metadata {

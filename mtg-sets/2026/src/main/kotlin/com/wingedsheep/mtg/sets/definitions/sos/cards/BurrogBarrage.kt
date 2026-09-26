@@ -3,13 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.sos.cards
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Burrog Barrage
@@ -35,16 +32,13 @@ val BurrogBarrage = card("Burrog Barrage") {
         "target creature an opponent controls."
 
     spell {
-        val own = target("target creature you control", Targets.CreatureYouControl)
-        val foe = target(
-            "up to one target creature an opponent controls",
-            TargetCreature(filter = TargetFilter.CreatureOpponentControls, optional = true),
-        )
-        effect = ConditionalEffect(
+        val own = target(TargetFilter.CreatureYouControl)
+        val foe = target(TargetFilter.CreatureOpponentControls, optional = true)
+        effect = Effects.If(
             condition = Conditions.YouCastSpellsThisTurn(2, GameObjectFilter.InstantOrSorcery),
-            effect = Effects.ModifyStats(1, 0, own),
+            then = Effects.ModifyStats(1, 0, own),
         ) then Effects.DealDamage(
-            DynamicAmounts.targetPower(0),
+            DynamicAmounts.powerOf(own),
             foe,
             damageSource = own,
         )

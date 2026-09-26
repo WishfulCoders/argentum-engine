@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.div
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Costs
 
 /**
@@ -31,14 +30,10 @@ val TorgaarFamineIncarnate = card("Torgaar, Famine Incarnate") {
     additionalCost(Costs.additional.SacrificeCreaturesForCostReduction())
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val player = target("player", TargetPlayer(optional = true))
+        trigger = Triggers.self.enters()
+        val player = target(Targets.Player, optional = true)
         effect = Effects.SetLifeTotal(
-            amount = DynamicAmount.Divide(
-                numerator = DynamicAmount.StartingLifeTotal(Player.ContextPlayer(0)),
-                denominator = DynamicAmount.Fixed(2),
-                roundUp = false,
-            ),
+            amount = DynamicAmounts.startingLifeTotal(player.asPlayer) / 2,
             target = player,
         )
     }

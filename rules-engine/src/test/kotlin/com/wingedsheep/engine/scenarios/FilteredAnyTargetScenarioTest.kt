@@ -1,7 +1,5 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.handlers.PredicateEvaluator
-import com.wingedsheep.engine.handlers.TargetFinder
 import com.wingedsheep.engine.handlers.effects.DamageUtils
 import com.wingedsheep.engine.legalactions.utils.TargetEnumerationUtils
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
@@ -27,7 +25,7 @@ class FilteredAnyTargetScenarioTest : ScenarioTestBase() {
         manaCost = "{R}"
         typeLine = "Instant"
         spell {
-            val recipient = target("damaged target", Targets.Any(filter))
+            val recipient = target(Targets.Any(filter))
             effect = Effects.DealDamage(1, recipient)
         }
     }
@@ -52,8 +50,8 @@ class FilteredAnyTargetScenarioTest : ScenarioTestBase() {
     }
 
     private fun TestGame.checkEligible(id: EntityId) {
-        TargetFinder().findLegalTargets(state, Targets.Any(filter), player1Id) shouldContain id
-        TargetEnumerationUtils(PredicateEvaluator()).findValidTargets(state, player1Id, Targets.Any(filter)) shouldContain id
+        services.targetFinder.findLegalTargets(state, Targets.Any(filter), player1Id) shouldContain id
+        TargetEnumerationUtils(services.predicateEvaluator).findValidTargets(state, player1Id, Targets.Any(filter)) shouldContain id
     }
 
     init {
@@ -102,7 +100,7 @@ class FilteredAnyTargetScenarioTest : ScenarioTestBase() {
         test("noncombat damage to a battle is recorded and its defense is removed") {
             val game = scenario().withPlayers("Caster", "Opponent").withCardOnBattlefield(1, "Damage History Siege").build()
             val battle = game.findPermanent("Damage History Siege")!!
-            game.state = DamageUtils.dealDamageToTarget(game.state, battle, 1, null).state
+            game.state = DamageUtils.dealDamageToTarget(zones, game.state, battle, 1, null).state
             game.checkEligible(battle)
             game.state.getEntity(battle)!!.get<CountersComponent>()!!.getCount(CounterType.DEFENSE) shouldBe 7
         }
@@ -132,8 +130,8 @@ class FilteredAnyTargetScenarioTest : ScenarioTestBase() {
                 .withLandsOnBattlefield(1, "Mountain", 1)
                 .build()
             val bogle = game.findPermanent("History Hexproof Creature")!!
-            game.state = DamageUtils.dealDamageToTarget(game.state, bogle, 1, null).state
-            TargetFinder().findLegalTargets(game.state, Targets.Any(filter), game.player1Id) shouldNotContain bogle
+            game.state = DamageUtils.dealDamageToTarget(zones, game.state, bogle, 1, null).state
+            services.targetFinder.findLegalTargets(game.state, Targets.Any(filter), game.player1Id) shouldNotContain bogle
             game.castSpell(1, "Filtered Test Bolt", bogle).error shouldNotBe null
         }
 
@@ -160,19 +158,19 @@ class FilteredAnyTargetScenarioTest : ScenarioTestBase() {
                 .withCardOnBattlefield(2, "Grizzly Bears")
                 .build()
             val giant = game.findPermanent("Hill Giant")!!
-            game.state = DamageUtils.dealDamageToTarget(game.state, giant, 1, null).state
-            game.state = DamageUtils.dealDamageToTarget(game.state, game.player2Id, 1, null).state
+            game.state = DamageUtils.dealDamageToTarget(zones, game.state, giant, 1, null).state
+            game.state = DamageUtils.dealDamageToTarget(zones, game.state, game.player2Id, 1, null).state
             val spell = game.findCardsInHand(1, "Filtered Test Bolt").single()
             game.castSpell(1, "Filtered Test Bolt", giant).error shouldBe null
             val context = com.wingedsheep.engine.handlers.EffectContext(
                 sourceId = null, controllerId = game.player2Id,
                 targets = listOf(com.wingedsheep.engine.state.components.stack.ChosenTarget.Spell(spell))
             )
-            val changed = com.wingedsheep.engine.handlers.effects.stack.ChangeTargetExecutor().execute(
+            val changed = com.wingedsheep.engine.handlers.effects.stack.ChangeTargetExecutor(predicateEvaluator = services.predicateEvaluator, targetFinder = services.targetFinder).execute(
                 game.state, com.wingedsheep.sdk.scripting.effects.ChangeTargetEffect(), context
             )
             (changed.state.pendingDecision as com.wingedsheep.engine.core.SelectCardsDecision).options shouldBe listOf(game.player2Id)
-            val random = com.wingedsheep.engine.handlers.effects.stack.ReselectTargetRandomlyExecutor().execute(
+            val random = com.wingedsheep.engine.handlers.effects.stack.ReselectTargetRandomlyExecutor(predicateEvaluator = services.predicateEvaluator, targetFinder = services.targetFinder).execute(
                 game.state, com.wingedsheep.sdk.scripting.effects.ReselectTargetRandomlyEffect,
                 context.copy(triggeringEntityId = spell)
             )
@@ -182,7 +180,7 @@ class FilteredAnyTargetScenarioTest : ScenarioTestBase() {
                 com.wingedsheep.engine.state.components.stack.ChosenTarget.Permanent(giant),
                 com.wingedsheep.engine.state.components.stack.ChosenTarget.Player(game.player2Id)
             )) shouldBe true
-            val creatureRedirect = com.wingedsheep.engine.handlers.effects.stack.ChangeSpellTargetExecutor().execute(
+            val creatureRedirect = com.wingedsheep.engine.handlers.effects.stack.ChangeSpellTargetExecutor(targetFinder = services.targetFinder).execute(
                 game.state, com.wingedsheep.sdk.scripting.effects.ChangeSpellTargetEffect(), context
             )
             creatureRedirect.state.pendingDecision shouldBe null

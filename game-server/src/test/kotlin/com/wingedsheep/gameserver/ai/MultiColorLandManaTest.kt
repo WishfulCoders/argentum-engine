@@ -1,5 +1,6 @@
 package com.wingedsheep.gameserver.ai
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.mtg.sets.MtgSetCatalog
@@ -46,7 +47,7 @@ class MultiColorLandManaTest : FunSpec({
         repeat(3) { driver.putLandOnBattlefield(player, "Mountain") }
         driver.putLandOnBattlefield(player, "Forest")
 
-        val solution = ManaSolver(driver.cardRegistry).solve(driver.state, player, grumgullyCost)
+        val solution = ManaSolver(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)).solve(driver.state, player, grumgullyCost)
         withClue("Basic lands must pay {1}{R}{G} — if this fails the harness itself is broken") {
             solution.shouldNotBeNull()
         }
@@ -61,7 +62,7 @@ class MultiColorLandManaTest : FunSpec({
         repeat(3) { driver.putLandOnBattlefield(player, "Mountain") }
         driver.putLandOnBattlefield(player, "Gruul Turf")
 
-        val solution = ManaSolver(driver.cardRegistry).solve(driver.state, player, grumgullyCost)
+        val solution = ManaSolver(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)).solve(driver.state, player, grumgullyCost)
         withClue("Gruul Turf must contribute {G}; the solver dropped the second mana of its {R}{G} tap") {
             solution.shouldNotBeNull()
         }
@@ -74,7 +75,7 @@ class MultiColorLandManaTest : FunSpec({
         repeat(3) { driver.putLandOnBattlefield(player, "Forest") }
         driver.putLandOnBattlefield(player, "Gruul Turf")
 
-        val solution = ManaSolver(driver.cardRegistry).solve(driver.state, player, grumgullyCost)
+        val solution = ManaSolver(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)).solve(driver.state, player, grumgullyCost)
         withClue("Gruul Turf must contribute {R} as well as {G}") {
             solution.shouldNotBeNull()
         }

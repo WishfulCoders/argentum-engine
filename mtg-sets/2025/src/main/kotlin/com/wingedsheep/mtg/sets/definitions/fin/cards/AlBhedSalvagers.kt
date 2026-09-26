@@ -1,13 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Al Bhed Salvagers
@@ -31,18 +29,9 @@ val AlBhedSalvagers = card("Al Bhed Salvagers") {
         "target opponent loses 1 life and you gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.CreatureOrArtifact.youControl(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY
-        )
-        val opponent = target("target opponent", Targets.Opponent)
-        effect = Effects.Composite(
-            listOf(
-                Effects.LoseLife(1, opponent),
-                Effects.GainLife(1)
-            )
-        )
+        trigger = Triggers.a(GameObjectFilter.CreatureOrArtifact.youControl()).dies()
+        val opponent = target(Targets.Opponent)
+        effect = Effects.LoseLife(1, opponent) then Effects.GainLife(1)
         description = "Whenever this creature or another creature or artifact you control dies, " +
             "target opponent loses 1 life and you gain 1 life."
     }

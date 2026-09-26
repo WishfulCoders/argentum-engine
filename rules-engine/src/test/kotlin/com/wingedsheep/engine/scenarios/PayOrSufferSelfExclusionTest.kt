@@ -14,6 +14,7 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.model.CreatureStats
 import com.wingedsheep.sdk.model.Deck
+import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
@@ -26,6 +27,7 @@ import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * "Sacrifice/tap it unless you [cost]" — whether the source itself is a legal way to pay.
@@ -60,6 +62,7 @@ class PayOrSufferSelfExclusionTest : FunSpec({
         creatureStats = CreatureStats(3, 3),
         script = CardScript.creature(
             TriggeredAbility.create(
+                id = AbilityId("PayOrSufferSelfExclusionTest_1"),
                 trigger = EventPattern.ZoneChangeEvent(to = Zone.BATTLEFIELD),
                 binding = TriggerBinding.SELF,
                 effect = PayOrSufferEffect(
@@ -84,6 +87,7 @@ class PayOrSufferSelfExclusionTest : FunSpec({
         creatureStats = CreatureStats(3, 3),
         script = CardScript.creature(
             TriggeredAbility.create(
+                id = AbilityId("PayOrSufferSelfExclusionTest_2"),
                 trigger = EventPattern.ZoneChangeEvent(to = Zone.BATTLEFIELD),
                 binding = TriggerBinding.SELF,
                 effect = PayOrSufferEffect(
@@ -115,7 +119,7 @@ class PayOrSufferSelfExclusionTest : FunSpec({
 
         val card = driver.putCardInHand(active, cardName)
         driver.giveMana(active, Color.GREEN, 2)
-        driver.castSpell(active, card).isSuccess shouldBe true
+        driver.castSpell(active, card).outcome shouldBe Outcome.Done
         driver.bothPass() // resolve the permanent
         driver.stackSize shouldBe 1
         driver.bothPass() // resolve the enters trigger
@@ -161,7 +165,7 @@ class PayOrSufferSelfExclusionTest : FunSpec({
         val other = driver.putCreatureOnBattlefield(active, "Artifact Creature")
         val card = driver.putCardInHand(active, "Another Sacrificer")
         driver.giveMana(active, Color.GREEN, 2)
-        driver.castSpell(active, card).isSuccess shouldBe true
+        driver.castSpell(active, card).outcome shouldBe Outcome.Done
         driver.bothPass()
         driver.bothPass()
 

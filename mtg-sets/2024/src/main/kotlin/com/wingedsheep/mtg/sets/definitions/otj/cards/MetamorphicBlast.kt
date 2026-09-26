@@ -4,11 +4,10 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Metamorphic Blast {U}
@@ -40,28 +39,26 @@ val MetamorphicBlast = card("Metamorphic Blast") {
         "+ {3} — Target player draws two cards."
 
     spell {
-        effect = ModalEffect(
+        effect = Effects.Modal(
             modes = listOf(
-                Mode(
+                mode("+ {1} — Until end of turn, target creature becomes a white Rabbit with base power and toughness 0/1.") {
+                    val creature = target(TargetFilter.Creature)
+                    additionalManaCost = "{1}"
                     effect = Effects.BecomeCreature(
-                        target = EffectTarget.ContextTarget(0),
+                        target = creature,
                         power = 0,
                         toughness = 1,
                         creatureTypes = setOf("Rabbit"),
                         colors = setOf(Color.WHITE.name),
                         imageUri = "/images/tokens/otj-rabbit.jpeg",
                         duration = Duration.EndOfTurn
-                    ),
-                    targetRequirements = listOf(Targets.Creature),
-                    description = "+ {1} — Until end of turn, target creature becomes a white Rabbit with base power and toughness 0/1.",
-                    additionalManaCost = "{1}"
-                ),
-                Mode(
-                    effect = Effects.DrawCards(2, EffectTarget.ContextTarget(0)),
-                    targetRequirements = listOf(Targets.Player),
-                    description = "+ {3} — Target player draws two cards.",
+                    )
+                },
+                mode("+ {3} — Target player draws two cards.") {
+                    val player = target(Targets.Player)
                     additionalManaCost = "{3}"
-                )
+                    effect = Effects.DrawCards(2, player)
+                }
             ),
             chooseCount = 2,
             minChooseCount = 1

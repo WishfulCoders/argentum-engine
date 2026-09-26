@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Young Pyromancer
@@ -22,7 +23,7 @@ val YoungPyromancer = card("Young Pyromancer") {
     oracleText = "Whenever you cast an instant or sorcery spell, create a 1/1 red Elemental creature token."
 
     triggeredAbility {
-        trigger = Triggers.YouCastInstantOrSorcery
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

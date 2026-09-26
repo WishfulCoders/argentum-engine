@@ -3,15 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.tmp.cards
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedActivatedAbility
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.AbilityId
-import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantActivatedAbility
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Mindwhip Sliver
@@ -34,13 +32,12 @@ val MindwhipSliver = card("Mindwhip Sliver") {
 
     staticAbility {
         ability = GrantActivatedAbility(
-            ability = ActivatedAbility(
-                id = AbilityId.generate(),
-                cost = Costs.Composite(Costs.Mana("{2}"), Costs.SacrificeSelf),
-                timing = TimingRule.SorcerySpeed,
-                effect = Patterns.Hand.discardRandom(1, EffectTarget.ContextTarget(0)),
-                targetRequirement = TargetPlayer()
-            ),
+            ability = grantedActivatedAbility {
+                cost = Costs.Composite(Costs.Mana("{2}"), Costs.SacrificeSelf)
+                val player = target(Targets.Player)
+                effect = Patterns.Hand.discardRandom(1, player)
+                timing = TimingRule.SorcerySpeed
+            },
             filter = sliverFilter
         )
     }

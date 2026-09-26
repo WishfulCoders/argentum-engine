@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.spm.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Villainous Wrath
@@ -21,9 +22,9 @@ val VillainousWrath = card("Villainous Wrath") {
     oracleText = "Target opponent loses life equal to the number of creatures they control. Then destroy all creatures."
 
     spell {
-        val opp = target("target opponent", TargetOpponent())
+        val opp = target(Targets.Opponent)
         effect = Effects.LoseLife(
-            DynamicAmount.AggregateBattlefield(Player.TargetOpponent, GameObjectFilter.Creature),
+            DynamicAmounts.battlefield(Player.TargetOpponent, GameObjectFilter.Creature).count(),
             opp
         ) then Effects.DestroyAll(GameObjectFilter.Creature)
     }

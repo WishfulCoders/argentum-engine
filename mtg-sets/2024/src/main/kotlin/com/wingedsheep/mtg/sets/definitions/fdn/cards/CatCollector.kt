@@ -25,12 +25,12 @@ val CatCollector = card("Cat Collector") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateFood()
     }
 
     triggeredAbility {
-        trigger = Triggers.YouGainLifeFirstTimeEachTurn
+        trigger = Triggers.you.gainsLife(true)
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

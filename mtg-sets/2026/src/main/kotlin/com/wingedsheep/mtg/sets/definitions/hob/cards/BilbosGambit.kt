@@ -2,12 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Bilbo's Gambit — The Hobbit #5
@@ -47,18 +48,18 @@ val BilbosGambit = card("Bilbo's Gambit") {
         effect = Patterns.Mechanic.giftSpell(
             noGiftMode = Mode.withTarget(
                 Effects.ReturnSpellToOwnersHand(),
-                Targets.Spell,
+                TargetObject(filter = TargetFilter.SpellOnStack),
                 "Don't promise a gift — return target spell to its owner's hand"
             ),
             giftMode = Mode.withTarget(
                 Effects.CreateTreasure(
                     count = 1,
                     controller = EffectTarget.PlayerRef(Player.ChosenOpponent)
-                )
-                    .then(Effects.ReturnSpellToOwnersHand())
-                    .then(Effects.CantCastSpells(EffectTarget.PlayerRef(Player.Each)))
-                    .then(Effects.GiftGiven()),
-                Targets.Spell,
+                ) then
+                    Effects.ReturnSpellToOwnersHand() then
+                    Effects.CantCastSpells(EffectTarget.PlayerRef(Player.Each)) then
+                    Effects.GiftGiven(),
+                TargetObject(filter = TargetFilter.SpellOnStack),
                 "Promise a gift — that opponent creates a Treasure, then return target spell to " +
                     "its owner's hand and players can't cast spells this turn"
             )

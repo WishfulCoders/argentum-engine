@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  * control" — a spell on the stack) reduce to the same shape: a creature object you control that an
  * opponent's spell/ability targets. The engine now emits a [BecomesTargetEvent] for spell targets
  * as well as permanent targets, so the single
- * [Triggers.CreatureYouControlBecomesTargetByOpponent] handles both. The creature filter matches a
+ * `Triggers.a(filter.youControl()).becomesTarget(byOpponent = true, includeSpellTargets)` handles both. The creature filter matches a
  * creature spell via its type line, and the spell's controller falls back to its caster.
  */
 val SurrakElusiveHunter = card("Surrak, Elusive Hunter") {
@@ -40,10 +40,7 @@ val SurrakElusiveHunter = card("Surrak, Elusive Hunter") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.CreatureYouControlBecomesTargetByOpponent(
-            GameObjectFilter.Creature,
-            includeSpellTargets = true
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).becomesTarget(byOpponent = true, includeSpellTargets = true)
         effect = Effects.DrawCards(1)
     }
 

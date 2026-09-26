@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -29,7 +28,7 @@ val RingOfTheLucii = card("Ring of the Lucii") {
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap, Costs.PayLife(1))
-        val t = target("target", TargetPermanent(filter = TargetFilter.NonlandPermanent))
+        val t = target(TargetFilter.NonlandPermanent)
         effect = Effects.Tap(t)
     }
     metadata {

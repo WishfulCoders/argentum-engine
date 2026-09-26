@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Toxin Analysis — Murders at Karlov Manor #107
@@ -25,12 +24,10 @@ val ToxinAnalysis = card("Toxin Analysis") {
         "(Create a Clue token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")"
 
     spell {
-        val t = target("target creature", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.DEATHTOUCH, t),
-            Effects.GrantKeyword(Keyword.LIFELINK, t),
+        val t = target(TargetFilter.Creature)
+        effect = Effects.GrantKeyword(Keyword.DEATHTOUCH, t) then
+            Effects.GrantKeyword(Keyword.LIFELINK, t) then
             Effects.Investigate()
-        )
     }
 
     metadata {

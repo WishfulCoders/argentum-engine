@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Barrage of Expendables
@@ -22,9 +21,9 @@ val BarrageOfExpendables = card("Barrage of Expendables") {
     oracleText = "{R}, Sacrifice a creature: This enchantment deals 1 damage to any target."
 
     activatedAbility {
+        val anyTarget = target(Targets.Any)
         cost = Costs.Composite(Costs.Mana("{R}"), Costs.Sacrifice(GameObjectFilter.Creature))
-        target = Targets.Any
-        effect = Effects.DealDamage(1, EffectTarget.ContextTarget(0))
+        effect = Effects.DealDamage(1, anyTarget)
         description = "{R}, Sacrifice a creature: This enchantment deals 1 damage to any target."
     }
 

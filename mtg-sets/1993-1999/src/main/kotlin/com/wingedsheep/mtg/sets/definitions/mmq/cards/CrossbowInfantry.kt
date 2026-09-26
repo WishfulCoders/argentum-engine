@@ -5,11 +5,10 @@
 package com.wingedsheep.mtg.sets.definitions.mmq.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -28,8 +27,8 @@ val CrossbowInfantry = card("Crossbow Infantry") {
     toughness = 1
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", TargetCreature(filter = TargetFilter.AttackingOrBlockingCreature))
-        effect = DealDamageEffect(1, t)
+        val t = target(TargetFilter.AttackingOrBlockingCreature)
+        effect = Effects.DealDamage(1, t)
     }
     metadata {
         rarity = Rarity.COMMON

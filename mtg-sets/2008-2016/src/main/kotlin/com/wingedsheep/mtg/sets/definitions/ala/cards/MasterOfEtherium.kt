@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ala.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Master of Etherium
@@ -31,10 +31,10 @@ val MasterOfEtherium = card("Master of Etherium") {
         "Other artifact creatures you control get +1/+1."
 
     dynamicStats(
-        DynamicAmount.AggregateBattlefield(
+        DynamicAmounts.battlefield(
             Player.You,
             GameObjectFilter.Artifact
-        )
+        ).count()
     )
 
     staticAbility {

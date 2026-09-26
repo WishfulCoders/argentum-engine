@@ -4,8 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.madness
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Alchemist's Greeting (Eldritch Moon #116)
@@ -27,8 +26,8 @@ val AlchemistsGreeting = card("Alchemist's Greeting") {
         "for its madness cost or put it into your graveyard.)"
 
     spell {
-        target = TargetCreature()
-        effect = Effects.DealDamage(4, EffectTarget.ContextTarget(0))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.DealDamage(4, creature)
     }
 
     madness("{1}{R}")

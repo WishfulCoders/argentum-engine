@@ -4,11 +4,9 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Flash Thompson, Spider-Fan
@@ -42,19 +40,17 @@ val FlashThompsonSpiderFan = card("Flash Thompson, Spider-Fan") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ModalEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.Modal(
             modes = listOf(
-                Mode.withTarget(
-                    effect = Effects.Tap(EffectTarget.ContextTarget(0)),
-                    target = TargetCreature(),
-                    description = "Heckle — Tap target creature."
-                ),
-                Mode.withTarget(
-                    effect = Effects.Untap(EffectTarget.ContextTarget(0)),
-                    target = TargetCreature(),
-                    description = "Hero Worship — Untap target creature."
-                )
+                mode("Heckle — Tap target creature.") {
+                    val creature = target(TargetFilter.Creature)
+                    effect = Effects.Tap(creature)
+                },
+                mode("Hero Worship — Untap target creature.") {
+                    val creature = target(TargetFilter.Creature)
+                    effect = Effects.Untap(creature)
+                }
             ),
             chooseCount = 2,
             minChooseCount = 1

@@ -1,6 +1,6 @@
 package com.wingedsheep.sdk.dsl
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.ActivatedAbility
@@ -23,14 +23,14 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * What the card gains at each charge threshold (the `{N+}` station symbols, CR 721.2a) is
  * *not* part of this helper — author those as `staticAbility { }` rows (Spacecraft granting
  * keywords / a creature type) or threshold-gated activated abilities, each gated on
- * [Conditions.SourceCounterCountAtLeast] with [Counters.CHARGE], because the payload differs
+ * [Conditions.SourceCounterCountAtLeast] with [CounterType.CHARGE], because the payload differs
  * per card.
  *
  * Example (Wedgelight Rammer):
  * ```
  * station()
  * staticAbility {
- *     condition = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 9)
+ *     condition = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 9)
  *     ability = GrantCardType("CREATURE", GroupFilter.source())
  * }
  * ```
@@ -38,14 +38,14 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
 fun CardBuilder.station() {
     activatedAbilities.add(
         ActivatedAbility(
-            id = AbilityId.generate(),
+            id = AbilityId.next(),
             cost = AbilityCost.Atom(CostAtom.TapPermanents(
                 count = 1,
                 filter = GameObjectFilter.Creature,
                 excludeSelf = true
             )),
             effect = Effects.AddDynamicCounters(
-                counterType = Counters.CHARGE,
+                counterType = CounterType.CHARGE,
                 amount = DynamicAmount.StationCharge,
                 target = EffectTarget.Self
             ),

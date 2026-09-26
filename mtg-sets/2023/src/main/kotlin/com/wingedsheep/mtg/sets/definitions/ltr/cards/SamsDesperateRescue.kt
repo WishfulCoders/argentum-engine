@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sam's Desperate Rescue
@@ -19,8 +19,8 @@ val SamsDesperateRescue = card("Sam's Desperate Rescue") {
     oracleText = "Return target creature card from your graveyard to your hand. The Ring tempts you."
 
     spell {
-        val t = target("target creature card in your graveyard", Targets.CreatureCardInYourGraveyard)
-        effect = Effects.ReturnToHand(t).then(Effects.TheRingTemptsYou())
+        val t = target(TargetFilter.CreatureInYourGraveyard)
+        effect = Effects.ReturnToHand(t) then Effects.TheRingTemptsYou()
     }
 
     metadata {

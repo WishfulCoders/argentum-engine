@@ -8,9 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Sundering Archaic
@@ -39,17 +37,13 @@ val SunderingArchaic = card("Sundering Archaic") {
         "{2}: Put target card from a graveyard on the bottom of its owner's library."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val permanent = target(
-            "nonland permanent an opponent controls with mana value less than or equal to the " +
-                "number of colors of mana spent to cast this creature",
-            TargetPermanent(
-                filter = TargetFilter(
-                    GameObjectFilter.NonlandPermanent
-                        .opponentControls()
-                        .manaValueAtMostColorsSpent(EntityReference.Source)
-                )
-            )
+            TargetFilter(
+                GameObjectFilter.NonlandPermanent
+                    .opponentControls()
+                    .manaValueAtMostColorsSpent(EffectTarget.Self)
+            ),
         )
         effect = Effects.Exile(permanent)
         description = "Converge — When this creature enters, exile target nonland permanent an " +
@@ -59,10 +53,7 @@ val SunderingArchaic = card("Sundering Archaic") {
 
     activatedAbility {
         cost = Costs.Mana("{2}")
-        val graveyardCard = target(
-            "target card from a graveyard",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Any, zone = Zone.GRAVEYARD))
-        )
+        val graveyardCard = target(TargetFilter(GameObjectFilter.Any, zone = Zone.GRAVEYARD))
         effect = Effects.PutOnBottomOfLibrary(graveyardCard)
     }
 

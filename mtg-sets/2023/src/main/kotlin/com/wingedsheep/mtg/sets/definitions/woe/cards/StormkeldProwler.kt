@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -25,8 +25,8 @@ val StormkeldProwler = card("Stormkeld Prowler") {
     oracleText = "Whenever you cast a spell with mana value 5 or greater, put two +1/+1 counters on this creature."
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(GameObjectFilter.Any.manaValueAtLeast(5))
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
+        trigger = Triggers.you.casts(GameObjectFilter.Any.manaValueAtLeast(5))
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
     }
 
     metadata {

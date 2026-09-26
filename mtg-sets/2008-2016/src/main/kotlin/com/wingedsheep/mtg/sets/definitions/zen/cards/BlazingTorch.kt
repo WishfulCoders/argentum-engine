@@ -5,13 +5,11 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedActivatedAbility
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.AbilityId
-import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.CantBeBlockedBy
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantActivatedAbility
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -56,20 +54,19 @@ val BlazingTorch = card("Blazing Torch") {
     // Equipped creature has "{T}, Sacrifice Blazing Torch: Blazing Torch deals 2 damage to any target."
     staticAbility {
         ability = GrantActivatedAbility(
-            ability = ActivatedAbility(
-                id = AbilityId.generate(),
+            ability = grantedActivatedAbility {
                 cost = Costs.Composite(
                     Costs.Tap,
                     Costs.SacrificeGrantingPermanent
-                ),
-                effect = DealDamageEffect(
+                )
+                val anyTarget = target(Targets.Any)
+                effect = Effects.DealDamage(
                     amount = 2,
-                    target = EffectTarget.ContextTarget(0),
+                    target = anyTarget,
                     damageSource = EffectTarget.GrantingSource
-                ),
-                targetRequirements = listOf(Targets.Any),
-                descriptionOverride = "{T}, Sacrifice Blazing Torch: Blazing Torch deals 2 damage to any target."
-            ),
+                )
+                description = "{T}, Sacrifice Blazing Torch: Blazing Torch deals 2 damage to any target."
+            },
             filter = Filters.EquippedCreature
         )
     }

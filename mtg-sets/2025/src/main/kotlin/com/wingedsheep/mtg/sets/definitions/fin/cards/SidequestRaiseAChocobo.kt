@@ -10,12 +10,10 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Sidequest: Raise a Chocobo // Black Chocobo — Final Fantasy #201
@@ -49,7 +47,7 @@ private val BlackChocobo = card("Black Chocobo") {
     // When this permanent transforms into Black Chocobo, search your library for a land card,
     // put it onto the battlefield tapped, then shuffle.
     triggeredAbility {
-        trigger = Triggers.TransformsToBack
+        trigger = Triggers.self.transforms(true)
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Land,
             destination = SearchDestination.BATTLEFIELD,
@@ -59,7 +57,7 @@ private val BlackChocobo = card("Black Chocobo") {
 
     // Landfall — Whenever a land you control enters, Birds you control get +1/+0 until end of turn.
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Patterns.Group.modifyStatsForAll(
             power = 1,
             toughness = 0,
@@ -86,8 +84,8 @@ private val SidequestRaiseAChocoboFront = card("Sidequest: Raise a Chocobo") {
     // When this enchantment enters, create a 2/2 green Bird creature token with
     // "Whenever a land you control enters, this token gets +1/+0 until end of turn."
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreateTokenEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateToken(
             power = 2,
             toughness = 2,
             colors = setOf(Color.GREEN),
@@ -95,11 +93,7 @@ private val SidequestRaiseAChocoboFront = card("Sidequest: Raise a Chocobo") {
             imageUri = "https://cards.scryfall.io/normal/front/1/f/1fbc471d-5948-47fc-b7cc-81cc13a4cd15.jpg?1782725374",
             triggeredAbilities = listOf(
                 TriggeredAbility.create(
-                    trigger = Triggers.entersBattlefield(
-                        filter = GameObjectFilter.Land.youControl(),
-                        binding = TriggerBinding.ANY,
-                    ).event,
-                    binding = TriggerBinding.ANY,
+                    trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters(),
                     effect = Effects.ModifyStats(1, 0, EffectTarget.Self),
                 ),
             ),
@@ -109,9 +103,9 @@ private val SidequestRaiseAChocoboFront = card("Sidequest: Raise a Chocobo") {
     // At the beginning of your first main phase, if you control four or more Birds,
     // transform this enchantment.
     triggeredAbility {
-        trigger = Triggers.FirstMainPhase
+        trigger = Triggers.you.beginningOf(Step.PRECOMBAT_MAIN)
         interveningIf = Conditions.YouControlAtLeast(4, GameObjectFilter.Creature.withSubtype("Bird"))
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
     }
 
     metadata {

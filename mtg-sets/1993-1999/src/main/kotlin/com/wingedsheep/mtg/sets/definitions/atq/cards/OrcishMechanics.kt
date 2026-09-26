@@ -24,7 +24,7 @@ val OrcishMechanics = card("Orcish Mechanics") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.Sacrifice(GameObjectFilter.Artifact))
-        val t = target("any target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(2, t)
         description = "{T}, Sacrifice an artifact: This creature deals 2 damage to any target."
     }

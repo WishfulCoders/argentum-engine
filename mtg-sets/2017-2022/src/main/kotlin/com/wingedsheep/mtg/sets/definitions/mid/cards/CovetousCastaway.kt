@@ -12,9 +12,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.RedirectZoneChange
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
@@ -41,7 +38,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  *  - "Up to three target cards from your graveyard" is a [TargetObject] with `count = 3,
  *    optional = true` over an owned-by-you graveyard filter, and [ForEachTargetEffect] moves each
  *    chosen card to its owner's library followed by one [ShuffleLibraryEffect] — the Gaea's Blessing
- *    shape. The "you may" is a separate resolution-time decision ([MayEffect]) because the targets
+ *    shape. The "you may" is a separate resolution-time decision ([Effects.May]) because the targets
  *    were locked in when the trigger went on the stack.
  *  - The exile-instead clause is [RedirectZoneChange] with `selfOnly = true`, carried on the card
  *    entity so it functions in every zone (CR 614.12) — a countered disturb spell is exiled.
@@ -57,7 +54,7 @@ private val CovetousCastawayFront = card("Covetous Castaway") {
         "Disturb {3}{U}{U} (You may cast this card from your graveyard transformed for its disturb cost.)"
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Patterns.Library.mill(3)
         description = "When this creature dies, mill three cards."
     }
@@ -104,17 +101,17 @@ private val GhostlyCastigator = card("Ghostly Castigator") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         target = TargetObject(
             count = 3,
             optional = true,
             filter = TargetFilter(GameObjectFilter.Any.ownedByYou(), zone = Zone.GRAVEYARD),
             id = "three target cards from your graveyard",
         )
-        effect = MayEffect(
-            ForEachTargetEffect(
-                effects = listOf(Effects.Move(EffectTarget.ContextTarget(0), Zone.LIBRARY))
-            ).then(ShuffleLibraryEffect()),
+        effect = Effects.May(
+            Effects.ForEachTarget(
+                Effects.Move(EffectTarget.ContextTarget(0), Zone.LIBRARY)
+            ) then Effects.ShuffleLibrary(),
             descriptionOverride = "Shuffle the targeted cards from your graveyard into your library?",
         )
         description = "When this creature enters, you may shuffle up to three target cards from " +

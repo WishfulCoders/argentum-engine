@@ -27,7 +27,7 @@ val ProfessorOfSymbology = card("Professor of Symbology") {
         "outside the game and put it into your hand, or discard a card to draw a card.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Mechanic.learn()
     }
 

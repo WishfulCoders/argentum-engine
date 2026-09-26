@@ -6,11 +6,10 @@ package com.wingedsheep.mtg.sets.definitions.lea.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CounterEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
 
 
 /**
@@ -26,8 +25,8 @@ val Lifeforce = card("Lifeforce") {
     oracleText = "{G}{G}: Counter target black spell."
     activatedAbility {
         cost = Costs.Mana("{G}{G}")
-        val t = target("target", TargetSpell(filter = TargetFilter.SpellOnStack.withColor(Color.BLACK)))
-        effect = CounterEffect()
+        val t = target(TargetFilter.SpellOnStack.withColor(Color.BLACK))
+        effect = Effects.CounterSpell()
     }
     metadata {
         rarity = Rarity.UNCOMMON

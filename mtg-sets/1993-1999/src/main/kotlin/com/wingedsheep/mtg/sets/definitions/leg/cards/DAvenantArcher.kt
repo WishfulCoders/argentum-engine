@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * D'Avenant Archer
@@ -25,10 +24,7 @@ val DAvenantArcher = card("D'Avenant Archer") {
 
     activatedAbility {
         cost = Costs.Tap
-        val creature = target(
-            "target attacking or blocking creature",
-            TargetPermanent(filter = TargetFilter.AttackingOrBlockingCreature),
-        )
+        val creature = target(TargetFilter.AttackingOrBlockingCreature)
         effect = Effects.DealDamage(1, creature)
     }
 

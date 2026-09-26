@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Network Disruptor — Kamigawa: Neon Dynasty #71 (canonical printing)
@@ -28,8 +28,8 @@ val NetworkDisruptor = card("Network Disruptor") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("permanent to tap", TargetPermanent())
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Permanent)
         effect = Effects.Tap(t)
         description = "When this creature enters, tap target permanent."
     }

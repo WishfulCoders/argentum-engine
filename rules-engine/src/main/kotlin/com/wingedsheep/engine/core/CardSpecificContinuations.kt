@@ -1,6 +1,7 @@
 package com.wingedsheep.engine.core
 
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.effects.Effect
 import com.wingedsheep.sdk.scripting.targets.TargetRequirement
@@ -134,13 +135,13 @@ data class ContestedRetargetContinuation(
  *
  * @property sourceId The creature the counters are being moved from
  * @property controllerId The player who controls the effect
- * @property counterType The type of counter being moved (e.g., "+1/+1")
+ * @property counterType The type of counter being moved
  */
 @Serializable
 data class DistributeCountersContinuation(
     val sourceId: EntityId,
     val controllerId: EntityId,
-    val counterType: String,
+    val counterType: CounterType,
     /**
      * When true (the "move counters from this creature onto others" shape, e.g. Forgotten Ancient),
      * the distributed counters are first removed from [sourceId]. When false, the counters are newly
@@ -179,9 +180,9 @@ data class DistributeCountersContinuation(
 data class RemoveAnyNumberOfCountersContinuation(
     val targetId: EntityId,
     val controllerId: EntityId,
-    val currentCounterType: String,
+    val currentCounterType: CounterType,
     val currentMaxAmount: Int,
-    val remainingCounterTypes: List<String>,
+    val remainingCounterTypes: List<CounterType>,
     val targetName: String,
     val sourceId: EntityId?,
     val sourceName: String?,
@@ -221,7 +222,7 @@ data class PayAnyAmountOfLifeAsEntersContinuation(
 data class AddCountersUpToContinuation(
     val targetId: EntityId,
     val controllerId: EntityId,
-    val counterType: String,
+    val counterType: CounterType,
     val sourceId: EntityId?,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
 ) : AnswerContinuation
@@ -242,7 +243,7 @@ data class AddCountersUpToContinuation(
 @Serializable
 data class PayCountersContinuation(
     val playerId: EntityId,
-    val counterType: String,
+    val counterType: CounterType,
     val storeAmountAs: String,
     val sourceId: EntityId?,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
@@ -272,9 +273,9 @@ data class MoveChosenCountersToTargetContinuation(
     val sourceId: EntityId,
     val destinationId: EntityId,
     val controllerId: EntityId,
-    val currentCounterType: String,
+    val currentCounterType: CounterType,
     val currentMaxAmount: Int,
-    val remainingCounterTypes: List<Pair<String, Int>>,
+    val remainingCounterTypes: List<Pair<CounterType, Int>>,
     val sourceName: String,
     val destinationName: String,
     val drawCardOnMove: Boolean,
@@ -726,6 +727,19 @@ data class ActivateAbilityOpponentChooserContinuation(
  * @property distinctNames When true the chosen permanents must all have different names
  *   ("sacrifice three artifact tokens with different names" — Transmutation Font).
  */
+/**
+ * Resume after the player picks which hand card(s) pay a
+ * [com.wingedsheep.sdk.scripting.costs.CostAtom.PutFromHandOnTopOfLibrary] cost (Leashling). The
+ * resumer re-enters the handler with the choice in `costPayment.cardsPutOnLibrary`; the pause
+ * happens before any cost is paid, so nothing needs undoing on the way back in.
+ */
+@Serializable
+data class ActivateAbilityPutOnLibraryContinuation(
+    val action: ActivateAbility,
+    val candidates: List<EntityId>,
+    val count: Int
+) : AnswerContinuation
+
 @Serializable
 data class ActivateAbilitySacrificeContinuation(
     val action: ActivateAbility,

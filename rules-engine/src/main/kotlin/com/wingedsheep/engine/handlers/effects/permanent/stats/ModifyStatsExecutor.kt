@@ -22,7 +22,7 @@ import kotlin.reflect.KClass
  * Supports both fixed and dynamic amounts via [DynamicAmountEvaluator].
  */
 class ModifyStatsExecutor(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<ModifyStatsEffect> {
 
     override val effectType: KClass<ModifyStatsEffect> = ModifyStatsEffect::class

@@ -1,11 +1,13 @@
 package com.wingedsheep.engine.multiplayer
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.GameConfig
 import com.wingedsheep.engine.core.GameInitializer
 import com.wingedsheep.engine.core.LifeChangeReason
 import com.wingedsheep.engine.core.PlayerConfig
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.DamageUtils
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.handlers.effects.life.GainLifeExecutor
 import com.wingedsheep.engine.handlers.effects.life.LoseLifeExecutor
 import com.wingedsheep.engine.handlers.effects.life.SetLifeTotalExecutor
@@ -41,6 +43,7 @@ import io.kotest.matchers.shouldBe
 class TwoHeadedGiantSharedLifeTest : FunSpec({
 
     fun registry(): CardRegistry = CardRegistry().also { it.register(TestCards.all) }
+    val zones = ZoneTransitionService(registry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
     /** Boot a 2HG game; returns state + the four player ids (p0,p1 = team 0; p2,p3 = team 1). */
     fun boot(): Pair<GameState, List<EntityId>> {
@@ -71,7 +74,7 @@ class TwoHeadedGiantSharedLifeTest : FunSpec({
 
     test("life loss by one teammate moves the single shared pool both teammates read") {
         val (state, p) = boot()
-        val (after, _) = DamageUtils.loseLife(state, p[1], 5, LifeChangeReason.LIFE_LOSS)
+        val (after, _) = DamageUtils.loseLife(state, p[1], 5, LifeChangeReason.LIFE_LOSS, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         after.lifeTotal(p[0]) shouldBe 25
         after.lifeTotal(p[1]) shouldBe 25
@@ -83,7 +86,7 @@ class TwoHeadedGiantSharedLifeTest : FunSpec({
 
     test("life gain by one teammate raises the shared total") {
         val (state, p) = boot()
-        val (after, _) = DamageUtils.gainLife(state, p[1], 4)
+        val (after, _) = DamageUtils.gainLife(state, p[1], 4, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         after.lifeTotal(p[0]) shouldBe 34
         after.lifeTotal(p[1]) shouldBe 34
     }
@@ -93,16 +96,16 @@ class TwoHeadedGiantSharedLifeTest : FunSpec({
         val locked = state.updateEntity(p[0]) {
             it.with(com.wingedsheep.engine.state.components.player.CantGainLifeComponent())
         }
-        val (afterTeammateGain, event) = DamageUtils.gainLife(locked, p[1], 4)
+        val (afterTeammateGain, event) = DamageUtils.gainLife(locked, p[1], 4, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         event shouldBe null
         afterTeammateGain.lifeTotal(p[1]) shouldBe 30
         // The opposing team is untouched by team 0's lock.
-        DamageUtils.gainLife(locked, p[2], 4).first.lifeTotal(p[2]) shouldBe 34
+        DamageUtils.gainLife(locked, p[2], 4, predicateEvaluator = PredicateEvaluator(cardRegistry = null)).first.lifeTotal(p[2]) shouldBe 34
     }
 
     test("damage to a teammate reduces the shared team total") {
         val (state, p) = boot()
-        val result = DamageUtils.dealDamageToTarget(state, p[0], 6, sourceId = null)
+        val result = DamageUtils.dealDamageToTarget(zones, state, p[0], 6, sourceId = null)
         result.state.lifeTotal(p[0]) shouldBe 24
         result.state.lifeTotal(p[1]) shouldBe 24
         result.state.lifeTotal(p[2]) shouldBe 30
@@ -116,7 +119,7 @@ class TwoHeadedGiantSharedLifeTest : FunSpec({
             amount = DynamicAmount.Fixed(3),
             target = EffectTarget.PlayerRef(Player.EachOpponent)
         )
-        val result = LoseLifeExecutor().execute(state, effect, ctx(p[0]))
+        val result = LoseLifeExecutor(amountEvaluator = PredicateEvaluator(cardRegistry = null).amounts).execute(state, effect, ctx(p[0]))
 
         result.state.lifeTotal(p[0]) shouldBe 30 // controller's team untouched
         result.state.lifeTotal(p[2]) shouldBe 24 // 30 - 3 - 3
@@ -129,7 +132,7 @@ class TwoHeadedGiantSharedLifeTest : FunSpec({
             amount = DynamicAmount.Fixed(2),
             target = EffectTarget.PlayerRef(Player.EachOpponent)
         )
-        val result = GainLifeExecutor().execute(state, effect, ctx(p[0]))
+        val result = GainLifeExecutor(amountEvaluator = PredicateEvaluator(cardRegistry = null).amounts).execute(state, effect, ctx(p[0]))
         result.state.lifeTotal(p[2]) shouldBe 34 // 30 + 2 + 2
         result.state.lifeTotal(p[0]) shouldBe 30
     }
@@ -140,7 +143,7 @@ class TwoHeadedGiantSharedLifeTest : FunSpec({
             amount = DynamicAmount.Fixed(10),
             target = EffectTarget.PlayerRef(Player.You)
         )
-        val result = SetLifeTotalExecutor().execute(state, effect, ctx(p[3]))
+        val result = SetLifeTotalExecutor(amountEvaluator = PredicateEvaluator(cardRegistry = null).amounts).execute(state, effect, ctx(p[3]))
         result.state.lifeTotal(p[2]) shouldBe 10
         result.state.lifeTotal(p[3]) shouldBe 10
         result.state.lifeTotal(p[0]) shouldBe 30
@@ -155,10 +158,10 @@ class TwoHeadedGiantSharedLifeTest : FunSpec({
     test("when a team's shared total hits 0, both teammates are marked lost in one SBA pass") {
         val (state, p) = boot()
         // Drop team 0 to exactly 0 via a single teammate's loss.
-        val (zeroed, _) = DamageUtils.loseLife(state, p[0], 30, LifeChangeReason.LIFE_LOSS)
+        val (zeroed, _) = DamageUtils.loseLife(state, p[0], 30, LifeChangeReason.LIFE_LOSS, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         zeroed.lifeTotal(p[1]) shouldBe 0
 
-        val result = PlayerLifeLossCheck().check(zeroed)
+        val result = PlayerLifeLossCheck(predicateEvaluator = PredicateEvaluator(cardRegistry = null)).check(zeroed)
         result.newState.getEntity(p[0])!!.has<PlayerLostComponent>() shouldBe true
         result.newState.getEntity(p[1])!!.has<PlayerLostComponent>() shouldBe true
         // The opposing team is unaffected.
@@ -176,7 +179,7 @@ class TwoHeadedGiantSharedLifeTest : FunSpec({
         val p = result.playerIds
         val state = result.state
         state.teamLifeOwnerOf(p[0]) shouldBe p[0]
-        val (after, _) = DamageUtils.loseLife(state, p[0], 4, LifeChangeReason.LIFE_LOSS)
+        val (after, _) = DamageUtils.loseLife(state, p[0], 4, LifeChangeReason.LIFE_LOSS, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         after.lifeTotal(p[0]) shouldBe 16
         after.lifeTotal(p[1]) shouldBe 20 // opponent untouched — they are their own team
         after.getEntity(p[0])!!.get<LifeTotalComponent>()!!.life shouldBe 16

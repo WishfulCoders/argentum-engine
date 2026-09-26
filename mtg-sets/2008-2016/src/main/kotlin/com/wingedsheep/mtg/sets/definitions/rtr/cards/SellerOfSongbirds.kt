@@ -23,7 +23,7 @@ val SellerOfSongbirds = card("Seller of Songbirds") {
     oracleText = "When this creature enters, create a 1/1 white Bird creature token with flying."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

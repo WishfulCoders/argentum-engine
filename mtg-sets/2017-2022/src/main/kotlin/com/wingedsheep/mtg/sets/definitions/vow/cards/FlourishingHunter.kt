@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.Aggregation
-import com.wingedsheep.sdk.scripting.values.CardNumericProperty
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Flourishing Hunter
@@ -33,15 +31,13 @@ val FlourishingHunter = card("Flourishing Hunter") {
         "other creatures you control."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(
-            DynamicAmount.AggregateBattlefield(
-                player = Player.You,
-                filter = GameObjectFilter.Creature,
-                aggregation = Aggregation.MAX,
-                property = CardNumericProperty.TOUGHNESS,
+            DynamicAmounts.battlefield(
+                Player.You,
+                GameObjectFilter.Creature,
                 excludeSelf = true
-            )
+            ).maxToughness()
         )
         description = "When this creature enters, you gain life equal to the greatest toughness " +
             "among other creatures you control."

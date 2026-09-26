@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Greed's Gambit
@@ -23,7 +24,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Three triggered abilities, each a [Effects.Composite] of atomic controller-scoped effects. Note
  * the loss clauses target [EffectTarget.Controller] explicitly because [Effects.LoseLife] and
  * [Effects.Sacrifice] default to the opponent. The leaves-the-battlefield trigger
- * ([Triggers.LeavesBattlefield]) fires off the enchantment's last controller, so the cleanup costs
+ * (`Triggers.self.leaves()`) fires off the enchantment's last controller, so the cleanup costs
  * fall on its owner regardless of how it left (destroyed, sacrificed, bounced, exiled).
  */
 val GreedsGambit = card("Greed's Gambit") {
@@ -38,49 +39,37 @@ val GreedsGambit = card("Greed's Gambit") {
 
     // When this enchantment enters: draw 3, gain 6 life, create three 2/1 black flying Bats.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            listOf(
-                Effects.DrawCards(3),
-                Effects.GainLife(6),
-                Effects.CreateToken(
-                    power = 2,
-                    toughness = 1,
-                    colors = setOf(Color.BLACK),
-                    creatureTypes = setOf("Bat"),
-                    keywords = setOf(Keyword.FLYING),
-                    count = 3,
-                    imageUri = "https://cards.scryfall.io/normal/front/5/9/59f138e5-501d-486f-b9a0-3f37640398a0.jpg?1712317347"
-                )
+        trigger = Triggers.self.enters()
+        effect = Effects.DrawCards(3) then
+            Effects.GainLife(6) then
+            Effects.CreateToken(
+                power = 2,
+                toughness = 1,
+                colors = setOf(Color.BLACK),
+                creatureTypes = setOf("Bat"),
+                keywords = setOf(Keyword.FLYING),
+                count = 3,
+                imageUri = "https://cards.scryfall.io/normal/front/5/9/59f138e5-501d-486f-b9a0-3f37640398a0.jpg?1712317347"
             )
-        )
         description = "You draw three cards, gain 6 life, and create three 2/1 black Bat creature " +
             "tokens with flying."
     }
 
     // At the beginning of your end step: discard a card, lose 2 life, sacrifice a creature.
     triggeredAbility {
-        trigger = Triggers.YourEndStep
-        effect = Effects.Composite(
-            listOf(
-                Effects.Discard(1, EffectTarget.Controller),
-                Effects.LoseLife(2, EffectTarget.Controller),
-                Effects.Sacrifice(GameObjectFilter.Creature, count = 1, target = EffectTarget.Controller)
-            )
-        )
+        trigger = Triggers.you.beginningOf(Step.END)
+        effect = Effects.Discard(1, EffectTarget.Controller) then
+            Effects.LoseLife(2, EffectTarget.Controller) then
+            Effects.Sacrifice(GameObjectFilter.Creature, count = 1, target = EffectTarget.Controller)
         description = "You discard a card, lose 2 life, and sacrifice a creature."
     }
 
     // When this enchantment leaves the battlefield: discard 3, lose 6 life, sacrifice 3 creatures.
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
-        effect = Effects.Composite(
-            listOf(
-                Effects.Discard(3, EffectTarget.Controller),
-                Effects.LoseLife(6, EffectTarget.Controller),
-                Effects.Sacrifice(GameObjectFilter.Creature, count = 3, target = EffectTarget.Controller)
-            )
-        )
+        trigger = Triggers.self.leaves()
+        effect = Effects.Discard(3, EffectTarget.Controller) then
+            Effects.LoseLife(6, EffectTarget.Controller) then
+            Effects.Sacrifice(GameObjectFilter.Creature, count = 3, target = EffectTarget.Controller)
         description = "You discard three cards, lose 6 life, and sacrifice three creatures."
     }
 

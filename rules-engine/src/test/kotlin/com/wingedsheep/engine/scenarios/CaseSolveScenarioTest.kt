@@ -22,7 +22,6 @@ import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
@@ -54,7 +53,7 @@ class CaseSolveScenarioTest : FunSpec({
             "Solved — At the beginning of your upkeep, draw a card."
         toSolve(Conditions.LifeAtLeast(25))
         solvedTriggeredAbility {
-            trigger = Triggers.YourUpkeep
+            trigger = Triggers.you.beginningOf(Step.UPKEEP)
             effect = Effects.DrawCards(1)
         }
     }
@@ -77,7 +76,7 @@ class CaseSolveScenarioTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Destroy target enchantment."
         spell {
-            val t = target("target", TargetPermanent(filter = TargetFilter(GameObjectFilter.Enchantment)))
+            val t = target(TargetFilter(GameObjectFilter.Enchantment))
             effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
         }
     }
@@ -88,7 +87,7 @@ class CaseSolveScenarioTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Create a token that's a copy of target enchantment."
         spell {
-            val t = target("target", TargetPermanent(filter = TargetFilter(GameObjectFilter.Enchantment)))
+            val t = target(TargetFilter(GameObjectFilter.Enchantment))
             effect = Effects.CreateTokenCopyOfTarget(t)
         }
     }

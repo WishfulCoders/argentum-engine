@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.dka.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Griptide
@@ -24,7 +24,7 @@ val Griptide = card("Griptide") {
     oracleText = "Put target creature on top of its owner's library."
 
     spell {
-        val victim = target("target", Targets.Creature)
+        val victim = target(TargetFilter.Creature)
         effect = Effects.Move(victim, Zone.LIBRARY, ZonePlacement.Top)
     }
 

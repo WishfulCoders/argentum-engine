@@ -29,7 +29,7 @@ val WallOfRunes = card("Wall of Runes") {
     keywords(Keyword.DEFENDER)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Scry(1)
     }
 

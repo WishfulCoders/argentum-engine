@@ -1,7 +1,5 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
-import com.wingedsheep.sdk.core.Counters
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
@@ -11,7 +9,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * The Great Goblin — The Hobbit #158
@@ -24,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetOpponent
  * may play it until the end of your next turn.
  *
  * Modeling notes:
- *  - The counters trigger is [Triggers.countersPlacedOn] with `firstTimeEachTurn = false`: the
+ *  - The counters trigger is `Triggers.<subject>.getsCounters(type, by, firstTimeEachTurn, batch)` with `firstTimeEachTurn = false`: the
  *    printed wording has no once-per-turn gate, so every batch of counters fires it again. It is
  *    "one or more counters", so a single placement of three counters still fires exactly once — the
  *    engine's `CountersPlacedEvent` is already per-placement, not per-counter.
@@ -56,26 +54,16 @@ val TheGreatGoblin = card("The Great Goblin") {
         "library. You may play it until the end of your next turn."
 
     triggeredAbility {
-        trigger = Triggers.countersPlacedOn(
-            filter = GameObjectFilter.Creature.youControl()
-                .withAnySubtype("Goblin", "Orc", "Army"),
-            counterType = Counters.ANY,
-            firstTimeEachTurn = false,
-            binding = TriggerBinding.ANY,
-            placedBy = Player.You,
-        )
-        val opponent = target("target opponent", TargetOpponent())
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()
+                .withAnySubtype("Goblin", "Orc", "Army")).getsCounters(by = Player.You)
+        val opponent = target(Targets.Opponent)
         effect = Effects.DealDamage(2, opponent)
         description = "The Great Goblin deals 2 damage to target opponent."
     }
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.youControl()
-                .withAnySubtype("Goblin", "Orc", "Army"),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.OTHER,
-        )
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()
+                .withAnySubtype("Goblin", "Orc", "Army")).dies()
         effect = Patterns.Exile.impulse(count = 1, expiry = MayPlayExpiry.UntilEndOfNextTurn)
         description = "Exile the top card of your library. You may play it until the end of your " +
             "next turn."

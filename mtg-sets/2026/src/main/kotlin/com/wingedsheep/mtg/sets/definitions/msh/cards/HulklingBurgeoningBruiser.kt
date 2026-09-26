@@ -1,18 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Hulkling, Burgeoning Bruiser — Marvel Super Heroes #173
@@ -23,7 +21,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * Whenever another creature you control enters, if it has greater power or toughness than
  * Hulkling, put a +1/+1 counter on Hulkling.
  *
- * [Triggers.OtherCreatureEnters] is the "another creature you control enters" template (OTHER
+ * `Triggers.another(GameObjectFilter.Creature.youControl()).enters()` is the "another creature you control enters" template (OTHER
  * binding + a `Creature.youControl()` filter), so Hulkling's own arrival never fires it.
  *
  * The "if it has greater power or toughness" clause is an intervening-if (CR 603.4): it is
@@ -47,20 +45,20 @@ val HulklingBurgeoningBruiser = card("Hulkling, Burgeoning Bruiser") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.OtherCreatureEnters
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
         interveningIf = Conditions.Any(
-            Compare(
-                DynamicAmount.EntityProperty(EntityReference.Triggering, EntityNumericProperty.Power),
+            Conditions.CompareAmounts(
+                DynamicAmounts.triggeringPower(),
                 ComparisonOperator.GT,
-                DynamicAmount.EntityProperty(EntityReference.Source, EntityNumericProperty.Power)
+                DynamicAmounts.sourcePower()
             ),
-            Compare(
-                DynamicAmount.EntityProperty(EntityReference.Triggering, EntityNumericProperty.Toughness),
+            Conditions.CompareAmounts(
+                DynamicAmounts.triggeringToughness(),
                 ComparisonOperator.GT,
-                DynamicAmount.EntityProperty(EntityReference.Source, EntityNumericProperty.Toughness)
+                DynamicAmounts.sourceToughness()
             )
         )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Whenever another creature you control enters, if it has greater power or " +
             "toughness than Hulkling, put a +1/+1 counter on Hulkling."
     }

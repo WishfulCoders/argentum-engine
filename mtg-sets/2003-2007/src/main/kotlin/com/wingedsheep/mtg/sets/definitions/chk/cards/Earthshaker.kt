@@ -20,11 +20,11 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * *your* casts with an OR over the two subtypes. `withAnySubtype` builds the single
  * `CardPredicate.Or` the grammar expects, in one call — the `or` infix collapses to the same
  * predicate here, but only because both branches are homogeneous, so the direct spelling is the
- * one all thirteen CHK cards in this family share. `Triggers.youCastSpell` supplies `Player.You`
+ * one all thirteen CHK cards in this family share. `Triggers.you.casts(spell, requires)` supplies `Player.You`
  * and `TriggerBinding.ANY`, so Earthshaker also triggers off its own cast.
  *
  * The payoff is a group sweep, not a targeted burn: `ForEachInGroup` over every creature lacking
- * flying, with `EffectTarget.Self` inside the body resolving to the current iteration entity.
+ * flying, with `EffectTarget.IterationEntity` inside the body resolving to the current iteration entity.
  * Earthshaker has no flying itself, so it is in its own blast radius (and survives it at 4/5).
  */
 val Earthshaker = card("Earthshaker") {
@@ -35,12 +35,10 @@ val Earthshaker = card("Earthshaker") {
     power = 4
     toughness = 5
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.Any.withAnySubtype("Spirit", "Arcane")
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withAnySubtype("Spirit", "Arcane"))
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreatures.withoutKeyword(Keyword.FLYING),
-            Effects.DealDamage(2, EffectTarget.Self)
+            Effects.DealDamage(2, EffectTarget.IterationEntity)
         )
     }
     metadata {

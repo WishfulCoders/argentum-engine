@@ -1,7 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.library
 
 import com.wingedsheep.engine.core.EffectResult
-import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.PredicateEvaluator
@@ -31,12 +30,12 @@ import kotlin.reflect.KClass
  * - Count evaluates to ≤ 0: both collections are empty (no cards walked)
  * - Fewer matches than count: storeMatch has what was found; storeRevealed is the whole library
  */
-class GatherUntilMatchExecutor : EffectExecutor<GatherUntilMatchEffect> {
+class GatherUntilMatchExecutor(
+    private val predicateEvaluator: PredicateEvaluator
+) : EffectExecutor<GatherUntilMatchEffect> {
+    private val amountEvaluator = predicateEvaluator.amounts
 
     override val effectType: KClass<GatherUntilMatchEffect> = GatherUntilMatchEffect::class
-
-    private val predicateEvaluator = PredicateEvaluator()
-    private val amountEvaluator = DynamicAmountEvaluator()
 
     override fun execute(
         state: GameState,

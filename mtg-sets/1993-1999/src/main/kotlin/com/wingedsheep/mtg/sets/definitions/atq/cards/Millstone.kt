@@ -20,7 +20,7 @@ val Millstone = card("Millstone") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        val player = target("target player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Patterns.Library.mill(2, player)
         description = "{2}, {T}: Target player mills two cards."
     }

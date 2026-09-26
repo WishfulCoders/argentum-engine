@@ -7,9 +7,7 @@ package com.wingedsheep.mtg.sets.definitions.jud.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CounterEffect
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 
 /**
@@ -25,11 +23,8 @@ val LaquatussDisdain = card("Laquatus's Disdain") {
     typeLine = "Instant"
     oracleText = "Counter target spell cast from a graveyard.\nDraw a card."
     spell {
-        val t = target("target", TargetSpell())
-        effect = Effects.Composite(
-            CounterEffect(),
-            DrawCardsEffect(1)
-        )
+        val t = target(TargetFilter.SpellOnStack)
+        effect = Effects.CounterSpell() then Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.UNCOMMON

@@ -3,13 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.ktk.cards
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
-import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Jeskai Ascendancy
@@ -26,24 +24,20 @@ val JeskaiAscendancy = card("Jeskai Ascendancy") {
     oracleText = "Whenever you cast a noncreature spell, creatures you control get +1/+1 until end of turn. Untap those creatures.\nWhenever you cast a noncreature spell, you may draw a card. If you do, discard a card."
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
-        effect = Effects.Composite(
-            listOf(
-                Effects.ForEachInGroup(
-                    GroupFilter.AllCreaturesYouControl,
-                    ModifyStatsEffect(1, 1, EffectTarget.Self)
-                ),
-                Effects.ForEachInGroup(
-                    GroupFilter.AllCreaturesYouControl,
-                    TapUntapEffect(EffectTarget.Self, tap = false)
-                )
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
+        effect = Effects.ForEachInGroup(
+            GroupFilter.AllCreaturesYouControl,
+            Effects.ModifyStats(1, 1, EffectTarget.IterationEntity)
+        ) then
+            Effects.ForEachInGroup(
+                GroupFilter.AllCreaturesYouControl,
+                Effects.Untap(EffectTarget.IterationEntity)
             )
-        )
     }
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
-        effect = MayEffect(Patterns.Hand.loot())
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
+        effect = Effects.May(Patterns.Hand.loot())
     }
 
     metadata {

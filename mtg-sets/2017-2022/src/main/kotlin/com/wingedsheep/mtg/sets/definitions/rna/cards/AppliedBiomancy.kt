@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.rna.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Applied Biomancy — Ravnica Allegiance #153
@@ -24,11 +24,11 @@ val AppliedBiomancy = card("Applied Biomancy") {
     spell {
         modal(chooseCount = 2, minChooseCount = 1) {
             mode("Target creature gets +1/+1 until end of turn") {
-                val creature = target("target", Targets.Creature)
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.ModifyStats(1, 1, creature)
             }
             mode("Return target creature to its owner's hand") {
-                val creature = target("target", Targets.Creature)
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.ReturnToHand(creature)
             }
         }

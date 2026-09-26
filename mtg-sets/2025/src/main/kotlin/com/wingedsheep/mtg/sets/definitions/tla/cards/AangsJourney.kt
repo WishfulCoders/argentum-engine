@@ -8,17 +8,9 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Aang's Journey
@@ -31,7 +23,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * hand, then shuffle.
  * You gain 2 life.
  *
- * The kicker swaps the entire search clause, so it is modeled as a [ConditionalEffect] keyed
+ * The kicker swaps the entire search clause, so it is modeled as a [Effects.If] keyed
  * on [WasKicked] (resolution-time state test, no decision/pause): the unkicked branch is the
  * ordinary single basic-land tutor-to-hand ([Patterns.Library.searchLibrary]); the kicked
  * branch adds a second selection for a Shrine card, then reveals + moves both finds to hand
@@ -51,57 +43,33 @@ val AangsJourney = card("Aang's Journey") {
     keywordAbility(KeywordAbility.kicker("{2}"))
 
     spell {
-        val kickedSearch = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.BasicLand),
-                    storeAs = "landSearchable"
-                ),
-                SelectFromCollectionEffect(
-                    from = "landSearchable",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    storeSelected = "foundLand",
-                    prompt = "Search your library for a basic land card"
-                ),
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        Zone.LIBRARY,
-                        Player.You,
-                        GameObjectFilter.Any.withSubtype("Shrine")
-                    ),
-                    storeAs = "shrineSearchable"
-                ),
-                SelectFromCollectionEffect(
-                    from = "shrineSearchable",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    storeSelected = "foundShrine",
-                    prompt = "Search your library for a Shrine card"
-                ),
-                MoveCollectionEffect(
-                    from = "foundLand",
-                    destination = CardDestination.ToZone(Zone.HAND),
-                    revealed = true
-                ),
-                MoveCollectionEffect(
-                    from = "foundShrine",
-                    destination = CardDestination.ToZone(Zone.HAND),
-                    revealed = true
-                ),
-                ShuffleLibraryEffect()
+        val kickedSearch = Effects.Pipeline {
+            val landSearchable = gather(CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.BasicLand))
+            val foundLand = chooseUpTo(1, from = landSearchable, prompt = "Search your library for a basic land card")
+            val shrineSearchable = gather(
+                CardSource.FromZone(
+                    Zone.LIBRARY,
+                    Player.You,
+                    GameObjectFilter.Any.withSubtype("Shrine")
+                )
             )
-        )
+            val foundShrine = chooseUpTo(1, from = shrineSearchable, prompt = "Search your library for a Shrine card")
+            toHand(foundLand, revealed = true)
+            toHand(foundShrine, revealed = true)
+            run(Effects.ShuffleLibrary())
+        }
 
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = WasKicked,
-            effect = kickedSearch,
-            elseEffect = Patterns.Library.searchLibrary(
+            then = kickedSearch,
+            otherwise = Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.BasicLand,
                 count = 1,
                 destination = SearchDestination.HAND,
                 reveal = true,
                 shuffleAfter = true
             )
-        ).then(Effects.GainLife(2))
+        ) then Effects.GainLife(2)
     }
 
     metadata {

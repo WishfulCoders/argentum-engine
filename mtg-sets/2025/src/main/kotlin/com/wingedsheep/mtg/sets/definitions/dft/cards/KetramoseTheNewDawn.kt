@@ -3,17 +3,17 @@ package com.wingedsheep.mtg.sets.definitions.dft.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantAttackUnless
 import com.wingedsheep.sdk.scripting.CantBlockUnless
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Ketramose, the New Dawn — Aetherdrift #209.
@@ -26,7 +26,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *
  * The draw trigger is a CR 603.2c batch — one exile event fires it once no matter how many cards
  * moved, and "graveyards and/or the battlefield" is unscoped (any graveyard, anyone's permanents),
- * so it uses [Triggers.CardsPutIntoExile] rather than the controller-scoped graveyard batches.
+ * so it uses `Triggers.oneOrMore(filter).putIntoExile(from, includeTokens)` rather than the controller-scoped graveyard batches.
  * "During your turn" is the trigger condition.
  */
 val KetramoseTheNewDawn = card("Ketramose, the New Dawn") {
@@ -42,10 +42,10 @@ val KetramoseTheNewDawn = card("Ketramose, the New Dawn") {
 
     keywords(Keyword.MENACE, Keyword.LIFELINK, Keyword.INDESTRUCTIBLE)
 
-    val sevenOrMoreCardsInExile = Compare(
-        DynamicAmount.Count(Player.Each, Zone.EXILE),
+    val sevenOrMoreCardsInExile = Conditions.CompareAmounts(
+        DynamicAmounts.count(Player.Each, Zone.EXILE),
         ComparisonOperator.GTE,
-        DynamicAmount.Fixed(7)
+        7
     )
 
     staticAbility {
@@ -56,12 +56,9 @@ val KetramoseTheNewDawn = card("Ketramose, the New Dawn") {
     }
 
     triggeredAbility {
-        trigger = Triggers.CardsPutIntoExile()
+        trigger = Triggers.oneOrMore(GameObjectFilter.Any).putIntoExile()
         triggerRestriction = Conditions.IsYourTurn
-        effect = Effects.Composite(
-            Effects.DrawCards(1),
-            Effects.LoseLife(1, EffectTarget.Controller)
-        )
+        effect = Effects.DrawCards(1) then Effects.LoseLife(1, EffectTarget.Controller)
         description = "Whenever one or more cards are put into exile from graveyards and/or the " +
             "battlefield during your turn, you draw a card and lose 1 life."
     }

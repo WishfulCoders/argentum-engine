@@ -1,10 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.dsl.Triggers
 
 /**
@@ -22,14 +21,14 @@ val RenewedFaith = card("Renewed Faith") {
     oracleText = "You gain 6 life.\nCycling {1}{W}\nWhen you cycle Renewed Faith, you may gain 2 life."
 
     spell {
-        effect = GainLifeEffect(6)
+        effect = Effects.GainLife(6)
     }
 
     keywordAbility(KeywordAbility.cycling("{1}{W}"))
 
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
-        effect = MayEffect(GainLifeEffect(2))
+        trigger = Triggers.self.isCycled()
+        effect = Effects.May(Effects.GainLife(2))
     }
 
     metadata {

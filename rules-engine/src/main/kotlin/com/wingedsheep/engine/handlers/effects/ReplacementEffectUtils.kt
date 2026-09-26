@@ -11,16 +11,13 @@ import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.DoubleCounterPlacement
 import com.wingedsheep.sdk.scripting.ModifyCounterPlacement
 import com.wingedsheep.sdk.scripting.PreventExtraTurns
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Utility functions for applying replacement effects that modify game actions
  * before they produce events (counter placement modifiers, extra turn prevention).
  */
 object ReplacementEffectUtils {
-
-    private val predicateEvaluator = PredicateEvaluator()
 
     /**
      * Check if extra turns are prevented by any PreventExtraTurns replacement effect
@@ -58,7 +55,8 @@ object ReplacementEffectUtils {
         targetId: EntityId,
         counterType: CounterType,
         count: Int,
-        placerId: EntityId? = null
+        placerId: EntityId? = null,
+        predicateEvaluator: PredicateEvaluator
     ): Int {
         if (count <= 0) return count
 
@@ -85,11 +83,12 @@ object ReplacementEffectUtils {
                 }
                 if (placedByYouOnly && placerId != sourceControllerId) continue
 
-                if (!matchesCounterTypeFilter(counterEvent.counterType, counterType)) continue
+                if (counterEvent.counterType != null && counterEvent.counterType != counterType) continue
 
                 // Check recipient filter
-                val recipientMatches = matchesRecipientFilter(
-                    counterEvent.recipient, state, targetId, entityId, sourceControllerId
+                val recipientMatches = matchesRecipient(
+                    counterEvent.recipient, state, targetId, entityId, sourceControllerId,
+                    predicateEvaluator = predicateEvaluator
                 )
                 if (!recipientMatches) continue
 
@@ -107,11 +106,12 @@ object ReplacementEffectUtils {
         //    gate (only the controller's own counter placements get the bonus).
         for (modifier in state.activeCounterPlacementModifiers) {
             if (placerId != modifier.controllerId) continue
-            if (!matchesCounterTypeFilter(modifier.counterType, counterType)) continue
+            if (modifier.counterType != counterType) continue
             // No battlefield source entity — pass the controller as the "source entity" so
-            // RecipientFilter.Self can't spuriously match, and the controller as controllerId.
-            val recipientMatches = matchesRecipientFilter(
-                modifier.recipient, state, targetId, modifier.controllerId, modifier.controllerId
+            // Recipient.Self can't spuriously match, and the controller as controllerId.
+            val recipientMatches = matchesRecipient(
+                modifier.recipient, state, targetId, modifier.controllerId, modifier.controllerId,
+                predicateEvaluator = predicateEvaluator
             )
             if (!recipientMatches) continue
             modifiedCount += modifier.modifier
@@ -120,64 +120,20 @@ object ReplacementEffectUtils {
         return modifiedCount.coerceAtLeast(0)
     }
 
-    /** Whether a [CounterTypeFilter] from a replacement/modifier matches the concrete [counterType] being placed. */
-    private fun matchesCounterTypeFilter(filter: CounterTypeFilter, counterType: CounterType): Boolean =
-        when (filter) {
-            is CounterTypeFilter.Any -> true
-            is CounterTypeFilter.PlusOnePlusOne -> counterType == CounterType.PLUS_ONE_PLUS_ONE
-            is CounterTypeFilter.MinusOneMinusOne -> counterType == CounterType.MINUS_ONE_MINUS_ONE
-            is CounterTypeFilter.PlusOnePlusZero -> counterType == CounterType.PLUS_ONE_PLUS_ZERO
-            is CounterTypeFilter.PlusZeroPlusOne -> counterType == CounterType.PLUS_ZERO_PLUS_ONE
-            is CounterTypeFilter.MinusOneMinusZero -> counterType == CounterType.MINUS_ONE_MINUS_ZERO
-            is CounterTypeFilter.MinusZeroMinusOne -> counterType == CounterType.MINUS_ZERO_MINUS_ONE
-            is CounterTypeFilter.Loyalty -> counterType == CounterType.LOYALTY
-            is CounterTypeFilter.Named -> {
-                try {
-                    counterType == CounterType.valueOf(filter.name.uppercase().replace(' ', '_'))
-                } catch (_: IllegalArgumentException) {
-                    false
-                }
-            }
-        }
-
-    private fun matchesRecipientFilter(
-        recipient: RecipientFilter,
+    /**
+     * The counter-placement side of [PredicateEvaluator.matchesRecipient]. A creature still on its
+     * way onto the battlefield (entering with counters, CR 614.12) has no projection entry yet, so
+     * the filter reads its own characteristics — as it would exist on the battlefield.
+     */
+    private fun matchesRecipient(
+        recipient: Recipient,
         state: GameState,
         targetId: EntityId,
         sourceEntityId: EntityId,
-        sourceControllerId: EntityId
-    ): Boolean {
-        val projected = state.projectedState
-        // Entities still on the stack (about to enter the battlefield) are not in the
-        // projected state yet, so fall back to base components for those. Battlefield
-        // permanents go through projected state so control-changing effects (Annex,
-        // Blatant Thievery) are honored.
-        val projectedController = projected.getController(targetId)
-        val effectiveController = projectedController
-            ?: state.getEntity(targetId)?.get<ControllerComponent>()?.playerId
-        return when (recipient) {
-            is RecipientFilter.CreatureYouControl -> {
-                val isCreature = if (projectedController != null) {
-                    projected.isCreature(targetId)
-                } else {
-                    state.getEntity(targetId)?.get<CardComponent>()?.typeLine?.isCreature == true
-                }
-                val isControlled = effectiveController == sourceControllerId
-                isCreature && isControlled
-            }
-            is RecipientFilter.Any -> true
-            is RecipientFilter.Self -> targetId == sourceEntityId
-            is RecipientFilter.PermanentYouControl -> {
-                effectiveController == sourceControllerId
-            }
-            is RecipientFilter.You -> targetId == sourceControllerId
-            is RecipientFilter.Matching -> {
-                val context = PredicateContext(controllerId = sourceControllerId, sourceId = sourceEntityId)
-                predicateEvaluator.matches(
-                    state, projected, targetId, recipient.filter, context
-                )
-            }
-            else -> false
-        }
-    }
+        sourceControllerId: EntityId,
+        predicateEvaluator: PredicateEvaluator
+    ): Boolean = predicateEvaluator.matchesRecipient(
+        state, state.projectedState, targetId, recipient,
+        PredicateContext(controllerId = sourceControllerId, sourceId = sourceEntityId),
+    )
 }

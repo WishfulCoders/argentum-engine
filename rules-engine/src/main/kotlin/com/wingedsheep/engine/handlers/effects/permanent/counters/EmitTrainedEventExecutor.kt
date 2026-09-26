@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.permanent.counters
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.core.TrainedEvent
 import com.wingedsheep.engine.handlers.EffectContext
@@ -34,7 +35,9 @@ import kotlin.reflect.KClass
  * yields exactly the count `AddCountersExecutor` placed. Card authors should not use
  * [EmitTrainedEventEffect] directly; it is wired into `training()`.
  */
-class EmitTrainedEventExecutor : EffectExecutor<EmitTrainedEventEffect> {
+class EmitTrainedEventExecutor(
+    private val predicateEvaluator: PredicateEvaluator
+) : EffectExecutor<EmitTrainedEventEffect> {
 
     override val effectType: KClass<EmitTrainedEventEffect> = EmitTrainedEventEffect::class
 
@@ -58,7 +61,8 @@ class EmitTrainedEventExecutor : EffectExecutor<EmitTrainedEventEffect> {
             trainedId,
             CounterType.PLUS_ONE_PLUS_ONE,
             count = 1,
-            placerId = context.controllerId
+            placerId = context.controllerId,
+            predicateEvaluator = predicateEvaluator
         )
         if (placed < 1) return EffectResult.success(state)
 

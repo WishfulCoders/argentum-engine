@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.TargetObject
 
@@ -39,30 +38,27 @@ val RovingActuator = card("Roving Actuator") {
         "without paying its mana cost."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.Void
         description = "Void — When this creature enters, if a nonland permanent left the " +
             "battlefield this turn or a spell was warped this turn, exile up to one target " +
             "instant or sorcery card with mana value 2 or less from your graveyard. Copy it. " +
             "You may cast the copy without paying its mana cost."
         val exiledCard = target(
-            "instant or sorcery card with mana value 2 or less from your graveyard",
-            TargetObject(
-                optional = true,
-                filter = TargetFilter(
-                    GameObjectFilter.InstantOrSorcery.manaValueAtMost(2).ownedByYou(),
-                    zone = Zone.GRAVEYARD,
-                ),
+            TargetFilter(
+                GameObjectFilter.InstantOrSorcery.manaValueAtMost(2).ownedByYou(),
+                zone = Zone.GRAVEYARD,
             ),
+            optional = true,
         )
-        effect = Effects.Composite(
-            Effects.Move(exiledCard, Zone.EXILE),
-            Effects.CopyCardIntoCollection(exiledCard, storeAs = "copy"),
-            MayEffect(
-                Effects.CastFromCollectionWithoutPayingCost("copy"),
+        effect = Effects.Pipeline {
+            run(Effects.Move(exiledCard, Zone.EXILE))
+            val copy = copyCard(exiledCard)
+            run(Effects.May(
+                Effects.CastFromCollectionWithoutPayingCost(copy),
                 descriptionOverride = "You may cast the copy without paying its mana cost.",
-            ),
-        )
+            ))
+        }
     }
 
     metadata {

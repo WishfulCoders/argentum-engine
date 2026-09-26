@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -7,8 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Magmakin Artillerist — Aetherdrift #137
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Cycling {1}{R}
  * When you cycle this card, it deals 1 damage to each opponent.
  *
- * The discard payoff is batch-worded (CR 603.2c), so it uses [Triggers.YouDiscardOneOrMore] —
+ * The discard payoff is batch-worded (CR 603.2c), so it uses `Triggers.you.discards(batch = true)` —
  * one trigger per discard *event*, however many cards it contained — and reads the batch size
  * back through [ContextPropertyKey.TRIGGER_DISCARD_COUNT] ("that much"). Discarding three cards
  * to one effect deals 3; three sequential single discards fire three triggers for 1 each.
@@ -40,9 +39,9 @@ val MagmakinArtillerist = card("Magmakin Artillerist") {
         "When you cycle this card, it deals 1 damage to each opponent."
 
     triggeredAbility {
-        trigger = Triggers.YouDiscardOneOrMore
+        trigger = Triggers.you.discards(batch = true)
         effect = Effects.DealDamage(
-            amount = DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_DISCARD_COUNT),
+            amount = DynamicAmounts.triggerDiscardCount(),
             target = EffectTarget.PlayerRef(Player.EachOpponent),
             damageSource = EffectTarget.Self,
         )
@@ -51,7 +50,7 @@ val MagmakinArtillerist = card("Magmakin Artillerist") {
     keywordAbility(KeywordAbility.cycling("{1}{R}"))
 
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
+        trigger = Triggers.self.isCycled()
         effect = Effects.DealDamage(
             amount = 1,
             target = EffectTarget.PlayerRef(Player.EachOpponent),

@@ -4,19 +4,17 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ChooseActionEffect
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.effects.EffectChoice
 import com.wingedsheep.sdk.scripting.effects.FeasibilityCheck
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
-import com.wingedsheep.sdk.scripting.effects.ForceSacrificeEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Osseous Sticktwister
@@ -54,44 +52,42 @@ val OsseousSticktwister = card("Osseous Sticktwister") {
     keywords(Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         // Delirium intervening-if (CR 603.4): four or more card types in your graveyard.
         interveningIf = Conditions.Delirium()
-        effect = ForEachPlayerEffect(
+        effect = Effects.ForEachPlayer(
             players = Player.EachOpponent,
-            effects = listOf(
-                ChooseActionEffect(
-                    // Inside the per-player iteration the controller is rebound to the iterated
-                    // opponent, so `Player.You` / `EffectTarget.Controller` is that opponent.
-                    player = EffectTarget.Controller,
-                    choices = listOf(
-                        EffectChoice(
-                            label = "Sacrifice a nonland permanent",
-                            effect = ForceSacrificeEffect(
-                                filter = GameObjectFilter.NonlandPermanent,
-                                count = 1,
-                                target = EffectTarget.Controller,
-                            ),
-                            feasibilityCheck = FeasibilityCheck.ControlsPermanentMatching(
-                                GameObjectFilter.NonlandPermanent
-                            ),
+            effect = Effects.ChooseAction(
+                // Inside the per-player iteration the controller is rebound to the iterated
+                // opponent, so `Player.You` / `EffectTarget.Controller` is that opponent.
+                player = EffectTarget.Controller,
+                choices = listOf(
+                    EffectChoice(
+                        label = "Sacrifice a nonland permanent",
+                        effect = Effects.Sacrifice(
+                            filter = GameObjectFilter.NonlandPermanent,
+                            count = 1,
+                            target = EffectTarget.Controller,
                         ),
-                        EffectChoice(
-                            label = "Discard a card",
-                            effect = Patterns.Hand.discardCards(1, EffectTarget.Controller),
-                            feasibilityCheck = FeasibilityCheck.HasCardsInZone(Zone.HAND),
-                        ),
-                        EffectChoice(
-                            label = "Take damage equal to Osseous Sticktwister's power",
-                            // damageSource left implicit → attributed to Osseous Sticktwister, so
-                            // its lifelink gains its controller that much life.
-                            effect = DealDamageEffect(
-                                amount = DynamicAmounts.sourcePower(),
-                                target = EffectTarget.Controller,
-                            ),
+                        feasibilityCheck = FeasibilityCheck.ControlsPermanentMatching(
+                            GameObjectFilter.NonlandPermanent
                         ),
                     ),
-                )
+                    EffectChoice(
+                        label = "Discard a card",
+                        effect = Patterns.Hand.discardCards(1, EffectTarget.Controller),
+                        feasibilityCheck = FeasibilityCheck.HasCardsInZone(Zone.HAND),
+                    ),
+                    EffectChoice(
+                        label = "Take damage equal to Osseous Sticktwister's power",
+                        // damageSource left implicit → attributed to Osseous Sticktwister, so
+                        // its lifelink gains its controller that much life.
+                        effect = Effects.DealDamage(
+                            amount = DynamicAmounts.sourcePower(),
+                            target = EffectTarget.Controller,
+                        ),
+                    ),
+                ),
             ),
         )
         description = "Delirium — At the beginning of your end step, if there are four or more card " +

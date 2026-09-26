@@ -36,7 +36,7 @@ val RazorkinNeedlehead = card("Razorkin Needlehead") {
 
     // Whenever an opponent draws a card, this creature deals 1 damage to that player.
     triggeredAbility {
-        trigger = Triggers.OpponentDraws
+        trigger = Triggers.anOpponent.draws()
         effect = Effects.DealDamage(
             1,
             EffectTarget.PlayerRef(Player.TriggeringPlayer),

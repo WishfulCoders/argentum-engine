@@ -1,14 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /** Pipeline slot holding the single player who won the contest, or nothing if it ended undecided. */
 private const val WINNER = "timesifterWinner"
@@ -34,7 +34,7 @@ private const val WINNER = "timesifterWinner"
  *   exiled the greatest mana value, and if no contender can exile at all the tie stands unbroken.
  *   Without the gate an unresolved `PipelineTarget` falls back to the ability's controller, which
  *   would hand Timesifter's own controller a free turn every time the table decked out.
- * - `Triggers.EachUpkeep` fires on **every** player's upkeep, not just its controller's — the card
+ * - `Triggers.anyPlayer.beginningOf(Step.UPKEEP)` fires on **every** player's upkeep, not just its controller's — the card
  *   is symmetrical, and in a two-player game that is two contests per turn cycle.
  * - Cards exiled by the contest stay in exile face up; nothing here returns them.
  */
@@ -48,18 +48,16 @@ val Timesifter = card("Timesifter") {
         "players repeat this process until the tie is broken."
 
     triggeredAbility {
-        trigger = Triggers.EachUpkeep
-        effect = Effects.Composite(
-            Effects.ExileTopCardContest(storeWinnerAs = WINNER),
-            ConditionalEffect(
+        trigger = Triggers.anyPlayer.beginningOf(Step.UPKEEP)
+        effect = Effects.ExileTopCardContest(storeWinnerAs = WINNER) then
+            Effects.If(
                 condition = Conditions.CompareAmounts(
-                    DynamicAmount.DistinctEntitiesInCollections(listOf(WINNER)),
+                    DynamicAmounts.distinctEntitiesIn(WINNER),
                     ComparisonOperator.GTE,
-                    DynamicAmount.Fixed(1)
+                    1
                 ),
-                effect = Effects.TakeExtraTurn(target = EffectTarget.PipelineTarget(WINNER))
+                then = Effects.TakeExtraTurn(target = EffectTarget.PipelineTarget(WINNER))
             )
-        )
         description = "At the beginning of each upkeep, each player exiles the top card of their " +
             "library. The player who exiled the card with the greatest mana value takes an extra " +
             "turn after this one. If two or more players' cards are tied for greatest, the tied " +

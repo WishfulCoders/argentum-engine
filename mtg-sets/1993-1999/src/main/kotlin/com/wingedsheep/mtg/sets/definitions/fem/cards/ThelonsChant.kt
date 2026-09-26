@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fem.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -8,11 +8,10 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Thelon's Chant
@@ -35,8 +34,8 @@ val ThelonsChant = card("Thelon's Chant") {
         "to that player unless the player puts a -1/-1 counter on a creature they control."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = PayOrSufferEffect(
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.PayOrSuffer(
             cost = Costs.pay.Mana("{G}"),
             suffer = SacrificeSelfEffect,
         )
@@ -44,13 +43,10 @@ val ThelonsChant = card("Thelon's Chant") {
     }
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Land.withSubtype(Subtype.SWAMP),
-            binding = TriggerBinding.ANY,
-        )
-        effect = PayOrSufferEffect(
+        trigger = Triggers.a(GameObjectFilter.Land.withSubtype(Subtype.SWAMP)).enters()
+        effect = Effects.PayOrSuffer(
             cost = Costs.pay.PutCountersOnPermanent(
-                counterType = Counters.MINUS_ONE_MINUS_ONE,
+                counterType = CounterType.MINUS_ONE_MINUS_ONE,
                 filter = GameObjectFilter.Creature,
             ),
             suffer = Effects.DealDamage(3, EffectTarget.PlayerRef(Player.TriggeringPlayer)),

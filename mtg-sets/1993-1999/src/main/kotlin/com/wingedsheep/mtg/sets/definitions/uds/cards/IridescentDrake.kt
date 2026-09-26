@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -30,8 +29,8 @@ val IridescentDrake = card("Iridescent Drake") {
     toughness = 2
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetObject(filter = TargetFilter.CardInGraveyard))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.CardInGraveyard)
         effect = Effects.PutOntoBattlefieldUnderYourControl(t)
     }
     metadata {

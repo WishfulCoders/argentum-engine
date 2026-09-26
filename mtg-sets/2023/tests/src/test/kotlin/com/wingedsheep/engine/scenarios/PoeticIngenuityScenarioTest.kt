@@ -23,7 +23,7 @@ import io.kotest.matchers.shouldBe
  *  - Whenever you cast an artifact spell, create a 3/1 red Dinosaur creature token.
  *    This ability triggers only once each turn.
  *
- * Both abilities compose existing primitives (group-attack trigger [Triggers.YouAttackWithFilter]
+ * Both abilities compose existing primitives (group-attack trigger `Triggers.you.attacks(with)`
  * with an [DynamicAmount.AggregateBattlefield] attacker count feeding [Effects.CreateTreasure];
  * a `youCastSpell(Artifact)` trigger with `oncePerTurn = true` minting a [Effects.CreateToken]),
  * so this scenario test is the behavioural gate.

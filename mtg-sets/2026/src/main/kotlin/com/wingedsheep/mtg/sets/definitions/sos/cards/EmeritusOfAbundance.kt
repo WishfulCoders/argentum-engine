@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Emeritus of Abundance // Regrowth — Secrets of Strixhaven #145
@@ -45,7 +44,7 @@ val EmeritusOfAbundance = card("Emeritus of Abundance") {
 
     // Whenever this creature attacks, if you control eight or more lands, it becomes prepared.
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         interveningIf = Conditions.ControlLandsAtLeast(8)
         effect = Effects.BecomePrepared(EffectTarget.Self)
     }
@@ -56,10 +55,8 @@ val EmeritusOfAbundance = card("Emeritus of Abundance") {
         typeLine = "Sorcery"
         oracleText = "Return target card from your graveyard to your hand."
         spell {
-            target = TargetObject(
-                filter = TargetFilter(GameObjectFilter.Any.ownedByYou(), zone = Zone.GRAVEYARD)
-            )
-            effect = Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND)
+            val target = target(TargetFilter(GameObjectFilter.Any.ownedByYou(), zone = Zone.GRAVEYARD))
+            effect = Effects.Move(target, Zone.HAND)
         }
     }
 

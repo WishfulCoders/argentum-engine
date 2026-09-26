@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.som.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Trigon of Corruption — Scars of Mirrodin #213
@@ -36,7 +35,7 @@ val TrigonOfCorruption = card("Trigon of Corruption") {
 
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.Named(Counters.CHARGE),
+            counterType = CounterType.CHARGE,
             count = 3,
             selfOnly = true
         )
@@ -44,17 +43,17 @@ val TrigonOfCorruption = card("Trigon of Corruption") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{B}{B}"), Costs.Tap)
-        effect = Effects.AddCounters(Counters.CHARGE, 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.CHARGE, 1, EffectTarget.Self)
     }
 
     activatedAbility {
         cost = Costs.Composite(
             Costs.Mana("{2}"),
             Costs.Tap,
-            Costs.RemoveCounterFromSelf(Counters.CHARGE)
+            Costs.RemoveCounterFromSelf(CounterType.CHARGE)
         )
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.AddCounters(Counters.MINUS_ONE_MINUS_ONE, 1, creature)
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(CounterType.MINUS_ONE_MINUS_ONE, 1, creature)
     }
 
     metadata {

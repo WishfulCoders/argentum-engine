@@ -3,11 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.atq.cards
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Gate to Phyrexia
@@ -30,7 +30,7 @@ val GateToPhyrexia = card("Gate to Phyrexia") {
 
     activatedAbility {
         cost = Costs.Sacrifice(GameObjectFilter.Creature)
-        val artifact = target("target artifact", Targets.Artifact)
+        val artifact = target(TargetFilter.Artifact)
         effect = Effects.Destroy(artifact)
         restrictions = listOf(
             ActivationRestriction.OncePerTurn,

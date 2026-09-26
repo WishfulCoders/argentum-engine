@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.lgn.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -7,7 +8,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Graveborn Muse
@@ -25,15 +26,13 @@ val GravebornMuse = card("Graveborn Muse") {
     oracleText = "At the beginning of your upkeep, you draw X cards and you lose X life, where X is the number of Zombies you control."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.DrawCards(
-            count = DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Permanent.withSubtype("Zombie")),
+            count = DynamicAmounts.battlefield(Player.You, GameObjectFilter.Permanent.withSubtype("Zombie")).count(),
             target = EffectTarget.Controller
-        ).then(
-            Effects.LoseLife(
-                amount = DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Permanent.withSubtype("Zombie")),
-                target = EffectTarget.Controller
-            )
+        ) then Effects.LoseLife(
+            amount = DynamicAmounts.battlefield(Player.You, GameObjectFilter.Permanent.withSubtype("Zombie")).count(),
+            target = EffectTarget.Controller
         )
     }
 

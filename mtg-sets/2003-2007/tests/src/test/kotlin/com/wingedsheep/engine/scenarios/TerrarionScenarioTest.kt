@@ -18,7 +18,7 @@ import io.kotest.matchers.shouldBe
  * ability's *cost*, so the draw trigger has to fire on any route to the graveyard, not only on the
  * self-sacrifice. These tests cover the enters-tapped replacement and the two ways the artifact can
  * reach a graveyard — its own cost, and someone else destroying it — because the trigger is
- * `Triggers.Dies` (battlefield-to-graveyard on the source), which is not creature-only despite the
+ * `Triggers.self.dies()` (battlefield-to-graveyard on the source), which is not creature-only despite the
  * name, and that is exactly what the printed "no matter how" ruling asks for.
  */
 class TerrarionScenarioTest : ScenarioTestBase() {

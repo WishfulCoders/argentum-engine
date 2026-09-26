@@ -247,7 +247,7 @@
                         "triggering": null,
                         "resolutionKey": null,
                         "permittedMoves": [],
-                        "selfBinding": null
+                        "iteration": null
                     },
                     "targets": [],
                     "alignedTargets": [],
@@ -316,8 +316,7 @@
                         "chosenValues": {},
                         "storedNumbers": {},
                         "storedStringLists": {},
-                        "storedSubtypeGroups": {},
-                        "iterationTarget": null
+                        "storedSubtypeGroups": {}
                     },
                     "resolutionDepth": 0
                 },

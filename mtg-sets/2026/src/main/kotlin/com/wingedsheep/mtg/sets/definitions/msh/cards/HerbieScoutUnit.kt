@@ -34,7 +34,7 @@ val HerbieScoutUnit = card("H.E.R.B.I.E. Scout Unit") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1) then
             Patterns.Hand.putFromHand(filter = GameObjectFilter.Land, entersTapped = true)
     }

@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
  * Crew 3 (Tap any number of creatures you control with total power 3 or more: This Vehicle becomes
  * an artifact creature until end of turn.)
  *
- * "This Vehicle" is the source, so the attack trigger is the plain [Triggers.Attacks] with an
+ * "This Vehicle" is the source, so the attack trigger is the plain `Triggers.self.attacks()` with an
  * [Targets.Any] slot and no explicit damage source — the engine already attributes the damage to
  * the ability's source. Crew is the engine-owned [KeywordAbility.crew] ability.
  */
@@ -29,8 +29,8 @@ val BallistaCharger = card("Ballista Charger") {
     toughness = 6
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val victim = target("any target", Targets.Any)
+        trigger = Triggers.self.attacks()
+        val victim = target(Targets.Any)
         effect = Effects.DealDamage(1, victim)
     }
 

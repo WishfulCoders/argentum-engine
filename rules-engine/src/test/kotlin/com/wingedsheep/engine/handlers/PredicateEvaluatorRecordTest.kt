@@ -9,7 +9,7 @@ import com.wingedsheep.sdk.core.Supertype
 import com.wingedsheep.sdk.core.TypeLine
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
@@ -24,7 +24,7 @@ import io.kotest.matchers.shouldBe
  */
 class PredicateEvaluatorRecordTest : FunSpec({
 
-    val evaluator = PredicateEvaluator()
+    val evaluator = PredicateEvaluator(cardRegistry = null)
 
     fun record(
         typeLine: TypeLine,
@@ -272,7 +272,7 @@ class PredicateEvaluatorRecordTest : FunSpec({
             evaluator.matchesFilter(rec, filter(CardPredicate.HasChosenSubtype)) shouldBe false
             evaluator.matchesFilter(
                 rec,
-                filter(CardPredicate.SharesCreatureTypeWith(EntityReference.Source))
+                filter(CardPredicate.SharesCreatureTypeWith(EffectTarget.Self))
             ) shouldBe false
             evaluator.matchesFilter(rec, filter(CardPredicate.HasSubtypeFromVariable("x"))) shouldBe false
             evaluator.matchesFilter(rec, filter(CardPredicate.HasSubtypeInStoredList("x"))) shouldBe false

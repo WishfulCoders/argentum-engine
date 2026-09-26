@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.mh3.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Galvanic Discharge
@@ -28,12 +28,10 @@ val GalvanicDischarge = card("Galvanic Discharge") {
         "then you may pay any amount of {E}. Galvanic Discharge deals that much damage to that permanent."
 
     spell {
-        val t = target("target", Targets.CreatureOrPlaneswalker)
-        effect = Effects.Composite(
-            Effects.GetEnergy(3),
-            Effects.PayCounters(Counters.ENERGY, storeAmountAs = "paid"),
-            Effects.DealDamage(DynamicAmount.VariableReference("paid"), t)
-        )
+        val t = target(Targets.CreatureOrPlaneswalker)
+        effect = Effects.GetEnergy(3) then
+            Effects.PayCounters(CounterType.ENERGY, storeAmountAs = "paid") then
+            Effects.DealDamage(DynamicAmounts.storedNumber("paid"), t)
     }
 
     metadata {

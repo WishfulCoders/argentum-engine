@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ExtraLoyaltyActivation
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Oath of Teferi
@@ -25,10 +24,8 @@ val OathOfTeferi = card("Oath of Teferi") {
     oracleText = "When Oath of Teferi enters, exile another target permanent you control. Return it to the battlefield under its owner's control at the beginning of the next end step.\nYou may activate the loyalty abilities of planeswalkers you control twice each turn rather than only once."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("permanent", TargetPermanent(
-            filter = TargetFilter(GameObjectFilter.Permanent.youControl(), excludeSelf = true)
-        ))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter(GameObjectFilter.Permanent.youControl(), excludeSelf = true))
         effect = Patterns.Exile.exileUntilEndStep(t)
     }
 

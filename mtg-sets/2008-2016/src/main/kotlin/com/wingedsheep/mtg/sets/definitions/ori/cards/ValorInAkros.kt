@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  * Enchantment
  * Whenever a creature you control enters, creatures you control get +1/+1 until end of turn.
  *
- * A plain "another permanent entered" trigger ([Triggers.entersBattlefield] over
+ * A plain "another permanent entered" trigger (`Triggers.a(filter).enters()` over
  * `Creature.youControl()` with [TriggerBinding.ANY], since the watcher is the enchantment rather
  * than the entering creature) feeding [Patterns.Group.modifyStatsForAll] over
  * [GroupFilter.AllCreaturesYouControl]. The group is snapshotted when the ability resolves, so the
@@ -27,10 +27,7 @@ val ValorInAkros = card("Valor in Akros") {
     oracleText = "Whenever a creature you control enters, creatures you control get +1/+1 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).enters()
         effect = Patterns.Group.modifyStatsForAll(1, 1, GroupFilter.AllCreaturesYouControl)
         description = "Creatures you control get +1/+1 until end of turn."
     }

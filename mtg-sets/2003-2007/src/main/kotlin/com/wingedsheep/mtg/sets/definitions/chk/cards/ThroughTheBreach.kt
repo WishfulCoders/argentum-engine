@@ -2,16 +2,16 @@ package com.wingedsheep.mtg.sets.definitions.chk.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.splice
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalOnCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.effects.CardDestination
+import com.wingedsheep.sdk.scripting.effects.CardSource
+import com.wingedsheep.sdk.scripting.references.Player
 
 /**
  * Through the Breach
@@ -40,24 +40,22 @@ val ThroughTheBreach = card("Through the Breach") {
     splice("{2}{R}{R}")
 
     spell {
-        effect = Patterns.Hand.putFromHand(
-            filter = GameObjectFilter.Creature
-        ).then(
-            ConditionalOnCollectionEffect(
-                collection = "putting",
-                ifNotEmpty = Effects.Composite(
-                    Effects.GrantKeyword(
-                        keyword = Keyword.HASTE,
-                        target = EffectTarget.PipelineTarget("putting", 0),
-                        duration = Duration.Permanent
-                    ),
-                    CreateDelayedTriggerEffect(
-                        step = Step.END,
-                        effect = Effects.SacrificeTarget(EffectTarget.PipelineTarget("putting", 0))
-                    )
-                )
-            )
-        )
+        effect = Effects.Pipeline {
+            val candidates = gather(CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Creature))
+            val putting = chooseUpTo(1, from = candidates)
+            move(putting, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You))
+            ifNotEmpty(putting) {
+                run(Effects.GrantKeyword(
+                    keyword = Keyword.HASTE,
+                    target = putting.asTarget,
+                    duration = Duration.Permanent
+                ))
+                run(Effects.CreateDelayedTrigger(
+                    step = Step.END,
+                    effect = Effects.SacrificeTarget(putting.asTarget)
+                ))
+            }
+        }
     }
 
     metadata {

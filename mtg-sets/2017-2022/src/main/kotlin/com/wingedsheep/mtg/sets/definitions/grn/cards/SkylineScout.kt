@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -25,8 +24,8 @@ val SkylineScout = card("Skyline Scout") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = MayPayManaEffect(
+        trigger = Triggers.self.attacks()
+        effect = Effects.MayPay(
             ManaCost.parse("{1}{W}"),
             Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
         )

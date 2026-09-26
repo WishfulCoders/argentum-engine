@@ -29,7 +29,7 @@ val ZhaoZilongTigerGeneral = card("Zhao Zilong, Tiger General") {
     keywords(Keyword.HORSEMANSHIP)
 
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }
 

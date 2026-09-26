@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Suspension Field
@@ -23,17 +22,14 @@ val SuspensionField = card("Suspension Field") {
     oracleText = "When this enchantment enters, you may exile target creature with toughness 3 or greater until this enchantment leaves the battlefield."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target(
-            "creature with toughness 3 or greater",
-            TargetCreature(filter = TargetFilter.Creature.toughnessAtLeast(3))
-        )
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature.toughnessAtLeast(3))
         effect = Effects.ExileUntilLeaves(creature)
         optional = true
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 

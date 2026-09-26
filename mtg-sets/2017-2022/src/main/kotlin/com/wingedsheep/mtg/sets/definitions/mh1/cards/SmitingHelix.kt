@@ -33,11 +33,8 @@ val SmitingHelix = card("Smiting Helix") {
     keywordAbility(KeywordAbility.flashback("{R}{W}"))
 
     spell {
-        val victim = target("any target", Targets.Any)
-        effect = Effects.Composite(
-            Effects.DealDamage(3, victim),
-            Effects.GainLife(3)
-        )
+        val victim = target(Targets.Any)
+        effect = Effects.DealDamage(3, victim) then Effects.GainLife(3)
     }
 
     metadata {

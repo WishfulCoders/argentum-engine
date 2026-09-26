@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sound the Trumpets
@@ -17,7 +16,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Counter target spell. If that spell's mana value was 2 or less, recruit.
  *
  * The mana-value test is deliberately hoisted *above* the counter rather than sequenced after it
- * ([ConditionalEffect] wrapping both branches, Prohibit's shape) so it reads the spell while it is
+ * ([Effects.If] wrapping both branches, Prohibit's shape) so it reads the spell while it is
  * still on the stack. Two things would go wrong reading it afterwards: an X spell's mana value
  * counts its chosen X only on the stack (CR 202.3b) and drops to X=0 once the card is in the
  * graveyard, and the check would then be evaluating a card, not the spell the oracle text refers to
@@ -39,14 +38,11 @@ val SoundTheTrumpets = card("Sound the Trumpets") {
         "Human Soldier creature token.)"
 
     spell {
-        target = Targets.Spell
-        effect = ConditionalEffect(
-            condition = Conditions.TargetSpellManaValueAtMost(DynamicAmount.Fixed(2)),
-            effect = Effects.Composite(
-                Effects.CounterSpell(),
-                Patterns.Mechanic.recruit(),
-            ),
-            elseEffect = Effects.CounterSpell(),
+        val spell = target(TargetFilter.SpellOnStack)
+        effect = Effects.If(
+            condition = Conditions.TargetSpellManaValueAtMost(DynamicAmounts.fixed(2), spell),
+            then = Effects.CounterSpell() then Patterns.Mechanic.recruit(),
+            otherwise = Effects.CounterSpell(),
         )
     }
 

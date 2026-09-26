@@ -6,10 +6,10 @@ import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Scenario tests for The Kingpin of Crime (Marvel Super Heroes #220).
@@ -52,7 +52,7 @@ class TheKingpinOfCrimeScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Target creature gets +0/+2 until end of turn."
         spell {
-            val t = target("target creature", TargetCreature())
+            val t = target(TargetFilter.Creature)
             effect = Effects.ModifyStats(0, 2, t)
         }
     }

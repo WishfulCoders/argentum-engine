@@ -1,20 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Razia's Purification
@@ -47,34 +39,27 @@ val RaziasPurification = card("Razia's Purification") {
     oracleText = "Each player chooses three permanents they control, then sacrifices the rest."
 
     spell {
-        effect = ForEachPlayerEffect(
+        effect = Effects.ForEachPlayer(
             players = Player.Each,
-            effects = listOf(
-                GatherCardsEffect(
-                    source = CardSource.ControlledPermanents(
+            Effects.Pipeline {
+                val permanents = gather(
+                    CardSource.ControlledPermanents(
                         player = Player.You,
                         filter = GameObjectFilter.Permanent
-                    ),
-                    storeAs = "permanents"
-                ),
-                SelectFromCollectionEffect(
-                    from = "permanents",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(3)),
+                    )
+                )
+                val (_, sacrificed) = chooseExactlySplit(
+                    3,
+                    from = permanents,
                     chooser = Chooser.Controller,
-                    storeSelected = "kept",
-                    storeRemainder = "sacrificed",
                     selectedLabel = "Keep",
                     remainderLabel = "Sacrifice",
                     prompt = "Choose three permanents you control to keep; the rest are sacrificed.",
                     useTargetingUI = true,
                     alwaysPrompt = true
-                ),
-                MoveCollectionEffect(
-                    from = "sacrificed",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD),
-                    moveType = MoveType.Sacrifice
                 )
-            )
+                sacrifice(sacrificed)
+            }
         )
     }
 

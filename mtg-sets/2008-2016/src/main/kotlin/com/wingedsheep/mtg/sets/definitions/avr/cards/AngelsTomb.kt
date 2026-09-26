@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -26,7 +25,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *    sugar: the printed text is "a creature you control", with no "another" clause. The distinction
  *    is inert in practice (the Tomb is not a creature as it enters) but the ANY binding is what the
  *    text says.
- *  - [MayEffect] wraps the animation: the controller is asked each time the trigger resolves, and
+ *  - [Effects.May] wraps the animation: the controller is asked each time the trigger resolves, and
  *    declining leaves the Tomb a plain artifact.
  *  - [Effects.BecomeCreature] always adds CREATURE, so `addTypes` carries the *other* word the
  *    text prints — ARTIFACT, a no-op union on a permanent that is already one. It sets base 3/3,
@@ -41,11 +40,8 @@ val AngelsTomb = card("Angel's Tomb") {
         "white Angel artifact creature with flying until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = Filters.Creature.youControl(),
-            binding = TriggerBinding.ANY
-        )
-        effect = MayEffect(
+        trigger = Triggers.a(Filters.Creature.youControl()).enters()
+        effect = Effects.May(
             Effects.BecomeCreature(
                 target = EffectTarget.Self,
                 power = 3,

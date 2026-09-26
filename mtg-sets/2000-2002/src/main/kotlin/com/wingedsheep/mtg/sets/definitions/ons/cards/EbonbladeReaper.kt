@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Ebonblade Reaper
@@ -25,12 +26,12 @@ val EbonbladeReaper = card("Ebonblade Reaper") {
     oracleText = "Whenever Ebonblade Reaper attacks, you lose half your life, rounded up.\nWhenever Ebonblade Reaper deals combat damage to a player, that player loses half their life, rounded up.\nMorph {3}{B}{B}"
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.LoseHalfLife(roundUp = true, target = EffectTarget.Controller)
     }
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         effect = Effects.LoseHalfLife(
             roundUp = true,
             target = EffectTarget.PlayerRef(Player.DefendingPlayer),

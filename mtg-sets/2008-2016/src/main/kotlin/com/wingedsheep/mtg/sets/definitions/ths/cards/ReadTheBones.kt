@@ -19,11 +19,9 @@ val ReadTheBones = card("Read the Bones") {
     oracleText = "Scry 2, then draw two cards. You lose 2 life. (To scry 2, look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.)"
 
     spell {
-        effect = Effects.Composite(
-            Effects.Scry(2),
-            Effects.DrawCards(2),
+        effect = Effects.Scry(2) then
+            Effects.DrawCards(2) then
             Effects.LoseLife(2, EffectTarget.Controller)
-        )
     }
 
     metadata {

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fdn.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
@@ -11,6 +11,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.GrantSubtype
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Skyknight Squire
@@ -22,7 +23,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * As long as this creature has three or more +1/+1 counters on it, it has flying and is
  * a Knight in addition to its other types.
  *
- * The grow trigger uses [Triggers.OtherCreatureEnters] (OTHER binding, Creature.youControl()
+ * The grow trigger uses `Triggers.another(GameObjectFilter.Creature.youControl()).enters()` (OTHER binding, Creature.youControl()
  * filter). The threshold buff is modeled as two conditional [staticAbility] blocks gated on
  * [Conditions.SourceCounterCountAtLeast] — one granting FLYING, one granting the Knight
  * subtype ([GrantSubtype] is additive, "in addition to its other types"). Both apply only
@@ -39,17 +40,17 @@ val SkyknightSquire = card("Skyknight Squire") {
         "Knight in addition to its other types."
 
     triggeredAbility {
-        trigger = Triggers.OtherCreatureEnters
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Whenever another creature you control enters, put a +1/+1 counter on this creature."
     }
 
     staticAbility {
-        condition = Conditions.SourceCounterCountAtLeast(Counters.PLUS_ONE_PLUS_ONE, 3)
+        condition = Conditions.SourceCounterCountAtLeast(CounterType.PLUS_ONE_PLUS_ONE, 3)
         ability = GrantKeyword(Keyword.FLYING, Filters.Self)
     }
     staticAbility {
-        condition = Conditions.SourceCounterCountAtLeast(Counters.PLUS_ONE_PLUS_ONE, 3)
+        condition = Conditions.SourceCounterCountAtLeast(CounterType.PLUS_ONE_PLUS_ONE, 3)
         ability = GrantSubtype("Knight", Filters.Self)
     }
 

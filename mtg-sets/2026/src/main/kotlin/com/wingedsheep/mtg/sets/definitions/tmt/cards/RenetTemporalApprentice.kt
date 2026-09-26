@@ -32,7 +32,7 @@ val RenetTemporalApprentice = card("Renet, Temporal Apprentice") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ForEachInGroup(
             filter = GroupFilter(
                 GameObjectFilter.NonlandPermanent.copy(
@@ -41,7 +41,7 @@ val RenetTemporalApprentice = card("Renet, Temporal Apprentice") {
                 ),
                 excludeSelf = true
             ),
-            effect = Effects.Move(EffectTarget.Self, Zone.HAND)
+            effect = Effects.Move(EffectTarget.IterationEntity, Zone.HAND)
         )
     }
 

@@ -2,6 +2,7 @@ package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.support.ScenarioTestBase
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
@@ -14,13 +15,12 @@ import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.ChoiceSlot
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.events.SpellCastPredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Teamwork N (CR 702.194, Marvel Super Heroes) end to end.
@@ -113,7 +113,7 @@ class TeamworkMechanicScenarioTest : ScenarioTestBase() {
             "teamwork, it deals 4 damage to that creature instead."
         teamwork(2)
         spell {
-            val damaged = target("target creature", TargetCreature())
+            val damaged = target(TargetFilter.Creature)
             effect = Effects.DealDamage(
                 com.wingedsheep.sdk.scripting.values.DynamicAmount.Conditional(
                     condition = Conditions.TeamworkWasPaid,
@@ -136,9 +136,9 @@ class TeamworkMechanicScenarioTest : ScenarioTestBase() {
             "When this creature enters, if it was cast using teamwork, put two +1/+1 counters on it."
         teamwork(2)
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             interveningIf = Conditions.TeamworkWasPaid
-            effect = Effects.AddCounters("+1/+1", 2, EffectTarget.Self)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
         }
     }
 
@@ -201,15 +201,12 @@ class TeamworkMechanicScenarioTest : ScenarioTestBase() {
             "teamwork, it also deals 2 damage to target player."
         teamwork(2)
         spell {
-            val damaged = target("target creature", TargetCreature())
+            val damaged = target(TargetFilter.Creature)
             effect = Effects.DealDamage(2, damaged)
 
-            val rallyCreature = kickerTarget("creature", TargetCreature())
-            val rallyPlayer = kickerTarget("player", com.wingedsheep.sdk.dsl.Targets.Player)
-            kickerEffect = Effects.Composite(
-                Effects.DealDamage(2, rallyCreature),
-                Effects.DealDamage(2, rallyPlayer),
-            )
+            val rallyCreature = kickerTarget(TargetFilter.Creature)
+            val rallyPlayer = kickerTarget(com.wingedsheep.sdk.dsl.Targets.Player)
+            kickerEffect = Effects.DealDamage(2, rallyCreature) then Effects.DealDamage(2, rallyPlayer)
         }
     }
 
@@ -223,9 +220,9 @@ class TeamworkMechanicScenarioTest : ScenarioTestBase() {
             "counters on it."
         keywordAbility(KeywordAbility.OptionalAdditionalCost(ManaCost.parse("{1}")))
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             interveningIf = WasKicked
-            effect = Effects.AddCounters("+1/+1", 2, EffectTarget.Self)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
         }
     }
 
@@ -237,7 +234,7 @@ class TeamworkMechanicScenarioTest : ScenarioTestBase() {
         toughness = 1
         oracleText = "Whenever you cast a kicked spell, you gain 3 life."
         triggeredAbility {
-            trigger = Triggers.youCastSpell(requires = setOf(SpellCastPredicate.WasKicked))
+            trigger = Triggers.you.casts(requires = setOf(SpellCastPredicate.WasKicked))
             effect = Effects.GainLife(3)
         }
     }

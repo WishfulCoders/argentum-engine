@@ -6,6 +6,8 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Inferno Fist
@@ -24,7 +26,7 @@ val InfernoFist = card("Inferno Fist") {
         "Enchanted creature gets +2/+0.\n" +
         "{R}, Sacrifice this Aura: This Aura deals 2 damage to any target."
 
-    auraTarget = Targets.CreatureYouControl
+    auraTarget = TargetObject(filter = TargetFilter.CreatureYouControl)
 
     staticAbility {
         ability = ModifyStats(+2, 0)
@@ -32,7 +34,7 @@ val InfernoFist = card("Inferno Fist") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{R}"), Costs.SacrificeSelf)
-        val victim = target("any target", Targets.Any)
+        val victim = target(Targets.Any)
         effect = Effects.DealDamage(2, victim)
     }
 

@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -25,7 +24,7 @@ val FeelingOfDread = card("Feeling of Dread") {
     typeLine = "Instant"
     oracleText = "Tap up to two target creatures.\nFlashback {1}{U} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
     spell {
-        val t = target("target", TargetCreature(optional = true, count = 2, filter = TargetFilter.Creature))
+        targets(TargetFilter.Creature, count = 2, optional = true)
         effect = Effects.TapEachTarget()
     }
     keywordAbility(KeywordAbility.flashback("{1}{U}"))

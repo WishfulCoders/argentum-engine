@@ -27,7 +27,7 @@ val CrestedHerdcaller = card("Crested Herdcaller") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 3,
             toughness = 3,

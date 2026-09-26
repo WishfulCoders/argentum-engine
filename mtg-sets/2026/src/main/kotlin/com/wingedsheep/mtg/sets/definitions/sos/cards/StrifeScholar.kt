@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Strife Scholar // Awaken the Ages — Secrets of Strixhaven #131
@@ -32,7 +33,7 @@ val StrifeScholar = card("Strife Scholar") {
         "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)"
 
     keywords(Keyword.PREPARED)
-    keywordAbility(KeywordAbility.wardLife(2))
+    keywordAbility(KeywordAbility.Ward(WardCost.Life(2)))
 
     // Awaken the Ages — the prepare spell. Create two 2/2 red and white Spirit creature tokens.
     prepare("Awaken the Ages") {

@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Rishadan Dockhand — Modern Horizons 2 #59
@@ -34,7 +35,7 @@ val RishadanDockhand = card("Rishadan Dockhand") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
-        val land = target("target land", Targets.Land)
+        val land = target(TargetFilter.Land)
         effect = Effects.Tap(land)
     }
 

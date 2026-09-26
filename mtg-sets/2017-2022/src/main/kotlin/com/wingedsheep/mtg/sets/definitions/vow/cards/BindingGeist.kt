@@ -2,7 +2,6 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.disturb
@@ -11,6 +10,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.RedirectZoneChange
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Binding Geist // Spectral Binding (Innistrad: Crimson Vow #48 — the card's earliest printing)
@@ -45,8 +46,8 @@ private val BindingGeistFront = card("Binding Geist") {
         "Disturb {1}{U} (You may cast this card from your graveyard transformed for its disturb cost.)"
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val weakened = target("creature an opponent controls", Targets.CreatureOpponentControls)
+        trigger = Triggers.self.attacks()
+        val weakened = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.ModifyStats(-2, 0, weakened)
     }
 
@@ -69,7 +70,7 @@ private val SpectralBinding = card("Spectral Binding") {
         "Enchanted creature gets -2/-0.\n" +
         "If Spectral Binding would be put into a graveyard from anywhere, exile it instead."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = ModifyStats(-2, 0)

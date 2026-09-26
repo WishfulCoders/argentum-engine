@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
-import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Crowd Favorites
@@ -26,18 +25,17 @@ val CrowdFavorites = card("Crowd Favorites") {
 
     activatedAbility {
         cost = Costs.Mana("{3}{W}")
-        val t = target("target", TargetCreature())
-        effect = TapUntapEffect(
-            target = t,
-            tap = true
+        val t = target(TargetFilter.Creature)
+        effect = Effects.Tap(
+            target = t
         )
     }
 
     activatedAbility {
         cost = Costs.Mana("{3}{W}")
-        effect = ModifyStatsEffect(
-            powerModifier = 0,
-            toughnessModifier = 5,
+        effect = Effects.ModifyStats(
+            power = 0,
+            toughness = 5,
             target = EffectTarget.Self
         )
     }

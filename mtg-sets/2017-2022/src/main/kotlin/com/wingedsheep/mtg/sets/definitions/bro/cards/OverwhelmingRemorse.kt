@@ -39,7 +39,7 @@ val OverwhelmingRemorse = card("Overwhelming Remorse") {
     }
 
     spell {
-        val victim = target("target", Targets.CreatureOrPlaneswalker)
+        val victim = target(Targets.CreatureOrPlaneswalker)
         effect = Effects.Exile(victim)
     }
 

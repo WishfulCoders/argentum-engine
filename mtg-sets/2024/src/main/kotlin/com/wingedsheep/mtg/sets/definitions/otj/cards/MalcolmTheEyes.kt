@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.references.Player
 
 /**
  * Malcolm, the Eyes
@@ -17,7 +16,7 @@ import com.wingedsheep.sdk.scripting.references.Player
  * Whenever you cast your second spell each turn, investigate. (Create a Clue token. It's an
  * artifact with "{2}, Sacrifice this token: Draw a card.")
  *
- * "Cast your second spell each turn" is [Triggers.NthSpellCast]; "investigate" is the keyword
+ * "Cast your second spell each turn" is `Triggers.<player>.castsNth(n, spell)`; "investigate" is the keyword
  * action [Effects.Investigate] (create a Clue token).
  */
 val MalcolmTheEyes = card("Malcolm, the Eyes") {
@@ -33,7 +32,7 @@ val MalcolmTheEyes = card("Malcolm, the Eyes") {
     keywords(Keyword.FLYING, Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.NthSpellCast(2, Player.You)
+        trigger = Triggers.you.castsNth(2)
         effect = Effects.Investigate()
         description = "Whenever you cast your second spell each turn, investigate."
     }

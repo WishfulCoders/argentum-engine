@@ -41,7 +41,7 @@ val CarrionCruiser = card("Carrion Cruiser") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Pipeline(
             descriptionOverride = "Mill two cards. Then return a creature or Vehicle card from your " +
                 "graveyard to your hand."

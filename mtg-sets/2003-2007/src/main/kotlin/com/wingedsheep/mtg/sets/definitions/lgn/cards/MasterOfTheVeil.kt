@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.lgn.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.TurnFaceDownEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Master of the Veil
@@ -25,12 +24,10 @@ val MasterOfTheVeil = card("Master of the Veil") {
     oracleText = "Morph {2}{U} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)\nWhen this creature is turned face up, you may turn target creature with a morph ability face down."
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
+        trigger = Triggers.self.turnedFaceUp()
         optional = true
-        val t = target("creature with a morph ability", TargetPermanent(
-            filter = TargetFilter(GameObjectFilter.Creature.withMorph().faceUp())
-        ))
-        effect = TurnFaceDownEffect(t)
+        val t = target(TargetFilter(GameObjectFilter.Creature.withMorph().faceUp()))
+        effect = Effects.TurnFaceDown(t)
     }
 
     morph = "{2}{U}"

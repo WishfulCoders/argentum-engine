@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Creeping Mold
@@ -24,7 +25,7 @@ val CreepingMold = card("Creeping Mold") {
     oracleText = "Destroy target artifact, enchantment, or land."
 
     spell {
-        val t = target("target", Targets.ArtifactEnchantmentOrLand)
+        val t = target(TargetFilter.ArtifactEnchantmentOrLand)
         effect = Effects.Destroy(t)
     }
 

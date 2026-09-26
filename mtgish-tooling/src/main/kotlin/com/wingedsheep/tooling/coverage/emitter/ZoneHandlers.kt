@@ -94,7 +94,7 @@ internal val zoneHandlers: Map<String, ActionHandler> = actionHandlers {
         val filter = groupFilterExpr(args) ?: return@on null
         call(
             "Effects.ForEachInGroup", arg(filter),
-            arg(call("Effects.Move", arg("EffectTarget.Self"), arg("Zone.GRAVEYARD"), arg("byDestruction", "true"))),
+            arg(call("Effects.Move", arg("EffectTarget.IterationEntity"), arg("Zone.GRAVEYARD"), arg("byDestruction", "true"))),
             arg("noRegenerate", noregen),
         )
     }
@@ -380,7 +380,7 @@ internal val zoneHandlers: Map<String, ActionHandler> = actionHandlers {
     // "Manifest dread" -> the fixed look-top-two / manifest-one / bin-the-rest pipeline (no args).
     simple("ManifestDread", dsl = "Patterns.Library.manifestDread()")
 
-    // Inline `If{cond}[effects]` action (inside an ActionList) -> a `ConditionalEffect`. Renders only the
+    // Inline `If{cond}[effects]` action (inside an ActionList) -> a `Effects.If`. Renders only the
     // condition shapes we can express faithfully:
     //  - "if [the targeted permanent] had mana value N or less"
     //    (`PermanentPassesFilter(Ref_TargetPermanent, ManaValueIs(LessThanOrEqualTo Integer N))`) ->
@@ -406,9 +406,9 @@ internal val zoneHandlers: Map<String, ActionHandler> = actionHandlers {
             if (cond["args"].strField("_Permanents") != "AnyPermanent") return@on null
             val edsl = renderEffectList(inner, tvar) ?: return@on null
             return@on call(
-                "ConditionalEffect",
+                "Effects.If",
                 arg("condition", call("Conditions.TargetMatchesFilter", arg("GameObjectFilter.Permanent"))),
-                arg("effect", edsl),
+                arg("then", edsl),
             )
         }
         // "if you control a <filter>" — a resolution-time state test over your own board.
@@ -416,9 +416,9 @@ internal val zoneHandlers: Map<String, ActionHandler> = actionHandlers {
             val condDsl = actionConditionDsl(cond) ?: return@on null
             val edsl = renderEffectList(inner, tvar) ?: return@on null
             return@on call(
-                "ConditionalEffect",
+                "Effects.If",
                 arg("condition", Lit(condDsl)),
-                arg("effect", edsl),
+                arg("then", edsl),
             )
         }
         // "If [N] or more mana was spent to cast that spell, [do X]" (Expressive Firedancer) — a
@@ -436,7 +436,7 @@ internal val zoneHandlers: Map<String, ActionHandler> = actionHandlers {
             val n = (cmp["args"].asInt()) ?: ((cmp["args"] as? JsonObject)?.get("args").asInt()) ?: return@on null
             val edsl = renderEffectList(inner, tvar) ?: return@on null
             return@on call(
-                "ConditionalEffect",
+                "Effects.If",
                 arg(
                     "condition",
                     call(
@@ -446,7 +446,7 @@ internal val zoneHandlers: Map<String, ActionHandler> = actionHandlers {
                         arg(call("DynamicAmount.Fixed", arg("$n"))),
                     ),
                 ),
-                arg("effect", edsl),
+                arg("then", edsl),
             )
         }
         if (cond.strField("_Condition") != "PermanentPassesFilter") return@on null
@@ -461,17 +461,17 @@ internal val zoneHandlers: Map<String, ActionHandler> = actionHandlers {
         val n = (cmp["args"].asInt()) ?: ((cmp["args"] as? JsonObject)?.get("args").asInt()) ?: return@on null
         val edsl = renderEffectList(inner, tvar) ?: return@on null
         call(
-            "ConditionalEffect",
+            "Effects.If",
             arg("condition", call("Conditions.TargetSpellManaValueAtMost", arg(call("DynamicAmount.Fixed", arg("$n"))))),
-            arg("effect", edsl),
+            arg("then", edsl),
         )
     }
 
-    // Inline `IfElse{cond}[thenEffects][elseEffects]` action -> a `ConditionalEffect(cond, then, else)`.
+    // Inline `IfElse{cond}[thenEffects][elseEffects]` action -> a `Effects.If(cond, then, else)`.
     // The condition resolves via [actionConditionDsl] (only the exact shapes we can express render);
     // both branches reuse the normal action-list renderer (sharing the spell's bound `tvar`). Take the
     // Fall: "Target creature gets -1/-0 …. It gets -4/-0 … instead if you control an outlaw." — the
-    // "instead" makes this an either/or branch, exactly a ConditionalEffect (never both arms). Anything
+    // "instead" makes this an either/or branch, exactly a Effects.If (never both arms). Anything
     // the condition or a branch can't render declines -> SCAFFOLD rather than dropping a clause.
     on("IfElse") { _, args, tvar ->
         val a = args.asArr ?: return@on null
@@ -482,14 +482,14 @@ internal val zoneHandlers: Map<String, ActionHandler> = actionHandlers {
         val thenEffect = renderEffectList(thenActions, tvar) ?: return@on null
         val elseEffect = renderEffectList(elseActions, tvar) ?: return@on null
         call(
-            "ConditionalEffect",
+            "Effects.If",
             arg("condition", Lit(condDsl)),
-            arg("effect", thenEffect),
-            arg("elseEffect", elseEffect),
+            arg("then", thenEffect),
+            arg("otherwise", elseEffect),
         )
     }
 
-    // Inline `Unless{cond}[actions]` action -> a `ConditionalEffect` that runs [actions] only when the
+    // Inline `Unless{cond}[actions]` action -> a `Effects.If` that runs [actions] only when the
     // condition is FALSE ("do X unless <cond>"). The condition resolves via [actionConditionDsl]; the
     // "unless" is the negation, so it renders as `Conditions.Not(<cond>)`. Splitskin Doll: "draw a card.
     // Then discard a card unless you control another creature with power 2 or less." — the discard runs
@@ -511,9 +511,9 @@ internal val zoneHandlers: Map<String, ActionHandler> = actionHandlers {
         if (inner.isEmpty()) return@on null
         val edsl = renderEffectList(inner, tvar) ?: return@on null
         call(
-            "ConditionalEffect",
+            "Effects.If",
             arg("condition", call("Conditions.Not", arg(Lit(condDsl)))),
-            arg("effect", edsl),
+            arg("then", edsl),
         )
     }
 

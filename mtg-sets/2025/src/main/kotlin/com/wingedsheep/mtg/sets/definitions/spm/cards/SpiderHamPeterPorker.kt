@@ -39,7 +39,7 @@ val SpiderHamPeterPorker = card("Spider-Ham, Peter Porker") {
         "Wolves you control get +1/+1."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateFood()
         description = "When Spider-Ham enters, create a Food token."
     }

@@ -2,11 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Burn, Burn, Tree and Fern
@@ -36,16 +34,13 @@ val BurnBurnTreeAndFern = card("Burn, Burn, Tree and Fern") {
 
     // I — This Saga deals 6 damage to target creature an opponent controls.
     sagaChapter(1) {
-        val creature = target("target creature an opponent controls", Targets.CreatureOpponentControls)
+        val creature = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.DealDamage(6, creature)
     }
 
     // II — Destroy target artifact an opponent controls.
     sagaChapter(2) {
-        val artifact = target(
-            "target artifact an opponent controls",
-            TargetPermanent(filter = TargetFilter.Artifact.opponentControls())
-        )
+        val artifact = target(TargetFilter.Artifact.opponentControls())
         effect = Effects.Destroy(artifact)
     }
 

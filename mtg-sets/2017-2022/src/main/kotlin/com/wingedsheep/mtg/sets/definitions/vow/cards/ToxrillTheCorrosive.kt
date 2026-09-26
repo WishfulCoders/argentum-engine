@@ -1,22 +1,19 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.unaryMinus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.core.Step
 
 /** VOW's own 1/1 black Slug token art. */
 private const val SLUG_TOKEN_IMAGE =
@@ -34,7 +31,7 @@ private const val SLUG_TOKEN_IMAGE =
  *
  * Modeling notes:
  *
- *  - **The slime counter is a pure marker** ([Counters.SLIME], added to `CounterType` with this
+ *  - **The slime counter is a pure marker** ([CounterType.SLIME], added to `CounterType` with this
  *    card). It carries no rule of its own — Toxrill's *second* ability is the only thing that turns
  *    a tally into a P/T change, and his third only asks whether one is present. That split is what
  *    the printed rulings require: both abilities "apply to all creatures you don't control with
@@ -42,13 +39,13 @@ private const val SLUG_TOKEN_IMAGE =
  *    ability**", and the third "triggers when a creature an opponent controls with a slime counter
  *    on it dies **for any reason**, not just due to its toughness being decreased".
  *  - **"for each slime counter on *them*" is a per-affected-permanent amount**, not a source
- *    tally. [GrantDynamicStatsEffect] is a Layer 7c bonus whose `DynamicAmount` is re-evaluated for
+ *    tally. [GrantDynamicStats] is a Layer 7c bonus whose `DynamicAmount` is re-evaluated for
  *    every creature it touches, with `EffectContext.affectedEntityId` bound to that creature — so
- *    [EntityReference.AffectedEntity] reads *its own* counters. This is Withering Hex's expression
+ *    [EffectTarget.AffectedEntity] reads *its own* counters. This is Withering Hex's expression
  *    (`Multiply(counterCount, -1)`, the negation idiom — there is no `Negate`) with `Source`
  *    swapped for `AffectedEntity`, and Diligent Zookeeper's per-affected-entity read widened from
  *    one creature to a group.
- *  - **The dies trigger reads last-known counters.** `Triggers.leavesBattlefield` with a
+ *  - **The dies trigger reads last-known counters.** `Triggers.<subject>.leaves(to, excludeTo, excludeSacrifice)` with a
  *    `.withCounter` filter is matched against the `ZoneChangeEvent`'s last-known state when the
  *    creature came from the battlefield, so the counter is still visible even though the entity is
  *    already gone. A slimed creature that dies *because* Toxrill shrank it to zero toughness is the
@@ -73,10 +70,10 @@ val ToxrillTheCorrosive = card("Toxrill, the Corrosive") {
 
     // At the beginning of each end step, put a slime counter on each creature you don't control.
     triggeredAbility {
-        trigger = Triggers.EachEndStep
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreaturesOpponentsControl,
-            Effects.AddCounters(Counters.SLIME, 1, EffectTarget.Self)
+            Effects.AddCounters(CounterType.SLIME, 1, EffectTarget.IterationEntity)
         )
         description = "At the beginning of each end step, put a slime counter on each creature " +
             "you don't control."
@@ -85,16 +82,8 @@ val ToxrillTheCorrosive = card("Toxrill, the Corrosive") {
     // Creatures you don't control get -1/-1 for each slime counter on them.
     staticAbility {
         // Re-evaluated per affected creature: AffectedEntity is *that* creature, not Toxrill.
-        val slimeOnIt = DynamicAmount.Multiply(
-            DynamicAmount.EntityProperty(
-                entity = EntityReference.AffectedEntity,
-                numericProperty = EntityNumericProperty.CounterCount(
-                    CounterTypeFilter.Named(Counters.SLIME)
-                )
-            ),
-            -1
-        )
-        ability = GrantDynamicStatsEffect(
+        val slimeOnIt = -DynamicAmounts.countersOn(EffectTarget.AffectedEntity, CounterType.SLIME)
+        ability = GrantDynamicStats(
             filter = GroupFilter.AllCreaturesOpponentsControl,
             powerBonus = slimeOnIt,
             toughnessBonus = slimeOnIt
@@ -104,11 +93,7 @@ val ToxrillTheCorrosive = card("Toxrill, the Corrosive") {
     // Whenever a creature you don't control with a slime counter on it dies, create a 1/1 black
     // Slug creature token.
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.opponentControls().withCounter(Counters.SLIME),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.opponentControls().withCounter(CounterType.SLIME)).dies()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

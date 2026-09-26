@@ -25,7 +25,7 @@ val RipjawRaptor = card("Ripjaw Raptor") {
     toughness = 5
 
     triggeredAbility {
-        trigger = Triggers.TakesDamage
+        trigger = Triggers.self.isDealtDamage()
         effect = Effects.DrawCards(1)
         description = "Enrage — Whenever this creature is dealt damage, draw a card."
     }

@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.SpellCastPredicate
 
 /**
  * Colleen Wing, Street Samurai — Marvel Super Heroes #13 (uncommon)
@@ -15,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever you cast a spell that targets a creature you control, put a +1/+1 counter on
  * Colleen Wing. Scry 1.
  *
- * Same trigger shape as Mockingbird, Ace Agent — [Triggers.youCastSpellTargeting], i.e. a
+ * Same trigger shape as Mockingbird, Ace Agent — `Triggers.you.casts(requires = setOf(SpellCastPredicate.TargetsMatching(filter)))`, i.e. a
  * `SpellCastEvent` gated on `SpellCastPredicate.TargetsMatching(Creature.youControl())`
  * evaluated against the spell's chosen targets relative to Colleen's controller. It fires once
  * per qualifying spell regardless of how many of your creatures the spell targets, and Colleen
@@ -34,11 +35,8 @@ val ColleenWingStreetSamurai = card("Colleen Wing, Street Samurai") {
         "that card on the bottom.)"
 
     triggeredAbility {
-        trigger = Triggers.youCastSpellTargeting(GameObjectFilter.Creature.youControl())
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
-            Effects.Scry(1),
-        )
+        trigger = Triggers.you.casts(requires = setOf(SpellCastPredicate.TargetsMatching(GameObjectFilter.Creature.youControl())))
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self) then Effects.Scry(1)
         description = "Whenever you cast a spell that targets a creature you control, put a " +
             "+1/+1 counter on Colleen Wing. Scry 1."
     }

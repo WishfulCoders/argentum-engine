@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.ChooseOptionDecision
 import com.wingedsheep.engine.core.CreatureTypeRevealedEvent
@@ -95,7 +96,7 @@ class SecretCreatureTypeChoiceTest : FunSpec({
 
     fun GameTestDriver.notedBadges(entityId: EntityId, viewer: EntityId, spectator: Boolean = false):
         List<ClientCardEffect> =
-        ClientStateTransformer(cardRegistry).transform(state, viewer, spectator)
+        ClientStateTransformer(cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)).transform(state, viewer, spectator)
             .cards[entityId]
             ?.activeEffects
             ?.filter { it.effectId.startsWith("noted_creature_types") }

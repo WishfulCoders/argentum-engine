@@ -1,5 +1,6 @@
 package com.wingedsheep.ai.llm.decision.handlers
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.ai.llm.AiResponseParser
 import com.wingedsheep.engine.core.ChooseTargetsDecision
 import com.wingedsheep.engine.core.DecisionContext
@@ -31,7 +32,7 @@ class ChooseTargetsHandlerCompletenessTest : FunSpec({
         registerCards(allCards)
         initMirrorMatch(deck = Deck.of("Forest" to 40), startingLife = 20)
     }
-    val state = ClientStateTransformer(driver.cardRegistry).transform(driver.state, driver.player1)
+    val state = ClientStateTransformer(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)).transform(driver.state, driver.player1)
 
     val first = EntityId.of("first")
     val second = EntityId.of("second")

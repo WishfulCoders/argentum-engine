@@ -1,14 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.references.Player
 
@@ -32,21 +28,17 @@ val WashOut = card("Wash Out") {
 
     spell {
         effect = Effects.ChooseColorThen(
-            then = Effects.Composite(
-                GatherCardsEffect(
-                    source = CardSource.BattlefieldMatching(
+            then = Effects.Pipeline {
+                val washOutGathered = gather(
+                    CardSource.BattlefieldMatching(
                         filter = GameObjectFilter(
                             cardPredicates = listOf(CardPredicate.HasChosenColor),
                         ),
                         player = Player.Each,
-                    ),
-                    storeAs = "washOut_gathered",
-                ),
-                MoveCollectionEffect(
-                    from = "washOut_gathered",
-                    destination = CardDestination.ToZone(Zone.HAND),
-                ),
-            ),
+                    )
+                )
+                toHand(washOutGathered)
+            },
             prompt = "Choose a color",
         )
     }

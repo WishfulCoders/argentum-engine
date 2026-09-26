@@ -7,9 +7,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * West Wind Avatar
@@ -39,25 +39,25 @@ val WestWindAvatar = card("West Wind Avatar") {
             CardPredicate.Or(listOf(CardPredicate.IsToken, CardPredicate.IsLand))
         )
     )
-    val sacrificeForLife = MayEffect(
-        Effects.Sacrifice(tokenOrLand, count = 1, target = EffectTarget.Controller)
-            .then(Effects.GainLife(3))
+    val sacrificeForLife = Effects.May(
+        Effects.Sacrifice(tokenOrLand, count = 1, target = EffectTarget.Controller) then
+            Effects.GainLife(3)
     )
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = sacrificeForLife
         description = "Whenever this creature enters, you may sacrifice a token or a land. If you do, you gain 3 life."
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = sacrificeForLife
         description = "Whenever this creature attacks, you may sacrifice a token or a land. If you do, you gain 3 life."
     }
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.YouHadPermanentLeaveBattlefieldThisTurn
         effect = Effects.DrawCards(1)
         description = "Disappear — At the beginning of your end step, if a permanent left the battlefield under your control this turn, draw a card."

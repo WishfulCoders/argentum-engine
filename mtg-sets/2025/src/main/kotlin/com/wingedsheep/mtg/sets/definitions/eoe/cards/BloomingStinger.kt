@@ -2,12 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Blooming Stinger
@@ -28,8 +26,8 @@ val BloomingStinger = card("Blooming Stinger") {
 
     // Triggered ability: When this creature enters...
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("another target creature you control", TargetCreature(filter = TargetFilter.Creature.youControl().other()))
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature.youControl().other())
         effect = Effects.GrantKeyword(
             keyword = Keyword.DEATHTOUCH,
             target = creature,

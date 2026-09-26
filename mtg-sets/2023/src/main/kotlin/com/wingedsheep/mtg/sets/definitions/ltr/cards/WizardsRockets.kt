@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Wizard's Rockets
@@ -31,14 +31,14 @@ val WizardsRockets = card("Wizard's Rockets") {
     // {X}, {T}, Sacrifice this artifact: Add X mana in any combination of colors.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{X}"), Costs.Tap, Costs.SacrificeSelf)
-        effect = Effects.AddManaInAnyCombination(DynamicAmount.XValue)
+        effect = Effects.AddManaInAnyCombination(DynamicAmounts.xValue())
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
 
     // When this artifact is put into a graveyard from the battlefield, draw a card.
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.DrawCards(1)
     }
 

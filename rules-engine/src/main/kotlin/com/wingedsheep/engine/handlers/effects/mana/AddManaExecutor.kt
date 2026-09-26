@@ -16,7 +16,7 @@ import kotlin.reflect.KClass
  * "Add {G}" or "Add {R}{R}" or "Add {R} for each Goblin on the battlefield."
  */
 class AddManaExecutor(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<AddManaEffect> {
 
     override val effectType: KClass<AddManaEffect> = AddManaEffect::class

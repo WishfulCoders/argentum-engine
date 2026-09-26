@@ -28,10 +28,8 @@ val PardicLancer = card("Pardic Lancer") {
     toughness = 2
     activatedAbility {
         cost = Costs.DiscardAtRandom(1)
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 0, EffectTarget.Self),
+        effect = Effects.ModifyStats(1, 0, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.Self)
-        )
     }
     metadata {
         rarity = Rarity.COMMON

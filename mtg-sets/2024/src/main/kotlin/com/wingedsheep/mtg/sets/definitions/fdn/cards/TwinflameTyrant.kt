@@ -6,8 +6,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.DoubleDamage
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
-import com.wingedsheep.sdk.scripting.events.SourceFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Twinflame Tyrant
@@ -21,7 +20,7 @@ import com.wingedsheep.sdk.scripting.events.SourceFilter
  *
  * The doubling is a [DoubleDamage] damage-amount replacement (CR 616), scoped by an
  * [EventPattern.DamageEvent] whose source is "any source you control" and whose recipient is
- * [RecipientFilter.OpponentOrPermanentTheyControl] ("an opponent or a permanent an opponent
+ * [Recipient.OpponentOrPermanentTheyControl] ("an opponent or a permanent an opponent
  * controls" — the same recipient shape used by Fated Firepower). Combat and noncombat damage
  * alike double, matching the unrestricted "deal damage" wording.
  */
@@ -40,8 +39,8 @@ val TwinflameTyrant = card("Twinflame Tyrant") {
     replacementEffect(
         DoubleDamage(
             appliesTo = EventPattern.DamageEvent(
-                source = SourceFilter.Matching(GameObjectFilter.Any.youControl()),
-                recipient = RecipientFilter.OpponentOrPermanentTheyControl,
+                source = GameObjectFilter.Any.youControl(),
+                recipient = Recipient.OpponentOrPermanentTheyControl,
             )
         )
     )

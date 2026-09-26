@@ -10,13 +10,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Say Its Name
@@ -55,27 +49,22 @@ val SayItsName = card("Say Its Name") {
         "the battlefield. If you search your library this way, shuffle. Activate only as a sorcery."
 
     spell {
-        effect = Effects.Composite(
-            Patterns.Library.mill(3),
-            GatherCardsEffect(
-                source = CardSource.FromZone(
+        effect = Effects.Pipeline {
+            run(Patterns.Library.mill(3))
+            val sayItsNameReturn = gather(
+                CardSource.FromZone(
                     zone = Zone.GRAVEYARD,
                     player = Player.You,
                     filter = GameObjectFilter.CreatureOrLand
-                ),
-                storeAs = "sayItsNameReturn"
-            ),
-            SelectFromCollectionEffect(
-                from = "sayItsNameReturn",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "sayItsNameChosen",
-                prompt = "You may return a creature or land card from your graveyard to your hand"
-            ),
-            MoveCollectionEffect(
-                from = "sayItsNameChosen",
-                destination = CardDestination.ToZone(Zone.HAND)
+                )
             )
-        )
+            val sayItsNameChosen = chooseUpTo(
+                1,
+                from = sayItsNameReturn,
+                prompt = "You may return a creature or land card from your graveyard to your hand"
+            )
+            toHand(sayItsNameChosen)
+        }
     }
 
     // Exile this card and two other cards named Say Its Name from your graveyard: search graveyard,
@@ -84,28 +73,24 @@ val SayItsName = card("Say Its Name") {
         cost = Costs.ExileFromGraveyard(3, GameObjectFilter.Any.named("Say Its Name"))
         activateFromZone = Zone.GRAVEYARD
         timing = TimingRule.SorcerySpeed
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.FromMultipleZones(
+        effect = Effects.Pipeline {
+            val altanak = gather(
+                CardSource.FromMultipleZones(
                     zones = listOf(Zone.GRAVEYARD, Zone.HAND, Zone.LIBRARY),
                     player = Player.You,
                     filter = GameObjectFilter.Any.named("Altanak, the Thrice-Called")
                 ),
-                storeAs = "altanak"
-            ),
-            SelectFromCollectionEffect(
-                from = "altanak",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "altanakChosen",
+                search = true
+            )
+            val altanakChosen = chooseUpTo(
+                1,
+                from = altanak,
                 prompt = "Search for Altanak, the Thrice-Called to put onto the battlefield"
-            ),
-            MoveCollectionEffect(
-                from = "altanakChosen",
-                destination = CardDestination.ToZone(Zone.BATTLEFIELD)
-            ),
+            )
+            move(altanakChosen, CardDestination.ToZone(Zone.BATTLEFIELD))
             // If you search your library this way, shuffle. The library is always searched, so always shuffle.
-            ShuffleLibraryEffect()
-        )
+            run(Effects.ShuffleLibrary())
+        }
         description = "Exile this card and two other cards named Say Its Name from your " +
             "graveyard: Search your graveyard, hand, and/or library for a card named Altanak, the " +
             "Thrice-Called and put it onto the battlefield. If you search your library this way, " +

@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.gift
@@ -12,7 +11,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GiftKind
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.RemoveKeywordStatic
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Starforged Sword
@@ -41,10 +40,10 @@ val StarforgedSword = card("Starforged Sword") {
     gift(GiftKind.TAPPED_FISH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        val creatureYouControl = target(TargetFilter.CreatureYouControl)
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.GiftWasPromised
-        target = Targets.CreatureYouControl
-        effect = Effects.AttachEquipment(EffectTarget.ContextTarget(0))
+        effect = Effects.AttachEquipment(creatureYouControl)
     }
 
     // Equipped creature gets +3/+3

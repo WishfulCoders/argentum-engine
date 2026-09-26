@@ -34,7 +34,7 @@ val DeepwayNavigator = card("Deepway Navigator") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Group.untapGroup(
             filter = GroupFilter(
                 GameObjectFilter.Permanent.youControl().withSubtype("Merfolk"),

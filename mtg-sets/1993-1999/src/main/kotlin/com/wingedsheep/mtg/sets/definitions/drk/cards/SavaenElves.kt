@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.StatePredicate
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Savaen Elves
@@ -32,14 +31,11 @@ val SavaenElves = card("Savaen Elves") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{G}{G}"), Costs.Tap)
         val aura = target(
-            "target",
-            TargetPermanent(
-                filter = TargetFilter(
-                    GameObjectFilter.Enchantment.withSubtype("Aura").copy(
-                        statePredicates = listOf(StatePredicate.AttachedToCardType(CardType.LAND))
-                    )
+            TargetFilter(
+                GameObjectFilter.Enchantment.withSubtype("Aura").copy(
+                    statePredicates = listOf(StatePredicate.AttachedToCardType(CardType.LAND))
                 )
-            )
+            ),
         )
         effect = Effects.Destroy(aura)
     }

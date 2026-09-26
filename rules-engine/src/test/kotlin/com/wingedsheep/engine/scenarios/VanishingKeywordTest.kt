@@ -12,11 +12,9 @@ import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.CounterType
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
@@ -25,6 +23,8 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Mechanic-level tests for Vanishing N (CR 702.62).
@@ -67,8 +67,8 @@ class VanishingKeywordTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Remove a time counter from target creature."
         spell {
-            val victim = target("target creature", Targets.Creature)
-            effect = Effects.RemoveCounters(Counters.TIME, 1, victim)
+            val victim = target(TargetFilter.Creature)
+            effect = Effects.RemoveCounters(CounterType.TIME, 1, victim)
         }
     }
 
@@ -91,7 +91,7 @@ class VanishingKeywordTest : FunSpec({
         val result = driver.submit(
             CastSpell(player, cardId, targets.map { ChosenTarget.Permanent(it) })
         )
-        if (!result.isSuccess) throw AssertionError("cast of $cardName failed: ${result.error}")
+        if (result.outcome !is Outcome.Done) throw AssertionError("cast of $cardName failed: ${result.error}")
         driver.bothPass()
     }
 

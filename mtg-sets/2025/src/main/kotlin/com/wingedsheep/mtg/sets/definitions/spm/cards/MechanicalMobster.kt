@@ -2,12 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.spm.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Mechanical Mobster
@@ -35,13 +33,10 @@ val MechanicalMobster = card("Mechanical Mobster") {
         "a nonland card, put a +1/+1 counter on that creature.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val exiled = target("target card in a graveyard", TargetObject(optional = true, filter = TargetFilter.CardInGraveyard))
-        val creature = target("target creature you control", Targets.CreatureYouControl)
-        effect = Effects.Composite(
-            Effects.Move(exiled, Zone.EXILE),
-            Effects.Connive(target = creature)
-        )
+        trigger = Triggers.self.enters()
+        val exiled = target(TargetFilter.CardInGraveyard, optional = true)
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.Move(exiled, Zone.EXILE) then Effects.Connive(target = creature)
         description = "When this creature enters, exile up to one target card from a graveyard. Target creature you control connives."
     }
 

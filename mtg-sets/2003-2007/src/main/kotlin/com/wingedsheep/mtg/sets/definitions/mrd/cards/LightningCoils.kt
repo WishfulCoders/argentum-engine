@@ -1,10 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
@@ -12,10 +11,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /** Lightning Coils — Mirrodin #198. */
 val LightningCoils = card("Lightning Coils") {
@@ -28,25 +24,18 @@ val LightningCoils = card("Lightning Coils") {
         "tokens with haste. Exile them at the beginning of the next end step."
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.youControl().nontoken(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY,
-        )
-        effect = Effects.AddCounters(Counters.CHARGE, 1, EffectTarget.Self)
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl().nontoken()).dies()
+        effect = Effects.AddCounters(CounterType.CHARGE, 1, EffectTarget.Self)
     }
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        interveningIf = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 5)
-        effect = Effects.Composite(
-            Effects.StoreNumber(
-                "removedChargeCounters",
-                DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.CHARGE)),
-            ),
-            Effects.RemoveAllCountersOfType(Counters.CHARGE, EffectTarget.Self),
-            Effects.CreateToken(
-                count = DynamicAmount.VariableReference("removedChargeCounters"),
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        interveningIf = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 5)
+        effect = Effects.Pipeline {
+            val removedChargeCounters = storeNumber(DynamicAmounts.countersOnSelf(CounterType.CHARGE))
+            run(Effects.RemoveAllCountersOfType(CounterType.CHARGE, EffectTarget.Self))
+            run(Effects.CreateToken(
+                count = removedChargeCounters.amount,
                 power = 3,
                 toughness = 1,
                 colors = setOf(Color.RED),
@@ -54,8 +43,8 @@ val LightningCoils = card("Lightning Coils") {
                 keywords = setOf(Keyword.HASTE),
                 exileAtStep = Step.END,
                 imageUri = "https://cards.scryfall.io/normal/front/e/4/e4a9051b-f964-43f9-877b-ea4f17620ecb.jpg?1783915251",
-            ),
-        )
+            ))
+        }
     }
 
     metadata {

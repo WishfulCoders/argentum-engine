@@ -34,7 +34,7 @@ val GloryheathLynx = card("Gloryheath Lynx") {
     toughness = 3
     keywords(Keyword.LIFELINK)
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         triggerRestriction = Conditions.SourceIsSaddled
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Land.withSubtype(Subtype.PLAINS),

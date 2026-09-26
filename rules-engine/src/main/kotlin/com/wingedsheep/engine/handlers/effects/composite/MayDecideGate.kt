@@ -7,13 +7,13 @@ import com.wingedsheep.sdk.scripting.effects.GatedEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
- * The "you may [then]." shape — the lowered form of the former `MayEffect` wrapper: a
+ * The "you may [then]." shape — the lowered form of the former `Effects.May` wrapper: a
  * [GatedEffect] whose gate is a [Gate.MayDecide] with no `otherwise` branch.
  *
- * Engine paths that used to special-case `is MayEffect` (the may-then-target trigger reorder in
+ * Engine paths that used to special-case `is Effects.May` (the may-then-target trigger reorder in
  * `TriggerProcessor`, its `resumeMayTrigger` unwrap) key off this matcher instead, so they still
  * recognize a bare "may" after the type was lowered to the frame. The `otherwise == null` guard
- * keeps it the *exact* `MayEffect` equivalent — the old wrapper had no else branch, so a
+ * keeps it the *exact* `Effects.May` equivalent — the old wrapper had no else branch, so a
  * `Gate.MayDecide` that carries an `otherwise` ("you may X, otherwise Y") deliberately does not
  * match and resolves through the generic [GatedEffectExecutor] yes/no path instead.
  *

@@ -1,6 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.handlers.ConditionEvaluator
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
@@ -45,7 +45,7 @@ class VoidConditionTest : FunSpec({
             targets = emptyList(),
             xValue = 0
         )
-        return ConditionEvaluator().evaluate(state, VoidCondition, context)
+        return PredicateEvaluator(cardRegistry = null).conditions.evaluate(state, VoidCondition, context)
     }
 
     test("Void is false at start of game") {
@@ -87,8 +87,7 @@ class VoidConditionTest : FunSpec({
         val land = driver.putLandOnBattlefield(player, "Forest")
         driver.state.nonlandPermanentLeftBattlefieldThisTurn shouldBe false
 
-        val transitionResult = com.wingedsheep.engine.handlers.effects.ZoneTransitionService
-            .moveToZone(
+        val transitionResult = driver.zones.moveToZone(
                 state = driver.state,
                 entityId = land,
                 destinationZone = com.wingedsheep.sdk.core.Zone.GRAVEYARD

@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * The Mighty Thor, Jane Foster
@@ -36,7 +35,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  *  - **Nontoken** is load-bearing: a token that leaves the battlefield ceases to exist (CR 111.7)
  *    and could never come back, so the printed card excludes tokens from the target set rather
  *    than offering a strictly-better removal mode.
- *  - The Equipment payoff is Giott, King of the Dwarves' shape: [Triggers.entersBattlefield] with
+ *  - The Equipment payoff is Giott, King of the Dwarves' shape: `Triggers.a(filter).enters()` with
  *    an "Equipment you control" filter and [TriggerBinding.ANY] (Thor is not an Equipment, so the
  *    binding is purely about watching other permanents). It fires for *every* Equipment, tokens
  *    included, and has no once-per-turn cap.
@@ -57,26 +56,17 @@ val TheMightyThorJaneFoster = card("The Mighty Thor, Jane Foster") {
     // Whenever The Mighty Thor attacks, exile up to one target nontoken artifact or creature,
     // then return that card to the battlefield tapped under its owner's control.
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val blinked = target(
-            "nontoken artifact or creature",
-            TargetPermanent(
-                optional = true,
-                filter = TargetFilter(GameObjectFilter.CreatureOrArtifact.nontoken()),
-            ),
-        )
-        effect = Effects.Move(blinked, Zone.EXILE)
-            .then(Effects.Move(blinked, Zone.BATTLEFIELD, placement = ZonePlacement.Tapped))
+        trigger = Triggers.self.attacks()
+        val blinked = target(TargetFilter(GameObjectFilter.CreatureOrArtifact.nontoken()), optional = true)
+        effect = Effects.Move(blinked, Zone.EXILE) then
+            Effects.Move(blinked, Zone.BATTLEFIELD, placement = ZonePlacement.Tapped)
         description = "Whenever The Mighty Thor attacks, exile up to one target nontoken artifact " +
             "or creature, then return that card to the battlefield tapped under its owner's control."
     }
 
     // Whenever an Equipment you control enters, draw a card.
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl()).enters()
         effect = Effects.DrawCards(1)
         description = "Whenever an Equipment you control enters, draw a card."
     }

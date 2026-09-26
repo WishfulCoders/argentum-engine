@@ -4,12 +4,12 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddManaEffect
 
 /**
  * Lys Alana Dignitary
@@ -40,7 +40,7 @@ val LysAlanaDignitary = card("Lys Alana Dignitary") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = AddManaEffect(Color.GREEN, amount = 2)
+        effect = Effects.AddMana(Color.GREEN, amount = 2)
         manaAbility = true
         timing = TimingRule.ManaAbility
         restrictions = listOf(

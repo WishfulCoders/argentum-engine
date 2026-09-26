@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.mmq.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Undertaker
@@ -22,7 +22,7 @@ val Undertaker = card("Undertaker") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{B}"), Costs.Tap, Costs.DiscardCard)
-        val t = target("target", Targets.CreatureCardInYourGraveyard)
+        val t = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.ReturnToHand(t)
     }
 

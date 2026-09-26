@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Fire Nation Engineer
@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  * Raid — At the beginning of your end step, if you attacked this turn, put a +1/+1 counter
  * on another target creature or Vehicle you control.
  *
- * Raid is modeled as an intervening-if on a [Triggers.YourEndStep] triggered ability via
+ * Raid is modeled as an intervening-if on a `Triggers.you.beginningOf(Step.END)` triggered ability via
  * [Conditions.YouAttackedThisTurn] (checked both when the trigger would go on the stack and again
  * on resolution, CR 603.4). "Another target creature or Vehicle you control" is a
  * [GameObjectFilter.CreatureOrVehicle] permanent target restricted to your control with
@@ -35,18 +35,10 @@ val FireNationEngineer = card("Fire Nation Engineer") {
         "+1/+1 counter on another target creature or Vehicle you control."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.YouAttackedThisTurn
-        val target = target(
-            "another target creature or Vehicle you control",
-            TargetPermanent(
-                filter = TargetFilter(
-                    GameObjectFilter.CreatureOrVehicle.youControl(),
-                    excludeSelf = true
-                )
-            )
-        )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, target)
+        val target = target(TargetFilter(GameObjectFilter.CreatureOrVehicle.youControl(), excludeSelf = true))
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, target)
         description = "Raid — At the beginning of your end step, if you attacked this turn, put a " +
             "+1/+1 counter on another target creature or Vehicle you control."
     }

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.mana.CostCalculator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.support.GameTestDriver
@@ -33,7 +34,7 @@ class GeyserDrakeScenarioTest : FunSpec({
 
     test("no reduction on your own turn") {
         val (driver, registry) = createDriver()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         driver.initMirrorMatch(deck = Deck.of("Forest" to 40), startingLife = 20)
 
         val active = driver.activePlayer!!
@@ -48,7 +49,7 @@ class GeyserDrakeScenarioTest : FunSpec({
 
     test("reduces generic by 1 during an opponent's turn") {
         val (driver, registry) = createDriver()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         driver.initMirrorMatch(deck = Deck.of("Forest" to 40), startingLife = 20)
 
         val active = driver.activePlayer!!
@@ -64,7 +65,7 @@ class GeyserDrakeScenarioTest : FunSpec({
 
     test("does not reduce colored mana") {
         val (driver, registry) = createDriver()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         driver.initMirrorMatch(deck = Deck.of("Forest" to 40), startingLife = 20)
 
         val active = driver.activePlayer!!

@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.gpt.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Douse in Gloom
@@ -18,9 +18,8 @@ val DouseInGloom = card("Douse in Gloom") {
     oracleText = "Douse in Gloom deals 2 damage to target creature and you gain 2 life."
 
     spell {
-        val t = target("creature", Targets.Creature)
-        effect = Effects.DealDamage(2, t)
-            .then(Effects.GainLife(2))
+        val t = target(TargetFilter.Creature)
+        effect = Effects.DealDamage(2, t) then Effects.GainLife(2)
     }
 
     metadata {

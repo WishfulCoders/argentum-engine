@@ -4,9 +4,9 @@
 
 package com.wingedsheep.mtg.sets.definitions.lea.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.TakeExtraTurnEffect
 
 
 /**
@@ -21,7 +21,7 @@ val TimeWalk = card("Time Walk") {
     typeLine = "Sorcery"
     oracleText = "Take an extra turn after this one."
     spell {
-        effect = TakeExtraTurnEffect()
+        effect = Effects.TakeExtraTurn()
     }
     metadata {
         rarity = Rarity.RARE

@@ -25,7 +25,7 @@ val ScholarOfStars = card("Scholar of Stars") {
     oracleText = "When this creature enters, if you control an artifact, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.ControlArtifact
         effect = Effects.DrawCards(1)
     }

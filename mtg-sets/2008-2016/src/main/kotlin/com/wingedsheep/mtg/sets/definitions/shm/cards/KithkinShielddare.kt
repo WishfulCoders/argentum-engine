@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Kithkin Shielddare
@@ -29,7 +30,7 @@ val KithkinShielddare = card("Kithkin Shielddare") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{W}"), Costs.Tap)
-        val blocker = target("target", Targets.BlockingCreature)
+        val blocker = target(TargetFilter.BlockingCreature)
         effect = Effects.ModifyStats(2, 2, blocker)
     }
 

@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.vividEtb
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -29,7 +29,7 @@ val Shinestriker = card("Shinestriker") {
     keywords(Keyword.FLYING)
 
     vividEtb { colorCount ->
-        DrawCardsEffect(count = colorCount, target = EffectTarget.Controller)
+        Effects.DrawCards(count = colorCount, target = EffectTarget.Controller)
     }
 
     metadata {

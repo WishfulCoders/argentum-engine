@@ -19,7 +19,7 @@ val Recuperate = card("Recuperate") {
     oracleText = "Target player gains 5 life."
 
     spell {
-        val t = target("target", Targets.Player)
+        val t = target(Targets.Player)
         effect = Effects.GainLife(5, t)
     }
 

@@ -1,19 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GrantTriggeredAbilityEffect
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Vigorous Charge
@@ -34,26 +30,21 @@ val VigorousCharge = card("Vigorous Charge") {
     keywordAbility(KeywordAbility.kicker("{W}"))
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            listOf(
-                Effects.GrantKeyword(Keyword.TRAMPLE, t),
-                ConditionalEffect(
-                    condition = WasKicked,
-                    effect = GrantTriggeredAbilityEffect(
-                        ability = TriggeredAbility.create(
-                            trigger = Triggers.dealsDamage(damageType = DamageType.Combat).event,
-                            binding = Triggers.dealsDamage(damageType = DamageType.Combat).binding,
-                            effect = Effects.GainLife(
-                                DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_DAMAGE_AMOUNT)
-                            ),
-                            descriptionOverride = "Whenever this creature deals combat damage, you gain life equal to that damage."
+        val t = target(TargetFilter.Creature)
+        effect = Effects.GrantKeyword(Keyword.TRAMPLE, t) then
+            Effects.If(
+                condition = WasKicked,
+                then = Effects.GrantTriggeredAbility(
+                    ability = TriggeredAbility.create(
+                        trigger = Triggers.self.dealsCombatDamage(),
+                        effect = Effects.GainLife(
+                            DynamicAmounts.triggerDamageAmount()
                         ),
-                        target = t
-                    )
+                        descriptionOverride = "Whenever this creature deals combat damage, you gain life equal to that damage."
+                    ),
+                    target = t
                 )
             )
-        )
     }
 
     metadata {

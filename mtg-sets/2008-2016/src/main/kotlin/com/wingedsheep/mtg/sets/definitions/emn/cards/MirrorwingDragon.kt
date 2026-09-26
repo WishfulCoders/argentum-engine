@@ -48,10 +48,7 @@ val MirrorwingDragon = card("Mirrorwing Dragon") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.anyPlayerCasts(
-            spellFilter = GameObjectFilter.InstantOrSorcery,
-            requires = setOf(SpellCastPredicate.TargetsOnlySource)
-        )
+        trigger = Triggers.anyPlayer.casts(GameObjectFilter.InstantOrSorcery, requires = setOf(SpellCastPredicate.TargetsOnlySource))
         effect = Effects.CopySpellForEachOtherPossibleTarget(
             candidates = GameObjectFilter.Creature.youControl()
         )

@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Bespoke Bō
@@ -28,11 +27,8 @@ val BespokeBo = card("Bespoke Bō") {
     oracleText = "When this Equipment enters, return up to one other target nonland permanent to its owner's hand.\nEquipped creature gets +2/+1 and has vigilance.\nEquip {3} ({3}: Attach to target creature you control. Equip only as a sorcery.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val permanent = target(
-            "other nonland permanent",
-            TargetPermanent(optional = true, filter = TargetFilter.NonlandPermanent.other())
-        )
+        trigger = Triggers.self.enters()
+        val permanent = target(TargetFilter.NonlandPermanent.other(), optional = true)
         effect = Effects.ReturnToHand(permanent)
     }
 

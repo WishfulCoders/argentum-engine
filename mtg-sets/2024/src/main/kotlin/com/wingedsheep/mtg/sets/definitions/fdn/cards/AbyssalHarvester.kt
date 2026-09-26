@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Abyssal Harvester
@@ -48,15 +47,7 @@ val AbyssalHarvester = card("Abyssal Harvester") {
 
     activatedAbility {
         cost = Costs.Tap
-        val harvested = target(
-            "creature card in a graveyard that was put there this turn",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.putIntoGraveyardThisTurn(),
-                    zone = Zone.GRAVEYARD
-                )
-            )
-        )
+        val harvested = target(TargetFilter(GameObjectFilter.Creature.putIntoGraveyardThisTurn(), zone = Zone.GRAVEYARD))
         effect = Effects.Pipeline {
             // Snapshot the Nightmare tokens that exist *before* the copy is created; those are
             // the "other" ones the last clause exiles.

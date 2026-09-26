@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 
 /**
  * Moon-Vigil Adherents
@@ -26,13 +26,10 @@ val MoonVigilAdherents = card("Moon-Vigil Adherents") {
 
     keywords(Keyword.TRAMPLE)
 
-    val bonus = DynamicAmount.Add(
-        DynamicAmounts.creaturesYouControl(),
-        DynamicAmounts.creatureCardsInYourGraveyard()
-    )
+    val bonus = DynamicAmounts.creaturesYouControl() + DynamicAmounts.creatureCardsInYourGraveyard()
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
             powerBonus = bonus,
             toughnessBonus = bonus

@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Recruit is a keyword action with fixed reminder text, composed by
  * [Patterns.Mechanic.recruit] — draw, discard, and a 1/1 Human Soldier if the discard was a
  * nonland card. Nothing about it reads the dying creature, so the ordinary SELF-bound
- * [Triggers.Dies] is all the binding this needs.
+ * `Triggers.self.dies()` is all the binding this needs.
  */
 val LaketownLookout = card("Lake-town Lookout") {
     manaCost = "{W}"
@@ -28,7 +28,7 @@ val LaketownLookout = card("Lake-town Lookout") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Patterns.Mechanic.recruit()
     }
 

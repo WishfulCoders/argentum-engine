@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Rockalanche — {2}{G} Sorcery — Lesson
@@ -34,7 +33,7 @@ val Rockalanche = card("Rockalanche") {
         "Flashback {5}{G} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
 
     spell {
-        val land = target("target land you control", TargetObject(filter = TargetFilter.Land.youControl()))
+        val land = target(TargetFilter.Land.youControl())
         effect = Effects.Earthbend(DynamicAmounts.landsWithSubtype(Subtype.FOREST), land)
     }
 

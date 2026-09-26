@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -10,16 +10,11 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.FaceDownMode
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Vannifar, Evolved Enigma — Murders at Karlov Manor #241
@@ -56,27 +51,23 @@ val VannifarEvolvedEnigma = card("Vannifar, Evolved Enigma") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        effect = ModalEffect(
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        effect = Effects.Modal(
             modes = listOf(
                 Mode.noTarget(
-                    Effects.Composite(
-                        GatherCardsEffect(
-                            source = CardSource.FromZone(Zone.HAND),
-                            storeAs = "vannifarHand",
-                        ),
-                        SelectFromCollectionEffect(
-                            from = "vannifarHand",
-                            selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                            storeSelected = "vannifarCloaking",
-                            prompt = "Choose a card to cloak",
-                        ),
-                        MoveCollectionEffect(
-                            from = "vannifarCloaking",
-                            destination = CardDestination.ToZone(Zone.BATTLEFIELD),
-                            faceDown = FaceDownMode.CLOAK,
-                        ),
-                    ),
+                    Effects.Pipeline {
+                        val vannifarHand = gather(CardSource.FromZone(Zone.HAND))
+                        val vannifarCloaking = chooseExactly(
+                            1,
+                            from = vannifarHand,
+                            prompt = "Choose a card to cloak"
+                        )
+                        move(
+                            vannifarCloaking,
+                            CardDestination.ToZone(Zone.BATTLEFIELD),
+                            faceDown = FaceDownMode.CLOAK
+                        )
+                    },
                     "Cloak a card from your hand",
                 ),
                 Mode.noTarget(
@@ -86,7 +77,7 @@ val VannifarEvolvedEnigma = card("Vannifar, Evolved Enigma") {
                                 .withCardPredicate(CardPredicate.IsColorless)
                                 .youControl(),
                         ),
-                        Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
+                        Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity),
                     ),
                     "Put a +1/+1 counter on each colorless creature you control",
                 ),

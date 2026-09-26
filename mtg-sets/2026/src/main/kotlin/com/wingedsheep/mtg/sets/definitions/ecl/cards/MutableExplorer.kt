@@ -31,7 +31,7 @@ val MutableExplorer = card("Mutable Explorer") {
     keywords(Keyword.CHANGELING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateMutavault(tapped = true)
     }
 

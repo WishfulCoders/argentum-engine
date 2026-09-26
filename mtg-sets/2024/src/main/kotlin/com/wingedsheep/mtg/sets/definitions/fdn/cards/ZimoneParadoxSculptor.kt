@@ -1,16 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.fdn.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Zimone, Paradox Sculptor
@@ -43,13 +41,10 @@ val ZimoneParadoxSculptor = card("Zimone, Paradox Sculptor") {
         "and/or artifacts you control."
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        target(
-            "up to two target creatures you control",
-            TargetCreature(count = 2, optional = true, filter = TargetFilter.Creature.youControl())
-        )
-        effect = ForEachTargetEffect(
-            listOf(Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0)))
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        targets(TargetFilter.Creature.youControl(), count = 2, optional = true)
+        effect = Effects.ForEachTarget(
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0))
         )
         description = "At the beginning of combat on your turn, put a +1/+1 counter on each of " +
             "up to two target creatures you control."
@@ -57,16 +52,9 @@ val ZimoneParadoxSculptor = card("Zimone, Paradox Sculptor") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{G}{U}"), Costs.Tap)
-        target(
-            "up to two target creatures and/or artifacts you control",
-            TargetObject(
-                count = 2,
-                optional = true,
-                filter = TargetFilter.CreatureOrArtifact.youControl()
-            )
-        )
-        effect = ForEachTargetEffect(
-            listOf(Effects.DoubleAllCounters(EffectTarget.ContextTarget(0)))
+        targets(TargetFilter.CreatureOrArtifact.youControl(), count = 2, optional = true)
+        effect = Effects.ForEachTarget(
+            Effects.DoubleAllCounters(EffectTarget.ContextTarget(0))
         )
         description = "Double the number of each kind of counter on up to two target creatures " +
             "and/or artifacts you control."

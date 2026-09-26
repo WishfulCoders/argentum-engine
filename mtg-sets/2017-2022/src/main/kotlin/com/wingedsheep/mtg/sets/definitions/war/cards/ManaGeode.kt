@@ -21,7 +21,7 @@ val ManaGeode = card("Mana Geode") {
     oracleText = "When this artifact enters, scry 1.\n{T}: Add one mana of any color."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Scry(1)
         description = "When this artifact enters, scry 1."
     }

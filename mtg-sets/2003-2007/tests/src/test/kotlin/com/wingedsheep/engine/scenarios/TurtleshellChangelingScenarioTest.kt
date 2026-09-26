@@ -11,9 +11,9 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 class TurtleshellChangelingScenarioTest : FunSpec({
     val asymmetricPump = card("Asymmetric Pump") {
@@ -21,7 +21,7 @@ class TurtleshellChangelingScenarioTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Target creature gets +2/+0 until end of turn."
         spell {
-            val creature = target("creature", TargetCreature())
+            val creature = target(TargetFilter.Creature)
             effect = Effects.ModifyStats(2, 0, creature)
         }
     }

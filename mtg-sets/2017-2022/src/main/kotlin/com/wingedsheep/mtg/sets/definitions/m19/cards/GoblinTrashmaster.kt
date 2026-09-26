@@ -3,12 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.m19.cards
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Goblin Trashmaster
@@ -49,7 +49,7 @@ val GoblinTrashmaster = card("Goblin Trashmaster") {
 
     activatedAbility {
         cost = Costs.Sacrifice(GameObjectFilter.Permanent.withSubtype(Subtype.GOBLIN))
-        val artifact = target("target", Targets.Artifact)
+        val artifact = target(TargetFilter.Artifact)
         effect = Effects.Destroy(artifact)
     }
 

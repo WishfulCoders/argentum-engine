@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.layers.StateProjector
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.state.components.battlefield.AttachedToComponent
@@ -96,7 +97,7 @@ class NoggleTheMindTest : FunSpec({
         driver.removeSummoningSickness(druid)
 
         // Before Noggle: ManaSolver sees the druid as a five-color source.
-        val solverBefore = ManaSolver(driver.cardRegistry)
+        val solverBefore = ManaSolver(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val sourcesBefore = solverBefore.findAvailableManaSources(driver.state, activePlayer)
         val druidBefore = sourcesBefore.find { it.entityId == druid }
         druidBefore shouldNotBe null
@@ -112,7 +113,7 @@ class NoggleTheMindTest : FunSpec({
         // must drop the druid from the available mana sources.
         driver.state.projectedState.hasLostAllAbilities(druid) shouldBe true
 
-        val solverAfter = ManaSolver(driver.cardRegistry)
+        val solverAfter = ManaSolver(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val sourcesAfter = solverAfter.findAvailableManaSources(driver.state, activePlayer)
         sourcesAfter.find { it.entityId == druid } shouldBe null
     }

@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Madame Hydra
@@ -17,7 +18,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Whenever you cast a Villain spell, create a 2/1 black Villain creature token with menace.
  *
  * Implementation notes:
- * - [Triggers.YouCastSubtype] matches the spell on the stack by subtype, so it fires for any
+ * - `Triggers.you.casts(GameObjectFilter.Any.withSubtype(subtype))` matches the spell on the stack by subtype, so it fires for any
  *   Villain spell (creature or otherwise) you cast — including the Villain tokens' own tribe
  *   payoffs later in the set. It does not fire for Madame Hydra herself (she isn't on the
  *   battlefield while her own spell is on the stack).
@@ -32,7 +33,7 @@ val MadameHydra = card("Madame Hydra") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.YouCastSubtype(Subtype.VILLAIN)
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withSubtype(Subtype.VILLAIN))
         effect = Effects.CreateToken(
             power = 2,
             toughness = 1,

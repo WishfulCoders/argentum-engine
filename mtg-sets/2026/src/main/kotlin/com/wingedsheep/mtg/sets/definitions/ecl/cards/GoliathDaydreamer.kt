@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -8,14 +8,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.events.SpellCastPredicate
-import com.wingedsheep.sdk.scripting.effects.CastFromCollectionWithoutPayingCostEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MarkSpellExileWithCountersEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -44,13 +38,10 @@ val GoliathDaydreamer = card("Goliath Daydreamer") {
 
     // First ability — re-route resolution to exile with a dream counter.
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.InstantOrSorcery,
-            requires = setOf(SpellCastPredicate.CastFromZone(Zone.HAND)),
-        )
-        effect = MarkSpellExileWithCountersEffect(
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery, requires = setOf(SpellCastPredicate.CastFromZone(Zone.HAND)))
+        effect = Effects.MarkSpellExileWithCounters(
             target = EffectTarget.TriggeringEntity,
-            counterType = Counters.DREAM,
+            counterType = CounterType.DREAM,
             count = 1
         )
     }
@@ -61,27 +52,23 @@ val GoliathDaydreamer = card("Goliath Daydreamer") {
     // CastFromCollectionWithoutPayingCostEffect — never a lingering until-end-of-turn grant.
     // Casting mid-resolution also ignores card-type timing (a sorcery is cast in combat).
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        zone = Zone.EXILE,
-                        player = Player.You,
-                        filter = GameObjectFilter.Nonland.withCounter(Counters.DREAM)
-                    ),
-                    storeAs = "dreamPool"
-                ),
-                SelectFromCollectionEffect(
-                    from = "dreamPool",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    storeSelected = "toCast",
-                    prompt = "You may cast a spell with a dream counter on it without paying its mana cost.",
-                    selectedLabel = "Cast for free",
-                ),
-                CastFromCollectionWithoutPayingCostEffect(from = "toCast")
+        trigger = Triggers.self.attacks()
+        effect = Effects.Pipeline {
+            val dreamPool = gather(
+                CardSource.FromZone(
+                    zone = Zone.EXILE,
+                    player = Player.You,
+                    filter = GameObjectFilter.Nonland.withCounter(CounterType.DREAM)
+                )
             )
-        )
+            val toCast = chooseUpTo(
+                1,
+                from = dreamPool,
+                prompt = "You may cast a spell with a dream counter on it without paying its mana cost.",
+                selectedLabel = "Cast for free"
+            )
+            run(Effects.CastFromCollectionWithoutPayingCost(from = toCast))
+        }
     }
 
     metadata {

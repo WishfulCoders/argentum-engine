@@ -18,8 +18,8 @@ import com.wingedsheep.sdk.dsl.flurry
  *   token with prowess. You may attach this Equipment to it.
  *   Equip {1}{R}
  *
- * Flurry is wired via the `flurry { }` builder ([com.wingedsheep.sdk.dsl.Triggers.NthSpellCast]
- * with `n = 2`), and the optional attach is a [com.wingedsheep.sdk.scripting.effects.MayEffect]
+ * Flurry is wired via the `flurry { }` builder (`Triggers.<player>.castsNth(n, spell)`
+ * with `n = 2`), and the optional attach is a [com.wingedsheep.sdk.dsl.Effects.May]
  * targeting the freshly-created token via the `CREATED_TOKENS` pipeline collection.
  */
 class CoriSteelCutterScenarioTest : ScenarioTestBase() {

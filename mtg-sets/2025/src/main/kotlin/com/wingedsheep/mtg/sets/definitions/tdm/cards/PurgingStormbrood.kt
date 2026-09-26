@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.effects.WardCost
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Purging Stormbrood // Absorb Essence — Tarkir: Dragonstorm #213
@@ -35,13 +35,13 @@ val PurgingStormbrood = card("Purging Stormbrood") {
         "When this creature enters, remove all counters from up to one target creature."
 
     keywords(Keyword.FLYING)
-    keywordAbility(KeywordAbility.wardLife(2))
+    keywordAbility(KeywordAbility.Ward(WardCost.Life(2)))
 
     // ETB: remove all counters from up to one target creature.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target("up to one target creature", Targets.UpToCreatures(1))
-        effect = Effects.RemoveAllCounters(EffectTarget.ContextTarget(0))
+        trigger = Triggers.self.enters()
+        val upToOneCreature = target(TargetFilter.Creature, optional = true)
+        effect = Effects.RemoveAllCounters(upToOneCreature)
     }
 
     // Omen: Absorb Essence — Instant. Target creature gets +2/+2 and gains lifelink and hexproof.
@@ -51,12 +51,10 @@ val PurgingStormbrood = card("Purging Stormbrood") {
         oracleText = "Target creature gets +2/+2 and gains lifelink and hexproof until end of turn. " +
             "(Then shuffle this card into its owner's library.)"
         spell {
-            val creature = target("creature", Targets.Creature)
-            effect = Effects.Composite(
-                Effects.ModifyStats(2, 2, creature),
-                Effects.GrantKeyword(Keyword.LIFELINK, creature),
-                Effects.GrantHexproof(creature),
-            )
+            val creature = target(TargetFilter.Creature)
+            effect = Effects.ModifyStats(2, 2, creature) then
+                Effects.GrantKeyword(Keyword.LIFELINK, creature) then
+                Effects.GrantHexproof(creature)
         }
     }
 

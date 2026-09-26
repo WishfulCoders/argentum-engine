@@ -4,7 +4,9 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.YouWereAttackedThisStep
+import com.wingedsheep.sdk.scripting.effects.PreventionSourceFilter
 
 /**
  * Heavy Fog
@@ -24,7 +26,10 @@ val HeavyFog = card("Heavy Fog") {
     spell {
         castOnlyDuring(Step.DECLARE_ATTACKERS)
         castOnlyIf(YouWereAttackedThisStep)
-        effect = Effects.PreventDamageFromAttackingCreatures()
+        effect = Effects.PreventDamage(
+            alsoToYou = true,
+            sources = PreventionSourceFilter.Matching(GameObjectFilter.Creature.attacking())
+        )
     }
 
     metadata {

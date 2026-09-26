@@ -7,19 +7,12 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.LookAtTargetHandEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Cracked Skull
@@ -39,42 +32,32 @@ val CrackedSkull = card("Cracked Skull") {
         "from it. That player discards that card.\n" +
         "When enchanted creature is dealt damage, destroy it."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     // When this Aura enters, look at target player's hand. You may choose a nonland card from it.
     // That player discards that card.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val player = target("target player", Targets.Player)
-        effect = Effects.Composite(
-            listOf(
-                LookAtTargetHandEffect(player),
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.HAND, Player.ContextPlayer(0)),
-                    storeAs = "targetHand",
-                ),
-                SelectFromCollectionEffect(
-                    from = "targetHand",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    chooser = Chooser.Controller,
-                    filter = GameObjectFilter.Nonland,
-                    storeSelected = "toDiscard",
-                    prompt = "You may choose a nonland card for that player to discard",
-                    showAllCards = true,
-                    alwaysPrompt = true,
-                ),
-                MoveCollectionEffect(
-                    from = "toDiscard",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
-                    moveType = MoveType.Discard,
-                ),
-            ),
-        )
+        trigger = Triggers.self.enters()
+        val player = target(Targets.Player)
+        effect = Effects.Pipeline {
+            run(Effects.LookAtHand(player))
+            val targetHand = gather(CardSource.FromZone(Zone.HAND, player.asPlayer))
+            val toDiscard = chooseUpTo(
+                1,
+                from = targetHand,
+                chooser = Chooser.Controller,
+                filter = GameObjectFilter.Nonland,
+                prompt = "You may choose a nonland card for that player to discard",
+                showAllCards = true,
+                alwaysPrompt = true
+            )
+            discard(toDiscard, player.asPlayer)
+        }
     }
 
     // When enchanted creature is dealt damage, destroy it.
     triggeredAbility {
-        trigger = Triggers.takesDamage(binding = TriggerBinding.ATTACHED)
+        trigger = Triggers.attached.isDealtDamage()
         effect = Effects.Destroy(EffectTarget.EnchantedCreature)
     }
 

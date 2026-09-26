@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Otepec Huntmaster
@@ -40,10 +39,7 @@ val OtepecHuntmaster = card("Otepec Huntmaster") {
 
     activatedAbility {
         cost = Costs.Tap
-        val dino = target(
-            "target",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Permanent.withSubtype(Subtype.DINOSAUR)))
-        )
+        val dino = target(TargetFilter(GameObjectFilter.Permanent.withSubtype(Subtype.DINOSAUR)))
         effect = Effects.GrantKeyword(Keyword.HASTE, dino)
     }
 

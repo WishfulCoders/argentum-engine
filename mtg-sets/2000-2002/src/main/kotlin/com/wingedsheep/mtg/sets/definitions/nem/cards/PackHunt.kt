@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -25,7 +24,7 @@ val PackHunt = card("Pack Hunt") {
     typeLine = "Sorcery"
     oracleText = "Search your library for up to three cards with the same name as target creature, reveal them, put them into your hand, then shuffle."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+        val t = target(TargetFilter.Creature)
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Creature,
             count = 3,

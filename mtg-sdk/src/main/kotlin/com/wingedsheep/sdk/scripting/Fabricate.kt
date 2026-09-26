@@ -1,12 +1,12 @@
 package com.wingedsheep.sdk.scripting
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
 import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * > "Fabricate N" means "When this permanent enters, you may put N +1/+1 counters on it. If you
  * > don't, create N 1/1 colorless Servo artifact creature tokens."
  *
- * So [etbChoice] is a [MayEffect] with an `otherwise` — the shape [TriggeredAbility.effect]'s own
+ * So [etbChoice] is a [Effects.May] with an `otherwise` — the shape [TriggeredAbility.effect]'s own
  * documentation names for a printed "you may … If you don't, …" — and **not** a
  * [com.wingedsheep.sdk.scripting.effects.ModalEffect]. The reminder line's "put two +1/+1 counters
  * on it **or** create two Servos" reads like a modal, and the two would perform identically once
@@ -69,8 +69,8 @@ object Fabricate {
             trigger = EventPattern.ZoneChangeEvent(to = Zone.BATTLEFIELD),
             binding = TriggerBinding.SELF,
             activeZones = setOf(Zone.BATTLEFIELD),
-            effect = MayEffect(
-                effect = AddCountersEffect(Counters.PLUS_ONE_PLUS_ONE, n, EffectTarget.Self),
+            effect = Effects.May(
+                effect = AddCountersEffect(CounterType.PLUS_ONE_PLUS_ONE, n, EffectTarget.Self),
                 otherwise = CreateTokenEffect(
                     count = DynamicAmount.Fixed(n),
                     power = 1,

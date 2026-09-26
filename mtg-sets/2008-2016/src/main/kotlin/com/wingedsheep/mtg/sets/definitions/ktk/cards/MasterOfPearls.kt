@@ -25,7 +25,7 @@ val MasterOfPearls = card("Master of Pearls") {
     morph = "{3}{W}{W}"
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
+        trigger = Triggers.self.turnedFaceUp()
         effect = Patterns.Group.modifyStatsForAll(2, 2, GroupFilter.AllCreaturesYouControl)
     }
 

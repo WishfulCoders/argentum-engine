@@ -30,13 +30,7 @@ val GatheringOfDarkness = card("Gathering of Darkness") {
         "If you don't control an Army, create a 0/0 black Goblin Army creature token first.)"
 
     spell {
-        val creatureCard = target(
-            "creature card in your graveyard",
-            TargetObject(
-                optional = true,
-                filter = TargetFilter(GameObjectFilter.Creature.ownedByYou(), zone = Zone.GRAVEYARD)
-            )
-        )
+        val creatureCard = target(TargetFilter(GameObjectFilter.Creature.ownedByYou(), zone = Zone.GRAVEYARD), optional = true)
 
         effect = Effects.Move(creatureCard, Zone.HAND) then Effects.Amass(3, "Goblin")
     }

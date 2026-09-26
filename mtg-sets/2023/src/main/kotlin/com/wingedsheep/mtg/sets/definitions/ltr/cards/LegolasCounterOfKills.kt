@@ -1,16 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -38,7 +35,7 @@ val LegolasCounterOfKills = card("Legolas, Counter of Kills") {
     keywords(Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.WheneverYouScry
+        trigger = Triggers.you.scries()
         interveningIf = Conditions.SourceIsTapped
         // "Do this only once each turn" is CR 603.2h — keyed to the untap, not to the trigger.
         // The official ruling is the clearest statement of the difference there is: "'Do this only
@@ -47,16 +44,12 @@ val LegolasCounterOfKills = card("Legolas, Counter of Kills") {
         // condition is met. Once you choose to do so, the ability will no longer trigger for the
         // rest of the turn." `oncePerTurn` would burn the turn's untap on a declined first scry.
         effectOncePerTurn = true
-        effect = MayEffect(Effects.Untap(EffectTarget.Self))
+        effect = Effects.May(Effects.Untap(EffectTarget.Self))
     }
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.opponentControls(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY
-        )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.a(GameObjectFilter.Creature.opponentControls()).dies()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     metadata {

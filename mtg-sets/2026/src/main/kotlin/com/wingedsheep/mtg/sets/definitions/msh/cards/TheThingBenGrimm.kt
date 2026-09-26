@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
@@ -9,7 +9,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -22,8 +22,8 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Implementation notes:
  * - This is a **source-side** damage trigger: the observed object is the damage *source* (a Hero
- *   you control), not the recipient. That is [Triggers.dealsDamage] with a `sourceFilter` of
- *   `Any.withSubtype(HERO).youControl()` and `recipient = RecipientFilter.AnyPlayer`, on
+ *   you control), not the recipient. That is `Triggers.<subject>.dealsDamage(to, damageType, requireExcess, batch, requires)` with a `sourceFilter` of
+ *   `Any.withSubtype(HERO).youControl()` and `recipient = Recipient.AnyPlayer`, on
  *   [TriggerBinding.ANY] so every Hero you control is watched — The Thing is itself a Hero, so its
  *   own damage counts. The filter is deliberately *not* narrowed to creatures: a bare tribal noun
  *   means any permanent with that creature type, and a noncreature Hero permanent (an animated-off
@@ -59,13 +59,8 @@ val TheThingBenGrimm = card("The Thing, Ben Grimm") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            recipient = RecipientFilter.AnyPlayer,
-            sourceFilter = GameObjectFilter.Any.withSubtype(Subtype.HERO).youControl(),
-            binding = TriggerBinding.ANY,
-            batch = true,
-        )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
+        trigger = Triggers.a(GameObjectFilter.Any.withSubtype(Subtype.HERO).youControl()).dealsDamage(Recipient.AnyPlayer, batch = true)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
         description = "Whenever one or more Heroes you control deal damage to a player, put two " +
             "+1/+1 counters on The Thing."
     }

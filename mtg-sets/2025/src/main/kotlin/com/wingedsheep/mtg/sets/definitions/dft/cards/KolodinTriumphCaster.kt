@@ -60,19 +60,13 @@ val KolodinTriumphCaster = card("Kolodin, Triumph Caster") {
     }
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Permanent.withSubtype(Subtype("Mount")).youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Permanent.withSubtype(Subtype("Mount")).youControl()).enters()
         effect = Effects.BecomeSaddled(EffectTarget.TriggeringEntity)
         description = "Whenever a Mount you control enters, it becomes saddled until end of turn."
     }
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Permanent.withSubtype(Subtype.VEHICLE).youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Permanent.withSubtype(Subtype.VEHICLE).youControl()).enters()
         effect = Effects.AddCardType("Creature", EffectTarget.TriggeringEntity, Duration.EndOfTurn)
         description =
             "Whenever a Vehicle you control enters, it becomes an artifact creature until end of turn."

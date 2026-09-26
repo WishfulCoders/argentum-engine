@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -32,7 +32,7 @@ val WurmwallSweeper = card("Wurmwall Sweeper") {
 
     // ETB: surveil 2
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.surveil(2)
     }
 
@@ -40,7 +40,7 @@ val WurmwallSweeper = card("Wurmwall Sweeper") {
     station()
 
     // 4+ charge counters: becomes artifact creature and gains flying
-    val charge4 = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 4)
+    val charge4 = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 4)
 
     staticAbility {
         condition = charge4

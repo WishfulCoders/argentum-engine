@@ -7,12 +7,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.FlipCoinEffect
-import com.wingedsheep.sdk.scripting.effects.SacrificeTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Goblin Kites
@@ -35,20 +30,15 @@ val GoblinKites = card("Goblin Kites") {
 
     activatedAbility {
         cost = Costs.Mana("{R}")
-        val t = target(
-            "target creature you control with toughness 2 or less",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.youControl().toughnessAtMost(2)))
-        )
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.FLYING, t),
-            CreateDelayedTriggerEffect(
+        val t = target(TargetFilter(GameObjectFilter.Creature.youControl().toughnessAtMost(2)))
+        effect = Effects.GrantKeyword(Keyword.FLYING, t) then
+            Effects.CreateDelayedTrigger(
                 step = Step.END,
-                effect = FlipCoinEffect(
+                effect = Effects.FlipCoin(
                     wonEffect = null,
-                    lostEffect = SacrificeTargetEffect(EffectTarget.ContextTarget(0)),
+                    lostEffect = Effects.SacrificeTarget(t),
                 )
             )
-        )
         description = "{R}: Target creature you control with toughness 2 or less gains flying until end of turn. Flip a coin at the beginning of the next end step. If you lose the flip, sacrifice that creature."
     }
 

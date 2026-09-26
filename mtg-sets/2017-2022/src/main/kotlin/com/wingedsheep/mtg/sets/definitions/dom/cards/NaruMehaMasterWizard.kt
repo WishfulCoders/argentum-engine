@@ -2,13 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.dom.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Naru Meha, Master Wizard
@@ -32,9 +32,9 @@ val NaruMehaMasterWizard = card("Naru Meha, Master Wizard") {
 
     // When Naru Meha enters, copy target instant or sorcery spell you control
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = Targets.InstantOrSorcerySpellYouControl
-        effect = Effects.CopyTargetSpell()
+        val instantOrSorcerySpellYouControl = target(TargetFilter.InstantOrSorcerySpellOnStack.youControl())
+        trigger = Triggers.self.enters()
+        effect = Effects.CopyTargetSpell(target = instantOrSorcerySpellYouControl)
     }
 
     // Other Wizards you control get +1/+1

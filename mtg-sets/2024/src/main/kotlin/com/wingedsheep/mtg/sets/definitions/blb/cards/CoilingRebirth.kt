@@ -5,15 +5,12 @@ import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Coiling Rebirth {3}{B}{B}
@@ -31,42 +28,30 @@ val CoilingRebirth = card("Coiling Rebirth") {
     typeLine = "Sorcery"
     oracleText = "Gift a card (You may promise an opponent a gift as you cast this spell. If you do, they draw a card before its other effects.)\nReturn target creature card from your graveyard to the battlefield. Then if the gift was promised and that creature isn't legendary, create a token that's a copy of that creature, except it's 1/1."
 
-    val returnEffect = Effects.Move(
-        EffectTarget.ContextTarget(0), Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD
-    )
+    fun returnToBattlefield(card: EffectTarget) = Effects.Move(card, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)
 
     spell {
         effect = Patterns.Mechanic.giftSpell(
             // Mode 1: No gift — return target creature card from graveyard to battlefield
-            Mode(
-                effect = returnEffect,
-                targetRequirements = listOf(
-                    TargetObject(filter = TargetFilter.CreatureInYourGraveyard)
-                ),
-                description = "Don't promise a gift — return target creature card from your graveyard to the battlefield"
-            ),
+            mode("Don't promise a gift — return target creature card from your graveyard to the battlefield") {
+                val creatureCard = target(TargetFilter.CreatureInYourGraveyard)
+                effect = returnToBattlefield(creatureCard)
+            },
             // Mode 2: Gift a card — opponent draws, return creature, then if nonlegendary create 1/1 copy
-            Mode(
-                effect = DrawCardsEffect(1, EffectTarget.PlayerRef(Player.ChosenOpponent))
-                    .then(returnEffect)
-                    .then(
-                        ConditionalEffect(
-                            condition = Conditions.TargetMatchesFilter(
-                                GameObjectFilter.Creature.nonlegendary()
-                            ),
-                            effect = Effects.CreateTokenCopyOfTarget(
-                                EffectTarget.ContextTarget(0),
-                                overridePower = 1,
-                                overrideToughness = 1
-                            )
+            mode("Promise a gift — opponent draws a card, return target creature card from your graveyard to the battlefield, then if it isn't legendary create a 1/1 token copy") {
+                val creatureInYourGraveyard = target(TargetFilter.CreatureInYourGraveyard)
+                effect = Effects.DrawCards(1, EffectTarget.PlayerRef(Player.ChosenOpponent)) then
+                    returnToBattlefield(creatureInYourGraveyard) then
+                    Effects.If(
+                        condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.nonlegendary(), creatureInYourGraveyard),
+                        then = Effects.CreateTokenCopyOfTarget(
+                            creatureInYourGraveyard,
+                            overridePower = 1,
+                            overrideToughness = 1
                         )
-                    )
-                    .then(Effects.GiftGiven()),
-                targetRequirements = listOf(
-                    TargetObject(filter = TargetFilter.CreatureInYourGraveyard)
-                ),
-                description = "Promise a gift — opponent draws a card, return target creature card from your graveyard to the battlefield, then if it isn't legendary create a 1/1 token copy"
-            )
+                    ) then
+                    Effects.GiftGiven()
+            }
         )
     }
 

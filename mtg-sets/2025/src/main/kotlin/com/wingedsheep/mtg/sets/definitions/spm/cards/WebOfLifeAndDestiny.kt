@@ -10,12 +10,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Web of Life and Destiny
@@ -49,34 +44,22 @@ val WebOfLifeAndDestiny = card("Web of Life and Destiny") {
     keywords(Keyword.CONVOKE)
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        effect = Effects.Composite(
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        effect = Effects.Pipeline {
             // Look at the top five cards of your library.
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(5)),
-                storeAs = "looked"
-            ),
+            val looked = gather(CardSource.TopOfLibrary(5))
             // You may put a creature card from among them onto the battlefield.
-            SelectFromCollectionEffect(
-                from = "looked",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
+            val (kept, rest) = chooseUpToSplit(
+                1,
+                from = looked,
                 filter = GameObjectFilter.Creature,
-                storeSelected = "kept",
-                storeRemainder = "rest",
                 prompt = "You may put a creature card onto the battlefield.",
                 showAllCards = true
-            ),
-            MoveCollectionEffect(
-                from = "kept",
-                destination = CardDestination.ToZone(Zone.BATTLEFIELD)
-            ),
-            // Put the rest on the bottom of your library in a random order.
-            MoveCollectionEffect(
-                from = "rest",
-                destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
-                order = CardOrder.Random
             )
-        )
+            move(kept, CardDestination.ToZone(Zone.BATTLEFIELD))
+            // Put the rest on the bottom of your library in a random order.
+            toLibraryBottom(rest, order = CardOrder.Random)
+        }
         description = "At the beginning of combat on your turn, look at the top five cards of your " +
             "library. You may put a creature card from among them onto the battlefield. Put the " +
             "rest on the bottom of your library in a random order."

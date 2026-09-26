@@ -3,15 +3,15 @@ package com.wingedsheep.mtg.sets.definitions.tmt.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantAttack
 import com.wingedsheep.sdk.scripting.CantBlock
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Uneasy Alliance
@@ -29,7 +29,7 @@ val UneasyAlliance = card("Uneasy Alliance") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature\nEnchanted creature can't attack or block.\n{5}, Sacrifice this Aura: Exile enchanted creature. You create a 1/1 black Ninja creature token. Activate only as a sorcery."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = CantAttack(filter = GroupFilter.attachedCreature())
@@ -45,15 +45,13 @@ val UneasyAlliance = card("Uneasy Alliance") {
             Costs.SacrificeSelf
         )
         timing = TimingRule.SorcerySpeed
-        effect = Effects.Exile(EffectTarget.EnchantedCreature)
-            .then(
-                CreateTokenEffect(
-                    power = 1,
-                    toughness = 1,
-                    colors = setOf(Color.BLACK),
-                    creatureTypes = setOf("Ninja"),
-                    imageUri = "https://cards.scryfall.io/normal/front/a/7/a7b76498-d696-40d1-b7c7-91657525b44f.jpg?1771590477"
-                )
+        effect = Effects.Exile(EffectTarget.EnchantedCreature) then
+            Effects.CreateToken(
+                power = 1,
+                toughness = 1,
+                colors = setOf(Color.BLACK),
+                creatureTypes = setOf("Ninja"),
+                imageUri = "https://cards.scryfall.io/normal/front/a/7/a7b76498-d696-40d1-b7c7-91657525b44f.jpg?1771590477"
             )
     }
 

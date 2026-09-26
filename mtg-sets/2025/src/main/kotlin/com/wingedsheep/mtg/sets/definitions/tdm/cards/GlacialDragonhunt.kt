@@ -6,18 +6,10 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.ConditionalOnCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Glacial Dragonhunt — Tarkir: Dragonstorm #188
@@ -27,15 +19,17 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Glacial Dragonhunt deals 3 damage to target creature.
  * Harmonize {4}{U}{R}
  *
- * The "when you discard a nonland card this way" clause is a reflexive trigger: its target is
- * chosen only after — and only if — a nonland card is actually discarded. We model that exactly
- * by composing pipeline primitives rather than declaring a cast-time spell target:
+ * The "when you discard a nonland card this way" clause is a reflexive triggered ability
+ * (CR 603.12): its target is chosen only after — and only if — a nonland card is actually
+ * discarded, so it is not a cast-time spell target:
  *   1. draw a card;
  *   2. gather the hand, let the controller discard UP TO one card (the printed "you may"), and
  *      move the choice to the graveyard as a discard;
- *   3. only when the discarded collection contains a [GameObjectFilter.Nonland] card, prompt for
- *      a target creature (on-battlefield targeting UI) and deal 3 damage to it.
- * If no card is discarded, or a land is discarded, no creature is chosen and no damage is dealt.
+ *   3. only when the discarded collection contains a [GameObjectFilter.Nonland] card, a
+ *      [ReflexiveTriggerEffect] puts the damage ability on the stack, targeting a creature as it
+ *      goes there — so hexproof and shroud apply, opponents can respond, and it does nothing if
+ *      the creature is gone by the time it resolves (CR 608.2b).
+ * If no card is discarded, or a land is discarded, nothing triggers.
  */
 val GlacialDragonhunt = card("Glacial Dragonhunt") {
     manaCost = "{U}{R}"
@@ -48,57 +42,33 @@ val GlacialDragonhunt = card("Glacial Dragonhunt") {
         "Then exile this spell.)"
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                Effects.DrawCards(1),
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.HAND, Player.You),
-                    storeAs = "hand"
-                ),
-                SelectFromCollectionEffect(
-                    from = "hand",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    chooser = Chooser.Controller,
-                    storeSelected = "discarded",
-                    prompt = "You may discard a card"
-                ),
-                MoveCollectionEffect(
-                    from = "discarded",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.You),
-                    moveType = MoveType.Discard
-                ),
-                // Reflexive trigger: only when a nonland was discarded do we pick a target creature
-                // and deal it 3 damage.
-                ConditionalOnCollectionEffect(
-                    collection = "discarded",
-                    filter = GameObjectFilter.Nonland,
-                    ifNotEmpty = Effects.Composite(
-                        listOf(
-                            GatherCardsEffect(
-                                source = CardSource.BattlefieldMatching(
-                                    filter = GameObjectFilter.Creature,
-                                    player = Player.Each
-                                ),
-                                storeAs = "creatures"
-                            ),
-                            SelectFromCollectionEffect(
-                                from = "creatures",
-                                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                                chooser = Chooser.Controller,
-                                storeSelected = "damageTarget",
-                                prompt = "Choose a creature to deal 3 damage to",
-                                useTargetingUI = true
-                            ),
-                            Effects.DealDamage(
-                                3,
-                                EffectTarget.PipelineTarget("damageTarget"),
-                                damageSource = EffectTarget.Self
-                            )
-                        )
-                    )
-                )
+        effect = Effects.Pipeline {
+            run(Effects.DrawCards(1))
+            val hand = gather(CardSource.FromZone(Zone.HAND, Player.You))
+            val discarded = chooseUpTo(
+                1,
+                from = hand,
+                chooser = Chooser.Controller,
+                prompt = "You may discard a card"
             )
-        )
+            discard(discarded)
+            // "When you discard a nonland card this way" is a reflexive triggered ability
+            // (CR 603.12): it exists only when the discarded card is nonland, and its target
+            // creature is chosen as it goes on the stack, not picked during resolution.
+            ifNotEmpty(discarded, filter = GameObjectFilter.Nonland) {
+                run(Effects.ReflexiveTrigger(
+                    action = Effects.Nothing,
+                    optional = false,
+                    descriptionOverride = "Glacial Dragonhunt deals 3 damage to target creature"
+                ) {
+                    // No `damageSource = Self`: by the time the reflexive ability resolves the
+                    // spell has left the stack, so its source is the ability's recorded source
+                    // (the default), not the new graveyard object.
+                    val creature = target(TargetFilter.Creature)
+                    effect = Effects.DealDamage(3, creature)
+                })
+            }
+        }
     }
 
     keywordAbility(KeywordAbility.harmonize("{4}{U}{R}"))

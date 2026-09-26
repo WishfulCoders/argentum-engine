@@ -25,7 +25,7 @@ val ImperialRecruiter = card("Imperial Recruiter") {
     oracleText = "When this creature enters, search your library for a creature card with power 2 or less, reveal it, put it into your hand, then shuffle."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Creature.powerAtMost(2),
             destination = SearchDestination.HAND,

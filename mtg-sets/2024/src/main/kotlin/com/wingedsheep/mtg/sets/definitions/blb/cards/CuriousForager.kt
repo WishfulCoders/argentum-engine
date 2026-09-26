@@ -7,10 +7,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Curious Forager
@@ -35,16 +32,15 @@ val CuriousForager = card("Curious Forager") {
     oracleText = "When this creature enters, you may forage. When you do, return target permanent card from your graveyard to your hand. (To forage, exile three cards from your graveyard or sacrifice a Food.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ReflexiveTriggerEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.ReflexiveTrigger(
             action = Patterns.Mechanic.forage(),
             optional = true,
-            reflexiveEffect = Effects.ReturnToHand(EffectTarget.ContextTarget(0)),
-            reflexiveTargetRequirements = listOf(
-                TargetObject(filter = TargetFilter(GameObjectFilter.Permanent.ownedByYou(), zone = Zone.GRAVEYARD))
-            ),
             hint = "Exile three cards from your graveyard or sacrifice a Food"
-        )
+        ) {
+            val permanent = target(TargetFilter(GameObjectFilter.Permanent.ownedByYou(), zone = Zone.GRAVEYARD))
+            effect = Effects.ReturnToHand(permanent)
+        }
     }
 
     metadata {

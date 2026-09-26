@@ -20,9 +20,9 @@ val Diresight = card("Diresight") {
     oracleText = "Surveil 2, then draw two cards. You lose 2 life."
 
     spell {
-        effect = Patterns.Library.surveil(2)
-            .then(Effects.DrawCards(2))
-            .then(Effects.LoseLife(2, EffectTarget.Controller))
+        effect = Patterns.Library.surveil(2) then
+            Effects.DrawCards(2) then
+            Effects.LoseLife(2, EffectTarget.Controller)
     }
 
     metadata {

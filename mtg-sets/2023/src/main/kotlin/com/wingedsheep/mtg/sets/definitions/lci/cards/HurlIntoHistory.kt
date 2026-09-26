@@ -1,15 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Hurl into History
@@ -26,12 +23,9 @@ val HurlIntoHistory = card("Hurl into History") {
     typeLine = "Instant"
     oracleText = "Counter target artifact or creature spell. Discover X, where X is that spell's mana value."
     spell {
-        target(
-            "target artifact or creature spell",
-            TargetSpell(filter = TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Creature, zone = Zone.STACK))
-        )
+        val artifactOrCreatureSpell = target(TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Creature, zone = Zone.STACK))
         effect = Effects.CounterSpell() then Effects.Discover(
-            DynamicAmount.EntityProperty(EntityReference.Target(0), EntityNumericProperty.ManaValue)
+            DynamicAmounts.manaValueOf(artifactOrCreatureSpell)
         )
     }
     metadata {

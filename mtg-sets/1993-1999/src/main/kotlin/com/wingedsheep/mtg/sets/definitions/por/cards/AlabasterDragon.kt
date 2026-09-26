@@ -31,7 +31,7 @@ val AlabasterDragon = card("Alabaster Dragon") {
     toughness = 4
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.Move(EffectTarget.Self, Zone.LIBRARY, ZonePlacement.Shuffled)
     }
     metadata {

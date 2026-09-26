@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.rna.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.riot
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Clamor Shaman — Ravnica Allegiance #96
@@ -26,8 +26,8 @@ val ClamorShaman = card("Clamor Shaman") {
 
     riot()
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val victim = target("target", Targets.CreatureOpponentControls)
+        trigger = Triggers.self.attacks()
+        val victim = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.CantBlock(victim)
     }
 

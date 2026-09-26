@@ -1,16 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
-import com.wingedsheep.sdk.core.Counters
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Decree of Savagery
@@ -29,10 +27,10 @@ val DecreeOfSavagery = card("Decree of Savagery") {
     spell {
         effect = Effects.ForEachInGroup(
             filter = GroupFilter.AllCreaturesYouControl,
-            effect = AddCountersEffect(
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
+            effect = Effects.AddCounters(
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
                 count = 4,
-                target = EffectTarget.Self
+                target = EffectTarget.IterationEntity
             )
         )
     }
@@ -40,11 +38,11 @@ val DecreeOfSavagery = card("Decree of Savagery") {
     keywordAbility(KeywordAbility.cycling("{4}{G}{G}"))
 
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
-        val t = target("target creature", Targets.Creature)
-        effect = MayEffect(
-            AddCountersEffect(
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
+        trigger = Triggers.self.isCycled()
+        val t = target(TargetFilter.Creature)
+        effect = Effects.May(
+            Effects.AddCounters(
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
                 count = 4,
                 target = t
             )

@@ -6,12 +6,12 @@ package com.wingedsheep.mtg.sets.definitions.soi.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -26,8 +26,8 @@ val RiseFromTheTides = card("Rise from the Tides") {
     typeLine = "Sorcery"
     oracleText = "Create a tapped 2/2 black Zombie creature token for each instant and sorcery card in your graveyard."
     spell {
-        effect = CreateTokenEffect(
-            count = DynamicAmount.Count(Player.You, Zone.GRAVEYARD, GameObjectFilter.InstantOrSorcery),
+        effect = Effects.CreateToken(
+            count = DynamicAmounts.count(Player.You, Zone.GRAVEYARD, GameObjectFilter.InstantOrSorcery),
             power = 2,
             toughness = 2,
             colors = setOf(Color.BLACK),

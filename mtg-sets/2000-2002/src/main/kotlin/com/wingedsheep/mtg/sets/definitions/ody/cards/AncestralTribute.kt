@@ -5,13 +5,14 @@
 package com.wingedsheep.mtg.sets.definitions.ody.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -27,8 +28,8 @@ val AncestralTribute = card("Ancestral Tribute") {
     typeLine = "Sorcery"
     oracleText = "You gain 2 life for each card in your graveyard.\nFlashback {9}{W}{W}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
     spell {
-        effect = GainLifeEffect(
-            DynamicAmount.Multiply(DynamicAmount.Count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Any), 2)
+        effect = Effects.GainLife(
+            DynamicAmounts.cardsInYourGraveyard() * 2
         )
     }
     keywordAbility(KeywordAbility.flashback("{9}{W}{W}{W}"))

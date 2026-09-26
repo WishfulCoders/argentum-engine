@@ -18,7 +18,7 @@ import io.kotest.matchers.shouldBe
  *
  * Player 1 attacks with two creatures — a red Goblin Guide (2/1) and a white Savannah Lions (1/1) —
  * and player 2 sacrifices the Forge-Tender in the declare-blockers step. Two creatures rather than
- * one is the point: a shield that ignored its `ChosenSourceMatching` colour filter would stop all
+ * one is the point: a shield that ignored its `Chosen` colour filter would stop all
  * three damage, so the Lions' 1 still landing is the assertion that the filter is doing work.
  *
  * The 2017-11-17 ruling that the ability doesn't target — the source is chosen *as it resolves*, and

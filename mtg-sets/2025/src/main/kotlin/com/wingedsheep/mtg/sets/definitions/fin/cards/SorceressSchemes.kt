@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Sorceress's Schemes
@@ -36,14 +35,8 @@ val SorceressSchemes = card("Sorceress's Schemes") {
         // Clause B: a card you own with flashback in exile.
         val union = TargetFilter.InstantOrSorceryInGraveyard.ownedByYou()
             .or(TargetFilter(GameObjectFilter.Any).withKeyword(Keyword.FLASHBACK).ownedByYou().inZone(Zone.EXILE))
-        val t = target(
-            "instant or sorcery card from your graveyard or exiled card with flashback you own",
-            TargetObject(filter = union)
-        )
-        effect = Effects.Composite(
-            Effects.ReturnToHand(t),
-            Effects.AddMana(Color.RED)
-        )
+        val t = target(union)
+        effect = Effects.ReturnToHand(t) then Effects.AddMana(Color.RED)
     }
 
     keywordAbility(KeywordAbility.flashback("{4}{R}"))

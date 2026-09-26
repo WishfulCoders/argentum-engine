@@ -3,15 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.fdn.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Chandra, Flameshaper
@@ -63,21 +61,21 @@ val ChandraFlameshaper = card("Chandra, Flameshaper") {
     loyaltyAbility(+2) {
         effect = Effects.Pipeline {
             run(Effects.AddMana(Color.RED, 3))
-            val exiled = gather(CardSource.TopOfLibrary(DynamicAmount.Fixed(3)))
+            val exiled = gather(CardSource.TopOfLibrary(3))
             exile(exiled)
             val chosen = chooseExactly(
                 1,
                 from = exiled,
                 prompt = "Choose a card you may play this turn",
             )
-            run(Effects.GrantMayPlayFromExile(chosen.key))
+            run(Effects.GrantMayPlayFromExile(chosen))
         }
     }
 
     // +1: Create a token that's a copy of target creature you control, except it has haste and
     //     "At the beginning of the end step, sacrifice this token."
     loyaltyAbility(+1) {
-        val creature = target("target creature you control", Targets.CreatureYouControl)
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.CreateTokenCopyOfTarget(
             creature,
             addedKeywords = setOf(Keyword.HASTE),
@@ -88,14 +86,10 @@ val ChandraFlameshaper = card("Chandra, Flameshaper") {
     // −4: Chandra deals 8 damage divided as you choose among any number of target creatures
     //     and/or planeswalkers.
     loyaltyAbility(-4) {
-        target(
-            "any number of target creatures and/or planeswalkers",
-            TargetObject(
-                unlimited = true,
-                filter = TargetFilter(GameObjectFilter.CreatureOrPlaneswalker),
-                dynamicMaxCount = DynamicAmount.Fixed(8),
-                id = "target creatures and/or planeswalkers",
-            ),
+        targets(
+            TargetFilter(GameObjectFilter.CreatureOrPlaneswalker),
+            unlimited = true,
+            dynamicMaxCount = DynamicAmounts.fixed(8),
         )
         effect = Effects.DividedDamage(total = 8, minTargets = 1, maxTargets = 8)
     }

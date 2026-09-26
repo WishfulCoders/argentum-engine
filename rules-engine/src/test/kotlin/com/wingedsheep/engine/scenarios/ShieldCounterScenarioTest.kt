@@ -5,18 +5,17 @@ import com.wingedsheep.engine.state.components.battlefield.DamageComponent
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.CounterType
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.EntityId
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Feature test for **shield counters** (CR 122.1c).
@@ -87,8 +86,8 @@ class ShieldCounterScenarioTest : ScenarioTestBase() {
         typeLine = "Sorcery"
         oracleText = "Put a shield counter on target creature."
         spell {
-            val t = target("target creature", Targets.Creature)
-            effect = Effects.AddCounters(Counters.SHIELD, 1, t)
+            val t = target(TargetFilter.Creature)
+            effect = Effects.AddCounters(CounterType.SHIELD, 1, t)
         }
     }
 
@@ -97,7 +96,7 @@ class ShieldCounterScenarioTest : ScenarioTestBase() {
         typeLine = "Sorcery"
         oracleText = "Shield Test Zap deals 3 damage to target creature."
         spell {
-            val t = target("target creature", Targets.Creature)
+            val t = target(TargetFilter.Creature)
             effect = Effects.DealDamage(3, t)
         }
     }
@@ -107,7 +106,7 @@ class ShieldCounterScenarioTest : ScenarioTestBase() {
         typeLine = "Sorcery"
         oracleText = "Destroy target creature."
         spell {
-            val t = target("target creature", Targets.Creature)
+            val t = target(TargetFilter.Creature)
             effect = Effects.Destroy(t)
         }
     }
@@ -126,7 +125,7 @@ class ShieldCounterScenarioTest : ScenarioTestBase() {
         typeLine = "Sorcery"
         oracleText = "Target creature's controller sacrifices it."
         spell {
-            val t = target("target creature", Targets.Creature)
+            val t = target(TargetFilter.Creature)
             effect = Effects.SacrificeTarget(t)
         }
     }

@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Super-Skrull — Marvel Super Heroes #115
@@ -68,14 +69,14 @@ val SuperSkrull = card("Super-Skrull") {
 
     activatedAbility {
         cost = Costs.Mana("{4}{R}")
-        val creature = target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.DealDamage(4, creature)
         description = "{4}{R}: Super-Skrull deals 4 damage to target creature."
     }
 
     activatedAbility {
         cost = Costs.Mana("{5}{U}")
-        val player = target("target player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Effects.DrawCards(4, player)
         description = "{5}{U}: Target player draws four cards."
     }

@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.ori.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Caustic Caterpillar
@@ -23,7 +23,7 @@ val CausticCaterpillar = card("Caustic Caterpillar") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{G}"), Costs.SacrificeSelf)
-        val t = target("target artifact or enchantment", Targets.ArtifactOrEnchantment)
+        val t = target(TargetFilter.ArtifactOrEnchantment)
         effect = Effects.Destroy(t)
     }
 

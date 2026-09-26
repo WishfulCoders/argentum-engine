@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.bargain
 import com.wingedsheep.sdk.dsl.card
@@ -9,19 +10,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.ConditionalOnCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.FaceDownMode
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Beseech the Mirror
@@ -45,50 +35,32 @@ val BeseechTheMirror = card("Beseech the Mirror") {
     bargain()
 
     spell {
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.LIBRARY, Player.You),
-                storeAs = "beseechLibrary"
-            ),
-            SelectFromCollectionEffect(
-                from = "beseechLibrary",
-                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                storeSelected = "beseechFound",
-                prompt = "Search your library for a card"
-            ),
-            MoveCollectionEffect(
-                from = "beseechFound",
-                destination = CardDestination.ToZone(Zone.EXILE),
-                faceDown = FaceDownMode.HIDDEN,
-                storeMovedAs = "beseechExiled"
-            ),
-            ShuffleLibraryEffect(),
-            ConditionalEffect(
-                condition = Conditions.WasBargained,
-                effect = Effects.Composite(
-                    FilterCollectionEffect(
-                        from = "beseechExiled",
-                        filter = CollectionFilter.ManaValueAtMost(DynamicAmount.Fixed(4)),
-                        storeMatching = "beseechCastable"
-                    ),
-                    ConditionalOnCollectionEffect(
-                        collection = "beseechCastable",
-                        ifNotEmpty = MayEffect(
-                            Effects.CastFromCollectionWithoutPayingCost("beseechCastable")
-                        )
-                    )
-                )
-            ),
-            FilterCollectionEffect(
-                from = "beseechExiled",
-                filter = CollectionFilter.InZone(Zone.EXILE),
-                storeMatching = "beseechUncast"
-            ),
-            MoveCollectionEffect(
-                from = "beseechUncast",
-                destination = CardDestination.ToZone(Zone.HAND)
+        effect = Effects.Pipeline {
+            val beseechLibrary = gather(CardSource.FromZone(Zone.LIBRARY, Player.You), search = true)
+            val beseechFound = chooseExactly(1, from = beseechLibrary, prompt = "Search your library for a card")
+            val beseechExiled = moveTracked(
+                beseechFound,
+                CardDestination.ToZone(Zone.EXILE),
+                faceDown = FaceDownMode.HIDDEN
             )
-        )
+            run(Effects.ShuffleLibrary())
+            run(Effects.If(
+                condition = Conditions.WasBargained,
+                then = Effects.Pipeline {
+                    val beseechCastable = filter(
+                        beseechExiled,
+                        GameObjectFilter.Any.manaValueAtMostDynamic(DynamicAmounts.fixed(4))
+                    )
+                    ifNotEmpty(beseechCastable) {
+                        run(Effects.May(
+                            Effects.CastFromCollectionWithoutPayingCost(beseechCastable)
+                        ))
+                    }
+                }
+            ))
+            val beseechUncast = filter(beseechExiled, GameObjectFilter.Any.currentlyIn(Zone.EXILE))
+            toHand(beseechUncast)
+        }
     }
 
     metadata {

@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 val HuntDown = card("Hunt Down") {
     manaCost = "{G}"
@@ -12,8 +12,8 @@ val HuntDown = card("Hunt Down") {
     oracleText = "Target creature blocks target creature this turn if able."
 
     spell {
-        val blocker = target("creature that must block", Targets.Creature)
-        val attacker = target("creature to be blocked", Targets.Creature)
+        val blocker = target(TargetFilter.Creature)
+        val attacker = target(TargetFilter.Creature)
         effect = Effects.ForceBlock(blocker, attacker)
     }
 

@@ -25,7 +25,7 @@ val SailorOfMeans = card("Sailor of Means") {
     power = 1
     toughness = 4
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateTreasure(1)
     }
     metadata {

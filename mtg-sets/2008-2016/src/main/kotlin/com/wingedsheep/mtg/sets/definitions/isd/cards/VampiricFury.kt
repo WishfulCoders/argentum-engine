@@ -28,10 +28,8 @@ val VampiricFury = card("Vampiric Fury") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withSubtype(Subtype.VAMPIRE).youControl()),
-            Effects.Composite(
-                Effects.ModifyStats(2, 0, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.Self)
-            )
+            Effects.ModifyStats(2, 0, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.IterationEntity)
         )
     }
     metadata {

@@ -3,12 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.ltr.cards
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Bill the Pony
@@ -38,13 +38,13 @@ val BillThePony = card("Bill the Pony") {
         "equal to its toughness rather than its power."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateFood(2)
     }
 
     activatedAbility {
         cost = Costs.Sacrifice(GameObjectFilter.Any.withSubtype("Food"))
-        val creature = target("creature you control", Targets.CreatureYouControl)
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.GrantKeyword(
             AbilityFlag.ASSIGNS_COMBAT_DAMAGE_AS_TOUGHNESS,
             creature,

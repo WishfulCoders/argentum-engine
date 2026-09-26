@@ -139,7 +139,7 @@ object Activated {
      * come back as the live one before [Steps.step] can print it.
      *
      * P/T needs no such rule and that asymmetry is the engine's, not an oversight: the SDK applies
-     * the last-known snapshot to `EntityProperty(Source, Power|Toughness)` automatically, so
+     * the last-known snapshot to `EntityProperty(Self, Power|Toughness)` automatically, so
      * "{T}, Sacrifice ~: You gain life equal to its power." is already correct as written.
      */
     private fun removesTheSource(cost: AbilityCost): Boolean = when (cost) {

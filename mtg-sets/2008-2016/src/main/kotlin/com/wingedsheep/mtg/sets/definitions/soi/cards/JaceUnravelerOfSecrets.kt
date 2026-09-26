@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.soi.cards
 
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Jace, Unraveler of Secrets - {3}{U}{U}
@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.references.Player
  *     that spell."
  *
  * The emblem is a permanent [Effects.CreateGlobalTriggeredAbility] whose trigger is
- * [Triggers.NthSpellCast] with n = 1 scoped to [Player.EachOpponent] — the engine already tracks
+ * `Triggers.<player>.castsNth(n, spell)` with n = 1 scoped to [Player.EachOpponent] — the engine already tracks
  * a per-turn, per-player spell count, so "their first spell each turn" is the n = 1 rung of the
  * same mechanism Shackle Slinger uses for "your second spell each turn". Scoping to
  * `EachOpponent` (rather than a single opponent) is what makes the emblem fire once per turn for
@@ -38,19 +38,18 @@ val JaceUnravelerOfSecrets = card("Jace, Unraveler of Secrets") {
         "counter that spell.\""
 
     loyaltyAbility(+1) {
-        effect = Patterns.Library.scry(1).then(Effects.DrawCards(1))
+        effect = Patterns.Library.scry(1) then Effects.DrawCards(1)
     }
 
     loyaltyAbility(-2) {
-        val creature = target("creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ReturnToHand(creature)
     }
 
     loyaltyAbility(-8) {
         effect = Effects.CreateGlobalTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.NthSpellCast(1, Player.EachOpponent).event,
-                binding = Triggers.NthSpellCast(1, Player.EachOpponent).binding,
+                trigger = Triggers.anOpponent.castsNth(1),
                 effect = Effects.CounterTriggeringSpell()
             ),
             descriptionOverride = "Whenever an opponent casts their first spell each turn, counter that spell."

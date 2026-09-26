@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.som.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Neurok Replica — Scars of Mirrodin #186
@@ -25,7 +25,7 @@ val NeurokReplica = card("Neurok Replica") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{U}"), Costs.SacrificeSelf)
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.ReturnToHand(t)
     }
 

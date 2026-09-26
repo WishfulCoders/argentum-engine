@@ -25,8 +25,8 @@ val DynamiteDiver = card("Dynamite Diver") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val damaged = target("any target", Targets.Any)
+        trigger = Triggers.self.dies()
+        val damaged = target(Targets.Any)
         effect = Effects.DealDamage(1, damaged)
     }
 

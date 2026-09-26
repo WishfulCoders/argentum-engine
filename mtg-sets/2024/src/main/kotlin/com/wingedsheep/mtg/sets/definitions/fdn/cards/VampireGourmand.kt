@@ -6,11 +6,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Vampire Gourmand
@@ -21,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  * Whenever this creature attacks, you may sacrifice another creature. If you do,
  * draw a card and this creature can't be blocked this turn.
  *
- * Mirrors Beetle-Headed Merchants' pay-then-payoff: a [MayEffect] wrapping the optional
+ * Mirrors Beetle-Headed Merchants' pay-then-payoff: a [Effects.May] wrapping the optional
  * sacrifice of another creature you control, sequenced before the payoff so "If you do"
  * is conditional on actually sacrificing. The payoff draws a card and grants this creature
  * CANT_BE_BLOCKED until end of turn ([EffectTarget.Self], default end-of-turn duration).
@@ -36,17 +33,12 @@ val VampireGourmand = card("Vampire Gourmand") {
         "draw a card and this creature can't be blocked this turn."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val sacrificeTarget = target(
-            "another creature",
-            TargetPermanent(
-                filter = TargetFilter(GameObjectFilter.Creature.youControl()).other()
-            )
-        )
-        effect = MayEffect(
+        trigger = Triggers.self.attacks()
+        val sacrificeTarget = target(TargetFilter(GameObjectFilter.Creature.youControl()).other())
+        effect = Effects.May(
             Effects.SacrificeTarget(sacrificeTarget) then
                 Effects.DrawCards(1) then
-                GrantKeywordEffect(AbilityFlag.CANT_BE_BLOCKED.name, EffectTarget.Self)
+                Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, EffectTarget.Self)
         )
         description = "Whenever this creature attacks, you may sacrifice another creature. If you do, " +
             "draw a card and this creature can't be blocked this turn."

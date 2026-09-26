@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.ons.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Voice of the Woods
@@ -27,7 +27,7 @@ val VoiceOfTheWoods = card("Voice of the Woods") {
         // "Elves" names the subtype and not the card type, so the cost counts Elf *permanents* — an
         // animated Elf land pays it too. Found by the Assay differential.
         cost = Costs.TapPermanents(5, GameObjectFilter.Permanent.withSubtype("Elf"))
-        effect = CreateTokenEffect(
+        effect = Effects.CreateToken(
             power = 7,
             toughness = 7,
             colors = setOf(Color.GREEN),

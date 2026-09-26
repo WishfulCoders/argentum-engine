@@ -2,18 +2,18 @@ package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Rediscover the Way — Tarkir: Dragonstorm #215
@@ -30,7 +30,7 @@ import com.wingedsheep.sdk.model.Rarity
  * library, ordered by the controller ([CardOrder.ControllerChooses]).
  *
  * Chapter III installs a turn-bounded, event-based delayed triggered ability:
- * [CreateDelayedTriggerEffect] on [Triggers.YouCastNoncreature] with `fireOnce = false` (it fires
+ * [CreateDelayedTriggerEffect] on `Triggers.you.casts(GameObjectFilter.Noncreature)` with `fireOnce = false` (it fires
  * for *every* noncreature spell cast this turn, not just the first) and `expiry = EndOfTurn`. Its
  * [CreateDelayedTriggerEffect.targetRequirement] is "target creature you control", chosen each
  * time the trigger fires; the chosen creature is granted double strike until end of turn via
@@ -53,13 +53,13 @@ val RediscoverTheWay = card("Rediscover the Way") {
         effect = rediscoverDig()
     }
     sagaChapter(3) {
-        effect = CreateDelayedTriggerEffect(
-            trigger = Triggers.YouCastNoncreature,
+        effect = Effects.CreateDelayedTrigger(
+            trigger = Triggers.you.casts(GameObjectFilter.Noncreature),
             fireOnce = false,
-            expiry = DelayedTriggerExpiry.EndOfTurn,
-            targetRequirement = Targets.CreatureYouControl,
-            effect = Effects.GrantKeyword(Keyword.DOUBLE_STRIKE)
-        )
+            expiry = DelayedTriggerExpiry.EndOfTurn) {
+            val creatureYouControl = target(TargetFilter.CreatureYouControl)
+            effect = Effects.GrantKeyword(Keyword.DOUBLE_STRIKE, target = creatureYouControl)
+        }
     }
 
     metadata {
@@ -75,8 +75,8 @@ val RediscoverTheWay = card("Rediscover the Way") {
  * bottom of your library in any order." A fresh instance backs each of chapters I and II.
  */
 private fun rediscoverDig() = Patterns.Library.lookAtTopAndKeep(
-    count = DynamicAmount.Fixed(3),
-    keepCount = DynamicAmount.Fixed(1),
+    count = DynamicAmounts.fixed(3),
+    keepCount = DynamicAmounts.fixed(1),
     keepDestination = CardDestination.ToZone(Zone.HAND),
     restDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
     restOrder = CardOrder.ControllerChooses,

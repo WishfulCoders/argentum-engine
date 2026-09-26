@@ -1,14 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ReplaceDamageWithCounters
-import com.wingedsheep.sdk.scripting.effects.RemoveCountersEffect
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Force Bubble
@@ -30,16 +31,16 @@ val ForceBubble = card("Force Bubble") {
     // Sacrifice threshold handles the state-triggered "when 4+ counters, sacrifice" ability
     replacementEffect(
         ReplaceDamageWithCounters(
-            counterType = Counters.DEPLETION,
+            counterType = CounterType.DEPLETION,
             sacrificeThreshold = 4,
-            appliesTo = EventPattern.DamageEvent(recipient = RecipientFilter.You)
+            appliesTo = EventPattern.DamageEvent(recipient = Recipient.You)
         )
     )
 
     // At the beginning of each end step, remove all depletion counters
     triggeredAbility {
-        trigger = Triggers.EachEndStep
-        effect = RemoveCountersEffect(Counters.DEPLETION, Int.MAX_VALUE, EffectTarget.Self)
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
+        effect = Effects.RemoveCounters(CounterType.DEPLETION, Int.MAX_VALUE, EffectTarget.Self)
     }
 
     metadata {

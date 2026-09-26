@@ -18,7 +18,7 @@ val PrecisionBolt = card("Precision Bolt") {
     oracleText = "Precision Bolt deals 3 damage to any target."
 
     spell {
-        val any = target("target", Targets.Any)
+        val any = target(Targets.Any)
         effect = Effects.DealDamage(3, any)
     }
 

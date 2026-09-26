@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
 
 /**
  * Flash Counter
@@ -20,7 +19,7 @@ val FlashCounter = card("Flash Counter") {
     oracleText = "Counter target instant spell."
 
     spell {
-        target("target instant spell", TargetSpell(filter = TargetFilter.InstantSpellOnStack))
+        target(TargetFilter.InstantSpellOnStack)
         effect = Effects.CounterSpell()
     }
 

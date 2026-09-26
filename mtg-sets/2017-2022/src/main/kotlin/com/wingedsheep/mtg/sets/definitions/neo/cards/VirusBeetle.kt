@@ -23,7 +23,7 @@ val VirusBeetle = card("Virus Beetle") {
     oracleText = "When this creature enters, each opponent discards a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.EachOpponentDiscards(1)
         description = "When this creature enters, each opponent discards a card."
     }

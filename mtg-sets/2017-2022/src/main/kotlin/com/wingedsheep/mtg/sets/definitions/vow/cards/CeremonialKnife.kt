@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.events.DamageType
 
 /**
  * Ceremonial Knife
@@ -26,8 +25,8 @@ import com.wingedsheep.sdk.scripting.events.DamageType
  *
  * The quoted trigger has no recipient: "deals combat damage" fires on combat damage to *anything*
  * — a player, a planeswalker, or a blocking/blocked creature — so it is
- * `Triggers.dealsDamage(DamageType.Combat)` with the default `RecipientFilter.Any`, not the
- * narrower [Triggers.DealsCombatDamageToPlayer]. Binding stays SELF: inside the granted ability
+ * `Triggers.self.dealsCombatDamage()` with the default `Recipient.Any`, not the
+ * narrower `Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)`. Binding stays SELF: inside the granted ability
  * "this creature" is the equipped creature that received it, and that creature's controller is the
  * one who gets the Blood token.
  */
@@ -47,8 +46,7 @@ val CeremonialKnife = card("Ceremonial Knife") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.dealsDamage(DamageType.Combat).event,
-                binding = Triggers.dealsDamage(DamageType.Combat).binding,
+                trigger = Triggers.self.dealsCombatDamage(),
                 effect = Effects.CreateBlood(),
                 descriptionOverride = "Whenever this creature deals combat damage, create a Blood token."
             )

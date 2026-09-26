@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -31,7 +30,7 @@ val DwarvenMiner = card("Dwarven Miner") {
         cost = Costs.Composite(Costs.Mana("{2}{R}"), Costs.Tap)
         // Shipped as TargetFilter.Land, so it destroyed basic lands too — the printed "nonbasic"
         // was dropped. Found by the Assay differential gate; see DwarvenMinerScenarioTest.
-        val t = target("target", TargetPermanent(filter = TargetFilter.NonbasicLand))
+        val t = target(TargetFilter.NonbasicLand)
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     metadata {

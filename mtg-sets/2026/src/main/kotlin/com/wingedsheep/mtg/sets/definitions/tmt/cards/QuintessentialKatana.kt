@@ -1,23 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
-import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.DealsDamageEvent
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.AttachEquipmentEffect
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -44,27 +35,16 @@ val QuintessentialKatana = card("Quintessential Katana") {
     staticAbility {
         ability = GrantTriggeredAbility(
             TriggeredAbility.create(
-                trigger = DealsDamageEvent(
-                    damageType = DamageType.Combat,
-                    recipient = RecipientFilter.Any
-                ),
-                binding = TriggerBinding.SELF,
-                effect = Effects.Untap(EffectTarget.Self)
-                    .then(Effects.GainLife(2))
+                trigger = Triggers.self.dealsCombatDamage(),
+                effect = Effects.Untap(EffectTarget.Self) then Effects.GainLife(2)
             )
         )
     }
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Creature.withSubtype("Ninja").youControl(),
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.withSubtype("Ninja").youControl()).enters()
         optional = true
-        effect = AttachEquipmentEffect(EffectTarget.TriggeringEntity)
+        effect = Effects.AttachEquipment(EffectTarget.TriggeringEntity)
         description = "Whenever a Ninja you control enters, you may attach this Equipment to it."
     }
 

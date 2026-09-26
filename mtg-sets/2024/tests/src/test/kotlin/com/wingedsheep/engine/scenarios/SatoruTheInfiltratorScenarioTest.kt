@@ -13,7 +13,7 @@ import io.kotest.matchers.shouldBe
  *   were cast or no mana was spent to cast them, draw a card.
  *
  * Exercises the new batch-level `Conditions.NoManaSpentToCastEntered` gate over a
- * `Triggers.OneOrMorePermanentsEnter` trigger: a creature put onto the battlefield (no mana spent)
+ * `Triggers.oneOrMore(filter).enter()` trigger: a creature put onto the battlefield (no mana spent)
  * draws; a creature hard-cast for mana does not.
  */
 class SatoruTheInfiltratorScenarioTest : ScenarioTestBase() {

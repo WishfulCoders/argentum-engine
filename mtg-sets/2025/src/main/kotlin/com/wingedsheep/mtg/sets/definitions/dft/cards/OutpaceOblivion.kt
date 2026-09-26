@@ -7,11 +7,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.startYourEngines
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreatureOrPlaneswalker
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Outpace Oblivion — Aetherdrift #139
@@ -22,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreatureOrPlaneswalker
  * {2}, Sacrifice this enchantment: It deals 2 damage to each player who doesn't have max speed.
  *
  * "Each player who doesn't have max speed" is the per-player evaluation Momentum Breaker uses:
- * one [ForEachPlayerEffect] over [Player.Each] whose body is a [ConditionalEffect]. Inside the
+ * one [ForEachPlayerEffect] over [Player.Each] whose body is a [Effects.If]. Inside the
  * loop the controller is rebound to the iterated player, so `Not(HasMaxSpeed(Player.You))` asks
  * about *that* player and [EffectTarget.Controller] is that player — which keeps the check right
  * in multiplayer and includes Outpace Oblivion's own controller, exactly as printed.
@@ -47,11 +45,8 @@ val OutpaceOblivion = card("Outpace Oblivion") {
     startYourEngines()
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "up to one target creature or planeswalker",
-            TargetCreatureOrPlaneswalker(optional = true),
-        )
+        trigger = Triggers.self.enters()
+        val t = target(Targets.CreatureOrPlaneswalker, optional = true)
         effect = Effects.DealDamage(5, t)
         description = "When this enchantment enters, it deals 5 damage to up to one target " +
             "creature or planeswalker."
@@ -59,13 +54,11 @@ val OutpaceOblivion = card("Outpace Oblivion") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.SacrificeSelf)
-        effect = ForEachPlayerEffect(
+        effect = Effects.ForEachPlayer(
             players = Player.Each,
-            effects = listOf(
-                ConditionalEffect(
-                    condition = Conditions.Not(Conditions.HasMaxSpeed(Player.You)),
-                    effect = Effects.DealDamage(2, EffectTarget.Controller),
-                ),
+            effect = Effects.If(
+                condition = Conditions.Not(Conditions.HasMaxSpeed(Player.You)),
+                then = Effects.DealDamage(2, EffectTarget.Controller),
             ),
         )
         description = "{2}, Sacrifice this enchantment: It deals 2 damage to each player who " +

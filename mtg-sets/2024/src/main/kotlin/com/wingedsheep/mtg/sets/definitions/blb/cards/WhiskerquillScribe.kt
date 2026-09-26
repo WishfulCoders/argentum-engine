@@ -5,8 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 
 /**
  * Whiskerquill Scribe
@@ -25,11 +23,11 @@ val WhiskerquillScribe = card("Whiskerquill Scribe") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.Valiant
-        effect = MayEffect(
-            effect = IfYouDoEffect(
+        trigger = Triggers.self.becomesTarget(byYou = true, firstTimeEachTurn = true)
+        effect = Effects.May(
+            effect = Effects.IfYouDo(
                 action = Patterns.Hand.discardCards(1),
-                ifYouDo = Effects.DrawCards(1)
+                then = Effects.DrawCards(1)
             ),
             descriptionOverride = "You may discard a card. If you do, draw a card."
         )

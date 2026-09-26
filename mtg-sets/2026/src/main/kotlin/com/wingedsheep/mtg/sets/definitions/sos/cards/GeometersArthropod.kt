@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.events.SpellCastPredicate
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Geometer's Arthropod
@@ -39,12 +38,10 @@ val GeometersArthropod = card("Geometer's Arthropod") {
         "in a random order."
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            requires = setOf(SpellCastPredicate.HasXInCost),
-        )
+        trigger = Triggers.you.casts(requires = setOf(SpellCastPredicate.HasXInCost))
         effect = Patterns.Library.lookAtTopAndKeep(
             count = DynamicAmounts.xValueOfTriggeringSpell(),
-            keepCount = DynamicAmount.Fixed(1),
+            keepCount = DynamicAmounts.fixed(1),
             keepDestination = CardDestination.ToZone(Zone.HAND),
             restDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
             restOrder = CardOrder.Random,

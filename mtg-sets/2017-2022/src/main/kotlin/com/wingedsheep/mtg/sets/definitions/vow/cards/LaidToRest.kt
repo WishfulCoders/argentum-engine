@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Laid to Rest — Innistrad: Crimson Vow #207
@@ -18,7 +16,7 @@ import com.wingedsheep.sdk.scripting.TriggerBinding
  * Whenever a Human you control dies, draw a card.
  * Whenever a creature you control with a +1/+1 counter on it dies, you gain 2 life.
  *
- * Both abilities are `Triggers.leavesBattlefield` with ANY binding, to = GRAVEYARD, and a
+ * Both abilities are `Triggers.<subject>.leaves(to, excludeTo, excludeSacrifice)` with ANY binding, to = GRAVEYARD, and a
  * `youControl()` filter — the first narrowed by `withSubtype(HUMAN)`, the second by
  * `withCounter(PLUS_ONE_PLUS_ONE)`. The engine evaluates the trigger filter against
  * last-known-information for zone-change triggers (CR 603.10), so both the Human type and the
@@ -35,22 +33,14 @@ val LaidToRest = card("Laid to Rest") {
 
     // Whenever a Human you control dies, draw a card.
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.youControl().withSubtype(Subtype.HUMAN),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl().withSubtype(Subtype.HUMAN)).dies()
         effect = Effects.DrawCards(1)
         description = "Whenever a Human you control dies, draw a card."
     }
 
     // Whenever a creature you control with a +1/+1 counter on it dies, you gain 2 life.
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.youControl().withCounter(Counters.PLUS_ONE_PLUS_ONE),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl().withCounter(CounterType.PLUS_ONE_PLUS_ONE)).dies()
         effect = Effects.GainLife(2)
         description = "Whenever a creature you control with a +1/+1 counter on it dies, you gain 2 life."
     }

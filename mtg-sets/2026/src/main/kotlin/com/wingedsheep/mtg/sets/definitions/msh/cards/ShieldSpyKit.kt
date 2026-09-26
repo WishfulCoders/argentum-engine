@@ -42,10 +42,7 @@ val ShieldSpyKit = card("S.H.I.E.L.D. Spy Kit") {
     }
 
     triggeredAbility {
-        trigger = Triggers.attacks(
-            requires = setOf(AttackPredicate.Alone),
-            binding = TriggerBinding.ATTACHED,
-        )
+        trigger = Triggers.attached.attacks(setOf(AttackPredicate.Alone))
         effect = Effects.Untap(EffectTarget.EquippedCreature) then Patterns.Library.scry(1)
         description = "Whenever equipped creature attacks alone, untap it and scry 1."
     }

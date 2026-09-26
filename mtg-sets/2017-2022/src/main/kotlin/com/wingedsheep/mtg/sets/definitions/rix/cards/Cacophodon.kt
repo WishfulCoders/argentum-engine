@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.rix.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Cacophodon
@@ -22,8 +22,8 @@ val Cacophodon = card("Cacophodon") {
     toughness = 5
 
     triggeredAbility {
-        trigger = Triggers.TakesDamage
-        val permanent = target("target permanent", Targets.Permanent)
+        trigger = Triggers.self.isDealtDamage()
+        val permanent = target(TargetFilter.Permanent)
         effect = Effects.Untap(permanent)
         description = "Enrage — Whenever this creature is dealt damage, untap target permanent."
     }

@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.WardCost
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -27,14 +26,14 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * **Ward—Pay 3 life:** `KeywordAbility.Ward(WardCost.Life(3))`. When an opponent
  * targets Amalia, they must pay 3 life or the spell/ability is countered (CR 702.21).
  *
- * **YouGainLife trigger:** Fires once per life-gain event (`Triggers.YouGainLife`).
+ * **YouGainLife trigger:** Fires once per life-gain event (`Triggers.you.gainsLife()`).
  * The triggered effect is a sequential `Composite`:
  *
  * 1. `Effects.Explore(EffectTarget.Self)` — Amalia explores (CR 701.44): reveal the top
  *    card of your library; a land goes to your hand (no counter); a nonland puts a +1/+1
  *    counter on Amalia and gives the controller the option to put the card in the graveyard.
  *
- * 2. `ConditionalEffect(Conditions.SourceMatches(GameObjectFilter.Creature.power(20)), ...)` —
+ * 2. `Effects.If(Conditions.SourceMatches(GameObjectFilter.Creature.power(20)), ...)` —
  *    AFTER explore completes, check Amalia's projected power. If exactly 20, destroy all
  *    other creatures. `Patterns.Group.destroyAll(GroupFilter(GameObjectFilter.Creature,
  *    excludeSelf = true))` gathers every creature on the battlefield except the source
@@ -61,18 +60,16 @@ val AmaliaBenavidesAguirre = card("Amalia Benavides Aguirre") {
 
     // Whenever you gain life, Amalia explores, then wipe if power == 20.
     triggeredAbility {
-        trigger = Triggers.YouGainLife
-        effect = Effects.Composite(listOf(
-            // Step 1: Amalia explores. Reveal top card; land → hand (no counter, no pause);
-            // nonland → +1/+1 counter on Amalia, then optional graveyard decision.
-            Effects.Explore(EffectTarget.Self),
+        trigger = Triggers.you.gainsLife()
+        // Step 1: Amalia explores. Reveal top card; land → hand (no counter, no pause);
+        // nonland → +1/+1 counter on Amalia, then optional graveyard decision.
+        effect = Effects.Explore(EffectTarget.Self) then
             // Step 2: After explore, check Amalia's projected power. If exactly 20, destroy
             // all other creatures (excludeSelf = true excludes Amalia as the source).
-            ConditionalEffect(
+            Effects.If(
                 condition = Conditions.SourceMatches(GameObjectFilter.Creature.power(20)),
-                effect = Patterns.Group.destroyAll(GroupFilter(GameObjectFilter.Creature, excludeSelf = true))
+                then = Patterns.Group.destroyAll(GroupFilter(GameObjectFilter.Creature, excludeSelf = true))
             )
-        ))
     }
 
     metadata {

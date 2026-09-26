@@ -6,15 +6,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Effect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.impending
 
@@ -55,47 +49,32 @@ val OverlordOfTheBalemurk = card("Overlord of the Balemurk") {
     // "Mill four cards, then you may return a non-Avatar creature card or a planeswalker
     // card from your graveyard to your hand." Shared by the enters and attacks triggers.
     val returnableFilter = GameObjectFilter.Creature.notSubtype(Subtype.AVATAR) or GameObjectFilter.Planeswalker
-    val millAndReturn: Effect = Effects.Composite(
-        listOf(
-            // Mill four cards.
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(4), Player.You),
-                storeAs = "balemurkMilled"
-            ),
-            MoveCollectionEffect(
-                from = "balemurkMilled",
-                destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.You)
-            ),
-            // ...then you may return a non-Avatar creature or planeswalker card from your
-            // graveyard to your hand (any eligible card, not just the milled ones).
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.GRAVEYARD, Player.You, returnableFilter),
-                storeAs = "balemurkReturnable"
-            ),
-            SelectFromCollectionEffect(
-                from = "balemurkReturnable",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "balemurkToReturn",
-                showAllCards = true,
-                prompt = "You may return a non-Avatar creature or planeswalker card to your hand",
-                selectedLabel = "Return to hand",
-                remainderLabel = "Leave in graveyard"
-            ),
-            MoveCollectionEffect(
-                from = "balemurkToReturn",
-                destination = CardDestination.ToZone(Zone.HAND)
-            )
+    val millAndReturn: Effect = Effects.Pipeline {
+        // Mill four cards.
+        val balemurkMilled = gather(CardSource.TopOfLibrary(4, Player.You))
+        toGraveyard(balemurkMilled)
+        // ...then you may return a non-Avatar creature or planeswalker card from your
+        // graveyard to your hand (any eligible card, not just the milled ones).
+        val balemurkReturnable = gather(CardSource.FromZone(Zone.GRAVEYARD, Player.You, returnableFilter))
+        val balemurkToReturn = chooseUpTo(
+            1,
+            from = balemurkReturnable,
+            showAllCards = true,
+            prompt = "You may return a non-Avatar creature or planeswalker card to your hand",
+            selectedLabel = "Return to hand",
+            remainderLabel = "Leave in graveyard"
         )
-    )
+        toHand(balemurkToReturn)
+    }
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = millAndReturn
         description = "Whenever this permanent enters, mill four cards, then you may return a non-Avatar creature card or a planeswalker card from your graveyard to your hand."
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = millAndReturn
         description = "Whenever this permanent attacks, mill four cards, then you may return a non-Avatar creature card or a planeswalker card from your graveyard to your hand."
     }

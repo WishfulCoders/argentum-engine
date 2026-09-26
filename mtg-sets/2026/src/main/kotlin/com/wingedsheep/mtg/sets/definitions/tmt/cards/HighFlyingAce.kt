@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * High-Flying Ace
@@ -33,10 +32,7 @@ val HighFlyingAce = card("High-Flying Ace") {
     activatedAbility {
         cost = Costs.Mana("{3}{W}")
         timing = TimingRule.SorcerySpeed
-        val creature = target(
-            "creature without flying",
-            TargetPermanent(filter = TargetFilter.Creature.withoutKeyword(Keyword.FLYING)),
-        )
+        val creature = target(TargetFilter.Creature.withoutKeyword(Keyword.FLYING))
         effect = Effects.GrantKeyword(Keyword.FLYING, creature, Duration.EndOfTurn)
     }
 

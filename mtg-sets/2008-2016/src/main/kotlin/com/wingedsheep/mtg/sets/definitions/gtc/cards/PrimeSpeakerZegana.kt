@@ -8,9 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.Aggregation
-import com.wingedsheep.sdk.scripting.values.CardNumericProperty
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Prime Speaker Zegana — GTC #188
@@ -39,18 +36,16 @@ val PrimeSpeakerZegana = card("Prime Speaker Zegana") {
 
     replacementEffect(
         EntersWithDynamicCounters(
-            count = DynamicAmount.AggregateBattlefield(
-                player = Player.You,
-                filter = GameObjectFilter.Creature,
-                aggregation = Aggregation.MAX,
-                property = CardNumericProperty.POWER,
+            count = DynamicAmounts.battlefield(
+                Player.You,
+                GameObjectFilter.Creature,
                 excludeSelf = true,
-            ),
+            ).maxPower(),
         ),
     )
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(DynamicAmounts.sourcePower())
         description = "When Prime Speaker Zegana enters, draw cards equal to its power."
     }

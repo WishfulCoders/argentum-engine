@@ -25,7 +25,7 @@ val Cathodion = card("Cathodion") {
     power = 3
     toughness = 3
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.AddColorlessMana(3)
     }
     metadata {

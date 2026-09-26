@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.BecomeCreatureTypeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -26,8 +26,8 @@ val ProteusMachine = card("Proteus Machine") {
     morph = "{0}"
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        effect = BecomeCreatureTypeEffect(
+        trigger = Triggers.self.turnedFaceUp()
+        effect = Effects.BecomeCreatureType(
             target = EffectTarget.Self,
             duration = Duration.Permanent
         )

@@ -1,11 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.PreventionScope
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Restrain
@@ -22,9 +21,9 @@ val Restrain = card("Restrain") {
         "Draw a card."
 
     spell {
-        target("target attacking creature", Targets.AttackingCreature)
+        val attackingCreature = target(TargetFilter.AttackingCreature)
         effect = Effects.PreventAllDamageDealtBy(
-            EffectTarget.ContextTarget(0),
+            attackingCreature,
             scope = PreventionScope.CombatOnly
         ) then Effects.DrawCards(1)
     }

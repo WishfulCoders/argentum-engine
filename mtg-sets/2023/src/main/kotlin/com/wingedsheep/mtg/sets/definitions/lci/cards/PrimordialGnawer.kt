@@ -20,7 +20,7 @@ val PrimordialGnawer = card("Primordial Gnawer") {
     toughness = 2
     oracleText = "When this creature dies, discover 3."
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.Discover(3)
     }
     metadata {

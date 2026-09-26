@@ -28,7 +28,7 @@ val BoulderbornDragon = card("Boulderborn Dragon") {
     keywords(Keyword.FLYING, Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Library.surveil(1)
         description = "Whenever this creature attacks, surveil 1."
     }

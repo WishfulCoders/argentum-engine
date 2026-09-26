@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
@@ -13,7 +13,7 @@ import com.wingedsheep.sdk.scripting.GrantCardType
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Synthesizer Labship
@@ -41,23 +41,17 @@ val SynthesizerLabship = card("Synthesizer Labship") {
     station()
 
     // Charge-counter threshold predicates ({N+} station symbols, CR 721.2a)
-    val charge2 = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 2)
-    val charge9 = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 9)
+    val charge2 = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 2)
+    val charge9 = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 9)
 
     // 2+ | At the beginning of combat on your turn, up to one other target artifact you control
     // becomes an artifact creature with base P/T 2/2 and gains flying until end of turn.
     triggeredAbility {
-        trigger = Triggers.BeginCombat
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
         triggerRestriction = charge2
         val targetArtifact = target(
-            "up to one other target artifact you control",
-            TargetObject(
-                optional = true,
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter.Artifact.youControl(),
-                    excludeSelf = true
-                )
-            )
+            TargetFilter(baseFilter = GameObjectFilter.Artifact.youControl(), excludeSelf = true),
+            optional = true,
         )
         effect = Effects.BecomeCreature(
             target = targetArtifact,

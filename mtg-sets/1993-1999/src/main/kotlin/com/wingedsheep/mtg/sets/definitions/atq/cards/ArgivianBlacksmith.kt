@@ -6,8 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Argivian Blacksmith
@@ -26,11 +24,8 @@ val ArgivianBlacksmith = card("Argivian Blacksmith") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target(
-            "target artifact creature",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.ArtifactCreature))
-        )
-        effect = Effects.PreventNextDamage(2, EffectTarget.ContextTarget(0))
+        val t = target(TargetFilter(GameObjectFilter.ArtifactCreature))
+        effect = Effects.PreventNextDamage(2, t)
         description = "{T}: Prevent the next 2 damage that would be dealt to target artifact creature this turn."
     }
 

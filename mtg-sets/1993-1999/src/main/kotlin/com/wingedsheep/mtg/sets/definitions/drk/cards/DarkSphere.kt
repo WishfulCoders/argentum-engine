@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.effects.PreventionSourceFilter
 
 /**
  * Dark Sphere
@@ -13,7 +14,7 @@ import com.wingedsheep.sdk.model.Rarity
  * this turn, prevent half that damage, rounded down.
  *
  * The Circle of Protection family's single-instance shield with the prevented amount halved:
- * `PreventHalfNextDamageFromChosenSource` installs the same chosen-source floating effect the
+ * `nextInstanceOnly` + `halve` install the same chosen-source floating effect the
  * Circles use, flagged to prevent only half the instance rounded down. The unprevented half is
  * still dealt, and the shield is spent either way — against a 1-damage source it prevents nothing
  * and is gone. That "spent even when it prevents nothing" behaviour is why this reuses the
@@ -27,7 +28,11 @@ val DarkSphere = card("Dark Sphere") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.SacrificeSelf)
-        effect = Effects.PreventHalfNextDamageFromChosenSource()
+        effect = Effects.PreventDamage(
+            sources = PreventionSourceFilter.Chosen(),
+            nextInstanceOnly = true,
+            halve = true
+        )
         description = "{T}, Sacrifice this artifact: The next time a source of your choice would " +
             "deal damage to you this turn, prevent half that damage, rounded down."
     }

@@ -2,12 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.tsp.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Lightning Axe
@@ -33,19 +32,17 @@ val LightningAxe = card("Lightning Axe") {
     spell {
         effect = ModalEffect.chooseOne(
             // Discard a card
-            Mode(
-                effect = Effects.DealDamage(5, EffectTarget.ContextTarget(0)),
-                targetRequirements = listOf(Targets.Creature),
-                description = "Discard a card — deal 5 damage to target creature",
+            mode("Discard a card — deal 5 damage to target creature") {
+                val creature = target(TargetFilter.Creature)
                 additionalCosts = listOf(Costs.additional.DiscardCards(count = 1))
-            ),
+                effect = Effects.DealDamage(5, creature)
+            },
             // Pay {5}
-            Mode(
-                effect = Effects.DealDamage(5, EffectTarget.ContextTarget(0)),
-                targetRequirements = listOf(Targets.Creature),
-                description = "Pay {5} — deal 5 damage to target creature",
+            mode("Pay {5} — deal 5 damage to target creature") {
+                val creature = target(TargetFilter.Creature)
                 additionalManaCost = "{5}"
-            ),
+                effect = Effects.DealDamage(5, creature)
+            },
             countsAsModalSpell = false
         )
     }

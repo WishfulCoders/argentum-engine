@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Over the Edge — {1}{G}
@@ -42,13 +43,12 @@ val OverTheEdge = card("Over the Edge") {
     spell {
         modal {
             mode("Destroy target artifact or enchantment") {
-                val artifactOrEnchantment = target("target artifact or enchantment", Targets.ArtifactOrEnchantment)
+                val artifactOrEnchantment = target(TargetFilter.ArtifactOrEnchantment)
                 effect = Effects.Destroy(artifactOrEnchantment)
             }
             mode("Target creature you control explores, then it explores again") {
-                val creature = target("target creature you control", Targets.CreatureYouControl)
-                effect = Effects.Explore(creature)
-                    .then(Effects.Explore(creature))
+                val creature = target(TargetFilter.CreatureYouControl)
+                effect = Effects.Explore(creature) then Effects.Explore(creature)
             }
         }
     }

@@ -7,7 +7,7 @@ import com.wingedsheep.sdk.scripting.CostModification
 import com.wingedsheep.sdk.scripting.CostReductionSource
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Witchstalker Frenzy
@@ -47,7 +47,7 @@ val WitchstalkerFrenzy = card("Witchstalker Frenzy") {
     }
 
     spell {
-        val creature = target("target creature", TargetCreature())
+        val creature = target(TargetFilter.Creature)
         effect = Effects.DealDamage(5, creature)
     }
 

@@ -8,11 +8,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ChooseActionEffect
 import com.wingedsheep.sdk.scripting.effects.EffectChoice
 import com.wingedsheep.sdk.scripting.effects.FeasibilityCheck
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
-import com.wingedsheep.sdk.scripting.effects.ForceSacrificeEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -55,47 +52,43 @@ val PolygraphOrb = card("Polygraph Orb") {
         "greater from your graveyard.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Patterns.Library.lookAtTopAndKeep(count = 4, keepCount = 2),
+        trigger = Triggers.self.enters()
+        effect = Patterns.Library.lookAtTopAndKeep(count = 4, keepCount = 2) then
             Effects.LoseLife(2, EffectTarget.Controller)
-        )
         description = "When this artifact enters, look at the top four cards of your library. Put " +
             "two of them into your hand and the rest into your graveyard. You lose 2 life."
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap, Costs.CollectEvidence(3))
-        effect = ForEachPlayerEffect(
+        effect = Effects.ForEachPlayer(
             players = Player.EachOpponent,
-            effects = listOf(
-                ChooseActionEffect(
-                    player = EffectTarget.Controller,
-                    choices = listOf(
-                        EffectChoice(
-                            label = "Discard a card",
-                            effect = Patterns.Hand.discardCards(1, EffectTarget.Controller),
-                            feasibilityCheck = FeasibilityCheck.HasCardsInZone(Zone.HAND),
+            effect = Effects.ChooseAction(
+                player = EffectTarget.Controller,
+                choices = listOf(
+                    EffectChoice(
+                        label = "Discard a card",
+                        effect = Patterns.Hand.discardCards(1, EffectTarget.Controller),
+                        feasibilityCheck = FeasibilityCheck.HasCardsInZone(Zone.HAND),
+                    ),
+                    EffectChoice(
+                        label = "Sacrifice a creature",
+                        effect = Effects.Sacrifice(
+                            filter = GameObjectFilter.Creature,
+                            count = 1,
+                            target = EffectTarget.Controller,
                         ),
-                        EffectChoice(
-                            label = "Sacrifice a creature",
-                            effect = ForceSacrificeEffect(
-                                filter = GameObjectFilter.Creature,
-                                count = 1,
-                                target = EffectTarget.Controller,
-                            ),
-                            feasibilityCheck = FeasibilityCheck.ControlsPermanentMatching(
-                                GameObjectFilter.Creature
-                            ),
-                        ),
-                        // No feasibility gate: "Your opponent can always choose to lose 3 life,
-                        // even if they have cards to discard or creatures to sacrifice."
-                        EffectChoice(
-                            label = "Lose 3 life",
-                            effect = Effects.LoseLife(3, EffectTarget.Controller),
+                        feasibilityCheck = FeasibilityCheck.ControlsPermanentMatching(
+                            GameObjectFilter.Creature
                         ),
                     ),
-                )
+                    // No feasibility gate: "Your opponent can always choose to lose 3 life,
+                    // even if they have cards to discard or creatures to sacrifice."
+                    EffectChoice(
+                        label = "Lose 3 life",
+                        effect = Effects.LoseLife(3, EffectTarget.Controller),
+                    ),
+                ),
             ),
         )
         description = "Each opponent loses 3 life unless they discard a card or sacrifice a creature."

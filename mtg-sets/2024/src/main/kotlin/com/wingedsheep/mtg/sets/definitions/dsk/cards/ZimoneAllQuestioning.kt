@@ -1,19 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CREATED_TOKENS
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Zimone, All-Questioning
@@ -49,21 +47,21 @@ val ZimoneAllQuestioning = card("Zimone, All-Questioning") {
         "on it. (2, 3, 5, 7, 11, 13, 17, 19, 23, 29, and 31 are prime numbers.)"
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.All(
             // "a land entered the battlefield under your control this turn"
             Conditions.CompareAmounts(
                 DynamicAmounts.landsEnteredUnderControlThisTurn(Player.You),
                 com.wingedsheep.sdk.scripting.conditions.ComparisonOperator.GTE,
-                DynamicAmount.Fixed(1),
+                1,
             ),
             // "and you control a prime number of lands"
             Conditions.AmountIsPrime(
-                DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land),
+                DynamicAmounts.landsYouControl(),
             ),
         )
-        effect = CreateTokenEffect(
-            count = DynamicAmount.Fixed(1),
+        effect = Effects.CreateToken(
+            count = 1,
             power = 0,
             toughness = 0,
             colors = setOf(Color.GREEN, Color.BLUE),
@@ -71,12 +69,10 @@ val ZimoneAllQuestioning = card("Zimone, All-Questioning") {
             name = "Primo, the Indivisible",
             legendary = true,
             imageUri = "https://cards.scryfall.io/normal/front/c/9/c990db6b-e1f2-4802-b8b1-80a8b768be0e.jpg?1775827823",
-        ).then(
-            Effects.AddDynamicCounters(
-                Counters.PLUS_ONE_PLUS_ONE,
-                DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land),
-                EffectTarget.PipelineTarget(CREATED_TOKENS, 0),
-            ),
+        ) then Effects.AddDynamicCounters(
+            CounterType.PLUS_ONE_PLUS_ONE,
+            DynamicAmounts.landsYouControl(),
+            EffectTarget.PipelineTarget(CREATED_TOKENS, 0),
         )
     }
 

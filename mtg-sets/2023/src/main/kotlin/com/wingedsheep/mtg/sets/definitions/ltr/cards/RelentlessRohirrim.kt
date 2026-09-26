@@ -22,7 +22,7 @@ val RelentlessRohirrim = card("Relentless Rohirrim") {
     oracleText = "When this creature enters, the Ring tempts you."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.TheRingTemptsYou()
     }
 

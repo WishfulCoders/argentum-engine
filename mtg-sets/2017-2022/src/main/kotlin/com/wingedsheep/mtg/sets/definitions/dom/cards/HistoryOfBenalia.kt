@@ -6,11 +6,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * History of Benalia
@@ -30,7 +27,7 @@ val HistoryOfBenalia = card("History of Benalia") {
         "III — Knights you control get +2/+1 until end of turn."
 
     sagaChapter(1) {
-        effect = CreateTokenEffect(
+        effect = Effects.CreateToken(
             power = 2,
             toughness = 2,
             colors = setOf(Color.WHITE),
@@ -41,7 +38,7 @@ val HistoryOfBenalia = card("History of Benalia") {
     }
 
     sagaChapter(2) {
-        effect = CreateTokenEffect(
+        effect = Effects.CreateToken(
             power = 2,
             toughness = 2,
             colors = setOf(Color.WHITE),
@@ -54,10 +51,10 @@ val HistoryOfBenalia = card("History of Benalia") {
     sagaChapter(3) {
         effect = Effects.ForEachInGroup(
             filter = GroupFilter(GameObjectFilter.Creature.withSubtype("Knight").youControl()),
-            effect = ModifyStatsEffect(
-                DynamicAmount.Fixed(2),
-                DynamicAmount.Fixed(1),
-                EffectTarget.Self
+            effect = Effects.ModifyStats(
+                2,
+                1,
+                EffectTarget.IterationEntity
             )
         )
     }

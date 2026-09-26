@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBeBlockedBy
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Stormkeld Vanguard // Bear Down
@@ -40,7 +40,7 @@ val StormkeldVanguard = card("Stormkeld Vanguard") {
         oracleText = "Destroy target artifact or enchantment. " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            val t = target("target", Targets.ArtifactOrEnchantment)
+            val t = target(TargetFilter.ArtifactOrEnchantment)
             effect = Effects.Destroy(t)
         }
     }

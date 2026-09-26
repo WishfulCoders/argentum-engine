@@ -41,7 +41,7 @@ val SoulOfMigration = card("Soul of Migration") {
     evoke = "{3}{W}"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

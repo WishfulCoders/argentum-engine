@@ -28,7 +28,7 @@ val GleamingBarrier = card("Gleaming Barrier") {
     toughness = 4
     keywords(Keyword.DEFENDER)
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateTreasure()
     }
     metadata {

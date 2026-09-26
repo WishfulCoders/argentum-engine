@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
@@ -9,18 +9,10 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.AddCountersToCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Scavenger's Talent {B}
@@ -53,7 +45,7 @@ val ScavengersTalent = card("Scavenger's Talent") {
     // Level 1: Whenever one or more creatures you control die, create a Food token.
     // This ability triggers only once each turn.
     triggeredAbility {
-        trigger = Triggers.YourCreatureDies
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).dies()
         oncePerTurn = true
         effect = Effects.CreateFood(1)
     }
@@ -62,8 +54,8 @@ val ScavengersTalent = card("Scavenger's Talent") {
     // Note: Uses batching trigger (fires once per batch, not per individual permanent)
     classLevel(2, "{1}{B}") {
         triggeredAbility {
-            trigger = Triggers.YouSacrificeOneOrMore()
-            val player = target("target player", Targets.Player)
+            trigger = Triggers.you.sacrifices(batch = true)
+            val player = target(Targets.Player)
             effect = Patterns.Library.mill(2, player)
         }
     }
@@ -73,36 +65,29 @@ val ScavengersTalent = card("Scavenger's Talent") {
     // with a finality counter on it.
     classLevel(3, "{2}{B}") {
         triggeredAbility {
-            trigger = Triggers.YourEndStep
-            effect = OptionalCostEffect(
-                cost = SacrificeEffect(
+            trigger = Triggers.you.beginningOf(Step.END)
+            effect = Effects.MayPay(
+                cost = Effects.SacrificeOwn(
                     filter = GameObjectFilter.NonlandPermanent,
                     count = 3,
                     excludeSource = true
                 ),
-                ifPaid = Effects.Composite(
-                    listOf(
-                        GatherCardsEffect(
-                            source = CardSource.FromZone(
-                                Zone.GRAVEYARD,
-                                Player.You,
-                                GameObjectFilter.Creature
-                            ),
-                            storeAs = "eligible"
-                        ),
-                        SelectFromCollectionEffect(
-                            from = "eligible",
-                            selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                            storeSelected = "chosen",
-                            prompt = "Choose a creature card to return to the battlefield"
-                        ),
-                        MoveCollectionEffect(
-                            from = "chosen",
-                            destination = CardDestination.ToZone(Zone.BATTLEFIELD)
-                        ),
-                        AddCountersToCollectionEffect("chosen", Counters.FINALITY, 1)
+                then = Effects.Pipeline {
+                    val eligible = gather(
+                        CardSource.FromZone(
+                            Zone.GRAVEYARD,
+                            Player.You,
+                            GameObjectFilter.Creature
+                        )
                     )
-                )
+                    val chosen = chooseExactly(
+                        1,
+                        from = eligible,
+                        prompt = "Choose a creature card to return to the battlefield"
+                    )
+                    move(chosen, CardDestination.ToZone(Zone.BATTLEFIELD))
+                    run(Effects.AddCountersToCollection(chosen, CounterType.FINALITY, 1))
+                }
             )
         }
     }

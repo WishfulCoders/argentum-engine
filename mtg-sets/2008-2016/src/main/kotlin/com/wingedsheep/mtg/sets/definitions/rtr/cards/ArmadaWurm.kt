@@ -33,7 +33,7 @@ val ArmadaWurm = card("Armada Wurm") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 5,
             toughness = 5,

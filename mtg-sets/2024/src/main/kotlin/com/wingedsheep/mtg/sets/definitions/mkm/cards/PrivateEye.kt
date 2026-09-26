@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Private Eye — Murders at Karlov Manor #223
@@ -22,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * The lord half is the standard `excludeSelf = true` [GroupFilter] — Private Eye is itself a
  * Detective, and "other" is what keeps it from pumping itself.
  *
- * The second half is [Triggers.NthCardDrawn] with `n = 2`, which is the CR 121.2 "your second card
+ * The second half is `Triggers.<player>.drawsNth(n)` with `n = 2`, which is the CR 121.2 "your second card
  * each turn" shape rather than "the second time you draw this turn": a single draw-two crosses the
  * threshold and fires the trigger exactly once, and cards put into hand without the word "draw"
  * (CR 121.5) never advance the count. Because MKM's Detective deck is built on investigate — Clues
@@ -54,11 +53,8 @@ val PrivateEye = card("Private Eye") {
     }
 
     triggeredAbility {
-        trigger = Triggers.NthCardDrawn(2)
-        val detective = target(
-            "detective",
-            TargetCreature(filter = TargetFilter.Creature.withSubtype(Subtype.DETECTIVE))
-        )
+        trigger = Triggers.you.drawsNth(2)
+        val detective = target(TargetFilter.Creature.withSubtype(Subtype.DETECTIVE))
         effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, detective)
         description = "Whenever you draw your second card each turn, target Detective can't be " +
             "blocked this turn."

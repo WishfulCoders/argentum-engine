@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.c17.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -45,7 +44,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * no token, which `EdgarMarkovScenarioTest` pins down.
  *
  * The attack trigger reuses the Cathars' Crusade idiom: [Effects.ForEachInGroup] over the Vampires
- * you control, with the inner counter aimed at [EffectTarget.Self] (the iterated member).
+ * you control, with the inner counter aimed at [EffectTarget.IterationEntity] (the iterated member).
  */
 val EdgarMarkov = card("Edgar Markov") {
     manaCost = "{3}{R}{W}{B}"
@@ -61,7 +60,7 @@ val EdgarMarkov = card("Edgar Markov") {
     keywords(Keyword.FIRST_STRIKE, Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.YouCastSubtype(Subtype.VAMPIRE)
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withSubtype(Subtype.VAMPIRE))
         triggerZones = setOf(Zone.BATTLEFIELD, Zone.COMMAND)
         interveningIf = Conditions.SourceInZone(Zone.BATTLEFIELD, Zone.COMMAND)
         effect = Effects.CreateToken(
@@ -75,10 +74,10 @@ val EdgarMarkov = card("Edgar Markov") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl().withSubtype(Subtype.VAMPIRE)),
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity),
         )
         description = "Whenever Edgar attacks, put a +1/+1 counter on each Vampire you control."
     }

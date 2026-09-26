@@ -1,7 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
@@ -9,15 +8,9 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Most Decrepit Old Bird // Speak Secrets
@@ -66,34 +59,22 @@ val MostDecrepitOldBird = card("Most Decrepit Old Bird") {
         oracleText = "Mill four cards, then put an instant or sorcery card from among them into your hand. " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            effect = Effects.Composite(
-                listOf(
-                    // Mill four cards.
-                    GatherCardsEffect(
-                        source = CardSource.TopOfLibrary(DynamicAmount.Fixed(4), Player.You, isMill = true),
-                        storeAs = "milled"
-                    ),
-                    MoveCollectionEffect(
-                        from = "milled",
-                        destination = CardDestination.ToZone(Zone.GRAVEYARD)
-                    ),
-                    // Then put an instant or sorcery card from among them into your hand.
-                    SelectFromCollectionEffect(
-                        from = "milled",
-                        selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                        filter = GameObjectFilter.InstantOrSorcery,
-                        storeSelected = "toHand",
-                        showAllCards = true,
-                        prompt = "Put an instant or sorcery card from among the milled cards into your hand",
-                        selectedLabel = "Put in hand",
-                        remainderLabel = "Leave in graveyard"
-                    ),
-                    MoveCollectionEffect(
-                        from = "toHand",
-                        destination = CardDestination.ToZone(Zone.HAND)
-                    )
+            effect = Effects.Pipeline {
+                // Mill four cards.
+                val milled = gather(CardSource.TopOfLibrary(4, Player.You, isMill = true))
+                toGraveyard(milled)
+                // Then put an instant or sorcery card from among them into your hand.
+                val toHandCards = chooseExactly(
+                    1,
+                    from = milled,
+                    filter = GameObjectFilter.InstantOrSorcery,
+                    showAllCards = true,
+                    prompt = "Put an instant or sorcery card from among the milled cards into your hand",
+                    selectedLabel = "Put in hand",
+                    remainderLabel = "Leave in graveyard"
                 )
-            )
+                toHand(toHandCards)
+            }
         }
     }
 

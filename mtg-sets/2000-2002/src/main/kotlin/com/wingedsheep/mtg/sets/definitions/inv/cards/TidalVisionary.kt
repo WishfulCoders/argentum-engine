@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Tidal Visionary
@@ -27,7 +27,7 @@ val TidalVisionary = card("Tidal Visionary") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.ChooseColorThen(
             then = Effects.ChangeColorToChosen(t),
             prompt = "Choose a color"

@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -23,8 +21,8 @@ private val ConduitOfStormsFront = card("Conduit of Storms") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = CreateDelayedTriggerEffect(
+        trigger = Triggers.self.attacks()
+        effect = Effects.CreateDelayedTrigger(
             step = Step.POSTCOMBAT_MAIN,
             effect = Effects.AddMana(Color.RED),
             fireOnPlayer = EffectTarget.PlayerRef(Player.You),
@@ -33,7 +31,7 @@ private val ConduitOfStormsFront = card("Conduit of Storms") {
 
     activatedAbility {
         cost = Costs.Mana("{3}{R}{R}")
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
         description = "Transform this creature."
     }
 
@@ -57,8 +55,8 @@ private val ConduitOfEmrakul = card("Conduit of Emrakul") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = CreateDelayedTriggerEffect(
+        trigger = Triggers.self.attacks()
+        effect = Effects.CreateDelayedTrigger(
             step = Step.POSTCOMBAT_MAIN,
             effect = Effects.AddColorlessMana(2),
             fireOnPlayer = EffectTarget.PlayerRef(Player.You),

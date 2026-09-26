@@ -22,7 +22,7 @@ val WatchfulGiant = card("Watchful Giant") {
     oracleText = "When this creature enters, create a 1/1 white Human creature token."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

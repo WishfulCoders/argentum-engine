@@ -4,6 +4,7 @@
 
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CostModification
@@ -11,9 +12,7 @@ import com.wingedsheep.sdk.scripting.CostReductionSource
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -37,8 +36,8 @@ val MagnificentEnd = card("Magnificent End") {
         )
     }
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = DealDamageEffect(5, t)
+        val t = target(TargetFilter.Creature)
+        effect = Effects.DealDamage(5, t)
     }
     metadata {
         rarity = Rarity.COMMON

@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Bile-Vial Boggart
@@ -24,9 +24,9 @@ val BileVialBoggart = card("Bile-Vial Boggart") {
     oracleText = "When this creature dies, put a -1/-1 counter on up to one target creature."
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val creature = target("creature", TargetCreature(count = 1, optional = true))
-        effect = Effects.AddCounters(Counters.MINUS_ONE_MINUS_ONE, 1, creature)
+        trigger = Triggers.self.dies()
+        val creature = target(TargetFilter.Creature, optional = true)
+        effect = Effects.AddCounters(CounterType.MINUS_ONE_MINUS_ONE, 1, creature)
     }
 
     metadata {

@@ -7,29 +7,24 @@ import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedActivatedAbility
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.ActivatedAbility
-import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 private const val ARLINN_EMBLEM = "Creatures you control have haste and '{T}: This creature deals damage equal to its power to any target.'"
 
-private val arlinnEmblemAbility = ActivatedAbility(
-    id = AbilityId.generate(),
-    cost = Costs.Tap,
-    targetRequirements = listOf(AnyTarget()),
-    effect = Effects.DealDamage(DynamicAmounts.sourcePower(), EffectTarget.ContextTarget(0)),
-    descriptionOverride = "{T}: This creature deals damage equal to its power to any target.",
-)
-
 private val ArlinnEmbracedByTheMoon = card("Arlinn, Embraced by the Moon") {
+    val arlinnEmblemAbility = grantedActivatedAbility {
+        cost = Costs.Tap
+        val anyTarget = target(Targets.Any)
+        effect = Effects.DealDamage(DynamicAmounts.sourcePower(), anyTarget)
+        description = "{T}: This creature deals damage equal to its power to any target."
+    }
+
     manaCost = ""
     colorIdentity = "RG"
     typeLine = "Legendary Planeswalker — Arlinn"
@@ -40,13 +35,13 @@ private val ArlinnEmbracedByTheMoon = card("Arlinn, Embraced by the Moon") {
     loyaltyAbility(+1) {
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreaturesYouControl,
-            Effects.ModifyStats(1, 1, EffectTarget.Self) then
-                Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self, Duration.EndOfTurn),
+            Effects.ModifyStats(1, 1, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.IterationEntity, Duration.EndOfTurn),
         )
     }
     loyaltyAbility(-1) {
-        val target = target("target", AnyTarget())
-        effect = Effects.DealDamage(3, target) then TransformEffect(EffectTarget.Self)
+        val target = target(Targets.Any)
+        effect = Effects.DealDamage(3, target) then Effects.Transform(EffectTarget.Self)
     }
     loyaltyAbility(-6) {
         effect = Effects.CreatePermanentEmblem(
@@ -73,7 +68,7 @@ private val ArlinnKordFront = card("Arlinn Kord") {
         "0: Create a 2/2 green Wolf creature token. Transform Arlinn Kord."
 
     loyaltyAbility(+1) {
-        val creature = target("creature", TargetCreature(optional = true))
+        val creature = target(TargetFilter.Creature, optional = true)
         effect = Effects.ModifyStats(2, 2, creature) then
             Effects.GrantKeyword(Keyword.VIGILANCE, creature, Duration.EndOfTurn) then
             Effects.GrantKeyword(Keyword.HASTE, creature, Duration.EndOfTurn)
@@ -84,7 +79,7 @@ private val ArlinnKordFront = card("Arlinn Kord") {
             toughness = 2,
             colors = setOf(Color.GREEN),
             creatureTypes = setOf("Wolf"),
-        ) then TransformEffect(EffectTarget.Self)
+        ) then Effects.Transform(EffectTarget.Self)
     }
     metadata {
         rarity = Rarity.MYTHIC

@@ -10,10 +10,11 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Step 4 — BDD test: ETB trigger suspects a chosen target creature, granting menace and no-block.
@@ -40,12 +41,12 @@ class EtbSuspectUpToOneTargetCreatureTest : FunSpec({
             "up to one target creature becomes suspected."
 
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             // "*Up to one* target creature" is an optional **requirement**, not an optional
             // ability: the ability is mandatory and the slot may be left empty. The two used to be
             // spelled the same way — `optional = true` on the ability forced every slot's minimum
             // to zero — and this card was written the wrong way round because of it.
-            val t = target("target creature", TargetCreature(optional = true))
+            val t = target(TargetFilter.Creature, optional = true)
             effect = Effects.Suspect(t)
         }
     }
@@ -74,7 +75,7 @@ class EtbSuspectUpToOneTargetCreatureTest : FunSpec({
         // Cast the ETB-Suspect source creature
         val witnessId = driver.putCardInHand(controller, "Suspicious Witness")
         driver.giveMana(controller, Color.WHITE, 2)
-        driver.castSpell(controller, witnessId).isSuccess shouldBe true
+        driver.castSpell(controller, witnessId).outcome shouldBe Outcome.Done
 
         // Both players pass → spell resolves, ETB trigger fires, game pauses for target selection
         driver.bothPass()

@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.codegen
 
 import com.wingedsheep.mtg.sets.discovery.CardDiscovery
-import com.wingedsheep.sdk.serialization.CardExporter
+import com.wingedsheep.sdk.tooling.CardExporter
 import java.io.File
 
 /**

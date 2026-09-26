@@ -1,14 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.renew
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Kheru Goldkeeper — Tarkir: Dragonstorm #199
@@ -19,7 +20,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Renew — {2}{B}{G}{U}, Exile this card from your graveyard: Put two +1/+1 counters and a
  *   flying counter on target creature. Activate only as a sorcery.
  *
- * The leave-graveyard trigger reuses the batching [Triggers.CardsLeaveYourGraveyard] (fires once
+ * The leave-graveyard trigger reuses the batching `Triggers.oneOrMore(filter).leaveYourGraveyard()` (fires once
  * per event batch) gated on [Conditions.IsYourTurn] for the "during your turn" restriction — the
  * same composition as Attuned Hunter. The renew payoff puts both counter kinds on a single target
  * via two chained [Effects.AddCounters] calls; the flying counter is a keyword counter (CR 122.1c),
@@ -40,15 +41,15 @@ val KheruGoldkeeper = card("Kheru Goldkeeper") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.CardsLeaveYourGraveyard()
+        trigger = Triggers.oneOrMore(GameObjectFilter.Any).leaveYourGraveyard()
         triggerRestriction = Conditions.IsYourTurn
         effect = Effects.CreateTreasure(1)
     }
 
     renew("{2}{B}{G}{U}") {
-        val creature = target("creature", Targets.Creature)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, creature)
-            .then(Effects.AddCounters(Counters.FLYING, 1, creature))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, creature) then
+            Effects.AddCounters(CounterType.FLYING, 1, creature)
     }
 
     metadata {

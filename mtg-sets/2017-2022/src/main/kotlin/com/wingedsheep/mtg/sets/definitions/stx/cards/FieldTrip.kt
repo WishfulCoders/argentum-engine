@@ -11,8 +11,7 @@ import com.wingedsheep.sdk.scripting.effects.SearchDestination
  * Field Trip — Strixhaven: School of Mages #131 (canonical printing)
  * {2}{G} · Sorcery
  *
- * Search your library for a basic Forest card, put that card onto the battlefield tapped, then
- * shuffle.
+ * Search your library for a basic Forest card, put that card onto the battlefield tapped, then * shuffle.
  * Learn.
  *
  * `Patterns.Library.searchLibrary` is the gather → select → move pipeline: `ChooseUpTo(1)` is what

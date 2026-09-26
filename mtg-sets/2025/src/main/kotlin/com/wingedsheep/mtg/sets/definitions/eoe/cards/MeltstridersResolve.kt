@@ -1,7 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -9,7 +8,7 @@ import com.wingedsheep.sdk.scripting.CantBeBlockedByMoreThan
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Meltstrider's Resolve
@@ -26,15 +25,12 @@ val MeltstridersResolve = card("Meltstrider's Resolve") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature you control\nWhen this Aura enters, enchanted creature fights up to one target creature an opponent controls. (Each deals damage equal to its power to the other.)\nEnchanted creature gets +0/+2 and can't be blocked by more than one creature."
 
-    auraTarget = Targets.CreatureYouControl
+    auraTarget = TargetObject(filter = TargetFilter.CreatureYouControl)
 
     // ETB: enchanted creature fights up to one target creature an opponent controls
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val opponentCreature = target(
-            "creature an opponent controls",
-            TargetCreature(optional = true, filter = TargetFilter.CreatureOpponentControls)
-        )
+        trigger = Triggers.self.enters()
+        val opponentCreature = target(TargetFilter.CreatureOpponentControls, optional = true)
         effect = Effects.Fight(EffectTarget.EnchantedCreature, opponentCreature)
     }
 

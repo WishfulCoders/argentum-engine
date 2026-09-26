@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.references.Player
 
 /**
  * Hostile Investigator
@@ -31,8 +30,8 @@ val HostileInvestigator = card("Hostile Investigator") {
 
     // ETB: target opponent discards a card.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val opponent = target("target opponent", Targets.Opponent)
+        trigger = Triggers.self.enters()
+        val opponent = target(Targets.Opponent)
         effect = Patterns.Hand.discardCards(1, opponent)
     }
 
@@ -40,7 +39,7 @@ val HostileInvestigator = card("Hostile Investigator") {
     // batch ("one or more") collapses to a single fire because oncePerTurn caps
     // the ability at one Clue per turn regardless of how many discards happen.
     triggeredAbility {
-        trigger = Triggers.discards(player = Player.Each)
+        trigger = Triggers.anyPlayer.discards()
         effect = Effects.Investigate()
         oncePerTurn = true
     }

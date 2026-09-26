@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * {B}: This creature deals 1 damage to each creature and each player.
  *
  * "Each creature and each player" is two iterations, not one: a group pass over the creatures
- * (`EffectTarget.Self` = the current iteration entity) and a player pass where each iteration
+ * (`EffectTarget.IterationEntity` = the current iteration entity) and a player pass where each iteration
  * rebinds the controller (`EffectTarget.Controller`). Same idiom as Inferno.
  */
 val ThrashingWumpus = card("Thrashing Wumpus") {
@@ -30,16 +30,14 @@ val ThrashingWumpus = card("Thrashing Wumpus") {
 
     activatedAbility {
         cost = Costs.Mana("{B}")
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(
-                GroupFilter(GameObjectFilter.Creature),
-                Effects.DealDamage(1, EffectTarget.Self)
-            ),
+        effect = Effects.ForEachInGroup(
+            GroupFilter(GameObjectFilter.Creature),
+            Effects.DealDamage(1, EffectTarget.IterationEntity)
+        ) then
             Effects.ForEachPlayer(
                 Player.Each,
                 listOf(Effects.DealDamage(1, EffectTarget.Controller))
             )
-        )
     }
 
     metadata {

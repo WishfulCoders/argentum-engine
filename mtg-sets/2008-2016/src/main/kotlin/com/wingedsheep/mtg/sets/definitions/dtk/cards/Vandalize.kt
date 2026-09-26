@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.dtk.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Vandalize
@@ -31,11 +31,11 @@ val Vandalize = card("Vandalize") {
     spell {
         modal(chooseCount = 2, minChooseCount = 1) {
             mode("Destroy target artifact") {
-                val artifact = target("target", Targets.Artifact)
+                val artifact = target(TargetFilter.Artifact)
                 effect = Effects.Destroy(artifact)
             }
             mode("Destroy target land") {
-                val land = target("target", Targets.Land)
+                val land = target(TargetFilter.Land)
                 effect = Effects.Destroy(land)
             }
         }

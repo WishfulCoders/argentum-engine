@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.som.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Oxidda Scrapmelter — Scars of Mirrodin #101
@@ -12,7 +12,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * When this creature enters, destroy target artifact.
  *
- * A plain SELF-bound [Triggers.EntersBattlefield] over [Effects.Destroy]. The trigger is not
+ * A plain SELF-bound `Triggers.self.enters()` over [Effects.Destroy]. The trigger is not
  * optional and its target is not "up to", so it must pick an artifact if one is on the battlefield
  * — including one of yours when the opponent has none. `Destroy` lowers to a graveyard move flagged
  * `byDestruction`, which is what lets indestructible and regeneration see it.
@@ -26,8 +26,8 @@ val OxiddaScrapmelter = card("Oxidda Scrapmelter") {
     oracleText = "When this creature enters, destroy target artifact."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val artifact = target("target artifact", Targets.Artifact)
+        trigger = Triggers.self.enters()
+        val artifact = target(TargetFilter.Artifact)
         effect = Effects.Destroy(artifact)
     }
 

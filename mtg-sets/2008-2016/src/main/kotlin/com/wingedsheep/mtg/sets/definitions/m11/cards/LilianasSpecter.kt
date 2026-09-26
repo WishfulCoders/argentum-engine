@@ -30,7 +30,7 @@ val LilianasSpecter = card("Liliana's Specter") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Hand.eachOpponentDiscards(1)
         description = "When this creature enters, each opponent discards a card."
     }

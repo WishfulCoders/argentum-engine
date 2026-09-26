@@ -5,8 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -39,20 +37,14 @@ val ForensicResearcher = card("Forensic Researcher") {
 
     activatedAbility {
         cost = Costs.Tap
-        val permanent = target(
-            "another target permanent you control",
-            TargetPermanent(filter = TargetFilter.Permanent.youControl().copy(excludeSelf = true)),
-        )
+        val permanent = target(TargetFilter.Permanent.youControl().copy(excludeSelf = true))
         effect = Effects.Untap(permanent)
         description = "Untap another target permanent you control."
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.CollectEvidence(3))
-        val creature = target(
-            "target creature you don't control",
-            TargetCreature(filter = TargetFilter.Creature.opponentControls()),
-        )
+        val creature = target(TargetFilter.Creature.opponentControls())
         effect = Effects.Tap(creature)
         description = "Tap target creature you don't control."
     }

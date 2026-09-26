@@ -2,19 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CreateTokenCopyOfTargetEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Foggy Swamp Visions
@@ -44,26 +39,18 @@ val FoggySwampVisions = card("Foggy Swamp Visions") {
     waterbendCost(isX = true)
 
     spell {
-        target = TargetObject(
-            optional = true,
-            filter = TargetFilter.CreatureInGraveyard,
-            dynamicMaxCount = DynamicAmount.XValue,
-        )
-        effect = Effects.Composite(
-            GatherCardsEffect(source = CardSource.ChosenTargets, storeAs = "exiled"),
-            MoveCollectionEffect(
-                from = "exiled",
-                destination = CardDestination.ToZone(Zone.EXILE),
-                storeMovedAs = "exiled",
-            ),
-            ForEachInCollectionEffect(
-                collection = "exiled",
-                effect = CreateTokenCopyOfTargetEffect(
-                    target = EffectTarget.Self,
+        targets(TargetFilter.CreatureInGraveyard, optional = true, dynamicMaxCount = DynamicAmounts.xValue())
+        effect = Effects.Pipeline {
+            val exiled = gather(CardSource.ChosenTargets)
+            val exiledCards = moveTracked(exiled, CardDestination.ToZone(Zone.EXILE))
+            run(Effects.ForEachInCollection(
+                collection = exiledCards,
+                effect = Effects.CreateTokenCopyOfTarget(
+                    target = EffectTarget.IterationEntity,
                     sacrificeAtStep = Step.END,
                 ),
-            ),
-        )
+            ))
+        }
     }
 
     metadata {

@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.scripting.CrewSaddleContribution
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Defend the Rider — Aetherdrift #157
@@ -26,12 +25,9 @@ val DefendTheRider = card("Defend the Rider") {
     spell {
         modal(chooseCount = 1) {
             mode("Grant hexproof and indestructible") {
-                val permanent = target(
-                    "target permanent you control",
-                    TargetPermanent(filter = TargetFilter(GameObjectFilter.Permanent.youControl()))
-                )
-                effect = Effects.GrantKeyword(Keyword.HEXPROOF, permanent, Duration.EndOfTurn)
-                    .then(Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, permanent, Duration.EndOfTurn))
+                val permanent = target(TargetFilter(GameObjectFilter.Permanent.youControl()))
+                effect = Effects.GrantKeyword(Keyword.HEXPROOF, permanent, Duration.EndOfTurn) then
+                    Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, permanent, Duration.EndOfTurn)
             }
             mode("Create a 1/1 Pilot creature token") {
                 effect = Effects.CreateToken(

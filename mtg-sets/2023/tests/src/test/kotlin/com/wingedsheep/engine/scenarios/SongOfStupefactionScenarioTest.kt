@@ -17,7 +17,7 @@ import io.kotest.matchers.shouldBe
  *   Fathomless descent — Enchanted permanent gets -X/-0, where X is the number of
  *   permanent cards in your graveyard.
  *
- * The static power penalty is a continuously recomputed [GrantDynamicStatsEffect] on the
+ * The static power penalty is a continuously recomputed [GrantDynamicStats] on the
  * attached permanent: power is reduced by the count of permanent cards in the Aura
  * controller's graveyard (negated via `Multiply(..., -1)`), toughness untouched. Because the
  * Aura can enchant a (non-creature) Vehicle, the penalty must land on any attached permanent,

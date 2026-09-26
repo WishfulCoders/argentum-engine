@@ -30,7 +30,7 @@ val Caregiver = card("Caregiver") {
             Costs.Mana("{W}"),
             Costs.Sacrifice(GameObjectFilter.Creature)
         )
-        val t = target("any target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.PreventNextDamage(1, t)
     }
 

@@ -1,8 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -10,7 +11,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.SetBasePowerToughnessDynamicStatic
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Ajani Goldmane - {2}{W}{W}
@@ -50,10 +50,8 @@ val AjaniGoldmane = card("Ajani Goldmane") {
     loyaltyAbility(-1) {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.Composite(
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.VIGILANCE, EffectTarget.Self)
-            )
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.VIGILANCE, EffectTarget.IterationEntity)
         )
     }
 
@@ -67,8 +65,8 @@ val AjaniGoldmane = card("Ajani Goldmane") {
             imageUri = "https://cards.scryfall.io/normal/front/f/6/f669cb99-be79-413b-8266-1dfd6a15cb41.jpg?1783942843",
             staticAbilities = listOf(
                 SetBasePowerToughnessDynamicStatic(
-                    power = DynamicAmount.YourLifeTotal,
-                    toughness = DynamicAmount.YourLifeTotal
+                    power = DynamicAmounts.yourLifeTotal(),
+                    toughness = DynamicAmounts.yourLifeTotal()
                 )
             )
         )

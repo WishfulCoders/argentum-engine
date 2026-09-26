@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.renew
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sagu Pummeler
@@ -36,9 +36,9 @@ val SaguPummeler = card("Sagu Pummeler") {
     keywords(Keyword.REACH)
 
     renew("{4}{G}") {
-        val creature = target("creature", Targets.Creature)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, creature)
-            .then(Effects.AddCounters(Counters.REACH, 1, creature))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, creature) then
+            Effects.AddCounters(CounterType.REACH, 1, creature)
     }
 
     metadata {

@@ -9,7 +9,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Howling Moon
@@ -23,7 +23,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * Implementation:
  *  - The begin-combat pump targets a Wolf-or-Werewolf you control via a [TargetFilter] union
  *    (`.or`), matching Blood Mist's begin-combat targeted-pump idiom.
- *  - "Whenever an opponent casts their second spell each turn" is [Triggers.NthSpellCast] with
+ *  - "Whenever an opponent casts their second spell each turn" is `Triggers.<player>.castsNth(n, spell)` with
  *    n = 2 scoped to [Player.EachOpponent]. `Player.EachOpponent` is used deliberately rather than
  *    `Player.AnOpponent`: the engine's trigger `matchesPlayer` routes `EachOpponent` to
  *    "caster != controller", so the count is per-opponent and never fires on your own spells.
@@ -38,13 +38,10 @@ val HowlingMoon = card("Howling Moon") {
 
     // At the beginning of combat on your turn, target Wolf or Werewolf you control gets +2/+2.
     triggeredAbility {
-        trigger = Triggers.BeginCombat
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
         val wolfOrWerewolf = target(
-            "target Wolf or Werewolf you control",
-            TargetCreature(
-                filter = TargetFilter.CreatureYouControl.withSubtype(Subtype.WOLF)
-                    .or(TargetFilter.CreatureYouControl.withSubtype(Subtype.WEREWOLF)),
-            ),
+            TargetFilter.CreatureYouControl.withSubtype(Subtype.WOLF)
+                .or(TargetFilter.CreatureYouControl.withSubtype(Subtype.WEREWOLF)),
         )
         effect = Effects.ModifyStats(2, 2, wolfOrWerewolf)
         description = "At the beginning of combat on your turn, target Wolf or Werewolf you control " +
@@ -53,7 +50,7 @@ val HowlingMoon = card("Howling Moon") {
 
     // Whenever an opponent casts their second spell each turn, create a 2/2 green Wolf token.
     triggeredAbility {
-        trigger = Triggers.NthSpellCast(2, Player.EachOpponent)
+        trigger = Triggers.anOpponent.castsNth(2)
         effect = Effects.CreateToken(
             power = 2,
             toughness = 2,

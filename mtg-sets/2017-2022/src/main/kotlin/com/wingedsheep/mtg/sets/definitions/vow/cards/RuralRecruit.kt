@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * Two independent pieces:
  *  - [training] gives the keyword + the attack trigger.
- *  - An ETB [Triggers.EntersBattlefield] trigger that makes a 3/1 green Boar token. The Boar's
+ *  - An ETB `Triggers.self.enters()` trigger that makes a 3/1 green Boar token. The Boar's
  *    power (3) exceeds the Recruit's own (1), so the token is exactly the "another creature with
  *    greater power" that lets the Recruit train when they attack together.
  */
@@ -35,7 +35,7 @@ val RuralRecruit = card("Rural Recruit") {
     training()
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 3,
             toughness = 1,

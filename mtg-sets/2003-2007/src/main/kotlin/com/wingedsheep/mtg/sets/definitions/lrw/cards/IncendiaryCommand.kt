@@ -5,12 +5,9 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Incendiary Command
@@ -42,25 +39,22 @@ val IncendiaryCommand = card("Incendiary Command") {
     spell {
         modal(chooseCount = 2) {
             mode("Incendiary Command deals 4 damage to target player or planeswalker") {
-                val victim = target("damage player or planeswalker", Targets.PlayerOrPlaneswalker)
+                val victim = target(Targets.PlayerOrPlaneswalker)
                 effect = Effects.DealDamage(4, victim)
             }
             mode("Incendiary Command deals 2 damage to each creature") {
                 effect = Patterns.Group.dealDamageToAll(2, GroupFilter.AllCreatures)
             }
             mode("Destroy target nonbasic land") {
-                val land = target(
-                    "nonbasic land to destroy",
-                    TargetPermanent(filter = TargetFilter.NonbasicLand)
-                )
+                val land = target(TargetFilter.NonbasicLand)
                 effect = Effects.Destroy(land)
             }
             mode("Each player discards all the cards in their hand, then draws that many cards") {
-                effect = ForEachPlayerEffect(
+                effect = Effects.ForEachPlayer(
                     players = Player.Each,
                     effects = listOf(
                         Patterns.Hand.discardHand(),
-                        Effects.DrawCards(DynamicAmount.VariableReference("discardedHand_count"))
+                        Effects.DrawCards(Patterns.Hand.discardedHand.count)
                     )
                 )
             }

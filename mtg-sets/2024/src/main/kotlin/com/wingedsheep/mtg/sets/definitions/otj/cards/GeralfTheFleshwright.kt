@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -25,7 +24,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * entered the battlefield under your control this turn.
  *
  * - First ability: "a spell during your turn other than your first spell that turn" → the spell-cast
- *   trigger [Triggers.YouCastSpell] gated by an intervening "if" that it is your turn and you have
+ *   trigger `Triggers.you.casts()` gated by an intervening "if" that it is your turn and you have
  *   already cast a spell this turn. The triggering spell is itself counted in
  *   `spellsCastThisTurnByPlayer` at the time the cast trigger is checked (cf. Inventive Wingsmith /
  *   Outlaw Stitcher), so [Conditions.YouCastSpellsThisTurn](atLeast = 2) is true exactly for the
@@ -51,7 +50,7 @@ val GeralfTheFleshwright = card("Geralf, the Fleshwright") {
         "entered the battlefield under your control this turn."
 
     triggeredAbility {
-        trigger = Triggers.YouCastSpell
+        trigger = Triggers.you.casts()
         triggerRestriction = Conditions.All(
             Conditions.IsYourTurn,
             Conditions.YouCastSpellsThisTurn(atLeast = 2),
@@ -68,12 +67,9 @@ val GeralfTheFleshwright = card("Geralf, the Fleshwright") {
     }
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.withSubtype(Subtype.ZOMBIE).youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.withSubtype(Subtype.ZOMBIE).youControl()).enters()
         effect = Effects.AddDynamicCounters(
-            counterType = Counters.PLUS_ONE_PLUS_ONE,
+            counterType = CounterType.PLUS_ONE_PLUS_ONE,
             amount = DynamicAmounts.subtypeEnteredUnderControlThisTurn(
                 subtype = Subtype.ZOMBIE,
                 excludeTriggeringEntity = true,

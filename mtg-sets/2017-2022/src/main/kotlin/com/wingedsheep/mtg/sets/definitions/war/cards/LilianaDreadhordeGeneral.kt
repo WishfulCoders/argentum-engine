@@ -44,7 +44,7 @@ val LilianaDreadhordeGeneral = card("Liliana, Dreadhorde General") {
 
     // Whenever a creature you control dies, draw a card.
     triggeredAbility {
-        trigger = Triggers.YourCreatureDies
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).dies()
         effect = Effects.DrawCards(1)
     }
 

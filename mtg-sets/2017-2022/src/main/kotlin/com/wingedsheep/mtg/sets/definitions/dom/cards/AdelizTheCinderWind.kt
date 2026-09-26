@@ -27,7 +27,7 @@ val AdelizTheCinderWind = card("Adeliz, the Cinder Wind") {
     keywords(Keyword.FLYING, Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.YouCastInstantOrSorcery
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
         effect = Patterns.Group.modifyStatsForAll(
             power = 1,
             toughness = 1,

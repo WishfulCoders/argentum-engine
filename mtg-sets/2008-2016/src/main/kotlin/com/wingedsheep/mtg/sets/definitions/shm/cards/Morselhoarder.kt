@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.shm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddManaOfChoiceEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.values.ManaColorSet
 
 /**
@@ -37,15 +36,15 @@ val Morselhoarder = card("Morselhoarder") {
 
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.MinusOneMinusOne,
+            counterType = CounterType.MINUS_ONE_MINUS_ONE,
             count = 2,
             selfOnly = true
         )
     )
 
     activatedAbility {
-        cost = Costs.RemoveCounterFromSelf(Counters.MINUS_ONE_MINUS_ONE)
-        effect = AddManaOfChoiceEffect(ManaColorSet.AnyColor, 1)
+        cost = Costs.RemoveCounterFromSelf(CounterType.MINUS_ONE_MINUS_ONE)
+        effect = Effects.AddManaOfChoice(ManaColorSet.AnyColor, 1)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

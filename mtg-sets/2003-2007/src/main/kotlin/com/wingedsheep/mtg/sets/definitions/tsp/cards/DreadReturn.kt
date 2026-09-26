@@ -4,10 +4,10 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Dread Return
@@ -26,10 +26,7 @@ val DreadReturn = card("Dread Return") {
             "for its flashback cost. Then exile it.)"
 
     spell {
-        val card = target(
-            "target creature card from your graveyard",
-            Targets.CreatureCardInYourGraveyard,
-        )
+        val card = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.Move(card, Zone.BATTLEFIELD)
     }
 

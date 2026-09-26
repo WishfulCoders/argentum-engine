@@ -23,7 +23,7 @@ val RogueKavu = card("Rogue Kavu") {
     oracleText = "Whenever this creature attacks alone, it gets +2/+0 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.attacks(requires = setOf(AttackPredicate.Alone))
+        trigger = Triggers.self.attacks(setOf(AttackPredicate.Alone))
         effect = Effects.ModifyStats(2, 0, EffectTarget.Self)
     }
 

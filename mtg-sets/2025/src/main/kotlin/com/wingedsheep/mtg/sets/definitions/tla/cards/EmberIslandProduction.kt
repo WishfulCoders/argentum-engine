@@ -4,12 +4,10 @@ import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Supertype
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Ember Island Production
@@ -35,28 +33,26 @@ val EmberIslandProduction = card("Ember Island Production") {
 
     spell {
         effect = ModalEffect.chooseOne(
-            Mode(
+            mode("Create a token that's a copy of target creature you control, except it's not legendary and it's a 4/4 Hero in addition to its other types") {
+                val creatureYouControl = target(TargetFilter.CreatureYouControl)
                 effect = Effects.CreateTokenCopyOfTarget(
-                    target = EffectTarget.ContextTarget(0),
+                    target = creatureYouControl,
                     overridePower = 4,
                     overrideToughness = 4,
                     removedSupertypes = setOf(Supertype.LEGENDARY),
                     addedSubtypes = setOf(Subtype("Hero")),
-                ),
-                targetRequirements = listOf(TargetObject(filter = TargetFilter.CreatureYouControl)),
-                description = "Create a token that's a copy of target creature you control, except it's not legendary and it's a 4/4 Hero in addition to its other types",
-            ),
-            Mode(
+                )
+            },
+            mode("Create a token that's a copy of target creature an opponent controls, except it's not legendary and it's a 2/2 Coward in addition to its other types") {
+                val creatureOpponentControls = target(TargetFilter.CreatureOpponentControls)
                 effect = Effects.CreateTokenCopyOfTarget(
-                    target = EffectTarget.ContextTarget(0),
+                    target = creatureOpponentControls,
                     overridePower = 2,
                     overrideToughness = 2,
                     removedSupertypes = setOf(Supertype.LEGENDARY),
                     addedSubtypes = setOf(Subtype("Coward")),
-                ),
-                targetRequirements = listOf(TargetObject(filter = TargetFilter.CreatureOpponentControls)),
-                description = "Create a token that's a copy of target creature an opponent controls, except it's not legendary and it's a 2/2 Coward in addition to its other types",
-            ),
+                )
+            },
         )
     }
 

@@ -3,12 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.tla.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Glider Staff — {2}{W} Artifact — Equipment
@@ -31,8 +31,8 @@ val GliderStaff = card("Glider Staff") {
         "Equip {2}"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target("up to one target creature", Targets.UpToCreatures(1))
+        trigger = Triggers.self.enters()
+        target(TargetFilter.Creature, optional = true)
         effect = Effects.Airbend()
     }
 

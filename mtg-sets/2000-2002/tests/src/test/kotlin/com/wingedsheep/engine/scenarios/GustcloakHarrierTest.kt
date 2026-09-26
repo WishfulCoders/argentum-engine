@@ -65,7 +65,7 @@ class GustcloakHarrierTest : FunSpec({
         // Trigger fires and goes on stack. Both pass to resolve.
         driver.bothPass()
 
-        // MayEffect creates a yes/no decision. Choose yes.
+        // Effects.May creates a yes/no decision. Choose yes.
         driver.submitYesNo(attacker, true)
 
         // Harrier should be untapped (from the effect)
@@ -123,7 +123,7 @@ class GustcloakHarrierTest : FunSpec({
         // Trigger fires. Both pass to resolve.
         driver.bothPass()
 
-        // MayEffect creates a yes/no decision. Choose no.
+        // Effects.May creates a yes/no decision. Choose no.
         driver.submitYesNo(attacker, false)
 
         // Harrier should still be tapped and attacking

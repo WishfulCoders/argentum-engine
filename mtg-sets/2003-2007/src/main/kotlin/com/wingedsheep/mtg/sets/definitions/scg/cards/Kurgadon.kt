@@ -1,15 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.EventPattern.SpellCastEvent
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Kurgadon
@@ -28,15 +25,9 @@ val Kurgadon = card("Kurgadon") {
     oracleText = "Whenever you cast a creature spell with mana value 6 or greater, put three +1/+1 counters on Kurgadon."
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            SpellCastEvent(
-                spellFilter = GameObjectFilter.Creature.manaValueAtLeast(6),
-                player = Player.You
-            ),
-            TriggerBinding.ANY
-        )
-        effect = AddCountersEffect(
-            counterType = Counters.PLUS_ONE_PLUS_ONE,
+        trigger = Triggers.you.casts(GameObjectFilter.Creature.manaValueAtLeast(6))
+        effect = Effects.AddCounters(
+            counterType = CounterType.PLUS_ONE_PLUS_ONE,
             count = 3,
             target = EffectTarget.Self
         )

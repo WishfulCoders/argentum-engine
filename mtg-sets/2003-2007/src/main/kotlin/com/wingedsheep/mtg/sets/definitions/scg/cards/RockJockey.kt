@@ -29,7 +29,7 @@ val RockJockey = card("Rock Jockey") {
     }
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CantPlayLandsThisTurn()
     }
 

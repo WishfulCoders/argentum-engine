@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Fungal Plots
@@ -26,7 +25,7 @@ val FungalPlots = card("Fungal Plots") {
             Costs.Mana("{1}{G}"),
             Costs.ExileFromGraveyard(1, GameObjectFilter.Creature)
         )
-        effect = CreateTokenEffect(
+        effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
             colors = setOf(Color.GREEN),
@@ -39,8 +38,7 @@ val FungalPlots = card("Fungal Plots") {
         // "two Saprolings" is a bare tribal noun — any permanent that's a Saproling, not only a
         // creature one. See WirewoodSymbiote for the same correction.
         cost = Costs.SacrificeMultiple(2, GameObjectFilter.Permanent.withSubtype("Saproling"))
-        effect = Effects.GainLife(2)
-            .then(Effects.DrawCards(1))
+        effect = Effects.GainLife(2) then Effects.DrawCards(1)
     }
 
     metadata {

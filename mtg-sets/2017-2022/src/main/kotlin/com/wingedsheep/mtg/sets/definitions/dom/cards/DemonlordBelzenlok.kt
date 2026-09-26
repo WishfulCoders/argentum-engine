@@ -28,7 +28,7 @@ val DemonlordBelzenlok = card("Demonlord Belzenlok") {
     keywords(Keyword.FLYING, Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ExileFromTopRepeating(
             repeatIfManaValueAtLeast = 4,
             damagePerCard = 1

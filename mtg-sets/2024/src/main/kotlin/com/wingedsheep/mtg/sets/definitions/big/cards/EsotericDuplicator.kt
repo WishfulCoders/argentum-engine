@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -21,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * beginning of the next end step, create a token that's a copy of that artifact.
  * {2}, Sacrifice this artifact: Draw a card.
  *
- * The sacrifice trigger uses [Triggers.YouSacrificeOneOrMore] with an Artifact filter and ANY
+ * The sacrifice trigger uses `Triggers.you.sacrifices(filter, batch = true)` with an Artifact filter and ANY
  * binding. Per CR, "whenever you sacrifice this artifact or another artifact" includes the source
  * sacrificing itself — the engine's self-sacrifice detection now fires ANY-binding sacrifice-batch
  * triggers off the just-sacrificed permanent, so this single ability covers both "this" and
@@ -40,10 +38,10 @@ val EsotericDuplicator = card("Esoteric Duplicator") {
         "{2}, Sacrifice this artifact: Draw a card."
 
     triggeredAbility {
-        trigger = Triggers.YouSacrificeOneOrMore(GameObjectFilter.Artifact)
-        effect = MayPayManaEffect(
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Artifact, batch = true)
+        effect = Effects.MayPay(
             ManaCost.parse("{2}"),
-            CreateDelayedTriggerEffect(
+            Effects.CreateDelayedTrigger(
                 step = Step.END,
                 effect = Effects.CreateTokenCopyOfTarget(target = EffectTarget.TriggeringEntity)
             )

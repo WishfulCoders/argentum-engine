@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Tidecaller Mentor {1}{U}{B}
@@ -29,12 +28,9 @@ val TidecallerMentor = card("Tidecaller Mentor") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.CardsInGraveyardAtLeast(7)
-        val permanent = target(
-            "up to one target nonland permanent",
-            TargetPermanent(optional = true, filter = TargetFilter.NonlandPermanent)
-        )
+        val permanent = target(TargetFilter.NonlandPermanent, optional = true)
         effect = Effects.ReturnToHand(permanent)
     }
 

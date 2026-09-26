@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.Aggregation
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Peer Past the Veil
@@ -29,16 +28,13 @@ val PeerPastTheVeil = card("Peer Past the Veil") {
     oracleText = "Discard your hand. Then draw X cards, where X is the number of card types among cards in your graveyard."
 
     spell {
-        effect = Effects.Composite(
-            Patterns.Hand.discardHand(EffectTarget.Controller),
+        effect = Patterns.Hand.discardHand(EffectTarget.Controller) then
             Effects.DrawCards(
-                DynamicAmount.AggregateZone(
-                    player = Player.You,
-                    zone = Zone.GRAVEYARD,
-                    aggregation = Aggregation.DISTINCT_TYPES
-                )
+                DynamicAmounts.zone(
+                    Player.You,
+                    Zone.GRAVEYARD
+                ).distinctTypes()
             )
-        )
     }
 
     metadata {

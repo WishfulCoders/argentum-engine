@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 
 /**
  * Krovod Haunch — Murders at Karlov Manor #21
@@ -29,10 +28,10 @@ import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
  * gain 3 life" — same shape here, but it is printed on the card rather than conferred by the
  * subtype, which is why it's written out.
  *
- * The leaves-the-battlefield trigger is [Triggers.Dies] (battlefield → graveyard, SELF binding),
+ * The leaves-the-battlefield trigger is `Triggers.self.dies()` (battlefield → graveyard, SELF binding),
  * which is a superset of the sacrifice ability's own path: cashing the Haunch in for 3 life *also*
  * offers the Dogs, since sacrificing puts it into the graveyard from the battlefield. The
- * [MayPayManaEffect] models "you may pay {1}{W}. If you do" — a resolution-time optional mana
+ * [Effects.MayPay] models "you may pay {1}{W}. If you do" — a resolution-time optional mana
  * payment, not an additional cost — and nothing downstream reads the source, so the Equipment
  * already being in the graveyard when the trigger resolves is harmless.
  *
@@ -59,10 +58,10 @@ val KrovodHaunch = card("Krovod Haunch") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        effect = MayPayManaEffect(
+        trigger = Triggers.self.dies()
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{1}{W}"),
-            effect = Effects.CreateToken(
+            then = Effects.CreateToken(
                 power = 1,
                 toughness = 1,
                 colors = setOf(Color.WHITE),

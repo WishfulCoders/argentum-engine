@@ -2,12 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.fem.cards
 
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Zelyon Sword
@@ -31,8 +30,8 @@ val ZelyonSword = card("Zelyon Sword") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap)
-        val target = target("target creature", TargetCreature(filter = TargetFilter.Creature))
-        effect = ModifyStatsEffect(2, 0, target, Duration.WhileSourceTapped("this artifact"))
+        val target = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 0, target, Duration.WhileSourceTapped("this artifact"))
     }
 
     metadata {

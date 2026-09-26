@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Brave the Wilds
@@ -59,21 +58,16 @@ val BraveTheWilds = card("Brave the Wilds") {
 
         effect = searchForBasic
 
-        val land = kickerTarget(
-            "target land you control",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Land.youControl())),
-        )
-        kickerEffect = Effects.Composite(
-            Effects.BecomeCreature(
-                target = land,
-                power = 3,
-                toughness = 3,
-                keywords = setOf(Keyword.HASTE),
-                creatureTypes = setOf("Elemental"),
-                duration = Duration.Permanent,
-            ),
-            searchForBasic,
-        )
+        val land = kickerTarget(TargetFilter(GameObjectFilter.Land.youControl()))
+        kickerEffect = Effects.BecomeCreature(
+            target = land,
+            power = 3,
+            toughness = 3,
+            keywords = setOf(Keyword.HASTE),
+            creatureTypes = setOf("Elemental"),
+            duration = Duration.Permanent,
+        ) then
+            searchForBasic
     }
 
     metadata {

@@ -8,10 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -34,26 +30,14 @@ val LastMarchOfTheEnts = card("Last March of the Ents") {
     spell {
         effect = Effects.DrawCards(
             DynamicAmounts.battlefield(Player.You, GameObjectFilter.Creature).maxToughness()
-        ).then(
-            Effects.Composite(
-                listOf(
-                    GatherCardsEffect(
-                        source = CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Creature),
-                        storeAs = "creatureCards"
-                    ),
-                    SelectFromCollectionEffect(
-                        from = "creatureCards",
-                        selection = SelectionMode.ChooseAnyNumber,
-                        storeSelected = "toPlay",
-                        prompt = "Choose any number of creature cards to put onto the battlefield"
-                    ),
-                    MoveCollectionEffect(
-                        from = "toPlay",
-                        destination = CardDestination.ToZone(Zone.BATTLEFIELD, Player.You)
-                    )
-                )
+        ) then Effects.Pipeline {
+            val creatureCards = gather(CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Creature))
+            val toPlay = chooseAnyNumber(
+                from = creatureCards,
+                prompt = "Choose any number of creature cards to put onto the battlefield"
             )
-        )
+            move(toPlay, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You))
+        }
     }
 
     metadata {

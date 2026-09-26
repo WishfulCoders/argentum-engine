@@ -3,12 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.lci.cards
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Triumphant Chomp — {R}
@@ -26,10 +25,10 @@ val TriumphantChomp = card("Triumphant Chomp") {
     oracleText = "Triumphant Chomp deals damage to target creature equal to 2 or the greatest power among Dinosaurs you control, whichever is greater."
 
     spell {
-        val t = target("target creature", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.DealDamage(
-            amount = DynamicAmount.Max(
-                DynamicAmount.Fixed(2),
+            amount = DynamicAmounts.max(
+                DynamicAmounts.fixed(2),
                 DynamicAmounts.battlefield(
                     Player.You,
                     GameObjectFilter.Creature.withSubtype(Subtype.DINOSAUR),

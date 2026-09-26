@@ -26,10 +26,8 @@ val ErstwhileTrooper = card("Erstwhile Trooper") {
 
     activatedAbility {
         cost = Costs.Discard(GameObjectFilter.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 2, EffectTarget.Self),
+        effect = Effects.ModifyStats(2, 2, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
-        )
         restrictions = listOf(ActivationRestriction.OncePerTurn)
     }
 

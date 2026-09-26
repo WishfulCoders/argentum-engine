@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Recoil
@@ -20,7 +20,7 @@ val Recoil = card("Recoil") {
     oracleText = "Return target permanent to its owner's hand. Then that player discards a card."
 
     spell {
-        val t = target("target", Targets.Permanent)
+        val t = target(TargetFilter.Permanent)
         effect = Effects.ReturnToHand(t) then
                 Effects.Discard(1, EffectTarget.PlayerRef(Player.OwnerOf("target permanent")))
     }

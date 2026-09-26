@@ -3,7 +3,6 @@ package com.wingedsheep.engine.scenarios
 import com.wingedsheep.engine.core.CountersAddedEvent
 import com.wingedsheep.engine.core.SpellFizzledEvent
 import com.wingedsheep.engine.handlers.PredicateContext
-import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
@@ -11,7 +10,6 @@ import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.CounterType
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
@@ -55,7 +53,7 @@ class TargetedProliferateTest : ScenarioTestBase() {
         oracleText = "For each kind of counter on target permanent or player, give that permanent " +
             "or player another counter of that kind."
         spell {
-            val recipient = target("target permanent or player", Targets.PermanentOrPlayer)
+            val recipient = target(Targets.PermanentOrPlayer)
             effect = Effects.Proliferate(recipient)
         }
     }
@@ -79,10 +77,7 @@ class TargetedProliferateTest : ScenarioTestBase() {
         oracleText = "For each kind of counter on target artifact or player, give it another " +
             "counter of that kind."
         spell {
-            val recipient = target(
-                "target artifact or player",
-                TargetPermanentOrPlayer(permanentFilter = TargetFilter.Artifact)
-            )
+            val recipient = target(TargetPermanentOrPlayer(permanentFilter = TargetFilter.Artifact))
             effect = Effects.Proliferate(recipient)
         }
     }
@@ -95,12 +90,9 @@ class TargetedProliferateTest : ScenarioTestBase() {
         oracleText = "For each kind of counter on each of two target permanents or players, give " +
             "it another counter of that kind."
         spell {
-            val first = target("first recipient", Targets.PermanentOrPlayer)
-            val second = target("second recipient", Targets.PermanentOrPlayer)
-            effect = Effects.Composite(
-                Effects.Proliferate(first),
-                Effects.Proliferate(second),
-            )
+            val first = target(Targets.PermanentOrPlayer)
+            val second = target(Targets.PermanentOrPlayer)
+            effect = Effects.Proliferate(first) then Effects.Proliferate(second)
         }
     }
 
@@ -139,7 +131,7 @@ class TargetedProliferateTest : ScenarioTestBase() {
         keywords(Keyword.HEXPROOF)
     }
 
-    private val predicateEvaluator = PredicateEvaluator()
+    private val predicateEvaluator = services.predicateEvaluator
 
     private fun counters(game: TestGame, id: EntityId, type: CounterType): Int =
         game.state.getEntity(id)?.get<CountersComponent>()?.getCount(type) ?: 0
@@ -349,7 +341,7 @@ class TargetedProliferateTest : ScenarioTestBase() {
                     matchesHistory(game, bears) shouldBe true
                 }
                 withClue("recorded under the counter's own kind, not a different one") {
-                    matchesHistory(game, bears, counterType = Counters.STUN) shouldBe false
+                    matchesHistory(game, bears, counterType = CounterType.STUN) shouldBe false
                 }
             }
         }
@@ -622,7 +614,7 @@ class TargetedProliferateTest : ScenarioTestBase() {
     private fun matchesHistory(
         game: TestGame,
         id: EntityId,
-        counterType: String = Counters.PLUS_ONE_PLUS_ONE
+        counterType: CounterType = CounterType.PLUS_ONE_PLUS_ONE
     ): Boolean = predicateEvaluator.matches(
         game.state,
         game.state.projectedState,

@@ -28,7 +28,7 @@ val VanguardSeraph = card("Vanguard Seraph") {
     toughness = 3
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.YouGainLifeFirstTimeEachTurn
+        trigger = Triggers.you.gainsLife(true)
         effect = Patterns.Library.surveil(1)
     }
     metadata {

@@ -2,7 +2,6 @@ package com.wingedsheep.mtg.sets.definitions.dka.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
@@ -10,7 +9,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
 /**
@@ -47,12 +45,8 @@ val DiregrafCaptain = card("Diregraf Captain") {
     }
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.withSubtype(Subtype.ZOMBIE).youControl(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.OTHER,
-        )
-        val opponent = target("target opponent", Targets.Opponent)
+        trigger = Triggers.another(GameObjectFilter.Creature.withSubtype(Subtype.ZOMBIE).youControl()).dies()
+        val opponent = target(Targets.Opponent)
         effect = Effects.LoseLife(1, opponent)
     }
 

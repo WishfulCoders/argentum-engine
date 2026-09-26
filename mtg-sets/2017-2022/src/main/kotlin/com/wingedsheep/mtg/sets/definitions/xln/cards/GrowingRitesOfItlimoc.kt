@@ -3,6 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.xln.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
@@ -12,10 +13,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.effects.CardOrder
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
-import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Growing Rites of Itlimoc // Itlimoc, Cradle of the Sun (Ixalan — the card's earliest
@@ -37,7 +36,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Implementation:
  *  - ETB uses [Patterns.Library.lookAtTopRevealMatchingToHand] (count 4, [GameObjectFilter.Creature],
  *    rest to the bottom in the controller's chosen order, [CardOrder.ControllerChooses]).
- *  - End-step transform is a [Triggers.YourEndStep] ability with an intervening-if
+ *  - End-step transform is a `Triggers.you.beginningOf(Step.END)` ability with an intervening-if
  *    [Conditions.YouControlAtLeast]`(4, Creature)` → [TransformEffect].
  *  - Back's scaling mana ability is [Effects.AddMana]`(GREEN, `[DynamicAmount.AggregateBattlefield]`)`,
  *    the Gaea's Cradle idiom.
@@ -56,9 +55,9 @@ private val GrowingRitesOfItlimocFront = card("Growing Rites of Itlimoc") {
     // When Growing Rites of Itlimoc enters, look at the top four cards, reveal a creature to
     // hand, rest to the bottom in any order.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.lookAtTopRevealMatchingToHand(
-            count = DynamicAmount.Fixed(4),
+            count = 4,
             filter = GameObjectFilter.Creature,
             prompt = "You may reveal a creature card and put it into your hand",
             restOrder = CardOrder.ControllerChooses,
@@ -67,9 +66,9 @@ private val GrowingRitesOfItlimocFront = card("Growing Rites of Itlimoc") {
 
     // At the beginning of your end step, if you control four or more creatures, transform.
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.YouControlAtLeast(4, GameObjectFilter.Creature)
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
         description = "At the beginning of your end step, if you control four or more " +
             "creatures, transform Growing Rites of Itlimoc."
     }
@@ -100,7 +99,7 @@ private val ItlimocCradleOfTheSun = card("Itlimoc, Cradle of the Sun") {
         cost = Costs.Tap
         effect = Effects.AddMana(
             Color.GREEN,
-            DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Creature),
+            DynamicAmounts.creaturesYouControl(),
         )
         manaAbility = true
         timing = TimingRule.ManaAbility

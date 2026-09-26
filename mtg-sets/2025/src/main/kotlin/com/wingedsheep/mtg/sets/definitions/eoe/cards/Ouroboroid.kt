@@ -1,14 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Ouroboroid
@@ -26,20 +26,22 @@ val Ouroboroid = card("Ouroboroid") {
     oracleText = "At the beginning of combat on your turn, put X +1/+1 counters on each creature you control, where X is this creature's power."
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
         // Snapshot source power before iteration so counter gains on Ouroboroid don't
         // increase X for the remaining creatures mid-loop.
-        effect = Effects.Composite(
-            Effects.StoreNumber("ouroboroid_power", DynamicAmount.EntityProperty(EntityReference.Source, EntityNumericProperty.Power)),
-            Effects.ForEachInGroup(
+        effect = Effects.Pipeline {
+            val ouroboroidPower = storeNumber(
+                DynamicAmounts.sourcePower()
+            )
+            run(Effects.ForEachInGroup(
                 filter = GroupFilter.AllCreaturesYouControl,
                 effect = Effects.AddDynamicCounters(
-                    counterType = "+1/+1",
-                    amount = DynamicAmount.VariableReference("ouroboroid_power"),
-                    target = EffectTarget.Self
+                    counterType = CounterType.PLUS_ONE_PLUS_ONE,
+                    amount = ouroboroidPower.amount,
+                    target = EffectTarget.IterationEntity
                 )
-            )
-        )
+            ))
+        }
         description = "At the beginning of combat on your turn, put X +1/+1 counters on each creature you control, where X is this creature's power."
     }
 

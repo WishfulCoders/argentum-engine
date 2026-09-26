@@ -28,10 +28,10 @@ val WanderingMusicians = card("Wandering Musicians") {
     power = 2
     toughness = 5
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(1, 0, EffectTarget.Self)
+            Effects.ModifyStats(1, 0, EffectTarget.IterationEntity)
         )
     }
     metadata {

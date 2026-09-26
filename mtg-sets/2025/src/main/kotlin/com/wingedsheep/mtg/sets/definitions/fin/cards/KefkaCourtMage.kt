@@ -12,19 +12,10 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Kefka, Court Mage // Kefka, Ruler of Ruin
@@ -57,7 +48,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *  - The {8} ability is a mana-only, sorcery-speed activated ability. Each opponent sacrifices a
  *    permanent of *their* choice (edict — the sacrificing player chooses). Transform targets Self,
  *    so a dead Kefka simply doesn't transform.
- *  - Back "an opponent loses life during your turn" = [Triggers.AnOpponentLosesLife] gated by
+ *  - Back "an opponent loses life during your turn" = `Triggers.anOpponent.losesLife()` gated by
  *    `triggerRestriction = Conditions.IsYourTurn` (fire-time only), drawing life-lost-many cards.
  */
 private val KefkaRulerOfRuin = card("Kefka, Ruler of Ruin") {
@@ -73,10 +64,10 @@ private val KefkaRulerOfRuin = card("Kefka, Ruler of Ruin") {
 
     // Whenever an opponent loses life during your turn, you draw that many cards.
     triggeredAbility {
-        trigger = Triggers.AnOpponentLosesLife
+        trigger = Triggers.anOpponent.losesLife()
         triggerRestriction = Conditions.IsYourTurn
         effect = Effects.DrawCards(
-            DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_LIFE_LOST)
+            DynamicAmounts.triggerLifeLost()
         )
         description = "Whenever an opponent loses life during your turn, you draw that many cards."
     }
@@ -101,57 +92,39 @@ private val KefkaCourtMageFrontFace = card("Kefka, Court Mage") {
     toughness = 5
 
     // Each player discards a card; then you draw a card for each card type among those discards.
-    val discardAndDraw = Effects.Composite(
-        listOf(
-            // You discard a card.
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.HAND, Player.You),
-                storeAs = "kefkaSelfHand"
-            ),
-            SelectFromCollectionEffect(
-                from = "kefkaSelfHand",
-                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                chooser = Chooser.Controller,
-                storeSelected = "kefkaSelfDiscard",
-                prompt = "Choose a card to discard"
-            ),
-            MoveCollectionEffect(
-                from = "kefkaSelfDiscard",
-                destination = CardDestination.ToZone(Zone.GRAVEYARD),
-                moveType = MoveType.Discard
-            ),
-            // Each opponent discards a card (a single opponent in a two-player game).
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.HAND, Player.AnOpponent),
-                storeAs = "kefkaOppHand"
-            ),
-            SelectFromCollectionEffect(
-                from = "kefkaOppHand",
-                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                chooser = Chooser.Opponent,
-                storeSelected = "kefkaOppDiscard",
-                prompt = "Choose a card to discard"
-            ),
-            MoveCollectionEffect(
-                from = "kefkaOppDiscard",
-                destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.AnOpponent),
-                moveType = MoveType.Discard
-            ),
-            // Then you draw a card for each card type among cards discarded this way.
-            Effects.DrawCards(
-                DynamicAmounts.distinctCardTypesIn("kefkaSelfDiscard", "kefkaOppDiscard")
-            )
+    val discardAndDraw = Effects.Pipeline {
+        // You discard a card.
+        val kefkaSelfHand = gather(CardSource.FromZone(Zone.HAND, Player.You))
+        val kefkaSelfDiscard = chooseExactly(
+            1,
+            from = kefkaSelfHand,
+            chooser = Chooser.Controller,
+            prompt = "Choose a card to discard"
         )
-    )
+        discard(kefkaSelfDiscard)
+        // Each opponent discards a card (a single opponent in a two-player game).
+        val kefkaOppHand = gather(CardSource.FromZone(Zone.HAND, Player.AnOpponent))
+        val kefkaOppDiscard = chooseExactly(
+            1,
+            from = kefkaOppHand,
+            chooser = Chooser.Opponent,
+            prompt = "Choose a card to discard"
+        )
+        discard(kefkaOppDiscard, Player.AnOpponent)
+        // Then you draw a card for each card type among cards discarded this way.
+        run(Effects.DrawCards(
+            DynamicAmounts.distinctCardTypesIn(listOf(kefkaSelfDiscard, kefkaOppDiscard))
+        ))
+    }
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = discardAndDraw
         description = "Whenever Kefka enters, each player discards a card. Then you draw a card " +
             "for each card type among cards discarded this way."
     }
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = discardAndDraw
         description = "Whenever Kefka attacks, each player discards a card. Then you draw a card " +
             "for each card type among cards discarded this way."
@@ -161,16 +134,12 @@ private val KefkaCourtMageFrontFace = card("Kefka, Court Mage") {
     activatedAbility {
         cost = Costs.Mana("{8}")
         timing = TimingRule.SorcerySpeed
-        effect = Effects.Composite(
-            listOf(
-                Effects.Sacrifice(
-                    GameObjectFilter.Any,
-                    1,
-                    EffectTarget.PlayerRef(Player.EachOpponent)
-                ),
-                TransformEffect(EffectTarget.Self)
-            )
-        )
+        effect = Effects.Sacrifice(
+            GameObjectFilter.Any,
+            1,
+            EffectTarget.PlayerRef(Player.EachOpponent)
+        ) then
+            Effects.Transform(EffectTarget.Self)
         description = "{8}: Each opponent sacrifices a permanent of their choice. Transform " +
             "Kefka. Activate only as a sorcery."
     }

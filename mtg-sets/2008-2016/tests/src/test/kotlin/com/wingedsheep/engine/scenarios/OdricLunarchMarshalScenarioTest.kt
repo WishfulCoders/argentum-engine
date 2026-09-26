@@ -1,6 +1,5 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.mtg.sets.definitions.soi.cards.OdricLunarchMarshal
 import com.wingedsheep.sdk.core.Keyword
@@ -26,7 +25,7 @@ import io.kotest.matchers.shouldBe
  *  - and the grant must be a resolution-time snapshot, not a continuously re-evaluated condition —
  *    the printed ruling says the granted abilities "won't change even if every creature that
  *    normally had the abilities leaves the battlefield". Wiring this through `GrantKeyword`'s
- *    `condition` parameter instead of a `ConditionalEffect` would pass the first two tests and fail
+ *    `condition` parameter instead of a `Effects.If` would pass the first two tests and fail
  *    the third, which is why the third one exists.
  *
  * Also pinned: the trigger is "each combat", so it fires on the opponent's turn too.
@@ -162,8 +161,7 @@ class OdricLunarchMarshalScenarioTest : ScenarioTestBase() {
                 }
 
                 // The creature that supplied first strike dies.
-                game.state = ZoneTransitionService
-                    .moveToZone(game.state, knight, Zone.GRAVEYARD).state
+                game.state = zones.moveToZone(game.state, knight, Zone.GRAVEYARD).state
 
                 withClue("the granted keyword survives — it is not re-checked each projection") {
                     game.state.projectedState.hasKeyword(lions, Keyword.FIRST_STRIKE) shouldBe true

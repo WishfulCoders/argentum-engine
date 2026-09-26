@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -32,8 +31,8 @@ val DawnsTruce = card("Dawn's Truce") {
     typeLine = "Instant"
     oracleText = "Gift a card (You may promise an opponent a gift as you cast this spell. If you do, they draw a card before its other effects.)\nYou and permanents you control gain hexproof until end of turn. If the gift was promised, permanents you control also gain indestructible until end of turn."
 
-    val hexproofEffects = Effects.GrantHexproof(EffectTarget.Controller)
-        .then(Patterns.Group.grantKeywordToAll(Keyword.HEXPROOF, Filters.Group.permanentsYouControl))
+    val hexproofEffects = Effects.GrantHexproof(EffectTarget.Controller) then
+        Patterns.Group.grantKeywordToAll(Keyword.HEXPROOF, Filters.Group.permanentsYouControl)
 
     spell {
         effect = Patterns.Mechanic.giftSpell(
@@ -44,10 +43,10 @@ val DawnsTruce = card("Dawn's Truce") {
             ),
             // Mode 2: Gift a card — opponent draws, hexproof + indestructible until end of turn
             Mode.noTarget(
-                DrawCardsEffect(1, EffectTarget.PlayerRef(Player.ChosenOpponent))
-                    .then(hexproofEffects)
-                    .then(Patterns.Group.grantKeywordToAll(Keyword.INDESTRUCTIBLE, Filters.Group.permanentsYouControl))
-                    .then(Effects.GiftGiven()),
+                Effects.DrawCards(1, EffectTarget.PlayerRef(Player.ChosenOpponent)) then
+                    hexproofEffects then
+                    Patterns.Group.grantKeywordToAll(Keyword.INDESTRUCTIBLE, Filters.Group.permanentsYouControl) then
+                    Effects.GiftGiven(),
                 "Promise a gift — an opponent draws a card, you and permanents you control gain hexproof until end of turn, permanents you control also gain indestructible until end of turn"
             )
         )

@@ -1,23 +1,18 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /** Sita Varma's power at resolution — read off the ability's source, not the iteration entity. */
-private val SitaVarmasPower: DynamicAmount = DynamicAmount.EntityProperty(
-    EntityReference.Source,
-    EntityNumericProperty.Power
-)
+private val SitaVarmasPower: DynamicAmount = DynamicAmounts.sourcePower()
 
 /**
  * Sita Varma, Masked Racer — Aetherdrift #223
@@ -28,8 +23,8 @@ private val SitaVarmasPower: DynamicAmount = DynamicAmount.EntityProperty(
  * turn. (Activate each exhaust ability only once.)
  *
  * Order is load-bearing and matches the printed "Then": the counters land first, so the power the
- * rest of the team copies is already `2 + X`. Inside the `ForEachInGroup` body, `EffectTarget.Self`
- * is the creature being set (the iteration entity) while `EntityReference.Source` is still Sita
+ * rest of the team copies is already `2 + X`. Inside the `ForEachInGroup` body,
+ * `EffectTarget.IterationEntity` is the creature being set while `EffectTarget.Self` is still Sita
  * Varma — which is what lets one body both read her power and write each other creature's.
  *
  * `SetBasePowerAndToughness` sets Layer 7b, so each affected creature's own +1/+1 counters still
@@ -48,17 +43,16 @@ val SitaVarmaMaskedRacer = card("Sita Varma, Masked Racer") {
     activatedAbility {
         cost = Costs.Mana("{X}{G}{G}{U}")
         isExhaust = true
-        effect = Effects.Composite(
-            Effects.AddDynamicCounters(
-                Counters.PLUS_ONE_PLUS_ONE,
-                DynamicAmount.XValue,
-                EffectTarget.Self
-            ),
-            MayEffect(
+        effect = Effects.AddDynamicCounters(
+            CounterType.PLUS_ONE_PLUS_ONE,
+            DynamicAmounts.xValue(),
+            EffectTarget.Self
+        ) then
+            Effects.May(
                 Effects.ForEachInGroup(
                     filter = GroupFilter.OtherCreaturesYouControl,
                     effect = Effects.SetBasePowerAndToughness(
-                        target = EffectTarget.Self,
+                        target = EffectTarget.IterationEntity,
                         power = SitaVarmasPower,
                         toughness = SitaVarmasPower,
                         duration = Duration.EndOfTurn
@@ -66,8 +60,7 @@ val SitaVarmaMaskedRacer = card("Sita Varma, Masked Racer") {
                 ),
                 descriptionOverride = "You may have the base power and toughness of each other " +
                     "creature you control become equal to Sita Varma's power until end of turn."
-            ),
-        )
+            )
         description = "Exhaust — {X}{G}{G}{U}: Put X +1/+1 counters on Sita Varma. Then you may " +
             "have the base power and toughness of each other creature you control become equal " +
             "to Sita Varma's power until end of turn."

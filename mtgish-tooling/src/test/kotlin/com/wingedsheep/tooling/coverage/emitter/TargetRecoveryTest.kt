@@ -244,7 +244,7 @@ class TargetRecoveryTest : StringSpec({
                 """{"_Permanents":"HasACounterOfType","args":{"_CounterType":"StunCounter"}}]}""",
         )
         ctx.creatureFilterDsl(withStun) shouldBe
-            "TargetFilter(GameObjectFilter.Creature.withCounter(Counters.STUN))"
+            "TargetFilter(GameObjectFilter.Creature.withCounter(CounterType.STUN))"
     }
 
     "creatureFilterDsl declines a counter restriction whose kind it can't name exactly" {

@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 /**
  * Champions of the Perfect
  * {3}{G}
@@ -28,12 +29,12 @@ val ChampionsOfThePerfect = card("Champions of the Perfect") {
     additionalCost(Costs.additional.BeholdAndExile(filter = Filters.WithSubtype("Elf")))
 
     triggeredAbility {
-        trigger = Triggers.YouCastCreature
+        trigger = Triggers.you.casts(GameObjectFilter.Creature)
         effect = Effects.DrawCards(1)
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileToHand()
     }
 

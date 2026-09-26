@@ -1,14 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Wail of the Forgotten
@@ -49,18 +49,18 @@ val WailOfTheForgotten = card("Wail of the Forgotten") {
         modal(
             chooseCount = 3,
             minChooseCount = 1,
-            dynamicChooseCount = DynamicAmount.Conditional(
+            dynamicChooseCount = DynamicAmounts.conditional(
                 condition = Conditions.CardsInGraveyardMatchingAtLeast(8, GameObjectFilter.Permanent),
-                ifTrue = DynamicAmount.Fixed(3),
-                ifFalse = DynamicAmount.Fixed(1)
+                ifTrue = 3,
+                ifFalse = 1
             )
         ) {
             mode("Return target nonland permanent to its owner's hand") {
-                val permanent = target("target nonland permanent", Targets.NonlandPermanent)
+                val permanent = target(TargetFilter.NonlandPermanent)
                 effect = Effects.ReturnToHand(permanent)
             }
             mode("Target opponent discards a card") {
-                val opponent = target("target opponent", TargetOpponent())
+                val opponent = target(Targets.Opponent)
                 effect = Patterns.Hand.discardCards(1, opponent)
             }
             mode("Look at the top three cards of your library. Put one of them into your hand and the rest into your graveyard") {

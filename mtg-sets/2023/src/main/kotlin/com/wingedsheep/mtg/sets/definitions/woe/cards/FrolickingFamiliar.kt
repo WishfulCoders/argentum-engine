@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Frolicking Familiar // Blow Off Steam
@@ -21,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Blow Off Steam deals 1 damage to any target.
  *
  * The pump is a self-targeted [Effects.ModifyStats] (end-of-turn duration) fired by
- * [Triggers.YouCastInstantOrSorcery]. (CR 715: Adventure cards. Casting the Adventure exiles the
+ * `Triggers.you.casts(GameObjectFilter.InstantOrSorcery)`. (CR 715: Adventure cards. Casting the Adventure exiles the
  * card on resolution and lets the caster cast it as the creature spell while it remains in exile.)
  */
 val FrolickingFamiliar = card("Frolicking Familiar") {
@@ -36,7 +37,7 @@ val FrolickingFamiliar = card("Frolicking Familiar") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YouCastInstantOrSorcery
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }
 
@@ -46,7 +47,7 @@ val FrolickingFamiliar = card("Frolicking Familiar") {
         oracleText = "Blow Off Steam deals 1 damage to any target. " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            val t = target("target", Targets.Any)
+            val t = target(Targets.Any)
             effect = Effects.DealDamage(1, t)
         }
     }

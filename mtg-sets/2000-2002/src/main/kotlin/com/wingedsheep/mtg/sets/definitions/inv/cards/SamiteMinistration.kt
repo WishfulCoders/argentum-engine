@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.effects.PreventionSourceFilter
 
 /**
  * Samite Ministration
@@ -20,7 +21,8 @@ val SamiteMinistration = card("Samite Ministration") {
         "Whenever damage from a black or red source is prevented this way this turn, you gain that much life."
 
     spell {
-        effect = Effects.PreventAllDamageFromChosenSource(
+        effect = Effects.PreventDamage(
+            sources = PreventionSourceFilter.Chosen(),
             gainLifeFromColors = setOf(Color.BLACK, Color.RED)
         )
     }

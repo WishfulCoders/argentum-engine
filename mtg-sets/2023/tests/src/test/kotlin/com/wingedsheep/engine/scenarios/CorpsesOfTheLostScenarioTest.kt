@@ -1,7 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.YesNoDecision
-import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.mtg.sets.definitions.lci.cards.CorpsesOfTheLost
@@ -15,6 +14,7 @@ import com.wingedsheep.sdk.model.EntityId
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Corpses of the Lost (LCI #98): {2}{B} Enchantment
@@ -50,7 +50,7 @@ class CorpsesOfTheLostScenarioTest : FunSpec({
      * increment the descend counter (CR 700.11).
      */
     fun GameTestDriver.descend(entityId: EntityId) {
-        val result = ZoneTransitionService.moveToZone(
+        val result = zones.moveToZone(
             state = state,
             entityId = entityId,
             destinationZone = Zone.GRAVEYARD
@@ -74,7 +74,7 @@ class CorpsesOfTheLostScenarioTest : FunSpec({
         // Cast Corpses of the Lost — {2}{B}.
         val enchantment = driver.putCardInHand(player, "Corpses of the Lost")
         driver.giveMana(player, Color.BLACK, 3)
-        driver.castSpell(player, enchantment).isSuccess shouldBe true
+        driver.castSpell(player, enchantment).outcome shouldBe Outcome.Done
 
         // Resolve the enchantment spell and its ETB token-creation trigger.
         var guard = 0

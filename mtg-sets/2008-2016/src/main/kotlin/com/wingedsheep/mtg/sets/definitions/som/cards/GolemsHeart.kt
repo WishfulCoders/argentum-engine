@@ -20,7 +20,7 @@ val GolemsHeart = card("Golem's Heart") {
     oracleText = "Whenever a player casts an artifact spell, you may gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.anyPlayerCasts(GameObjectFilter.Artifact)
+        trigger = Triggers.anyPlayer.casts(GameObjectFilter.Artifact)
         optional = true
         effect = Effects.GainLife(1)
     }

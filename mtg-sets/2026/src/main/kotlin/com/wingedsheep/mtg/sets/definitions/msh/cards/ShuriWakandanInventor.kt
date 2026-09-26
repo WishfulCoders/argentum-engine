@@ -59,18 +59,12 @@ val ShuriWakandanInventor = card("Shuri, Wakandan Inventor") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
-        val becomesCopy = target(
-            "target artifact you control",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Artifact.youControl())),
-        )
-        val copySource = target(
-            "a second target artifact you control",
-            TargetOther(
+        val becomesCopy = target(TargetFilter(GameObjectFilter.Artifact.youControl()))
+        val copySource = target(TargetOther(
                 baseRequirement = TargetObject(
                     filter = TargetFilter(GameObjectFilter.Artifact.youControl()),
                 ),
-            ),
-        )
+            ))
         effect = Effects.EachPermanentBecomesCopyOfTarget(
             target = copySource,
             affected = becomesCopy,

@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  * you may draw a card.
  * Infusion — This creature gets +2/+0 as long as you gained life this turn.
  *
- * The targeting trigger is the self-bound [Triggers.BecomesTargetByOpponent] with
+ * The targeting trigger is the self-bound `Triggers.self.becomesTarget(byOpponent = true)` with
  * `optional = true` for the "you may" draw (Cactarantula idiom). Infusion is an ability
  * word (no rules meaning, CR 207.2c) — the +2/+0 is a conditional self-buff static gated
  * on [Conditions.YouGainedLifeThisTurn], scoped to this creature via [GroupFilter.source].
@@ -37,7 +37,7 @@ val TenuredConcocter = card("Tenured Concocter") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.BecomesTargetByOpponent
+        trigger = Triggers.self.becomesTarget(byOpponent = true)
         optional = true
         effect = Effects.DrawCards(1)
     }

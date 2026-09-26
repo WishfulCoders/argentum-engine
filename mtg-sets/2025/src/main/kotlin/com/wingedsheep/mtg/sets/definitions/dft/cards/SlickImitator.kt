@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.dft.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.maxSpeed
 import com.wingedsheep.sdk.dsl.startYourEngines
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Slick Imitator
@@ -36,7 +36,7 @@ val SlickImitator = card("Slick Imitator") {
     maxSpeed {
         activatedAbility {
             cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeSelf)
-            val spell = target("target spell you control", Targets.SpellYouControl)
+            val spell = target(TargetFilter.SpellOnStack.youControl())
             effect = Effects.CopyTargetSpell(spell)
             // `maxSpeed { }` prepends "Max speed — "; the auto-rendered label would otherwise
             // read the bound variable name mid-sentence.

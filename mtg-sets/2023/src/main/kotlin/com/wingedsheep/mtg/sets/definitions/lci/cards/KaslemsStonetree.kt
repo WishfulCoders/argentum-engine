@@ -11,12 +11,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Kaslem's Stonetree // Kaslem's Strider (CR 702.167, The Lost Caverns of Ixalan)
@@ -59,33 +54,19 @@ private val KaslemsStonetreeFront = card("Kaslem's Stonetree") {
     // ETB: look at the top six, optionally put a land onto the battlefield tapped,
     // rest to the bottom of the library in a random order.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(6)),
-                    storeAs = "looked"
-                ),
-                SelectFromCollectionEffect(
-                    from = "looked",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    filter = GameObjectFilter.Land,
-                    storeSelected = "kept",
-                    storeRemainder = "rest",
-                    prompt = "You may put a land card onto the battlefield tapped",
-                    showAllCards = true
-                ),
-                MoveCollectionEffect(
-                    from = "kept",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped)
-                ),
-                MoveCollectionEffect(
-                    from = "rest",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
-                    order = CardOrder.Random
-                )
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val looked = gather(CardSource.TopOfLibrary(6))
+            val (kept, rest) = chooseUpToSplit(
+                1,
+                from = looked,
+                filter = GameObjectFilter.Land,
+                prompt = "You may put a land card onto the battlefield tapped",
+                showAllCards = true
             )
-        )
+            move(kept, CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped))
+            toLibraryBottom(rest, order = CardOrder.Random)
+        }
     }
 
     craft(filter = CaveFilter, cost = "{5}{G}", materialDescription = "Cave", minCount = 1, maxCount = 1)

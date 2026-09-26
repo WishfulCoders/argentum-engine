@@ -23,7 +23,7 @@ val SenateGriffin = card("Senate Griffin") {
 
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Scry(1)
     }
 

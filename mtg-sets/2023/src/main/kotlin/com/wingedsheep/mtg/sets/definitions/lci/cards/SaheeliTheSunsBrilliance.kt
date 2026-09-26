@@ -37,14 +37,11 @@ val SaheeliTheSunsBrilliance = card("Saheeli, the Sun's Brilliance") {
     // modeling Molten Duplication / The Jolly Balloon Man use). No sorcery-speed clause.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{U}{R}"), Costs.Tap)
-        val t = target(
-            "another target creature or artifact you control",
-            TargetOther(
+        val t = target(TargetOther(
                 baseRequirement = TargetObject(
                     filter = TargetFilter(GameObjectFilter.CreatureOrArtifact.youControl())
                 )
-            )
-        )
+            ))
         effect = Effects.CreateTokenCopyOfTarget(
             target = t,
             addCardTypes = setOf("ARTIFACT"),

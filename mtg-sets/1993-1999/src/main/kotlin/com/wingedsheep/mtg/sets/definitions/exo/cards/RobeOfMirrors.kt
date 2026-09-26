@@ -5,10 +5,11 @@
 package com.wingedsheep.mtg.sets.definitions.exo.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -23,7 +24,7 @@ val RobeOfMirrors = card("Robe of Mirrors") {
     colorIdentity = "U"
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature (Target a creature as you cast this. This card enters attached to that creature.)\nEnchanted creature has shroud. (It can't be the target of spells or abilities.)"
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
     staticAbility {
         ability = GrantKeyword(Keyword.SHROUD)
     }

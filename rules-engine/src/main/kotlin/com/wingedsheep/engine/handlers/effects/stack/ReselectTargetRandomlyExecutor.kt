@@ -26,12 +26,12 @@ import kotlin.reflect.KClass
  * If it has exactly one target, finds all legal targets and randomly picks one.
  * If it has zero or multiple targets, does nothing.
  */
-class ReselectTargetRandomlyExecutor : EffectExecutor<ReselectTargetRandomlyEffect> {
+class ReselectTargetRandomlyExecutor(
+    private val predicateEvaluator: PredicateEvaluator,
+    private val targetFinder: TargetFinder
+) : EffectExecutor<ReselectTargetRandomlyEffect> {
 
     override val effectType: KClass<ReselectTargetRandomlyEffect> = ReselectTargetRandomlyEffect::class
-
-    private val predicateEvaluator = PredicateEvaluator()
-    private val targetFinder = TargetFinder()
 
     override fun execute(
         state: GameState,

@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
@@ -15,6 +14,8 @@ import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.Duration
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Tests for [Duration.WhileYouControlSource] — the "for as long as you control this [source]"
@@ -42,7 +43,7 @@ class WhileYouControlSourceDurationTest : FunSpec({
         oracleText = "{T}: Gain control of target creature for as long as you control this creature."
         activatedAbility {
             cost = Costs.Tap
-            val t = target("creature", Targets.Creature)
+            val t = target(TargetFilter.Creature)
             effect = Effects.GainControl(t, Duration.WhileYouControlSource("Source Control Stealer"))
         }
     }
@@ -54,7 +55,7 @@ class WhileYouControlSourceDurationTest : FunSpec({
         typeLine = "Sorcery"
         oracleText = "Gain control of target permanent until end of turn."
         spell {
-            val t = target("permanent", Targets.Permanent)
+            val t = target(TargetFilter.Permanent)
             effect = Effects.GainControl(t, Duration.EndOfTurn)
         }
     }
@@ -81,7 +82,7 @@ class WhileYouControlSourceDurationTest : FunSpec({
                 targets = listOf(com.wingedsheep.engine.state.components.stack.ChosenTarget.Permanent(target))
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         bothPass()
         return stealer
     }
@@ -183,6 +184,7 @@ class WhileYouControlSourceDurationTest : FunSpec({
 
         // Move the stealer off the battlefield directly to its graveyard, mirroring a removal spell.
         val moved = com.wingedsheep.engine.handlers.effects.ZoneMovementUtils.moveCardToZone(
+            driver.zones,
             driver.state,
             stealer,
             com.wingedsheep.sdk.core.Zone.GRAVEYARD

@@ -12,14 +12,8 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.SetBasePowerToughnessDynamicStatic
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Bonny Pall, Clearcutter {3}{G}{U}{U}
@@ -55,9 +49,9 @@ val BonnyPallClearcutter = card("Bonny Pall, Clearcutter") {
 
     // When Bonny Pall enters, create Beau (a legendary blue Ox with a CDA P/T).
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreateTokenEffect(
-            count = DynamicAmount.Fixed(1),
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateToken(
+            count = 1,
             power = 0,
             toughness = 0,
             colors = setOf(Color.BLUE),
@@ -78,27 +72,19 @@ val BonnyPallClearcutter = card("Bonny Pall, Clearcutter") {
     // Whenever you attack, draw a card, then you may put a land card from your hand or
     // graveyard onto the battlefield.
     triggeredAbility {
-        trigger = Triggers.YouAttack
-        effect = Effects.Composite(
-            Effects.DrawCards(1),
-            GatherCardsEffect(
-                source = CardSource.FromMultipleZones(
+        trigger = Triggers.you.attacks()
+        effect = Effects.Pipeline {
+            run(Effects.DrawCards(1))
+            val bonnyPallLands = gather(
+                CardSource.FromMultipleZones(
                     zones = listOf(Zone.HAND, Zone.GRAVEYARD),
                     player = Player.You,
                     filter = GameObjectFilter.Land
-                ),
-                storeAs = "bonnyPallLands"
-            ),
-            SelectFromCollectionEffect(
-                from = "bonnyPallLands",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "bonnyPallLandToPlay"
-            ),
-            MoveCollectionEffect(
-                from = "bonnyPallLandToPlay",
-                destination = CardDestination.ToZone(Zone.BATTLEFIELD)
+                )
             )
-        )
+            val bonnyPallLandToPlay = chooseUpTo(1, from = bonnyPallLands)
+            move(bonnyPallLandToPlay, CardDestination.ToZone(Zone.BATTLEFIELD))
+        }
     }
 
     metadata {

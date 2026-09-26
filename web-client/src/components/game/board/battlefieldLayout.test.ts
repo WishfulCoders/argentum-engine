@@ -28,6 +28,18 @@ const row = (count: number, tapped = 0, stackedExtra = 0): RowStats => ({ count,
 const board = (front: RowStats, back: RowStats): BoardStats => ({ front, back })
 
 describe('solveSlotLayout', () => {
+  it('keeps roomy spacing while cards are comfortable, and compacts it on a crowded board', () => {
+    expect(solveSlotLayout(SLOT_W, SLOT_H, board(row(3), row(5)), DESKTOP).compact).toBe(false)
+    // A three-player overview cell: 805 x 221, 20 creatures over 9 lands.
+    const cell = board(row(20), row(9))
+    const crowded = solveSlotLayout(805, 221, cell, DESKTOP)
+    expect(crowded.compact).toBe(true)
+    expect(slotHeightNeeded(cell, crowded.frontLines, crowded.backLines, crowded.cardWidth, DESKTOP, true)).toBeLessThanOrEqual(221)
+    // Budgeted with roomy spacing (divider, row padding, breathing gap) the same card would not fit.
+    const fullDivider = slotHeightNeeded(cell, crowded.frontLines, crowded.backLines, crowded.cardWidth, DESKTOP, false)
+    expect(fullDivider).toBeGreaterThan(221)
+  })
+
   it('an empty front row costs no line: lands-only grows to one tall line', () => {
     const layout = solveSlotLayout(SLOT_W, SLOT_H, board(EMPTY_ROW, row(1)), DESKTOP)
     expect(layout.frontLines).toBe(0)

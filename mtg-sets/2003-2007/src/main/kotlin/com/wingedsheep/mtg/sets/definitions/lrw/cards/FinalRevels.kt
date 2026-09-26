@@ -31,13 +31,13 @@ val FinalRevels = card("Final Revels") {
             mode("All creatures get +2/+0 until end of turn") {
                 effect = Effects.ForEachInGroup(
                     GroupFilter(GameObjectFilter.Creature),
-                    Effects.ModifyStats(2, 0, EffectTarget.Self)
+                    Effects.ModifyStats(2, 0, EffectTarget.IterationEntity)
                 )
             }
             mode("All creatures get -0/-2 until end of turn") {
                 effect = Effects.ForEachInGroup(
                     GroupFilter(GameObjectFilter.Creature),
-                    Effects.ModifyStats(0, -2, EffectTarget.Self)
+                    Effects.ModifyStats(0, -2, EffectTarget.IterationEntity)
                 )
             }
         }

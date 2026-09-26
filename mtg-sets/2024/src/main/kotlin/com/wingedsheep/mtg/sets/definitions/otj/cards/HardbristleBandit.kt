@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * The mana ability is a [Costs.Tap] / [Effects.AddAnyColorMana] activated ability (manaAbility = true).
  * The crime trigger untaps this creature ([Effects.Untap] on [EffectTarget.Self]) and is limited to
  * one trigger per turn via `oncePerTurn`. The crime-this-turn tracker is read at the trigger's emit
- * site by the engine's `CrimeDetector`; this card only consumes [Triggers.YouCommitCrime].
+ * site by the engine's `CrimeDetector`; this card only consumes `Triggers.you.commitsCrime()`.
  */
 val HardbristleBandit = card("Hardbristle Bandit") {
     manaCost = "{1}{G}"
@@ -39,7 +39,7 @@ val HardbristleBandit = card("Hardbristle Bandit") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YouCommitCrime
+        trigger = Triggers.you.commitsCrime()
         oncePerTurn = true
         effect = Effects.Untap(EffectTarget.Self)
         description = "Whenever you commit a crime, untap this creature. This ability triggers only once each turn."

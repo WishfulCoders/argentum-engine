@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Costs
 
 /**
@@ -26,17 +25,14 @@ val ScroungeForEternity = card("Scrounge for Eternity") {
     additionalCost(Costs.additional.SacrificePermanent(GameObjectFilter.Artifact.or(GameObjectFilter.Creature)))
 
     spell {
-        val graveyardTarget = target("creature or Spacecraft card with mana value 5 or less from your graveyard", TargetObject(
-            filter = TargetFilter( 
+        val graveyardTarget = target(
+            TargetFilter( 
                 GameObjectFilter.Companion.Creature.ownedByYou().manaValueAtMost(5).or(GameObjectFilter.Companion.Permanent.withSubtype("Spacecraft").ownedByYou().manaValueAtMost(5)),
                 zone = Zone.GRAVEYARD
-            )
-        ))
+            ),
+        )
 
-        effect = Effects.Composite(listOf(
-            Effects.PutOntoBattlefield(graveyardTarget),
-            Effects.CreateLander()
-        ))
+        effect = Effects.PutOntoBattlefield(graveyardTarget) then Effects.CreateLander()
     }
 
     metadata {

@@ -43,7 +43,7 @@ val FaerieSnoop = card("Faerie Snoop") {
     disguise = "{1}{U/B}{U/B}"
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
+        trigger = Triggers.self.turnedFaceUp()
         effect = Patterns.Library.lookAtTopAndKeep(count = 2, keepCount = 1)
         description = "When this creature is turned face up, look at the top two cards of your " +
             "library. Put one into your hand and the other into your graveyard."

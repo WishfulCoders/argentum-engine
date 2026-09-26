@@ -40,9 +40,9 @@ jobs:
           - name: server            # Spring Boot integration tests; compiles the full module graph
             tasks: ":game-server:test"
           - name: content           # SDK + card definitions + AI advisors
-            tasks: ":mtg-sdk:test :mtg-sets:test :ai:test :mtg-search:test"
-          - name: tools             # gym RL env + mtgish coverage tooling
-            tasks: ":gym:test :gym-server:test :gym-trainer:test :mtgish-tooling:test"
+            tasks: ":mtg-sdk:test :mtg-sdk-tooling:test :mtg-sets:test :ai:test :mtg-search:test"
+          - name: tools             # gym RL env (mtgish tooling is legacy and not gated in CI)
+            tasks: ":gym:test :gym-server:test :gym-trainer:test"
     name: test (${{ matrix.name }})
     runs-on: ubuntu-latest
     env:

@@ -1,8 +1,11 @@
 package com.wingedsheep.engine.handlers.effects.zones
 
+import com.wingedsheep.engine.handlers.TargetFinder
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.LibraryShuffledEvent
 import com.wingedsheep.engine.core.ZoneChangeEvent
 import com.wingedsheep.engine.handlers.EffectContext
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.state.ComponentContainer
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
@@ -24,15 +27,19 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 class MoveToZoneEffectExecutorTest : FunSpec({
 
     val cardRegistry = com.wingedsheep.engine.registry.CardRegistry()
-    // None of the cases below use a card definition carrying an OnEnterRunEffect, so the
+    val zones = ZoneTransitionService(cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
+    // None of the cases below use a card definition carrying an OnEnterRun, so the
     // entering-permanent recursion must never fire; throwing makes that explicit.
     val executor = MoveToZoneEffectExecutor(
+        zones,
         cardRegistry,
-        effectExecutor = { _, _, _ -> error("no OnEnterRunEffect expected in this test") }
+        effectExecutor = { _, _, _ -> error("no OnEnterRun expected in this test") },
+        targetFinder = TargetFinder(PredicateEvaluator(cardRegistry = null))
     )
 
     val playerId = EntityId.generate()
@@ -94,7 +101,7 @@ class MoveToZoneEffectExecutorTest : FunSpec({
         )
 
         val result = executor.execute(state, effect, context(cardId, playerId))
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         val graveyardZone = ZoneKey(playerId, Zone.GRAVEYARD)
         result.state.getZone(graveyardZone) shouldContain cardId
@@ -117,7 +124,7 @@ class MoveToZoneEffectExecutorTest : FunSpec({
         )
 
         val result = executor.execute(state, effect, context(cardId, playerId))
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         val handZone = ZoneKey(playerId, Zone.HAND)
         result.state.getZone(handZone) shouldContain cardId
@@ -136,7 +143,7 @@ class MoveToZoneEffectExecutorTest : FunSpec({
         )
 
         val result = executor.execute(state, effect, context(cardId, playerId))
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         val exileZone = ZoneKey(playerId, Zone.EXILE)
         result.state.getZone(exileZone) shouldContain cardId
@@ -153,7 +160,7 @@ class MoveToZoneEffectExecutorTest : FunSpec({
         )
 
         val result = executor.execute(state, effect, context(cardId, playerId))
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         val libraryZone = ZoneKey(playerId, Zone.LIBRARY)
         val library = result.state.getZone(libraryZone)
@@ -176,7 +183,7 @@ class MoveToZoneEffectExecutorTest : FunSpec({
         )
 
         val result = executor.execute(state, effect, context(cardId, playerId))
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         val library = result.state.getZone(libraryZone)
         library.last() shouldBe cardId
@@ -194,7 +201,7 @@ class MoveToZoneEffectExecutorTest : FunSpec({
         )
 
         val result = executor.execute(state, effect, context(cardId, playerId))
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         val libraryZone = ZoneKey(playerId, Zone.LIBRARY)
         result.state.getZone(libraryZone) shouldContain cardId
@@ -219,7 +226,7 @@ class MoveToZoneEffectExecutorTest : FunSpec({
         )
 
         val result = executor.execute(state, effect, ctx)
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         val battlefieldZone = ZoneKey(playerId, Zone.BATTLEFIELD)
         result.state.getZone(battlefieldZone) shouldContain cardId
@@ -240,7 +247,7 @@ class MoveToZoneEffectExecutorTest : FunSpec({
         )
 
         val result = executor.execute(state, effect, context(cardId, playerId))
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         val graveyardZone = ZoneKey(playerId, Zone.GRAVEYARD)
         result.state.getZone(graveyardZone) shouldContain cardId
@@ -260,7 +267,7 @@ class MoveToZoneEffectExecutorTest : FunSpec({
         )
 
         val result = executor.execute(state, effect, context(cardId, playerId))
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         // Card stays on battlefield
         val battlefieldZone = ZoneKey(playerId, Zone.BATTLEFIELD)
@@ -280,7 +287,7 @@ class MoveToZoneEffectExecutorTest : FunSpec({
         )
 
         val result = executor.execute(state, effect, context(cardId, playerId))
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         val entity = result.state.getEntity(cardId)!!
         entity.get<ControllerComponent>() shouldBe null

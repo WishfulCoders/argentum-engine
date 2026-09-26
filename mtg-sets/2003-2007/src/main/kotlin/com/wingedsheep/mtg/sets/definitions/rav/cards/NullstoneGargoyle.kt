@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.rav.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -9,7 +10,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Nullstone Gargoyle — Ravnica: City of Guilds #266
@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Whenever the first noncreature spell of a turn is cast, counter that spell.
  *
  * "The first noncreature spell **of a turn**" is a per-turn count across every player, which is
- * why this is not `Triggers.NthSpellCast(1, …)`: that event counts the *caster's* own history, so
+ * why this is not `Triggers.player(…).castsNth(1)`: that event counts the *caster's* own history, so
  * the second player's first noncreature spell of the turn would also trigger it. Instead the
  * trigger is the plain "a player casts a noncreature spell" event with a `triggerRestriction`
  * that reads the whole table's cast history — `SpellsCastThisTurn(Player.Each, Noncreature)`
@@ -43,11 +43,11 @@ val NullstoneGargoyle = card("Nullstone Gargoyle") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.anyPlayerCasts(GameObjectFilter.Noncreature)
+        trigger = Triggers.anyPlayer.casts(GameObjectFilter.Noncreature)
         triggerRestriction = Conditions.CompareAmounts(
-            DynamicAmount.SpellsCastThisTurn(player = Player.Each, filter = GameObjectFilter.Noncreature),
+            DynamicAmounts.spellsCastThisTurn(player = Player.Each, filter = GameObjectFilter.Noncreature),
             ComparisonOperator.EQ,
-            DynamicAmount.Fixed(1),
+            1,
         )
         effect = Effects.CounterTriggeringSpell()
         description = "Whenever the first noncreature spell of a turn is cast, counter that spell."

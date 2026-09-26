@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -22,7 +21,7 @@ val LayWaste = card("Lay Waste") {
     oracleText = "Destroy target land.\nCycling {2}"
 
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter.Land))
+        val t = target(TargetFilter.Land)
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
 

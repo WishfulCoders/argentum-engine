@@ -1,14 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBeBlockedBy
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Cynical Loner
@@ -21,10 +22,10 @@ import com.wingedsheep.sdk.scripting.effects.SearchDestination
  * search your library for a card, put it into your graveyard, then shuffle.
  *
  * "Survival" is an ability word (no rules meaning) — modeled as a postcombat-main-phase trigger
- * ([Triggers.YourPostcombatMain]) with an intervening-if ([Conditions.SourceIsTapped], CR 603.4 —
+ * (`Triggers.you.beginningOf(Step.POSTCOMBAT_MAIN)`) with an intervening-if ([Conditions.SourceIsTapped], CR 603.4 —
  * checked both when it would trigger and on resolution). The search is "for a card" (any card,
  * [GameObjectFilter.Any]) to the graveyard, and is optional ("you may"), so it's wrapped in a
- * [MayEffect]; when you don't search, no shuffle happens. The unblockable-by clause is the unified
+ * [Effects.May]; when you don't search, no shuffle happens. The unblockable-by clause is the unified
  * [CantBeBlockedBy] static over the Glimmer subtype.
  */
 val CynicalLoner = card("Cynical Loner") {
@@ -44,9 +45,9 @@ val CynicalLoner = card("Cynical Loner") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YourPostcombatMain
+        trigger = Triggers.you.beginningOf(Step.POSTCOMBAT_MAIN)
         interveningIf = Conditions.SourceIsTapped
-        effect = MayEffect(
+        effect = Effects.May(
             Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.Any,
                 destination = SearchDestination.GRAVEYARD,

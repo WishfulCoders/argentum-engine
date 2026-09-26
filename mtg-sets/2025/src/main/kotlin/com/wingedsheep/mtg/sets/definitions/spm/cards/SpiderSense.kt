@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.webSlinging
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Spider-Sense — Marvel's Spider-Man #46
@@ -30,7 +31,7 @@ val SpiderSense = card("Spider-Sense") {
     webSlinging("{U}")
 
     spell {
-        val t = target("target instant spell, sorcery spell, or triggered ability", Targets.InstantSorceryOrTriggeredAbility)
+        val t = target(TargetFilter.InstantSorcerySpellOrTriggeredAbilityOnStack)
         effect = Effects.CounterSpellOrAbility()
     }
 

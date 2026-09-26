@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Sylvan Bounty
@@ -28,7 +28,7 @@ val SylvanBounty = card("Sylvan Bounty") {
         "card, reveal it, put it into your hand, then shuffle.)"
 
     spell {
-        val t = target("target", TargetPlayer())
+        val t = target(Targets.Player)
         effect = Effects.GainLife(8, t)
     }
 

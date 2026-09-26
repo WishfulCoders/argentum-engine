@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.conditions.PutCounterKindOnCreatureThisTurn
 import com.wingedsheep.sdk.scripting.conditions.YouWereAttackedThisStep
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.Conditions as SdkConditions
 
 /**
@@ -179,7 +179,7 @@ object Conditions {
         // "Whenever a player plays a land or casts a spell, **if it shares a card type with the
         // exiled card**, …" — the Crimson Vow cemetery cycle. The pronoun is the object the trigger
         // just reported (a played land or a cast spell), and "the exiled card" is the CR 607
-        // imprint anaphor `EntityReference.LinkedExiledCard` — the same handle Mirrodin's imprint
+        // imprint anaphor `EffectTarget.LinkedExiledCard` — the same handle Mirrodin's imprint
         // payoffs read. So the whole clause is one `EntityMatches` over a one-predicate filter, and
         // there is nothing in it to slot: neither side of the comparison is a noun phrase the text
         // varies. A card that compared some *other* characteristic with the exiled card ("shares a
@@ -189,7 +189,7 @@ object Conditions {
         constant(
             "it shares a card type with the exiled card",
             SdkConditions.TriggeringSpellMatches(
-                GameObjectFilter.Any.sharingCardTypeWith(EntityReference.LinkedExiledCard()),
+                GameObjectFilter.Any.sharingCardTypeWith(EffectTarget.LinkedExiledCard()),
             ),
         ),
         constant("it's bargained", SdkConditions.WasBargained),

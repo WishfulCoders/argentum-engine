@@ -1,17 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.SelectionRestriction
 import com.wingedsheep.sdk.scripting.references.Player
 
@@ -38,38 +31,30 @@ val DestinedConfrontation = card("Destined Confrontation") {
         "less, then sacrifices all other creatures they control."
 
     spell {
-        effect = ForEachPlayerEffect(
+        effect = Effects.ForEachPlayer(
             players = Player.Each,
-            effects = listOf(
+            Effects.Pipeline {
                 // 1. Gather the creatures this player controls.
-                GatherCardsEffect(
-                    source = CardSource.ControlledPermanents(
+                val creatures = gather(
+                    CardSource.ControlledPermanents(
                         player = Player.You,
                         filter = GameObjectFilter.Creature
-                    ),
-                    storeAs = "creatures"
-                ),
+                    )
+                )
                 // 2. This player keeps any number with total power 4 or less; the rest are the remainder.
-                SelectFromCollectionEffect(
-                    from = "creatures",
-                    selection = SelectionMode.ChooseAnyNumber,
+                val (_, sacrificed) = chooseAnyNumberSplit(
+                    from = creatures,
                     restrictions = listOf(SelectionRestriction.TotalPowerAtMost(4)),
-                    storeSelected = "kept",
-                    storeRemainder = "sacrificed",
                     selectedLabel = "Keep",
                     remainderLabel = "Sacrifice",
                     prompt = "Choose any number of creatures you control with total power 4 or less. " +
                         "The rest are sacrificed.",
                     useTargetingUI = true,
                     alwaysPrompt = true
-                ),
-                // 3. Sacrifice all the creatures this player did not keep.
-                MoveCollectionEffect(
-                    from = "sacrificed",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD),
-                    moveType = MoveType.Sacrifice
                 )
-            )
+                // 3. Sacrifice all the creatures this player did not keep.
+                sacrifice(sacrificed)
+            }
         )
     }
 

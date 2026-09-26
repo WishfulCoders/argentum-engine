@@ -35,7 +35,7 @@ val BloodtitheCollector = card("Bloodtithe Collector") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.OpponentLostLifeThisTurn
         effect = Effects.EachOpponentDiscards(1)
         description = "When this creature enters, if an opponent lost life this turn, each opponent " +

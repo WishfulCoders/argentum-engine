@@ -3,7 +3,7 @@
 .page {
   position: fixed;
   inset: 0;
-  background: var(--bg-canvas, #15171c);
+  background: var(--bg-canvas, #12131b);
   color: var(--text-primary);
   display: grid;
   grid-template-columns: 260px 1fr 340px;
@@ -20,13 +20,16 @@
   align-items: center;
   gap: var(--space-3);
   padding: 0 var(--space-4);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01));
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
 }
 
 .title {
-  font-size: 1rem;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
   font-weight: 600;
+  letter-spacing: 0.01em;
   color: var(--text-primary);
   margin: 0;
 }
@@ -36,17 +39,20 @@
 }
 
 .iconButton {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--text-secondary);
-  border-radius: var(--radius-sm);
-  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  padding: 5px var(--space-3);
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
-.iconButton:hover {
-  background: rgba(255, 255, 255, 0.06);
+.iconButton:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.18);
   color: var(--text-primary);
 }
 
@@ -1590,10 +1596,11 @@
 }
 
 .secondaryButton {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.03);
   color: var(--text-secondary);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast), color var(--transition-fast);
   padding: 8px 12px;
   cursor: pointer;
   font-size: 0.85rem;

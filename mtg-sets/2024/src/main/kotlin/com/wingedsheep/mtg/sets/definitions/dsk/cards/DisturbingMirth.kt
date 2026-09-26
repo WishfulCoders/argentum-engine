@@ -5,10 +5,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.SelectTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
@@ -27,7 +24,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  * cards" payoff run. Modelled with [ReflexiveTriggerEffect] (optional sacrifice action, untargeted
  * draw payoff) — the same shape as Treetop Sentries / Unscrupulous Contractor.
  *
- * Second ability: the standard [Triggers.Sacrificed] SELF trigger ("when you sacrifice this"),
+ * Second ability: the standard `Triggers.self.isSacrificed()` SELF trigger ("when you sacrifice this"),
  * reusing the shared [Patterns.Library.manifestDread] recipe (CR 701.62b).
  */
 val DisturbingMirth = card("Disturbing Mirth") {
@@ -41,19 +38,16 @@ val DisturbingMirth = card("Disturbing Mirth") {
         "its mana cost if it's a creature card.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ReflexiveTriggerEffect(
-            action = Effects.Composite(
-                listOf(
-                    SelectTargetEffect(
-                        requirement = TargetObject(
-                            filter = TargetFilter.CreatureOrEnchantment.youControl().other()
-                        ),
-                        storeAs = "permanentToSacrifice"
-                    ),
-                    Effects.SacrificeTarget(EffectTarget.PipelineTarget("permanentToSacrifice"))
+        trigger = Triggers.self.enters()
+        effect = Effects.ReflexiveTrigger(
+            action = Effects.Pipeline {
+                val permanentToSacrifice = selectTarget(
+                    TargetObject(
+                        filter = TargetFilter.CreatureOrEnchantment.youControl().other()
+                    )
                 )
-            ),
+                run(Effects.SacrificeTarget(permanentToSacrifice.asTarget))
+            },
             optional = true,
             reflexiveEffect = Effects.DrawCards(2),
             descriptionOverride = "You may sacrifice another enchantment or creature. If you do, draw two cards."
@@ -63,7 +57,7 @@ val DisturbingMirth = card("Disturbing Mirth") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Sacrificed
+        trigger = Triggers.self.isSacrificed()
         effect = Patterns.Library.manifestDread()
     }
 

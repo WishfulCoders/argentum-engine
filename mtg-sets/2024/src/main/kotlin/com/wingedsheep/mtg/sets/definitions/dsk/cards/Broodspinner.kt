@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
@@ -15,8 +16,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.Aggregation
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -37,18 +36,16 @@ val Broodspinner = card("Broodspinner") {
     toughness = 3
     keywords(Keyword.REACH)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.surveil(2)
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{4}{B}{G}"), Costs.Tap, Costs.SacrificeSelf)
         effect = Effects.CreateToken(
-            count = DynamicAmount.AggregateZone(
+            count = DynamicAmounts.zone(
                 Player.You,
-                Zone.GRAVEYARD,
-                GameObjectFilter.Any,
-                Aggregation.DISTINCT_TYPES
-            ),
+                Zone.GRAVEYARD
+            ).distinctTypes(),
             power = 1,
             toughness = 1,
             colors = setOf(Color.BLACK, Color.GREEN),

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.triggers
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ZoneChangeEvent
 import com.wingedsheep.engine.event.TriggerDetector
 import com.wingedsheep.engine.state.components.identity.TokenComponent
@@ -49,7 +50,7 @@ class CardsPutIntoExileBatchTriggerTest : FunSpec({
         power = 0
         toughness = 1
         triggeredAbility {
-            trigger = Triggers.CardsPutIntoExile()
+            trigger = Triggers.oneOrMore(GameObjectFilter.Any).putIntoExile()
             effect = Effects.DrawCards(1)
         }
     }
@@ -61,11 +62,7 @@ class CardsPutIntoExileBatchTriggerTest : FunSpec({
         power = 0
         toughness = 1
         triggeredAbility {
-            trigger = Triggers.CardsPutIntoExile(
-                fromZones = setOf(Zone.BATTLEFIELD, Zone.GRAVEYARD),
-                filter = GameObjectFilter.Creature.youControl(),
-                includeTokens = true,
-            )
+            trigger = Triggers.oneOrMore(GameObjectFilter.Creature.youControl()).putIntoExile(setOf(Zone.BATTLEFIELD, Zone.GRAVEYARD), includeTokens = true)
             effect = Effects.DrawCards(1)
         }
     }
@@ -113,7 +110,7 @@ class CardsPutIntoExileBatchTriggerTest : FunSpec({
         )
 
     fun exileTriggersOf(driver: GameTestDriver, events: List<ZoneChangeEvent>, sourceId: EntityId) =
-        TriggerDetector(driver.cardRegistry)
+        TriggerDetector(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null), conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
             .detectTriggers(driver.state, events)
             .filter { it.ability.trigger is EventPattern.CardsPutIntoExileEvent && it.sourceId == sourceId }
 

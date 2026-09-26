@@ -22,8 +22,8 @@ val TectonicHazard = card("Tectonic Hazard") {
     oracleText = "Tectonic Hazard deals 1 damage to each opponent and each creature they control."
 
     spell {
-        effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent))
-            .then(Patterns.Group.dealDamageToAll(1, GroupFilter(GameObjectFilter.Creature.opponentControls())))
+        effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent)) then
+            Patterns.Group.dealDamageToAll(1, GroupFilter(GameObjectFilter.Creature.opponentControls()))
     }
 
     metadata {

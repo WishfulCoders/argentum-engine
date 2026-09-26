@@ -14,7 +14,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -41,7 +40,7 @@ val LordOfTheUndead = card("Lord of the Undead") {
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{B}"), Costs.Tap)
-        val t = target("target", TargetObject(filter = TargetFilter.CardInGraveyard.withSubtype(Subtype.ZOMBIE).ownedByYou()))
+        val t = target(TargetFilter.CardInGraveyard.withSubtype(Subtype.ZOMBIE).ownedByYou())
         effect = Effects.Move(t, Zone.HAND)
     }
     metadata {

@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.drk.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Fasting
@@ -41,32 +41,27 @@ val Fasting = card("Fasting") {
         "When you draw a card, destroy this enchantment."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.HUNGER, 1, EffectTarget.Self),
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.AddCounters(CounterType.HUNGER, 1, EffectTarget.Self) then
             // Checked after the counter goes on, so the fifth upkeep is the last one.
-            ConditionalEffect(
-                condition = Conditions.SourceCounterCountAtLeast(Counters.HUNGER, 5),
-                effect = Effects.Destroy(EffectTarget.Self),
-            ),
-        )
+            Effects.If(
+                condition = Conditions.SourceCounterCountAtLeast(CounterType.HUNGER, 5),
+                then = Effects.Destroy(EffectTarget.Self),
+            )
         description = "At the beginning of your upkeep, put a hunger counter on this enchantment. " +
             "Then destroy this enchantment if it has five or more hunger counters on it."
     }
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         optional = true
-        effect = Effects.Composite(
-            Effects.SkipNextDrawStep(EffectTarget.Controller),
-            Effects.GainLife(2),
-        )
+        effect = Effects.SkipNextDrawStep(EffectTarget.Controller) then Effects.GainLife(2)
         description = "If you would begin your draw step, you may skip that step instead. If you " +
             "do, you gain 2 life."
     }
 
     triggeredAbility {
-        trigger = Triggers.YouDraw
+        trigger = Triggers.you.draws()
         effect = Effects.Destroy(EffectTarget.Self)
         description = "When you draw a card, destroy this enchantment."
     }

@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.renew
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Alchemist's Assistant — Tarkir: Dragonstorm #71
@@ -33,7 +33,7 @@ val AlchemistsAssistant = card("Alchemist's Assistant") {
     keywords(Keyword.LIFELINK)
 
     renew("{1}{B}") {
-        effect = Effects.AddCounters(Counters.LIFELINK, 1, target("creature", Targets.Creature))
+        effect = Effects.AddCounters(CounterType.LIFELINK, 1, target(TargetFilter.Creature))
     }
 
     metadata {

@@ -1,6 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.handlers.ConditionEvaluator
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.state.components.combat.AttackingComponent
 import com.wingedsheep.engine.support.GameTestDriver
@@ -54,7 +54,7 @@ class CastRestrictionTest : FunSpec({
             xValue = 0
         )
 
-        val evaluator = ConditionEvaluator()
+        val evaluator = PredicateEvaluator(cardRegistry = null).conditions
         val result = evaluator.evaluate(driver.state, YouWereAttackedThisStep, context)
 
         result shouldBe false
@@ -83,7 +83,7 @@ class CastRestrictionTest : FunSpec({
             xValue = 0
         )
 
-        val evaluator = ConditionEvaluator()
+        val evaluator = PredicateEvaluator(cardRegistry = null).conditions
         val result = evaluator.evaluate(driver.state, YouWereAttackedThisStep, context)
 
         result shouldBe true
@@ -112,7 +112,7 @@ class CastRestrictionTest : FunSpec({
             xValue = 0
         )
 
-        val evaluator = ConditionEvaluator()
+        val evaluator = PredicateEvaluator(cardRegistry = null).conditions
         val result = evaluator.evaluate(driver.state, YouWereAttackedThisStep, context)
 
         // Player 1 is the attacker, not the defender, so this should be false

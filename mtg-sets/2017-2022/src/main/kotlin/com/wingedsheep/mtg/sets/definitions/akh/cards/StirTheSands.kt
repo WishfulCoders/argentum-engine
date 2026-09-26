@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
  * Cycling {3}{B} ({3}{B}, Discard this card: Draw a card.)
  * When you cycle this card, create a 2/2 black Zombie creature token.
  *
- * Three parts: the `spell { }` body, [KeywordAbility.cycling], and a [Triggers.YouCycleThis]
+ * Three parts: the `spell { }` body, [KeywordAbility.cycling], and a `Triggers.self.isCycled()`
  * triggered ability that fires from the graveyard once the cycling ability has resolved.
  */
 val StirTheSands = card("Stir the Sands") {
@@ -40,7 +40,7 @@ val StirTheSands = card("Stir the Sands") {
     keywordAbility(KeywordAbility.cycling("{3}{B}"))
 
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
+        trigger = Triggers.self.isCycled()
         effect = Effects.CreateToken(
             power = 2,
             toughness = 2,

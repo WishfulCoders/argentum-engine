@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -24,12 +23,10 @@ val DaringLeap = card("Daring Leap") {
     typeLine = "Instant"
     oracleText = "Target creature gets +1/+1 and gains flying and first strike until end of turn."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 1, t),
-            Effects.GrantKeyword(Keyword.FLYING, t),
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(1, 1, t) then
+            Effects.GrantKeyword(Keyword.FLYING, t) then
             Effects.GrantKeyword(Keyword.FIRST_STRIKE, t)
-        )
     }
     metadata {
         rarity = Rarity.COMMON

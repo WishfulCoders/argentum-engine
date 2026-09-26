@@ -11,7 +11,7 @@ import io.kotest.matchers.shouldBe
  * Dross Harvester (MRD) — protection from white; "At the beginning of your end step, you lose 4
  * life"; "Whenever a creature dies, you gain 2 life."
  *
- * The death trigger is deliberately battlefield-wide ([com.wingedsheep.sdk.dsl.Triggers.AnyCreatureDies]):
+ * The death trigger is deliberately battlefield-wide (`Triggers.a(GameObjectFilter.Creature).dies()`):
  * *any* creature, either player's, and the Harvester itself. That last case is the one a self- or
  * you-control-scoped trigger would silently drop, so it gets its own test.
  */

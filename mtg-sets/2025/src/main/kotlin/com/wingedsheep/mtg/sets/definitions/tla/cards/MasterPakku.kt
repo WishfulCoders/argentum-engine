@@ -33,8 +33,8 @@ val MasterPakku = card("Master Pakku") {
     prowess()
 
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
-        val player = target("target player", Targets.Player)
+        trigger = Triggers.self.becomesTapped()
+        val player = target(Targets.Player)
         effect = Patterns.Library.mill(
             DynamicAmounts.zone(
                 Player.You,

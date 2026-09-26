@@ -19,7 +19,7 @@ val FlameLash = card("Flame Lash") {
     oracleText = "Flame Lash deals 4 damage to any target."
 
     spell {
-        val any = target("any", Targets.Any)
+        val any = target(Targets.Any)
         effect = Effects.DealDamage(4, any)
     }
 

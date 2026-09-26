@@ -7,20 +7,14 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Summon: Brynhildr
@@ -65,17 +59,11 @@ val SummonBrynhildr = card("Summon: Brynhildr") {
     // I — Chain — Exile the top card of your library; playable during turns you put a lore counter
     // on this Saga (modeled as your turns while you control it).
     sagaChapter(1) {
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1)),
-                storeAs = "chainedCard"
-            ),
-            MoveCollectionEffect(
-                from = "chainedCard",
-                destination = CardDestination.ToZone(Zone.EXILE)
-            ),
-            Effects.GrantMayPlayFromExile(
-                from = "chainedCard",
+        effect = Effects.Pipeline {
+            val chainedCard = gather(CardSource.TopOfLibrary(1))
+            exile(chainedCard)
+            run(Effects.GrantMayPlayFromExile(
+                from = chainedCard,
                 expiry = MayPlayExpiry.Permanent,
                 condition = Conditions.All(
                     Conditions.IsYourTurn,
@@ -85,8 +73,8 @@ val SummonBrynhildr = card("Summon: Brynhildr") {
                         filter = GameObjectFilter.Enchantment.named("Summon: Brynhildr")
                     )
                 )
-            )
-        )
+            ))
+        }
     }
 
     // II, III — Gestalt Mode — When you next cast a creature spell this turn, it gains haste.
@@ -110,13 +98,8 @@ val SummonBrynhildr = card("Summon: Brynhildr") {
  * Gestalt Mode — install a one-shot delayed trigger that grants haste to your next creature spell
  * cast this turn. Shared by chapters II and III.
  */
-private fun gestaltMode() = CreateDelayedTriggerEffect(
-    trigger = TriggerSpec(
-        event = EventPattern.SpellCastEvent(
-            spellFilter = GameObjectFilter.Creature,
-            player = Player.You,
-        ),
-    ),
+private fun gestaltMode() = Effects.CreateDelayedTrigger(
+    trigger = Triggers.you.casts(GameObjectFilter.Creature),
     fireOnce = true,
     expiry = DelayedTriggerExpiry.EndOfTurn,
     effect = Effects.GrantKeyword(Keyword.HASTE, EffectTarget.TriggeringEntity, Duration.EndOfTurn),

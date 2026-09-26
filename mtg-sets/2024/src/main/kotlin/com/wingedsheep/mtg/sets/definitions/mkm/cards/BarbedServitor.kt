@@ -1,14 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Barbed Servitor — Murders at Karlov Manor #77
@@ -25,7 +25,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *
  * "That much life" reads the *damage event's* amount, not the Servitor's toughness — CR damage is
  * dealt in full even when it exceeds toughness, so a Lightning Bolt drains 3 off an indestructible
- * 1/1. That's [ContextPropertyKey.TRIGGER_DAMAGE_AMOUNT] off [Triggers.TakesDamage], the same
+ * 1/1. That's [ContextPropertyKey.TRIGGER_DAMAGE_AMOUNT] off `Triggers.self.isDealtDamage()`, the same
  * idiom Innocent Bystander uses for its "3 or more damage" gate — and it fires once per damage
  * *event*, so two blockers dealing 2 each queue two separate triggers of 2.
  *
@@ -48,26 +48,23 @@ val BarbedServitor = card("Barbed Servitor") {
     keywords(Keyword.INDESTRUCTIBLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Suspect(EffectTarget.Self)
         description = "When this creature enters, suspect it."
     }
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = Effects.Composite(
-            Effects.DrawCards(1),
-            Effects.LoseLife(1, EffectTarget.Controller),
-        )
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.DrawCards(1) then Effects.LoseLife(1, EffectTarget.Controller)
         description = "Whenever this creature deals combat damage to a player, you draw a card " +
             "and you lose 1 life."
     }
 
     triggeredAbility {
-        trigger = Triggers.TakesDamage
-        val opponent = target("target opponent", Targets.Opponent)
+        trigger = Triggers.self.isDealtDamage()
+        val opponent = target(Targets.Opponent)
         effect = Effects.LoseLife(
-            DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_DAMAGE_AMOUNT),
+            DynamicAmounts.triggerDamageAmount(),
             opponent,
         )
         description = "Whenever this creature is dealt damage, target opponent loses that much life."

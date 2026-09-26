@@ -7,9 +7,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Reaper King
@@ -44,11 +43,8 @@ val ReaperKing = card("Reaper King") {
 
     // Whenever another Scarecrow you control enters, destroy target permanent.
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Permanent.withSubtype(Subtype.SCARECROW).youControl(),
-            binding = TriggerBinding.OTHER
-        )
-        val t = target("target", TargetPermanent())
+        trigger = Triggers.another(GameObjectFilter.Permanent.withSubtype(Subtype.SCARECROW).youControl()).enters()
+        val t = target(TargetFilter.Permanent)
         effect = Effects.Destroy(t)
     }
 

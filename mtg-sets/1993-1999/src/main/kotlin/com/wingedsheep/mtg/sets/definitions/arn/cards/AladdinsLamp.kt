@@ -2,15 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.arn.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Aladdin's Lamp
@@ -23,7 +22,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Composition:
  *  - `{X}, {T}` activated ability whose only effect is `Effects.ReplaceNextDraw(...)` — it installs a
  *    one-shot draw-replacement shield for the rest of the turn. The shield now captures the
- *    activation-time {X} (see `ReplaceDrawWithEffect.xValue`), so the replacement can read
+ *    activation-time {X} (see `ReplaceDrawWith.xValue`), so the replacement can read
  *    `DynamicAmount.XValue` when it fires at the next draw.
  *  - The replacement is a `lookAtTopAndKeep` dig: look at the top X, keep one on top, put the rest
  *    on the bottom in a random order, then a real `DrawCards(1)` draws the kept card (so draw
@@ -43,18 +42,16 @@ val AladdinsLamp = card("Aladdin's Lamp") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{X}"), Costs.Tap)
         effect = Effects.ReplaceNextDraw(
-            Effects.Composite(
-                Patterns.Library.lookAtTopAndKeep(
-                    count = DynamicAmount.XValue,
-                    keepCount = DynamicAmount.Fixed(1),
-                    keepDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Top),
-                    restDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
-                    restOrder = CardOrder.Random,
-                    selectedLabel = "Keep on top",
-                    remainderLabel = "Put on bottom at random"
-                ),
-                DrawCardsEffect(1)
-            )
+            Patterns.Library.lookAtTopAndKeep(
+                count = DynamicAmounts.xValue(),
+                keepCount = DynamicAmounts.fixed(1),
+                keepDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Top),
+                restDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
+                restOrder = CardOrder.Random,
+                selectedLabel = "Keep on top",
+                remainderLabel = "Put on bottom at random"
+            ) then
+                Effects.DrawCards(1)
         )
         description = "{X}, {T}: The next time you would draw a card this turn, instead look at the top X " +
             "cards of your library, put all but one of them on the bottom of your library in a random " +

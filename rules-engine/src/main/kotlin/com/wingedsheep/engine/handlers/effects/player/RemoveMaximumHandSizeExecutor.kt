@@ -14,10 +14,10 @@ import kotlin.reflect.KClass
 /**
  * Resolves [RemoveMaximumHandSizeEffect].
  *
- * Adds [PlayerNoMaximumHandSizeComponent] to the target player. Idempotent: if the player already
- * has no maximum hand size, nothing changes and no event fires (the property is permanent for the
- * rest of the game — conferring it twice is a no-op). [com.wingedsheep.engine.core.CleanupPhaseManager]
- * consults this component when discarding to hand size.
+ * Stamps [PlayerNoMaximumHandSizeComponent] on the target player with the current timestamp. The
+ * property lasts for the rest of the game; conferring it again restamps it, since each application
+ * is a new effect ordered by its own timestamp (CR 613.11).
+ * [com.wingedsheep.engine.core.MaximumHandSize.effective] reads it when discarding to hand size.
  */
 class RemoveMaximumHandSizeExecutor : EffectExecutor<RemoveMaximumHandSizeEffect> {
 
@@ -38,13 +38,11 @@ class RemoveMaximumHandSizeExecutor : EffectExecutor<RemoveMaximumHandSizeEffect
         val playerContainer = state.getEntity(targetId)
             ?: return EffectResult.error(state, "Target player no longer exists")
 
-        if (playerContainer.has<PlayerNoMaximumHandSizeComponent>()) {
-            return EffectResult.success(state)
-        }
-
+        // A repeat application is a new effect with a new timestamp (CR 613.7), so it restamps the
+        // marker — it then overrides any "maximum hand size is N" static that entered in between.
         val newState = state.updateEntity(targetId) { container ->
-            container.with(PlayerNoMaximumHandSizeComponent)
-        }
+            container.with(PlayerNoMaximumHandSizeComponent(state.timestamp))
+        }.tick()
 
         val playerName = playerContainer.get<PlayerComponent>()?.name ?: "Player"
         val sourceName = context.sourceId?.let {

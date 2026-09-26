@@ -5,8 +5,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.DoubleCounterPlacement
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.MultiplyTokenCreation
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Doubling Season
@@ -20,7 +19,7 @@ import com.wingedsheep.sdk.scripting.events.RecipientFilter
  * Both clauses are static replacement effects. Token doubling uses the default
  * `TokenCreationEvent(controller = You)`. Counter doubling gates purely on the recipient
  * ("a permanent you control"), independent of who places the counters — hence
- * `placedByYou = false` with `RecipientFilter.PermanentYouControl` and any counter type.
+ * `placedByYou = false` with `Recipient.PermanentYouControl` and any counter type.
  */
 val DoublingSeason = card("Doubling Season") {
     manaCost = "{4}{G}"
@@ -36,8 +35,8 @@ val DoublingSeason = card("Doubling Season") {
         DoubleCounterPlacement(
             placedByYou = false,
             appliesTo = EventPattern.CounterPlacementEvent(
-                counterType = CounterTypeFilter.Any,
-                recipient = RecipientFilter.PermanentYouControl,
+                counterType = null,
+                recipient = Recipient.PermanentYouControl,
             ),
         )
     )

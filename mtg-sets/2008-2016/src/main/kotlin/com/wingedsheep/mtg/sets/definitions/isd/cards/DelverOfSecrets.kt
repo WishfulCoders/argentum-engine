@@ -1,7 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.isd.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -9,14 +8,8 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Delver of Secrets // Insectile Aberration (Innistrad #51)
@@ -55,32 +48,25 @@ private val DelverOfSecretsFront = card("Delver of Secrets") {
         "reveal that card. If an instant or sorcery card is revealed this way, transform this creature."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.Composite(
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.Pipeline {
             // Look at the top card of your library — gather only; it stays on top either way.
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1)),
-                storeAs = "delverLooked",
-            ),
+            val delverLooked = gather(CardSource.TopOfLibrary(1))
             // You may reveal that card. Selecting it is the reveal; declining selects nothing.
-            SelectFromCollectionEffect(
-                from = "delverLooked",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "delverRevealed",
+            val delverRevealed = chooseUpTo(
+                1,
+                from = delverLooked,
                 showAllCards = true,
                 prompt = "You may reveal the top card of your library",
-                selectedLabel = "Reveal",
-            ),
-            RevealCollectionEffect(from = "delverRevealed", revealToSelf = false),
+                selectedLabel = "Reveal"
+            )
+            reveal(delverRevealed, revealToSelf = false)
             // If an instant or sorcery card is revealed this way, transform this creature.
-            ConditionalEffect(
-                condition = Conditions.CollectionContainsMatch(
-                    "delverRevealed",
-                    GameObjectFilter.InstantOrSorcery,
-                ),
-                effect = TransformEffect(EffectTarget.Self),
-            ),
-        )
+            run(Effects.If(
+                condition = whenMatches(delverRevealed, GameObjectFilter.InstantOrSorcery),
+                then = Effects.Transform(EffectTarget.Self),
+            ))
+        }
         description = "At the beginning of your upkeep, look at the top card of your library. You " +
             "may reveal that card. If an instant or sorcery card is revealed this way, transform " +
             "this creature."

@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.spm.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 /**
  * Oscorp Research Team
@@ -21,7 +21,7 @@ val OscorpResearchTeam = card("Oscorp Research Team") {
     toughness = 5
     activatedAbility {
         cost = Costs.Mana("{6}{U}")
-        effect = DrawCardsEffect(2)
+        effect = Effects.DrawCards(2)
     }
     metadata {
         rarity = Rarity.COMMON

@@ -13,7 +13,7 @@ import io.kotest.matchers.shouldBe
  *  your graveyard. If you do, Heated Argument also deals 2 damage to that creature's controller."
  *
  * Verifies the 6 damage to the targeted creature always happens; the 2 damage to that creature's
- * controller only happens when the caster actually exiles a graveyard card (MayEffect + IfYouDo).
+ * controller only happens when the caster actually exiles a graveyard card (Effects.May + IfYouDo).
  */
 class HeatedArgumentScenarioTest : ScenarioTestBase() {
 
@@ -35,7 +35,7 @@ class HeatedArgumentScenarioTest : ScenarioTestBase() {
                 game.castSpell(1, "Heated Argument", bears)
                 game.resolveStack()
 
-                // MayEffect: accept and exile the graveyard card.
+                // Effects.May: accept and exile the graveyard card.
                 game.hasPendingDecision() shouldBe true
                 game.answerYesNo(true)
                 game.resolveStack()

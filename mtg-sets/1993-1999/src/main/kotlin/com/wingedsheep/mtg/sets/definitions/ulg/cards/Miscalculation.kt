@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Miscalculation
@@ -25,7 +26,7 @@ val Miscalculation = card("Miscalculation") {
     oracleText = "Counter target spell unless its controller pays {2}.\nCycling {2}"
 
     spell {
-        target = Targets.Spell
+        val spell = target(TargetFilter.SpellOnStack)
         effect = Effects.CounterUnlessPays("{2}")
     }
 

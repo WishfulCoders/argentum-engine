@@ -11,8 +11,6 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.EmitLibrarySearchedEventEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -31,7 +29,7 @@ import com.wingedsheep.sdk.scripting.references.Player
  * battlefield and the `orElse` branch to hand. A declined "up to one" (or an artifact-less library)
  * leaves the collection empty, so both branches move nothing and only the shuffle runs.
  *
- * The outer [MayEffect] is the "you may search" — per the card's 2025-02-07 Oracle update the
+ * The outer [Effects.May] is the "you may search" — per the card's 2025-02-07 Oracle update the
  * shuffle only happens if you *choose* to search, which is exactly why the shuffle sits inside the
  * may rather than after it.
  */
@@ -51,8 +49,8 @@ val GuidelightPathmaker = card("Guidelight Pathmaker") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.May(
             Effects.Pipeline {
                 val searchable = gather(
                     CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.Artifact),
@@ -64,7 +62,7 @@ val GuidelightPathmaker = card("Guidelight Pathmaker") {
                 } orElse {
                     toHand(found)
                 }
-                run(ShuffleLibraryEffect())
+                run(Effects.ShuffleLibrary())
                 run(EmitLibrarySearchedEventEffect)
             },
         )

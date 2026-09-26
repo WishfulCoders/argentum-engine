@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -8,7 +9,6 @@ import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Crowd-Control Warden — Murders at Karlov Manor #193
@@ -52,19 +52,19 @@ val CrowdControlWarden = card("Crowd-Control Warden") {
     // "other creatures you control".
     replacementEffect(
         EntersWithDynamicCounters(
-            count = DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Creature)
+            count = DynamicAmounts.creaturesYouControl()
         )
     )
 
     disguise = "{3}{G/W}{G/W}"
     // Turning face up: the Warden IS on the battlefield, so it must be excluded from its own count.
     disguiseFaceUpEffect = Effects.AddDynamicCounters(
-        Counters.PLUS_ONE_PLUS_ONE,
-        DynamicAmount.AggregateBattlefield(
+        CounterType.PLUS_ONE_PLUS_ONE,
+        DynamicAmounts.battlefield(
             Player.You,
             GameObjectFilter.Creature,
             excludeSelf = true
-        ),
+        ).count(),
         EffectTarget.Self
     )
 

@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 
 /**
  * Urza's Mine
@@ -22,13 +21,13 @@ val UrzasMine = card("Urza's Mine") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.All(
                 Conditions.YouControl(GameObjectFilter.Land.named("Urza's Power Plant")),
                 Conditions.YouControl(GameObjectFilter.Land.named("Urza's Tower"))
             ),
-            effect = Effects.AddColorlessMana(2),
-            elseEffect = Effects.AddColorlessMana(1)
+            then = Effects.AddColorlessMana(2),
+            otherwise = Effects.AddColorlessMana(1)
         )
         manaAbility = true
         timing = TimingRule.ManaAbility

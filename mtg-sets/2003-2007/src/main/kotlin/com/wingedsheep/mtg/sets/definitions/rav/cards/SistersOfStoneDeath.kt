@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Sisters of Stone Death — Ravnica: City of Guilds #231
@@ -52,17 +51,14 @@ val SistersOfStoneDeath = card("Sisters of Stone Death") {
 
     activatedAbility {
         cost = Costs.Mana("{G}")
-        val blocker = target("target creature", TargetCreature())
+        val blocker = target(TargetFilter.Creature)
         effect = Effects.ForceBlock(target = blocker)
         description = "Target creature blocks Sisters of Stone Death this turn if able."
     }
 
     activatedAbility {
         cost = Costs.Mana("{B}{G}")
-        val paired = target(
-            "target creature blocking or blocked by Sisters of Stone Death",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.blockingOrBlockedBySource()))
-        )
+        val paired = target(TargetFilter(GameObjectFilter.Creature.blockingOrBlockedBySource()))
         effect = Effects.ExileLinkedToSource(paired)
         description = "Exile target creature blocking or blocked by Sisters of Stone Death."
     }

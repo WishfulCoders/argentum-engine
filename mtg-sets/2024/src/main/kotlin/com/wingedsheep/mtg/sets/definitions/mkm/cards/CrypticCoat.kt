@@ -12,10 +12,7 @@ import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.FaceDownMode
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Cryptic Coat — Murders at Karlov Manor #50
@@ -52,20 +49,16 @@ val CrypticCoat = card("Cryptic Coat") {
         "{1}{U}: Return this Equipment to its owner's hand."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1)),
-                storeAs = "crypticCoatCloak",
-            ),
-            MoveCollectionEffect(
-                from = "crypticCoatCloak",
-                destination = CardDestination.ToZone(Zone.BATTLEFIELD),
-                faceDown = FaceDownMode.CLOAK,
-                storeMovedAs = "crypticCoatCloaked",
-            ),
-            Effects.AttachEquipment(EffectTarget.PipelineTarget("crypticCoatCloaked")),
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val crypticCoatCloak = gather(CardSource.TopOfLibrary(1))
+            val crypticCoatCloaked = moveTracked(
+                crypticCoatCloak,
+                CardDestination.ToZone(Zone.BATTLEFIELD),
+                faceDown = FaceDownMode.CLOAK
+            )
+            run(Effects.AttachEquipment(crypticCoatCloaked.asTarget))
+        }
         description = "When this Equipment enters, cloak the top card of your library, then attach " +
             "this Equipment to it."
     }

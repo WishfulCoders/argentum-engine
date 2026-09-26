@@ -13,7 +13,7 @@ import io.kotest.matchers.shouldBe
  *
  * Whenever you cast a spell during an opponent's turn, put a +1/+1 counter on this creature.
  *
- * Verifies the [com.wingedsheep.sdk.dsl.Triggers.YouCastSpell] trigger gated by
+ * Verifies the `Triggers.you.casts()` trigger gated by
  * [com.wingedsheep.sdk.dsl.Conditions.IsNotYourTurn]: it grows only when its controller casts
  * a spell on a turn that isn't theirs, and stays put for spells cast on their own turn.
  */

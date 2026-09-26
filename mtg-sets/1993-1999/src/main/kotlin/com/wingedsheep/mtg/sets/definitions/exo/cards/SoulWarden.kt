@@ -4,12 +4,11 @@
 
 package com.wingedsheep.mtg.sets.definitions.exo.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -27,8 +26,8 @@ val SoulWarden = card("Soul Warden") {
     power = 1
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(filter = GameObjectFilter.Creature, binding = TriggerBinding.OTHER)
-        effect = GainLifeEffect(1)
+        trigger = Triggers.another(GameObjectFilter.Creature).enters()
+        effect = Effects.GainLife(1)
     }
     metadata {
         rarity = Rarity.COMMON

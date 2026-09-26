@@ -22,7 +22,7 @@ import com.wingedsheep.sdk.model.Rarity
  * (draw, discard, and a +1/+1 counter if the discard was a nonland card) — the same shape
  * A.I.M. Scientists uses in this set.
  *
- * The draw payoff is [Triggers.NthCardDrawn]`(2)` (CR 121.2): it reads the per-turn draw counter,
+ * The draw payoff is `Triggers.<player>.drawsNth(n)``(2)` (CR 121.2): it reads the per-turn draw counter,
  * so it fires exactly once per turn on the crossing into the second draw — a single two-card draw
  * fires it once, not twice. Note the connive's own draw counts toward that tally. The token is the
  * unnamed 2/1 black Villain with menace this set already mints elsewhere.
@@ -39,13 +39,13 @@ val MadameMasque = card("Madame Masque") {
         "with menace. (It can't be blocked except by two or more creatures.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Connive()
         description = "When Madame Masque enters, she connives."
     }
 
     triggeredAbility {
-        trigger = Triggers.NthCardDrawn(2)
+        trigger = Triggers.you.drawsNth(2)
         effect = Effects.CreateToken(
             power = 2,
             toughness = 1,

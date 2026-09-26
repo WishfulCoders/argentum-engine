@@ -5,8 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Tinker's Tote — The Lost Caverns of Ixalan #40
@@ -16,7 +14,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * When this artifact enters, create two 1/1 colorless Gnome artifact creature tokens.
  * {W}, Sacrifice this artifact: You gain 3 life.
  *
- * Ability 1 — [Triggers.EntersBattlefield] fires the ETB. [CreateTokenEffect] with
+ * Ability 1 — `Triggers.self.enters()` fires the ETB. [CreateTokenEffect] with
  *   `count = DynamicAmount.Fixed(2)` makes two 1/1 colorless Gnome artifact creature tokens: no
  *   color set (`colors = emptySet()`),
  *   `artifactToken = true`, `creatureTypes = setOf("Gnome")` — the same token minted by Anim Pakal,
@@ -35,9 +33,9 @@ val TinkersTote = card("Tinker's Tote") {
 
     // When this artifact enters, create two 1/1 colorless Gnome artifact creature tokens.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreateTokenEffect(
-            count = DynamicAmount.Fixed(2),
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateToken(
+            count = 2,
             power = 1,
             toughness = 1,
             colors = emptySet(),

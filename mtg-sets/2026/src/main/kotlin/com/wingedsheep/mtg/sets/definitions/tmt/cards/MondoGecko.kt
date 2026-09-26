@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Mondo Gecko
@@ -33,18 +34,14 @@ val MondoGecko = card("Mondo Gecko") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Discard())
         effect = Effects.ChooseColorThen(
-            Effects.Composite(
-                listOf(
-                    Effects.ChangeColorToChosen(EffectTarget.Self, Duration.EndOfTurn),
-                    Effects.GrantHexproofFromChosenColor(EffectTarget.Self, Duration.EndOfTurn)
-                )
-            )
+            Effects.ChangeColorToChosen(EffectTarget.Self, Duration.EndOfTurn) then
+                Effects.GrantHexproofFromChosenColor(EffectTarget.Self, Duration.EndOfTurn)
         )
         description = "{1}, Discard a card: Until end of turn, Mondo Gecko becomes the color of your choice and gains hexproof from that color."
     }
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         effect = Effects.DrawCards(DynamicAmounts.colorsAmongPermanents())
         description = "Whenever Mondo Gecko deals combat damage to a player, draw a card for each color among permanents you control."
     }

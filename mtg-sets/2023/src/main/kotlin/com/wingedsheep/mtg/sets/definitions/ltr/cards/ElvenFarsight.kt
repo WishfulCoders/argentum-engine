@@ -1,17 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Elven Farsight
@@ -27,23 +21,12 @@ val ElvenFarsight = card("Elven Farsight") {
 
     spell {
         // Scry 3, then reveal the top card; if it's a creature card, put it into your hand (draw it).
-        effect = Patterns.Library.scry(3) then
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1)),
-                storeAs = "revealed",
-                revealed = true
-            ) then
-            SelectFromCollectionEffect(
-                from = "revealed",
-                selection = SelectionMode.All,
-                filter = GameObjectFilter.Creature,
-                storeSelected = "creature",
-                storeRemainder = "noncreature"
-            ) then
-            MoveCollectionEffect(
-                from = "creature",
-                destination = CardDestination.ToZone(Zone.HAND)
-            )
+        effect = Effects.Pipeline {
+            run(Patterns.Library.scry(3))
+            val revealed = gather(CardSource.TopOfLibrary(1), revealed = true)
+            val creature = selectAll(from = revealed, filter = GameObjectFilter.Creature)
+            toHand(creature)
+        }
     }
 
     metadata {

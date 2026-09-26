@@ -1,16 +1,19 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBeBlocked
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Silent Hallcreeper
@@ -51,11 +54,11 @@ val SilentHallcreeper = card("Silent Hallcreeper") {
     }
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         effect = ModalEffect.chooseOneNotYetChosen(
             // • Put two +1/+1 counters on this creature.
             Mode.noTarget(
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self),
+                Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self),
                 "Put two +1/+1 counters on this creature"
             ),
             // • Draw a card.
@@ -64,15 +67,14 @@ val SilentHallcreeper = card("Silent Hallcreeper") {
                 "Draw a card"
             ),
             // • This creature becomes a copy of another target creature you control.
-            Mode.withTarget(
-                Effects.EachPermanentBecomesCopyOfTarget(
-                    target = EffectTarget.ContextTarget(0),
+            mode("This creature becomes a copy of another target creature you control") {
+                val otherCreatureYouControl = target(TargetFilter.OtherCreatureYouControl)
+                effect = Effects.EachPermanentBecomesCopyOfTarget(
+                    target = otherCreatureYouControl,
                     duration = Duration.Permanent,
                     affected = EffectTarget.Self,
-                ),
-                Targets.OtherCreatureYouControl,
-                "This creature becomes a copy of another target creature you control"
-            )
+                )
+            }
         )
         description = "Whenever this creature deals combat damage to a player, choose one that " +
             "hasn't been chosen — Put two +1/+1 counters on this creature; or draw a card; or this " +

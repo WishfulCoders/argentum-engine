@@ -26,10 +26,8 @@ val WaterbendingLesson = card("Waterbending Lesson") {
         "Each one pays for {1}.)"
 
     spell {
-        effect = Effects.Composite(
-            Effects.DrawCards(3),
+        effect = Effects.DrawCards(3) then
             Effects.UnlessYouWaterbend(amount = 2, otherwise = Effects.Discard(1))
-        )
     }
 
     metadata {

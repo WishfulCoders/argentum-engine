@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fem.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.EntersWithCounters
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -42,21 +41,21 @@ val IcatianMoneychanger = card("Icatian Moneychanger") {
 
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.Named(Counters.CREDIT),
+            counterType = CounterType.CREDIT,
             count = 3,
             selfOnly = true
         )
     )
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DealDamage(3, EffectTarget.Controller)
         description = "When this creature enters, it deals 3 damage to you."
     }
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.AddCounters(Counters.CREDIT, 1, EffectTarget.Self)
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.AddCounters(CounterType.CREDIT, 1, EffectTarget.Self)
         description = "At the beginning of your upkeep, put a credit counter on this creature."
     }
 
@@ -72,7 +71,7 @@ val IcatianMoneychanger = card("Icatian Moneychanger") {
         // ability resolves the Moneychanger is in the graveyard with its counters stripped. Reading
         // the live entity would gain 0 life every time.
         effect = Effects.GainLife(
-            DynamicAmounts.lastKnownSourceCounters(CounterTypeFilter.Named(Counters.CREDIT))
+            DynamicAmounts.lastKnownSourceCounters(CounterType.CREDIT)
         )
         description = "Sacrifice this creature: You gain 1 life for each credit counter on this creature. Activate only during your upkeep."
     }

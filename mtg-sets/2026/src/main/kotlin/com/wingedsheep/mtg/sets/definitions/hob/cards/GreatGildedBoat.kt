@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
  * Whenever you attack, recruit.
  * Crew 2
  *
- * "Whenever you attack" is the once-per-combat declare-attackers trigger ([Triggers.YouAttack]),
+ * "Whenever you attack" is the once-per-combat declare-attackers trigger (`Triggers.you.attacks()`),
  * not a per-attacker one — it fires once however many creatures were declared, and it fires even
  * when the Boat itself is uncrewed and stays home.
  */
@@ -31,7 +31,7 @@ val GreatGildedBoat = card("Great Gilded Boat") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.YouAttack
+        trigger = Triggers.you.attacks()
         effect = Patterns.Mechanic.recruit()
     }
 

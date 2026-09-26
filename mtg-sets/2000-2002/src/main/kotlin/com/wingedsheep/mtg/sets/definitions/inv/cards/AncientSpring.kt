@@ -31,10 +31,7 @@ val AncientSpring = card("Ancient Spring") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.SacrificeSelf)
-        effect = Effects.Composite(
-            Effects.AddMana(Color.WHITE),
-            Effects.AddMana(Color.BLACK),
-        )
+        effect = Effects.AddMana(Color.WHITE) then Effects.AddMana(Color.BLACK)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

@@ -21,7 +21,7 @@ val ImperialCeratops = card("Imperial Ceratops") {
     toughness = 5
 
     triggeredAbility {
-        trigger = Triggers.TakesDamage
+        trigger = Triggers.self.isDealtDamage()
         effect = Effects.GainLife(2)
         description = "Enrage — Whenever this creature is dealt damage, you gain 2 life."
     }

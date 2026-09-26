@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -24,11 +23,8 @@ val Breach = card("Breach") {
     typeLine = "Instant"
     oracleText = "Target creature gets +2/+0 and gains fear until end of turn. (It can't be blocked except by artifact creatures and/or black creatures.)"
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 0, t),
-            Effects.GrantKeyword(Keyword.FEAR, t)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 0, t) then Effects.GrantKeyword(Keyword.FEAR, t)
     }
     metadata {
         rarity = Rarity.COMMON

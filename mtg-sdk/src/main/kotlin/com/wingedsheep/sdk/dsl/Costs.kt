@@ -1,5 +1,6 @@
 package com.wingedsheep.sdk.dsl
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Zone
@@ -157,6 +158,16 @@ object Costs {
      */
     val DiscardHand: AbilityCost = AbilityCost.DiscardHand
 
+    /**
+     * Put [count] cards matching [filter] from your hand on top of your library — Leashling's
+     * "Put a card from your hand on top of your library: …". Not a discard: nothing reaches the
+     * graveyard and no discard trigger fires.
+     */
+    fun PutFromHandOnTopOfLibrary(
+        count: Int = 1,
+        filter: GameObjectFilter = GameObjectFilter.Any
+    ): AbilityCost = AbilityCost.Atom(CostAtom.PutFromHandOnTopOfLibrary(count, filter))
+
     // =========================================================================
     // Mill Costs
     // =========================================================================
@@ -238,6 +249,24 @@ object Costs {
     val TapGrantingPermanent: AbilityCost = AbilityCost.TapGrantingPermanent
 
     /**
+     * Remove all [counterType] counters from this permanent — "{T}, Remove all +1/+1 counters from
+     * Molten Hydra: It deals damage to any target equal to the number of +1/+1 counters removed
+     * this way." Read the count with [DynamicAmounts.countersRemovedAsCost].
+     */
+    fun RemoveAllCountersFromSelf(counterType: CounterType): AbilityCost =
+        AbilityCost.RemoveAllCounters(counterType)
+
+    /**
+     * Remove all [counterType] counters from the permanent that granted this activated ability —
+     * the counter member of the granter-cost family: Hankyu grants the equipped creature "{T},
+     * Remove all aim counters from Hankyu: This creature deals damage to any target equal to the
+     * number of aim counters removed this way." Read the count with
+     * [DynamicAmounts.countersRemovedAsCost].
+     */
+    fun RemoveAllCountersFromGrantingPermanent(counterType: CounterType): AbilityCost =
+        AbilityCost.RemoveAllCounters(counterType, fromGrantingPermanent = true)
+
+    /**
      * Sacrifice a creature of the type chosen when this permanent entered the battlefield.
      * Used by cards like Doom Cannon.
      */
@@ -273,6 +302,14 @@ object Costs {
      */
     fun ExileFromGraveyard(count: Int, filter: GameObjectFilter = GameObjectFilter.Any): AbilityCost =
         AbilityCost.Atom(CostAtom.ExileFrom(Zone.GRAVEYARD, filter, count))
+
+    /**
+     * "Exile another [filter] card from your graveyard" — the graveyard exile cost of an ability
+     * activated *from* that graveyard, where the activating card itself can't pay (Gallia, Tragic
+     * Host).
+     */
+    fun ExileAnotherFromGraveyard(count: Int = 1, filter: GameObjectFilter = GameObjectFilter.Any): AbilityCost =
+        AbilityCost.Atom(CostAtom.ExileFrom(Zone.GRAVEYARD, filter, count, excludeSelf = true))
 
     /**
      * Exile [count] cards matching [filter] from a *single* graveyard — any player's, but all
@@ -502,14 +539,14 @@ object Costs {
      * Delegates to [RemoveCounters].
      */
     fun RemovePlusOnePlusOneCounters(filter: GameObjectFilter, count: Int): AbilityCost =
-        AbilityCost.Atom(CostAtom.RemoveCounters("+1/+1", DynamicAmount.Fixed(count), filter))
+        AbilityCost.Atom(CostAtom.RemoveCounters(CounterType.PLUS_ONE_PLUS_ONE, DynamicAmount.Fixed(count), filter))
 
     /**
      * Remove one or more counters of the specified type from this permanent.
      * Used for artifacts with charge/gem counters as activation costs.
      * Delegates to [RemoveCounters] with [self] = true.
      */
-    fun RemoveCounterFromSelf(counterType: String?, count: Int = 1): AbilityCost =
+    fun RemoveCounterFromSelf(counterType: CounterType?, count: Int = 1): AbilityCost =
         AbilityCost.Atom(CostAtom.RemoveCounters(counterType, DynamicAmount.Fixed(count), self = true))
 
     /**
@@ -517,7 +554,7 @@ object Costs {
      * "{T}, Put a page counter on this artifact: Scry 1" (Mazemind Tome). The accruing mirror of
      * [RemoveCounterFromSelf]; always payable, since it costs the player nothing they must have.
      */
-    fun PutCounterOnSelf(counterType: String, count: Int = 1): AbilityCost =
+    fun PutCounterOnSelf(counterType: CounterType, count: Int = 1): AbilityCost =
         AbilityCost.Atom(CostAtom.PutCountersOnSelf(counterType, count))
 
     /**
@@ -526,14 +563,14 @@ object Costs {
      * (default), counters of any type may be removed in any combination.
      *
      * Examples:
-     * - `Costs.RemoveCounters(count = 2, counterType = "+1/+1", filter = Filters.Artifact)`
+     * - `Costs.RemoveCounters(count = 2, counterType = CounterType.PLUS_ONE_PLUS_ONE, filter = Filters.Artifact)`
      *   — "Remove two +1/+1 counters from among artifacts you control"
      * - `Costs.RemoveCounters(count = 3, filter = Filters.Creature)`
      *   — "Remove three counters from among creatures you control" (any type)
      */
     fun RemoveCounters(
         count: Int = 1,
-        counterType: String? = null,
+        counterType: CounterType? = null,
         filter: GameObjectFilter = GameObjectFilter.Permanent
     ): AbilityCost = AbilityCost.Atom(CostAtom.RemoveCounters(counterType, DynamicAmount.Fixed(count), filter))
 
@@ -547,7 +584,7 @@ object Costs {
      * permanents, which is wrong — and unpayable — for a self-scoped cost.
      */
     fun RemoveXCounters(
-            counterType: String? = null,
+            counterType: CounterType? = null,
             count: DynamicAmount = DynamicAmount.XValue,
             filter: GameObjectFilter = GameObjectFilter.Permanent,
             self: Boolean = false
@@ -606,6 +643,14 @@ object Costs {
         /** Sacrifice [count] permanents matching [filter] (Natural Order). */
         fun SacrificePermanent(filter: GameObjectFilter = GameObjectFilter.Any, count: Int = 1): AdditionalCost =
             AdditionalCost.Atom(CostAtom.Sacrifice(filter, count))
+
+        /**
+         * Sacrifice **every** permanent you control matching [filter] (Soulblast). Nothing is
+         * chosen and controlling none pays it for free; the sacrificed permanents' last-known
+         * snapshots feed `DynamicAmounts.totalPowerSacrificedThisWay()`.
+         */
+        fun SacrificeAll(filter: GameObjectFilter = GameObjectFilter.Creature): AdditionalCost =
+            AdditionalCost.Atom(CostAtom.SacrificeAll(filter))
 
         /**
          * Tap any number of permanents matching [filter] you control whose **total projected
@@ -846,7 +891,7 @@ object Costs {
          */
         fun RemoveCounters(
             count: Int = 1,
-            counterType: String? = null,
+            counterType: CounterType? = null,
             filter: GameObjectFilter = GameObjectFilter.Permanent
         ): AdditionalCost = AdditionalCost.Atom(CostAtom.RemoveCounters(counterType, DynamicAmount.Fixed(count), filter))
 
@@ -928,7 +973,7 @@ object Costs {
          * control". Unpayable when they control no matching permanent.
          */
         fun PutCountersOnPermanent(
-            counterType: String,
+            counterType: CounterType,
             count: Int = 1,
             filter: GameObjectFilter = GameObjectFilter.Permanent
         ): PayCost = PayCost.Atom(CostAtom.PutCountersOnPermanent(counterType, count, filter))
@@ -978,7 +1023,7 @@ object Costs {
          */
         fun RemoveCounters(
             count: Int = 1,
-            counterType: String? = null,
+            counterType: CounterType? = null,
             filter: GameObjectFilter = GameObjectFilter.Permanent
         ): PayCost = PayCost.Atom(CostAtom.RemoveCounters(counterType, DynamicAmount.Fixed(count), filter))
     }

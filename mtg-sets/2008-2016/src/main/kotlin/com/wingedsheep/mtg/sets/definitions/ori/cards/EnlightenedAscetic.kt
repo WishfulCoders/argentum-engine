@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ori.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Enlightened Ascetic
@@ -23,9 +23,9 @@ val EnlightenedAscetic = card("Enlightened Ascetic") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
-        val t = target("target enchantment", Targets.Enchantment)
+        val t = target(TargetFilter.Enchantment)
         effect = Effects.Destroy(t)
     }
 

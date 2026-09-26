@@ -9,8 +9,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -29,11 +28,8 @@ val CephalidLooter = card("Cephalid Looter") {
     toughness = 1
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", TargetPlayer())
-        effect = Effects.Composite(
-            DrawCardsEffect(1, t),
-            Patterns.Hand.discardCards(1, t)
-        )
+        val t = target(Targets.Player)
+        effect = Effects.DrawCards(1, t) then Patterns.Hand.discardCards(1, t)
     }
     metadata {
         rarity = Rarity.COMMON

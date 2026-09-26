@@ -9,13 +9,11 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -37,14 +35,13 @@ val ColiseumBehemoth = card("Coliseum Behemoth") {
     toughness = 7
     keywords(Keyword.TRAMPLE)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseOne(
-            Mode.withTarget(
-                Effects.Move(EffectTarget.ContextTarget(0), Zone.GRAVEYARD, byDestruction = true),
-                TargetPermanent(filter = TargetFilter.ArtifactOrEnchantment),
-                "Destroy target artifact or enchantment"
-            ),
-            Mode.noTarget(DrawCardsEffect(1), "Draw a card")
+            mode("Destroy target artifact or enchantment") {
+                val artifactOrEnchantment = target(TargetFilter.ArtifactOrEnchantment)
+                effect = Effects.Move(artifactOrEnchantment, Zone.GRAVEYARD, byDestruction = true)
+            },
+            Mode.noTarget(Effects.DrawCards(1), "Draw a card")
         )
     }
     metadata {

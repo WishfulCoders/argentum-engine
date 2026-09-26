@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 
 /**
  * Mind's Eye — Mirrodin #205
@@ -13,10 +12,10 @@ import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
  *
  * Whenever an opponent draws a card, you may pay {1}. If you do, draw a card.
  *
- * [Triggers.OpponentDraws] fires once per individual card drawn (CR 121.2), so an opponent's
+ * `Triggers.anOpponent.draws()` fires once per individual card drawn (CR 121.2), so an opponent's
  * "draw three cards" puts three separate instances on the stack and each is paid for — or
  * declined — on its own. The payment is a resolution-time optional cost
- * ([MayPayManaEffect] → `Gate.MayPay`), so the {1} is only asked for as each instance
+ * ([Effects.MayPay] → `Gate.MayPay`), so the {1} is only asked for as each instance
  * resolves, and an empty mana pool with no untapped lands skips the prompt entirely rather
  * than offering an unpayable "yes".
  *
@@ -29,10 +28,10 @@ val MindsEye = card("Mind's Eye") {
     oracleText = "Whenever an opponent draws a card, you may pay {1}. If you do, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.OpponentDraws
-        effect = MayPayManaEffect(
+        trigger = Triggers.anOpponent.draws()
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{1}"),
-            effect = Effects.DrawCards(1)
+            then = Effects.DrawCards(1)
         )
     }
 

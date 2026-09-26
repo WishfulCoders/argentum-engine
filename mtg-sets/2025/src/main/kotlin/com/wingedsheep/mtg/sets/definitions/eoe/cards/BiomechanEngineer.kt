@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Biomechan Engineer
@@ -25,26 +24,22 @@ val BiomechanEngineer = card("Biomechan Engineer") {
 
     // ETB: create a Lander token
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateLander()
     }
 
     // Activated ability: {8}: Draw two cards and create a 2/2 Robot token
     activatedAbility {
         cost = Costs.Mana("{8}")
-        effect = Effects.Composite(
-            listOf(
-                Effects.DrawCards(2),
-                CreateTokenEffect(
-                    power = 2,
-                    toughness = 2,
-                    colors = setOf(),
-                    creatureTypes = setOf("Robot"),
-                    artifactToken = true,
-                    imageUri = "https://cards.scryfall.io/normal/front/c/4/c46f9a07-005c-44b7-8057-b2f00b274dd6.jpg?1756281130"
-                )
+        effect = Effects.DrawCards(2) then
+            Effects.CreateToken(
+                power = 2,
+                toughness = 2,
+                colors = setOf(),
+                creatureTypes = setOf("Robot"),
+                artifactToken = true,
+                imageUri = "https://cards.scryfall.io/normal/front/c/4/c46f9a07-005c-44b7-8057-b2f00b274dd6.jpg?1756281130"
             )
-        )
     }
 
     metadata {

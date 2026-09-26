@@ -21,8 +21,6 @@ import com.wingedsheep.sdk.scripting.CantAttackUnlessSacrifice
  */
 object AttackSacrificeCosts {
 
-    private val predicateEvaluator = PredicateEvaluator()
-
     /**
      * The sacrifice requirement [attackerId] carries, or null when it has none. Face-down creatures
      * have no abilities (CR 708.2), so they never carry one.
@@ -49,6 +47,7 @@ object AttackSacrificeCosts {
         attackingPlayer: EntityId,
         attackerId: EntityId,
         requirement: CantAttackUnlessSacrifice,
+        predicateEvaluator: PredicateEvaluator
     ): List<EntityId> {
         val projected = state.projectedState
         val context = PredicateContext(controllerId = attackingPlayer, sourceId = attackerId)

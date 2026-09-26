@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Spectral Snatcher
@@ -27,7 +28,7 @@ val SpectralSnatcher = card("Spectral Snatcher") {
         "Swampcycling {2} ({2}, Discard this card: Search your library for a Swamp card, reveal it, " +
         "put it into your hand, then shuffle.)"
 
-    keywordAbility(KeywordAbility.wardDiscard())
+    keywordAbility(KeywordAbility.Ward(WardCost.Discard()))
     keywordAbility(KeywordAbility.typecycling("Swamp", ManaCost.parse("{2}")))
 
     metadata {

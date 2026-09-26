@@ -1,14 +1,11 @@
 package com.wingedsheep.sdk.scripting.filters.unified
 
-import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.ObjectFilterBuilder
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.text.TextReplaceable
 import com.wingedsheep.sdk.scripting.text.TextReplacer
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import kotlinx.serialization.Serializable
 
 /**
@@ -63,7 +60,7 @@ data class TargetFilter(
      * can't express because each zone needs its own predicate.
      */
     val alternatives: List<TargetFilter> = emptyList()
-) : TextReplaceable<TargetFilter> {
+) : TextReplaceable<TargetFilter>, ObjectFilterBuilder<TargetFilter> {
     val description: String
         get() = buildDescription()
 
@@ -83,18 +80,14 @@ data class TargetFilter(
     /** Union this filter with [other] — adds [other] as an alternative clause. */
     fun or(other: TargetFilter): TargetFilter = copy(alternatives = alternatives + other)
 
-    private fun buildDescription(): String =
-        if (alternatives.isEmpty()) describeClause()
-        else clauses().joinToString(" or ") { it.describeClause() }
+    /**
+     * The object noun phrase this filter names, in Oracle word order — "creature you control",
+     * "creature card in your graveyard", "noncreature spell" — without the "other" of [excludeSelf],
+     * which belongs to the quantifier ("another target …"). The targeting prompt is built from it.
+     */
+    fun targetPhrase(plural: Boolean = false): String = TargetPhrase.describe(this, plural)
 
-    private fun describeClause(): String = buildString {
-        if (excludeSelf) append("other ")
-        append(baseFilter.description)
-        if (zone != Zone.BATTLEFIELD) {
-            append(" in ")
-            append(zone.displayName)
-        }
-    }
+    private fun buildDescription(): String = (if (excludeSelf) "other " else "") + targetPhrase()
 
     // =============================================================================
     // Pre-built Creature Targets (Battlefield)
@@ -135,6 +128,9 @@ data class TargetFilter(
 
         /** Target blocking creature */
         val BlockingCreature = TargetFilter(GameObjectFilter.Companion.Creature.blocking())
+
+        /** Target blocked creature — an attacker that has become blocked (CR 509.1h) */
+        val BlockedCreature = TargetFilter(GameObjectFilter.Companion.Creature.blocked())
 
         /** Target attacking or blocking creature */
         val AttackingOrBlockingCreature = TargetFilter(GameObjectFilter.Companion.Creature.attackingOrBlocking())
@@ -366,162 +362,11 @@ data class TargetFilter(
     }
 
     // =============================================================================
-    // Fluent Builder Methods (delegates to GameObjectFilter)
+    // Builders — the predicate builders come from [ObjectFilterBuilder]; these are TargetFilter's own
     // =============================================================================
 
-    /** Add color requirement */
-    fun withColor(color: Color) = copy(baseFilter = baseFilter.withColor(color))
-
-    /** Match any of the specified colors (OR logic), e.g. "target white or black creature". */
-    fun withAnyColor(vararg colors: Color) = copy(baseFilter = baseFilter.withAnyColor(*colors))
-
-    /** Exclude color */
-    fun notColor(color: Color) = copy(baseFilter = baseFilter.notColor(color))
-
-    /** Restrict to nonartifact objects ("nonartifact creature", the Terror template). */
-    fun nonartifact() = copy(baseFilter = baseFilter.nonartifact())
-
-    /** Add subtype requirement */
-    fun withSubtype(subtype: Subtype) = copy(baseFilter = baseFilter.withSubtype(subtype))
-
-    /** Add subtype by string */
-    fun withSubtype(subtype: String) = copy(baseFilter = baseFilter.withSubtype(subtype))
-
-    /** Exclude subtype ("target non-Faerie spell", "target non-Elf creature"). */
-    fun notSubtype(subtype: Subtype) = copy(baseFilter = baseFilter.notSubtype(subtype))
-
-    /** Add keyword requirement */
-    fun withKeyword(keyword: Keyword) = copy(baseFilter = baseFilter.withKeyword(keyword))
-
-    /** Exclude keyword */
-    fun withoutKeyword(keyword: Keyword) = copy(baseFilter = baseFilter.withoutKeyword(keyword))
-
-    /** Mana value equals */
-    fun manaValue(value: Int) = copy(baseFilter = baseFilter.manaValue(value))
-
-    /** Mana value at most */
-    fun manaValueAtMost(max: Int) = copy(baseFilter = baseFilter.manaValueAtMost(max))
-
-    /** Mana value at most the X chosen for the source spell/ability */
-    fun manaValueAtMostX() = copy(baseFilter = baseFilter.manaValueAtMostX())
-
-    /**
-     * Mana value at most a resolved [DynamicAmount] — "target spell with mana value X or less,
-     * where X is the number of Faeries you control" (Spellstutter Sprite). The pass-through of
-     * [ObjectFilter.manaValueAtMostDynamic] onto the *target* side, where the cap is re-read both
-     * when targets are chosen and again on resolution (CR 608.2b).
-     */
-    fun manaValueAtMostDynamic(amount: DynamicAmount) =
-        copy(baseFilter = baseFilter.manaValueAtMostDynamic(amount))
-
-    /** Mana value exactly equal to the X chosen for the source spell/ability (Repeal, Spell Blast). */
-    fun manaValueEqualsX() = copy(baseFilter = baseFilter.manaValueEqualsX())
-
-    /** Mana value at least */
-    fun manaValueAtLeast(min: Int) = copy(baseFilter = baseFilter.manaValueAtLeast(min))
-
-    /** Power exactly equal to the X chosen for the source spell/ability (Ent-Draught Basin). */
-    fun powerEqualsX() = copy(baseFilter = baseFilter.powerEqualsX())
-
-    /** Power at most */
-    fun powerAtMost(max: Int) = copy(baseFilter = baseFilter.powerAtMost(max))
-
-    /** Power at least */
-    fun powerAtLeast(min: Int) = copy(baseFilter = baseFilter.powerAtLeast(min))
-
-    /** Power strictly greater than the projected power of a referenced entity (source, triggering, etc.) */
-    fun powerGreaterThanEntity(reference: com.wingedsheep.sdk.scripting.values.EntityReference) =
-        copy(baseFilter = baseFilter.powerGreaterThanEntity(reference))
-
-    /** Power strictly less than the projected power of a referenced entity (source, triggering, etc.) */
-    fun powerLessThanEntity(reference: com.wingedsheep.sdk.scripting.values.EntityReference) =
-        copy(baseFilter = baseFilter.powerLessThanEntity(reference))
-
-    /** Projected power strictly greater than the object's own base (printed) power. */
-    fun powerGreaterThanBase() = copy(baseFilter = baseFilter.powerGreaterThanBase())
-
-    /** Power less than or equal to the projected power of a referenced entity (source, triggering, etc.) */
-    fun powerAtMostEntity(reference: com.wingedsheep.sdk.scripting.values.EntityReference) =
-        copy(baseFilter = baseFilter.powerAtMostEntity(reference))
-
-    /** Toughness at most */
-    fun toughnessAtMost(max: Int) = copy(baseFilter = baseFilter.toughnessAtMost(max))
-
-    /** Toughness at least */
-    fun toughnessAtLeast(min: Int) = copy(baseFilter = baseFilter.toughnessAtLeast(min))
-
-    /** Power or toughness at least */
-    fun powerOrToughnessAtLeast(min: Int) = copy(baseFilter = baseFilter.powerOrToughnessAtLeast(min))
-
-    /** Must have no counters of any type ("with no counters on it" — Heartless Act). */
-    fun withoutCounters() = copy(baseFilter = baseFilter.withoutCounters())
-
-    /** Must not have a counter of the given type; other counter types are allowed. */
-    fun withoutCounter(counterType: String) = copy(baseFilter = baseFilter.withoutCounter(counterType))
-
-    /** Must be tapped */
-    fun tapped() = copy(baseFilter = baseFilter.tapped())
-
-    /** Must be untapped */
-    fun untapped() = copy(baseFilter = baseFilter.untapped())
-
-    /** Must be a Room with at least one locked door (CR 709.5c). */
-    fun hasLockedDoor() = copy(baseFilter = baseFilter.hasLockedDoor())
-
-    /** Must be attacking */
-    fun attacking() = copy(baseFilter = baseFilter.attacking())
-
-    /** Attacking, with no other creature attacking (CR 506.5) — Crowd of True Believers. */
-    fun attackingAlone() = copy(baseFilter = baseFilter.attackingAlone())
-
-    /** Spell on the stack cast from [zone] (reads `SpellOnStackComponent.castFromZone`). */
-    fun castFromZone(zone: Zone) = copy(baseFilter = baseFilter.castFromZone(zone))
-
-    /**
-     * Spell on the stack that was *not* cast from [zone] — Wash Away's "counter target spell that
-     * wasn't cast from its owner's hand" (`Zone.HAND`).
-     */
-    fun notCastFromZone(zone: Zone) = copy(baseFilter = baseFilter.notCastFromZone(zone))
-
-    /** Must have been dealt damage this turn — passive ("...that was dealt damage this turn"). */
-    fun wasDealtDamageThisTurn() = copy(baseFilter = baseFilter.wasDealtDamageThisTurn())
-
-    /** Must have dealt damage this turn — active ("...that dealt damage this turn"). */
-    fun hasDealtDamageThisTurn() = copy(baseFilter = baseFilter.hasDealtDamageThisTurn())
-
-    /** Must be controlled by you */
-    fun youControl() = copy(baseFilter = baseFilter.youControl())
-
-    /**
-     * Narrow a stack-ability target by its *source* (CR 113.7): "…from a creature source",
-     * "…from an artifact source". See [CardPredicate.AbilitySourceMatches].
-     */
-    fun abilitySourceMatches(subfilter: GameObjectFilter) =
-        copy(baseFilter = baseFilter.abilitySourceMatches(subfilter))
-
-    /** Must not be legendary */
-    fun nonlegendary() = copy(baseFilter = baseFilter.nonlegendary())
-
-    /** Must not be a basic land ("nonbasic land"). */
-    fun nonbasic() = copy(baseFilter = baseFilter.nonbasic())
-
-    /** Must be legendary */
-    fun legendary() = copy(baseFilter = baseFilter.legendary())
-
-    /** Must be controlled by opponent */
-    fun opponentControls() = copy(baseFilter = baseFilter.opponentControls())
-
-    /** Must have an Aura attached ("target enchanted creature", Graceful Takedown). */
-    fun enchanted() = copy(baseFilter = baseFilter.enchanted())
-
-    /** Must be owned by you (for cards in graveyards/exile) */
-    fun ownedByYou() = copy(baseFilter = baseFilter.ownedByYou())
-
-    /** Must be owned by opponent (for cards in graveyards/exile) */
-    fun ownedByOpponent() = copy(baseFilter = baseFilter.ownedByOpponent())
-
-    /** Must have the greatest power among creatures its controller controls */
-    fun hasGreatestPower() = copy(baseFilter = baseFilter.hasGreatestPower())
+    override fun mapObjectFilter(transform: (GameObjectFilter) -> GameObjectFilter) =
+        copy(baseFilter = transform(baseFilter))
 
     /** Exclude the source permanent */
     fun other() = copy(excludeSelf = true)

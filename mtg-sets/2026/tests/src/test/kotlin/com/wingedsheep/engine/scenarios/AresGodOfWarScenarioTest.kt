@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
@@ -20,6 +19,8 @@ import com.wingedsheep.sdk.model.EntityId
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ares, God of War (MSH) — "Whenever an attacking creature you control dies, return that card to
@@ -58,7 +59,7 @@ class AresGodOfWarScenarioTest : FunSpec({
         manaCost = "{R}"
         typeLine = "Instant"
         spell {
-            val victim = target("target creature", Targets.Creature)
+            val victim = target(TargetFilter.Creature)
             effect = Effects.DealDamage(3, victim)
         }
     }
@@ -129,7 +130,7 @@ class AresGodOfWarScenarioTest : FunSpec({
 
         val zap = d.putCardInHand(p1, "Ares Test Zap")
         d.giveMana(p1, Color.RED, 1)
-        d.castSpell(p1, zap, listOf(grunt)).isSuccess shouldBe true
+        d.castSpell(p1, zap, listOf(grunt)).outcome shouldBe Outcome.Done
         d.resolveStack()
 
         withClue("graveyard=${d.graveyardNames(p1)} — the Grunt must have died") {

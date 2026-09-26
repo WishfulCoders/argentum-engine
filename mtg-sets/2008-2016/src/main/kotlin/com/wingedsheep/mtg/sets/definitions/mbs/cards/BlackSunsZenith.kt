@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.mbs.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Black Sun's Zenith — Mirrodin Besieged #39 (canonical / earliest real printing, 2011)
@@ -14,8 +14,8 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *
  * Put X -1/-1 counters on each creature. Shuffle Black Sun's Zenith into its owner's library.
  *
- * Darkness Descends' shape (`ForEachInGroup` over `GroupFilter.AllCreatures`, `EffectTarget.Self`
- * rebound to each creature in turn) with the fixed count swapped for the dynamic one. Counters
+ * Darkness Descends' shape (`ForEachInGroup` over `GroupFilter.AllCreatures`, `EffectTarget.IterationEntity`
+ * bound to each creature in turn) with the fixed count swapped for the dynamic one. Counters
  * rather than a -X/-X effect is the whole point of the card: they stick past end of turn, and a
  * creature reduced to 0 toughness dies to state-based actions.
  */
@@ -30,9 +30,9 @@ val BlackSunsZenith = card("Black Sun's Zenith") {
         effect = Effects.ForEachInGroup(
             filter = GroupFilter.AllCreatures,
             effect = Effects.AddDynamicCounters(
-                counterType = Counters.MINUS_ONE_MINUS_ONE,
-                amount = DynamicAmount.XValue,
-                target = EffectTarget.Self,
+                counterType = CounterType.MINUS_ONE_MINUS_ONE,
+                amount = DynamicAmounts.xValue(),
+                target = EffectTarget.IterationEntity,
             ),
         )
         selfShuffleIntoLibrary()

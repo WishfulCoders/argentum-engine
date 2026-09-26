@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * keeps a power-reading filter from matching a different set on a second pass.
  * `Patterns.Group.pumpAndGrantToAll` is the two-clause facade for this sentence but carries only a
  * single keyword, so the body is spelled out: [Effects.ModifyStats]`(5, 5)` plus one
- * [Effects.GrantKeyword] per keyword, each bound to [EffectTarget.Self] — the per-iteration member —
+ * [Effects.GrantKeyword] per keyword, each bound to [EffectTarget.IterationEntity] — the per-iteration member —
  * and each defaulting to `Duration.EndOfTurn`, the fronted "until end of turn".
  */
 val TitanicUltimatum = card("Titanic Ultimatum") {
@@ -31,12 +31,10 @@ val TitanicUltimatum = card("Titanic Ultimatum") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreaturesYouControl,
-            Effects.Composite(
-                Effects.ModifyStats(5, 5, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self)
-            )
+            Effects.ModifyStats(5, 5, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.IterationEntity)
         )
     }
 

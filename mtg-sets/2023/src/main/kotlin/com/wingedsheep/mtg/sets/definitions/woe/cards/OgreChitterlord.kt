@@ -2,15 +2,15 @@ package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.Effect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /** Rats you control — the count gate and the pump target of [OgreChitterlord] read the same set. */
 private val ratsYouControl = GameObjectFilter.Creature.withSubtype("Rat").youControl()
@@ -26,17 +26,15 @@ private val ratsYouControl = GameObjectFilter.Creature.withSubtype("Rat").youCon
  * resolution, not again when the ability would trigger.
  *
  * Shared by the enters and attacks halves of the printed ability, which the SDK models as two
- * triggered abilities (the [Triggers.EntersBattlefield] / [Triggers.Attacks] pair used for every
+ * triggered abilities (the `Triggers.self.enters()` / `Triggers.self.attacks()` pair used for every
  * "enters or attacks" card).
  */
-private fun ratSwarmAndRally(): Effect = woeRatToken(DynamicAmount.Fixed(2)).then(
-    ConditionalEffect(
-        condition = Conditions.YouControlAtLeast(5, ratsYouControl),
-        effect = Patterns.Group.modifyStatsForAll(
-            power = 2,
-            toughness = 0,
-            filter = GroupFilter(ratsYouControl)
-        )
+private fun ratSwarmAndRally(): Effect = woeRatToken(DynamicAmounts.fixed(2)) then Effects.If(
+    condition = Conditions.YouControlAtLeast(5, ratsYouControl),
+    then = Patterns.Group.modifyStatsForAll(
+        power = 2,
+        toughness = 0,
+        filter = GroupFilter(ratsYouControl)
     )
 )
 
@@ -69,14 +67,14 @@ val OgreChitterlord = card("Ogre Chitterlord") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ratSwarmAndRally()
         description = "Create two 1/1 black Rat creature tokens with \"This token can't block.\" " +
             "Then if you control five or more Rats, each Rat you control gets +2/+0 until end of turn."
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = ratSwarmAndRally()
         description = "Create two 1/1 black Rat creature tokens with \"This token can't block.\" " +
             "Then if you control five or more Rats, each Rat you control gets +2/+0 until end of turn."

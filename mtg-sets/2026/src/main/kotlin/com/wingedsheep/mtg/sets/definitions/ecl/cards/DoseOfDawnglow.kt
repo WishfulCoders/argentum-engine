@@ -2,11 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Dose of Dawnglow
@@ -25,16 +24,12 @@ val DoseOfDawnglow = card("Dose of Dawnglow") {
         "Then if it isn't your main phase, blight 2. (Put two -1/-1 counters on a creature you control.)"
 
     spell {
-        val creature = target("target creature card from your graveyard", Targets.CreatureCardInYourGraveyard)
-        effect = Effects.Composite(
-            listOf(
-                Effects.PutOntoBattlefield(creature),
-                ConditionalEffect(
-                    condition = Conditions.Not(Conditions.IsYourMainPhase),
-                    effect = Patterns.Mechanic.blight(2)
-                )
+        val creature = target(TargetFilter.CreatureInYourGraveyard)
+        effect = Effects.PutOntoBattlefield(creature) then
+            Effects.If(
+                condition = Conditions.Not(Conditions.IsYourMainPhase),
+                then = Patterns.Mechanic.blight(2)
             )
-        )
     }
 
     metadata {

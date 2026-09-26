@@ -14,7 +14,7 @@ import io.kotest.matchers.shouldBe
  * Regression for Party Dude's Level 2 ability (TMT):
  * "Whenever an artifact an opponent controls is put into a graveyard from the battlefield, draw a card."
  *
- * The original definition let `Triggers.leavesBattlefield` default its binding to `SELF`, so the
+ * The original definition let `Triggers.<subject>.leaves(to, excludeTo, excludeSacrifice)` default its binding to `SELF`, so the
  * trigger only watched Party Dude's *own* departure — an opponent's artifact (e.g. a sacrificed
  * Food token) dying never drew a card. The fix uses `TriggerBinding.ANY` so any matching artifact
  * leaving the battlefield fires it.

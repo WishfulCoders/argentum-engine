@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  * Whenever you sacrifice a Food, create a 1/1 black Rat creature token with "This token can't block."
  *
  * "Whenever you sacrifice **a** Food" is the per-permanent template, not the batch one
- * ([Triggers.YouSacrificeA], CR 603.2c): sacrificing three Foods at once to something like Feasting
+ * (`Triggers.you.sacrifices(filter)`, CR 603.2c): sacrificing three Foods at once to something like Feasting
  * Troll King's activated cost makes three Rats, not one. Per the 2024-11-08 ruling a "Food" is any
  * Food *artifact*, so the filter keys on the subtype rather than on token-ness — Tough Cookie (an
  * Artifact Creature — Food Golem) counts.
@@ -33,12 +33,12 @@ val ExperimentalConfectioner = card("Experimental Confectioner") {
         "can't block.\""
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateFood()
     }
 
     triggeredAbility {
-        trigger = Triggers.YouSacrificeA(GameObjectFilter.Artifact.withSubtype("Food"))
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Artifact.withSubtype("Food"))
         effect = woeRatToken()
         description = "Whenever you sacrifice a Food, create a 1/1 black Rat creature token with " +
             "\"This token can't block.\""

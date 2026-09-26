@@ -1,6 +1,8 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.namedFromVariable
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -11,13 +13,8 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.conditions.Exists
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.Gate
-import com.wingedsheep.sdk.scripting.effects.GatedEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.RevealHandEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Liar's Pendulum — Mirrodin #196
@@ -56,46 +53,41 @@ val LiarsPendulum = card("Liar's Pendulum") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        target("target opponent", Targets.Opponent)
+        target(Targets.Opponent)
 
-        effect = Effects.ChooseCardName(
-            storeAs = "pendulumName",
-            prompt = "Choose a card name"
-        )
-            .then(
+        effect = Effects.Pipeline {
+            val pendulumName = chooseCardName(prompt = "Choose a card name")
+            run(
                 Effects.PlayerGuessesCondition(
                     condition = Exists(
                         player = Player.You,
                         zone = Zone.HAND,
-                        filter = GameObjectFilter.Any.namedFromVariable("pendulumName")
+                        filter = GameObjectFilter.Any.namedFromVariable(pendulumName)
                     ),
                     // "your opponent" reads from the guesser's side; the decision also carries this
                     // artifact's name, so a multiplayer table can still tell whose hand is meant.
                     prompt = "Is a card named \"{name}\" in your opponent's hand?",
+                    promptName = pendulumName,
                     storeGuessedRightAs = "pendulumGuessedRight",
-                    guesser = Chooser.TargetPlayer,
-                    promptNameVariable = "pendulumName"
+                    guesser = Chooser.TargetPlayer
                 )
             )
-            .then(
-                MayEffect(
-                    effect = RevealHandEffect(EffectTarget.Controller)
-                        .then(
-                            GatedEffect(
-                                gate = Gate.WhenCondition(
-                                    Conditions.CompareAmounts(
-                                        DynamicAmount.VariableReference("pendulumGuessedRight"),
-                                        ComparisonOperator.EQ,
-                                        DynamicAmount.Fixed(0),
-                                    )
+            run(
+                Effects.May(
+                    effect = Effects.RevealHand(EffectTarget.Controller) then
+                        Effects.If(
+                            condition = Conditions.CompareAmounts(
+                                    DynamicAmounts.storedNumber("pendulumGuessedRight"),
+                                    ComparisonOperator.EQ,
+                                    0,
                                 ),
-                                then = Effects.DrawCards(1),
-                                descriptionOverride = "If your opponent guessed wrong, draw a card.",
-                            )
+                            then = Effects.DrawCards(1),
+                            descriptionOverride = "If your opponent guessed wrong, draw a card.",
                         ),
                     descriptionOverride = "reveal your hand",
                 )
             )
+        }
 
         description = "Choose a card name. Target opponent guesses whether a card with that name " +
             "is in your hand. You may reveal your hand. If you do and your opponent guessed " +

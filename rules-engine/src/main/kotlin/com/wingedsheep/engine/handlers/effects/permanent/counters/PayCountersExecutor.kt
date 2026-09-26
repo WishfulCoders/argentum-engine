@@ -40,7 +40,7 @@ class PayCountersExecutor : EffectExecutor<PayCountersEffect> {
         val playerId = TargetResolutionUtils.resolvePlayerRef(effect.player, context, state)
             ?: return EffectResult.error(state, "PayCounters: could not resolve paying player")
 
-        val current = state.getEntity(playerId)?.get<CountersComponent>()?.getCount(resolveCounterType(effect.counterType)) ?: 0
+        val current = state.getEntity(playerId)?.get<CountersComponent>()?.getCount(effect.counterType) ?: 0
         if (current <= 0) {
             return DrawUpToExecutor.injectStoredNumber(state, effect.storeAmountAs, 0)
         }
@@ -50,7 +50,7 @@ class PayCountersExecutor : EffectExecutor<PayCountersEffect> {
         val decision = { decisionId: String -> ChooseNumberDecision(
             id = decisionId,
             playerId = playerId,
-            prompt = "Pay how many ${effect.counterType} counters? (0-$current)",
+            prompt = "Pay how many ${effect.counterType.printed} counters? (0-$current)",
             context = DecisionContext(
                 sourceId = context.sourceId,
                 sourceName = sourceName,

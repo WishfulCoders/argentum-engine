@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -10,7 +11,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Voldaren Estate — Innistrad: Crimson Vow #267
@@ -58,10 +58,10 @@ val VoldarenEstate = card("Voldaren Estate") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{5}"), AbilityCost.Tap)
         effect = Effects.CreateBlood()
-        genericCostReduction = DynamicAmount.AggregateBattlefield(
-            player = Player.You,
-            filter = GameObjectFilter.Creature.withSubtype(Subtype.VAMPIRE)
-        )
+        genericCostReduction = DynamicAmounts.battlefield(
+            Player.You,
+            GameObjectFilter.Creature.withSubtype(Subtype.VAMPIRE)
+        ).count()
         description = "{5}, {T}: Create a Blood token. This ability costs {1} less to activate for " +
             "each Vampire you control."
     }

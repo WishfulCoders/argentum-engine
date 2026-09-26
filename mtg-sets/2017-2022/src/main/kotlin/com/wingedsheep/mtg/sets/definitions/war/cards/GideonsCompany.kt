@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.war.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Gideon's Company — War of the Spark #268 (canonical printing)
@@ -21,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  * A planeswalker-deck exclusive, so `inBooster = false` — it is part of the set's card pool but
  * never appears in a booster.
  *
- * The activated ability adds a [Counters.LOYALTY] counter like any other counter type; loyalty is
+ * The activated ability adds a [CounterType.LOYALTY] counter like any other counter type; loyalty is
  * not special-cased outside the planeswalker's own cost and damage rules. "Target Gideon
  * planeswalker" is the planeswalker filter narrowed by the *subtype*, not by name — it would
  * find any Gideon on the battlefield, yours or an opponent's.
@@ -36,14 +35,14 @@ val GideonsCompany = card("Gideon's Company") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.YouGainLife
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
+        trigger = Triggers.you.gainsLife()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
     }
 
     activatedAbility {
         cost = Costs.Mana("{3}{W}")
-        val gideon = target("target", TargetPermanent(filter = TargetFilter.Planeswalker.withSubtype("Gideon")))
-        effect = Effects.AddCounters(Counters.LOYALTY, 1, gideon)
+        val gideon = target(TargetFilter.Planeswalker.withSubtype("Gideon"))
+        effect = Effects.AddCounters(CounterType.LOYALTY, 1, gideon)
     }
 
     metadata {

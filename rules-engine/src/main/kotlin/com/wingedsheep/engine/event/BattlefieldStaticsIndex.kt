@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.event
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.ConditionEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.registry.CardRegistry
@@ -55,7 +56,7 @@ class BattlefieldStaticsIndex private constructor(
      * unfiltered — consumers apply their own face-down / card-definition checks, exactly as they
      * did while scanning the battlefield themselves.
      */
-    val attachmentsByTarget: Map<EntityId, List<EntityId>>,
+    val attachmentsByTarget: Map<EntityId, List<EntityId>>
 ) {
     data class WardGrantProvider(
         val sourceId: EntityId,
@@ -75,9 +76,9 @@ class BattlefieldStaticsIndex private constructor(
     companion object {
         val EMPTY = BattlefieldStaticsIndex(emptyList(), emptyList(), emptyList(), emptyMap())
 
-        fun build(state: GameState, cardRegistry: CardRegistry): BattlefieldStaticsIndex {
+        fun build(state: GameState, cardRegistry: CardRegistry, predicateEvaluator: PredicateEvaluator): BattlefieldStaticsIndex {
             // Reused across the whole walk; ConditionEvaluator is stateless.
-            val conditionEvaluator = ConditionEvaluator()
+            val conditionEvaluator = predicateEvaluator.conditions
             var triggerGrants: MutableList<TriggerIndex.GrantProviderEntry>? = null
             var wardGrants: MutableList<WardGrantProvider>? = null
             var suppressors: MutableList<WardSuppressor>? = null

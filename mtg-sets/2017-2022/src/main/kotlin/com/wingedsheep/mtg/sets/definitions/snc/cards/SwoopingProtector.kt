@@ -1,11 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.snc.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 
 /**
  * Swooping Protector
@@ -32,7 +31,7 @@ val SwoopingProtector = card("Swooping Protector") {
 
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.Named(Counters.SHIELD),
+            counterType = CounterType.SHIELD,
             count = 1,
             selfOnly = true,
         )

@@ -3,14 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Shapesharer — Lorwyn #85
@@ -55,17 +52,12 @@ val Shapesharer = card("Shapesharer") {
 
     activatedAbility {
         cost = Costs.Mana("{2}{U}")
-        target(
-            "target Shapeshifter",
-            TargetPermanent(
-                filter = TargetFilter(GameObjectFilter.Permanent.withSubtype("Shapeshifter"))
-            )
-        )
-        target("target creature", Targets.Creature)
+        val shapeshifter = target(TargetFilter(GameObjectFilter.Permanent.withSubtype("Shapeshifter")))
+        val creature = target(TargetFilter.Creature)
         effect = Effects.EachPermanentBecomesCopyOfTarget(
-            target = EffectTarget.ContextTarget(1),
+            target = creature,
             duration = Duration.UntilYourNextTurn,
-            affected = EffectTarget.ContextTarget(0),
+            affected = shapeshifter,
         )
         description = "Target Shapeshifter becomes a copy of target creature until your next turn."
     }

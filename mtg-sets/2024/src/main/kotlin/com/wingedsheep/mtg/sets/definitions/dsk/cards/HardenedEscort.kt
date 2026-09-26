@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -28,12 +27,9 @@ val HardenedEscort = card("Hardened Escort") {
     power = 2
     toughness = 4
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val t = target("target", TargetCreature(filter = TargetFilter.OtherCreatureYouControl))
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 0, t),
-            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t)
-        )
+        trigger = Triggers.self.attacks()
+        val t = target(TargetFilter.OtherCreatureYouControl)
+        effect = Effects.ModifyStats(1, 0, t) then Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t)
     }
     metadata {
         rarity = Rarity.COMMON

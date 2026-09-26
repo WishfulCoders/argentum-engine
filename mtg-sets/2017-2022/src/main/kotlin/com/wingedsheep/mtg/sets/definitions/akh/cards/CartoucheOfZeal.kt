@@ -2,12 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.akh.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Cartouche of Zeal
@@ -25,11 +26,11 @@ val CartoucheOfZeal = card("Cartouche of Zeal") {
         "When this Aura enters, target creature can't block this turn.\n" +
         "Enchanted creature gets +1/+1 and has haste. (It can attack and {T} no matter when it came under your control.)"
 
-    auraTarget = Targets.CreatureYouControl
+    auraTarget = TargetObject(filter = TargetFilter.CreatureYouControl)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", Targets.Creature)
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature)
         effect = Effects.CantBlock(t)
     }
 

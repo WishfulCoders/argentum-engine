@@ -1,16 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.soi.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Essence Flux
@@ -31,19 +30,14 @@ val EssenceFlux = card("Essence Flux") {
         "under its owner's control. If it's a Spirit, put a +1/+1 counter on it."
 
     spell {
-        val creature = target("creature you control", Targets.CreatureYouControl)
-        effect = Effects.Move(creature, Zone.EXILE)
-            .then(Effects.Move(creature, Zone.BATTLEFIELD))
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.TargetMatchesFilter(
-                        filter = GameObjectFilter(
-                            cardPredicates = listOf(CardPredicate.HasSubtype(Subtype("Spirit")))
-                        ),
-                        targetIndex = 0
-                    ),
-                    effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creature)
-                )
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.Move(creature, Zone.EXILE) then
+            Effects.Move(creature, Zone.BATTLEFIELD) then
+            Effects.If(
+                condition = Conditions.TargetMatchesFilter(GameObjectFilter(
+                        cardPredicates = listOf(CardPredicate.HasSubtype(Subtype("Spirit")))
+                    ), creature),
+                then = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature)
             )
     }
 

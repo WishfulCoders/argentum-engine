@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Broodguard Elite
@@ -34,13 +33,13 @@ val BroodguardElite = card("Broodguard Elite") {
         "the beginning of the next end step, then you may cast it from exile on a later turn.)"
 
     // Enters with X +1/+1 counters, where X is the value paid in its mana cost.
-    replacementEffect(EntersWithDynamicCounters(count = DynamicAmount.XValue))
+    replacementEffect(EntersWithDynamicCounters(count = DynamicAmounts.xValue()))
 
     // When this creature leaves the battlefield, put its counters on target creature you control.
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
-        target = Targets.CreatureYouControl
-        effect = Effects.MoveAllLastKnownCounters(EffectTarget.ContextTarget(0))
+        val creatureYouControl = target(TargetFilter.CreatureYouControl)
+        trigger = Triggers.self.leaves()
+        effect = Effects.MoveAllLastKnownCounters(creatureYouControl)
     }
 
     warp = "{X}{G}"

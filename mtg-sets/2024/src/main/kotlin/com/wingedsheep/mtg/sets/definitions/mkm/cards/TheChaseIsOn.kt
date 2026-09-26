@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * The Chase Is On — Murders at Karlov Manor #116
@@ -24,12 +24,10 @@ val TheChaseIsOn = card("The Chase Is On") {
         "(Create a Clue token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")"
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(3, 0, creature),
-            Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature),
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(3, 0, creature) then
+            Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature) then
             Effects.Investigate()
-        )
     }
 
     metadata {

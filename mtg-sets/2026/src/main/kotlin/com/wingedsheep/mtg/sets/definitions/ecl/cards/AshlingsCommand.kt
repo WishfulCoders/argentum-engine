@@ -5,11 +5,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreatePredefinedTokenEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Ashling's Command
@@ -35,26 +33,23 @@ val AshlingsCommand = card("Ashling's Command") {
     spell {
         modal(chooseCount = 2) {
             mode("Create a token that's a copy of target Elemental you control") {
-                val elemental = target(
-                    "target Elemental you control",
-                    TargetObject(filter = TargetFilter(GameObjectFilter.Creature.youControl().withSubtype("Elemental")))
-                )
+                val elemental = target(TargetFilter(GameObjectFilter.Creature.youControl().withSubtype("Elemental")))
                 effect = Effects.CreateTokenCopyOfTarget(elemental)
             }
             mode("Target player draws two cards") {
-                val player = target("target player", TargetPlayer())
+                val player = target(Targets.Player)
                 effect = Effects.DrawCards(2, player)
             }
             mode("Ashling's Command deals 2 damage to each creature target player controls") {
-                val player = target("target player", TargetPlayer())
+                val player = target(Targets.Player)
                 effect = Patterns.Group.dealDamageToAll(
                     amount = 2,
                     filter = GroupFilter(GameObjectFilter.Creature.targetPlayerControls(player))
                 )
             }
             mode("Target player creates two Treasure tokens") {
-                val player = target("target player", TargetPlayer())
-                effect = CreatePredefinedTokenEffect("Treasure", count = 2, controller = player)
+                val player = target(Targets.Player)
+                effect = Effects.CreateTreasure(2, controller = player)
             }
         }
     }

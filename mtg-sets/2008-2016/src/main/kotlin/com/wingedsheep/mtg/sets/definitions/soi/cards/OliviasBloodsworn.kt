@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBlock
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Olivia's Bloodsworn (Shadows over Innistrad #127)
@@ -42,7 +41,7 @@ val OliviasBloodsworn = card("Olivia's Bloodsworn") {
 
     activatedAbility {
         cost = Costs.Mana("{R}")
-        val t = target("target", TargetPermanent(filter = TargetFilter.Permanent.withSubtype(Subtype.VAMPIRE)))
+        val t = target(TargetFilter.Permanent.withSubtype(Subtype.VAMPIRE))
         effect = Effects.GrantKeyword(Keyword.HASTE, t)
     }
 

@@ -66,10 +66,7 @@ val HearthElemental = card("Hearth Elemental") {
         oracleText = "Discard your hand, then draw two cards. " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            effect = Effects.Composite(
-                Patterns.Hand.discardHand(),
-                Effects.DrawCards(2),
-            )
+            effect = Patterns.Hand.discardHand() then Effects.DrawCards(2)
         }
     }
 

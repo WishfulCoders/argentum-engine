@@ -10,10 +10,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * There and Back Again
@@ -37,7 +35,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  *
  * Chapter III spawns Smaug as a one-off named legendary 6/6 red Dragon token. The death
  * rider is granted on the token via [CreateTokenEffect.triggeredAbilities] — a
- * `Triggers.Dies` event with [Effects.CreateTreasure]`(14)` as the payoff.
+ * `Triggers.self.dies()` event with [Effects.CreateTreasure]`(14)` as the payoff.
  */
 val ThereAndBackAgain = card("There and Back Again") {
     manaCost = "{3}{R}{R}"
@@ -49,14 +47,9 @@ val ThereAndBackAgain = card("There and Back Again") {
         "III — Create Smaug, a legendary 6/6 red Dragon creature token with flying, haste, and \"When Smaug dies, create fourteen Treasure tokens.\""
 
     sagaChapter(1) {
-        val creature = target(
-            "up to one target creature",
-            TargetCreature(optional = true)
-        )
-        effect = Effects.Composite(
-            Effects.CantBlock(creature, Duration.WhileYouControlSource("There and Back Again")),
+        val creature = target(TargetFilter.Creature, optional = true)
+        effect = Effects.CantBlock(creature, Duration.WhileYouControlSource("There and Back Again")) then
             Effects.TheRingTemptsYou()
-        )
     }
 
     sagaChapter(2) {
@@ -68,8 +61,8 @@ val ThereAndBackAgain = card("There and Back Again") {
     }
 
     sagaChapter(3) {
-        effect = CreateTokenEffect(
-            count = DynamicAmount.Fixed(1),
+        effect = Effects.CreateToken(
+            count = 1,
             power = 6,
             toughness = 6,
             colors = setOf(Color.RED),
@@ -79,8 +72,7 @@ val ThereAndBackAgain = card("There and Back Again") {
             legendary = true,
             triggeredAbilities = listOf(
                 TriggeredAbility.create(
-                    trigger = Triggers.Dies.event,
-                    binding = Triggers.Dies.binding,
+                    trigger = Triggers.self.dies(),
                     effect = Effects.CreateTreasure(14)
                 )
             ),

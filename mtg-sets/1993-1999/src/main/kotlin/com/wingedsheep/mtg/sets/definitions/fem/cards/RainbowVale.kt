@@ -5,8 +5,6 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.GiveControlToTargetPlayerEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -28,16 +26,14 @@ val RainbowVale = card("Rainbow Vale") {
     activatedAbility {
         cost = Costs.Tap
         manaAbility = true
-        effect = Effects.Composite(
-            Effects.AddAnyColorMana(1),
-            CreateDelayedTriggerEffect(
+        effect = Effects.AddAnyColorMana(1) then
+            Effects.CreateDelayedTrigger(
                 step = Step.END,
-                effect = GiveControlToTargetPlayerEffect(
+                effect = Effects.GiveControl(
                     permanent = EffectTarget.Self,
                     newController = EffectTarget.PlayerRef(Player.AnOpponent),
                 )
             )
-        )
         description = "{T}: Add one mana of any color. An opponent gains control of this land at the beginning of the next end step."
     }
 

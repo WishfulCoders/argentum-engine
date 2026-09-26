@@ -21,11 +21,8 @@ val KissOfDeath = card("Kiss of Death") {
     oracleText = "Kiss of Death deals 4 damage to target opponent or planeswalker. You gain 4 life."
 
     spell {
-        val victim = target("target", Targets.OpponentOrPlaneswalker)
-        effect = Effects.Composite(
-            Effects.DealDamage(4, victim),
-            Effects.GainLife(4)
-        )
+        val victim = target(Targets.OpponentOrPlaneswalker)
+        effect = Effects.DealDamage(4, victim) then Effects.GainLife(4)
     }
 
     metadata {

@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Dream's Grip
@@ -30,11 +30,11 @@ val DreamsGrip = card("Dream's Grip") {
             additionalManaCostPerExtraMode = "{1}"
         ) {
             mode("Tap target permanent") {
-                val permanent = target("permanent to tap", Targets.Permanent)
+                val permanent = target(TargetFilter.Permanent)
                 effect = Effects.Tap(permanent)
             }
             mode("Untap target permanent") {
-                val permanent = target("permanent to untap", Targets.Permanent)
+                val permanent = target(TargetFilter.Permanent)
                 effect = Effects.Untap(permanent)
             }
         }

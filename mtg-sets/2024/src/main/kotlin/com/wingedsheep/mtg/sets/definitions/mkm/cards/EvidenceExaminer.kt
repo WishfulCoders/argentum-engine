@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Evidence Examiner — Murders at Karlov Manor #201
@@ -22,14 +22,14 @@ import com.wingedsheep.sdk.scripting.effects.MayEffect
  * The same shape as [SurveillanceMonitor], with the self-feeding trigger moved from enters to
  * beginning of combat. Both halves come straight off the existing rails:
  *
- * - [Triggers.BeginCombat] is already scoped to your turn (`Step.BEGIN_COMBAT, Player.You`), so the
+ * - `Triggers.you.beginningOf(Step.BEGIN_COMBAT)` is already scoped to your turn (`Step.BEGIN_COMBAT, Player.You`), so the
  *   "on your turn" clause needs no extra condition.
  * - The collect is a bare "you may" with no rider, so it is [Effects.CollectEvidence] under a
- *   [MayEffect] gate rather than a reflexive trigger — there is no "when you do" to put on the
+ *   [Effects.May] gate rather than a reflexive trigger — there is no "when you do" to put on the
  *   stack, and the Clue arrives via the separate payoff trigger instead. Per CR 701.59b the prompt
  *   is skipped entirely when the graveyard can't reach total mana value 4, so a player is never
  *   offered a collection they couldn't complete.
- * - [Triggers.WheneverYouCollectEvidence] fires once per collection, after the cards are exiled —
+ * - `Triggers.you.collectsEvidence()` fires once per collection, after the cards are exiled —
  *   never for a declined collect, nor for one CR 701.59b made impossible. That is what makes the
  *   two abilities chain without any explicit linkage between them.
  *
@@ -48,13 +48,13 @@ val EvidenceExaminer = card("Evidence Examiner") {
         "\"{2}, Sacrifice this token: Draw a card.\")"
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        effect = MayEffect(Effects.CollectEvidence(4))
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        effect = Effects.May(Effects.CollectEvidence(4))
         description = "At the beginning of combat on your turn, you may collect evidence 4."
     }
 
     triggeredAbility {
-        trigger = Triggers.WheneverYouCollectEvidence
+        trigger = Triggers.you.collectsEvidence()
         effect = Effects.Investigate()
         description = "Whenever you collect evidence, investigate."
     }

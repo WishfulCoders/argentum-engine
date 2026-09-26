@@ -26,7 +26,7 @@ val CaligoSkinWitch = card("Caligo Skin-Witch") {
     keywordAbility(KeywordAbility.kicker("{3}{B}"))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = WasKicked
         effect = Effects.EachOpponentDiscards(2)
     }

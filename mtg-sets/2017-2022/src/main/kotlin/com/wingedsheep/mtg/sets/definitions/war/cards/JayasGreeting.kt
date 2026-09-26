@@ -3,7 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.war.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Jaya's Greeting
@@ -20,11 +20,8 @@ val JayasGreeting = card("Jaya's Greeting") {
     oracleText = "Jaya's Greeting deals 3 damage to target creature. Scry 1."
 
     spell {
-        val t = target("target", TargetCreature())
-        effect = Effects.Composite(
-            Effects.DealDamage(3, t),
-            Effects.Scry(1)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.DealDamage(3, t) then Effects.Scry(1)
     }
 
     metadata {

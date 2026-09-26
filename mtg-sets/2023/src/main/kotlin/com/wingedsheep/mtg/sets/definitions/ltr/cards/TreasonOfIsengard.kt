@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Treason of Isengard
@@ -24,14 +23,10 @@ val TreasonOfIsengard = card("Treason of Isengard") {
 
     spell {
         val card = target(
-            "up to one target instant or sorcery card from your graveyard",
-            TargetObject(
-                filter = TargetFilter(GameObjectFilter.InstantOrSorcery.ownedByYou(), zone = Zone.GRAVEYARD),
-                optional = true
-            )
+            TargetFilter(GameObjectFilter.InstantOrSorcery.ownedByYou(), zone = Zone.GRAVEYARD),
+            optional = true,
         )
-        effect = Effects.PutOnTopOfLibrary(card)
-            .then(Effects.Amass(2, "Orc"))
+        effect = Effects.PutOnTopOfLibrary(card) then Effects.Amass(2, "Orc")
     }
 
     metadata {

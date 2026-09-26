@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Daring Escape
@@ -19,10 +19,10 @@ val DaringEscape = card("Daring Escape") {
     oracleText = "Target creature gets +1/+0 and gains first strike until end of turn. Scry 1."
 
     spell {
-        val creature = target("target creature to get +1/+0 and first strike", TargetCreature())
-        effect = Effects.ModifyStats(1, 0, creature)
-            .then(Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature))
-            .then(Effects.Scry(1))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(1, 0, creature) then
+            Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature) then
+            Effects.Scry(1)
     }
 
     metadata {

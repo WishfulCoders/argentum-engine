@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.model.EntityId
  *   "Whenever one or more counters are put on a creature you control, if it's the first time
  *    counters have been put on that creature this turn, put a +1/+1 counter on that creature."
  *
- * Exercises the engine's new `Triggers.countersPlacedOn` (any counter type, first-time-per-turn
+ * Exercises the engine's new `Triggers.<subject>.getsCounters(type, by, firstTimeEachTurn, batch)` (any counter type, first-time-per-turn
  * gate via `ReceivedCountersThisTurnComponent`). Sage of the Fang's ETB ("put a +1/+1 counter on
  * target creature") is the counter source.
  */

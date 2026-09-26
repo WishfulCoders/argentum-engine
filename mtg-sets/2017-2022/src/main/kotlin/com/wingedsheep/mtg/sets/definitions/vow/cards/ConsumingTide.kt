@@ -2,13 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Consuming Tide (Innistrad: Crimson Vow #53)
@@ -42,12 +42,12 @@ val ConsumingTide = card("Consuming Tide") {
             toHand(exclude(pool, kept))
             run(
                 Effects.DrawCards(
-                    DynamicAmount.CountPlayersWith(
+                    DynamicAmounts.countPlayersWith(
                         scope = Player.EachOpponent,
                         condition = Conditions.CompareAmounts(
-                            left = DynamicAmount.Count(Player.You, Zone.HAND),
+                            left = DynamicAmounts.cardsInYourHand(),
                             operator = ComparisonOperator.GT,
-                            right = DynamicAmount.Count(Player.ControllerOfSource, Zone.HAND),
+                            right = DynamicAmounts.count(Player.ControllerOfSource, Zone.HAND),
                         ),
                     )
                 )

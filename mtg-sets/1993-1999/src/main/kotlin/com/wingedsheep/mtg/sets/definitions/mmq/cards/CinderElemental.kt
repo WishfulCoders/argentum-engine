@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.mmq.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Cinder Elemental
@@ -25,9 +24,9 @@ val CinderElemental = card("Cinder Elemental") {
     toughness = 2
 
     activatedAbility {
+        val anyTarget = target(Targets.Any)
         cost = Costs.Composite(Costs.Mana("{X}{R}"), Costs.Tap, Costs.SacrificeSelf)
-        target = Targets.Any
-        effect = Effects.DealDamage(DynamicAmount.XValue, EffectTarget.ContextTarget(0))
+        effect = Effects.DealDamage(DynamicAmounts.xValue(), anyTarget)
         description = "{X}{R}, {T}, Sacrifice this creature: It deals X damage to any target."
     }
 

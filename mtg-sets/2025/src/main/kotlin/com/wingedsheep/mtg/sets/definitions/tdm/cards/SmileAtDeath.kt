@@ -1,15 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Smile at Death — Tarkir: Dragonstorm #24
@@ -32,20 +32,18 @@ val SmileAtDeath = card("Smile at Death") {
         "those creatures."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         target = TargetObject(
             count = 2,
             optional = true,
             filter = TargetFilter.CreatureInYourGraveyard.powerAtMost(2)
         )
-        effect = ForEachTargetEffect(
-            effects = listOf(
-                Effects.Move(
-                    EffectTarget.ContextTarget(0),
-                    Zone.BATTLEFIELD,
-                    fromZone = Zone.GRAVEYARD
-                ).then(Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0)))
-            )
+        effect = Effects.ForEachTarget(
+            Effects.Move(
+                EffectTarget.ContextTarget(0),
+                Zone.BATTLEFIELD,
+                fromZone = Zone.GRAVEYARD
+            ) then Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0))
         )
         description = "At the beginning of your upkeep, return up to two target creature cards with " +
             "power 2 or less from your graveyard to the battlefield. Put a +1/+1 counter on each of those creatures."

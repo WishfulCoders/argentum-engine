@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.atq.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Staff of Zegon
@@ -20,7 +20,7 @@ val StaffOfZegon = card("Staff of Zegon") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap)
-        val t = target("target creature", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(-2, 0, t)
         description = "{3}, {T}: Target creature gets -2/-0 until end of turn."
     }

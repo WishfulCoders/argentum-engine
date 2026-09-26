@@ -2,14 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.arn.cards
 
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GainControlEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Old Man of the Sea
@@ -45,10 +44,8 @@ val OldManOfTheSea = card("Old Man of the Sea") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", TargetCreature(
-            filter = TargetFilter(GameObjectFilter.Creature.powerAtMostEntity(EntityReference.Source))
-        ))
-        effect = GainControlEffect(
+        val t = target(TargetFilter(GameObjectFilter.Creature.powerAtMostEntity(EffectTarget.Self)))
+        effect = Effects.GainControl(
             t,
             Duration.WhileSourceTappedAndAffectedPowerAtMostSource("Old Man of the Sea")
         )

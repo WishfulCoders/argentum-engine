@@ -11,9 +11,11 @@ import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.effects.AddCreatureTypeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Subtype
 
 /**
  * Tests for AddCreatureTypeEffect.
@@ -32,7 +34,7 @@ class AddCreatureTypeTest : FunSpec({
                 target = EffectTarget.ContextTarget(0),
                 duration = Duration.EndOfTurn
             ),
-            TargetCreature()
+            TargetObject(filter = TargetFilter.Creature)
         )
     )
 
@@ -96,7 +98,7 @@ class AddCreatureTypeTest : FunSpec({
                     target = EffectTarget.ContextTarget(0),
                     duration = Duration.Permanent
                 ),
-                TargetCreature()
+                TargetObject(filter = TargetFilter.Creature)
             )
         )
 

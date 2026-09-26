@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.scripting.CostModification
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -61,10 +60,7 @@ val MomoFriendlyFlier = card("Momo, Friendly Flier") {
 
     // Whenever another creature you control with flying enters, Momo gets +1/+1 until end of turn.
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.youControl().withKeyword(Keyword.FLYING),
-            binding = TriggerBinding.OTHER,
-        )
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl().withKeyword(Keyword.FLYING)).enters()
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }
 

@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Tajuru Warcaller
@@ -29,10 +28,7 @@ val TajuruWarcaller = card("Tajuru Warcaller") {
         "+2/+2 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Permanent.withSubtype("Ally").youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Permanent.withSubtype("Ally").youControl()).enters()
         effect = Patterns.Group.modifyStatsForAll(2, 2, Filters.Group.creaturesYouControl)
     }
 

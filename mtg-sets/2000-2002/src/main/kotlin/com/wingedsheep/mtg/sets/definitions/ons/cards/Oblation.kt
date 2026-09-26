@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Oblation
@@ -20,7 +20,7 @@ val Oblation = card("Oblation") {
     oracleText = "The owner of target nonland permanent shuffles it into their library, then draws two cards."
 
     spell {
-        val t = target("target", Targets.NonlandPermanent)
+        val t = target(TargetFilter.NonlandPermanent)
         effect = Effects.ShuffleIntoLibrary(t) then
                 Effects.DrawCards(2, EffectTarget.PlayerRef(Player.OwnerOf("target permanent")))
     }

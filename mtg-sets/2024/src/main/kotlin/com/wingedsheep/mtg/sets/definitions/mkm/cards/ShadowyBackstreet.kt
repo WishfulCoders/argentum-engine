@@ -24,7 +24,7 @@ val ShadowyBackstreet = card("Shadowy Backstreet") {
     replacementEffect(EntersTapped())
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.surveil(1)
     }
 

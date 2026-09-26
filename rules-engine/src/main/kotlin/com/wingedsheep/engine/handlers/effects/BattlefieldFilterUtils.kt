@@ -15,8 +15,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  */
 object BattlefieldFilterUtils {
 
-    private val predicateEvaluator = PredicateEvaluator()
-
     /**
      * Find all entities on the battlefield matching the given filter using projected state.
      *
@@ -29,7 +27,8 @@ object BattlefieldFilterUtils {
         state: GameState,
         filter: GameObjectFilter,
         context: PredicateContext,
-        excludeSelfId: EntityId? = null
+        excludeSelfId: EntityId? = null,
+        predicateEvaluator: PredicateEvaluator
     ): List<EntityId> {
         val projected = state.projectedState
         return state.getBattlefield().filter { entityId ->
@@ -45,8 +44,9 @@ object BattlefieldFilterUtils {
         state: GameState,
         filter: GameObjectFilter,
         context: EffectContext,
-        excludeSelfId: EntityId? = null
+        excludeSelfId: EntityId? = null,
+        predicateEvaluator: PredicateEvaluator
     ): List<EntityId> {
-        return findMatchingOnBattlefield(state, filter, PredicateContext.fromEffectContext(context), excludeSelfId)
+        return findMatchingOnBattlefield(state, filter, PredicateContext.fromEffectContext(context), excludeSelfId, predicateEvaluator = predicateEvaluator)
     }
 }

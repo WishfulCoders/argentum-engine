@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -9,9 +9,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantCardType
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.station
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Pinnacle Kill-Ship
@@ -32,8 +32,8 @@ val PinnacleKillShip = card("Pinnacle Kill-Ship") {
 
     // ETB: deals 10 damage to up to one target creature
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val target = target("up to one target creature", TargetCreature(optional = true))
+        trigger = Triggers.self.enters()
+        val target = target(TargetFilter.Creature, optional = true)
         effect = Effects.DealDamage(10, target)
     }
 
@@ -41,7 +41,7 @@ val PinnacleKillShip = card("Pinnacle Kill-Ship") {
     station()
 
     // 7+ charge counters: becomes artifact creature and gains flying
-    val charge7 = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 7)
+    val charge7 = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 7)
 
     staticAbility {
         condition = charge7

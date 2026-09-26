@@ -13,6 +13,7 @@ import com.wingedsheep.sdk.scripting.GrantAdditionalTypesToGroup
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Ragost, Deft Gastronaut
@@ -67,7 +68,7 @@ val RagostDeftGastronaut = card("Ragost, Deft Gastronaut") {
 
     // At the beginning of each end step, if you gained life this turn, untap Ragost.
     triggeredAbility {
-        trigger = Triggers.EachEndStep
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
         interveningIf = Conditions.YouGainedLifeThisTurn
         effect = Effects.Untap(EffectTarget.Self)
     }

@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.c17.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Ramos, Dragon Engine — Commander 2017 #55.
@@ -30,24 +29,22 @@ val RamosDragonEngine = card("Ramos, Dragon Engine") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YouCastSpell
+        trigger = Triggers.you.casts()
         effect = Effects.AddDynamicCounters(
-            counterType = Counters.PLUS_ONE_PLUS_ONE,
-            amount = DynamicAmounts.colorCountOf(EntityReference.Triggering),
+            counterType = CounterType.PLUS_ONE_PLUS_ONE,
+            amount = DynamicAmounts.colorCountOf(EffectTarget.TriggeringEntity),
             target = EffectTarget.Self
         )
     }
 
     activatedAbility {
-        cost = Costs.RemoveCounterFromSelf(Counters.PLUS_ONE_PLUS_ONE, 5)
+        cost = Costs.RemoveCounterFromSelf(CounterType.PLUS_ONE_PLUS_ONE, 5)
         restrictions = listOf(ActivationRestriction.OncePerTurn)
-        effect = Effects.Composite(
-            Effects.AddMana(Color.WHITE, 2),
-            Effects.AddMana(Color.BLUE, 2),
-            Effects.AddMana(Color.BLACK, 2),
-            Effects.AddMana(Color.RED, 2),
+        effect = Effects.AddMana(Color.WHITE, 2) then
+            Effects.AddMana(Color.BLUE, 2) then
+            Effects.AddMana(Color.BLACK, 2) then
+            Effects.AddMana(Color.RED, 2) then
             Effects.AddMana(Color.GREEN, 2)
-        )
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

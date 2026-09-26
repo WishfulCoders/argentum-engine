@@ -1,16 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.drk.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.RepeatCondition
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Mana Clash
@@ -40,32 +39,30 @@ val ManaClash = card("Mana Clash") {
         "heads on the same flip."
 
     spell {
-        val opponent = target("target opponent", TargetOpponent())
-        val myHeads = DynamicAmount.VariableReference("manaClashMine")
-        val theirHeads = DynamicAmount.VariableReference("manaClashTheirs")
+        val opponent = target(Targets.Opponent)
+        val myHeads = DynamicAmounts.storedNumber("manaClashMine")
+        val theirHeads = DynamicAmounts.storedNumber("manaClashTheirs")
 
         effect = Effects.RepeatWhile(
-            body = Effects.Composite(
-                Effects.FlipCoins(1, storeHeadsAs = "manaClashMine"),
-                Effects.FlipCoins(1, storeHeadsAs = "manaClashTheirs"),
-                ConditionalEffect(
+            body = Effects.FlipCoins(1, storeHeadsAs = "manaClashMine") then
+                Effects.FlipCoins(1, storeHeadsAs = "manaClashTheirs") then
+                Effects.If(
                     condition = Conditions.CompareAmounts(
-                        myHeads, ComparisonOperator.EQ, DynamicAmount.Fixed(0)
+                        myHeads, ComparisonOperator.EQ, 0
                     ),
-                    effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You)),
-                ),
-                ConditionalEffect(
+                    then = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You)),
+                ) then
+                Effects.If(
                     condition = Conditions.CompareAmounts(
-                        theirHeads, ComparisonOperator.EQ, DynamicAmount.Fixed(0)
+                        theirHeads, ComparisonOperator.EQ, 0
                     ),
-                    effect = Effects.DealDamage(1, opponent),
+                    then = Effects.DealDamage(1, opponent),
                 ),
-            ),
             repeatCondition = RepeatCondition.WhileCondition(
                 Conditions.Not(
                     Conditions.All(
-                        Conditions.CompareAmounts(myHeads, ComparisonOperator.EQ, DynamicAmount.Fixed(1)),
-                        Conditions.CompareAmounts(theirHeads, ComparisonOperator.EQ, DynamicAmount.Fixed(1)),
+                        Conditions.CompareAmounts(myHeads, ComparisonOperator.EQ, 1),
+                        Conditions.CompareAmounts(theirHeads, ComparisonOperator.EQ, 1),
                     )
                 )
             ),

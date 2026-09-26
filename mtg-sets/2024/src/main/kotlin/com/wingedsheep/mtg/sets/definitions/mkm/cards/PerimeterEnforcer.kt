@@ -30,7 +30,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * The "enters" half is [TriggerBinding.OTHER] with a Detective-you-control filter, so the Enforcer's
  * own arrival doesn't pump it ("*another* Detective"). The "turned face up" half deliberately has
  * **no** "another" clause on the printed card, so it fires even when the Enforcer itself is the
- * creature turned face up — hence [Triggers.CreatureTurnedFaceUp] (ANY binding), not an OTHER one.
+ * creature turned face up — hence `Triggers.<player>.permanentTurnedFaceUp(filter)` (ANY binding), not an OTHER one.
  * That filter is evaluated against the permanent's post-flip characteristics, which is the only
  * reading that works: a face-down creature is a nameless, typeless 2/2, so nothing would ever be a
  * Detective at the moment it's turned face up if the check read the face-down state.
@@ -52,19 +52,14 @@ val PerimeterEnforcer = card("Perimeter Enforcer") {
 
     // Whenever another Detective you control enters …
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.withSubtype(Subtype.DETECTIVE).youControl(),
-            binding = TriggerBinding.OTHER
-        )
+        trigger = Triggers.another(GameObjectFilter.Creature.withSubtype(Subtype.DETECTIVE).youControl()).enters()
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
         description = "Whenever another Detective you control enters, this creature gets +1/+1 until end of turn."
     }
 
     // … and whenever a Detective you control is turned face up.
     triggeredAbility {
-        trigger = Triggers.CreatureTurnedFaceUp(
-            filter = GameObjectFilter.Creature.withSubtype(Subtype.DETECTIVE)
-        )
+        trigger = Triggers.you.permanentTurnedFaceUp(GameObjectFilter.Creature.withSubtype(Subtype.DETECTIVE))
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
         description = "Whenever a Detective you control is turned face up, this creature gets +1/+1 until end of turn."
     }

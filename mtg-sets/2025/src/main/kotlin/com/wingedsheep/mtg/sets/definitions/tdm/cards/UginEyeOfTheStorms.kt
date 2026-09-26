@@ -6,20 +6,10 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.EventPattern
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
@@ -59,27 +49,24 @@ val UginEyeOfTheStorms = card("Ugin, Eye of the Storms") {
 
     // When you cast this spell, exile up to one target colored permanent.
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
-        target = exileUpToOneColoredPermanent()
-        effect = Effects.Exile(EffectTarget.ContextTarget(0))
+        val target = target(exileUpToOneColoredPermanent())
+        trigger = Triggers.self.isCast()
+        effect = Effects.Exile(target)
         description = "When you cast this spell, exile up to one target permanent that's one or more colors."
     }
 
     // Whenever you cast a colorless spell, exile up to one target colored permanent.
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = EventPattern.SpellCastEvent(spellFilter = colorlessSpell, player = Player.You),
-            binding = TriggerBinding.ANY
-        )
-        target = exileUpToOneColoredPermanent()
-        effect = Effects.Exile(EffectTarget.ContextTarget(0))
+        val target = target(exileUpToOneColoredPermanent())
+        trigger = Triggers.you.casts(colorlessSpell)
+        effect = Effects.Exile(target)
         description = "Whenever you cast a colorless spell, exile up to one target permanent that's one or more colors."
     }
 
     // +2: You gain 3 life and draw a card.
     loyaltyAbility(+2) {
         description = "You gain 3 life and draw a card."
-        effect = Effects.Composite(listOf(Effects.GainLife(3), Effects.DrawCards(1)))
+        effect = Effects.GainLife(3) then Effects.DrawCards(1)
     }
 
     // 0: Add {C}{C}{C}.
@@ -93,31 +80,24 @@ val UginEyeOfTheStorms = card("Ugin, Eye of the Storms") {
     loyaltyAbility(-11) {
         description = "Search your library for any number of colorless nonland cards, exile them, then " +
             "shuffle. Until end of turn, you may cast those cards without paying their mana costs."
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        Zone.LIBRARY,
-                        Player.You,
-                        GameObjectFilter(cardPredicates = listOf(CardPredicate.IsColorless, CardPredicate.IsNonland))
-                    ),
-                    storeAs = "searchable"
+        effect = Effects.Pipeline {
+            val searchable = gather(
+                CardSource.FromZone(
+                    Zone.LIBRARY,
+                    Player.You,
+                    GameObjectFilter(cardPredicates = listOf(CardPredicate.IsColorless, CardPredicate.IsNonland))
                 ),
-                SelectFromCollectionEffect(
-                    from = "searchable",
-                    selection = SelectionMode.ChooseAnyNumber,
-                    storeSelected = "exiled",
-                    prompt = "Search your library for any number of colorless nonland cards"
-                ),
-                MoveCollectionEffect(
-                    from = "exiled",
-                    destination = CardDestination.ToZone(Zone.EXILE, Player.You)
-                ),
-                ShuffleLibraryEffect(),
-                Effects.GrantMayPlayFromExile("exiled", MayPlayExpiry.EndOfTurn),
-                Effects.GrantPlayWithoutPayingCost("exiled")
+                search = true
             )
-        )
+            val exiled = chooseAnyNumber(
+                from = searchable,
+                prompt = "Search your library for any number of colorless nonland cards"
+            )
+            exile(exiled)
+            run(Effects.ShuffleLibrary())
+            run(Effects.GrantMayPlayFromExile(exiled, MayPlayExpiry.EndOfTurn))
+            run(Effects.GrantPlayWithoutPayingCost(exiled))
+        }
     }
 
     metadata {

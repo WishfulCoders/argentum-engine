@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Witch Hunter
@@ -25,13 +26,13 @@ val WitchHunter = card("Witch Hunter") {
 
     activatedAbility {
         cost = Costs.Tap
-        val victim = target("target player or planeswalker", Targets.PlayerOrPlaneswalker)
+        val victim = target(Targets.PlayerOrPlaneswalker)
         effect = Effects.DealDamage(1, victim)
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{W}{W}"), Costs.Tap)
-        val creature = target("target creature an opponent controls", Targets.CreatureOpponentControls)
+        val creature = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.ReturnToHand(creature)
     }
 

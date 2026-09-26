@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Slumbering Cerberus
@@ -31,7 +32,7 @@ val SlumberingCerberus = card("Slumbering Cerberus") {
     // "Morbid — At the beginning of each end step, if a creature died this turn, untap this creature."
     // The intervening-if (Rule 603.4) is checked when the trigger would fire AND again on resolution.
     triggeredAbility {
-        trigger = Triggers.EachEndStep
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
         interveningIf = Conditions.CreatureDiedThisTurn
         effect = Effects.Untap(EffectTarget.Self)
     }

@@ -6,10 +6,8 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.scripting.targets.TargetPlayer
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
@@ -49,32 +47,24 @@ val RalZarekGuestLecturer = card("Ral Zarek, Guest Lecturer") {
     // −1: Any number of target players each discard a card.
     loyaltyAbility(-1) {
         target = TargetPlayer(unlimited = true)
-        effect = ForEachTargetEffect(
-            listOf(Effects.Discard(1, EffectTarget.ContextTarget(0)))
+        effect = Effects.ForEachTarget(
+            Effects.Discard(1, EffectTarget.ContextTarget(0))
         )
     }
 
     // −2: Return target creature card with mana value 3 or less from your graveyard to the battlefield.
     loyaltyAbility(-2) {
-        val creature = target(
-            "creature",
-            TargetObject(filter = TargetFilter.CreatureInYourGraveyard.manaValueAtMost(3)),
-        )
+        val creature = target(TargetFilter.CreatureInYourGraveyard.manaValueAtMost(3))
         effect = Effects.Move(creature, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)
     }
 
     // −7: Flip five coins. Target opponent skips their next X turns, where X is heads.
     loyaltyAbility(-7) {
-        target = Targets.Opponent
-        effect = Effects.Composite(
-            listOf(
-                Effects.FlipCoins(5, storeHeadsAs = "heads"),
-                Effects.SkipNextTurn(
-                    target = EffectTarget.ContextTarget(0),
-                    count = DynamicAmount.VariableReference("heads"),
-                ),
-            )
-        )
+        val opponent = target(Targets.Opponent)
+        effect = Effects.Pipeline {
+            val heads = runStoringNumber { Effects.FlipCoins(5, storeHeadsAs = it) }
+            run(Effects.SkipNextTurn(target = opponent, count = heads.amount))
+        }
     }
 
     metadata {

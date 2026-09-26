@@ -34,12 +34,8 @@ val UnrootedAncestor = card("Unrooted Ancestor") {
             Costs.Mana("{1}"),
             Costs.SacrificeAnother(GameObjectFilter.Creature)
         )
-        effect = Effects.Composite(
-            listOf(
-                Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self),
-                Effects.Tap(EffectTarget.Self)
-            )
-        )
+        effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self) then
+            Effects.Tap(EffectTarget.Self)
         description = "This creature gains indestructible until end of turn. Tap it."
     }
 

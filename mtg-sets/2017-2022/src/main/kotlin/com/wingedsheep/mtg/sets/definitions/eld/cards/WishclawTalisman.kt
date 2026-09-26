@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.eld.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
@@ -9,9 +9,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GiveControlToTargetPlayerEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -45,7 +43,7 @@ val WishclawTalisman = card("Wishclaw Talisman") {
 
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.Named(Counters.WISH),
+            counterType = CounterType.WISH,
             count = 3,
             selfOnly = true
         )
@@ -55,19 +53,17 @@ val WishclawTalisman = card("Wishclaw Talisman") {
         cost = Costs.Composite(
             Costs.Mana("{1}"),
             Costs.Tap,
-            Costs.RemoveCounterFromSelf(Counters.WISH, 1)
+            Costs.RemoveCounterFromSelf(CounterType.WISH, 1)
         )
-        effect = Effects.Composite(
-            Patterns.Library.searchLibrary(
-                filter = GameObjectFilter.Any,
-                destination = SearchDestination.HAND
-            ),
-            Effects.ChooseOpponent("Choose an opponent to gain control of Wishclaw Talisman"),
-            GiveControlToTargetPlayerEffect(
+        effect = Patterns.Library.searchLibrary(
+            filter = GameObjectFilter.Any,
+            destination = SearchDestination.HAND
+        ) then
+            Effects.ChooseOpponent("Choose an opponent to gain control of Wishclaw Talisman") then
+            Effects.GiveControl(
                 permanent = EffectTarget.Self,
                 newController = EffectTarget.PlayerRef(Player.ChosenOpponent)
             )
-        )
         restrictions = listOf(ActivationRestriction.OnlyDuringYourTurn)
     }
 

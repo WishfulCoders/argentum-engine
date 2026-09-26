@@ -22,8 +22,7 @@ val ThirstForIdentity = card("Thirst for Identity") {
     oracleText = "Draw three cards. Then discard two cards unless you discard a creature card."
 
     spell {
-        effect = Effects.DrawCards(3)
-            .then(Effects.DiscardUnlessMatching(2, GameObjectFilter.Creature))
+        effect = Effects.DrawCards(3) then Effects.DiscardUnlessMatching(2, GameObjectFilter.Creature)
     }
 
     metadata {

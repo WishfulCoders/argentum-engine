@@ -3,13 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.drk.cards
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBeBlockedBy
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Tower of Coireall
@@ -30,11 +29,11 @@ val TowerOfCoireall = card("Tower of Coireall") {
     oracleText = "{T}: Target creature can't be blocked by Walls this turn."
 
     activatedAbility {
+        val creature = target(TargetFilter.Creature)
         cost = Costs.Tap
-        target = Targets.Creature
         effect = Effects.GrantStaticAbility(
             ability = CantBeBlockedBy(GameObjectFilter.Creature.withSubtype(Subtype.WALL)),
-            target = EffectTarget.ContextTarget(0),
+            target = creature,
             duration = Duration.EndOfTurn,
         )
         description = "{T}: Target creature can't be blocked by Walls this turn."

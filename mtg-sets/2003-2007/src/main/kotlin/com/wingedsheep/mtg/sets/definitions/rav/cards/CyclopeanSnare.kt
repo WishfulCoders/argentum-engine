@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -27,11 +26,8 @@ val CyclopeanSnare = card("Cyclopean Snare") {
     oracleText = "{3}, {T}: Tap target creature, then return this artifact to its owner's hand."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap)
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.Tap(t),
-            Effects.Move(EffectTarget.Self, Zone.HAND)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.Tap(t) then Effects.Move(EffectTarget.Self, Zone.HAND)
     }
     metadata {
         rarity = Rarity.UNCOMMON

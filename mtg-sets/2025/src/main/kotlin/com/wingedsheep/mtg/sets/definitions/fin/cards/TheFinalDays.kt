@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * The Final Days
@@ -34,10 +33,10 @@ val TheFinalDays = card("The Final Days") {
 
     spell {
         effect = Effects.CreateToken(
-            count = DynamicAmount.Conditional(
+            count = DynamicAmounts.conditional(
                 condition = Conditions.WasCastFromGraveyard,
                 ifTrue = DynamicAmounts.creatureCardsInYourGraveyard(),
-                ifFalse = DynamicAmount.Fixed(2),
+                ifFalse = DynamicAmounts.fixed(2),
             ),
             power = 2,
             toughness = 2,

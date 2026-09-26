@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
@@ -10,13 +11,11 @@ import com.wingedsheep.sdk.dsl.solvedTriggeredAbility
 import com.wingedsheep.sdk.dsl.toSolve
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Case of the Shattered Pact — Murders at Karlov Manor #1
@@ -50,7 +49,7 @@ val CaseOfTheShatteredPact = card("Case of the Shattered Pact") {
         "flying, double strike, and vigilance until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.BasicLand,
             destination = SearchDestination.HAND,
@@ -59,21 +58,19 @@ val CaseOfTheShatteredPact = card("Case of the Shattered Pact") {
     }
 
     toSolve(
-        Compare(
+        Conditions.CompareAmounts(
             DynamicAmounts.colorsAmongPermanents(Player.You, GameObjectFilter.Permanent),
             ComparisonOperator.GTE,
-            DynamicAmount.Fixed(5)
+            5
         )
     )
 
     solvedTriggeredAbility {
-        trigger = Triggers.BeginCombat
-        target = TargetCreature(filter = TargetFilter.Creature.youControl())
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.FLYING),
-            Effects.GrantKeyword(Keyword.DOUBLE_STRIKE),
-            Effects.GrantKeyword(Keyword.VIGILANCE)
-        )
+        val creature = target(TargetFilter.Creature.youControl())
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        effect = Effects.GrantKeyword(Keyword.FLYING, target = creature) then
+            Effects.GrantKeyword(Keyword.DOUBLE_STRIKE, target = creature) then
+            Effects.GrantKeyword(Keyword.VIGILANCE, target = creature)
         description = "Solved — At the beginning of combat on your turn, target creature you " +
             "control gains flying, double strike, and vigilance until end of turn."
     }

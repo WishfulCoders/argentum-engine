@@ -7,7 +7,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Branchloft Pathway:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -26,7 +26,7 @@
         "script": {
             "activatedAbilities": [
                 {
-                    "id": "ability_2",
+                    "id": "Boulderloft Pathway:1",
                     "cost": "CostTap",
                     "effect": {
                         "type": "AddMana",
@@ -68,7 +68,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Brightclimb Pathway:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -87,7 +87,7 @@
         "script": {
             "activatedAbilities": [
                 {
-                    "id": "ability_2",
+                    "id": "Grimclimb Pathway:1",
                     "cost": "CostTap",
                     "effect": {
                         "type": "AddMana",
@@ -131,7 +131,7 @@
             "type": "MoveToZone",
             "target": {
                 "type": "BoundVariable",
-                "name": "target artifact, enchantment, or creature with flying"
+                "name": "t0"
             },
             "destination": "Graveyard",
             "byDestruction": true
@@ -167,7 +167,7 @@
                         ]
                     }
                 },
-                "id": "target artifact, enchantment, or creature with flying"
+                "id": "t0"
             }
         ]
     },
@@ -195,7 +195,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Canopy Baloth:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "land ctrl:you",
@@ -265,7 +265,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "creature"
+                        "name": "t0"
                     }
                 },
                 {
@@ -295,7 +295,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "creature"
+                "id": "t0"
             }
         ]
     },
@@ -325,7 +325,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Clearwater Pathway:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -344,7 +344,7 @@
         "script": {
             "activatedAbilities": [
                 {
-                    "id": "ability_2",
+                    "id": "Murkwater Pathway:1",
                     "cost": "CostTap",
                     "effect": {
                         "type": "AddMana",
@@ -406,7 +406,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Cragcrown Pathway:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -425,7 +425,7 @@
         "script": {
             "activatedAbilities": [
                 {
-                    "id": "ability_2",
+                    "id": "Timbercrown Pathway:1",
                     "cost": "CostTap",
                     "effect": {
                         "type": "AddMana",
@@ -467,7 +467,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Crawling Barrens:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddColorlessMana",
@@ -480,7 +480,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Crawling Barrens:2",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -493,7 +493,7 @@
                     "effects": [
                         {
                             "type": "AddCounters",
-                            "counterType": "+1/+1",
+                            "counterType": "PLUS_ONE_PLUS_ONE",
                             "count": 2,
                             "target": "Self"
                         },
@@ -553,7 +553,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Felidar Retreat:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "land ctrl:you",
@@ -592,14 +592,14 @@
                                     "effects": [
                                         {
                                             "type": "AddCounters",
-                                            "counterType": "+1/+1",
+                                            "counterType": "PLUS_ONE_PLUS_ONE",
                                             "count": 1,
-                                            "target": "Self"
+                                            "target": "IterationEntity"
                                         },
                                         {
                                             "type": "GrantKeyword",
                                             "keyword": "VIGILANCE",
-                                            "target": "Self"
+                                            "target": "IterationEntity"
                                         }
                                     ]
                                 }
@@ -662,7 +662,7 @@
                         "statePredicates": [
                             {
                                 "type": "HasCounter",
-                                "counterType": "+1/+1"
+                                "counterType": "PLUS_ONE_PLUS_ONE"
                             }
                         ],
                         "controllerPredicate": "ControlledByYou"
@@ -723,7 +723,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Luminarch Aspirant:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "BEGIN_COMBAT"
@@ -731,18 +731,19 @@
                 "binding": "ANY",
                 "effect": {
                     "type": "AddCounters",
-                    "counterType": "+1/+1",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
                     "count": 1,
                     "target": {
-                        "type": "ContextTarget",
-                        "index": 0
+                        "type": "BoundVariable",
+                        "name": "t0"
                     }
                 },
                 "targetRequirement": {
                     "type": "TargetObject",
                     "filter": {
                         "baseFilter": "creature ctrl:you"
-                    }
+                    },
+                    "id": "t0"
                 }
             }
         ]
@@ -772,7 +773,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Marauding Blight-Priest:1",
                 "trigger": "LifeGainEvent",
                 "binding": "ANY",
                 "effect": {
@@ -829,7 +830,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Needleverge Pathway:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -848,7 +849,7 @@
         "script": {
             "activatedAbilities": [
                 {
-                    "id": "ability_2",
+                    "id": "Pillarverge Pathway:1",
                     "cost": "CostTap",
                     "effect": {
                         "type": "AddMana",
@@ -904,7 +905,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Nullpriest of Oblivion:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -913,7 +914,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature card from your graveyard"
+                        "name": "t0"
                     },
                     "destination": "Battlefield"
                 },
@@ -923,7 +924,7 @@
                         "baseFilter": "creature own:you",
                         "zone": "Graveyard"
                     },
-                    "id": "target creature card from your graveyard"
+                    "id": "t0"
                 },
                 "interveningIf": "WasKicked",
                 "descriptionOverride": "When this creature enters, if it was kicked, return target creature card from your graveyard to the battlefield."
@@ -957,7 +958,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Prowling Felidar:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "land ctrl:you",
@@ -966,7 +967,7 @@
                 "binding": "ANY",
                 "effect": {
                     "type": "AddCounters",
-                    "counterType": "+1/+1",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
                     "count": 1,
                     "target": "Self"
                 },
@@ -1008,7 +1009,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Riverglide Pathway:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -1027,7 +1028,7 @@
         "script": {
             "activatedAbilities": [
                 {
-                    "id": "ability_2",
+                    "id": "Lavaglide Pathway:1",
                     "cost": "CostTap",
                     "effect": {
                         "type": "AddMana",
@@ -1073,7 +1074,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Spitfire Lagac:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "land ctrl:you",

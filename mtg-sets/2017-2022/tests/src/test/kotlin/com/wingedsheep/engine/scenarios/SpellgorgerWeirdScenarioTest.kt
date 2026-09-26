@@ -16,7 +16,7 @@ import io.kotest.matchers.shouldBe
  *
  * "Whenever you cast a noncreature spell, put a +1/+1 counter on Spellgorger Weird."
  *
- * Exercises the mtgish `WhenAPlayerCastsASpell` -> `Triggers.YouCastNoncreature` mapping: the
+ * Exercises the mtgish `WhenAPlayerCastsASpell` -> `Triggers.you.casts(GameObjectFilter.Noncreature)` mapping: the
  * trigger fires on each noncreature spell you cast (and accumulates), but NOT on a creature spell.
  */
 class SpellgorgerWeirdScenarioTest : ScenarioTestBase() {

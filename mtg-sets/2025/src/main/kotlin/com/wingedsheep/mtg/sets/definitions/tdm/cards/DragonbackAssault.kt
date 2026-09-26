@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -22,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * The board-wipe ETB iterates the single combined group [GameObjectFilter.CreatureOrPlaneswalker]
  * (the same primitive Goblin Chainwhirler-style sweeps use), dealing 3 damage from the
- * enchantment to each member. The landfall half reuses [Triggers.LandYouControlEnters] +
+ * enchantment to each member. The landfall half reuses `Triggers.a(GameObjectFilter.Land.youControl()).enters()` +
  * [Effects.CreateToken], mirroring Rampaging Baloths.
  */
 val DragonbackAssault = card("Dragonback Assault") {
@@ -33,15 +32,15 @@ val DragonbackAssault = card("Dragonback Assault") {
         "Landfall — Whenever a land you control enters, create a 4/4 red Dragon creature token with flying."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.CreatureOrPlaneswalker),
-            DealDamageEffect(3, EffectTarget.Self),
+            Effects.DealDamage(3, EffectTarget.IterationEntity),
         )
     }
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.CreateToken(
             power = 4,
             toughness = 4,

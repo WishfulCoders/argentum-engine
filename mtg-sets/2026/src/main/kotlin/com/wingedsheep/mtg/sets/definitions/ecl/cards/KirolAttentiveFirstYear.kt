@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Kirol, Attentive First-Year
@@ -27,7 +27,7 @@ val KirolAttentiveFirstYear = card("Kirol, Attentive First-Year") {
 
     activatedAbility {
         cost = Costs.TapPermanents(2, GameObjectFilter.Creature)
-        val ability = target("target triggered ability you control", Targets.TriggeredAbilityYouControl)
+        val ability = target(TargetFilter.TriggeredAbilityOnStack.youControl())
         effect = Effects.CopyTargetTriggeredAbility(ability)
         restrictions = listOf(ActivationRestriction.OncePerTurn)
         // Hold priority while a triggered ability we control is on top of the stack —

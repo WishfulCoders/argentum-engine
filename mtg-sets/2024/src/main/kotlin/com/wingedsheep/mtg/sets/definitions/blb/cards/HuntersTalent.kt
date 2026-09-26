@@ -2,18 +2,16 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Hunter's Talent {G}
@@ -40,14 +38,11 @@ val HuntersTalent = card("Hunter's Talent") {
 
     // Level 1: ETB — bite effect
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val myCreature = target("creature you control", Targets.CreatureYouControl)
-        val theirCreature = target("creature you don't control", Targets.CreatureOpponentControls)
-        effect = DealDamageEffect(
-            amount = DynamicAmount.EntityProperty(
-                EntityReference.Target(0),
-                EntityNumericProperty.Power
-            ),
+        trigger = Triggers.self.enters()
+        val myCreature = target(TargetFilter.CreatureYouControl)
+        val theirCreature = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.DealDamage(
+            amount = DynamicAmounts.powerOf(myCreature),
             target = theirCreature,
             damageSource = myCreature
         )
@@ -56,17 +51,16 @@ val HuntersTalent = card("Hunter's Talent") {
     // Level 2: Whenever you attack, target attacking creature gets +1/+0 and trample
     classLevel(2, "{1}{G}") {
         triggeredAbility {
-            trigger = Triggers.YouAttack
-            val attacker = target("attacking creature", Targets.AttackingCreature)
-            effect = Effects.ModifyStats(1, 0, attacker)
-                .then(Effects.GrantKeyword(Keyword.TRAMPLE, attacker))
+            trigger = Triggers.you.attacks()
+            val attacker = target(TargetFilter.AttackingCreature)
+            effect = Effects.ModifyStats(1, 0, attacker) then Effects.GrantKeyword(Keyword.TRAMPLE, attacker)
         }
     }
 
     // Level 3: At the beginning of your end step, if you control a creature with power 4+, draw a card
     classLevel(3, "{3}{G}") {
         triggeredAbility {
-            trigger = Triggers.YourEndStep
+            trigger = Triggers.you.beginningOf(Step.END)
             interveningIf = Exists(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature.powerAtLeast(4))
             effect = Effects.DrawCards(1)
         }

@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Surrounded by Orcs
@@ -30,14 +29,12 @@ val SurroundedByOrcs = card("Surrounded by Orcs") {
     oracleText = "Amass Orcs 3, then target player mills X cards, where X is the amassed Army's power. (To amass Orcs 3, put three +1/+1 counters on an Army you control. It's also an Orc. If you don't control an Army, create a 0/0 black Orc Army creature token first.)"
 
     spell {
-        val player = target("target player", Targets.Player)
-        effect = Effects.Composite(listOf(
-            Effects.Amass(3, "Orc"),
+        val player = target(Targets.Player)
+        effect = Effects.Amass(3, "Orc") then
             Patterns.Library.mill(
-                DynamicAmount.EntityProperty(EntityReference.AmassedArmy, EntityNumericProperty.Power),
+                DynamicAmounts.powerOf(EffectTarget.AmassedArmy),
                 player
             )
-        ))
     }
 
     metadata {

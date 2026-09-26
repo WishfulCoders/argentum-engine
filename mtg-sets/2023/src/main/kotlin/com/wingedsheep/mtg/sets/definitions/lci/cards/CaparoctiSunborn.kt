@@ -6,13 +6,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.TapUntapCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Caparocti Sunborn
@@ -22,7 +16,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Whenever Caparocti Sunborn attacks, you may tap two untapped artifacts and/or creatures you
  * control. If you do, discover 3.
  *
- * "You may tap two … If you do" is an [OptionalCostEffect] whose payable cost is the
+ * "You may tap two … If you do" is an [Effects.MayPay] whose payable cost is the
  * Gather → Select-exactly-2 → Tap pipeline (same shape as Aziza, Mage Tower Captain).
  */
 val CaparoctiSunborn = card("Caparocti Sunborn") {
@@ -34,29 +28,25 @@ val CaparoctiSunborn = card("Caparocti Sunborn") {
     oracleText = "Whenever Caparocti Sunborn attacks, you may tap two untapped artifacts and/or creatures you control. If you do, discover 3."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val tapCost = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.ControlledPermanents(
-                        player = Player.You,
-                        filter = (GameObjectFilter.Artifact or GameObjectFilter.Creature).untapped(),
-                    ),
-                    storeAs = "caparoctiTapPool",
-                ),
-                SelectFromCollectionEffect(
-                    from = "caparoctiTapPool",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(2)),
-                    storeSelected = "caparoctiToTap",
-                    prompt = "Tap two untapped artifacts and/or creatures you control",
-                    useTargetingUI = true,
-                ),
-                TapUntapCollectionEffect("caparoctiToTap", tap = true),
-            ),
-        )
-        effect = OptionalCostEffect(
+        trigger = Triggers.self.attacks()
+        val tapCost = Effects.Pipeline {
+            val caparoctiTapPool = gather(
+                CardSource.ControlledPermanents(
+                    player = Player.You,
+                    filter = (GameObjectFilter.Artifact or GameObjectFilter.Creature).untapped(),
+                )
+            )
+            val caparoctiToTap = chooseExactly(
+                2,
+                from = caparoctiTapPool,
+                prompt = "Tap two untapped artifacts and/or creatures you control",
+                useTargetingUI = true
+            )
+            run(Effects.TapCollection(caparoctiToTap, tap = true))
+        }
+        effect = Effects.MayPay(
             cost = tapCost,
-            ifPaid = Effects.Discover(3),
+            then = Effects.Discover(3),
             descriptionOverride = "You may tap two untapped artifacts and/or creatures you control. If you do, discover 3.",
         )
     }

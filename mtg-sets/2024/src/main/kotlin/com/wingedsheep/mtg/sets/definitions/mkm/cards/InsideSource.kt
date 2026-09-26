@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Inside Source — Murders at Karlov Manor #19
@@ -46,7 +45,7 @@ val InsideSource = card("Inside Source") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 2,
             toughness = 2,
@@ -58,14 +57,8 @@ val InsideSource = card("Inside Source") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap)
         timing = TimingRule.SorcerySpeed
-        val detective = target(
-            "target Detective you control",
-            TargetPermanent(filter = TargetFilter.PermanentYouControl.withSubtype(Subtype.DETECTIVE))
-        )
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 0, detective),
-            Effects.GrantKeyword(Keyword.VIGILANCE, detective)
-        )
+        val detective = target(TargetFilter.PermanentYouControl.withSubtype(Subtype.DETECTIVE))
+        effect = Effects.ModifyStats(2, 0, detective) then Effects.GrantKeyword(Keyword.VIGILANCE, detective)
         description = "Target Detective you control gets +2/+0 and gains vigilance until end of turn."
     }
 

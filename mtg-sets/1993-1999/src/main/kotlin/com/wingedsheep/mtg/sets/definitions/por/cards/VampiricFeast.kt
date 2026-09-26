@@ -7,9 +7,7 @@ package com.wingedsheep.mtg.sets.definitions.por.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -24,11 +22,8 @@ val VampiricFeast = card("Vampiric Feast") {
     typeLine = "Sorcery"
     oracleText = "Vampiric Feast deals 4 damage to any target and you gain 4 life."
     spell {
-        val t = target("target", AnyTarget())
-        effect = Effects.Composite(
-            DealDamageEffect(4, t),
-            GainLifeEffect(4)
-        )
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(4, t) then Effects.GainLife(4)
     }
     metadata {
         rarity = Rarity.UNCOMMON

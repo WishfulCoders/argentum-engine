@@ -1,16 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.SelectTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
@@ -44,22 +40,21 @@ val GlorifierOfSuffering = card("Glorifier of Suffering") {
     oracleText = "When this creature enters, you may sacrifice another creature or artifact. When you do, put a +1/+1 counter on each of up to two target creatures."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ReflexiveTriggerEffect(
-            action = Effects.Composite(listOf(
-                SelectTargetEffect(
-                    requirement = TargetObject(
+        trigger = Triggers.self.enters()
+        effect = Effects.ReflexiveTrigger(
+            action = Effects.Pipeline {
+                val toSacrifice = selectTarget(
+                    TargetObject(
                         filter = TargetFilter.CreatureOrArtifact.youControl().other()
-                    ),
-                    storeAs = "toSacrifice"
-                ),
-                Effects.SacrificeTarget(EffectTarget.PipelineTarget("toSacrifice"))
-            )),
+                    )
+                )
+                run(Effects.SacrificeTarget(toSacrifice.asTarget))
+            },
             optional = true,
-            reflexiveEffect = ForEachTargetEffect(
-                listOf(Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0)))
+            reflexiveEffect = Effects.ForEachTarget(
+                Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0))
             ),
-            reflexiveTargetRequirements = listOf(TargetCreature(count = 2, optional = true)),
+            reflexiveTargetRequirements = listOf(TargetObject(filter = TargetFilter.Creature, count = 2, optional = true)),
             descriptionOverride = "You may sacrifice another creature or artifact. When you do, put a +1/+1 counter on each of up to two target creatures."
         )
         description = "When this creature enters, you may sacrifice another creature or artifact. When you do, put a +1/+1 counter on each of up to two target creatures."

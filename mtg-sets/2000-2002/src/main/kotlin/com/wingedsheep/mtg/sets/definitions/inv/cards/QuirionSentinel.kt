@@ -24,7 +24,7 @@ val QuirionSentinel = card("Quirion Sentinel") {
     oracleText = "When this creature enters, add one mana of any color."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.AddAnyColorMana()
     }
 

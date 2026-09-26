@@ -24,8 +24,8 @@ val PitchburnDevils = card("Pitchburn Devils") {
     oracleText = "When this creature dies, it deals 3 damage to any target."
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val damaged = target("target", Targets.Any)
+        trigger = Triggers.self.dies()
+        val damaged = target(Targets.Any)
         effect = Effects.DealDamage(3, damaged)
     }
 

@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
 import com.wingedsheep.sdk.dsl.Costs
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Wirewood Symbiote
@@ -28,10 +28,9 @@ val WirewoodSymbiote = card("Wirewood Symbiote") {
         // creature one. Unobservable today — every Elf printed is a creature — which is why it
         // survived; Assay's differential found it the moment it could read a cost's noun phrase.
         cost = Costs.ReturnToHand(GameObjectFilter.Permanent.withSubtype("Elf"))
-        val t = target("creature", Targets.Creature)
-        effect = TapUntapEffect(
-            target = t,
-            tap = false
+        val t = target(TargetFilter.Creature)
+        effect = Effects.Untap(
+            target = t
         )
         restrictions = listOf(ActivationRestriction.OncePerTurn)
     }

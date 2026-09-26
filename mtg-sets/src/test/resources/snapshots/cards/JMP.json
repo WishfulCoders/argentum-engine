@@ -11,7 +11,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Archaeomender:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -20,7 +20,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target artifact card in your graveyard"
+                        "name": "t0"
                     },
                     "destination": "Hand"
                 },
@@ -30,7 +30,7 @@
                         "baseFilter": "artifact own:you",
                         "zone": "Graveyard"
                     },
-                    "id": "target artifact card in your graveyard"
+                    "id": "t0"
                 },
                 "descriptionOverride": "When this creature enters, return target artifact card from your graveyard to your hand."
             }
@@ -63,7 +63,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Chained Brute:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -121,7 +121,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Corsair Captain:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -169,6 +169,34 @@
     "keywords": [
         "PROWESS"
     ],
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "Lightning Visionary:1",
+                "trigger": {
+                    "type": "SpellCastEvent",
+                    "spellFilter": {
+                        "cardPredicates": [
+                            "IsNoncreature"
+                        ]
+                    }
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "ModifyStats",
+                    "powerModifier": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "toughnessModifier": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": "Self"
+                }
+            }
+        ]
+    },
     "metadata": {
         "collectorNumber": "22",
         "artist": "Bryan Sola",
@@ -193,7 +221,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Lightning-Core Excavator:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -215,12 +243,15 @@
                         "amount": 3
                     },
                     "target": {
-                        "type": "ContextTarget",
-                        "index": 0
+                        "type": "BoundVariable",
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
-                    "AnyTarget"
+                    {
+                        "type": "AnyTarget",
+                        "id": "t0"
+                    }
                 ],
                 "descriptionOverride": "{5}, {T}, Sacrifice this creature: It deals 3 damage to any target."
             }
@@ -283,7 +314,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Sethron, Hurloon General:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "creature Minotaur nontoken ctrl:you",
@@ -306,7 +337,7 @@
         ],
         "activatedAbilities": [
             {
-                "id": "ability_2",
+                "id": "Sethron, Hurloon General:2",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -335,17 +366,17 @@
                                     "type": "Fixed",
                                     "amount": 0
                                 },
-                                "target": "Self"
+                                "target": "IterationEntity"
                             },
                             {
                                 "type": "GrantKeyword",
                                 "keyword": "MENACE",
-                                "target": "Self"
+                                "target": "IterationEntity"
                             },
                             {
                                 "type": "GrantKeyword",
                                 "keyword": "HASTE",
-                                "target": "Self"
+                                "target": "IterationEntity"
                             }
                         ]
                     }
@@ -379,7 +410,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Stone Haven Pilgrim:1",
                 "trigger": "AttackEvent",
                 "effect": {
                     "type": "Composite",
@@ -425,6 +456,266 @@
     ]
 }
 
+// Thriving Bluff
+{
+    "name": "Thriving Bluff",
+    "manaCost": "",
+    "typeLine": "Land",
+    "oracleText": "This land enters tapped. As it enters, choose a color other than red.\n{T}: Add {R} or one mana of the chosen color.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Thriving Bluff:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddManaOfChoice",
+                    "colorSet": {
+                        "type": "ManaColorSet.Union",
+                        "members": [
+                            {
+                                "type": "ManaColorSet.Specific",
+                                "colors": [
+                                    "RED"
+                                ]
+                            },
+                            "ManaColorSet.SourceChosenColor"
+                        ]
+                    }
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            }
+        ],
+        "replacementEffects": [
+            "EntersTapped",
+            {
+                "type": "EntersWithChoice",
+                "choiceType": "COLOR",
+                "excludedColors": [
+                    "RED"
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "33",
+        "artist": "Johannes Voss",
+        "flavorText": "As eons passed, the rock wore away, revealing the rich colors at the mountain's heart.",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/5/15481459-3703-4185-ad27-105d95691e9d.jpg?1783930498"
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
+// Thriving Grove
+{
+    "name": "Thriving Grove",
+    "manaCost": "",
+    "typeLine": "Land",
+    "oracleText": "This land enters tapped. As it enters, choose a color other than green.\n{T}: Add {G} or one mana of the chosen color.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Thriving Grove:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddManaOfChoice",
+                    "colorSet": {
+                        "type": "ManaColorSet.Union",
+                        "members": [
+                            {
+                                "type": "ManaColorSet.Specific",
+                                "colors": [
+                                    "GREEN"
+                                ]
+                            },
+                            "ManaColorSet.SourceChosenColor"
+                        ]
+                    }
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            }
+        ],
+        "replacementEffects": [
+            "EntersTapped",
+            {
+                "type": "EntersWithChoice",
+                "choiceType": "COLOR",
+                "excludedColors": [
+                    "GREEN"
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "34",
+        "artist": "Ravenna Tran",
+        "flavorText": "Far from human eyes, birds flit between vivid blossoms in a hidden paradise.",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/9/79cabbe0-1c44-4888-8ebc-25a4c3e2c5d7.jpg?1783930498"
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
+// Thriving Heath
+{
+    "name": "Thriving Heath",
+    "manaCost": "",
+    "typeLine": "Land",
+    "oracleText": "This land enters tapped. As it enters, choose a color other than white.\n{T}: Add {W} or one mana of the chosen color.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Thriving Heath:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddManaOfChoice",
+                    "colorSet": {
+                        "type": "ManaColorSet.Union",
+                        "members": [
+                            {
+                                "type": "ManaColorSet.Specific",
+                                "colors": [
+                                    "WHITE"
+                                ]
+                            },
+                            "ManaColorSet.SourceChosenColor"
+                        ]
+                    }
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            }
+        ],
+        "replacementEffects": [
+            "EntersTapped",
+            {
+                "type": "EntersWithChoice",
+                "choiceType": "COLOR",
+                "excludedColors": [
+                    "WHITE"
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "35",
+        "artist": "Alayna Danner",
+        "flavorText": "Wildflowers here bloom not with the season but with the ebb and flow of magic.",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/e/fe424eb3-7df8-4317-8776-6d960afbb90a.jpg?1783930498"
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
+// Thriving Isle
+{
+    "name": "Thriving Isle",
+    "manaCost": "",
+    "typeLine": "Land",
+    "oracleText": "This land enters tapped. As it enters, choose a color other than blue.\n{T}: Add {U} or one mana of the chosen color.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Thriving Isle:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddManaOfChoice",
+                    "colorSet": {
+                        "type": "ManaColorSet.Union",
+                        "members": [
+                            {
+                                "type": "ManaColorSet.Specific",
+                                "colors": [
+                                    "BLUE"
+                                ]
+                            },
+                            "ManaColorSet.SourceChosenColor"
+                        ]
+                    }
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            }
+        ],
+        "replacementEffects": [
+            "EntersTapped",
+            {
+                "type": "EntersWithChoice",
+                "choiceType": "COLOR",
+                "excludedColors": [
+                    "BLUE"
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "36",
+        "artist": "Jonas De Ro",
+        "flavorText": "All the wonders of the natural world in one breathtaking microcosm.",
+        "imageUri": "https://cards.scryfall.io/normal/front/7/e/7eb8fd94-2b59-4b05-b4d0-c93497301d19.jpg?1783930498"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
+// Thriving Moor
+{
+    "name": "Thriving Moor",
+    "manaCost": "",
+    "typeLine": "Land",
+    "oracleText": "This land enters tapped. As it enters, choose a color other than black.\n{T}: Add {B} or one mana of the chosen color.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "Thriving Moor:1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "AddManaOfChoice",
+                    "colorSet": {
+                        "type": "ManaColorSet.Union",
+                        "members": [
+                            {
+                                "type": "ManaColorSet.Specific",
+                                "colors": [
+                                    "BLACK"
+                                ]
+                            },
+                            "ManaColorSet.SourceChosenColor"
+                        ]
+                    }
+                },
+                "timing": "ManaAbility",
+                "isManaAbility": true
+            }
+        ],
+        "replacementEffects": [
+            "EntersTapped",
+            {
+                "type": "EntersWithChoice",
+                "choiceType": "COLOR",
+                "excludedColors": [
+                    "BLACK"
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "37",
+        "artist": "Titus Lunter",
+        "flavorText": "Beauty appears in strange places for those with eyes to see it.",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/8/18756fe5-70f0-48d9-a4f1-ea78f77d2084.jpg?1783930496"
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Trusty Retriever
 {
     "name": "Trusty Retriever",
@@ -438,7 +729,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Trusty Retriever:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -449,7 +740,7 @@
                         {
                             "effect": {
                                 "type": "AddCounters",
-                                "counterType": "+1/+1",
+                                "counterType": "PLUS_ONE_PLUS_ONE",
                                 "count": 1,
                                 "target": "Self"
                             },
@@ -459,8 +750,8 @@
                             "effect": {
                                 "type": "MoveToZone",
                                 "target": {
-                                    "type": "ContextTarget",
-                                    "index": 0
+                                    "type": "BoundVariable",
+                                    "name": "t0"
                                 },
                                 "destination": "Hand"
                             },
@@ -470,7 +761,8 @@
                                     "filter": {
                                         "baseFilter": "artifact|enchantment own:you",
                                         "zone": "Graveyard"
-                                    }
+                                    },
+                                    "id": "t0"
                                 }
                             ],
                             "description": "Return target artifact or enchantment card from your graveyard to your hand"

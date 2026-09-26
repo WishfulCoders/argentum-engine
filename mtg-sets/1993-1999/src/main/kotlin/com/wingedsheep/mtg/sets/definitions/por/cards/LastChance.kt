@@ -4,9 +4,9 @@
 
 package com.wingedsheep.mtg.sets.definitions.por.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.TakeExtraTurnEffect
 
 
 /**
@@ -21,7 +21,7 @@ val LastChance = card("Last Chance") {
     typeLine = "Sorcery"
     oracleText = "Take an extra turn after this one. At the beginning of that turn's end step, you lose the game."
     spell {
-        effect = TakeExtraTurnEffect(loseAtEndStep = true)
+        effect = Effects.TakeExtraTurn(loseAtEndStep = true)
     }
     metadata {
         rarity = Rarity.RARE

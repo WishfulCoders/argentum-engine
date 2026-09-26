@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.life
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.core.GameEvent as EngineGameEvent
 import com.wingedsheep.engine.core.LifeChangeReason
@@ -28,10 +29,10 @@ import kotlin.reflect.KClass
  * lost life this way, draw that many cards.").
  */
 class ExchangeLifeTotalsExecutor(
-    private val cardRegistry: com.wingedsheep.engine.registry.CardRegistry
+    private val cardRegistry: com.wingedsheep.engine.registry.CardRegistry,
+    private val predicateEvaluator: PredicateEvaluator
 ) : EffectExecutor<ExchangeLifeTotalsEffect> {
-
-    private val drawPrimitive = DrawCardPrimitive(cardRegistry)
+    private val drawPrimitive = DrawCardPrimitive(cardRegistry, predicateEvaluator = predicateEvaluator)
 
     override val effectType: KClass<ExchangeLifeTotalsEffect> = ExchangeLifeTotalsEffect::class
 
@@ -87,11 +88,12 @@ class ExchangeLifeTotalsExecutor(
         events: MutableList<EngineGameEvent>
     ): GameState {
         val (newState, event) = when {
-            to > from -> DamageUtils.gainLife(state, playerId, to - from)
+            to > from -> DamageUtils.gainLife(state, playerId, to - from, predicateEvaluator = predicateEvaluator)
             to < from -> DamageUtils.loseLife(
                 state, playerId, from - to,
                 reason = LifeChangeReason.LIFE_LOSS,
                 applyLifeLossModification = true,
+                predicateEvaluator = predicateEvaluator
             )
             else -> state to null
         }

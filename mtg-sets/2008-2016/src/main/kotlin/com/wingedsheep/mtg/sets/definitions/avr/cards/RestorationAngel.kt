@@ -8,10 +8,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Restoration Angel
@@ -34,23 +32,19 @@ val RestorationAngel = card("Restoration Angel") {
     keywords(Keyword.FLASH, Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val creature = target(
-            "non-Angel creature you control",
-            TargetCreature(
-                filter = TargetFilter(
-                    GameObjectFilter(
-                        cardPredicates = listOf(
-                            CardPredicate.IsCreature,
-                            CardPredicate.NotSubtype(Subtype("Angel"))
-                        )
-                    ).youControl()
-                )
-            )
+            TargetFilter(
+                GameObjectFilter(
+                    cardPredicates = listOf(
+                        CardPredicate.IsCreature,
+                        CardPredicate.NotSubtype(Subtype("Angel"))
+                    )
+                ).youControl()
+            ),
         )
-        effect = MayEffect(
-            Effects.Move(creature, Zone.EXILE)
-                .then(Effects.Move(creature, Zone.BATTLEFIELD))
+        effect = Effects.May(
+            Effects.Move(creature, Zone.EXILE) then Effects.Move(creature, Zone.BATTLEFIELD)
         )
     }
 

@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.war.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Patterns
@@ -9,14 +10,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.TapUntapCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Finale of Revelation
@@ -37,30 +32,26 @@ val FinaleOfRevelation = card("Finale of Revelation") {
 
     spell {
         selfExile()
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.CompareAmounts(
-                DynamicAmount.XValue,
+                DynamicAmounts.xValue(),
                 ComparisonOperator.GTE,
-                DynamicAmount.Fixed(10),
+                10,
             ),
-            effect = Effects.Composite(
-                Patterns.Library.shuffleGraveyardIntoLibrary(EffectTarget.Controller),
-                Effects.DrawCards(DynamicAmount.XValue),
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.BATTLEFIELD, Player.You, Filters.Land),
-                    storeAs = "lands",
-                ),
-                SelectFromCollectionEffect(
-                    from = "lands",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(5)),
-                    storeSelected = "landsToUntap",
+            then = Effects.Pipeline {
+                run(Patterns.Library.shuffleGraveyardIntoLibrary(EffectTarget.Controller))
+                run(Effects.DrawCards(DynamicAmounts.xValue()))
+                val lands = gather(CardSource.FromZone(Zone.BATTLEFIELD, Player.You, Filters.Land))
+                val landsToUntap = chooseUpTo(
+                    5,
+                    from = lands,
                     prompt = "Choose up to five lands to untap",
-                    showAllCards = true,
-                ),
-                TapUntapCollectionEffect(collectionName = "landsToUntap", tap = false),
-                Effects.RemoveMaximumHandSize(),
-            ),
-            elseEffect = Effects.DrawCards(DynamicAmount.XValue),
+                    showAllCards = true
+                )
+                run(Effects.TapCollection(collection = landsToUntap, tap = false))
+                run(Effects.RemoveMaximumHandSize())
+            },
+            otherwise = Effects.DrawCards(DynamicAmounts.xValue()),
         )
     }
 

@@ -5,10 +5,9 @@ import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Oversold Cemetery
@@ -24,12 +23,10 @@ val OversoldCemetery = card("Oversold Cemetery") {
     oracleText = "At the beginning of your upkeep, if you have four or more creature cards in your graveyard, you may return target creature card from your graveyard to your hand."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         optional = true
         interveningIf = Conditions.CreatureCardsInGraveyardAtLeast(4)
-        val t = target("target", TargetObject(
-            filter = TargetFilter.CreatureInYourGraveyard
-        ))
+        val t = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.Move(
             target = t,
             destination = Zone.HAND

@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.dtk.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Shambling Goblin
@@ -23,8 +23,8 @@ val ShamblingGoblin = card("Shambling Goblin") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val creature = target("target creature an opponent controls", Targets.CreatureOpponentControls)
+        trigger = Triggers.self.dies()
+        val creature = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.ModifyStats(-1, -1, creature)
         description = "When this creature dies, target creature an opponent controls gets -1/-1 until end of turn."
     }

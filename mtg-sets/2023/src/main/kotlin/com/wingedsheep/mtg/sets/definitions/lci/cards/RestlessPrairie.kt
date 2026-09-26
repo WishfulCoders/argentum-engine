@@ -10,12 +10,8 @@ import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddManaEffect
-import com.wingedsheep.sdk.scripting.effects.BecomeCreatureEffect
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Restless Prairie
@@ -38,24 +34,24 @@ val RestlessPrairie = card("Restless Prairie") {
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddManaEffect(Color.GREEN)
+        effect = Effects.AddMana(Color.GREEN)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddManaEffect(Color.WHITE)
+        effect = Effects.AddMana(Color.WHITE)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
 
     activatedAbility {
         cost = Costs.Mana("{2}{G}{W}")
-        effect = BecomeCreatureEffect(
+        effect = Effects.BecomeCreature(
             target = EffectTarget.Self,
-            power = DynamicAmount.Fixed(3),
-            toughness = DynamicAmount.Fixed(3),
+            power = 3,
+            toughness = 3,
             creatureTypes = setOf("Llama"),
             colors = setOf(Color.GREEN.name, Color.WHITE.name),
             duration = Duration.EndOfTurn,
@@ -63,13 +59,13 @@ val RestlessPrairie = card("Restless Prairie") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ForEachInGroup(
             filter = GroupFilter.OtherCreaturesYouControl,
-            effect = ModifyStatsEffect(
-                powerModifier = 1,
-                toughnessModifier = 1,
-                target = EffectTarget.Self,
+            effect = Effects.ModifyStats(
+                power = 1,
+                toughness = 1,
+                target = EffectTarget.IterationEntity,
                 duration = Duration.EndOfTurn,
             ),
         )

@@ -4,10 +4,11 @@
 
 package com.wingedsheep.mtg.sets.definitions.rna.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DividedDamageEffect
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -22,8 +23,8 @@ val BiogenicUpgrade = card("Biogenic Upgrade") {
     typeLine = "Sorcery"
     oracleText = "Distribute three +1/+1 counters among one, two, or three target creatures, then double the number of +1/+1 counters on each of those creatures."
     spell {
-        target = TargetCreature(count = 3, minCount = 1)
-        effect = DividedDamageEffect(totalDamage = 3, minTargets = 1, maxTargets = 3)
+        target = TargetObject(filter = TargetFilter.Creature, count = 3, minCount = 1)
+        effect = Effects.DividedDamage(total = 3, minTargets = 1, maxTargets = 3)
     }
     metadata {
         rarity = Rarity.UNCOMMON

@@ -5,12 +5,11 @@ import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Spinal Embrace
@@ -37,19 +36,15 @@ val SpinalEmbrace = card("Spinal Embrace") {
 
     spell {
         castOnlyDuring(Phase.COMBAT)
-        val t = target("target creature you don't control", Targets.CreatureOpponentControls)
-        effect = Effects.Composite(
-            Effects.Untap(t),
-            Effects.GainControl(t, Duration.Permanent),
-            Effects.GrantKeyword(Keyword.HASTE, t, Duration.EndOfTurn),
-            CreateDelayedTriggerEffect(
+        val t = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.Untap(t) then
+            Effects.GainControl(t, Duration.Permanent) then
+            Effects.GrantKeyword(Keyword.HASTE, t, Duration.EndOfTurn) then
+            Effects.CreateDelayedTrigger(
                 step = Step.END,
-                effect = Effects.Composite(
-                    Effects.SacrificeTarget(t),
+                effect = Effects.SacrificeTarget(t) then
                     Effects.GainLife(DynamicAmounts.sacrificedToughness(), EffectTarget.Controller)
-                )
             )
-        )
     }
 
     metadata {

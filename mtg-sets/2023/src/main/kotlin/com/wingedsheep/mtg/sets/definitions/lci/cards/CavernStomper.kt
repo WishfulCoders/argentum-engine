@@ -33,7 +33,7 @@ val CavernStomper = card("Cavern Stomper") {
     toughness = 7
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.scry(2)
     }
 

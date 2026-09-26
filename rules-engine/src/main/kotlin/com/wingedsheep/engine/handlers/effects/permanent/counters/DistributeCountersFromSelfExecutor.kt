@@ -34,7 +34,7 @@ class DistributeCountersFromSelfExecutor : EffectExecutor<DistributeCountersFrom
         val sourceId = context.sourceId
             ?: return EffectResult.error(state, "No source for distribute counters effect")
 
-        val counterType = resolveCounterType(effect.counterType)
+        val counterType = effect.counterType
 
         // Check how many counters are on the source
         val sourceEntity = state.getEntity(sourceId)
@@ -64,7 +64,7 @@ class DistributeCountersFromSelfExecutor : EffectExecutor<DistributeCountersFrom
         val decision = { decisionId: String -> DistributeDecision(
             id = decisionId,
             playerId = context.controllerId,
-            prompt = "Distribute up to $totalCounters ${effect.counterType} counter${if (totalCounters != 1) "s" else ""} from $sourceName onto other creatures",
+            prompt = "Distribute up to $totalCounters ${effect.counterType.printed} counter${if (totalCounters != 1) "s" else ""} from $sourceName onto other creatures",
             context = DecisionContext(
                 sourceId = sourceId,
                 sourceName = sourceName,

@@ -1,6 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.library
 
-import com.wingedsheep.engine.handlers.ConditionEvaluator
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.ReplacementEffectSourceComponent
@@ -28,10 +28,11 @@ object MillAmountModifier {
     fun apply(
         state: GameState,
         playerId: EntityId,
-        originalCount: Int
+        originalCount: Int,
+        predicateEvaluator: PredicateEvaluator
     ): Int {
         if (originalCount <= 0) return originalCount
-        val conditionEvaluator = ConditionEvaluator()
+        val conditionEvaluator = predicateEvaluator.conditions
         var adjusted = originalCount
         for (entityId in state.getBattlefield()) {
             val container = state.getEntity(entityId) ?: continue

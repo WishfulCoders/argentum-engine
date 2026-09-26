@@ -7,12 +7,10 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedTriggeredAbility
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Dragonbroods' Relic
@@ -53,7 +51,7 @@ val DragonbroodsRelic = card("Dragonbroods' Relic") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}{W}{U}{B}{R}{G}"), Costs.SacrificeSelf)
         timing = TimingRule.SorcerySpeed
-        effect = CreateTokenEffect(
+        effect = Effects.CreateToken(
             power = 4,
             toughness = 4,
             colors = setOf(Color.WHITE, Color.BLUE, Color.BLACK, Color.RED, Color.GREEN),
@@ -61,13 +59,12 @@ val DragonbroodsRelic = card("Dragonbroods' Relic") {
             keywords = setOf(Keyword.FLYING, Keyword.LIFELINK),
             name = "Reliquary Dragon",
             triggeredAbilities = listOf(
-                TriggeredAbility.create(
-                    trigger = Triggers.EntersBattlefield.event,
-                    binding = Triggers.EntersBattlefield.binding,
-                    effect = Effects.DealDamage(3, EffectTarget.ContextTarget(0)),
-                    targetRequirement = Targets.Any,
-                    descriptionOverride = "When this token enters, it deals 3 damage to any target."
-                )
+                grantedTriggeredAbility {
+                    trigger = Triggers.self.enters()
+                    val anyTarget = target(Targets.Any)
+                    effect = Effects.DealDamage(3, anyTarget)
+                    description = "When this token enters, it deals 3 damage to any target."
+                }
             ),
             imageUri = "https://cards.scryfall.io/normal/front/4/4/44465924-8cc2-49a4-bc07-8dbae7570af6.jpg?1743176691"
         )

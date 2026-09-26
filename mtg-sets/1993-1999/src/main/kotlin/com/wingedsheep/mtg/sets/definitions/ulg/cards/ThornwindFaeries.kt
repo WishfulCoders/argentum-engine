@@ -6,10 +6,10 @@ package com.wingedsheep.mtg.sets.definitions.ulg.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -30,8 +30,8 @@ val ThornwindFaeries = card("Thornwind Faeries") {
     keywords(Keyword.FLYING)
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", AnyTarget())
-        effect = DealDamageEffect(1, t)
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(1, t)
     }
     metadata {
         rarity = Rarity.COMMON

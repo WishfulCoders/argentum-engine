@@ -30,7 +30,7 @@ val ManaweftSliver = card("Manaweft Sliver") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Tap,
                 effect = Effects.AddManaOfChoice(),
                 timing = TimingRule.ManaAbility,

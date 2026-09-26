@@ -143,7 +143,7 @@ object CardDiscovery {
             // whatever order reflection happened to yield this run. Break the tie on collector
             // number so `basicLands` is deterministic and each type leads with its standard art
             // (see [BasicLandArt]); limited deck building takes that first variant.
-            basicLands = basicLands.sortedWith(compareBy<CardDefinition> { it.name }.then(BasicLandArt.standardFirst)),
+            basicLands = basicLands.sortedWith(compareBy<CardDefinition> { it.name } then BasicLandArt.standardFirst),
             // Sort by name first so `printings.toString()` reads naturally; the
             // (setCode, collectorNumber) tiebreakers are only relevant if a future
             // discovery picks up >1 reprint of the same card from the same package.

@@ -25,8 +25,7 @@ fun CardBuilder.decayed() {
     staticAbilities.add(CantBlock(GroupFilter.source()))
     triggeredAbilities.add(
         TriggeredAbility.create(
-            trigger = Triggers.Attacks.event,
-            binding = Triggers.Attacks.binding,
+            trigger = Triggers.self.attacks(),
             effect = CreateDelayedTriggerEffect(
                 step = Step.END_COMBAT,
                 effect = Effects.SacrificeTarget(EffectTarget.Self)

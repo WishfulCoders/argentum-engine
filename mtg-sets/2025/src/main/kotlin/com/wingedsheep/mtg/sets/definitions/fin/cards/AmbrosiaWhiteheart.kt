@@ -6,10 +6,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Ambrosia Whiteheart
@@ -35,21 +33,15 @@ val AmbrosiaWhiteheart = card("Ambrosia Whiteheart") {
 
     // When Ambrosia enters, you may return another permanent you control to its owner's hand.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "another permanent you control",
-            TargetObject(
-                optional = true,
-                filter = TargetFilter(GameObjectFilter.Permanent.youControl(), excludeSelf = true),
-            ),
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter(GameObjectFilter.Permanent.youControl(), excludeSelf = true), optional = true)
         effect = Effects.ReturnToHand(t)
     }
 
     // Landfall — Whenever a land you control enters, Ambrosia gets +1/+0 until end of turn.
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
-        effect = ModifyStatsEffect(1, 0, EffectTarget.Self)
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
+        effect = Effects.ModifyStats(1, 0, EffectTarget.Self)
         description = "Landfall — Whenever a land you control enters, Ambrosia Whiteheart gets +1/+0 until end of turn."
     }
 

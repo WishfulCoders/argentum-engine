@@ -2,23 +2,16 @@ package com.wingedsheep.mtg.sets.definitions.fem.cards
 
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.dsl.Triggers
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Delif's Cone
@@ -42,27 +35,19 @@ val DelifsCone = card("Delif's Cone") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.SacrificeSelf)
-        val t = target(
-            "target creature you control",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.youControl()))
-        )
-        effect = CreateDelayedTriggerEffect(
-            trigger = Triggers.AttacksAndIsntBlocked.copy(binding = TriggerBinding.ANY),
+        val t = target(TargetFilter(GameObjectFilter.Creature.youControl()))
+        effect = Effects.CreateDelayedTrigger(
+            trigger = Triggers.a().attacksAndIsntBlocked(),
             watchedTarget = t,
-            effect = MayEffect(
-                Effects.Composite(
-                    Effects.GainLife(
-                        DynamicAmount.EntityProperty(
-                            EntityReference.Triggering,
-                            EntityNumericProperty.Power
-                        )
-                    ),
-                    GrantKeywordEffect(
-                        AbilityFlag.ASSIGNS_NO_COMBAT_DAMAGE.name,
+            effect = Effects.May(
+                Effects.GainLife(
+                    DynamicAmounts.triggeringPower()
+                ) then
+                    Effects.GrantKeyword(
+                        AbilityFlag.ASSIGNS_NO_COMBAT_DAMAGE,
                         EffectTarget.TriggeringEntity,
                         Duration.EndOfTurn,
                     ),
-                ),
                 descriptionOverride = "gain life equal to that creature's power. If you do, it assigns no combat damage this turn",
             ),
             expiry = DelayedTriggerExpiry.EndOfTurn,

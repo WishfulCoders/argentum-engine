@@ -1,7 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -23,7 +22,7 @@ val RodeoPyromancers = card("Rodeo Pyromancers") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.NthSpellCast(1, Player.You)
+        trigger = Triggers.you.castsNth(1)
         effect = Effects.AddMana(Color.RED, 2)
     }
 

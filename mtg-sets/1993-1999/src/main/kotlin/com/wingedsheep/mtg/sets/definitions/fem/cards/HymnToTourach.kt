@@ -3,7 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.fem.cards
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Hymn to Tourach
@@ -21,7 +21,7 @@ val HymnToTourach = card("Hymn to Tourach") {
     oracleText = "Target player discards two cards at random."
 
     spell {
-        val t = target("target player", TargetPlayer())
+        val t = target(Targets.Player)
         effect = Patterns.Hand.discardRandom(2, t)
     }
 

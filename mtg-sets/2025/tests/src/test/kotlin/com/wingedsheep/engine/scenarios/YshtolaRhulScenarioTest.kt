@@ -39,7 +39,7 @@ class YshtolaRhulScenarioTest : FunSpec({
         toughness = 1
         oracleText = "When Lifebloom Spirit enters the battlefield, you gain 1 life."
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             effect = Effects.GainLife(1)
         }
     }

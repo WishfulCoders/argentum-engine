@@ -5,8 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -18,10 +16,10 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * The Antiquities "tap / activate an artifact" punisher template (cf. Powerleech, Artifact
  * Possession). It is two triggers:
- *  - the tap half ([Triggers.becomesTapped] over [GameObjectFilter.Artifact]) — "that artifact's
+ *  - the tap half (`Triggers.<subject>.becomesTapped(reason, firstTimeEachTurn)` over [GameObjectFilter.Artifact]) — "that artifact's
  *    controller" is the controller of the just-tapped artifact, reached via
  *    [EffectTarget.ControllerOfTriggeringEntity].
- *  - the ability half ([Triggers.activatesAbilityWithoutTap]) — keys on the literal "without {T}
+ *  - the ability half (`Triggers.<player>.activatesAbility(of, withoutTapInCost = true)`) — keys on the literal "without {T}
  *    in its activation cost" wording (not "isn't a mana ability"), so a non-{T} mana ability also
  *    fires it. "That artifact's controller" is the controller of the activated artifact
  *    ([EffectTarget.ControllerOfTriggeringEntity]) — not the activating player, which differs
@@ -36,18 +34,12 @@ val HauntingWind = card("Haunting Wind") {
         "controller."
 
     triggeredAbility {
-        trigger = Triggers.becomesTapped(
-            binding = TriggerBinding.ANY,
-            filter = GameObjectFilter.Artifact
-        )
+        trigger = Triggers.a(GameObjectFilter.Artifact).becomesTapped()
         effect = Effects.DealDamage(1, EffectTarget.ControllerOfTriggeringEntity)
     }
 
     triggeredAbility {
-        trigger = Triggers.activatesAbilityWithoutTap(
-            player = Player.Each,
-            sourceFilter = GameObjectFilter.Artifact
-        )
+        trigger = Triggers.anyPlayer.activatesAbility(of = GameObjectFilter.Artifact, withoutTapInCost = true)
         effect = Effects.DealDamage(1, EffectTarget.ControllerOfTriggeringEntity)
     }
 

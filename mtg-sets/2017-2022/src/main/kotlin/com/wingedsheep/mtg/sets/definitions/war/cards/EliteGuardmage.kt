@@ -26,7 +26,7 @@ val EliteGuardmage = card("Elite Guardmage") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(3) then Effects.DrawCards(1)
     }
 

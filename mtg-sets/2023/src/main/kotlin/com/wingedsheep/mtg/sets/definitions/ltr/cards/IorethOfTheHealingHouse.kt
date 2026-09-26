@@ -5,9 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Ioreth of the Healing House
@@ -28,26 +25,15 @@ val IorethOfTheHealingHouse = card("Ioreth of the Healing House") {
     // {T}: Untap another target permanent.
     activatedAbility {
         cost = Costs.Tap
-        val permanent = target(
-            "another target permanent",
-            TargetPermanent(filter = TargetFilter.Permanent.other())
-        )
+        val permanent = target(TargetFilter.Permanent.other())
         effect = Effects.Untap(permanent)
     }
 
     // {T}: Untap two other target legendary creatures.
     activatedAbility {
         cost = Costs.Tap
-        target(
-            "two other target legendary creatures",
-            TargetCreature(filter = TargetFilter.Creature.legendary().other(), count = 2)
-        )
-        effect = Effects.Composite(
-            listOf(
-                Effects.Untap(EffectTarget.ContextTarget(0)),
-                Effects.Untap(EffectTarget.ContextTarget(1))
-            )
-        )
+        val (firstCreature, secondCreature) = targets(TargetFilter.Creature.legendary().other(), count = 2)
+        effect = Effects.Untap(firstCreature) then Effects.Untap(secondCreature)
     }
 
     metadata {

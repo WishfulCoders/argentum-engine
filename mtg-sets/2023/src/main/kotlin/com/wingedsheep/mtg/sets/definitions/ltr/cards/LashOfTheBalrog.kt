@@ -2,13 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Lash of the Balrog
@@ -30,21 +29,19 @@ val LashOfTheBalrog = card("Lash of the Balrog") {
     spell {
         effect = ModalEffect.chooseOne(
             // Sacrifice a creature
-            Mode(
-                effect = Effects.Destroy(EffectTarget.ContextTarget(0)),
-                targetRequirements = listOf(TargetCreature()),
-                description = "Sacrifice a creature — destroy target creature",
+            mode("Sacrifice a creature — destroy target creature") {
+                val creature = target(TargetFilter.Creature)
                 additionalCosts = listOf(
                     Costs.additional.SacrificePermanent(filter = GameObjectFilter.Creature)
                 )
-            ),
+                effect = Effects.Destroy(creature)
+            },
             // Pay {4}
-            Mode(
-                effect = Effects.Destroy(EffectTarget.ContextTarget(0)),
-                targetRequirements = listOf(TargetCreature()),
-                description = "Pay {4} — destroy target creature",
+            mode("Pay {4} — destroy target creature") {
+                val creature = target(TargetFilter.Creature)
                 additionalManaCost = "{4}"
-            ),
+                effect = Effects.Destroy(creature)
+            },
             countsAsModalSpell = false
         )
     }

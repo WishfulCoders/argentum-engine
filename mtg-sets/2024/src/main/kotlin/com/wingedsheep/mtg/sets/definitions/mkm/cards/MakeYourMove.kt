@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Make Your Move — Murders at Karlov Manor #22
@@ -27,12 +26,7 @@ val MakeYourMove = card("Make Your Move") {
 
     spell {
         val t = target(
-            "target artifact, enchantment, or creature with power 4 or greater",
-            TargetPermanent(
-                filter = TargetFilter(
-                    GameObjectFilter.ArtifactOrEnchantment or GameObjectFilter.Creature.powerAtLeast(4)
-                )
-            )
+            TargetFilter(GameObjectFilter.ArtifactOrEnchantment or GameObjectFilter.Creature.powerAtLeast(4)),
         )
         effect = Effects.Destroy(t)
     }

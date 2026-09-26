@@ -8,11 +8,10 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.events.AttackPredicate
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Squall, SeeD Mercenary — Final Fantasy #243
@@ -24,7 +23,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  * value 3 or less from your graveyard to the battlefield.
  *
  * "Rough Divide" is an ability word (CR 207.2c) — flavor only, no rules meaning. The first
- * ability is the Thoughtweft Imbuer "attacks alone" shape: an ANY-bound [Triggers.attacks]
+ * ability is the Thoughtweft Imbuer "attacks alone" shape: an ANY-bound `Triggers.<subject>.attacks(requires)`
  * with [AttackPredicate.Alone] over "creature you control", granting double strike to
  * [EffectTarget.TriggeringEntity] (the lone attacker).
  *
@@ -45,11 +44,7 @@ val SquallSeedMercenary = card("Squall, SeeD Mercenary") {
         "or less from your graveyard to the battlefield."
 
     triggeredAbility {
-        trigger = Triggers.attacks(
-            filter = GameObjectFilter.Creature.youControl(),
-            requires = setOf(AttackPredicate.Alone),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).attacks(setOf(AttackPredicate.Alone))
         effect = Effects.GrantKeyword(
             Keyword.DOUBLE_STRIKE,
             EffectTarget.TriggeringEntity,
@@ -60,14 +55,11 @@ val SquallSeedMercenary = card("Squall, SeeD Mercenary") {
     }
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        target = TargetObject(
-            filter = TargetFilter(
-                GameObjectFilter.Permanent.ownedByYou().manaValueAtMost(3),
-                zone = Zone.GRAVEYARD,
-            ),
+        val target = target(
+            TargetFilter(GameObjectFilter.Permanent.ownedByYou().manaValueAtMost(3), zone = Zone.GRAVEYARD),
         )
-        effect = Effects.PutOntoBattlefield(EffectTarget.ContextTarget(0))
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.PutOntoBattlefield(target)
         description = "Whenever Squall deals combat damage to a player, return target permanent card with " +
             "mana value 3 or less from your graveyard to the battlefield."
     }

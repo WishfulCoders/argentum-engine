@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Proctor's Gaze
@@ -22,17 +21,12 @@ val ProctorsGaze = card("Proctor's Gaze") {
     typeLine = "Instant"
     oracleText = "Return up to one target nonland permanent to its owner's hand. Search your library for a basic land card, put it onto the battlefield tapped, then shuffle."
     spell {
-        val t = target(
-            "up to one target nonland permanent",
-            TargetPermanent(optional = true, filter = TargetFilter.NonlandPermanent)
-        )
-        effect = Effects.ReturnToHand(t)
-            .then(
-                Patterns.Library.searchLibrary(
-                    filter = GameObjectFilter.BasicLand,
-                    destination = SearchDestination.BATTLEFIELD,
-                    entersTapped = true
-                )
+        val t = target(TargetFilter.NonlandPermanent, optional = true)
+        effect = Effects.ReturnToHand(t) then
+            Patterns.Library.searchLibrary(
+                filter = GameObjectFilter.BasicLand,
+                destination = SearchDestination.BATTLEFIELD,
+                entersTapped = true
             )
     }
     metadata {

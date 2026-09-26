@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -29,14 +28,12 @@ val Rakalite = card("Rakalite") {
 
     activatedAbility {
         cost = Costs.Mana("{2}")
-        val t = target("any target", Targets.Any)
-        effect = Effects.Composite(listOf(
-            Effects.PreventNextDamage(1, EffectTarget.ContextTarget(0)),
-            CreateDelayedTriggerEffect(
+        val t = target(Targets.Any)
+        effect = Effects.PreventNextDamage(1, t) then
+            Effects.CreateDelayedTrigger(
                 step = Step.END,
                 effect = Effects.ReturnToHand(EffectTarget.Self)
             )
-        ))
         description = "{2}: Prevent the next 1 damage that would be dealt to any target this turn. " +
             "Return this artifact to its owner's hand at the beginning of the next end step."
     }

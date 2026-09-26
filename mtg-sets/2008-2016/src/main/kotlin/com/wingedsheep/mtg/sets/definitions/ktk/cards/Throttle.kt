@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Throttle
@@ -18,8 +18,8 @@ val Throttle = card("Throttle") {
     oracleText = "Target creature gets -4/-4 until end of turn."
 
     spell {
-        effect = Effects.ModifyStats(-4, -4)
-        target = Targets.Creature
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(-4, -4, target = creature)
     }
 
     metadata {

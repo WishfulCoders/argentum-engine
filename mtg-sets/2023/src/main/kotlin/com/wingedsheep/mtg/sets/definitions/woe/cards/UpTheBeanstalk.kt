@@ -27,12 +27,12 @@ val UpTheBeanstalk = card("Up the Beanstalk") {
         "or greater, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1)
     }
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(GameObjectFilter.Any.manaValueAtLeast(5))
+        trigger = Triggers.you.casts(GameObjectFilter.Any.manaValueAtLeast(5))
         effect = Effects.DrawCards(1)
     }
 

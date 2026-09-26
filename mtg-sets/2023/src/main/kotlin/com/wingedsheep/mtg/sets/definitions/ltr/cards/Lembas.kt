@@ -26,7 +26,7 @@ val Lembas = card("Lembas") {
         "When this artifact is put into a graveyard from the battlefield, its owner shuffles it into their library."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.scry(1) then Effects.DrawCards(1)
     }
 
@@ -40,7 +40,7 @@ val Lembas = card("Lembas") {
     }
 
     triggeredAbility {
-        trigger = Triggers.PutIntoGraveyardFromBattlefield
+        trigger = Triggers.self.dies()
         effect = Effects.ShuffleIntoLibrary(EffectTarget.Self)
     }
 

@@ -8,14 +8,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Rise of the Witch-king
@@ -33,7 +27,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *  - `Effects.Sacrifice(Creature, count=1, target=Player.Each)` — each player auto-sacrifices
  *    a sole creature or chooses among multiples. Snapshots flow into
  *    `EffectContext.sacrificedPermanents` so the rider can read them.
- *  - The rider is a `ConditionalEffect` gated on `YouSacrificedThisWay` (LTR Gap 17).
+ *  - The rider is a `Effects.If` gated on `YouSacrificedThisWay` (LTR Gap 17).
  *  - The reanimation half is the standard Gather → Select(`ChooseUpTo(1)`) → Move
  *    pipeline against the graveyard: the player is offered the eligible permanent cards
  *    in their graveyard and may pick zero or one of them. The Gather uses
@@ -54,37 +48,28 @@ val RiseOfTheWitchKing = card("Rise of the Witch-king") {
             GameObjectFilter.Creature,
             count = 1,
             target = EffectTarget.PlayerRef(Player.Each)
-        ).then(
-            ConditionalEffect(
-                condition = Conditions.YouSacrificedThisWay,
-                effect = Effects.Composite(
-                    listOf(
-                        GatherCardsEffect(
-                            source = CardSource.FromZone(
-                                Zone.GRAVEYARD,
-                                Player.You,
-                                GameObjectFilter.Permanent,
-                                // "return ANOTHER permanent card" — the creature you just
-                                // sacrificed to this spell sits in your graveyard but is not
-                                // a legal choice (CR ruling: "You cannot return the same
-                                // permanent card that you sacrificed.").
-                                excludeSacrificedThisWay = true
-                            ),
-                            storeAs = "eligible"
-                        ),
-                        SelectFromCollectionEffect(
-                            from = "eligible",
-                            selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                            storeSelected = "chosen",
-                            prompt = "Choose a permanent card to return to the battlefield"
-                        ),
-                        MoveCollectionEffect(
-                            from = "chosen",
-                            destination = CardDestination.ToZone(Zone.BATTLEFIELD)
-                        )
+        ) then Effects.If(
+            condition = Conditions.YouSacrificedThisWay,
+            then = Effects.Pipeline {
+                val eligible = gather(
+                    CardSource.FromZone(
+                        Zone.GRAVEYARD,
+                        Player.You,
+                        GameObjectFilter.Permanent,
+                        // "return ANOTHER permanent card" — the creature you just
+                        // sacrificed to this spell sits in your graveyard but is not
+                        // a legal choice (CR ruling: "You cannot return the same
+                        // permanent card that you sacrificed.").
+                        excludeSacrificedThisWay = true
                     )
                 )
-            )
+                val chosen = chooseUpTo(
+                    1,
+                    from = eligible,
+                    prompt = "Choose a permanent card to return to the battlefield"
+                )
+                move(chosen, CardDestination.ToZone(Zone.BATTLEFIELD))
+            }
         )
     }
 

@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBeBlockedBy
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Exit Specialist — Murders at Karlov Manor #55
@@ -50,11 +49,8 @@ val ExitSpecialist = card("Exit Specialist") {
     }
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        val creature = target(
-            "another target creature",
-            TargetCreature(filter = TargetFilter.OtherCreature)
-        )
+        trigger = Triggers.self.turnedFaceUp()
+        val creature = target(TargetFilter.OtherCreature)
         effect = Effects.ReturnToHand(creature)
         description = "When this creature is turned face up, return another target creature to " +
             "its owner's hand."

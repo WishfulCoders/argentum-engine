@@ -22,7 +22,7 @@ val JumboCactuar = card("Jumbo Cactuar") {
     power = 1
     toughness = 7
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ModifyStats(9999, 0, EffectTarget.Self)
     }
     metadata {

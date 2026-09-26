@@ -41,6 +41,7 @@ System.getenv("GRADLE_BUILD_CACHE_DIR")?.let { cacheDir ->
 include(":game-server")
 include(":rules-engine")
 include(":mtg-sdk")
+include(":mtg-sdk-tooling")
 include(":mtg-sets")
 include(":mtg-search")
 

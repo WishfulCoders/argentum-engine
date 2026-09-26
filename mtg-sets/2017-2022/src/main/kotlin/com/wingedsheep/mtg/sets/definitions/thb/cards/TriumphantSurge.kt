@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Triumphant Surge
@@ -25,11 +24,8 @@ val TriumphantSurge = card("Triumphant Surge") {
     oracleText = "Destroy target creature with power 4 or greater. You gain 3 life."
 
     spell {
-        val victim = target("target", TargetCreature(filter = TargetFilter.Creature.powerAtLeast(4)))
-        effect = Effects.Composite(
-            Effects.Destroy(victim),
-            Effects.GainLife(3),
-        )
+        val victim = target(TargetFilter.Creature.powerAtLeast(4))
+        effect = Effects.Destroy(victim) then Effects.GainLife(3)
     }
 
     metadata {

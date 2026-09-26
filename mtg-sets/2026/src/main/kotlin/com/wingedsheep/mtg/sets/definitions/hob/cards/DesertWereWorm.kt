@@ -1,22 +1,19 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
-import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.Aggregation
-import com.wingedsheep.sdk.scripting.values.CardNumericProperty
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Desert Were-Worm — The Hobbit #92
@@ -28,7 +25,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * untap all attacking creatures. After this phase, there is an additional combat phase.
  *
  * Modeling notes:
- *  - The Mountain pump is a static [GrantDynamicStatsEffect] on the source, so it feeds the total
+ *  - The Mountain pump is a static [GrantDynamicStats] on the source, so it feeds the total
  *    power the attack trigger measures — a Were-Worm swinging alongside six Mountains is already
  *    12 power by itself.
  *  - "For the first time each turn" is `oncePerTurn` on the ability paired with an
@@ -52,41 +49,32 @@ val DesertWereWorm = card("Desert Were-Worm") {
         "combat phase."
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
-            powerBonus = DynamicAmount.Multiply(
-                DynamicAmounts.battlefield(
-                    Player.You,
-                    GameObjectFilter.Land.withSubtype(Subtype.MOUNTAIN)
-                ).count(),
-                2
-            ),
-            toughnessBonus = DynamicAmount.Fixed(0)
+            powerBonus = DynamicAmounts.battlefield(
+                Player.You,
+                GameObjectFilter.Land.withSubtype(Subtype.MOUNTAIN)
+            ).count() * 2,
+            toughnessBonus = DynamicAmounts.fixed(0)
         )
     }
 
     triggeredAbility {
-        trigger = Triggers.YouAttack
-        triggerRestriction = Compare(
-            left = DynamicAmount.AggregateBattlefield(
-                player = Player.You,
-                filter = GameObjectFilter.Creature.attacking(),
-                aggregation = Aggregation.SUM,
-                property = CardNumericProperty.POWER
-            ),
+        trigger = Triggers.you.attacks()
+        triggerRestriction = Conditions.CompareAmounts(
+            left = DynamicAmounts.battlefield(
+                Player.You,
+                GameObjectFilter.Creature.attacking()
+            ).sumPower(),
             operator = ComparisonOperator.GTE,
-            right = DynamicAmount.Fixed(12)
+            right = 12
         )
         oncePerTurn = true
-        effect = Effects.Composite(
-            listOf(
-                Effects.ForEachInGroup(
-                    filter = GroupFilter(baseFilter = GameObjectFilter.Creature.attacking()),
-                    effect = TapUntapEffect(EffectTarget.Self, tap = false)
-                ),
-                Effects.AddCombatPhase
-            )
-        )
+        effect = Effects.ForEachInGroup(
+            filter = GroupFilter(baseFilter = GameObjectFilter.Creature.attacking()),
+            effect = Effects.Untap(EffectTarget.IterationEntity)
+        ) then
+            Effects.AddCombatPhase
         description = "Whenever you attack with creatures with total power 12 or greater for the " +
             "first time each turn, untap all attacking creatures. After this phase, there is an " +
             "additional combat phase."

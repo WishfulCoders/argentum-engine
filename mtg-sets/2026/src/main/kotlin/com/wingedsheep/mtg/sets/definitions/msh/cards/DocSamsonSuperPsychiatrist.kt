@@ -2,14 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.msh.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.ModifyCounterPlacement
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddManaOfChoiceEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.values.ManaColorSet
 
 /**
@@ -22,9 +21,9 @@ import com.wingedsheep.sdk.scripting.values.ManaColorSet
  * {T}: Add X mana of any one color, where X is Doc Samson's power.
  *
  * The counter clause is Hardened Scales' [ModifyCounterPlacement] widened on both axes: the
- * counter kind is [CounterTypeFilter.Any] ("one or more counters", not just +1/+1 — and the
+ * counter kind is `null` ("one or more counters", not just +1/+1 — and the
  * `+1` applies per kind, which is what "one of each of those kinds" means) and the recipient is
- * [RecipientFilter.PermanentYouControl] ("a permanent you control", not merely a creature).
+ * [Recipient.PermanentYouControl] ("a permanent you control", not merely a creature).
  * Modelling it as the placement *replacement* rather than a trigger is what makes the printed
  * interactions fall out: a permanent entering with counters enters with one extra of each kind,
  * two Doc Samsons stack, and the controller orders it against other placement replacements per
@@ -50,8 +49,8 @@ val DocSamsonSuperPsychiatrist = card("Doc Samson, Super Psychiatrist") {
         ModifyCounterPlacement(
             modifier = 1,
             appliesTo = EventPattern.CounterPlacementEvent(
-                counterType = CounterTypeFilter.Any,
-                recipient = RecipientFilter.PermanentYouControl
+                counterType = null,
+                recipient = Recipient.PermanentYouControl
             ),
             // "If **you** would put ..." — the placer matters, not just the recipient. Without
             // this the card reads like Winding Constrictor ("if counters would be put"), and an
@@ -63,7 +62,7 @@ val DocSamsonSuperPsychiatrist = card("Doc Samson, Super Psychiatrist") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = AddManaOfChoiceEffect(
+        effect = Effects.AddManaOfChoice(
             colorSet = ManaColorSet.AnyColor,
             amount = DynamicAmounts.sourcePower()
         )

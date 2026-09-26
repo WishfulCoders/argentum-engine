@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Glare of Heresy
@@ -25,10 +24,7 @@ val GlareOfHeresy = card("Glare of Heresy") {
     oracleText = "Exile target white permanent."
 
     spell {
-        val permanent = target(
-            "white permanent",
-            TargetPermanent(filter = TargetFilter.Permanent.withColor(Color.WHITE))
-        )
+        val permanent = target(TargetFilter.Permanent.withColor(Color.WHITE))
         effect = Effects.Exile(permanent)
     }
 

@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.core.Keyword
 
 /**
@@ -22,7 +22,7 @@ val BurrowguardMentor = card("Burrowguard Mentor") {
     oracleText = "Trample\nBurrowguard Mentor's power and toughness are each equal to the number of creatures you control."
 
     keywords(Keyword.TRAMPLE)
-    dynamicStats(DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Creature))
+    dynamicStats(DynamicAmounts.creaturesYouControl())
 
     metadata {
         rarity = Rarity.UNCOMMON

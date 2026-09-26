@@ -1,24 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ChooseCreatureTypeEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Unbury
@@ -30,10 +20,14 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * • Return two target creature cards that share a creature type from your graveyard
  *   to your hand.
  *
- * Note: the second mode is implemented as "choose a creature type, then return two
- * creature cards of that type" — same set of legal outcomes as the oracle wording,
- * with one extra player decision (the creature type) instead of inferring it from
- * the chosen pair.
+ * Both modes target (CR 601.2c). The second mode's pair is one two-slot requirement with
+ * [TargetObject.sameCreatureType], which reads a graveyard card's printed creature types (a
+ * changeling card has them all). Each target is returned on its own.
+ *
+ * Known engine gap: the 2025-11-17 ruling says that if one of the pair leaves the graveyard the
+ * other still returns, but `ModalEffectExecutor` re-checks a pre-chosen mode's targets
+ * all-or-nothing (CR 608.2b partial legality isn't modelled for modes), so today the whole mode
+ * does nothing in that case.
  */
 val Unbury = card("Unbury") {
     manaCost = "{1}{B}"
@@ -45,37 +39,18 @@ val Unbury = card("Unbury") {
 
     spell {
         effect = ModalEffect.chooseOne(
+            mode("Return target creature card from your graveyard to your hand") {
+                val creatureInYourGraveyard = target(TargetFilter.CreatureInYourGraveyard)
+                effect = Effects.ReturnToHand(creatureInYourGraveyard)
+            },
             Mode.withTarget(
-                Effects.ReturnToHand(EffectTarget.ContextTarget(0)),
-                TargetObject(filter = TargetFilter.CreatureInYourGraveyard),
-                "Return target creature card from your graveyard to your hand"
-            ),
-            Mode.noTarget(
-                Effects.Composite(
-                    listOf(
-                        ChooseCreatureTypeEffect,
-                        GatherCardsEffect(
-                            source = CardSource.FromZone(
-                                zone = Zone.GRAVEYARD,
-                                player = Player.You,
-                                filter = GameObjectFilter.Creature
-                            ),
-                            storeAs = "graveyardCreatures"
-                        ),
-                        SelectFromCollectionEffect(
-                            from = "graveyardCreatures",
-                            selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(2)),
-                            matchChosenCreatureType = true,
-                            storeSelected = "chosen",
-                            prompt = "Choose two creature cards of the chosen type"
-                        ),
-                        MoveCollectionEffect(
-                            from = "chosen",
-                            destination = CardDestination.ToZone(Zone.HAND)
-                        )
-                    )
+                Effects.ForEachTarget(Effects.ReturnToHand(EffectTarget.ContextTarget(0))),
+                TargetObject(
+                    count = 2,
+                    filter = TargetFilter.CreatureInYourGraveyard,
+                    sameCreatureType = true
                 ),
-                "Return two creature cards that share a creature type from your graveyard"
+                "Return two target creature cards that share a creature type from your graveyard to your hand"
             )
         )
     }

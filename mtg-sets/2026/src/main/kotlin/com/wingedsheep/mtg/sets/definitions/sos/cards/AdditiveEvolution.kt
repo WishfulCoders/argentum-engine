@@ -1,15 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CREATED_TOKENS
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Additive Evolution
@@ -26,7 +27,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * three +1/+1 counters on that just-created token via `PipelineTarget(CREATED_TOKENS, 0)`. The
  * count is fixed (three), so a plain [Effects.AddCounters].
  *
- * The combat trigger uses [Triggers.BeginCombat] (already restricted to the controller's combat,
+ * The combat trigger uses `Triggers.you.beginningOf(Step.BEGIN_COMBAT)` (already restricted to the controller's combat,
  * "on your turn"): bind one target creature you control, add a +1/+1 counter to it, then grant it
  * vigilance until end of turn — both effects reference the same bound target.
  */
@@ -40,29 +41,27 @@ val AdditiveEvolution = card("Additive Evolution") {
         "control. It gains vigilance until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 0,
             toughness = 0,
             colors = setOf(Color.GREEN, Color.BLUE),
             creatureTypes = setOf("Fractal"),
             imageUri = "https://cards.scryfall.io/normal/front/d/e/de564776-9d88-4533-8717-842eecdd0594.jpg?1775828279"
-        ).then(
-            Effects.AddCounters(
-                Counters.PLUS_ONE_PLUS_ONE,
-                3,
-                EffectTarget.PipelineTarget(CREATED_TOKENS, 0)
-            )
+        ) then Effects.AddCounters(
+            CounterType.PLUS_ONE_PLUS_ONE,
+            3,
+            EffectTarget.PipelineTarget(CREATED_TOKENS, 0)
         )
         description = "When this enchantment enters, create a 0/0 green and blue Fractal creature " +
             "token. Put three +1/+1 counters on it."
     }
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        val creature = target("target creature you control", Targets.CreatureYouControl)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creature)
-            .then(Effects.GrantKeyword(Keyword.VIGILANCE, creature))
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature) then
+            Effects.GrantKeyword(Keyword.VIGILANCE, creature)
         description = "At the beginning of combat on your turn, put a +1/+1 counter on target " +
             "creature you control. It gains vigilance until end of turn."
     }

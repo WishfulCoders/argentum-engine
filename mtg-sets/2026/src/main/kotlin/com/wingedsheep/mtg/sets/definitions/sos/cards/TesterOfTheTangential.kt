@@ -1,16 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.increment
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayPayXForEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Tester of the Tangential — Secrets of Strixhaven #69
@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * At the beginning of combat on your turn, you may pay {X}. When you do, move X +1/+1 counters
  * from this creature onto another target creature.
  *
- * The second ability is a may-pay-{X} reflexive: [MayPayXForEffect] pauses for the X chooser and
+ * The second ability is a may-pay-{X} reflexive: [Effects.MayPayX] pauses for the X chooser and
  * binds the chosen X into [DynamicAmount.XValue], then resolves its inner pipeline — select
  * "another target creature", then [Effects.MoveCounters] moves X +1/+1 counters from this creature
  * (capped at the number present) onto the selected target. Targeting happens after the payment, as
@@ -41,17 +41,19 @@ val TesterOfTheTangential = card("Tester of the Tangential") {
     increment()
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        effect = MayPayXForEffect(
-            effect = Effects.SelectTarget(TargetCreature(filter = TargetFilter.OtherCreature), "moveTarget")
-                .then(
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        effect = Effects.MayPayX(
+            then = Effects.Pipeline {
+                val moveTarget = selectTarget(TargetObject(filter = TargetFilter.OtherCreature))
+                run(
                     Effects.MoveCounters(
-                        counterType = Counters.PLUS_ONE_PLUS_ONE,
-                        amount = DynamicAmount.XValue,
+                        counterType = CounterType.PLUS_ONE_PLUS_ONE,
+                        amount = DynamicAmounts.xValue(),
                         source = EffectTarget.Self,
-                        destination = EffectTarget.PipelineTarget("moveTarget"),
+                        destination = moveTarget.asTarget,
                     )
                 )
+            }
         )
     }
 

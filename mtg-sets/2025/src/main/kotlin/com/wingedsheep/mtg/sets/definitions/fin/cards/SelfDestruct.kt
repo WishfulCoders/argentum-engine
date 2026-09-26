@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.AnyTarget
 import com.wingedsheep.sdk.scripting.targets.TargetOther
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Self-Destruct
@@ -27,14 +28,14 @@ val SelfDestruct = card("Self-Destruct") {
     oracleText = "Target creature you control deals X damage to any other target and X damage to itself, where X is its power."
 
     spell {
-        val yourCreature = target("creature you control", Targets.CreatureYouControl)
-        val other = target("any other target", TargetOther(baseRequirement = AnyTarget()))
+        val yourCreature = target(TargetFilter.CreatureYouControl)
+        val other = target(TargetOther(baseRequirement = Targets.Any))
         effect = Effects.DealDamage(
-            DynamicAmounts.targetPower(0),
+            DynamicAmounts.powerOf(yourCreature),
             other,
             damageSource = yourCreature
         ) then Effects.DealDamage(
-            DynamicAmounts.targetPower(0),
+            DynamicAmounts.powerOf(yourCreature),
             yourCreature,
             damageSource = yourCreature
         )

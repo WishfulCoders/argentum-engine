@@ -29,11 +29,9 @@ class PausedSpellObjectIdentityTest : FunSpec({
             val spell = card("Identity Paused Spell $destination") {
                 manaCost = "{0}"; typeLine = "Sorcery"
                 spell {
-                    effect = Effects.Composite(
-                        GatedEffect(Gate.MayDecide("First?"), Effects.Composite(
-                            Effects.GainLife(1),
-                            GatedEffect(Gate.MayDecide("Second?"), Effects.GainLife(2)))),
-                        Effects.GainLife(4))
+                    effect = GatedEffect(Gate.MayDecide("First?"), Effects.GainLife(1) then
+                        GatedEffect(Gate.MayDecide("Second?"), Effects.GainLife(2))) then
+                        Effects.GainLife(4)
                 }
                 if (destination == "flashback") keywordAbility(KeywordAbility.flashback("{0}"))
                 if (destination == "replacement") replacementEffect(RedirectZoneChange(

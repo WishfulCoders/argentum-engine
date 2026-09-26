@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects
 
+import com.wingedsheep.engine.mechanics.stack.colorChoicePrompt
 import com.wingedsheep.engine.core.suspendForDecision
 import com.wingedsheep.engine.core.AnswerContinuation
 import com.wingedsheep.engine.core.ChooseColorDecision
@@ -24,6 +25,7 @@ import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.PlayerComponent
 import com.wingedsheep.engine.state.components.identity.RevealedToComponent
+import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.CardDefinition
@@ -33,21 +35,21 @@ import com.wingedsheep.sdk.scripting.ChoiceType
 import com.wingedsheep.sdk.scripting.EntersAsCopy
 import com.wingedsheep.sdk.scripting.EntersWithChoice
 import com.wingedsheep.sdk.scripting.EntersWithDevour
-import com.wingedsheep.sdk.scripting.OnEnterRunEffect
+import com.wingedsheep.sdk.scripting.OnEnterRun
 import com.wingedsheep.sdk.scripting.effects.Effect
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
  * Applies a permanent's own "as-enters" replacements — [EntersWithChoice] (CR 614.12 — choose a
  * color / creature type / mode / … as the permanent enters), [EntersAsCopy], and the generic
- * [OnEnterRunEffect] — to an entity that has *already* been placed on the battlefield
+ * [OnEnterRun] — to an entity that has *already* been placed on the battlefield
  * **directly**, i.e. not cast as a spell that resolves off the stack.
  *
  * **Each caller uses a different subset — this is a toolbox, not one entry point.** Which of the
  * two helper families is wired where today:
  *
  *  - [com.wingedsheep.engine.handlers.actions.land.PlayLandHandler] — a land played directly.
- *    Both: [pauseForEntersWithChoice] / [entersAsCopyCandidates], and [OnEnterRunEffect] inline
+ *    Both: [pauseForEntersWithChoice] / [entersAsCopyCandidates], and [OnEnterRun] inline
  *    (sharing this object's [onEnterRunEffectFor] lookup).
  *  - [com.wingedsheep.engine.handlers.effects.token.TokenFromDefinition] — a token minted from a
  *    card definition (e.g. the Momir Basic avatar's random-creature token).
@@ -57,7 +59,7 @@ import com.wingedsheep.sdk.scripting.references.Player
  *    [runOnEnterRunEffect] only.
  *  - [com.wingedsheep.engine.mechanics.stack.StackResolver] — a permanent *cast as a spell*, run
  *    just after `enterPermanentOnBattlefield`. [runOnEnterRunEffect] only. Added for Nameless
- *    Race; until then [OnEnterRunEffect] was silently inert on every cast permanent, which went
+ *    Race; until then [OnEnterRun] was silently inert on every cast permanent, which went
  *    unnoticed because its only two users were lands (played, not cast).
  *  - [com.wingedsheep.engine.handlers.continuations.ModalAndCloneContinuationResumer]'s
  *    `resumeEntersWithChoiceSpell` — the same cast-as-a-spell entry, finished on the *other* side
@@ -78,15 +80,13 @@ import com.wingedsheep.sdk.scripting.references.Player
  *
  * The choice pauses for a player decision. [EntersWithChoiceOnBattlefieldContinuation]'s resumer
  * records the chosen value into the entity's `CastChoicesComponent`, chains to any remaining
- * choice, and then fires the entry's ETB triggers off a synthesized [ZoneChangeEvent] (using the
- * continuation's `fromZone`). **ETB triggers are therefore fired by the resumer, never by the
- * caller** — a caller whose paused result is run through trigger detection (e.g. an effect
- * resolving via `StackResolver`) must NOT also include the entry battlefield [ZoneChangeEvent] in
- * [carryEvents], or the triggers fire twice.
+ * choice, and then emits the entry's [ZoneChangeEvent] (using the continuation's `fromZone`).
+ * **The entry event is therefore emitted by the resumer, never by the caller.** The settle
+ * boundary detects triggers over every event a paused result carries, so a caller must NOT
+ * include the entry battlefield [ZoneChangeEvent] in [carryEvents], or the ETB triggers fire
+ * twice.
  */
 object PermanentEntryReplacements {
-
-    private val predicateEvaluator = PredicateEvaluator()
 
     /**
      * Models the "look at an opponent's hand" clause of an [EntersWithChoice] with
@@ -120,7 +120,7 @@ object PermanentEntryReplacements {
     }
 
     /**
-     * The single [OnEnterRunEffect] a card definition contributes, or `null` if it has none.
+     * The single [OnEnterRun] a card definition contributes, or `null` if it has none.
      *
      * **First one wins.** Both entry paths consult only the first, so a card that needs two
      * "as ~ enters" clauses must fold them into one composite inside a single replacement — see
@@ -149,6 +149,7 @@ object PermanentEntryReplacements {
         controllerId: EntityId,
         devour: EntersWithDevour,
         enteringId: EntityId?,
+        predicateEvaluator: PredicateEvaluator
     ): List<EntityId> {
         val predicateContext = PredicateContext(controllerId = controllerId, sourceId = enteringId)
         return state.getBattlefield().filter { entityId ->
@@ -160,13 +161,13 @@ object PermanentEntryReplacements {
         }
     }
 
-    fun onEnterRunEffectFor(cardDef: CardDefinition?): OnEnterRunEffect? =
+    fun onEnterRunEffectFor(cardDef: CardDefinition?): OnEnterRun? =
         cardDef?.script?.replacementEffects
-            ?.filterIsInstance<OnEnterRunEffect>()
+            ?.filterIsInstance<OnEnterRun>()
             ?.firstOrNull()
 
     /**
-     * Run a permanent's own [OnEnterRunEffect] — the generic "as ~ enters, run [effect]"
+     * Run a permanent's own [OnEnterRun] — the generic "as ~ enters, run [effect]"
      * self-replacement — on an entity that has *already* been placed on the battlefield.
      *
      * [com.wingedsheep.engine.handlers.actions.land.PlayLandHandler] runs this inline for a land
@@ -187,7 +188,7 @@ object PermanentEntryReplacements {
      * @param resolutionDepth the calling effect's depth, carried into the fresh context so the
      *   registry's runaway-recursion backstop still counts a self-perpetuating entry loop.
      * @return the [EffectResult] of running the replacement, or `null` if the card has no
-     *   [OnEnterRunEffect] — the caller then completes entry normally.
+     *   [OnEnterRun] — the caller then completes entry normally.
      */
     fun runOnEnterRunEffect(
         state: GameState,
@@ -235,6 +236,7 @@ object PermanentEntryReplacements {
         entityId: EntityId,
         controllerId: EntityId,
         effect: EntersAsCopy,
+        predicateEvaluator: PredicateEvaluator
     ): List<EntityId> {
         val pool = if (effect.copyFromZone == Zone.GRAVEYARD) {
             state.turnOrder.flatMap { state.getGraveyard(it) }
@@ -277,9 +279,10 @@ object PermanentEntryReplacements {
         carryEvents: List<GameEvent> = emptyList(),
         entryOldObject: com.wingedsheep.engine.state.ObjectRef? = null,
         entryNewObject: com.wingedsheep.engine.state.ObjectRef? = state.objectRef(entityId),
+        predicateEvaluator: PredicateEvaluator
     ): ExecutionResult? {
         val copyFromGraveyard = effect.copyFromZone == Zone.GRAVEYARD
-        val candidates = entersAsCopyCandidates(state, entityId, controllerId, effect)
+        val candidates = entersAsCopyCandidates(state, entityId, controllerId, effect, predicateEvaluator = predicateEvaluator)
         if (candidates.isEmpty()) return null
 
         val filterDesc = effect.copyFilter.description
@@ -328,8 +331,7 @@ object PermanentEntryReplacements {
      * @param fromZone the zone the permanent came from, used to synthesize the entry
      *   [ZoneChangeEvent] in the resumer; `null` for a freshly-minted token (no prior zone).
      * @param carryEvents events already produced by the caller to forward with the pause (e.g.
-     *   counters added). Must NOT include the entry battlefield [ZoneChangeEvent] when the caller's
-     *   result is trigger-detected (see class docs).
+     *   counters added). Must NOT include the entry battlefield [ZoneChangeEvent] (see class docs).
      * @return a paused [ExecutionResult], or `null` if the choice cannot be presented (e.g.
      *   `CREATURE_ON_BATTLEFIELD` with no other creatures, an empty `MODE`/`OPPONENT` set) — the
      *   caller then completes entry normally.
@@ -374,7 +376,10 @@ object PermanentEntryReplacements {
         return when (choice.choiceType) {
             ChoiceType.COLOR -> {
                 pause(
-                    { id -> ChooseColorDecision(id, chooserId, "Choose a color", context()) },
+                    { id -> ChooseColorDecision(
+                        id, chooserId, colorChoicePrompt(choice), context(),
+                        availableColors = Color.entries.toSet() - choice.excludedColors
+                    ) },
                     EntersWithChoiceOnBattlefieldContinuation(
                         entityId = entityId,
                         controllerId = controllerId,

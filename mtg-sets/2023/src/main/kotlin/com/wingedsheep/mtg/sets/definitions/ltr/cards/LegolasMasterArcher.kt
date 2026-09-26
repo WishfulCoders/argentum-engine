@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
@@ -10,7 +10,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.predicates.ControllerPredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.events.SpellCastPredicate
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Legolas, Master Archer
@@ -24,7 +25,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * damage equal to its power to up to one target creature.
  *
  * Both abilities use the `SpellCastPredicate.TargetsSource` / `TargetsMatching` cast-time
- * predicates (Triggers.youCastSpellTargetingSource / youCastSpellTargeting). "A creature you
+ * predicates (Triggers.you.casts(requires = setOf(SpellCastPredicate.TargetsSource)) / youCastSpellTargeting). "A creature you
  * don't control" is `Not(ControlledByYou)` (not `opponentControls()`, which would miss a
  * teammate's creatures in multiplayer). The damage clause composes `DealDamage(sourcePower(),
  * target)` — the damage source defaults to Legolas (the trigger source).
@@ -43,17 +44,15 @@ val LegolasMasterArcher = card("Legolas, Master Archer") {
     keywords(Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.youCastSpellTargetingSource()
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.casts(requires = setOf(SpellCastPredicate.TargetsSource))
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     triggeredAbility {
-        trigger = Triggers.youCastSpellTargeting(
-            GameObjectFilter.Creature.withControllerPredicate(
+        trigger = Triggers.you.casts(requires = setOf(SpellCastPredicate.TargetsMatching(GameObjectFilter.Creature.withControllerPredicate(
                 ControllerPredicate.Not(ControllerPredicate.ControlledByYou)
-            )
-        )
-        val t = target("up to one target creature", TargetCreature(optional = true))
+            ))))
+        val t = target(TargetFilter.Creature, optional = true)
         effect = Effects.DealDamage(DynamicAmounts.sourcePower(), t)
     }
 

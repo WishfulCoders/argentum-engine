@@ -15,7 +15,7 @@ import io.kotest.matchers.shouldBe
  *  You have no maximum hand size.
  *  Max speed — If you would draw a card, draw two cards instead."
  *
- * Exercises [com.wingedsheep.sdk.scripting.ReplaceDrawWithEffect] as a *per-card* replacement,
+ * Exercises [com.wingedsheep.sdk.scripting.ReplaceDrawWith] as a *per-card* replacement,
  * and the max-speed gate folded into that effect's own `restrictions` slot (replacement effects
  * can't go through `maxSpeed { }`). Three things worth proving:
  *

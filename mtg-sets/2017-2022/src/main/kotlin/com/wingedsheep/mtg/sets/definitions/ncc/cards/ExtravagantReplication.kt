@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Extravagant Replication
@@ -27,11 +27,8 @@ val ExtravagantReplication = card("Extravagant Replication") {
     oracleText = "At the beginning of your upkeep, create a token that's a copy of another target nonland permanent you control."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        val copyTarget = target(
-            "another target nonland permanent you control",
-            TargetObject(filter = TargetFilter.OtherNonlandPermanent.youControl())
-        )
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        val copyTarget = target(TargetFilter.OtherNonlandPermanent.youControl())
         effect = Effects.CreateTokenCopyOfTarget(copyTarget)
     }
 

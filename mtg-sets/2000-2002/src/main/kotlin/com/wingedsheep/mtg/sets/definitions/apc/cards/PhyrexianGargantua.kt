@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 
@@ -28,11 +26,8 @@ val PhyrexianGargantua = card("Phyrexian Gargantua") {
     power = 4
     toughness = 4
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            DrawCardsEffect(2),
-            LoseLifeEffect(2, EffectTarget.Controller)
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.DrawCards(2) then Effects.LoseLife(2, EffectTarget.Controller)
     }
     metadata {
         rarity = Rarity.UNCOMMON

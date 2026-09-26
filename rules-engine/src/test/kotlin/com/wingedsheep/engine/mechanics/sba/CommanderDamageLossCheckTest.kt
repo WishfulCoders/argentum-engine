@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.mechanics.sba
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.sba.player.CommanderDamageLossCheck
 import com.wingedsheep.engine.state.ComponentContainer
 import com.wingedsheep.engine.state.GameState
@@ -30,7 +31,7 @@ class CommanderDamageLossCheckTest : FunSpec({
     test("21+ damage from a single commander makes the defender lose") {
         val state = baseState(Format.Commander())
             .recordCommanderDamage(cmdrA, p2, 21)
-        val result = CommanderDamageLossCheck().check(state)
+        val result = CommanderDamageLossCheck(predicateEvaluator = PredicateEvaluator(cardRegistry = null)).check(state)
         val updatedP2 = result.newState.getEntity(p2)
         updatedP2!!.get<PlayerLostComponent>() shouldNotBe null
         updatedP2.get<PlayerLostComponent>()!!.reason shouldBe LossReason.COMMANDER_DAMAGE
@@ -39,7 +40,7 @@ class CommanderDamageLossCheckTest : FunSpec({
     test("20 damage is not enough; defender stays alive") {
         val state = baseState(Format.Commander())
             .recordCommanderDamage(cmdrA, p2, 20)
-        val result = CommanderDamageLossCheck().check(state)
+        val result = CommanderDamageLossCheck(predicateEvaluator = PredicateEvaluator(cardRegistry = null)).check(state)
         result.newState.getEntity(p2)!!.get<PlayerLostComponent>() shouldBe null
     }
 
@@ -48,14 +49,14 @@ class CommanderDamageLossCheckTest : FunSpec({
         val state = baseState(Format.Commander())
             .recordCommanderDamage(cmdrA, p2, 11)
             .recordCommanderDamage(cmdrB, p2, 11)
-        val result = CommanderDamageLossCheck().check(state)
+        val result = CommanderDamageLossCheck(predicateEvaluator = PredicateEvaluator(cardRegistry = null)).check(state)
         result.newState.getEntity(p2)!!.get<PlayerLostComponent>() shouldBe null
     }
 
     test("Standard format: SBA never fires regardless of commanderDamage tally") {
         val state = baseState(Format.Standard)
             .recordCommanderDamage(cmdrA, p2, 99)
-        val result = CommanderDamageLossCheck().check(state)
+        val result = CommanderDamageLossCheck(predicateEvaluator = PredicateEvaluator(cardRegistry = null)).check(state)
         result.newState.getEntity(p2)!!.get<PlayerLostComponent>() shouldBe null
     }
 
@@ -63,12 +64,12 @@ class CommanderDamageLossCheckTest : FunSpec({
         // Pretend Brawl-shaped variant with a hypothetical 30-damage threshold
         val state = baseState(Format.Commander(commanderDamageThreshold = 30))
             .recordCommanderDamage(cmdrA, p2, 25)
-        CommanderDamageLossCheck().check(state).newState
+        CommanderDamageLossCheck(predicateEvaluator = PredicateEvaluator(cardRegistry = null)).check(state).newState
             .getEntity(p2)!!.get<PlayerLostComponent>() shouldBe null
 
         val state2 = baseState(Format.Commander(commanderDamageThreshold = 30))
             .recordCommanderDamage(cmdrA, p2, 30)
-        CommanderDamageLossCheck().check(state2).newState
+        CommanderDamageLossCheck(predicateEvaluator = PredicateEvaluator(cardRegistry = null)).check(state2).newState
             .getEntity(p2)!!.get<PlayerLostComponent>() shouldNotBe null
     }
 
@@ -80,7 +81,7 @@ class CommanderDamageLossCheckTest : FunSpec({
         )
         val state = baseState(format).recordCommanderDamage(cmdrA, p2, 21)
 
-        CommanderDamageLossCheck().check(state).newState
+        CommanderDamageLossCheck(predicateEvaluator = PredicateEvaluator(cardRegistry = null)).check(state).newState
             .getEntity(p2)!!.get<PlayerLostComponent>() shouldNotBe null
     }
 })

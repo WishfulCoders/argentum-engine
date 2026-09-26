@@ -24,7 +24,7 @@ val VolcanicRambler = card("Volcanic Rambler") {
 
     activatedAbility {
         cost = Costs.Mana("{2}{R}")
-        val t = target("target player or planeswalker", Targets.PlayerOrPlaneswalker)
+        val t = target(Targets.PlayerOrPlaneswalker)
         effect = Effects.DealDamage(1, t)
     }
 

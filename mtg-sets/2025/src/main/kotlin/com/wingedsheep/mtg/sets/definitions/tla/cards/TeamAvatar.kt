@@ -4,14 +4,13 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.events.AttackPredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Team Avatar
@@ -34,11 +33,7 @@ val TeamAvatar = card("Team Avatar") {
     // Whenever a creature you control attacks alone, it gets +X/+X until end of turn,
     // where X is the number of creatures you control (counted on resolution).
     triggeredAbility {
-        trigger = Triggers.attacks(
-            filter = GameObjectFilter.Creature.youControl(),
-            requires = setOf(AttackPredicate.Alone),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).attacks(setOf(AttackPredicate.Alone))
         val creatureCount = DynamicAmounts.creaturesYouControl()
         effect = Effects.ModifyStats(creatureCount, creatureCount, EffectTarget.TriggeringEntity)
     }
@@ -47,7 +42,7 @@ val TeamAvatar = card("Team Avatar") {
     // you control to target creature.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{W}"), Costs.DiscardSelf)
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.DealDamage(DynamicAmounts.creaturesYouControl(), t)
         activateFromZone = Zone.HAND
     }

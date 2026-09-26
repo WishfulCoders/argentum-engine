@@ -21,7 +21,7 @@ val SuChi = card("Su-Chi") {
     oracleText = "When this creature dies, add {C}{C}{C}{C}."
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.AddColorlessMana(4)
         description = "When this creature dies, add {C}{C}{C}{C}."
     }

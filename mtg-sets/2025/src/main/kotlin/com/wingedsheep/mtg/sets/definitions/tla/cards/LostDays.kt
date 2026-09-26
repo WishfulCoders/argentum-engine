@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Lost Days
@@ -23,11 +23,8 @@ val LostDays = card("Lost Days") {
         "\"{2}, Sacrifice this token: Draw a card.\")"
 
     spell {
-        val t = target("target creature or enchantment", Targets.CreatureOrEnchantment)
-        effect = Effects.Composite(
-            Effects.PutSecondFromTopOrBottomOfLibrary(t),
-            Effects.CreateClue(),
-        )
+        val t = target(TargetFilter.CreatureOrEnchantment)
+        effect = Effects.PutSecondFromTopOrBottomOfLibrary(t) then Effects.CreateClue()
     }
 
     metadata {

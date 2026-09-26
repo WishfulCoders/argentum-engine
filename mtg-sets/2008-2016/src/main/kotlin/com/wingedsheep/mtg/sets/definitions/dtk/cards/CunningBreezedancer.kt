@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Cunning Breezedancer
@@ -17,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever you cast a noncreature spell, this creature gets +2/+2 until end of turn.
  *
  * A prowess-shaped trigger that is deliberately *not* prowess — the printed line is its own
- * ability with a +2/+2 bonus, so it is a plain [Triggers.YouCastNoncreature] trigger. Writing
+ * ability with a +2/+2 bonus, so it is a plain `Triggers.you.casts(GameObjectFilter.Noncreature)` trigger. Writing
  * `prowess()` would lower to the keyword plus a second +1/+1 trigger and double-count the pump.
  * The pump is [EffectTarget.Self]; `Duration.EndOfTurn` is the facade default that spells
  * "until end of turn".
@@ -34,7 +35,7 @@ val CunningBreezedancer = card("Cunning Breezedancer") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
     }
 

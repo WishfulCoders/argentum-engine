@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.fdn.cards
 
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -10,7 +11,6 @@ import com.wingedsheep.sdk.scripting.SelfAlternativeCost
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Blasphemous Edict
@@ -42,9 +42,9 @@ val BlasphemousEdict = card("Blasphemous Edict") {
     selfAlternativeCost = SelfAlternativeCost(
         manaCost = ManaCost.parse("{B}"),
         condition = Conditions.CompareAmounts(
-            DynamicAmount.AggregateBattlefield(Player.Each, GameObjectFilter.Creature),
+            DynamicAmounts.allCreatures(),
             ComparisonOperator.GTE,
-            DynamicAmount.Fixed(13)
+            13
         )
     )
 

@@ -1,9 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 
@@ -23,10 +24,8 @@ val SoullessOne = card("Soulless One") {
     oracleText = "Trample\nSoulless One's power and toughness are each equal to the number of Zombies on the battlefield plus the number of Zombie cards in all graveyards."
 
     dynamicStats(
-        DynamicAmount.Add(
-            DynamicAmount.AggregateBattlefield(Player.Each, GameObjectFilter.Creature.withSubtype("Zombie")),
-            DynamicAmount.Count(Player.Each, Zone.GRAVEYARD, GameObjectFilter.Any.withSubtype("Zombie"))
-        )
+        DynamicAmounts.battlefield(Player.Each, GameObjectFilter.Creature.withSubtype("Zombie")).count() +
+            DynamicAmounts.count(Player.Each, Zone.GRAVEYARD, GameObjectFilter.Any.withSubtype("Zombie"))
     )
 
     metadata {

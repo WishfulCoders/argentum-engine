@@ -3,11 +3,8 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.DealsDamageEvent
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Thieving Otter
@@ -26,13 +23,7 @@ val ThievingOtter = card("Thieving Otter") {
     oracleText = "Whenever this creature deals damage to an opponent, draw a card."
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = DealsDamageEvent(
-                damageType = DamageType.Any,
-                recipient = RecipientFilter.Opponent
-            ),
-            binding = TriggerBinding.SELF
-        )
+        trigger = Triggers.self.dealsDamage(Recipient.Opponent)
         effect = Effects.DrawCards(1)
     }
 

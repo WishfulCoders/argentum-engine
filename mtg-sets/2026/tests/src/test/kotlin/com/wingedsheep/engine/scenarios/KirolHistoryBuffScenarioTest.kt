@@ -19,7 +19,7 @@ import io.kotest.matchers.shouldNotBe
  * Scenario tests for Kirol, History Buff // Pack a Punch (Secrets of Strixhaven).
  *
  * Kirol does NOT enter prepared (no PREPARED keyword). He becomes prepared via the batched
- * "Whenever one or more cards leave your graveyard" trigger (`Triggers.CardsLeaveYourGraveyard`)
+ * "Whenever one or more cards leave your graveyard" trigger (`Triggers.oneOrMore(filter).leaveYourGraveyard()`)
  * + `Effects.BecomePrepared`. Becoming prepared creates a copy of "Pack a Punch" ({1}{R}{W}, "Mill
  * a card. Put two +1/+1 counters on target creature. It gains trample until end of turn.") in exile;
  * casting that copy unprepares him.

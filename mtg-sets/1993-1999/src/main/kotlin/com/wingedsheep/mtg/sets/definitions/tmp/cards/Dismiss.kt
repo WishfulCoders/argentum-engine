@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.tmp.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Dismiss
@@ -19,7 +19,7 @@ val Dismiss = card("Dismiss") {
     oracleText = "Counter target spell.\nDraw a card."
 
     spell {
-        target = Targets.Spell
+        val spell = target(TargetFilter.SpellOnStack)
         effect = Effects.CounterSpell() then Effects.DrawCards(1)
     }
 

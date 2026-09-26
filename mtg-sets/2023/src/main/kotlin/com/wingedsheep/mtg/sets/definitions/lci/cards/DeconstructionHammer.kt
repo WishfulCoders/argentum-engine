@@ -5,12 +5,11 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedActivatedAbility
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.AbilityId
-import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.GrantActivatedAbility
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Deconstruction Hammer (LCI #9) — {W} Artifact — Equipment (common)
@@ -47,17 +46,16 @@ val DeconstructionHammer = card("Deconstruction Hammer") {
     // ... and has "{3}, {T}, Sacrifice Deconstruction Hammer: Destroy target artifact or enchantment."
     staticAbility {
         ability = GrantActivatedAbility(
-            ability = ActivatedAbility(
-                id = AbilityId.generate(),
+            ability = grantedActivatedAbility {
                 cost = Costs.Composite(
                     Costs.Mana("{3}"),
                     Costs.Tap,
                     Costs.SacrificeGrantingPermanent
-                ),
-                effect = Effects.Destroy(EffectTarget.ContextTarget(0)),
-                targetRequirements = listOf(Targets.ArtifactOrEnchantment),
-                descriptionOverride = "{3}, {T}, Sacrifice Deconstruction Hammer: Destroy target artifact or enchantment."
-            ),
+                )
+                val artifactOrEnchantment = target(TargetFilter.ArtifactOrEnchantment)
+                effect = Effects.Destroy(artifactOrEnchantment)
+                description = "{3}, {T}, Sacrifice Deconstruction Hammer: Destroy target artifact or enchantment."
+            },
             filter = Filters.EquippedCreature
         )
     }

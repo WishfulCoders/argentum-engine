@@ -1,14 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.atq.cards
 
 import com.wingedsheep.sdk.core.ManaCost
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 
 /**
  * Tablet of Epityr
@@ -26,12 +23,8 @@ val TabletOfEpityr = card("Tablet of Epityr") {
 
     // "an artifact you control" includes this artifact itself, so the trigger uses ANY binding.
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY,
-        )
-        effect = MayPayManaEffect(ManaCost.parse("{1}"), Effects.GainLife(1))
+        trigger = Triggers.a(GameObjectFilter.Artifact.youControl()).dies()
+        effect = Effects.MayPay(ManaCost.parse("{1}"), Effects.GainLife(1))
     }
 
     metadata {

@@ -9,6 +9,7 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Aloe Alchemist (OTJ #152) — {1}{G} Plant Warlock, 3/2, Trample, Plot {1}{G}.
@@ -17,7 +18,7 @@ import io.kotest.matchers.shouldBe
  *    of turn."
  *
  * Exercises the new [com.wingedsheep.sdk.scripting.EventPattern.BecomesPlottedEvent] trigger
- * ([com.wingedsheep.sdk.dsl.Triggers.BecomesPlotted]) end-to-end: paying the plot cost exiles
+ * (`Triggers.self.becomesPlotted()`) end-to-end: paying the plot cost exiles
  * the card face up (CR 718) and fires the SELF-bound trigger while the card sits in exile, even
  * though the card is never on the battlefield.
  */
@@ -43,7 +44,7 @@ class AloeAlchemistScenarioTest : FunSpec({
         driver.state.projectedState.getToughness(target) shouldBe 2
 
         // Plotting pauses for the "becomes plotted" trigger's target choice (CR 603.3d).
-        driver.submit(PlotCard(player, aloe)).isPaused shouldBe true
+        (driver.submit(PlotCard(player, aloe)).outcome is Outcome.Paused) shouldBe true
         driver.submitTargetSelection(player, listOf(target))
         driver.bothPass() // resolve the trigger
 
@@ -65,7 +66,7 @@ class AloeAlchemistScenarioTest : FunSpec({
         val aloe = driver.putCardInHand(player, "Aloe Alchemist")
         driver.giveMana(player, Color.GREEN, 2)
 
-        driver.submit(PlotCard(player, aloe)).isPaused shouldBe true
+        (driver.submit(PlotCard(player, aloe)).outcome is Outcome.Paused) shouldBe true
         driver.submitTargetSelection(player, listOf(target))
         driver.bothPass()
 

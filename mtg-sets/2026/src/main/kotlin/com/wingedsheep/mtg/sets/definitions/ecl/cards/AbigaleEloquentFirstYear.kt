@@ -1,15 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.RemoveAllAbilitiesEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Abigale, Eloquent First-Year
@@ -40,20 +38,12 @@ val AbigaleEloquentFirstYear = card("Abigale, Eloquent First-Year") {
     keywords(Keyword.FLYING, Keyword.FIRST_STRIKE, Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target(
-            "up to one other target creature",
-            TargetCreature(
-                optional = true,
-                filter = TargetFilter.Creature.copy(excludeSelf = true)
-            )
-        )
-        effect = Effects.Composite(
-            RemoveAllAbilitiesEffect(creature, Duration.Permanent),
-            Effects.AddCounters(Counters.FLYING, 1, creature),
-            Effects.AddCounters(Counters.FIRST_STRIKE, 1, creature),
-            Effects.AddCounters(Counters.LIFELINK, 1, creature),
-        )
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature.copy(excludeSelf = true), optional = true)
+        effect = Effects.RemoveAllAbilities(creature, Duration.Permanent) then
+            Effects.AddCounters(CounterType.FLYING, 1, creature) then
+            Effects.AddCounters(CounterType.FIRST_STRIKE, 1, creature) then
+            Effects.AddCounters(CounterType.LIFELINK, 1, creature)
     }
 
     metadata {

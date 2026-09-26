@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Sinister Monolith
@@ -24,11 +25,8 @@ val SinisterMonolith = card("Sinister Monolith") {
 
     // At the beginning of combat on your turn, each opponent loses 1 life and you gain 1 life.
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        effect = Effects.Composite(
-            Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)),
-            Effects.GainLife(1)
-        )
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(1)
     }
 
     // {T}, Pay 2 life, Sacrifice this artifact: Draw two cards. Activate only as a sorcery.

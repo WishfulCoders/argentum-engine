@@ -33,7 +33,7 @@ val EncampmentKeeper = card("Encampment Keeper") {
         cost = Costs.Composite(Costs.Mana("{7}{W}"), Costs.Tap, Costs.SacrificeSelf)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(2, 2, EffectTarget.Self)
+            Effects.ModifyStats(2, 2, EffectTarget.IterationEntity)
         )
     }
 

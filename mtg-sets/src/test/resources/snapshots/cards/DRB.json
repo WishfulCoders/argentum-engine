@@ -16,7 +16,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Hellkite Overlord:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -38,7 +38,7 @@
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Hellkite Overlord:2",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {

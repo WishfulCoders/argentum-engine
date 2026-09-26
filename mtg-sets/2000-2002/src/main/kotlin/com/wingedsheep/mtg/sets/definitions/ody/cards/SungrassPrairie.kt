@@ -24,7 +24,7 @@ val SungrassPrairie = card("Sungrass Prairie") {
     oracleText = "{1}, {T}: Add {G}{W}."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
-        effect = Effects.Composite(Effects.AddMana(Color.GREEN, 1), Effects.AddMana(Color.WHITE, 1))
+        effect = Effects.AddMana(Color.GREEN, 1) then Effects.AddMana(Color.WHITE, 1)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

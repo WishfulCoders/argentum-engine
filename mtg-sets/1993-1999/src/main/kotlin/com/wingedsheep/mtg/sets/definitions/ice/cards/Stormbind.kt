@@ -24,7 +24,7 @@ val Stormbind = card("Stormbind") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Discard(atRandom = true))
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(2, t)
     }
 

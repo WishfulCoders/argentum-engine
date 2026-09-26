@@ -1,10 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.bro.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Urza's Rebuff
@@ -23,11 +22,11 @@ val UrzasRebuff = card("Urza's Rebuff") {
     spell {
         modal(chooseCount = 1) {
             mode("Counter target spell") {
-                target("target", Targets.Spell)
+                target(TargetFilter.SpellOnStack)
                 effect = Effects.CounterSpell()
             }
             mode("Tap up to two target creatures") {
-                target("target", TargetCreature(count = 2, optional = true))
+                targets(TargetFilter.Creature, count = 2, optional = true)
                 effect = Effects.TapEachTarget()
             }
         }

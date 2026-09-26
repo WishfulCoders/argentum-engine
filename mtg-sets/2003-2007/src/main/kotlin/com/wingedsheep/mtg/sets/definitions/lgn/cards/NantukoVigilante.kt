@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Nantuko Vigilante
@@ -25,8 +24,8 @@ val NantukoVigilante = card("Nantuko Vigilante") {
     oracleText = "Morph {1}{G} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)\nWhen Nantuko Vigilante is turned face up, destroy target artifact or enchantment."
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        val t = target("artifact or enchantment", TargetPermanent(filter = TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Enchantment)))
+        trigger = Triggers.self.turnedFaceUp()
+        val t = target(TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Enchantment))
         effect = Effects.Destroy(t)
     }
 

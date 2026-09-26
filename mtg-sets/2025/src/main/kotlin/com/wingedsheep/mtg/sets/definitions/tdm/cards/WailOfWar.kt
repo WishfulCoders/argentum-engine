@@ -4,14 +4,13 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Wail of War
@@ -38,7 +37,7 @@ val WailOfWar = card("Wail of War") {
     spell {
         modal(chooseCount = 1) {
             mode("Creatures target opponent controls get -1/-1 until end of turn") {
-                val opponent = target("target opponent", TargetOpponent())
+                val opponent = target(Targets.Opponent)
                 effect = Patterns.Group.modifyStatsForAll(
                     power = -1,
                     toughness = -1,
@@ -51,8 +50,8 @@ val WailOfWar = card("Wail of War") {
                     optional = true,
                     filter = TargetFilter.CreatureInYourGraveyard
                 )
-                effect = ForEachTargetEffect(
-                    effects = listOf(Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND))
+                effect = Effects.ForEachTarget(
+                    Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND)
                 )
             }
         }

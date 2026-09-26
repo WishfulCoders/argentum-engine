@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Ghazbán Ogre
@@ -22,7 +23,7 @@ val GhazbanOgre = card("Ghazbán Ogre") {
     oracleText = "At the beginning of your upkeep, if a player has more life than each other player, the player with the most life gains control of this creature."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.GainControlByMostLife()
     }
 

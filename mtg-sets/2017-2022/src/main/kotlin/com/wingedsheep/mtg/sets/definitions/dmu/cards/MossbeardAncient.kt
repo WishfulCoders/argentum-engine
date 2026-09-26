@@ -25,7 +25,7 @@ val MossbeardAncient = card("Mossbeard Ancient") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(5)
     }
 

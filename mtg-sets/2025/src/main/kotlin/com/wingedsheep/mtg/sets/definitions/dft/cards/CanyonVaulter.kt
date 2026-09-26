@@ -19,7 +19,7 @@ val CanyonVaulter = card("Canyon Vaulter") {
         "phase, that Mount or Vehicle gains flying until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.or(Triggers.Saddles, Triggers.Crews)
+        trigger = Triggers.or(Triggers.self.saddles(), Triggers.self.crews())
         triggerRestriction = Conditions.IsYourMainPhase
         effect = Effects.GrantKeyword(
             Keyword.FLYING,

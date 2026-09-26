@@ -1,14 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.thb.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Blood Aspirant
@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * {1}{R}, {T}, Sacrifice a creature or enchantment: This creature deals 1 damage to target creature.
  * That creature can't block this turn.
  *
- * The trigger is [Triggers.YouSacrificeA] — the *per-permanent* template (CR 603.2c), which fires
+ * The trigger is `Triggers.you.sacrifices(filter)` — the *per-permanent* template (CR 603.2c), which fires
  * once for each matching permanent rather than once per batch, and whose `ANY` binding lets the
  * Satyr count itself. The two abilities interact by design: the activated ability's sacrifice is
  * paid as a **cost**, and the cost-payment paths emit `PermanentsSacrificedEvent` just like an
@@ -41,8 +41,8 @@ val BloodAspirant = card("Blood Aspirant") {
         "That creature can't block this turn."
 
     triggeredAbility {
-        trigger = Triggers.YouSacrificeA(GameObjectFilter.Permanent)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Permanent)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     activatedAbility {
@@ -51,7 +51,7 @@ val BloodAspirant = card("Blood Aspirant") {
             Costs.Tap,
             Costs.Sacrifice(GameObjectFilter.CreatureOrEnchantment)
         )
-        val creature = target("target", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.DealDamage(1, creature) then Effects.CantBlock(creature)
     }
 

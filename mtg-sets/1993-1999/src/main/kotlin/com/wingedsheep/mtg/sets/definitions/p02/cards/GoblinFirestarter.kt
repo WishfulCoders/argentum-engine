@@ -31,7 +31,7 @@ val GoblinFirestarter = card("Goblin Firestarter") {
             ActivationRestriction.OnlyDuringYourTurn,
             ActivationRestriction.BeforeStep(Step.DECLARE_ATTACKERS)
         )
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
     }
 

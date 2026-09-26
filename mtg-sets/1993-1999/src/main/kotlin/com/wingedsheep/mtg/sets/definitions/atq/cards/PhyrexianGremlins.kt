@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.atq.cards
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Phyrexian Gremlins
@@ -39,7 +39,7 @@ val PhyrexianGremlins = card("Phyrexian Gremlins") {
 
     activatedAbility {
         cost = Costs.Tap
-        val artifact = target("target artifact", Targets.Artifact)
+        val artifact = target(TargetFilter.Artifact)
         effect = Effects.Tap(artifact) then
             Effects.GrantKeyword(AbilityFlag.DOESNT_UNTAP, artifact, Duration.WhileSourceTapped("Phyrexian Gremlins"))
         description = "{T}: Tap target artifact. It doesn't untap during its controller's untap step " +

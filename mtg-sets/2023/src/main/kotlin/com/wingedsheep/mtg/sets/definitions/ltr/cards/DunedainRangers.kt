@@ -29,7 +29,7 @@ val DunedainRangers = card("Dúnedain Rangers") {
         "the Ring tempts you."
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         interveningIf = Conditions.YouControl(GameObjectFilter.Creature.ringBearer(), negate = true)
         effect = Effects.TheRingTemptsYou()
     }

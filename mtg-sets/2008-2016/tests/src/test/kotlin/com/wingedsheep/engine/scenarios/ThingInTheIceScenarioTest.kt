@@ -18,7 +18,7 @@ import io.kotest.matchers.shouldBe
 /**
  * Thing in the Ice // Awoken Horror (SOI) — the ice-counter countdown.
  *
- * Covers the new `Counters.ICE` counter, the `Conditions.SourceCounterCountAtMost(ice, 0)` gate that
+ * Covers the new `CounterType.ICE` counter, the `Conditions.SourceCounterCountAtMost(ice, 0)` gate that
  * only flips the permanent on the resolution that removed the last counter, and the back face's
  * transforms-into trigger bouncing every non-Horror creature.
  */

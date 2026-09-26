@@ -12,11 +12,13 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.AdditionalCostPayment
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Tests for Dispersing Orb.
@@ -38,7 +40,7 @@ class DispersingOrbTest : FunSpec({
                 Costs.Mana("{3}{U}"),
                 Costs.Sacrifice(GameObjectFilter.Permanent)
             )
-            target = TargetPermanent(id = "target")
+            target = TargetObject(filter = TargetFilter.Permanent, id = "target")
             effect = Effects.ReturnToHand(EffectTarget.BoundVariable("target"))
         }
     }
@@ -78,7 +80,7 @@ class DispersingOrbTest : FunSpec({
                 costPayment = AdditionalCostPayment(sacrificedPermanents = listOf(sacTarget))
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         // Let the ability resolve
         driver.bothPass()
@@ -119,7 +121,7 @@ class DispersingOrbTest : FunSpec({
                 costPayment = AdditionalCostPayment(sacrificedPermanents = listOf(land))
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         driver.bothPass()
 
@@ -152,7 +154,7 @@ class DispersingOrbTest : FunSpec({
                 costPayment = AdditionalCostPayment(sacrificedPermanents = listOf(sacTarget))
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         driver.bothPass()
 

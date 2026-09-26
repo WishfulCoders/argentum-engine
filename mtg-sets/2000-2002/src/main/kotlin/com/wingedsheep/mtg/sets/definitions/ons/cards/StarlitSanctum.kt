@@ -1,17 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.dsl.DynamicAmounts
-import com.wingedsheep.sdk.scripting.effects.AddColorlessManaEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Starlit Sanctum
@@ -27,7 +25,7 @@ val StarlitSanctum = card("Starlit Sanctum") {
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddColorlessManaEffect(1)
+        effect = Effects.AddColorlessMana(1)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
@@ -38,7 +36,7 @@ val StarlitSanctum = card("Starlit Sanctum") {
             Costs.Tap,
             Costs.Sacrifice(GameObjectFilter.Creature.withSubtype("Cleric"))
         )
-        effect = GainLifeEffect(
+        effect = Effects.GainLife(
             amount = DynamicAmounts.sacrificedToughness(),
             target = EffectTarget.Controller
         )
@@ -50,8 +48,8 @@ val StarlitSanctum = card("Starlit Sanctum") {
             Costs.Tap,
             Costs.Sacrifice(GameObjectFilter.Creature.withSubtype("Cleric"))
         )
-        val t = target("target", TargetPlayer())
-        effect = LoseLifeEffect(
+        val t = target(Targets.Player)
+        effect = Effects.LoseLife(
             amount = DynamicAmounts.sacrificedPower(),
             target = t
         )

@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.fem.cards
 
 import com.wingedsheep.sdk.dsl.Costs
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Thrull Retainer
@@ -27,7 +28,7 @@ val ThrullRetainer = card("Thrull Retainer") {
     oracleText = "Enchant creature\n" +
         "Enchanted creature gets +1/+1.\n" +
         "Sacrifice this Aura: Regenerate enchanted creature."
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = ModifyStats(1, 1)
@@ -35,7 +36,7 @@ val ThrullRetainer = card("Thrull Retainer") {
 
     activatedAbility {
         cost = Costs.SacrificeSelf
-        effect = RegenerateEffect(EffectTarget.EnchantedPermanent)
+        effect = Effects.Regenerate(EffectTarget.EnchantedPermanent)
         description = "Sacrifice this Aura: Regenerate enchanted creature."
     }
 

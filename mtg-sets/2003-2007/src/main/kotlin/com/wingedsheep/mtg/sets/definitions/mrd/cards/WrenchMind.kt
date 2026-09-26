@@ -4,8 +4,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Wrench Mind — Mirrodin #84
@@ -32,11 +31,11 @@ val WrenchMind = card("Wrench Mind") {
     oracleText = "Target player discards two cards unless they discard an artifact card."
 
     spell {
-        target = TargetPlayer()
+        val player = target(Targets.Player)
         effect = Patterns.Hand.discardCardsUnlessMatching(
             count = 2,
             unlessFilter = GameObjectFilter.Artifact,
-            target = EffectTarget.ContextTarget(0),
+            target = player,
             prompt = "Discard two cards, or a single artifact card"
         )
     }

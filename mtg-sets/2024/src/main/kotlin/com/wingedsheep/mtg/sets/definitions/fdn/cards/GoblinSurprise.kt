@@ -31,7 +31,7 @@ val GoblinSurprise = card("Goblin Surprise") {
             mode("Creatures you control get +2/+0 until end of turn") {
                 effect = Effects.ForEachInGroup(
                     GroupFilter(GameObjectFilter.Creature.youControl()),
-                    Effects.ModifyStats(2, 0, EffectTarget.Self)
+                    Effects.ModifyStats(2, 0, EffectTarget.IterationEntity)
                 )
             }
             mode("Create two 1/1 red Goblin creature tokens") {

@@ -22,7 +22,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Arcbound Condor:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield",
@@ -33,14 +33,14 @@
                     "gate": "Gate.MayDecide",
                     "then": {
                         "type": "AddDynamicCounters",
-                        "counterType": "+1/+1",
+                        "counterType": "PLUS_ONE_PLUS_ONE",
                         "amount": {
                             "type": "ContextProperty",
                             "key": "LAST_KNOWN_PLUS_ONE_COUNTER_COUNT"
                         },
                         "target": {
-                            "type": "ContextTarget",
-                            "index": 0
+                            "type": "BoundVariable",
+                            "name": "t0"
                         }
                     },
                     "descriptionOverride": "When this creature dies, you may put its +1/+1 counters on target artifact creature."
@@ -49,12 +49,13 @@
                     "type": "TargetObject",
                     "filter": {
                         "baseFilter": "artifact creature"
-                    }
+                    },
+                    "id": "t0"
                 },
                 "descriptionOverride": "When this creature dies, you may put its +1/+1 counters on target artifact creature."
             },
             {
-                "id": "ability_2",
+                "id": "Arcbound Condor:2",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "artifact ctrl:you",
@@ -72,15 +73,16 @@
                         "amount": -1
                     },
                     "target": {
-                        "type": "ContextTarget",
-                        "index": 0
+                        "type": "BoundVariable",
+                        "name": "t1"
                     }
                 },
                 "targetRequirement": {
                     "type": "TargetObject",
                     "filter": {
                         "baseFilter": "creature ctrl:opponent"
-                    }
+                    },
+                    "id": "t1"
                 },
                 "descriptionOverride": "Whenever another artifact you control enters, target creature an opponent controls gets -1/-1 until end of turn."
             }
@@ -119,7 +121,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Arena of Glory:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -129,7 +131,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Arena of Glory:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -265,7 +267,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Furnace Hellkite:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -313,13 +315,13 @@
             "effects": [
                 {
                     "type": "AddCounters",
-                    "counterType": "energy",
+                    "counterType": "ENERGY",
                     "count": 3,
                     "target": "Controller"
                 },
                 {
                     "type": "PayCounters",
-                    "counterType": "energy",
+                    "counterType": "ENERGY",
                     "storeAmountAs": "paid"
                 },
                 {
@@ -330,7 +332,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 }
             ]
@@ -338,7 +340,7 @@
         "targetRequirements": [
             {
                 "type": "TargetCreatureOrPlaneswalker",
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -380,7 +382,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Guide of Souls:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "creature ctrl:you",
@@ -399,7 +401,7 @@
                         },
                         {
                             "type": "AddCounters",
-                            "counterType": "energy",
+                            "counterType": "ENERGY",
                             "count": 1,
                             "target": "Controller"
                         }
@@ -407,14 +409,14 @@
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Guide of Souls:2",
                 "trigger": "YouAttackEvent",
                 "binding": "ANY",
                 "effect": {
                     "type": "ReflexiveTrigger",
                     "action": {
                         "type": "PayFixedCounters",
-                        "counterType": "energy",
+                        "counterType": "ENERGY",
                         "amount": 3
                     },
                     "reflexiveEffect": {
@@ -422,28 +424,28 @@
                         "effects": [
                             {
                                 "type": "AddCounters",
-                                "counterType": "+1/+1",
+                                "counterType": "PLUS_ONE_PLUS_ONE",
                                 "count": 2,
                                 "target": {
-                                    "type": "ContextTarget",
-                                    "index": 0
+                                    "type": "BoundVariable",
+                                    "name": "t0"
                                 }
                             },
                             {
                                 "type": "AddCounters",
-                                "counterType": "flying",
+                                "counterType": "FLYING",
                                 "count": 1,
                                 "target": {
-                                    "type": "ContextTarget",
-                                    "index": 0
+                                    "type": "BoundVariable",
+                                    "name": "t0"
                                 }
                             },
                             {
                                 "type": "AddCreatureType",
                                 "subtype": "Angel",
                                 "target": {
-                                    "type": "ContextTarget",
-                                    "index": 0
+                                    "type": "BoundVariable",
+                                    "name": "t0"
                                 }
                             }
                         ]
@@ -453,7 +455,8 @@
                             "type": "TargetObject",
                             "filter": {
                                 "baseFilter": "creature attacking"
-                            }
+                            },
+                            "id": "t0"
                         }
                     ],
                     "descriptionOverride": "You may pay {E}{E}{E}. When you do, put two +1/+1 counters and a flying counter on target attacking creature. It becomes an Angel in addition to its other types."
@@ -505,12 +508,12 @@
                             "amount": 4
                         }
                     },
-                    "storeAs": "revealed",
+                    "storeAs": "gathered0",
                     "revealed": true
                 },
                 {
                     "type": "SelectFromCollection",
-                    "from": "revealed",
+                    "from": "gathered0",
                     "selection": {
                         "type": "ChooseUpTo",
                         "count": {
@@ -519,8 +522,8 @@
                         }
                     },
                     "filter": "permanent",
-                    "storeSelected": "toHand",
-                    "storeRemainder": "toGraveyard",
+                    "storeSelected": "selected1",
+                    "storeRemainder": "remainder1",
                     "prompt": "You may put a permanent card into your hand",
                     "selectedLabel": "Put into hand",
                     "remainderLabel": "Put into graveyard",
@@ -528,7 +531,7 @@
                 },
                 {
                     "type": "MoveCollection",
-                    "from": "toHand",
+                    "from": "selected1",
                     "destination": {
                         "type": "ToZone",
                         "zone": "Hand"
@@ -536,7 +539,7 @@
                 },
                 {
                     "type": "MoveCollection",
-                    "from": "toGraveyard",
+                    "from": "remainder1",
                     "destination": {
                         "type": "ToZone",
                         "zone": "Graveyard"
@@ -575,7 +578,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Nightshade Dryad:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddColorlessMana",
@@ -588,7 +591,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Nightshade Dryad:2",
                 "cost": "CostTap",
                 "effect": "AddManaOfChoice",
                 "timing": "ManaAbility",
@@ -636,7 +639,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Nulldrifter:1",
                 "trigger": "CastThisSpellEvent",
                 "effect": {
                     "type": "DrawCards",
@@ -648,7 +651,7 @@
                 "descriptionOverride": "When you cast this spell, draw two cards."
             },
             {
-                "id": "ability_2",
+                "id": "Nulldrifter:2",
                 "trigger": "AttackEvent",
                 "effect": {
                     "type": "ForceSacrifice",
@@ -709,7 +712,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Ocelot Pride:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "END"
@@ -754,7 +757,7 @@
                                 },
                                 "body": {
                                     "type": "CreateTokenCopyOfTarget",
-                                    "target": "Self"
+                                    "target": "IterationEntity"
                                 }
                             }
                         }
@@ -821,7 +824,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Sarpadian Simulacrum:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -843,7 +846,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -852,7 +855,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target creature"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{3}{R}, Sacrifice this creature: It deals 4 damage to target creature."
@@ -883,7 +886,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Serum Visionary:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -934,7 +937,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Sneaky Snacker:1",
                 "trigger": {
                     "type": "NthCardDrawnEvent",
                     "nthCard": 3
@@ -990,7 +993,7 @@
                         },
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target creature"
+                            "name": "t0"
                         }
                     },
                     "targetRequirements": [
@@ -999,7 +1002,7 @@
                             "filter": {
                                 "baseFilter": "creature"
                             },
-                            "id": "target creature"
+                            "id": "t0"
                         }
                     ],
                     "description": "Thraben Charm deals damage equal to twice the number of creatures you control to target creature"
@@ -1009,7 +1012,7 @@
                         "type": "MoveToZone",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target enchantment"
+                            "name": "t1"
                         },
                         "destination": "Graveyard",
                         "byDestruction": true
@@ -1020,7 +1023,7 @@
                             "filter": {
                                 "baseFilter": "enchantment"
                             },
-                            "id": "target enchantment"
+                            "id": "t1"
                         }
                     ],
                     "description": "Destroy target enchantment"
@@ -1042,11 +1045,11 @@
                                             "index": 0
                                         }
                                     },
-                                    "storeAs": "tc_graveyard"
+                                    "storeAs": "gathered0"
                                 },
                                 {
                                     "type": "MoveCollection",
-                                    "from": "tc_graveyard",
+                                    "from": "gathered0",
                                     "destination": {
                                         "type": "ToZone",
                                         "zone": "Exile"
@@ -1059,7 +1062,7 @@
                         {
                             "type": "TargetPlayer",
                             "unlimited": true,
-                            "id": "any number of target players"
+                            "id": "t2"
                         }
                     ],
                     "description": "Exile any number of target players' graveyards"
@@ -1086,7 +1089,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Ugin's Labyrinth:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -1109,11 +1112,11 @@
                                     ]
                                 }
                             },
-                            "storeAs": "labyrinthEligible"
+                            "storeAs": "gathered0"
                         },
                         {
                             "type": "SelectFromCollection",
-                            "from": "labyrinthEligible",
+                            "from": "gathered0",
                             "selection": {
                                 "type": "ChooseUpTo",
                                 "count": {
@@ -1121,13 +1124,13 @@
                                     "amount": 1
                                 }
                             },
-                            "storeSelected": "labyrinthPicked",
+                            "storeSelected": "selected1",
                             "prompt": "Exile a colorless card with mana value 7 or greater?",
                             "selectedLabel": "Exile"
                         },
                         {
                             "type": "MoveCollection",
-                            "from": "labyrinthPicked",
+                            "from": "selected1",
                             "destination": {
                                 "type": "ToZone",
                                 "zone": "Exile"
@@ -1141,7 +1144,7 @@
         ],
         "activatedAbilities": [
             {
-                "id": "ability_2",
+                "id": "Ugin's Labyrinth:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddColorlessMana",
@@ -1169,7 +1172,7 @@
                 "descriptionOverride": "{T}: Add {C}. If a card is exiled with this land, add {C}{C} instead."
             },
             {
-                "id": "ability_3",
+                "id": "Ugin's Labyrinth:3",
                 "cost": "CostTap",
                 "effect": {
                     "type": "Composite",
@@ -1221,7 +1224,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Warren Soultrader:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -1284,16 +1287,16 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 {
                     "type": "AddCounters",
-                    "counterType": "flying",
+                    "counterType": "FLYING",
                     "count": 1,
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 {
@@ -1308,7 +1311,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "target creature"
+                "id": "t0"
             }
         ]
     },

@@ -11,12 +11,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.ForceSacrificeEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -32,10 +29,9 @@ val CorneredByBlackMages = card("Cornered by Black Mages") {
     typeLine = "Sorcery"
     oracleText = "Target opponent sacrifices a creature of their choice.\nCreate a 0/1 black Wizard creature token with \"Whenever you cast a noncreature spell, this token deals 1 damage to each opponent.\""
     spell {
-        val t = target("target", TargetOpponent())
-        effect = Effects.Composite(
-            ForceSacrificeEffect(GameObjectFilter.Creature, 1, t),
-            CreateTokenEffect(
+        val t = target(Targets.Opponent)
+        effect = Effects.Sacrifice(GameObjectFilter.Creature, 1, t) then
+            Effects.CreateToken(
                 power = 0,
                 toughness = 1,
                 colors = setOf(Color.BLACK),
@@ -43,13 +39,11 @@ val CorneredByBlackMages = card("Cornered by Black Mages") {
                 imageUri = "https://cards.scryfall.io/normal/front/1/8/187fe54c-7d0c-4225-9d46-3affbead897d.jpg?1782725378",
                 triggeredAbilities = listOf(
                     TriggeredAbility.create(
-                        trigger = Triggers.YouCastNoncreature.event,
-                        binding = Triggers.YouCastNoncreature.binding,
-                        effect = DealDamageEffect(1, EffectTarget.PlayerRef(Player.EachOpponent))
+                        trigger = Triggers.you.casts(GameObjectFilter.Noncreature),
+                        effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent))
                     )
                 )
             )
-        )
     }
     metadata {
         rarity = Rarity.COMMON

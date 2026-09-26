@@ -3,6 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -13,10 +14,9 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.MayCastFromGraveyard
 import com.wingedsheep.sdk.scripting.MayPlayLandsFromGraveyard
 import com.wingedsheep.sdk.scripting.RedirectZoneChange
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.predicates.ControllerPredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Emet-Selch, Unsundered // Hades, Sorcerer of Eld — Final Fantasy #218
@@ -38,7 +38,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * triggered abilities (`EntersBattlefield` + self `Attacks`), each running the standard
  * draw-then-discard [Patterns.Hand.loot]. The upkeep transform is an intervening-"if" trigger
  * ([interveningIf]) — per the ruling, the fourteen-card graveyard check is evaluated both when
- * the ability would trigger and again as it resolves — wrapped in [MayEffect] for the optional
+ * the ability would trigger and again as it resolves — wrapped in [Effects.May] for the optional
  * "you may transform" and flipping the permanent in place with [TransformEffect].
  *
  * Hades' back face reuses the Yawgmoth's Agenda shape: [MayPlayLandsFromGraveyard] (land-play
@@ -120,11 +120,11 @@ private val EmetSelchUnsunderedFront = card("Emet-Selch, Unsundered") {
 
     // Whenever Emet-Selch enters or attacks, draw a card, then discard a card.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Hand.loot()
     }
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Hand.loot()
     }
 
@@ -132,9 +132,9 @@ private val EmetSelchUnsunderedFront = card("Emet-Selch, Unsundered") {
     // you may transform Emet-Selch. Intervening "if" — checked at trigger time and again on
     // resolution.
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         interveningIf = Conditions.CardsInGraveyardAtLeast(14)
-        effect = MayEffect(TransformEffect(EffectTarget.Self))
+        effect = Effects.May(Effects.Transform(EffectTarget.Self))
     }
 
     metadata {

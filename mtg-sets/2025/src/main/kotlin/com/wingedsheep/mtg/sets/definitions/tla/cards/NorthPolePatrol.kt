@@ -2,11 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * North Pole Patrol
@@ -34,10 +32,7 @@ val NorthPolePatrol = card("North Pole Patrol") {
 
     activatedAbility {
         cost = Costs.Tap
-        val permanent = target(
-            "another target permanent you control",
-            TargetPermanent(filter = TargetFilter.Permanent.youControl().other()),
-        )
+        val permanent = target(TargetFilter.Permanent.youControl().other())
         effect = Effects.Untap(permanent)
         description = "{T}: Untap another target permanent you control."
     }
@@ -45,10 +40,7 @@ val NorthPolePatrol = card("North Pole Patrol") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap)
         hasWaterbend = true
-        val theirCreature = target(
-            "target creature an opponent controls",
-            Targets.CreatureOpponentControls,
-        )
+        val theirCreature = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.Tap(theirCreature)
         description = "Waterbend {3}, {T}: Tap target creature an opponent controls."
     }

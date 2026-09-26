@@ -155,7 +155,8 @@ three are constant-time; the only cost is object allocation.
 - **No training-data persistence.** `:gym-trainer` handles this;
   `:gym` only emits live observations.
 - **No Spring, no threading model assumptions.** Envs are
-  single-threaded by contract; cross-env parallelism is opt-in via
+  single-threaded by contract; `MultiEnvService` serializes calls naming
+  the same env, and cross-env parallelism is opt-in via
   `MultiEnvService.stepBatch`.
 
 ## Tests

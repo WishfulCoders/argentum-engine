@@ -190,4 +190,7 @@ export const counterManaClass: Record<string, string> = {
   CREDIT: 'counter-gold',
   CUBE: 'counter-charge',
   JUDGMENT: 'counter-shield',
+  BLOODLINE: 'counter-doom',
+  INVITATION: 'counter-devotion',
+  IMPOSTOR: 'counter-shield',
 }

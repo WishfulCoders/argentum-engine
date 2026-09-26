@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.fem.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.TargetPlayer
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Orcish Spy
@@ -31,11 +31,10 @@ val OrcishSpy = card("Orcish Spy") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target player", TargetPlayer())
-        effect = GatherCardsEffect(
-            source = CardSource.TopOfLibrary(DynamicAmount.Fixed(3), Player.TargetPlayer),
-            storeAs = "spied"
-        )
+        val t = target(Targets.Player)
+        effect = Effects.Pipeline {
+            gather(CardSource.TopOfLibrary(3, Player.TargetPlayer))
+        }
     }
 
     metadata {

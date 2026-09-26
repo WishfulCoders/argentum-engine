@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Mordor Trebuchet
@@ -31,10 +31,8 @@ val MordorTrebuchet = card("Mordor Trebuchet") {
     keywords(Keyword.DEFENDER)
 
     triggeredAbility {
-        trigger = Triggers.YouAttackWithFilter(
-            GameObjectFilter.Creature.youControl().withAnySubtype("Goblin", "Orc")
-        )
-        effect = CreateTokenEffect(
+        trigger = Triggers.you.attacks(GameObjectFilter.Creature.youControl().withAnySubtype("Goblin", "Orc"))
+        effect = Effects.CreateToken(
             power = 2,
             toughness = 1,
             colors = setOf(), // colorless

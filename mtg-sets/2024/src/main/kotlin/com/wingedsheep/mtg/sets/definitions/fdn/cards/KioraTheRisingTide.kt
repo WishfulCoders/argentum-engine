@@ -27,12 +27,12 @@ val KioraTheRisingTide = card("Kiora, the Rising Tide") {
     oracleText = "When Kiora enters, draw two cards, then discard two cards.\nThreshold — Whenever Kiora attacks, if there are seven or more cards in your graveyard, you may create Scion of the Deep, a legendary 8/8 blue Octopus creature token."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Hand.loot(draw = 2, discard = 2)
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         interveningIf = Conditions.CardsInGraveyardAtLeast(7)
         optional = true
         effect = Effects.CreateToken(

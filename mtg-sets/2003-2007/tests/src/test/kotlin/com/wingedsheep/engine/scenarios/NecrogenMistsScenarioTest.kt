@@ -16,7 +16,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  *
  * "At the beginning of each player's upkeep, that player discards a card."
  *
- * Pins the each-player upkeep scope (`Triggers.EachUpkeep`) drafted by mtgish-tooling. Unlike
+ * Pins the each-player upkeep scope (`Triggers.anyPlayer.beginningOf(Step.UPKEEP)`) drafted by mtgish-tooling. Unlike
  * Bottomless Pit's random discard, this is a CHOSEN discard, so the discarding player (the one
  * whose upkeep it is) gets to pick — verified by the SelectCardsDecision routed to that player.
  */

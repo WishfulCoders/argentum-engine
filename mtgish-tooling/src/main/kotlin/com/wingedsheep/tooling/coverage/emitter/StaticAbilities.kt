@@ -41,7 +41,7 @@ internal fun gatedStaticAbilityStmt(cond: String, ability: Dsl): Stmt =
  * [abilities] and is a creature with base power/toughness [P/T]." Renders one threshold-gated
  * `staticAbility { }` row per granted ability — `GrantCardType("CREATURE", …)` for the animate, plus a
  * `GrantKeyword(...)` per listed keyword — each gated on
- * `Conditions.SourceCounterCountAtLeast(Counters.CHARGE, N)`. The base P/T (args[2]) is the card's
+ * `Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, N)`. The base P/T (args[2]) is the card's
  * printed power/toughness, already emitted on the card, so it needs no separate row.
  *
  * Only *bare keyword* abilities render. A threshold that grants a triggered or activated ability (or any
@@ -56,7 +56,7 @@ internal fun EmitCtx.stationAnimateBlock(rule: JsonObject): List<Stmt>? {
         ?.takeIf { it.strField("_GameRange") == "ValueOrBigger" }
         ?.get("args").asInt() ?: return scaffoldStation()
     val abilityRules = (args.getOrNull(1) as? JsonArray)?.filterIsInstance<JsonObject>() ?: emptyList()
-    val cond = "Conditions.SourceCounterCountAtLeast(Counters.CHARGE, $n)"
+    val cond = "Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, $n)"
     val stmts = mutableListOf<Stmt>()
     stmts.add(gatedStaticAbilityStmt(cond, call("GrantCardType", arg("\"CREATURE\""), arg("GroupFilter.source()"))))
     for (ar in abilityRules) {
@@ -248,7 +248,7 @@ private fun scaledBonus(count: Dsl, multiplier: Int): Dsl = when (multiplier) {
 
 /**
  * A self-buff `PermanentLayerEffect(ThisPermanent, [AdjustPTForEach])` -> one
- * `staticAbility { ability = GrantDynamicStatsEffect(filter = GroupFilter.source(), powerBonus = …,
+ * `staticAbility { ability = GrantDynamicStats(filter = GroupFilter.source(), powerBonus = …,
  * toughnessBonus = …) }`. `AdjustPTForEach`'s args are `[powerMult, toughnessMult, countNode]`:
  * "this creature gets +powerMult/+toughnessMult for each [countNode]". The per-permanent count is
  * rendered as `DynamicAmounts.battlefield(Player.You, …).count()` — the `AggregateBattlefield`
@@ -287,7 +287,7 @@ private fun EmitCtx.selfDynamicStatsBlock(rule: JsonObject): List<Stmt>? {
             stmts.add(
                 staticAbilityStmt(
                     call(
-                        "GrantDynamicStatsEffect",
+                        "GrantDynamicStats",
                         arg("filter", call("GroupFilter.source")),
                         arg("powerBonus", handBonus(powerMult)),
                         arg("toughnessBonus", handBonus(toughnessMult)),
@@ -315,7 +315,7 @@ private fun EmitCtx.selfDynamicStatsBlock(rule: JsonObject): List<Stmt>? {
         stmts.add(
             staticAbilityStmt(
                 call(
-                    "GrantDynamicStatsEffect",
+                    "GrantDynamicStats",
                     arg("filter", call("GroupFilter.source")),
                     arg("powerBonus", bonus(powerMult)),
                     arg("toughnessBonus", bonus(toughnessMult)),
@@ -328,7 +328,7 @@ private fun EmitCtx.selfDynamicStatsBlock(rule: JsonObject): List<Stmt>? {
 
 /**
  * An `Activated` / `ActivatedWithModifiers` rule granted to a group ("All Slivers have '{cost}: …'") ->
- * an `ActivatedAbility(id = AbilityId.generate(), cost = …, [timing = …], effect = …, [targetRequirement
+ * an `ActivatedAbility(id = AbilityId.next(), cost = …, [timing = …], effect = …, [targetRequirement
  * = …])` constructor expression for wrapping in `GrantActivatedAbility`. Reuses the same cost / target /
  * effect recovery as the card-body [activatedBlock], but in expression form: a chosen target becomes
  * `targetRequirement = <node>` and the effect references `EffectTarget.ContextTarget(0)` (the granted
@@ -350,7 +350,7 @@ internal fun EmitCtx.grantedActivatedAbilityExpr(rule: JsonObject): Dsl? {
     val timing = grantedActivationTiming(rule) ?: return null
 
     val args = mutableListOf(
-        arg("id", "AbilityId.generate()"),
+        arg("id", "AbilityId.next()"),
         arg("cost", cost),
     )
     args.add(arg("effect", effect))

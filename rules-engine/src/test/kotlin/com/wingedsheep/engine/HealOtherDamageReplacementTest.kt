@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.HealOtherDamage
 import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -34,9 +34,9 @@ import io.kotest.matchers.shouldBe
  *     only what was marked before the step (the `CombatDamageManager` path).
  *  3. **The first-strike step is a separate event** — a first striker's damage is healed away by
  *     the regular combat damage step.
- *  4. **`appliesTo` is a real filter** — a `RecipientFilter.CreatureYouControl` host heals *other*
+ *  4. **`appliesTo` is a real filter** — a `Recipient.CreatureYouControl` host heals *other*
  *     creatures its controller controls and leaves the opponent's alone, so the primitive is not
- *     hardwired to `RecipientFilter.Self`.
+ *     hardwired to `Recipient.Self`.
  *  5. **Deathtouch still kills** — the heal clears the whole `DamageComponent` including its
  *     deathtouch flag, but the damage being dealt in the same event re-stamps it (CR 704.5h).
  *  6. **`damageType` is a real filter** — a `DamageType.NonCombat` host heals through burn but not
@@ -56,7 +56,7 @@ class HealOtherDamageReplacementTest : FunSpec({
         oracleText = "If damage would be dealt to this creature, instead that damage is dealt, but " +
             "all other damage already dealt to it is healed."
         replacementEffect(
-            HealOtherDamage(appliesTo = EventPattern.DamageEvent(recipient = RecipientFilter.Self))
+            HealOtherDamage(appliesTo = EventPattern.DamageEvent(recipient = Recipient.Self))
         )
     }
 
@@ -68,7 +68,7 @@ class HealOtherDamageReplacementTest : FunSpec({
             "dealt, but all other damage already dealt to it is healed."
         replacementEffect(
             HealOtherDamage(
-                appliesTo = EventPattern.DamageEvent(recipient = RecipientFilter.CreatureYouControl)
+                appliesTo = EventPattern.DamageEvent(recipient = Recipient.CreatureYouControl)
             )
         )
     }
@@ -84,7 +84,7 @@ class HealOtherDamageReplacementTest : FunSpec({
         replacementEffect(
             HealOtherDamage(
                 appliesTo = EventPattern.DamageEvent(
-                    recipient = RecipientFilter.Self,
+                    recipient = Recipient.Self,
                     damageType = DamageType.NonCombat
                 )
             )

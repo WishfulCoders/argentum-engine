@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Maze of Shadows
@@ -32,12 +31,8 @@ val MazeOfShadows = card("Maze of Shadows") {
 
     activatedAbility {
         cost = Costs.Tap
-        val shadowAttacker = target(
-            "target attacking creature with shadow",
-            TargetCreature(filter = TargetFilter.AttackingCreature.withKeyword(Keyword.SHADOW)),
-        )
-        effect = Effects.Untap(shadowAttacker)
-            .then(Effects.PreventCombatDamageToAndBy(shadowAttacker))
+        val shadowAttacker = target(TargetFilter.AttackingCreature.withKeyword(Keyword.SHADOW))
+        effect = Effects.Untap(shadowAttacker) then Effects.PreventCombatDamageToAndBy(shadowAttacker)
         description = "{T}: Untap target attacking creature with shadow. Prevent all combat damage " +
             "that would be dealt to and dealt by that creature this turn."
     }

@@ -2,20 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ajani, Outland Chaperone
@@ -42,7 +36,7 @@ val AjaniOutlandChaperone = card("Ajani, Outland Chaperone") {
 
     // +1: Create a 1/1 green and white Kithkin creature token.
     loyaltyAbility(+1) {
-        effect = CreateTokenEffect(
+        effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
             colors = setOf(Color.GREEN, Color.WHITE),
@@ -53,7 +47,7 @@ val AjaniOutlandChaperone = card("Ajani, Outland Chaperone") {
 
     // −2: Ajani deals 4 damage to target tapped creature.
     loyaltyAbility(-2) {
-        val tapped = target("creature", Targets.TappedCreature)
+        val tapped = target(TargetFilter.TappedCreature)
         effect = Effects.DealDamage(4, tapped)
     }
 
@@ -61,34 +55,20 @@ val AjaniOutlandChaperone = card("Ajani, Outland Chaperone") {
     // put any number of nonland permanent cards with mana value 3 or less from among
     // them onto the battlefield. Then shuffle.
     loyaltyAbility(-8) {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.YourLifeTotal),
-                    storeAs = "looked"
-                ),
-                SelectFromCollectionEffect(
-                    from = "looked",
-                    selection = SelectionMode.ChooseAnyNumber,
-                    filter = GameObjectFilter.NonlandPermanent.manaValueAtMost(3),
-                    showAllCards = true,
-                    storeSelected = "toBattlefield",
-                    storeRemainder = "rest",
-                    prompt = "You may put any number of nonland permanent cards with mana value 3 or less onto the battlefield",
-                    selectedLabel = "Put onto the battlefield",
-                    remainderLabel = "Shuffle into your library"
-                ),
-                MoveCollectionEffect(
-                    from = "toBattlefield",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD)
-                ),
-                MoveCollectionEffect(
-                    from = "rest",
-                    destination = CardDestination.ToZone(Zone.LIBRARY)
-                ),
-                ShuffleLibraryEffect()
+        effect = Effects.Pipeline {
+            val looked = gather(CardSource.TopOfLibrary(DynamicAmounts.yourLifeTotal()))
+            val (toBattlefield, rest) = chooseAnyNumberSplit(
+                from = looked,
+                filter = GameObjectFilter.NonlandPermanent.manaValueAtMost(3),
+                showAllCards = true,
+                prompt = "You may put any number of nonland permanent cards with mana value 3 or less onto the battlefield",
+                selectedLabel = "Put onto the battlefield",
+                remainderLabel = "Shuffle into your library"
             )
-        )
+            move(toBattlefield, CardDestination.ToZone(Zone.BATTLEFIELD))
+            move(rest, CardDestination.ToZone(Zone.LIBRARY))
+            run(Effects.ShuffleLibrary())
+        }
     }
 
     metadata {

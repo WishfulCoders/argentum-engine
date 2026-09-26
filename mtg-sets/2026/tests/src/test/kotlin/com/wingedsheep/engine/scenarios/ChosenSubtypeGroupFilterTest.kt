@@ -48,7 +48,7 @@ class ChosenSubtypeGroupFilterTest : FunSpec({
                     effect = ModifyStatsEffect(
                         powerModifier = DynamicAmount.Fixed(2),
                         toughnessModifier = DynamicAmount.Fixed(2),
-                        target = EffectTarget.Self,
+                        target = EffectTarget.IterationEntity,
                         duration = Duration.EndOfTurn
                     )
                 )

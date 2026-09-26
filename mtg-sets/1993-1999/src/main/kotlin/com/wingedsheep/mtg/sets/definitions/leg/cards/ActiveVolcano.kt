@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Active Volcano
@@ -29,17 +28,11 @@ val ActiveVolcano = card("Active Volcano") {
     spell {
         modal(chooseCount = 1) {
             mode("Destroy target blue permanent") {
-                val permanent = target(
-                    "target blue permanent",
-                    TargetPermanent(filter = TargetFilter(GameObjectFilter.Permanent.withColor(Color.BLUE))),
-                )
+                val permanent = target(TargetFilter(GameObjectFilter.Permanent.withColor(Color.BLUE)))
                 effect = Effects.Destroy(permanent)
             }
             mode("Return target Island to its owner's hand") {
-                val land = target(
-                    "target Island",
-                    TargetPermanent(filter = TargetFilter(GameObjectFilter.Land.withSubtype(Subtype.ISLAND))),
-                )
+                val land = target(TargetFilter(GameObjectFilter.Land.withSubtype(Subtype.ISLAND)))
                 effect = Effects.ReturnToHand(land)
             }
         }

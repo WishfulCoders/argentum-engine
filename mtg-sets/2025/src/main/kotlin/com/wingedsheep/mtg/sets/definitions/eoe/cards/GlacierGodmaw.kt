@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Glacier Godmaw
@@ -30,22 +31,18 @@ val GlacierGodmaw = card("Glacier Godmaw") {
 
     // ETB: create a Lander token
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateLander()
     }
 
     // Landfall: creatures you control get +1/+1 and gain vigilance and haste until end of turn
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.ForEachInGroup(
             filter = GroupFilter.AllCreaturesYouControl,
-            effect = Effects.Composite(
-                listOf(
-                    Effects.ModifyStats(+1, +1, EffectTarget.Self),
-                    Effects.GrantKeyword(Keyword.VIGILANCE, EffectTarget.Self),
-                    Effects.GrantKeyword(Keyword.HASTE, EffectTarget.Self)
-                )
-            )
+            effect = Effects.ModifyStats(+1, +1, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.VIGILANCE, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.HASTE, EffectTarget.IterationEntity)
         )
     }
 

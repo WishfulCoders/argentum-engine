@@ -34,7 +34,7 @@ val NightbladeBrigade = card("Nightblade Brigade") {
     mobilize(1)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.surveil(1)
         description = "When this creature enters, surveil 1."
     }

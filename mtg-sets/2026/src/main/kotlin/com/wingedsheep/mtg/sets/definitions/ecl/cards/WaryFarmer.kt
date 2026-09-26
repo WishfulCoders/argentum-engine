@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.Exists
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Wary Farmer
@@ -26,7 +27,7 @@ val WaryFarmer = card("Wary Farmer") {
     oracleText = "At the beginning of your end step, if another creature entered the battlefield under your control this turn, surveil 1."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Exists(
             player = Player.You,
             zone = Zone.BATTLEFIELD,

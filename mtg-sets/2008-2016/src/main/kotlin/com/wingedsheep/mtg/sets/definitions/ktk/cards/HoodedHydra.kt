@@ -1,16 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Hooded Hydra
@@ -36,13 +34,13 @@ val HoodedHydra = card("Hooded Hydra") {
     oracleText = "Hooded Hydra enters the battlefield with X +1/+1 counters on it.\nWhen Hooded Hydra dies, create a 1/1 green Snake creature token for each +1/+1 counter on it.\nMorph {3}{G}{G}\nAs Hooded Hydra is turned face up, put five +1/+1 counters on it."
 
     // Enters with X +1/+1 counters (when cast normally, not face-down)
-    replacementEffect(EntersWithDynamicCounters(count = DynamicAmount.XValue))
+    replacementEffect(EntersWithDynamicCounters(count = DynamicAmounts.xValue()))
 
     // When this creature dies, create 1/1 green Snake tokens equal to its +1/+1 counters
     triggeredAbility {
-        trigger = Triggers.Dies
-        effect = CreateTokenEffect(
-            count = DynamicAmount.ContextProperty(ContextPropertyKey.LAST_KNOWN_PLUS_ONE_COUNTER_COUNT),
+        trigger = Triggers.self.dies()
+        effect = Effects.CreateToken(
+            count = DynamicAmounts.lastKnownPlusOneCounters(),
             power = 1,
             toughness = 1,
             colors = setOf(Color.GREEN),
@@ -53,7 +51,7 @@ val HoodedHydra = card("Hooded Hydra") {
 
     // Morph {3}{G}{G} — as turned face up, put 5 +1/+1 counters on it
     morph = "{3}{G}{G}"
-    morphFaceUpEffect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 5, EffectTarget.Self)
+    morphFaceUpEffect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 5, EffectTarget.Self)
 
     metadata {
         rarity = Rarity.MYTHIC

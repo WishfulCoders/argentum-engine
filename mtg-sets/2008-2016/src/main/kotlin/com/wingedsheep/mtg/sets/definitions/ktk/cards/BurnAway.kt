@@ -1,11 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MarkExileControllerGraveyardOnDeathEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Burn Away
@@ -21,9 +19,8 @@ val BurnAway = card("Burn Away") {
     oracleText = "Burn Away deals 6 damage to target creature. When that creature dies this turn, exile its controller's graveyard."
 
     spell {
-        val t = target("creature", Targets.Creature)
-        effect = Effects.DealDamage(6, t) then
-                MarkExileControllerGraveyardOnDeathEffect(t)
+        val t = target(TargetFilter.Creature)
+        effect = Effects.DealDamage(6, t) then Effects.MarkExileControllerGraveyardOnDeath(t)
     }
 
     metadata {

@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.iko.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Void Beckoner
@@ -39,9 +39,9 @@ val VoidBeckoner = card("Void Beckoner") {
     keywordAbility(KeywordAbility.cycling("{2}{B}"))
 
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
-        val t = target("target", Targets.CreatureYouControl)
-        effect = Effects.AddCounters(Counters.DEATHTOUCH, 1, t)
+        trigger = Triggers.self.isCycled()
+        val t = target(TargetFilter.CreatureYouControl)
+        effect = Effects.AddCounters(CounterType.DEATHTOUCH, 1, t)
     }
 
     metadata {

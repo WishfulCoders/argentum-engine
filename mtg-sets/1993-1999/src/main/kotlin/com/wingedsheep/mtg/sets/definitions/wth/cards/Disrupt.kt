@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.wth.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Disrupt
@@ -23,7 +23,7 @@ val Disrupt = card("Disrupt") {
     oracleText = "Counter target instant or sorcery spell unless its controller pays {1}.\nDraw a card."
 
     spell {
-        target = Targets.InstantOrSorcerySpell
+        val instantOrSorcerySpell = target(TargetFilter.InstantOrSorcerySpellOnStack)
         effect = Effects.CounterUnlessPays("{1}") then Effects.DrawCards(1)
     }
 

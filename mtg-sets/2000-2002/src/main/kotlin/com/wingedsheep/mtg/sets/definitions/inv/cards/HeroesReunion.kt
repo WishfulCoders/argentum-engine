@@ -3,7 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.inv.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Heroes' Reunion
@@ -18,7 +18,7 @@ val HeroesReunion = card("Heroes' Reunion") {
     oracleText = "Target player gains 7 life."
 
     spell {
-        val t = target("target player", TargetPlayer())
+        val t = target(Targets.Player)
         effect = Effects.GainLife(7, t)
     }
 

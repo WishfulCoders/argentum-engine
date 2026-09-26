@@ -4,12 +4,10 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Strength of Arms
@@ -26,20 +24,18 @@ val StrengthOfArms = card("Strength of Arms") {
         "create a 1/1 white Human Soldier creature token."
 
     spell {
-        target = Targets.Creature
-        effect = Effects.ModifyStats(2, 2, EffectTarget.ContextTarget(0))
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.YouControlAtLeast(
-                        1,
-                        GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT)
-                    ),
-                    effect = Effects.CreateToken(
-                        power = 1,
-                        toughness = 1,
-                        colors = setOf(Color.WHITE),
-                        creatureTypes = setOf("Human", "Soldier")
-                    )
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 2, creature) then
+            Effects.If(
+                condition = Conditions.YouControlAtLeast(
+                    1,
+                    GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT)
+                ),
+                then = Effects.CreateToken(
+                    power = 1,
+                    toughness = 1,
+                    colors = setOf(Color.WHITE),
+                    creatureTypes = setOf("Human", "Soldier")
                 )
             )
     }

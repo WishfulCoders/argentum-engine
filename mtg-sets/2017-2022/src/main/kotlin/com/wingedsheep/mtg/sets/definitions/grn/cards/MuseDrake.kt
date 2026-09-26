@@ -25,7 +25,7 @@ val MuseDrake = card("Muse Drake") {
 
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1)
     }
 

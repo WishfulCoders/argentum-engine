@@ -7,11 +7,10 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.ForceSacrificeEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Tsabo Tavoc
@@ -35,16 +34,13 @@ val TsaboTavoc = card("Tsabo Tavoc") {
     keywordAbility(KeywordAbility.protectionFromSupertype("Legendary"))
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = ForceSacrificeEffect(GameObjectFilter.Creature, 1, EffectTarget.PlayerRef(Player.DefendingPlayer))
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.Sacrifice(GameObjectFilter.Creature, 1, EffectTarget.PlayerRef(Player.DefendingPlayer))
     }
 
     activatedAbility {
         cost = Costs.Tap
-        val legendaryCreature = target(
-            "target legendary creature",
-            TargetObject(filter = TargetFilter(baseFilter = GameObjectFilter.Creature.legendary())),
-        )
+        val legendaryCreature = target(TargetFilter(baseFilter = GameObjectFilter.Creature.legendary()))
         effect = Effects.Destroy(legendaryCreature)
     }
 

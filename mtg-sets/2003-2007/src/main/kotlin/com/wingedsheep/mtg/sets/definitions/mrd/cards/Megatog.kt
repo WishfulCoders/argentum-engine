@@ -29,10 +29,8 @@ val Megatog = card("Megatog") {
     toughness = 4
     activatedAbility {
         cost = Costs.Sacrifice(GameObjectFilter.Artifact)
-        effect = Effects.Composite(
-            Effects.ModifyStats(3, 3, EffectTarget.Self),
+        effect = Effects.ModifyStats(3, 3, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
-        )
     }
     metadata {
         rarity = Rarity.RARE

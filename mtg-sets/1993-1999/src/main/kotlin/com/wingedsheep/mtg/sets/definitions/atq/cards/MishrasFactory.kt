@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -59,10 +58,7 @@ val MishrasFactory = card("Mishra's Factory") {
 
     activatedAbility {
         cost = Costs.Tap
-        val worker = target(
-            "target Assembly-Worker creature",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.withSubtype(Subtype.ASSEMBLY_WORKER)))
-        )
+        val worker = target(TargetFilter(GameObjectFilter.Creature.withSubtype(Subtype.ASSEMBLY_WORKER)))
         effect = Effects.ModifyStats(1, 1, worker, Duration.EndOfTurn)
         description = "{T}: Target Assembly-Worker creature gets +1/+1 until end of turn."
     }

@@ -44,7 +44,7 @@ val FirewakeSliver = card("Firewake Sliver") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeSelf),
                 effect = Effects.ModifyStats(2, 2, EffectTarget.BoundVariable("target")),
                 targetRequirements = listOf(

@@ -39,7 +39,7 @@ val HeraldOfThePantheon = card("Herald of the Pantheon") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YouCastEnchantment
+        trigger = Triggers.you.casts(GameObjectFilter.Enchantment)
         effect = Effects.GainLife(1)
     }
 

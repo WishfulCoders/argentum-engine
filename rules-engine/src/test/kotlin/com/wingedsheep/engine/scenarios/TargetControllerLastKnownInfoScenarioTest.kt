@@ -14,8 +14,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CreatePredefinedTokenEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
 
@@ -43,7 +41,7 @@ class TargetControllerLastKnownInfoScenarioTest : ScenarioTestBase() {
         typeLine = "Sorcery"
         oracleText = "Gain control of target creature."
         spell {
-            val t = target("target creature", TargetCreature())
+            val t = target(TargetFilter.Creature)
             effect = Effects.GainControl(t)
         }
     }
@@ -54,7 +52,7 @@ class TargetControllerLastKnownInfoScenarioTest : ScenarioTestBase() {
         typeLine = "Sorcery"
         oracleText = "Target creature's controller creates two Map tokens."
         spell {
-            target("target creature", TargetCreature())
+            target(TargetFilter.Creature)
             effect = CreatePredefinedTokenEffect("Map", 2, EffectTarget.TargetController)
         }
     }
@@ -65,10 +63,7 @@ class TargetControllerLastKnownInfoScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Return target creature card from a graveyard to the battlefield."
         spell {
-            val t = target(
-                "target creature card in a graveyard",
-                TargetObject(filter = TargetFilter(GameObjectFilter.Creature, zone = Zone.GRAVEYARD))
-            )
+            val t = target(TargetFilter(GameObjectFilter.Creature, zone = Zone.GRAVEYARD))
             effect = Effects.PutOntoBattlefield(t)
         }
     }

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.mechanics.mana
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.player.ManaPoolComponent
@@ -129,7 +130,7 @@ class DynamicManaAmountAutoTapTest : FunSpec({
     test("mana source reports the dynamic amount its ability produces") {
         val (driver, playerId) = boardWithThreeElves()
 
-        val source = ManaSolver(createRegistry())
+        val source = ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .findAvailableManaSources(driver.state, playerId)
             .single { it.name == "Test Elf Archdruid" }
 
@@ -140,13 +141,13 @@ class DynamicManaAmountAutoTapTest : FunSpec({
     test("available mana count includes every mana a dynamic ability makes") {
         val (driver, playerId) = boardWithThreeElves()
 
-        ManaSolver(createRegistry()).getAvailableManaCount(driver.state, playerId) shouldBe 3
+        ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null)).getAvailableManaCount(driver.state, playerId) shouldBe 3
     }
 
     test("a cost payable off one dynamic tap is solved by tapping that source alone") {
         val (driver, playerId) = boardWithThreeElves()
 
-        val solution = ManaSolver(createRegistry())
+        val solution = ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .solve(driver.state, playerId, ManaCost.parse("{2}{G}"))
 
         solution.shouldNotBeNull()
@@ -174,7 +175,7 @@ class DynamicManaAmountAutoTapTest : FunSpec({
         val playerId = driver.activePlayer!!
         driver.putLandOnBattlefield(playerId, "Test Legendary Cradle")
 
-        val solver = ManaSolver(createRegistry())
+        val solver = ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         // "Add {G} for each creature you control" with no creatures adds nothing. The land must not
         // claim a green it can't make, and must not fall back to the colorless land default either.
@@ -193,7 +194,7 @@ class DynamicManaAmountAutoTapTest : FunSpec({
         driver.putLandOnBattlefield(playerId, "Test Legendary Cradle")
         repeat(2) { driver.putCreatureOnBattlefield(playerId, "Test Elf Warrior") }
 
-        val source = ManaSolver(createRegistry())
+        val source = ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .findAvailableManaSources(driver.state, playerId)
             .single { it.name == "Test Legendary Cradle" }
 

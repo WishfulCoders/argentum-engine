@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.ktk.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
@@ -11,6 +10,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sarkhan, the Dragonspeaker - {3}{R}{R}
@@ -48,30 +48,26 @@ val SarkhanTheDragonspeaker = card("Sarkhan, the Dragonspeaker") {
 
     // -3: Deal 4 damage to target creature
     loyaltyAbility(-3) {
-        val creature = target("creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.DealDamage(4, creature)
     }
 
     // -6: Emblem with draw step and end step triggered abilities
     loyaltyAbility(-6) {
-        effect = Effects.Composite(
-            Effects.CreateGlobalTriggeredAbility(
-                ability = TriggeredAbility.create(
-                    trigger = Triggers.YourDrawStep.event,
-                    binding = Triggers.YourDrawStep.binding,
-                    effect = Effects.DrawCards(2)
-                ),
-                descriptionOverride = "At the beginning of your draw step, draw two additional cards."
+        effect = Effects.CreateGlobalTriggeredAbility(
+            ability = TriggeredAbility.create(
+                trigger = Triggers.you.beginningOf(Step.DRAW),
+                effect = Effects.DrawCards(2)
             ),
+            descriptionOverride = "At the beginning of your draw step, draw two additional cards."
+        ) then
             Effects.CreateGlobalTriggeredAbility(
                 ability = TriggeredAbility.create(
-                    trigger = Triggers.YourEndStep.event,
-                    binding = Triggers.YourEndStep.binding,
+                    trigger = Triggers.you.beginningOf(Step.END),
                     effect = Patterns.Hand.discardHand()
                 ),
                 descriptionOverride = "At the beginning of your end step, discard your hand."
             )
-        )
     }
 
     metadata {

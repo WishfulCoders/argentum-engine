@@ -1,20 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherUntilMatchEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
+import com.wingedsheep.sdk.core.Step
 
 /**
  * House Cartographer
@@ -26,7 +19,7 @@ import com.wingedsheep.sdk.scripting.effects.ZonePlacement
  * and the rest on the bottom of your library in a random order.
  *
  * "Survival" is an ability word (no rules meaning) — modeled as a postcombat-main-phase trigger
- * ([Triggers.YourPostcombatMain]) with an intervening-if ([Conditions.SourceIsTapped], CR 603.4 —
+ * (`Triggers.you.beginningOf(Step.POSTCOMBAT_MAIN)`) with an intervening-if ([Conditions.SourceIsTapped], CR 603.4 —
  * checked both when it would trigger and on resolution). The reveal-until-land body reuses the
  * Clifftop Lookout pipeline (GatherUntilMatch → Reveal → Filter → Move), but lands the found card
  * in hand rather than onto the battlefield.
@@ -40,33 +33,16 @@ val HouseCartographer = card("House Cartographer") {
     oracleText = "Survival — At the beginning of your second main phase, if this creature is tapped, reveal cards from the top of your library until you reveal a land card. Put that card into your hand and the rest on the bottom of your library in a random order."
 
     triggeredAbility {
-        trigger = Triggers.YourPostcombatMain
+        trigger = Triggers.you.beginningOf(Step.POSTCOMBAT_MAIN)
         interveningIf = Conditions.SourceIsTapped
-        effect = Effects.Composite(
-            listOf(
-                GatherUntilMatchEffect(
-                    filter = GameObjectFilter.Land,
-                    storeMatch = "revealedLand",
-                    storeRevealed = "allRevealed"
-                ),
-                RevealCollectionEffect(from = "allRevealed"),
-                // allRevealed includes the matched land, so subtract it before bottoming.
-                FilterCollectionEffect(
-                    from = "allRevealed",
-                    filter = CollectionFilter.ExcludeOtherCollection("revealedLand"),
-                    storeMatching = "nonLandRevealed"
-                ),
-                MoveCollectionEffect(
-                    from = "revealedLand",
-                    destination = CardDestination.ToZone(Zone.HAND)
-                ),
-                MoveCollectionEffect(
-                    from = "nonLandRevealed",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
-                    order = CardOrder.Random
-                )
-            )
-        )
+        effect = Effects.Pipeline {
+            val (revealedLand, allRevealed) = gatherUntilMatch(GameObjectFilter.Land)
+            reveal(allRevealed)
+            // allRevealed includes the matched land, so subtract it before bottoming.
+            val nonLandRevealed = exclude(allRevealed, minus = revealedLand)
+            toHand(revealedLand)
+            toLibraryBottom(nonLandRevealed, order = CardOrder.Random)
+        }
         description = "Survival — At the beginning of your second main phase, if this creature is " +
             "tapped, reveal cards from the top of your library until you reveal a land card. Put " +
             "that card into your hand and the rest on the bottom of your library in a random order."

@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Rage Weaver
@@ -28,10 +27,7 @@ val RageWeaver = card("Rage Weaver") {
 
     activatedAbility {
         cost = Costs.Mana("{2}")
-        val t = target(
-            "target",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.withAnyColor(Color.BLACK, Color.GREEN)))
-        )
+        val t = target(TargetFilter(GameObjectFilter.Creature.withAnyColor(Color.BLACK, Color.GREEN)))
         effect = Effects.GrantKeyword(Keyword.HASTE, target = t)
         description = "{2}: Target black or green creature gains haste until end of turn."
     }

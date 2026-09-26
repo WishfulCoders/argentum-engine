@@ -10,6 +10,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Pummeler for Hire
@@ -32,10 +33,10 @@ val PummelerForHire = card("Pummeler for Hire") {
         "When this creature enters, you gain X life, where X is the greatest power among Giants you control."
 
     keywords(Keyword.VIGILANCE, Keyword.REACH)
-    keywordAbility(KeywordAbility.ward("{2}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(
             amount = DynamicAmounts.battlefield(
                 Player.You,

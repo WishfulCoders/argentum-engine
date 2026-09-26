@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -17,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * One ability with a branch, not two abilities: the first activation suspects it (menace, can't
  * block — CR 701.60a), and every activation after that grows it. The branch is a *state test*, so
- * `ConditionalEffect` (which lowers to `GatedEffect` + `Gate.WhenCondition`) is the right shape —
+ * `Effects.If` (which lowers to `GatedEffect` + `Gate.WhenCondition`) is the right shape —
  * no prompt, no pause, both branches resolve synchronously in the executor.
  *
  * The condition is checked on **resolution**, not activation, which is the interaction worth
@@ -41,10 +40,10 @@ val RepeatOffender = card("Repeat Offender") {
 
     activatedAbility {
         cost = Costs.Mana("{2}{B}")
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.SourceIsSuspected,
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
-            elseEffect = Effects.Suspect(EffectTarget.Self)
+            then = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
+            otherwise = Effects.Suspect(EffectTarget.Self)
         )
         description = "If this creature is suspected, put a +1/+1 counter on it. Otherwise, suspect it."
     }

@@ -44,15 +44,13 @@ val WhiplashVengefulEngineer = card("Whiplash, Vengeful Engineer") {
     replacementEffect(EntersTapped())
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         interveningIf = Conditions.SourceMatches(GameObjectFilter.Any.equipped())
-        effect = Effects.Composite(
-            Effects.LoseLife(
-                DynamicAmounts.equipmentAttachedToSelf(),
-                EffectTarget.PlayerRef(Player.EachOpponent)
-            ),
+        effect = Effects.LoseLife(
+            DynamicAmounts.equipmentAttachedToSelf(),
+            EffectTarget.PlayerRef(Player.EachOpponent)
+        ) then
             Effects.GainLife(DynamicAmounts.equipmentAttachedToSelf())
-        )
         description = "Whenever Whiplash attacks, if he's equipped, each opponent loses X life " +
             "and you gain X life, where X is the number of Equipment attached to him."
     }

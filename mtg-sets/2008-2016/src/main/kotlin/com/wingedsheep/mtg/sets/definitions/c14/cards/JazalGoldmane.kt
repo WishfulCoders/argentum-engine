@@ -6,6 +6,7 @@ package com.wingedsheep.mtg.sets.definitions.c14.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -13,7 +14,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -37,9 +37,9 @@ val JazalGoldmane = card("Jazal Goldmane") {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.attacking().youControl()),
             Effects.ModifyStats(
-                DynamicAmount.AggregateBattlefield(Player.Each, GameObjectFilter.Creature.attacking()),
-                DynamicAmount.AggregateBattlefield(Player.Each, GameObjectFilter.Creature.attacking()),
-                EffectTarget.Self
+                DynamicAmounts.battlefield(Player.Each, GameObjectFilter.Creature.attacking()).count(),
+                DynamicAmounts.battlefield(Player.Each, GameObjectFilter.Creature.attacking()).count(),
+                EffectTarget.IterationEntity
             )
         )
     }

@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ori.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Zendikar Incarnate
@@ -26,7 +26,7 @@ val ZendikarIncarnate = card("Zendikar Incarnate") {
     oracleText = "Zendikar Incarnate's power is equal to the number of lands you control."
     toughness = 4
 
-    dynamicPower(DynamicAmount.AggregateBattlefield(Player.You, Filters.Land))
+    dynamicPower(DynamicAmounts.battlefield(Player.You, Filters.Land).count())
 
     metadata {
         rarity = Rarity.UNCOMMON

@@ -22,7 +22,7 @@ import io.kotest.matchers.shouldNotBe
  * value of those milled cards.
  *
  * Exercises the two reusable primitives this card introduced:
- *  - the opponent-decides "may" (MayEffect.decisionMaker = the targeted opponent),
+ *  - the opponent-decides "may" (Effects.May.decisionMaker = the targeted opponent),
  *  - DynamicAmount.ManaValueSumOfCollection ("total mana value of those cards").
  */
 class PalantirOfOrthancScenarioTest : ScenarioTestBase() {

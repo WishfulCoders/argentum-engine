@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
@@ -9,6 +9,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Weather Maker
@@ -28,8 +29,8 @@ val WeatherMaker = card("Weather Maker") {
     oracleText = "Landfall — Whenever a land you control enters, put a charge counter on this artifact.\n{T}: Add one mana of any color.\n{T}, Remove two charge counters from this artifact: Add {C}{C}.\n{T}, Remove three charge counters from this artifact: It deals 3 damage to any target."
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
-        effect = Effects.AddCounters(Counters.CHARGE, 1, EffectTarget.Self)
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
+        effect = Effects.AddCounters(CounterType.CHARGE, 1, EffectTarget.Self)
     }
 
     activatedAbility {
@@ -42,7 +43,7 @@ val WeatherMaker = card("Weather Maker") {
     activatedAbility {
         cost = Costs.Composite(
             Costs.Tap,
-            Costs.RemoveCounterFromSelf(Counters.CHARGE, 2)
+            Costs.RemoveCounterFromSelf(CounterType.CHARGE, 2)
         )
         effect = Effects.AddColorlessMana(2)
         manaAbility = true
@@ -52,9 +53,9 @@ val WeatherMaker = card("Weather Maker") {
     activatedAbility {
         cost = Costs.Composite(
             Costs.Tap,
-            Costs.RemoveCounterFromSelf(Counters.CHARGE, 3)
+            Costs.RemoveCounterFromSelf(CounterType.CHARGE, 3)
         )
-        val anyTarget = target("any target", Targets.Any)
+        val anyTarget = target(Targets.Any)
         effect = Effects.DealDamage(3, anyTarget)
     }
 

@@ -30,7 +30,7 @@ val ExhibitionMagician = card("Exhibition Magician") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseOne(
             Mode.noTarget(
                 effect = Effects.CreateToken(

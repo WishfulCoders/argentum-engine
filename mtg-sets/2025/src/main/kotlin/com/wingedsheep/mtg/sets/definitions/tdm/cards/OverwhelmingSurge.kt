@@ -6,8 +6,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Overwhelming Surge
@@ -36,22 +34,17 @@ val OverwhelmingSurge = card("Overwhelming Surge") {
     spell {
         modal(chooseCount = 1) {
             mode("Overwhelming Surge deals 3 damage to target creature") {
-                val creature = target("creature", TargetCreature())
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.DealDamage(3, creature)
             }
             mode("Destroy target noncreature artifact") {
-                val artifact = target("noncreature artifact", TargetPermanent(filter = NoncreatureArtifact))
+                val artifact = target(NoncreatureArtifact)
                 effect = Effects.Destroy(artifact)
             }
             mode("Deal 3 damage to target creature and destroy target noncreature artifact") {
-                val creature = target("creature", TargetCreature())
-                val artifact = target("noncreature artifact", TargetPermanent(filter = NoncreatureArtifact))
-                effect = Effects.Composite(
-                    listOf(
-                        Effects.DealDamage(3, creature),
-                        Effects.Destroy(artifact),
-                    )
-                )
+                val creature = target(TargetFilter.Creature)
+                val artifact = target(NoncreatureArtifact)
+                effect = Effects.DealDamage(3, creature) then Effects.Destroy(artifact)
             }
         }
     }

@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Snooping Page
@@ -34,20 +35,14 @@ val SnoopingPage = card("Snooping Page") {
         "Whenever this creature deals combat damage to a player, you draw a card and lose 1 life."
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.InstantOrSorcery.targetsMatching(GameObjectFilter.Creature)
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery.targetsMatching(GameObjectFilter.Creature))
         effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, EffectTarget.Self, Duration.EndOfTurn)
     }
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = Effects.Composite(
-            listOf(
-                Effects.DrawCards(1, EffectTarget.Controller),
-                Effects.LoseLife(1, EffectTarget.Controller),
-            )
-        )
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.DrawCards(1, EffectTarget.Controller) then
+            Effects.LoseLife(1, EffectTarget.Controller)
     }
 
     metadata {

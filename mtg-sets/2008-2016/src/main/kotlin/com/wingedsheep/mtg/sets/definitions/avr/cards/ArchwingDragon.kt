@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Archwing Dragon
@@ -17,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Flying, haste
  * At the beginning of the end step, return this creature to its owner's hand.
  *
- * "The end step" carries no possessive, so the trigger is [Triggers.EachEndStep]
+ * "The end step" carries no possessive, so the trigger is `Triggers.anyPlayer.beginningOf(Step.END)`
  * (`StepEvent(Step.END, Player.Each)`) — the Dragon bounces at the end of *every* turn, not only
  * its controller's.
  */
@@ -33,7 +34,7 @@ val ArchwingDragon = card("Archwing Dragon") {
     keywords(Keyword.FLYING, Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.EachEndStep
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
         effect = Effects.Move(EffectTarget.Self, Zone.HAND)
     }
 

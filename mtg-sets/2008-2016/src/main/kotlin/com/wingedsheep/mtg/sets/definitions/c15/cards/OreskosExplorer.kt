@@ -28,7 +28,7 @@ val OreskosExplorer = card("Oreskos Explorer") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Land.withSubtype(Subtype.PLAINS),
             destination = SearchDestination.HAND,

@@ -16,7 +16,6 @@ import com.wingedsheep.engine.state.GameState
 class ContinuationHandler(
     private val services: EngineServices
 ) {
-
     private val effectRunner = EffectContinuationRunner(services.effectExecutorRegistry)
 
     private val registry = ContinuationResumerRegistry().apply {
@@ -41,11 +40,12 @@ class ContinuationHandler(
         registerModule(DiscardAndDrawContinuationResumer(services))
         registerModule(StateBasedContinuationResumer(services))
         registerModule(SacrificeAndPayContinuationResumer(services))
-        registerModule(CollectEvidenceContinuationResumer())
+        registerModule(CollectEvidenceContinuationResumer(services.zones))
         registerModule(CostPaymentContinuationResumer(services))
         registerModule(ManaPaymentContinuationResumer(services))
-        registerModule(LibraryAndZoneContinuationResumer(services))
+        registerModule(LibraryAndZoneContinuationResumer(services, targetFinder = services.targetFinder))
         registerModule(GuessContinuationResumer(services))
+        registerModule(RedistributeLifeContinuationResumer(services))
         registerModule(ModalAndCloneContinuationResumer(services))
         registerModule(RoomDoorContinuationResumer(services))
         registerModule(CastModalContinuationResumer(services))
@@ -67,6 +67,12 @@ class ContinuationHandler(
         registerModule(replacementResumer)
         registerAutoResumerModule(replacementResumer)
     }
+
+    /** Continuation types with a registered resumer, for `ContinuationResumerCoverageTest`. */
+    fun registeredAnswerTypes() = registry.registeredAnswerTypes()
+
+    /** Automatic continuation types with a registered auto-resumer, for the same coverage test. */
+    fun registeredAutomaticTypes() = registry.registeredAutomaticTypes()
 
     /**
      * Resume execution after a decision is submitted.
@@ -102,6 +108,20 @@ class ContinuationHandler(
         state: GameState,
         events: List<GameEvent>
     ): ExecutionResult {
+        // A resumer that dealt damage or countered a spell outside the effect registry (a declined
+        // "counter unless you pay", a divided-damage answer) may owe a replacement's rest — Guile's
+        // free cast, Vigor's counters. Run it before the interrupted resolution goes on, as the
+        // registry would have. A rider that asks a question stacks its suspension above the
+        // remaining frames, which resume once it's answered.
+        if (state.pendingReplacementRiders.isNotEmpty() && state.pendingDecision == null) {
+            val drained = com.wingedsheep.engine.replacement.ReplacementRiders.drain(
+                state, services.effectExecutorRegistry::execute
+            )
+            if (drained.outcome is com.wingedsheep.engine.core.Outcome.Paused) {
+                return ExecutionResult.propagatePause(drained.state, events + drained.events)
+            }
+            return checkForMoreContinuations(drained.state, events + drained.events)
+        }
         registry.tryAutoResume(state, events, ::checkForMoreContinuations)?.let { return it }
         return if (state.pendingDecision != null) ExecutionResult.propagatePause(state, events)
         else ExecutionResult.success(state, events)

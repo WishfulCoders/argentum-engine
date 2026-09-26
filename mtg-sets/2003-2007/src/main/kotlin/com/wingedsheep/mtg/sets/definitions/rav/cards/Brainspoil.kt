@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.StatePredicate
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 val Brainspoil = card("Brainspoil") {
     manaCost = "{3}{B}{B}"
@@ -17,10 +16,9 @@ val Brainspoil = card("Brainspoil") {
 
     spell {
         val creature = target(
-            "target creature that isn't enchanted",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.copy(
+            TargetFilter(GameObjectFilter.Creature.copy(
                 statePredicates = listOf(StatePredicate.Not(StatePredicate.IsEnchanted))
-            )))
+            )),
         )
         effect = Effects.Destroy(creature, noRegenerate = true)
     }

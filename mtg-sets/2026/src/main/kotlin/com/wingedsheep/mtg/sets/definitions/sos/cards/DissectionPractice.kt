@@ -3,8 +3,8 @@ package com.wingedsheep.mtg.sets.definitions.sos.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Dissection Practice
@@ -22,13 +22,13 @@ val DissectionPractice = card("Dissection Practice") {
         "Up to one target creature gets +1/+1 until end of turn.\n" +
         "Up to one target creature gets -1/-1 until end of turn."
     spell {
-        val opponent = target("target opponent", TargetOpponent())
-        val pumped = target("up to one target creature to pump", TargetCreature(optional = true))
-        val weakened = target("up to one target creature to weaken", TargetCreature(optional = true))
-        effect = Effects.LoseLife(1, opponent)
-            .then(Effects.GainLife(1))
-            .then(Effects.ModifyStats(1, 1, pumped))
-            .then(Effects.ModifyStats(-1, -1, weakened))
+        val opponent = target(Targets.Opponent)
+        val pumped = target(TargetFilter.Creature, optional = true)
+        val weakened = target(TargetFilter.Creature, optional = true)
+        effect = Effects.LoseLife(1, opponent) then
+            Effects.GainLife(1) then
+            Effects.ModifyStats(1, 1, pumped) then
+            Effects.ModifyStats(-1, -1, weakened)
     }
     metadata {
         rarity = Rarity.UNCOMMON

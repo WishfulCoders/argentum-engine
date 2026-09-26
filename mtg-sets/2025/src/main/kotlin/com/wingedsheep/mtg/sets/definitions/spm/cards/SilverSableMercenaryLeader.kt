@@ -1,16 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.spm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.StatePredicate
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Silver Sable, Mercenary Leader
@@ -29,22 +27,19 @@ val SilverSableMercenaryLeader = card("Silver Sable, Mercenary Leader") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetCreature(filter = TargetFilter.OtherCreature))
-        effect = AddCountersEffect(counterType = Counters.PLUS_ONE_PLUS_ONE, count = 1, target = t)
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.OtherCreature)
+        effect = Effects.AddCounters(counterType = CounterType.PLUS_ONE_PLUS_ONE, count = 1, target = t)
     }
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         val t = target(
-            "target",
-            TargetCreature(
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter.Creature.youControl().copy(
-                        statePredicates = GameObjectFilter.Creature.youControl().statePredicates +
-                            StatePredicate.IsModified
-                    )
+            TargetFilter(
+                baseFilter = GameObjectFilter.Creature.youControl().copy(
+                    statePredicates = GameObjectFilter.Creature.youControl().statePredicates +
+                        StatePredicate.IsModified
                 )
-            )
+            ),
         )
         effect = Effects.GrantKeyword(Keyword.LIFELINK, t)
     }

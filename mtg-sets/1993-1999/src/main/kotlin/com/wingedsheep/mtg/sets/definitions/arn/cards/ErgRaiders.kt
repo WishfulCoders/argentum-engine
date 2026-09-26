@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Erg Raiders
@@ -36,7 +37,7 @@ val ErgRaiders = card("Erg Raiders") {
         "turn, it deals 2 damage to you unless it came under your control this turn."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.All(
             Conditions.Not(Conditions.SourceAttackedThisTurn),
             Conditions.Not(Conditions.SourceEnteredThisTurn),

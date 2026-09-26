@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.card
@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.MayCastSelfFromZones
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
 /**
@@ -49,7 +48,7 @@ val HundredBattleVeteran = card("Hundred-Battle Veteran") {
     // ...If you do, it enters with a finality counter on it.
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.Named(Counters.FINALITY),
+            counterType = CounterType.FINALITY,
             count = 1,
             selfOnly = true,
             condition = Conditions.WasCastFromGraveyard

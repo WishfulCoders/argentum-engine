@@ -3,13 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.tdm.cards
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.model.Rarity
 
 /**
@@ -33,8 +31,8 @@ val UnderfootUnderdogs = card("Underfoot Underdogs") {
         "{1}, {T}: Target creature you control with power 2 or less can't be blocked this turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreateTokenEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateToken(
             count = 1,
             power = 1,
             toughness = 1,
@@ -47,13 +45,8 @@ val UnderfootUnderdogs = card("Underfoot Underdogs") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
-        val t = target(
-            "target",
-            TargetCreature(
-                filter = TargetFilter(GameObjectFilter.Creature.powerAtMost(2).youControl())
-            )
-        )
-        effect = GrantKeywordEffect(AbilityFlag.CANT_BE_BLOCKED.name, t)
+        val t = target(TargetFilter(GameObjectFilter.Creature.powerAtMost(2).youControl()))
+        effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, t)
         description = "{1}, {T}: Target creature you control with power 2 or less can't be blocked this turn."
     }
 

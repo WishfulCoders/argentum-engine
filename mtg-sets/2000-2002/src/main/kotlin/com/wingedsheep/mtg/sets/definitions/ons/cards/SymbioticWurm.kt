@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Symbiotic Wurm
@@ -22,8 +22,8 @@ val SymbioticWurm = card("Symbiotic Wurm") {
     oracleText = "When Symbiotic Wurm dies, create seven 1/1 green Insect creature tokens."
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        effect = CreateTokenEffect(
+        trigger = Triggers.self.dies()
+        effect = Effects.CreateToken(
             count = 7,
             power = 1,
             toughness = 1,

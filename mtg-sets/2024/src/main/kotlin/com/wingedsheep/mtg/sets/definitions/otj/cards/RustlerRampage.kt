@@ -4,12 +4,12 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Rustler Rampage {W}
@@ -35,25 +35,23 @@ val RustlerRampage = card("Rustler Rampage") {
         "+ {1} — Target creature gains double strike until end of turn."
 
     spell {
-        effect = ModalEffect(
+        effect = Effects.Modal(
             modes = listOf(
-                Mode(
+                mode("+ {1} — Untap all creatures target player controls.") {
+                    val player = target(Targets.Player)
+                    additionalManaCost = "{1}"
                     effect = Effects.ForEachInGroup(
                         filter = GroupFilter(
-                            GameObjectFilter.Creature.targetPlayerControls(EffectTarget.ContextTarget(0))
+                            GameObjectFilter.Creature.targetPlayerControls(player)
                         ),
-                        effect = Effects.Untap(EffectTarget.Self)
-                    ),
-                    targetRequirements = listOf(Targets.Player),
-                    description = "+ {1} — Untap all creatures target player controls.",
+                        effect = Effects.Untap(EffectTarget.IterationEntity)
+                    )
+                },
+                mode("+ {1} — Target creature gains double strike until end of turn.") {
+                    val creature = target(TargetFilter.Creature)
                     additionalManaCost = "{1}"
-                ),
-                Mode(
-                    effect = Effects.GrantKeyword(Keyword.DOUBLE_STRIKE, EffectTarget.ContextTarget(0)),
-                    targetRequirements = listOf(Targets.Creature),
-                    description = "+ {1} — Target creature gains double strike until end of turn.",
-                    additionalManaCost = "{1}"
-                )
+                    effect = Effects.GrantKeyword(Keyword.DOUBLE_STRIKE, creature)
+                }
             ),
             chooseCount = 2,
             minChooseCount = 1

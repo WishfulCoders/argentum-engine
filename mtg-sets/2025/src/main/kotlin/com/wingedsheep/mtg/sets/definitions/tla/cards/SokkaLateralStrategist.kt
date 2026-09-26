@@ -31,7 +31,7 @@ val SokkaLateralStrategist = card("Sokka, Lateral Strategist") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.attacks(requires = setOf(AttackPredicate.AttackerCountAtLeast(2)))
+        trigger = Triggers.self.attacks(setOf(AttackPredicate.AttackerCountAtLeast(2)))
         effect = Effects.DrawCards(1)
         description = "Whenever Sokka and at least one other creature attack, draw a card."
     }

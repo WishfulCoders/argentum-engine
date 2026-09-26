@@ -2,14 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Slash of Light
@@ -28,16 +28,14 @@ val SlashOfLight = card("Slash of Light") {
     oracleText = "Slash of Light deals damage equal to the number of creatures you control plus the number of Equipment you control to target creature."
 
     spell {
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.DealDamage(
-            DynamicAmount.Add(
-                DynamicAmount.Count(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature),
-                DynamicAmount.Count(
+            DynamicAmounts.count(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature) +
+                DynamicAmounts.count(
                     Player.You,
                     Zone.BATTLEFIELD,
                     GameObjectFilter.Artifact.withSubtype(Subtype("Equipment"))
-                )
-            ),
+                ),
             t
         )
     }

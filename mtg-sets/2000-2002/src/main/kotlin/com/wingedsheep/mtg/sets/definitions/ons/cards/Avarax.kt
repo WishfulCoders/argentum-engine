@@ -2,15 +2,15 @@ package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
+
 /**
  * Avarax
  * {3}{R}{R}
@@ -32,8 +32,8 @@ val Avarax = card("Avarax") {
     keywords(Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.May(
             Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.Any.named("Avarax"),
                 count = 1,
@@ -46,9 +46,9 @@ val Avarax = card("Avarax") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{R}")
-        effect = ModifyStatsEffect(
-            powerModifier = 1,
-            toughnessModifier = 0,
+        effect = Effects.ModifyStats(
+            power = 1,
+            toughness = 0,
             target = EffectTarget.Self
         )
     }

@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Nobody
@@ -26,13 +25,9 @@ val Nobody = card("Nobody") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val artifact = target(
-            "other artifact you control",
-            TargetPermanent(optional = true, filter = TargetFilter.Artifact.youControl().other())
-        )
-        effect = Effects.ReturnToHand(artifact)
-            .then(Patterns.Library.scry(1))
+        trigger = Triggers.self.enters()
+        val artifact = target(TargetFilter.Artifact.youControl().other(), optional = true)
+        effect = Effects.ReturnToHand(artifact) then Patterns.Library.scry(1)
     }
 
     metadata {

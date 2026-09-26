@@ -6,9 +6,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Flame Blitz — Modern Horizons 2 #124
@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * "Each planeswalker" is untargeted group damage, so it is [Effects.ForEachInGroup] over a
  * [GroupFilter] of every planeswalker on the battlefield — no controller predicate, so the
- * enchantment burns its own controller's walkers too. Inside the loop, `EffectTarget.Self` names
+ * enchantment burns its own controller's walkers too. Inside the loop, `EffectTarget.IterationEntity` names
  * the *iterated* permanent (the group member currently being processed), not the enchantment; the
  * damage source stays Flame Blitz because the ability's source is the enchantment.
  *
@@ -34,10 +34,10 @@ val FlameBlitz = card("Flame Blitz") {
         "Cycling {2} ({2}, Discard this card: Draw a card.)"
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Planeswalker),
-            DealDamageEffect(5, EffectTarget.Self)
+            Effects.DealDamage(5, EffectTarget.IterationEntity)
         )
     }
 

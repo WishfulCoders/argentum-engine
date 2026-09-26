@@ -1,15 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
+import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.PreventDamage
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Spirit of Resistance
@@ -32,13 +31,13 @@ val SpiritOfResistance = card("Spirit of Resistance") {
     replacementEffect(
         PreventDamage(
             restrictions = listOf(
-                Compare(
+                Conditions.CompareAmounts(
                     DynamicAmounts.colorsAmongPermanents(Player.You),
                     ComparisonOperator.GTE,
-                    DynamicAmount.Fixed(5)
+                    5
                 )
             ),
-            appliesTo = EventPattern.DamageEvent(recipient = RecipientFilter.You)
+            appliesTo = EventPattern.DamageEvent(recipient = Recipient.You)
         )
     )
 

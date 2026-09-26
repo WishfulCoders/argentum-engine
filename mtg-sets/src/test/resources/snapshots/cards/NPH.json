@@ -11,7 +11,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Alloy Myr:1",
                 "cost": "CostTap",
                 "effect": "AddManaOfChoice",
                 "timing": "ManaAbility",
@@ -45,7 +45,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Deceiver Exarch:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -57,8 +57,8 @@
                             "effect": {
                                 "type": "TapUntap",
                                 "target": {
-                                    "type": "ContextTarget",
-                                    "index": 0
+                                    "type": "BoundVariable",
+                                    "name": "t0"
                                 },
                                 "tap": false
                             },
@@ -67,7 +67,8 @@
                                     "type": "TargetObject",
                                     "filter": {
                                         "baseFilter": "permanent ctrl:you"
-                                    }
+                                    },
+                                    "id": "t0"
                                 }
                             ],
                             "description": "Untap target permanent you control."
@@ -76,8 +77,8 @@
                             "effect": {
                                 "type": "TapUntap",
                                 "target": {
-                                    "type": "ContextTarget",
-                                    "index": 0
+                                    "type": "BoundVariable",
+                                    "name": "t1"
                                 }
                             },
                             "targetRequirements": [
@@ -85,7 +86,8 @@
                                     "type": "TargetObject",
                                     "filter": {
                                         "baseFilter": "permanent ctrl:opponent"
-                                    }
+                                    },
+                                    "id": "t1"
                                 }
                             ],
                             "description": "Tap target permanent an opponent controls."
@@ -126,7 +128,7 @@
             },
             "target": {
                 "type": "BoundVariable",
-                "name": "target"
+                "name": "t0"
             }
         },
         "targetRequirements": [
@@ -135,7 +137,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -206,7 +208,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Pristine Talisman:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "Composite",

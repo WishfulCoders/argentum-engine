@@ -2,18 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedActivatedAbility
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
-import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Lassoed by the Law
@@ -40,29 +35,26 @@ val LassoedByTheLaw = card("Lassoed by the Law") {
         "creature you control gets +1/+0 until end of turn. Activate only as a sorcery.\""
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val permanent = target(
-            "nonland permanent an opponent controls",
-            TargetPermanent(filter = TargetFilter.NonlandPermanentOpponentControls)
-        )
+        trigger = Triggers.self.enters()
+        val permanent = target(TargetFilter.NonlandPermanentOpponentControls)
         effect = Effects.ExileUntilLeaves(permanent)
     }
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreateTokenEffect(
-            count = DynamicAmount.Fixed(1),
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateToken(
+            count = 1,
             power = 1,
             toughness = 1,
             colors = setOf(Color.RED),
             creatureTypes = setOf("Mercenary"),
             activatedAbilities = listOf(
-                ActivatedAbility(
-                    cost = AbilityCost.Tap,
-                    effect = Effects.ModifyStats(1, 0, EffectTarget.ContextTarget(0)),
-                    targetRequirements = listOf(Targets.CreatureYouControl),
+                grantedActivatedAbility {
+                    cost = AbilityCost.Tap
+                    val creatureYouControl = target(TargetFilter.CreatureYouControl)
+                    effect = Effects.ModifyStats(1, 0, creatureYouControl)
                     timing = TimingRule.SorcerySpeed
-                )
+                }
             ),
             imageUri = "https://cards.scryfall.io/normal/front/5/f/5f04607f-eed2-462e-897f-82e41e5f7049.jpg?1712316319"
         )
@@ -71,7 +63,7 @@ val LassoedByTheLaw = card("Lassoed by the Law") {
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 

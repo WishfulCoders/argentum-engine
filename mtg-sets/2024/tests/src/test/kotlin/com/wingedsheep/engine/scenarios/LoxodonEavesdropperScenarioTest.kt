@@ -19,7 +19,7 @@ import io.kotest.matchers.shouldBe
  *  until end of turn."
  *
  * The enters half is a plain `Effects.Investigate()`; the interesting half is the
- * [com.wingedsheep.sdk.dsl.Triggers.NthCardDrawn]`(2)` payoff landing on the source itself, so
+ * `Triggers.<player>.drawsNth(n)``(2)` payoff landing on the source itself, so
  * these cover: the Clue arriving on entry, the second draw (and only the second) pumping it, and
  * the bonus being end-of-turn rather than permanent.
  */

@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Phyrexian Infiltrator
@@ -24,7 +24,7 @@ val PhyrexianInfiltrator = card("Phyrexian Infiltrator") {
 
     activatedAbility {
         cost = Costs.Mana("{2}{U}{U}")
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.ExchangeControl(EffectTarget.Self, t)
     }
 

@@ -64,7 +64,7 @@ val PetrifiedHamlet = card("Petrified Hamlet") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Tap,
                 effect = Effects.AddColorlessMana(1),
                 isManaAbility = true,

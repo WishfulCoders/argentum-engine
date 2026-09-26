@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.MayPayXForEffect
 import com.wingedsheep.sdk.core.Keyword
 
 /**
@@ -26,8 +25,8 @@ val DecreeOfJustice = card("Decree of Justice") {
     oracleText = "Create X 4/4 white Angel creature tokens with flying.\nCycling {2}{W}\nWhen you cycle Decree of Justice, you may pay {X}. If you do, create X 1/1 white Soldier creature tokens."
 
     spell {
-        effect = CreateTokenEffect(
-            count = DynamicAmount.XValue,
+        effect = Effects.CreateToken(
+            count = DynamicAmounts.xValue(),
             power = 4,
             toughness = 4,
             colors = setOf(Color.WHITE),
@@ -40,10 +39,10 @@ val DecreeOfJustice = card("Decree of Justice") {
     keywordAbility(KeywordAbility.cycling("{2}{W}"))
 
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
-        effect = MayPayXForEffect(
-            effect = CreateTokenEffect(
-                count = DynamicAmount.XValue,
+        trigger = Triggers.self.isCycled()
+        effect = Effects.MayPayX(
+            then = Effects.CreateToken(
+                count = DynamicAmounts.xValue(),
                 power = 1,
                 toughness = 1,
                 colors = setOf(Color.WHITE),

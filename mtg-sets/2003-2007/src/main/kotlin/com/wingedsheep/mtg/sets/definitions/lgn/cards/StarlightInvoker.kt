@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.lgn.cards
 
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -25,7 +25,7 @@ val StarlightInvoker = card("Starlight Invoker") {
 
     activatedAbility {
         cost = Costs.Mana(ManaCost.parse("{7}{W}"))
-        effect = GainLifeEffect(5, EffectTarget.Controller)
+        effect = Effects.GainLife(5, EffectTarget.Controller)
     }
 
     metadata {

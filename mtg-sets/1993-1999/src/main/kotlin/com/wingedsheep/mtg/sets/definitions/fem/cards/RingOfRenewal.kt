@@ -22,10 +22,7 @@ val RingOfRenewal = card("Ring of Renewal") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{5}"), Costs.Tap)
-        effect = Effects.Composite(
-            Patterns.Hand.discardRandom(1),
-            Effects.DrawCards(2)
-        )
+        effect = Patterns.Hand.discardRandom(1) then Effects.DrawCards(2)
     }
 
     metadata {

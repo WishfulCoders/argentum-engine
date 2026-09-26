@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Scepter of Dominance
@@ -24,7 +25,7 @@ val ScepterOfDominance = card("Scepter of Dominance") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{W}"), Costs.Tap)
-        val victim = target("target", Targets.Permanent)
+        val victim = target(TargetFilter.Permanent)
         effect = Effects.Tap(victim)
     }
 

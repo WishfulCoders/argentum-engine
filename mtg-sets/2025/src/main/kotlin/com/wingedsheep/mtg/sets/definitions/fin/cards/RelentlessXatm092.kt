@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * The evasion is the generalized-menace static [CantBeBlockedByFewerThan] (minBlockers = 3, like Troll
  * of Khazad-dûm). The recursion is a graveyard-activated ability (`activateFromZone = GRAVEYARD`) that
  * puts the card straight onto the battlefield tapped and stamps a finality counter; the
- * [Counters.FINALITY] counter's exile-instead-of-die replacement is handled by the engine, so no
+ * [CounterType.FINALITY] counter's exile-instead-of-die replacement is handled by the engine, so no
  * extra wiring is needed for the reminder text.
  */
 val RelentlessXatm092 = card("Relentless X-ATM092") {
@@ -40,10 +40,8 @@ val RelentlessXatm092 = card("Relentless X-ATM092") {
 
     activatedAbility {
         cost = Costs.Mana("{8}")
-        effect = Effects.Composite(
-            Effects.PutOntoBattlefieldFromGraveyard(EffectTarget.Self, tapped = true),
-            Effects.AddCounters(Counters.FINALITY, 1, EffectTarget.Self)
-        )
+        effect = Effects.PutOntoBattlefieldFromGraveyard(EffectTarget.Self, tapped = true) then
+            Effects.AddCounters(CounterType.FINALITY, 1, EffectTarget.Self)
         activateFromZone = Zone.GRAVEYARD
     }
 

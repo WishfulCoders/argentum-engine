@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Boggart Loggers
@@ -37,12 +36,9 @@ val BoggartLoggers = card("Boggart Loggers") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{B}"), Costs.SacrificeSelf)
         val treefolkOrForest = target(
-            "target Treefolk or Forest",
-            TargetPermanent(
-                filter = TargetFilter(
-                    GameObjectFilter.Permanent.withAnySubtype(Subtype.TREEFOLK.value, Subtype.FOREST.value)
-                )
-            )
+            TargetFilter(
+                GameObjectFilter.Permanent.withAnySubtype(Subtype.TREEFOLK.value, Subtype.FOREST.value)
+            ),
         )
         effect = Effects.Destroy(treefolkOrForest)
         description = "Destroy target Treefolk or Forest."

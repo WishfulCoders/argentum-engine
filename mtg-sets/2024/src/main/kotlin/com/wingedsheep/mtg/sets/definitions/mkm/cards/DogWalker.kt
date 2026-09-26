@@ -35,7 +35,7 @@ val DogWalker = card("Dog Walker") {
     disguise = "{R/W}{R/W}"
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
+        trigger = Triggers.self.turnedFaceUp()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

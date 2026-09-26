@@ -29,7 +29,7 @@ val TeapotSlinger = card("Teapot Slinger") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.Expend(4)
+        trigger = Triggers.you.expends(4)
         effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.EachOpponent))
     }
 

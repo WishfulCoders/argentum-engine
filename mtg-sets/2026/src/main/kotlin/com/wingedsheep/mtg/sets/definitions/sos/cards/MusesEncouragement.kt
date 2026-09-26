@@ -25,17 +25,15 @@ val MusesEncouragement = card("Muse's Encouragement") {
     typeLine = "Instant"
     oracleText = "Create a 3/3 blue and red Elemental creature token with flying.\nSurveil 2. (Look at the top two cards of your library, then put any number of them into your graveyard and the rest on top of your library in any order.)"
     spell {
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                power = 3,
-                toughness = 3,
-                colors = setOf(Color.BLUE, Color.RED),
-                creatureTypes = setOf("Elemental"),
-                keywords = setOf(Keyword.FLYING),
-                imageUri = "https://cards.scryfall.io/normal/front/b/5/b5b2df9c-228f-4441-a962-46b335bb356e.jpg?1782723481"
-            ),
+        effect = Effects.CreateToken(
+            power = 3,
+            toughness = 3,
+            colors = setOf(Color.BLUE, Color.RED),
+            creatureTypes = setOf("Elemental"),
+            keywords = setOf(Keyword.FLYING),
+            imageUri = "https://cards.scryfall.io/normal/front/b/5/b5b2df9c-228f-4441-a962-46b335bb356e.jpg?1782723481"
+        ) then
             Patterns.Library.surveil(2)
-        )
     }
     metadata {
         rarity = Rarity.COMMON

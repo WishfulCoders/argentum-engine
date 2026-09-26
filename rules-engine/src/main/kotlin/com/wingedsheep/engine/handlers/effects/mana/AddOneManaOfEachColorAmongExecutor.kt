@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.mana
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.BattlefieldFilterUtils
@@ -19,7 +20,9 @@ import kotlin.reflect.KClass
  * one mana of EVERY color found in the union of matching permanents' colors — simultaneously,
  * no choice. Colors are read from projected state so recolor effects are honored.
  */
-class AddOneManaOfEachColorAmongExecutor : EffectExecutor<AddOneManaOfEachColorAmongEffect> {
+class AddOneManaOfEachColorAmongExecutor(
+    private val predicateEvaluator: PredicateEvaluator
+) : EffectExecutor<AddOneManaOfEachColorAmongEffect> {
 
     override val effectType: KClass<AddOneManaOfEachColorAmongEffect> =
         AddOneManaOfEachColorAmongEffect::class
@@ -33,7 +36,7 @@ class AddOneManaOfEachColorAmongExecutor : EffectExecutor<AddOneManaOfEachColorA
         when (effect.colorSource) {
             ManaColorSource.MatchingPermanents -> {
                 val projected = state.projectedState
-                val matched = BattlefieldFilterUtils.findMatchingOnBattlefield(state, effect.filter, context)
+                val matched = BattlefieldFilterUtils.findMatchingOnBattlefield(state, effect.filter, context, predicateEvaluator = predicateEvaluator)
                 for (entityId in matched) {
                     val colors = projected.getColors(entityId)
                     for (colorName in colors) {

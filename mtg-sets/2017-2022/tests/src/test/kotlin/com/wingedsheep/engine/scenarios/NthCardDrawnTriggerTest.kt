@@ -36,7 +36,7 @@ class NthCardDrawnTriggerTest : FunSpec({
         toughness = 1
 
         triggeredAbility {
-            trigger = Triggers.NthCardDrawn(2)
+            trigger = Triggers.you.drawsNth(2)
             effect = Effects.GainLife(1)
         }
 

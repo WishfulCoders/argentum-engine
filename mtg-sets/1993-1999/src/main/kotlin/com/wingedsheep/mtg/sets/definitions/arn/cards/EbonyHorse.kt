@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Ebony Horse
@@ -22,11 +21,8 @@ val EbonyHorse = card("Ebony Horse") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        val creature = target(
-            "target attacking creature you control",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Creature.attacking().youControl()))
-        )
-        effect = Effects.Untap(creature).then(Effects.PreventCombatDamageToAndBy(creature))
+        val creature = target(TargetFilter(GameObjectFilter.Creature.attacking().youControl()))
+        effect = Effects.Untap(creature) then Effects.PreventCombatDamageToAndBy(creature)
     }
 
     metadata {

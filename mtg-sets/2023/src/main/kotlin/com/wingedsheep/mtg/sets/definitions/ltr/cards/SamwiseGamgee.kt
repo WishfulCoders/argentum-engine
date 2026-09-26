@@ -7,9 +7,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Samwise Gamgee
@@ -34,19 +32,13 @@ val SamwiseGamgee = card("Samwise Gamgee") {
         "(Artifacts, legendaries, and Sagas are historic.)"
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.nontoken().youControl(),
-            binding = TriggerBinding.OTHER
-        )
+        trigger = Triggers.another(GameObjectFilter.Creature.nontoken().youControl()).enters()
         effect = Effects.CreateFood()
     }
 
     activatedAbility {
         cost = Costs.SacrificeMultiple(3, GameObjectFilter.Any.withSubtype("Food"))
-        val t = target(
-            "historic card from your graveyard",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Historic.ownedByYou(), zone = Zone.GRAVEYARD))
-        )
+        val t = target(TargetFilter(GameObjectFilter.Historic.ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.ReturnToHand(t)
     }
 

@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.firebending
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CopyTargetSpellEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -37,9 +37,9 @@ val FireLordAzula = card("Fire Lord Azula") {
     firebending(2)
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell()
+        trigger = Triggers.you.casts()
         triggerRestriction = Conditions.SourceIsAttacking
-        effect = CopyTargetSpellEffect(target = EffectTarget.TriggeringEntity)
+        effect = Effects.CopyTargetSpell(target = EffectTarget.TriggeringEntity)
         description = "Whenever you cast a spell while Fire Lord Azula is attacking, copy that spell. " +
             "You may choose new targets for the copy."
     }

@@ -26,7 +26,7 @@ class RemoveCountersExecutor : EffectExecutor<RemoveCountersEffect> {
         val targetId = context.resolveTarget(effect.target)
             ?: return EffectResult.error(state, "No valid target for counter removal")
 
-        val counterType = resolveCounterType(effect.counterType)
+        val counterType = effect.counterType
 
         val current = state.getEntity(targetId)?.get<CountersComponent>() ?: CountersComponent()
 

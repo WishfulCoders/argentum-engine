@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Wear Down
@@ -33,24 +32,19 @@ val WearDown = card("Wear Down") {
     spell {
         effect = Patterns.Mechanic.giftSpell(
             // Mode 1: No gift — destroy one artifact or enchantment
-            Mode.withTarget(
-                Effects.Destroy(EffectTarget.ContextTarget(0)),
-                Targets.ArtifactOrEnchantment,
-                "Don't promise a gift — destroy target artifact or enchantment"
-            ),
+            mode("Don't promise a gift — destroy target artifact or enchantment") {
+                val artifactOrEnchantment = target(TargetFilter.ArtifactOrEnchantment)
+                effect = Effects.Destroy(artifactOrEnchantment)
+            },
             // Mode 2: Gift a card — opponent draws, then destroy two artifacts and/or enchantments
-            Mode(
-                effect = Effects.Composite(
-                    listOf(
-                        DrawCardsEffect(1, EffectTarget.PlayerRef(Player.ChosenOpponent)),
-                        Effects.Destroy(EffectTarget.ContextTarget(0)),
-                        Effects.Destroy(EffectTarget.ContextTarget(1)),
-                        Effects.GiftGiven()
-                    )
-                ),
-                targetRequirements = listOf(Targets.ArtifactOrEnchantment, Targets.ArtifactOrEnchantment),
-                description = "Promise a gift — an opponent draws a card, then destroy two target artifacts and/or enchantments"
-            )
+            mode("Promise a gift — an opponent draws a card, then destroy two target artifacts and/or enchantments") {
+                val firstArtifactOrEnchantment = target(TargetFilter.ArtifactOrEnchantment)
+                val secondArtifactOrEnchantment = target(TargetFilter.ArtifactOrEnchantment)
+                effect = Effects.DrawCards(1, EffectTarget.PlayerRef(Player.ChosenOpponent)) then
+                    Effects.Destroy(firstArtifactOrEnchantment) then
+                    Effects.Destroy(secondArtifactOrEnchantment) then
+                    Effects.GiftGiven()
+            }
         )
     }
 

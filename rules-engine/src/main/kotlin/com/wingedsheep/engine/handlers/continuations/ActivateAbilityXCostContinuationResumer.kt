@@ -8,6 +8,7 @@ import com.wingedsheep.engine.core.ActivateAbilityExileFromGraveyardContinuation
 import com.wingedsheep.engine.core.ActivateAbilityVariablePermanentsContinuation
 import com.wingedsheep.engine.core.ActivateAbilityExileXFromGraveyardContinuation
 import com.wingedsheep.engine.core.ActivateAbilitySacrificeContinuation
+import com.wingedsheep.engine.core.ActivateAbilityPutOnLibraryContinuation
 import com.wingedsheep.engine.core.ActivateAbilityTapXTargetsContinuation
 import com.wingedsheep.engine.core.CancelDecisionResponse
 import com.wingedsheep.engine.core.CardsSelectedResponse
@@ -25,6 +26,7 @@ import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.sdk.scripting.AdditionalCostPayment
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Resumer module for the two-step legal-actions submission flow on activated abilities whose cost
@@ -56,6 +58,7 @@ class ActivateAbilityXCostContinuationResumer(
         resumer(ActivateAbilityTapXTargetsContinuation::class, ::resumeTapXTargets),
         resumer(ActivateAbilityExileFromGraveyardContinuation::class, ::resumeExileFromGraveyard),
         resumer(ActivateAbilitySacrificeContinuation::class, ::resumeSacrifice),
+        resumer(ActivateAbilityPutOnLibraryContinuation::class, ::resumePutOnLibrary),
         resumer(ActivateAbilityVariablePermanentsContinuation::class, ::resumeVariablePermanents),
         resumer(ActivateAbilityControllerTargetContinuation::class, ::resumeControllerTargets)
     )
@@ -245,6 +248,39 @@ class ActivateAbilityXCostContinuationResumer(
     }
 
     /**
+     * Resume after the player picks which hand card(s) to put on top of their library for a
+     * `CostAtom.PutFromHandOnTopOfLibrary` cost (Leashling). Fills the choice into
+     * `costPayment.cardsPutOnLibrary` and re-enters the handler to pay and put the ability on the
+     * stack. A cancel backs out cleanly — nothing has been paid yet.
+     */
+    private fun resumePutOnLibrary(
+        state: GameState,
+        continuation: ActivateAbilityPutOnLibraryContinuation,
+        response: DecisionResponse,
+        checkForMore: CheckForMore
+    ): ExecutionResult {
+        if (response is CancelDecisionResponse) {
+            return ExecutionResult.success(state.withPriority(continuation.action.playerId))
+        }
+        if (response !is CardsSelectedResponse) {
+            return ExecutionResult.error(state, "Expected card-selection response for ActivateAbility PutFromHandOnTopOfLibrary")
+        }
+        val selected = response.selectedCards
+        if (selected.size != continuation.count || selected.toSet().size != selected.size) {
+            return ExecutionResult.error(state, "Expected ${continuation.count} distinct card(s), got ${selected.size}")
+        }
+        if (selected.any { it !in continuation.candidates }) {
+            return ExecutionResult.error(state, "Selected card is not in the list of valid candidates")
+        }
+        val action = continuation.action
+        val replay = action.copy(
+            costPayment = (action.costPayment ?: AdditionalCostPayment())
+                .copy(cardsPutOnLibrary = selected)
+        )
+        return reenter(handler.execute(state, replay), checkForMore)
+    }
+
+    /**
      * Resume after the controller picks which permanents pay a variable-count
      * `CostAtom.VariablePermanents` cost — "Exile one or more other [filter] you control with total
      * mana value X" (Fabrication Foundry) or "Sacrifice one or more [filter]" (Radiant Lotus).
@@ -355,6 +391,6 @@ class ActivateAbilityXCostContinuationResumer(
      * or failed re-entry is passed through untouched; its own frame is still in flight.
      */
     private fun reenter(result: ExecutionResult, checkForMore: CheckForMore): ExecutionResult =
-        if (result.isPaused || result.error != null) result
+        if (result.outcome is Outcome.Paused || result.error != null) result
         else checkForMore(result.newState, result.events)
 }

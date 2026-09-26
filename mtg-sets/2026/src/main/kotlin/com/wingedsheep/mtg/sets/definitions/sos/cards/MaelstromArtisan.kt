@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Maelstrom Artisan // Rocket Volley — Secrets of Strixhaven #122
@@ -43,7 +42,7 @@ val MaelstromArtisan = card("Maelstrom Artisan") {
         typeLine = "Sorcery"
         oracleText = "Destroy target nonbasic land."
         spell {
-            val land = target("target", TargetPermanent(filter = TargetFilter.Land.nonbasic()))
+            val land = target(TargetFilter.Land.nonbasic())
             effect = Effects.Destroy(land)
         }
     }

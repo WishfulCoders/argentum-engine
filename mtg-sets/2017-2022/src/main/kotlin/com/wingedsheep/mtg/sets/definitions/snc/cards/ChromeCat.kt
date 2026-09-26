@@ -20,7 +20,7 @@ val ChromeCat = card("Chrome Cat") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Scry(1)
     }
 

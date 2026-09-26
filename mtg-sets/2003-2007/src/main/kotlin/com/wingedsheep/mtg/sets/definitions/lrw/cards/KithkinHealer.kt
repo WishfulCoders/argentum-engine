@@ -23,7 +23,7 @@ val KithkinHealer = card("Kithkin Healer") {
 
     activatedAbility {
         cost = Costs.Tap
-        val recipient = target("any target", Targets.Any)
+        val recipient = target(Targets.Any)
         effect = Effects.PreventNextDamage(1, recipient)
         description = "{T}: Prevent the next 1 damage that would be dealt to any target this turn."
     }

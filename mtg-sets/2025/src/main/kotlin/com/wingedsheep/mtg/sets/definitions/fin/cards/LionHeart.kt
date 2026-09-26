@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -22,9 +22,9 @@ val LionHeart = card("Lion Heart") {
     typeLine = "Artifact — Equipment"
     oracleText = "When this Equipment enters, it deals 2 damage to any target.\nEquipped creature gets +2/+1.\nEquip {2}"
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", AnyTarget())
-        effect = DealDamageEffect(2, t)
+        trigger = Triggers.self.enters()
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(2, t)
     }
     staticAbility {
         ability = ModifyStats(2, 1)

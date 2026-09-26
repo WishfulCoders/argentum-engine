@@ -54,22 +54,20 @@ class LibraryPlacementKnowledgeTest : ScenarioTestBase() {
         manaCost = "{0}"
         typeLine = "Sorcery"
         spell {
-            effect = Effects.Composite(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Any),
-                    storeAs = "hand"
-                ),
+            effect = GatherCardsEffect(
+                source = CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Any),
+                storeAs = "hand"
+            ) then
                 SelectFromCollectionEffect(
                     from = "hand",
                     selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
                     storeSelected = "toTop",
                     selectedLabel = "Put on top of your library"
-                ),
+                ) then
                 MoveCollectionEffect(
                     from = "toTop",
                     destination = CardDestination.ToZone(Zone.LIBRARY, Player.You, ZonePlacement.Top)
                 )
-            )
         }
     }
 

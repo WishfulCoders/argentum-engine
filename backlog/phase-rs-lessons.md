@@ -8,11 +8,8 @@ structural moves where phase is more elegant than us.
 
 **Companion docs:**
 
-- [sdk-language-design.md](sdk-language-design.md) — "one concept, one encoding"; composition over
-  enumeration. This doc's Lesson 1 is a concrete instance of that premise.
-- [sdk-architecture-review.md](sdk-architecture-review.md) — systemic "a general primitive landed but
-  its predecessors were never retired" framing.
-- [sdk-reusability-consolidation.md](sdk-reusability-consolidation.md) — tactical class collapses.
+- [engine-sdk-architecture-review.md](engine-sdk-architecture-review.md) §5 — "one spelling per concept"; composition over enumeration, and retiring
+  predecessors once a general primitive lands. This doc's Lesson 1 is a concrete instance of that premise.
 
 ## The lessons
 
@@ -83,7 +80,7 @@ is precisely this move for unless-cost — one pipeline, `UnlessPaysMana` / `Unl
 variants, **no** per-cost continuation. We never got a "counter-unless-pay vs counter-unless-sacrifice
 ordering bug" there. Lesson 1 generalizes that instinct to the gated-effect cluster.
 
-This is **composition over enumeration** (sdk-language-design §Guiding principles), not "adding params
+This is **composition over enumeration** ([engine-sdk-architecture-review.md](engine-sdk-architecture-review.md) §5), not "adding params
 to an atomic effect" (which [feedback] forbids): we are replacing an *enumeration of 11 wrappers* with
 *one composable frame + a gate algebra*.
 
@@ -235,7 +232,7 @@ The plumbing already exists; we are wiring it together, not building it:
   exposes every `MtgSet`; each `MtgSet.cards` ([`MtgSet.kt:29`](../mtg-sdk/src/main/kotlin/com/wingedsheep/sdk/model/MtgSet.kt))
   is its `List<CardDefinition>`.
 - **Canonical serialization** — `CardExporter.exportToJson`
-  ([`CardExporter.kt`](../mtg-sdk/src/main/kotlin/com/wingedsheep/sdk/serialization/CardExporter.kt))
+  ([`CardExporter.kt`](../mtg-sdk-tooling/src/main/kotlin/com/wingedsheep/sdk/tooling/CardExporter.kt))
   already produces stable, pretty-printed, `CompactJsonTransformer`-normalized JSON (the same shape it
   uses for the Kotlin→JSON migration). Reuse it verbatim so the snapshot matches a format we already
   trust round-trips.

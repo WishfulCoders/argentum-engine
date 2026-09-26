@@ -12,7 +12,7 @@ import io.kotest.matchers.shouldBe
  *
  * "When this creature enters, you may discard a card. If you do, draw a card."
  *
- * The ETB is a MayEffect → IfYouDoEffect(Discard, DrawCards). Verifies the accept path (a card is
+ * The ETB is a Effects.May → Effects.IfYouDo(Discard, DrawCards). Verifies the accept path (a card is
  * discarded and a card drawn) and the decline path (hand and graveyard unchanged).
  */
 class DiscerningPeddlerScenarioTest : ScenarioTestBase() {
@@ -37,7 +37,7 @@ class DiscerningPeddlerScenarioTest : ScenarioTestBase() {
                 }
                 game.resolveStack()
 
-                // ETB MayEffect: accept, then choose the card to discard. With a single
+                // ETB Effects.May: accept, then choose the card to discard. With a single
                 // discardable card the engine auto-selects it (no second decision), so guard
                 // the explicit selection like the Rescue Leopard loot test.
                 if (game.hasPendingDecision()) {

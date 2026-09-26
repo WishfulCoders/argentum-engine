@@ -38,7 +38,7 @@ val SozinsComet = card("Sozin's Comet") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreaturesYouControl,
-            Effects.GrantFirebending(5, EffectTarget.Self)
+            Effects.GrantFirebending(5, EffectTarget.IterationEntity)
         )
     }
 

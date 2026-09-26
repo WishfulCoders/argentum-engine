@@ -12,7 +12,7 @@ import com.wingedsheep.sdk.model.Rarity
  * 2/2
  * When this creature enters, draw a card.
  *
- * The plainest cantrip body there is: [Triggers.EntersBattlefield] carrying [Effects.DrawCards], whose
+ * The plainest cantrip body there is: `Triggers.self.enters()` carrying [Effects.DrawCards], whose
  * controller-drawing default is exactly what the printed line means.
  */
 val RovingHarper = card("Roving Harper") {
@@ -24,7 +24,7 @@ val RovingHarper = card("Roving Harper") {
     oracleText = "When this creature enters, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1)
         description = "When this creature enters, draw a card."
     }

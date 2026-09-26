@@ -19,9 +19,9 @@ import kotlin.reflect.KClass
  * Used for Sarkhan, the Dragonspeaker's +1 and similar "becomes a creature" effects.
  * Creates all floating effects atomically to avoid validation issues with intermediate states.
  */
-class BecomeCreatureExecutor : EffectExecutor<BecomeCreatureEffect> {
-
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+class BecomeCreatureExecutor(
+    private val amountEvaluator: DynamicAmountEvaluator
+) : EffectExecutor<BecomeCreatureEffect> {
 
     override val effectType: KClass<BecomeCreatureEffect> = BecomeCreatureEffect::class
 

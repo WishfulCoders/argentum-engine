@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.composite
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.state.GameState
@@ -15,10 +16,13 @@ class ForEachTargetContextTest : FunSpec({
     test("a surviving target is rebound after an earlier target becomes illegal") {
         val survivingTarget = ChosenTarget.Permanent(EntityId("surviving-target"))
         val resolvedTargets = mutableListOf<ChosenTarget?>()
-        val executor = ForEachExecutor { state, _, context ->
-            resolvedTargets += context.positionalTarget(0)
-            EffectResult.success(state)
-        }
+        val executor = ForEachExecutor(
+            { state, _, context ->
+                resolvedTargets += context.positionalTarget(0)
+                EffectResult.success(state)
+            },
+            PredicateEvaluator(cardRegistry = null)
+        )
         val player = EntityId("player")
 
         val result = executor.execute(

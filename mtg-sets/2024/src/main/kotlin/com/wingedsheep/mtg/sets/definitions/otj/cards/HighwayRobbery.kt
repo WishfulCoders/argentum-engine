@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -39,12 +38,12 @@ val HighwayRobbery = card("Highway Robbery") {
         "on a later turn without paying its mana cost. Plot only as a sorcery.)"
 
     spell {
-        effect = ModalEffect(
+        effect = Effects.Modal(
             modes = listOf(
                 Mode(
                     effect = Effects.IfYouDo(
                         action = Effects.Discard(1, EffectTarget.Controller),
-                        ifYouDo = Effects.DrawCards(2)
+                        then = Effects.DrawCards(2)
                     ),
                     description = "Discard a card, then draw two cards"
                 ),
@@ -60,7 +59,7 @@ val HighwayRobbery = card("Highway Robbery") {
                             )
                             sacrifice(chosen)
                         },
-                        ifYouDo = Effects.DrawCards(2)
+                        then = Effects.DrawCards(2)
                     ),
                     description = "Sacrifice a land, then draw two cards"
                 )

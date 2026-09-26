@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever an artifact you control enters, this creature gets +2/+0 and gains trample until end of
  * turn.
  *
- * The Weldfast Wingsmith trigger shape — [Triggers.entersBattlefield] over
+ * The Weldfast Wingsmith trigger shape — `Triggers.a(filter).enters()` over
  * `Artifact.youControl()` with [TriggerBinding.ANY], so every artifact you control sets it off,
  * not only the source — feeding a self-targeted pump plus keyword grant.
  */
@@ -30,14 +30,9 @@ val SalivatingGremlins = card("Salivating Gremlins") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            binding = TriggerBinding.ANY
-        )
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 0, EffectTarget.Self),
+        trigger = Triggers.a(GameObjectFilter.Artifact.youControl()).enters()
+        effect = Effects.ModifyStats(2, 0, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
-        )
         description = "This creature gets +2/+0 and gains trample until end of turn."
     }
 

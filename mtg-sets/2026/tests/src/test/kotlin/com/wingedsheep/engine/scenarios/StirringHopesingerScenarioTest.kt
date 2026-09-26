@@ -15,7 +15,7 @@ import io.kotest.matchers.shouldBe
  *   Repartee — Whenever you cast an instant or sorcery spell that targets a creature,
  *   put a +1/+1 counter on each creature you control.
  *
- * Verifies the Repartee trigger (`Triggers.youCastSpell` over an instant/sorcery that targets a
+ * Verifies the Repartee trigger (`Triggers.you.casts(spell, requires)` over an instant/sorcery that targets a
  * creature) fires on a creature-targeting spell and counters every creature you control —
  * including Stirring Hopesinger itself — and does NOT fire on a non-targeting spell.
  */

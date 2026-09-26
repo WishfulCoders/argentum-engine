@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.BecomeCreatureTypeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -27,7 +27,7 @@ val MistformDreamer = card("Mistform Dreamer") {
 
     activatedAbility {
         cost = Costs.Mana("{1}")
-        effect = BecomeCreatureTypeEffect(
+        effect = Effects.BecomeCreatureType(
             target = EffectTarget.Self
         )
     }

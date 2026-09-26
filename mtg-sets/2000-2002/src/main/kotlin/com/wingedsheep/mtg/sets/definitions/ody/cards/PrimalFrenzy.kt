@@ -5,10 +5,11 @@
 package com.wingedsheep.mtg.sets.definitions.ody.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -23,7 +24,7 @@ val PrimalFrenzy = card("Primal Frenzy") {
     colorIdentity = "G"
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature\nEnchanted creature has trample."
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
     staticAbility {
         ability = GrantKeyword(Keyword.TRAMPLE)
     }

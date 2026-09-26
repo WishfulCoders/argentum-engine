@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -29,7 +28,7 @@ val WaterbendingScroll = card("Waterbending Scroll") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{6}"), Costs.Tap)
-        effect = DrawCardsEffect(1)
+        effect = Effects.DrawCards(1)
         genericCostReduction =
             DynamicAmounts.battlefield(Player.You, GameObjectFilter.Land.withSubtype("Island")).count()
     }

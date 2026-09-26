@@ -4,13 +4,12 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
@@ -38,20 +37,17 @@ val QutrubForayer = card("Qutrub Forayer") {
         "• Exile up to two target cards from a single graveyard."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseOne(
             // Mode 1: Destroy target creature that was dealt damage this turn.
-            Mode(
-                effect = Effects.Destroy(EffectTarget.ContextTarget(0)),
-                targetRequirements = listOf(
-                    TargetCreature(filter = TargetFilter.Creature.wasDealtDamageThisTurn())
-                ),
-                description = "Destroy target creature that was dealt damage this turn"
-            ),
+            mode("Destroy target creature that was dealt damage this turn") {
+                val creature = target(TargetFilter.Creature.wasDealtDamageThisTurn())
+                effect = Effects.Destroy(creature)
+            },
             // Mode 2: Exile up to two target cards from a single graveyard.
             Mode(
-                effect = ForEachTargetEffect(
-                    effects = listOf(Effects.Move(EffectTarget.ContextTarget(0), Zone.EXILE))
+                effect = Effects.ForEachTarget(
+                    Effects.Move(EffectTarget.ContextTarget(0), Zone.EXILE)
                 ),
                 targetRequirements = listOf(
                     TargetObject(

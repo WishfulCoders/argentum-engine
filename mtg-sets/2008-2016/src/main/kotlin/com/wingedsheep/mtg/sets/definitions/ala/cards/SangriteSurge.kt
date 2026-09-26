@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.ala.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sangrite Surge
@@ -24,11 +24,8 @@ val SangriteSurge = card("Sangrite Surge") {
     oracleText = "Target creature gets +3/+3 and gains double strike until end of turn."
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(3, 3, t),
-            Effects.GrantKeyword(Keyword.DOUBLE_STRIKE, t)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(3, 3, t) then Effects.GrantKeyword(Keyword.DOUBLE_STRIKE, t)
     }
 
     metadata {

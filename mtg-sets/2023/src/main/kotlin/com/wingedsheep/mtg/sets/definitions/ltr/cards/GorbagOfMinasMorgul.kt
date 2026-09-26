@@ -5,12 +5,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -32,14 +29,9 @@ val GorbagOfMinasMorgul = card("Gorbag of Minas Morgul") {
     oracleText = "Whenever a Goblin or Orc you control deals combat damage to a player, you may sacrifice it. When you do, choose one —\n• Draw a card.\n• Create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")"
 
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            damageType = DamageType.Combat,
-            recipient = RecipientFilter.AnyPlayer,
-            sourceFilter = (GameObjectFilter.Creature.withSubtype("Goblin") or
-                GameObjectFilter.Creature.withSubtype("Orc")).youControl(),
-            binding = TriggerBinding.ANY,
-        )
-        effect = ReflexiveTriggerEffect(
+        trigger = Triggers.a((GameObjectFilter.Creature.withSubtype("Goblin") or
+                GameObjectFilter.Creature.withSubtype("Orc")).youControl()).dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.ReflexiveTrigger(
             action = Effects.SacrificeTarget(EffectTarget.TriggeringEntity),
             optional = true,
             reflexiveEffect = ModalEffect.chooseOne(

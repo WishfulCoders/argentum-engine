@@ -15,6 +15,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Flame Fusillade — {3}{R} Sorcery (Ravnica: City of Guilds #123)
@@ -22,7 +23,8 @@ import io.kotest.matchers.shouldNotBe
  * "Until end of turn, permanents you control gain "{T}: This permanent deals 1 damage to any target.""
  *
  * The card is a `ForEachInGroup` fan-out of a [GrantActivatedAbilityEffect] onto
- * `EffectTarget.Self`, so everything worth proving is about where "Self" lands:
+ * `EffectTarget.IterationEntity`, and the granted ability's own `Self` is its host, so everything
+ * worth proving is about where that `Self` lands:
  *  - every permanent you control receives the grant — lands included, and a land that entered this
  *    turn can still pay `{T}` because summoning sickness gates only creatures (the card's ruling);
  *  - the `{T}` taps *that* permanent, and it is the source of the damage (CR 113.7);
@@ -59,7 +61,7 @@ class FlameFusilladeScenarioTest : FunSpec({
                 abilityId = grantedAbilityId,
                 targets = listOf(ChosenTarget.Player(d.player2))
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         d.bothPass()
 
         withClue("\"permanents you control\" includes lands, and {T} isn't gated by summoning sickness") {
@@ -90,7 +92,7 @@ class FlameFusilladeScenarioTest : FunSpec({
                 abilityId = grantedAbilityId,
                 targets = listOf(ChosenTarget.Permanent(theirs))
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         d.bothPass()
 
         withClue("1 damage is lethal to a 1/1, so the damage demonstrably landed") {
@@ -106,7 +108,7 @@ class FlameFusilladeScenarioTest : FunSpec({
                     abilityId = grantedAbilityId,
                     targets = listOf(ChosenTarget.Player(d.player1))
                 )
-            ).isSuccess shouldBe false
+            ).outcome shouldNotBe Outcome.Done
             d.getLifeTotal(d.player1) shouldBe 20
         }
     }
@@ -135,7 +137,7 @@ class FlameFusilladeScenarioTest : FunSpec({
                 abilityId = grantedAbilityId,
                 targets = listOf(ChosenTarget.Player(d.player2))
             )
-        ).isSuccess shouldBe false
+        ).outcome shouldNotBe Outcome.Done
         d.getLifeTotal(d.player2) shouldBe 20
     }
 })

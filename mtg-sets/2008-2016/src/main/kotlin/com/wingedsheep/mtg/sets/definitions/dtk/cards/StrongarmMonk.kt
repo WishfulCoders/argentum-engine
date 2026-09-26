@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Strongarm Monk
@@ -15,7 +16,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  * Whenever you cast a noncreature spell, creatures you control get +1/+1 until end of turn.
  *
  * A team pump rather than a self pump, so this is not prowess — a plain
- * [Triggers.YouCastNoncreature] trigger over [Patterns.Group.modifyStatsForAll], which iterates the
+ * `Triggers.you.casts(GameObjectFilter.Noncreature)` trigger over [Patterns.Group.modifyStatsForAll], which iterates the
  * group and applies the +1/+1 per creature (the source included; the printed noun is "creatures you
  * control", not "other creatures"). The `Duration.EndOfTurn` default spells "until end of turn".
  */
@@ -28,7 +29,7 @@ val StrongarmMonk = card("Strongarm Monk") {
     oracleText = "Whenever you cast a noncreature spell, creatures you control get +1/+1 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
         effect = Patterns.Group.modifyStatsForAll(1, 1, GroupFilter.AllCreaturesYouControl)
     }
 

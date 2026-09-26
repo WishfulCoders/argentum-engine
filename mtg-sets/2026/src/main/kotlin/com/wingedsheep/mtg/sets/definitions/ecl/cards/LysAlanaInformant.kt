@@ -23,12 +23,12 @@ val LysAlanaInformant = card("Lys Alana Informant") {
         "(Look at the top card of your library. You may put it into your graveyard.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.surveil(1)
     }
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Patterns.Library.surveil(1)
     }
 

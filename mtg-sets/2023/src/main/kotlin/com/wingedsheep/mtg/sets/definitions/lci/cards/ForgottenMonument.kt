@@ -36,7 +36,7 @@ val ForgottenMonument = card("Forgotten Monument") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Composite(Costs.Tap, Costs.PayLife(1)),
                 effect = Effects.AddManaOfChoice(),
                 isManaAbility = true,

@@ -11,6 +11,7 @@ import com.wingedsheep.sdk.scripting.GrantSubtype
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Red Mage's Rapier
@@ -40,8 +41,7 @@ val RedMagesRapier = card("Red Mage's Rapier") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.YouCastNoncreature.event,
-                binding = Triggers.YouCastNoncreature.binding,
+                trigger = Triggers.you.casts(GameObjectFilter.Noncreature),
                 effect = Effects.ModifyStats(2, 0, EffectTarget.Self, Duration.EndOfTurn)
             ),
             filter = Filters.EquippedCreature

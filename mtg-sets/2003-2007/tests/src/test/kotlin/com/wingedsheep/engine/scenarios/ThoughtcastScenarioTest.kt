@@ -20,7 +20,7 @@ import io.kotest.matchers.shouldNotBe
  */
 class ThoughtcastScenarioTest : ScenarioTestBase() {
 
-    private val costCalculator by lazy { CostCalculator(cardRegistry) }
+    private val costCalculator by lazy { CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator) }
 
     init {
         fun boardWithArtifacts(count: Int) = run {

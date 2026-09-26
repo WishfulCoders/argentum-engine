@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -11,16 +10,10 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sandworm
@@ -34,7 +27,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * A Stone-Rain-shaped land destruction stapled to an ETB, with the same Path-to-Exile-style
  * compensation as [com.wingedsheep.mtg.sets.definitions.sos.cards.Erode]: the destroy resolves
  * first, then the destroyed land's controller — not Sandworm's controller — gets the optional
- * search, so the [MayEffect] gate is delegated to [EffectTarget.TargetController] and the search
+ * search, so the [Effects.May] gate is delegated to [EffectTarget.TargetController] and the search
  * pipeline is scoped to [Player.ControllerOf] (library to gather from, battlefield to put the basic
  * onto tapped, and the library to shuffle). "Its controller" resolves from the targeted land at
  * resolution; since the land has just left the battlefield, it falls back to its owner (the standard
@@ -53,36 +46,29 @@ val Sandworm = card("Sandworm") {
     keywords(Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val land = target("target land", Targets.Land)
-        effect = Effects.Destroy(land) then MayEffect(
-            effect = Effects.Composite(
-                listOf(
-                    GatherCardsEffect(
-                        source = CardSource.FromZone(
-                            zone = Zone.LIBRARY,
-                            player = Player.ControllerOf("target"),
-                            filter = GameObjectFilter.BasicLand,
-                        ),
-                        storeAs = "searchable",
+        trigger = Triggers.self.enters()
+        val land = target(TargetFilter.Land)
+        effect = Effects.Destroy(land) then Effects.May(
+            effect = Effects.Pipeline {
+                val searchable = gather(
+                    CardSource.FromZone(
+                        zone = Zone.LIBRARY,
+                        player = Player.ControllerOf("target"),
+                        filter = GameObjectFilter.BasicLand,
                     ),
-                    SelectFromCollectionEffect(
-                        from = "searchable",
-                        selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                        chooser = Chooser.ControllerOfTarget,
-                        storeSelected = "found",
-                    ),
-                    MoveCollectionEffect(
-                        from = "found",
-                        destination = CardDestination.ToZone(
-                            zone = Zone.BATTLEFIELD,
-                            player = Player.ControllerOf("target"),
-                            placement = ZonePlacement.Tapped,
-                        ),
-                    ),
-                    ShuffleLibraryEffect(target = EffectTarget.TargetController),
-                ),
-            ),
+                    search = true
+                )
+                val found = chooseUpTo(1, from = searchable, chooser = Chooser.ControllerOfTarget)
+                move(
+                    found,
+                    CardDestination.ToZone(
+                        zone = Zone.BATTLEFIELD,
+                        player = Player.ControllerOf("target"),
+                        placement = ZonePlacement.Tapped,
+                    )
+                )
+                run(Effects.ShuffleLibrary(target = EffectTarget.TargetController))
+            },
             decisionMaker = EffectTarget.TargetController,
         )
     }

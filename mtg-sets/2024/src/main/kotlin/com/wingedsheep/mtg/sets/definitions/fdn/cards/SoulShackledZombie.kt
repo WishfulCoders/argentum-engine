@@ -1,16 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.fdn.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalOnCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -42,35 +37,18 @@ val SoulShackledZombie = card("Soul-Shackled Zombie") {
         "gain 2 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target(
-            "up to two target cards from a single graveyard",
-            TargetObject(
-                count = 2,
-                optional = true,
-                filter = TargetFilter.CardInGraveyard,
-                sameOwner = true
-            )
-        )
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.ChosenTargets,
-                storeAs = "ssz_exiled"
-            ),
-            MoveCollectionEffect(
-                from = "ssz_exiled",
-                destination = CardDestination.ToZone(Zone.EXILE)
-            ),
-            ConditionalOnCollectionEffect(
-                collection = "ssz_exiled",
-                filter = GameObjectFilter.Creature,
-                ifNotEmpty = Effects.Composite(
-                    Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent)),
-                    Effects.GainLife(2)
-                ),
-                ifEmpty = Effects.Composite(emptyList())
-            )
-        )
+        trigger = Triggers.self.enters()
+        targets(TargetFilter.CardInGraveyard, count = 2, optional = true, sameOwner = true)
+        effect = Effects.Pipeline {
+            val sszExiled = gather(CardSource.ChosenTargets)
+            exile(sszExiled)
+            ifNotEmpty(sszExiled, filter = GameObjectFilter.Creature) {
+                run(Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent)) then
+                    Effects.GainLife(2))
+            } orElse {
+                run(Effects.Nothing)
+            }
+        }
     }
 
     metadata {

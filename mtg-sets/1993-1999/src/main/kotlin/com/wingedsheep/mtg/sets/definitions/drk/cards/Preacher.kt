@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.TargetChooser
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Preacher
@@ -48,13 +46,10 @@ val Preacher = card("Preacher") {
     flags(AbilityFlag.MAY_NOT_UNTAP)
 
     activatedAbility {
+        val creature = target(TargetFilter.CreatureOpponentControls, chooser = TargetChooser.Opponent)
         cost = Costs.Tap
-        target = TargetCreature(
-            filter = TargetFilter.CreatureOpponentControls,
-            chooser = TargetChooser.Opponent,
-        )
         effect = Effects.GainControl(
-            EffectTarget.ContextTarget(0),
+            creature,
             Duration.WhileSourceTapped("this creature"),
         )
         description = "{T}: For as long as this creature remains tapped, gain control of target " +

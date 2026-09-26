@@ -5,13 +5,15 @@
 package com.wingedsheep.mtg.sets.definitions.por.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -26,15 +28,12 @@ val Starlight = card("Starlight") {
     typeLine = "Sorcery"
     oracleText = "You gain 3 life for each black creature target opponent controls."
     spell {
-        val t = target("target", TargetOpponent())
-        effect = GainLifeEffect(
-            DynamicAmount.Multiply(
-                DynamicAmount.AggregateBattlefield(
-                    Player.TargetOpponent,
-                    GameObjectFilter.Creature.withColor(Color.BLACK)
-                ),
-                3
-            )
+        val t = target(Targets.Opponent)
+        effect = Effects.GainLife(
+            DynamicAmounts.battlefield(
+                Player.TargetOpponent,
+                GameObjectFilter.Creature.withColor(Color.BLACK)
+            ).count() * 3
         )
     }
     metadata {

@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
@@ -61,8 +60,8 @@ val IshgardTheHolySee = card("Ishgard, the Holy See") {
                     zone = Zone.GRAVEYARD
                 )
             )
-            effect = ForEachTargetEffect(
-                effects = listOf(Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND))
+            effect = Effects.ForEachTarget(
+                Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND)
             )
         }
     }

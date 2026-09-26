@@ -4,6 +4,7 @@ import com.wingedsheep.assay.syntax.ParseOutcome
 import com.wingedsheep.assay.syntax.parseLine
 import com.wingedsheep.assay.syntax.printLine
 import com.wingedsheep.sdk.core.AbilityFlag
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.scripting.Duration
@@ -42,7 +43,7 @@ class SequencesTest : StringSpec({
     "two sentences on one line are one composite" {
         fragment("Draw a card. You gain 2 life.") shouldBe CardFragment(
             script = CardScript(
-                spellEffect = Effects.Composite(listOf(Effects.DrawCards(1), Effects.GainLife(2)))
+                spellEffect = Effects.DrawCards(1) then Effects.GainLife(2)
             )
         )
         roundTrips("Draw a card. You gain 2 life.")
@@ -54,12 +55,7 @@ class SequencesTest : StringSpec({
     "a target is declared at its first mention and referred to afterwards" {
         fragment("Target creature gets +1/+3 until end of turn. Untap that creature.") shouldBe CardFragment(
             script = CardScript(
-                spellEffect = Effects.Composite(
-                    listOf(
-                        Effects.ModifyStats(1, 3, Targets.bound()),
-                        Effects.Untap(Targets.bound()),
-                    )
-                ),
+                spellEffect = Effects.ModifyStats(1, 3, Targets.bound()) then Effects.Untap(Targets.bound()),
                 targetRequirements = listOf(Targets.permanent(GameObjectFilter.Creature)),
             )
         )
@@ -80,12 +76,7 @@ class SequencesTest : StringSpec({
         )
         fragment("Untap target creature. It gets +2/+4 until end of turn.") shouldBe CardFragment(
             script = CardScript(
-                spellEffect = Effects.Composite(
-                    listOf(
-                        Effects.Untap(Targets.bound()),
-                        Effects.ModifyStats(2, 4, Targets.bound()),
-                    )
-                ),
+                spellEffect = Effects.Untap(Targets.bound()) then Effects.ModifyStats(2, 4, Targets.bound()),
                 targetRequirements = listOf(Targets.permanent(GameObjectFilter.Creature)),
             )
         )
@@ -150,16 +141,12 @@ class SequencesTest : StringSpec({
         fragment("Tap target creature. It doesn't untap during its controller's next untap step.") shouldBe
             CardFragment(
                 script = CardScript(
-                    spellEffect = Effects.Composite(
-                        listOf(
-                            Effects.Tap(Targets.bound()),
-                            Effects.GrantKeyword(
-                                AbilityFlag.DOESNT_UNTAP,
-                                Targets.bound(),
-                                Duration.UntilAfterAffectedControllersNextUntap,
-                            ),
-                        )
-                    ),
+                    spellEffect = Effects.Tap(Targets.bound()) then
+                        Effects.GrantKeyword(
+                            AbilityFlag.DOESNT_UNTAP,
+                            Targets.bound(),
+                            Duration.UntilAfterAffectedControllersNextUntap,
+                        ),
                     targetRequirements = listOf(Targets.permanent(GameObjectFilter.Creature)),
                 )
             )
@@ -176,12 +163,8 @@ class SequencesTest : StringSpec({
     "the source's name reads in a later clause as well as a first one" {
         fragment("Draw a card. Put a +1/+1 counter on ~.") shouldBe CardFragment(
             script = CardScript(
-                spellEffect = Effects.Composite(
-                    listOf(
-                        Effects.DrawCards(1),
-                        Effects.AddCounters("+1/+1", 1, EffectTarget.Self),
-                    )
-                )
+                spellEffect = Effects.DrawCards(1) then
+                    Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
             )
         )
         roundTrips("Draw a card. Put a +1/+1 counter on ~.")
@@ -198,12 +181,8 @@ class SequencesTest : StringSpec({
     "a later clause's pronoun reaches every verb the source's does" {
         fragment("Put two +1/+1 counters on target creature. Untap it.") shouldBe CardFragment(
             script = CardScript(
-                spellEffect = Effects.Composite(
-                    listOf(
-                        Effects.AddCounters("+1/+1", 2, Targets.bound()),
-                        Effects.Untap(Targets.bound()),
-                    )
-                ),
+                spellEffect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, Targets.bound()) then
+                    Effects.Untap(Targets.bound()),
                 targetRequirements = listOf(Targets.permanent(GameObjectFilter.Creature)),
             )
         )

@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.core.Zone
 
 /**
  * Market Gnome — The Lost Caverns of Ixalan #22
@@ -14,10 +15,10 @@ import com.wingedsheep.sdk.model.Rarity
  * When this creature is exiled from the battlefield while you're activating a craft ability,
  * you gain 1 life and draw a card.
  *
- * Ability 1 — [Triggers.Dies] (battlefield → graveyard). [Effects.Composite] of
+ * Ability 1 — `Triggers.self.dies()` (battlefield → graveyard). [Effects.Composite] of
  *   [Effects.GainLife] (1) then [Effects.DrawCards] (1), both defaulting to the controller.
  *
- * Ability 2 — [Triggers.ExiledAsCraftMaterial]: a SELF exile trigger gated on the craft-material
+ * Ability 2 — `Triggers.self.leaves(to = Zone.EXILE, asCraftMaterial = true)`: a SELF exile trigger gated on the craft-material
  *   fact stamped by the Craft cost payment (CR 702.167), so it fires only when this creature is
  *   exiled as a material to pay a craft ability's cost — not on removal-style exile, and never
  *   alongside the dies trigger (exile is not death). Same [Effects.Composite] payoff.
@@ -35,22 +36,16 @@ val MarketGnome = card("Market Gnome") {
 
     // When this creature dies, you gain 1 life and draw a card.
     triggeredAbility {
-        trigger = Triggers.Dies
-        effect = Effects.Composite(
-            Effects.GainLife(1),
-            Effects.DrawCards(1)
-        )
+        trigger = Triggers.self.dies()
+        effect = Effects.GainLife(1) then Effects.DrawCards(1)
         description = "When Market Gnome dies, you gain 1 life and draw a card."
     }
 
     // When this creature is exiled from the battlefield while you're activating a craft ability,
     // you gain 1 life and draw a card.
     triggeredAbility {
-        trigger = Triggers.ExiledAsCraftMaterial
-        effect = Effects.Composite(
-            Effects.GainLife(1),
-            Effects.DrawCards(1)
-        )
+        trigger = Triggers.self.leaves(to = Zone.EXILE, asCraftMaterial = true)
+        effect = Effects.GainLife(1) then Effects.DrawCards(1)
         description = "When Market Gnome is exiled from the battlefield while you're activating a " +
             "craft ability, you gain 1 life and draw a card."
     }

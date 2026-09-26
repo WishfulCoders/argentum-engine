@@ -7,10 +7,7 @@ package com.wingedsheep.mtg.sets.definitions.fdn.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -25,11 +22,8 @@ val JoustThrough = card("Joust Through") {
     typeLine = "Instant"
     oracleText = "Joust Through deals 3 damage to target attacking or blocking creature. You gain 1 life."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.AttackingOrBlockingCreature))
-        effect = Effects.Composite(
-            DealDamageEffect(3, t),
-            GainLifeEffect(1)
-        )
+        val t = target(TargetFilter.AttackingOrBlockingCreature)
+        effect = Effects.DealDamage(3, t) then Effects.GainLife(1)
     }
     metadata {
         rarity = Rarity.UNCOMMON

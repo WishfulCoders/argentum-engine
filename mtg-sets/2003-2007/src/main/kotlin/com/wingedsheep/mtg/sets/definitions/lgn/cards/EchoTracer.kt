@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.lgn.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Echo Tracer
@@ -23,8 +23,8 @@ val EchoTracer = card("Echo Tracer") {
     oracleText = "Morph {2}{U} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)\nWhen this creature is turned face up, return target creature to its owner's hand."
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        val t = target("creature", Targets.Creature)
+        trigger = Triggers.self.turnedFaceUp()
+        val t = target(TargetFilter.Creature)
         effect = Effects.ReturnToHand(t)
     }
 

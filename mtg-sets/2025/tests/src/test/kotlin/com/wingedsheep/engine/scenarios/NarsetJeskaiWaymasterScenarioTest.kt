@@ -21,7 +21,7 @@ import io.kotest.matchers.shouldBe
  *   At the beginning of your end step, you may discard your hand. If you do, draw cards equal to
  *   the number of spells you've cast this turn.
  *
- * Exercises the `MayEffect(IfYouDoEffect(discardHand, DrawCards(SpellsCastThisTurn)))` shape: the
+ * Exercises the `Effects.May(Effects.IfYouDo(discardHand, DrawCards(SpellsCastThisTurn)))` shape: the
  * draw count equals the number of spells cast that turn.
  */
 class NarsetJeskaiWaymasterScenarioTest : FunSpec({

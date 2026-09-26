@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Whalebone Glider
@@ -26,7 +27,7 @@ val WhaleboneGlider = card("Whalebone Glider") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        val t = target("target", Targets.CreatureWithPowerAtMost(3))
+        val t = target(TargetFilter.Creature.powerAtMost(3))
         effect = Effects.GrantKeyword(Keyword.FLYING, t)
     }
 

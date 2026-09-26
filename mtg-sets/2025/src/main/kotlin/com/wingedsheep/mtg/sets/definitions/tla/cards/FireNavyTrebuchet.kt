@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Fire Navy Trebuchet
@@ -33,8 +33,8 @@ val FireNavyTrebuchet = card("Fire Navy Trebuchet") {
 
     // Whenever you attack, create a tapped-and-attacking Ballistic Boulder, sacrificed next end step.
     triggeredAbility {
-        trigger = Triggers.YouAttack
-        effect = CreateTokenEffect(
+        trigger = Triggers.you.attacks()
+        effect = Effects.CreateToken(
             power = 2,
             toughness = 1,
             colors = setOf(), // colorless

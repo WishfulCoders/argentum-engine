@@ -2,11 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.war.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Aid the Fallen — War of the Spark #76 (canonical printing)
@@ -36,16 +34,11 @@ val AidTheFallen = card("Aid the Fallen") {
     spell {
         modal(chooseCount = 2, minChooseCount = 1) {
             mode("Return target creature card from your graveyard to your hand.") {
-                val creature = target("target", Targets.CreatureCardInYourGraveyard)
+                val creature = target(TargetFilter.CreatureInYourGraveyard)
                 effect = Effects.ReturnToHand(creature)
             }
             mode("Return target planeswalker card from your graveyard to your hand.") {
-                val planeswalker = target(
-                    "target",
-                    TargetObject(
-                        filter = TargetFilter.Planeswalker.ownedByYou().inZone(Zone.GRAVEYARD)
-                    )
-                )
+                val planeswalker = target(TargetFilter.Planeswalker.ownedByYou().inZone(Zone.GRAVEYARD))
                 effect = Effects.ReturnToHand(planeswalker)
             }
         }

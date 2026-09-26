@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Royal Treatment
@@ -29,11 +29,8 @@ val RoyalTreatment = card("Royal Treatment") {
         "Enchanted creature gets +1/+1 and has ward {1}.)"
 
     spell {
-        val t = target("target creature you control", Targets.CreatureYouControl)
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.HEXPROOF, t),
-            Effects.CreateRoleToken("Royal Role", t)
-        )
+        val t = target(TargetFilter.CreatureYouControl)
+        effect = Effects.GrantKeyword(Keyword.HEXPROOF, t) then Effects.CreateRoleToken("Royal Role", t)
     }
 
     metadata {

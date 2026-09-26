@@ -6,10 +6,9 @@ import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.targets.TargetOther
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Markov Retribution
@@ -44,28 +43,18 @@ val MarkovRetribution = card("Markov Retribution") {
                 effect = pumpAll
             }
             mode("Target Vampire you control deals damage equal to its power to another target creature") {
-                val vampire = target(
-                    "target Vampire you control",
-                    TargetCreature(filter = TargetFilter.Creature.withSubtype("Vampire").youControl())
-                )
-                val victim = target("another target creature", TargetOther(TargetCreature()))
-                effect = DealDamageEffect(DynamicAmounts.targetPower(0), victim, damageSource = vampire)
+                val vampire = target(TargetFilter.Creature.withSubtype("Vampire").youControl())
+                val victim = target(TargetOther(TargetObject(filter = TargetFilter.Creature)))
+                effect = Effects.DealDamage(DynamicAmounts.powerOf(vampire), victim, damageSource = vampire)
             }
             mode(
                 "Creatures you control get +1/+0 until end of turn and target Vampire you " +
                     "control deals damage equal to its power to another target creature"
             ) {
-                val vampire = target(
-                    "target Vampire you control",
-                    TargetCreature(filter = TargetFilter.Creature.withSubtype("Vampire").youControl())
-                )
-                val victim = target("another target creature", TargetOther(TargetCreature()))
-                effect = Effects.Composite(
-                    listOf(
-                        pumpAll,
-                        DealDamageEffect(DynamicAmounts.targetPower(0), victim, damageSource = vampire)
-                    )
-                )
+                val vampire = target(TargetFilter.Creature.withSubtype("Vampire").youControl())
+                val victim = target(TargetOther(TargetObject(filter = TargetFilter.Creature)))
+                effect = pumpAll then
+                    Effects.DealDamage(DynamicAmounts.powerOf(vampire), victim, damageSource = vampire)
             }
         }
     }

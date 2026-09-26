@@ -23,7 +23,7 @@ val Brushwagg = card("Brushwagg") {
     oracleText = "Whenever this creature blocks or becomes blocked, it gets -2/+2 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.BlocksOrBecomesBlockedBy(GameObjectFilter.Creature)
+        trigger = Triggers.self.blocksOrBecomesBlocked(GameObjectFilter.Creature)
         effect = Effects.ModifyStats(-2, 2, EffectTarget.Self)
     }
 

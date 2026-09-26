@@ -6,6 +6,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ChoiceType
 import com.wingedsheep.sdk.scripting.EntersWithChoice
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.effects.PreventionSourceFilter
 
 /**
  * Circle of Solace
@@ -24,7 +26,10 @@ val CircleOfSolace = card("Circle of Solace") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{W}")
-        effect = Effects.PreventNextDamageFromChosenCreatureType()
+        effect = Effects.PreventDamage(
+            sources = PreventionSourceFilter.Matching(GameObjectFilter.Creature.withChosenSubtype()),
+            nextInstanceOnly = true
+        )
     }
 
     metadata {

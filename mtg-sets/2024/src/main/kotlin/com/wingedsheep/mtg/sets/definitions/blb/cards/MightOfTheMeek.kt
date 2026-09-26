@@ -4,10 +4,9 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Might of the Meek
@@ -25,15 +24,13 @@ val MightOfTheMeek = card("Might of the Meek") {
     oracleText = "Target creature gains trample until end of turn. It also gets +1/+0 until end of turn if you control a Mouse.\nDraw a card."
 
     spell {
-        val creature = target("target creature to gain trample", Targets.Creature)
-        effect = Effects.GrantKeyword(Keyword.TRAMPLE, creature)
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.ControlCreatureOfType(Subtype("Mouse")),
-                    effect = Effects.ModifyStats(1, 0, creature)
-                )
-            )
-            .then(Effects.DrawCards(1))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.GrantKeyword(Keyword.TRAMPLE, creature) then
+            Effects.If(
+                condition = Conditions.ControlCreatureOfType(Subtype("Mouse")),
+                then = Effects.ModifyStats(1, 0, creature)
+            ) then
+            Effects.DrawCards(1)
     }
 
     metadata {

@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ferocious Werefox // Guard Change
@@ -38,7 +38,7 @@ val FerociousWerefox = card("Ferocious Werefox") {
             "gets +1/+1 and has trample.) " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            val t = target("target creature you control", Targets.CreatureYouControl)
+            val t = target(TargetFilter.CreatureYouControl)
             effect = Effects.CreateRoleToken("Monster Role", t)
         }
     }

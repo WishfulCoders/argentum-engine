@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -26,12 +25,12 @@ val Narcissism = card("Narcissism") {
     oracleText = "{G}, Discard a card: Target creature gets +2/+2 until end of turn.\n{G}, Sacrifice this enchantment: Target creature gets +2/+2 until end of turn."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{G}"), Costs.DiscardCard)
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(2, 2, t)
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{G}"), Costs.SacrificeSelf)
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(2, 2, t)
     }
     metadata {

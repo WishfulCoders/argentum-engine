@@ -24,7 +24,7 @@ import io.kotest.matchers.shouldBe
 class BroodstarScenarioTest : ScenarioTestBase() {
 
     private val projector = StateProjector()
-    private val costCalculator by lazy { CostCalculator(cardRegistry) }
+    private val costCalculator by lazy { CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator) }
 
     init {
         fun board(yourArtifacts: Int, opponentArtifacts: Int = 0) = run {

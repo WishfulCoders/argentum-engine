@@ -9,8 +9,7 @@ import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantMiracleToCardsInHand
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Lorehold, the Historian
@@ -49,11 +48,11 @@ val LoreholdTheHistorian = card("Lorehold, the Historian") {
 
     // At the beginning of each opponent's upkeep, you may discard a card. If you do, draw a card.
     triggeredAbility {
-        trigger = Triggers.EachOpponentUpkeep
-        effect = MayEffect(
-            IfYouDoEffect(
+        trigger = Triggers.anOpponent.beginningOf(Step.UPKEEP)
+        effect = Effects.May(
+            Effects.IfYouDo(
                 action = Patterns.Hand.discardCards(1),
-                ifYouDo = Effects.DrawCards(1)
+                then = Effects.DrawCards(1)
             )
         )
     }

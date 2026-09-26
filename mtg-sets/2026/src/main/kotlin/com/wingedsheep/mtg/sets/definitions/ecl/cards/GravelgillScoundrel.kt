@@ -6,8 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.SelectTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
@@ -25,20 +23,19 @@ val GravelgillScoundrel = card("Gravelgill Scoundrel") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         // The "may tap another untapped creature" is a resolution-time choice, not a target.
         // Selection happens via SelectTargetEffect after the player accepts the optional,
         // so declining doesn't force them to commit to one.
-        effect = ReflexiveTriggerEffect(
-            action = Effects.Composite(listOf(
-                SelectTargetEffect(
-                    requirement = TargetObject(
+        effect = Effects.ReflexiveTrigger(
+            action = Effects.Pipeline {
+                val creatureToTap = selectTarget(
+                    TargetObject(
                         filter = TargetFilter.OtherCreatureYouControl.untapped()
-                    ),
-                    storeAs = "creatureToTap"
-                ),
-                Effects.Tap(EffectTarget.PipelineTarget("creatureToTap"))
-            )),
+                    )
+                )
+                run(Effects.Tap(creatureToTap.asTarget))
+            },
             optional = true,
             reflexiveEffect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, EffectTarget.Self)
         )

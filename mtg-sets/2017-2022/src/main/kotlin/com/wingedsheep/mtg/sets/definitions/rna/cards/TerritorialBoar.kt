@@ -27,14 +27,9 @@ val TerritorialBoar = card("Territorial Boar") {
     oracleText = "Whenever a creature you control with power 4 or greater enters, this creature gets +1/+1 and gains vigilance until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.powerAtLeast(4).youControl(),
-            binding = TriggerBinding.ANY
-        )
-        effect = Effects.Composite(listOf(
-            Effects.ModifyStats(1, 1, EffectTarget.Self),
+        trigger = Triggers.a(GameObjectFilter.Creature.powerAtLeast(4).youControl()).enters()
+        effect = Effects.ModifyStats(1, 1, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.VIGILANCE, EffectTarget.Self)
-        ))
     }
 
     metadata {

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.multiplayer
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.YesNoDecision
 import com.wingedsheep.engine.handlers.DecisionHandler
 import com.wingedsheep.engine.mechanics.sba.permanent.CommanderZoneChoiceCheck
@@ -29,6 +30,7 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Commander in a multiplayer pod (issue #1456).
@@ -156,7 +158,7 @@ class CommanderPodTest : FunSpec({
     // =========================================================================
 
     /** The pod's state after the SBA has run once, so the loss checks read the same shape. */
-    fun GameState.afterCommanderDamageCheck(): GameState = CommanderDamageLossCheck().check(this).newState
+    fun GameState.afterCommanderDamageCheck(): GameState = CommanderDamageLossCheck(predicateEvaluator = PredicateEvaluator(cardRegistry = null)).check(this).newState
 
     test("one commander's damage does not pool across the defenders it hit") {
         val (driver, players) = podOfFour()
@@ -252,7 +254,7 @@ class CommanderPodTest : FunSpec({
         // One question per SBA pass, and it goes to the earliest seat in turn order that has one
         // pending — seat 0's commander is still in its command zone, so seat 1 is asked first.
         val first = check.check(state)
-        first.isPaused shouldBe true
+        (first.outcome is Outcome.Paused) shouldBe true
         val firstDecision = first.pendingDecision.shouldBeInstanceOf<YesNoDecision>()
         firstDecision.playerId shouldBe players[1]
 
@@ -261,14 +263,14 @@ class CommanderPodTest : FunSpec({
             it.with(com.wingedsheep.engine.state.components.identity.CommanderZoneChoiceAskedComponent)
         }
         val second = check.check(afterFirst)
-        second.isPaused shouldBe true
+        (second.outcome is Outcome.Paused) shouldBe true
         second.pendingDecision.shouldBeInstanceOf<YesNoDecision>().playerId shouldBe players[2]
     }
 
     test("no seat is asked about a commander that is still in its command zone") {
         val (driver, _) = podOfFour()
         val result = CommanderZoneChoiceCheck(DecisionHandler()).check(driver.state)
-        result.isPaused shouldBe false
+        (result.outcome is Outcome.Paused) shouldBe false
     }
 
     // =========================================================================

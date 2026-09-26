@@ -1,14 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.daybound
 import com.wingedsheep.sdk.dsl.nightbound
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Lambholt Raconteur // Lambholt Ravager (Innistrad: Crimson Vow)
@@ -20,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Back  — Lambholt Ravager (4/4): "Whenever you cast a noncreature spell, this creature deals 2 damage to
  *          each opponent"; Nightbound.
  *
- * A noncreature-cast pinger, following Thermo-Alchemist's [Triggers.YouCastNoncreature] +
+ * A noncreature-cast pinger, following Thermo-Alchemist's `Triggers.you.casts(GameObjectFilter.Noncreature)` +
  * [DealDamageEffect] to [EffectTarget.PlayerRef]([Player.EachOpponent]) rail. The night face doubles the
  * damage to 2. The back is a transformed face with no mana cost, so its color comes from a color
  * indicator (CR 204): `colorIndicator = "R"`.
@@ -36,8 +37,8 @@ private val LambholtRaconteurFront = card("Lambholt Raconteur") {
         "Daybound (If a player casts no spells during their own turn, it becomes night next turn.)"
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
-        effect = DealDamageEffect(1, EffectTarget.PlayerRef(Player.EachOpponent), damageSource = EffectTarget.Self)
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
+        effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent), damageSource = EffectTarget.Self)
         description = "This creature deals 1 damage to each opponent."
     }
     daybound()
@@ -61,8 +62,8 @@ private val LambholtRavager = card("Lambholt Ravager") {
         "Nightbound (If a player casts at least two spells during their own turn, it becomes day next turn.)"
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
-        effect = DealDamageEffect(2, EffectTarget.PlayerRef(Player.EachOpponent), damageSource = EffectTarget.Self)
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
+        effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.EachOpponent), damageSource = EffectTarget.Self)
         description = "This creature deals 2 damage to each opponent."
     }
     nightbound()

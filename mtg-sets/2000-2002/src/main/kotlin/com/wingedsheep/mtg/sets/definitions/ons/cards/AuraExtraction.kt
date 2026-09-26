@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Aura Extraction
@@ -22,7 +22,7 @@ val AuraExtraction = card("Aura Extraction") {
     oracleText = "Put target enchantment on top of its owner's library.\nCycling {2}"
 
     spell {
-        val t = target("target", Targets.Enchantment)
+        val t = target(TargetFilter.Enchantment)
         effect = Effects.Move(t, Zone.LIBRARY, ZonePlacement.Top)
     }
 

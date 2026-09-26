@@ -1,15 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Malamet Battle Glyph
@@ -33,21 +30,12 @@ val MalametBattleGlyph = card("Malamet Battle Glyph") {
         "creature you control entered this turn, put a +1/+1 counter on it. Then those creatures fight each other."
 
     spell {
-        val mine = target(
-            "target creature you control",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.youControl()))
-        )
-        val theirs = target(
-            "target creature you don't control",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.opponentControls()))
-        )
-        effect = ConditionalEffect(
-            condition = Conditions.TargetMatchesFilter(
-                GameObjectFilter.Any.enteredThisTurn(),
-                targetIndex = 0
-            ),
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0))
-        ).then(Effects.Fight(mine, theirs))
+        val mine = target(TargetFilter(GameObjectFilter.Creature.youControl()))
+        val theirs = target(TargetFilter(GameObjectFilter.Creature.opponentControls()))
+        effect = Effects.If(
+            condition = Conditions.TargetMatchesFilter(GameObjectFilter.Any.enteredThisTurn(), mine),
+            then = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, mine)
+        ) then Effects.Fight(mine, theirs)
     }
 
     metadata {

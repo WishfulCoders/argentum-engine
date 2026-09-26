@@ -24,7 +24,7 @@ val ScaldingDevil = card("Scalding Devil") {
 
     activatedAbility {
         cost = Costs.Mana("{2}{R}")
-        val victim = target("target", Targets.PlayerOrPlaneswalker)
+        val victim = target(Targets.PlayerOrPlaneswalker)
         effect = Effects.DealDamage(1, victim)
     }
 

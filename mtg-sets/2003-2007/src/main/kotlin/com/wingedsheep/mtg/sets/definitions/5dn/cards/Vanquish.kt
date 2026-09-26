@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -24,7 +23,7 @@ val Vanquish = card("Vanquish") {
     typeLine = "Instant"
     oracleText = "Destroy target blocking creature."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.BlockingCreature))
+        val t = target(TargetFilter.BlockingCreature)
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     metadata {

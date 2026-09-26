@@ -7,14 +7,9 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Starfall Invocation
@@ -42,22 +37,20 @@ val StarfallInvocation = card("Starfall Invocation") {
             ),
             // Mode 2: Gift a card — opponent draws, destroy all creatures, then return one of yours
             Mode.noTarget(
-                Effects.Composite(listOf(
-                    DrawCardsEffect(1, EffectTarget.PlayerRef(Player.ChosenOpponent)),
-                    Effects.DestroyAll(GameObjectFilter.Creature, storeDestroyedAs = "destroyed"),
-                    SelectFromCollectionEffect(
-                        from = "destroyed",
-                        selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
+                Effects.Pipeline {
+                    run(Effects.DrawCards(1, EffectTarget.PlayerRef(Player.ChosenOpponent)))
+                    val destroyed = runStoringCollection {
+                        Effects.DestroyAll(GameObjectFilter.Creature, storeDestroyedAs = it)
+                    }
+                    val returned = chooseUpTo(
+                        1,
+                        from = destroyed,
                         filter = GameObjectFilter.Creature.ownedByYou(),
-                        storeSelected = "returned",
                         prompt = "Choose a creature card put into your graveyard this way to return to the battlefield"
-                    ),
-                    MoveCollectionEffect(
-                        from = "returned",
-                        destination = CardDestination.ToZone(Zone.BATTLEFIELD)
-                    ),
-                    Effects.GiftGiven()
-                )),
+                    )
+                    move(returned, CardDestination.ToZone(Zone.BATTLEFIELD))
+                    run(Effects.GiftGiven())
+                },
                 "Promise a gift — an opponent draws a card, then destroy all creatures and return one of yours to the battlefield"
             )
         )

@@ -38,31 +38,23 @@ val UrzasAvenger = card("Urza's Avenger") {
         cost = Costs.Free
         effect = ModalEffect.chooseOne(
             Mode.noTarget(
-                Effects.Composite(
-                    Effects.ModifyStats(-1, -1, EffectTarget.Self),
-                    Effects.GrantKeyword(Keyword.BANDING, EffectTarget.Self)
-                ),
+                Effects.ModifyStats(-1, -1, EffectTarget.Self) then
+                    Effects.GrantKeyword(Keyword.BANDING, EffectTarget.Self),
                 "This creature gets -1/-1 and gains banding until end of turn"
             ),
             Mode.noTarget(
-                Effects.Composite(
-                    Effects.ModifyStats(-1, -1, EffectTarget.Self),
-                    Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
-                ),
+                Effects.ModifyStats(-1, -1, EffectTarget.Self) then
+                    Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self),
                 "This creature gets -1/-1 and gains flying until end of turn"
             ),
             Mode.noTarget(
-                Effects.Composite(
-                    Effects.ModifyStats(-1, -1, EffectTarget.Self),
-                    Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.Self)
-                ),
+                Effects.ModifyStats(-1, -1, EffectTarget.Self) then
+                    Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.Self),
                 "This creature gets -1/-1 and gains first strike until end of turn"
             ),
             Mode.noTarget(
-                Effects.Composite(
-                    Effects.ModifyStats(-1, -1, EffectTarget.Self),
-                    Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
-                ),
+                Effects.ModifyStats(-1, -1, EffectTarget.Self) then
+                    Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self),
                 "This creature gets -1/-1 and gains trample until end of turn"
             ),
             countsAsModalSpell = false

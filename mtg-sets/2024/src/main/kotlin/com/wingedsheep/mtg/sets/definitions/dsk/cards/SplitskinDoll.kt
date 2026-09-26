@@ -6,8 +6,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
@@ -27,22 +25,20 @@ val SplitskinDoll = card("Splitskin Doll") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         // "draw a card. Then discard a card unless you control another creature with power 2 or
         // less." Modeled as draw, then a conditional discard gated on NOT controlling such a
         // creature — the discard only happens when the "unless" clause is unmet.
-        effect = Effects.Composite(
-            DrawCardsEffect(1),
-            ConditionalEffect(
+        effect = Effects.DrawCards(1) then
+            Effects.If(
                 condition = Conditions.Not(
                     Conditions.YouControl(
                         GameObjectFilter.Creature.powerAtMost(2),
                         excludeSelf = true
                     )
                 ),
-                effect = Patterns.Hand.discardCards(1)
+                then = Patterns.Hand.discardCards(1)
             )
-        )
     }
 
     metadata {

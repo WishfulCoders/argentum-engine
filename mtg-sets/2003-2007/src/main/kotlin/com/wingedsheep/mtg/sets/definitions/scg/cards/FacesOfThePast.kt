@@ -37,7 +37,7 @@ val FacesOfThePast = card("Faces of the Past") {
     )
 
     triggeredAbility {
-        trigger = Triggers.AnyCreatureDies
+        trigger = Triggers.a(GameObjectFilter.Creature).dies()
         effect = ModalEffect.chooseOne(
             Mode.noTarget(
                 Patterns.Group.tapAll(sharesTypeFilter),

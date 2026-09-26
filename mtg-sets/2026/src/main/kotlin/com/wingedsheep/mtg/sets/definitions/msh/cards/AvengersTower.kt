@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Avengers Tower
@@ -58,7 +57,7 @@ val AvengersTower = card("Avengers Tower") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{4}"), Costs.Tap)
         effect = Patterns.Library.lookAtTopRevealMatchingToHand(
-            count = DynamicAmount.Fixed(3),
+            count = 3,
             filter = GameObjectFilter.Any.withSubtype(Subtype.HERO),
             prompt = "You may reveal a Hero card and put it into your hand",
             restOrder = CardOrder.ControllerChooses,

@@ -8,9 +8,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 
 /**
@@ -25,11 +24,8 @@ val PhyrexianArena = card("Phyrexian Arena") {
     typeLine = "Enchantment"
     oracleText = "At the beginning of your upkeep, you draw a card and you lose 1 life."
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.Composite(
-            DrawCardsEffect(1),
-            LoseLifeEffect(1, EffectTarget.Controller)
-        )
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.DrawCards(1) then Effects.LoseLife(1, EffectTarget.Controller)
     }
     metadata {
         rarity = Rarity.RARE

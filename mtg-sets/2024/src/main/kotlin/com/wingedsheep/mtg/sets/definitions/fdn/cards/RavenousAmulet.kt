@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fdn.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -22,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * {4}, {T}, Sacrifice this artifact: Each opponent loses life equal to the number of soul
  *   counters on this artifact.
  *
- * "Soul" is a passive storage counter (see [Counters.SOUL]) — no inherent rule; the first ability
+ * "Soul" is a passive storage counter (see [CounterType.SOUL]) — no inherent rule; the first ability
  * accumulates it and the second reads the count.
  */
 val RavenousAmulet = card("Ravenous Amulet") {
@@ -41,10 +40,7 @@ val RavenousAmulet = card("Ravenous Amulet") {
             Costs.Tap,
             Costs.Sacrifice(GameObjectFilter.Creature)
         )
-        effect = Effects.Composite(
-            Effects.DrawCards(1),
-            Effects.AddCounters(Counters.SOUL, 1, EffectTarget.Self)
-        )
+        effect = Effects.DrawCards(1) then Effects.AddCounters(CounterType.SOUL, 1, EffectTarget.Self)
         timing = TimingRule.SorcerySpeed
     }
 
@@ -58,7 +54,7 @@ val RavenousAmulet = card("Ravenous Amulet") {
             Costs.SacrificeSelf
         )
         effect = Effects.LoseLife(
-            amount = DynamicAmounts.lastKnownSourceCounters(CounterTypeFilter.Named(Counters.SOUL)),
+            amount = DynamicAmounts.lastKnownSourceCounters(CounterType.SOUL),
             target = EffectTarget.PlayerRef(Player.EachOpponent)
         )
     }

@@ -10,7 +10,8 @@ import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Nettlevine Blight
@@ -27,7 +28,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  * controller — precisely backwards for a card you play on an opponent's permanent, and it would
  * walk the Blight through your own board instead of eating theirs. [GrantTriggeredAbility] over the
  * default `Scope.AttachedTo` filter is what makes it right: the engine indexes a granted trigger on
- * the permanent it was granted to, so [Triggers.YourEndStep]'s `Player.You` and the pipeline's
+ * the permanent it was granted to, so `Triggers.you.beginningOf(Step.END)`'s `Player.You` and the pipeline's
  * [CardSource.ControlledPermanents] both read that permanent's controller. Inevitable End is the
  * same shape one step smaller.
  *
@@ -60,18 +61,16 @@ val NettlevineBlight = card("Nettlevine Blight") {
         "Enchanted permanent has \"At the beginning of your end step, sacrifice this permanent " +
         "and attach Nettlevine Blight to a creature or land you control.\""
 
-    auraTarget = TargetPermanent(filter = TargetFilter.CreatureOrLandPermanent)
+    auraTarget = TargetObject(filter = TargetFilter.CreatureOrLandPermanent)
 
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.YourEndStep.event,
-                binding = Triggers.YourEndStep.binding,
+                trigger = Triggers.you.beginningOf(Step.END),
                 effect = Effects.Pipeline {
                     run(Effects.SacrificeTarget(EffectTarget.Self))
                     val hosts = gather(
-                        CardSource.ControlledPermanents(filter = GameObjectFilter.CreatureOrLand),
-                        name = "newHosts"
+                        CardSource.ControlledPermanents(filter = GameObjectFilter.CreatureOrLand)
                     )
                     val newHost = chooseExactly(
                         1,
@@ -83,7 +82,7 @@ val NettlevineBlight = card("Nettlevine Blight") {
                         run(
                             Effects.AttachTargetEquipmentToCreature(
                                 equipmentTarget = EffectTarget.GrantingSource,
-                                creatureTarget = EffectTarget.PipelineTarget(newHost.key)
+                                creatureTarget = newHost.asTarget
                             )
                         )
                     }

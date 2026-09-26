@@ -4,10 +4,9 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreatureOrPlaneswalker
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Worthy Cost — Tarkir: Dragonstorm #99
@@ -25,7 +24,7 @@ val WorthyCost = card("Worthy Cost") {
     additionalCost(Costs.additional.SacrificePermanent(GameObjectFilter.Creature))
 
     spell {
-        val t = target("target", TargetCreatureOrPlaneswalker())
+        val t = target(Targets.CreatureOrPlaneswalker)
         effect = Effects.Move(t, Zone.EXILE)
     }
 

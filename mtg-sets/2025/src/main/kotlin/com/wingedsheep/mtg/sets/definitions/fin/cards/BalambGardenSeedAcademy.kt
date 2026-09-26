@@ -3,6 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -12,10 +13,8 @@ import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Balamb Garden, SeeD Academy // Balamb Garden, Airborne — Final Fantasy #272
@@ -53,7 +52,7 @@ private val BalambGardenAirborne = card("Balamb Garden, Airborne") {
 
     // Whenever Balamb Garden attacks, draw a card.
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.DrawCards(1)
     }
 
@@ -97,12 +96,12 @@ private val BalambGardenSeedAcademyFront = card("Balamb Garden, SeeD Academy") {
     // other Town you control.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{5}{G}{U}"), Costs.Tap)
-        effect = TransformEffect(EffectTarget.Self)
-        genericCostReduction = DynamicAmount.AggregateBattlefield(
-            player = Player.You,
-            filter = GameObjectFilter.Land.withSubtype("Town"),
+        effect = Effects.Transform(EffectTarget.Self)
+        genericCostReduction = DynamicAmounts.battlefield(
+            Player.You,
+            GameObjectFilter.Land.withSubtype("Town"),
             excludeSelf = true,
-        )
+        ).count()
     }
 
     metadata {

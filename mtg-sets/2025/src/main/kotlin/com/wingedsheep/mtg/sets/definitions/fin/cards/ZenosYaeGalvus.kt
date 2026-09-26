@@ -8,16 +8,11 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Zenos yae Galvus // Shinryu, Transcendent Rival (Final Fantasy #127)
@@ -46,13 +41,13 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  *  - The -2/-2 is a one-shot [ModifyStatsEffect] applied to `AllCreatures.other().otherThanTarget()`
  *    — every creature except the source (Zenos) and the chosen target — mirroring Infest.
  *  - "When the chosen creature leaves the battlefield, transform Zenos" is a reflexive delayed
- *    trigger scoped to the chosen creature ([Triggers.LeavesBattlefield] + `watchedTarget`). It
+ *    trigger scoped to the chosen creature (`Triggers.self.leaves()` + `watchedTarget`). It
  *    must survive across turns until that creature leaves, so it uses [DelayedTriggerExpiry.Never]
  *    with `fireOnce` (the end-of-turn cleanup only removes EndOfTurn triggers). `EffectTarget.Self`
  *    resolves to the delayed trigger's source — Zenos — when it fires.
- *  - The back's win condition is a broad [Triggers.AnyPlayerLosesGame] gated to the chosen player
+ *  - The back's win condition is a broad `Triggers.anyPlayer.losesGame()` gated to the chosen player
  *    via `triggerRestriction = TriggeringPlayerIs(Player.ChosenOpponent)`; [Effects.ChooseOpponent]
- *    (on [Triggers.TransformsToBack]) stores that opponent, and only an actual transform sets it.
+ *    (on `Triggers.self.transforms(true)`) stores that opponent, and only an actual transform sets it.
  */
 
 private val ShinryuTranscendentRival = card("Shinryu, Transcendent Rival") {
@@ -69,14 +64,14 @@ private val ShinryuTranscendentRival = card("Shinryu, Transcendent Rival") {
 
     // As this creature transforms into Shinryu, choose an opponent.
     triggeredAbility {
-        trigger = Triggers.TransformsToBack
+        trigger = Triggers.self.transforms(true)
         effect = Effects.ChooseOpponent("Choose an opponent")
         description = "As this creature transforms into Shinryu, choose an opponent."
     }
 
     // Burning Chains — When the chosen player loses the game, you win the game.
     triggeredAbility {
-        trigger = Triggers.AnyPlayerLosesGame
+        trigger = Triggers.anyPlayer.losesGame()
         triggerRestriction = Conditions.TriggeringPlayerIs(Player.ChosenOpponent)
         effect = Effects.WinGame(
             message = "Shinryu, Transcendent Rival — the chosen player lost the game"
@@ -107,30 +102,25 @@ private val ZenosYaeGalvusFront = card("Zenos yae Galvus") {
     // rider still resolves when opponents control none). Give every other creature -2/-2 until end
     // of turn, then, if a creature was chosen, set up the transform-watch on it.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val chosen = target(
-            "creature an opponent controls",
-            TargetPermanent(filter = TargetFilter.CreatureOpponentControls, optional = true)
-        )
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(
-                filter = GroupFilter.AllCreatures.other().otherThanTarget(),
-                effect = ModifyStatsEffect(-2, -2, EffectTarget.Self)
-            ),
-            ConditionalEffect(
+        trigger = Triggers.self.enters()
+        val chosen = target(TargetFilter.CreatureOpponentControls, optional = true)
+        effect = Effects.ForEachInGroup(
+            filter = GroupFilter.AllCreatures.other().otherThanTarget(),
+            effect = Effects.ModifyStats(-2, -2, EffectTarget.IterationEntity)
+        ) then
+            Effects.If(
                 condition = Conditions.EntityMatches(
-                    EffectTarget.ContextTarget(0),
+                    chosen,
                     GameObjectFilter.Creature
                 ),
-                effect = CreateDelayedTriggerEffect(
-                    trigger = Triggers.LeavesBattlefield,
+                then = Effects.CreateDelayedTrigger(
+                    trigger = Triggers.self.leaves(),
                     watchedTarget = chosen,
                     fireOnce = true,
                     expiry = DelayedTriggerExpiry.Never,
-                    effect = TransformEffect(EffectTarget.Self)
+                    effect = Effects.Transform(EffectTarget.Self)
                 )
             )
-        )
         description = "My First Friend — When Zenos yae Galvus enters, choose a creature an " +
             "opponent controls. Until end of turn, creatures other than Zenos yae Galvus and the " +
             "chosen creature get -2/-2. When the chosen creature leaves the battlefield, transform " +

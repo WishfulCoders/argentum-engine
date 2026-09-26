@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.shm.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Faerie Swarm
@@ -30,10 +30,10 @@ val FaerieSwarm = card("Faerie Swarm") {
     keywords(Keyword.FLYING)
 
     dynamicStats(
-        DynamicAmount.AggregateBattlefield(
+        DynamicAmounts.battlefield(
             Player.You,
             GameObjectFilter.Permanent.withColor(Color.BLUE)
-        )
+        ).count()
     )
 
     metadata {

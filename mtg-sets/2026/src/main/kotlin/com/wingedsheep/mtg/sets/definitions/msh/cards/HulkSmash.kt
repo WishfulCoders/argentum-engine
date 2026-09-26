@@ -1,17 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.teamwork
 import com.wingedsheep.sdk.dsl.teamworkModal
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * HULK SMASH! — Marvel Super Heroes #135
@@ -30,7 +26,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  *
  * Mode 2 is the Rabid Bite shape — one-sided damage whose source is the attacking creature, so
  * deathtouch/lifelink on it apply and the victim deals nothing back. Its amount reads *this*
- * mode's first target ([EntityReference.Target]`(0)` is scoped to the mode's own target list), and
+ * mode's first target ([EffectTarget.ContextTarget]`(0)` is scoped to the mode's own target list), and
  * it is read at resolution, so a pump between cast and resolution counts.
  */
 val HulkSmash = card("HULK SMASH!") {
@@ -49,26 +45,17 @@ val HulkSmash = card("HULK SMASH!") {
     spell {
         teamworkModal {
             mode("Destroy target noncreature artifact") {
-                val artifact = target(
-                    "target noncreature artifact",
-                    TargetPermanent(filter = TargetFilter(GameObjectFilter.Artifact.notCreature())),
-                )
+                val artifact = target(TargetFilter(GameObjectFilter.Artifact.notCreature()))
                 effect = Effects.Destroy(artifact)
             }
             mode(
                 "Target creature you control deals damage equal to its power to target creature " +
                     "an opponent controls",
             ) {
-                val yours = target("target creature you control", Targets.CreatureYouControl)
-                val theirs = target(
-                    "target creature an opponent controls",
-                    Targets.CreatureOpponentControls,
-                )
+                val yours = target(TargetFilter.CreatureYouControl)
+                val theirs = target(TargetFilter.CreatureOpponentControls)
                 effect = Effects.DealDamage(
-                    amount = DynamicAmount.EntityProperty(
-                        EntityReference.Target(0),
-                        EntityNumericProperty.Power,
-                    ),
+                    amount = DynamicAmounts.powerOf(yours),
                     target = theirs,
                     damageSource = yours,
                 )

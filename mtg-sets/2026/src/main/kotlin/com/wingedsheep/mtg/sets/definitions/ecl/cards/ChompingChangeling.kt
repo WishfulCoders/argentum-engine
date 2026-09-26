@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Chomping Changeling
@@ -29,11 +28,8 @@ val ChompingChangeling = card("Chomping Changeling") {
     keywords(Keyword.CHANGELING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val permanent = target(
-            "up to one target artifact or enchantment",
-            TargetPermanent(optional = true, filter = TargetFilter.ArtifactOrEnchantment)
-        )
+        trigger = Triggers.self.enters()
+        val permanent = target(TargetFilter.ArtifactOrEnchantment, optional = true)
         effect = Effects.Destroy(permanent)
     }
 

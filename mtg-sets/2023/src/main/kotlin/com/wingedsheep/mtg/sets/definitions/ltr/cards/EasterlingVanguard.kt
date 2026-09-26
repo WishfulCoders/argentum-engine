@@ -23,7 +23,7 @@ val EasterlingVanguard = card("Easterling Vanguard") {
         "It's also an Orc. If you don't control an Army, create a 0/0 black Orc Army creature token first.)"
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.Amass(1, "Orc")
     }
 

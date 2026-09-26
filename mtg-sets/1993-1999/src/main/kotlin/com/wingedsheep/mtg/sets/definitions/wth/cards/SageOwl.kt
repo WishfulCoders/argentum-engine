@@ -28,7 +28,7 @@ val SageOwl = card("Sage Owl") {
     toughness = 1
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.lookAtTopAndReorder(count = 4)
     }
     metadata {

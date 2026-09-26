@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
@@ -12,8 +12,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -31,7 +29,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *  - **Trigger** — "a Mountain you control" is any *land* with the Mountain subtype (a nonbasic dual
  *    with the type counts), so the filter is `Land.withSubtype(MOUNTAIN).youControl()` with an `ANY`
  *    binding rather than a basic-land-only filter.
- *  - **Threshold** — the counter goes on unconditionally, then a [ConditionalEffect] gated on the
+ *  - **Threshold** — the counter goes on unconditionally, then a [Effects.If] gated on the
  *    *live* count ([Conditions.SourceCounterCountAtLeast]`(QUEST, 6)`) fires the payoff, exactly
  *    like the Ascension cycle. "Six or more" (not "exactly six") matters because proliferate can
  *    overshoot six between triggers.
@@ -61,25 +59,18 @@ val LastLightOfDurinsDay = card("Last Light of Durin's Day") {
         "reveal it, put it into your hand, then shuffle.)"
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Land.withSubtype(Subtype.MOUNTAIN).youControl(),
-            binding = TriggerBinding.ANY
-        )
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.QUEST, 1, EffectTarget.Self),
-            ConditionalEffect(
-                condition = Conditions.SourceCounterCountAtLeast(Counters.QUEST, 6),
-                effect = Effects.Composite(
-                    Effects.SacrificeTarget(EffectTarget.Self),
+        trigger = Triggers.a(GameObjectFilter.Land.withSubtype(Subtype.MOUNTAIN).youControl()).enters()
+        effect = Effects.AddCounters(CounterType.QUEST, 1, EffectTarget.Self) then
+            Effects.If(
+                condition = Conditions.SourceCounterCountAtLeast(CounterType.QUEST, 6),
+                then = Effects.SacrificeTarget(EffectTarget.Self) then
                     Patterns.Library.searchMultipleZones(
                         zones = listOf(Zone.HAND, Zone.LIBRARY),
                         filter = GameObjectFilter.Any.withSubtype(Subtype.DRAGON),
                         count = 1,
                         destination = SearchDestination.BATTLEFIELD
                     )
-                )
             )
-        )
         description = "Whenever a Mountain you control enters, put a quest counter on this " +
             "enchantment. If it has six or more quest counters on it, sacrifice it. If you do, " +
             "search your hand and/or library for a Dragon card and put it onto the battlefield. " +

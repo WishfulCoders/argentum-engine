@@ -2,13 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.dft.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Haunt the Network — Aetherdrift #207
@@ -36,25 +36,23 @@ val HauntTheNetwork = card("Haunt the Network") {
         "the number of artifacts you control."
 
     spell {
-        val opponent = target("target opponent", TargetOpponent())
-        val artifactsYouControl = DynamicAmount.Count(
+        val opponent = target(Targets.Opponent)
+        val artifactsYouControl = DynamicAmounts.count(
             Player.You,
             Zone.BATTLEFIELD,
             GameObjectFilter.Artifact
         )
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                power = 1,
-                toughness = 1,
-                creatureTypes = setOf("Thopter"),
-                keywords = setOf(Keyword.FLYING),
-                count = 2,
-                artifactToken = true,
-                imageUri = "https://cards.scryfall.io/normal/front/d/3/d38fc294-ad86-441e-96fe-4ca286a11218.jpg?1783907677",
-            ),
-            Effects.LoseLife(artifactsYouControl, opponent),
-            Effects.GainLife(artifactsYouControl),
-        )
+        effect = Effects.CreateToken(
+            power = 1,
+            toughness = 1,
+            creatureTypes = setOf("Thopter"),
+            keywords = setOf(Keyword.FLYING),
+            count = 2,
+            artifactToken = true,
+            imageUri = "https://cards.scryfall.io/normal/front/d/3/d38fc294-ad86-441e-96fe-4ca286a11218.jpg?1783907677",
+        ) then
+            Effects.LoseLife(artifactsYouControl, opponent) then
+            Effects.GainLife(artifactsYouControl)
     }
 
     metadata {

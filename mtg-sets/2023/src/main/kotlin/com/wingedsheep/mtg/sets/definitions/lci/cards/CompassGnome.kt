@@ -27,7 +27,7 @@ val CompassGnome = card("Compass Gnome") {
     power = 2
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.BasicLand or GameObjectFilter.Land.withSubtype("Cave"),

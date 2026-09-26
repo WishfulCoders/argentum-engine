@@ -45,14 +45,11 @@ val TheJollyBalloonMan = card("The Jolly Balloon Man") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
         timing = TimingRule.SorcerySpeed
-        val t = target(
-            "another target creature you control",
-            TargetOther(
+        val t = target(TargetOther(
                 baseRequirement = TargetObject(
                     filter = TargetFilter(GameObjectFilter.Creature.youControl())
                 )
-            )
-        )
+            ))
         effect = Effects.CreateTokenCopyOfTarget(
             target = t,
             overridePower = 1,

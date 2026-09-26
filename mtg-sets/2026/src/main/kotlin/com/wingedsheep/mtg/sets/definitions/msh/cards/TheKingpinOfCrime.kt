@@ -7,10 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AssignDamageEqualToToughness
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.Gate
-import com.wingedsheep.sdk.scripting.effects.GatedEffect
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
-import com.wingedsheep.sdk.scripting.effects.PayLifeEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -28,8 +24,8 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  *  - **Extort** (CR 702.101) has no `Keyword` of its own here, and it does not need one: it *is*
  *    exactly "whenever you cast a spell, you may pay {W/B}. If you do, each opponent loses 1 life
- *    and you gain that much life" — [Triggers.YouCastSpell] over [Patterns.Mechanic.extort], a
- *    [MayPayManaEffect] of the hybrid `{W/B}` over [Effects.DrainLife]`(1)`, shared with Blind
+ *    and you gain that much life" — `Triggers.you.casts()` over [Patterns.Mechanic.extort], an
+ *    [Effects.MayPay] of the hybrid `{W/B}` over [Effects.DrainLife]`(1)`, shared with Blind
  *    Obedience. The hybrid parses and pays as a hybrid symbol (either color, or two
  *    generic-equivalent sources of either), and `DrainLife(1)` is the single-event "each opponent
  *    loses 1, you gain that much" shape — so a multiplayer drain gains the total, not 1 per
@@ -40,7 +36,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *    `GatedEffectExecutor.canAfford` is `life >= amount`, so paying at exactly 2 life *is* offered:
  *    CR 118.3/118.3b bar only a payment you lack the life for, so paying down to 0 is legal, and it
  *    is the separate state-based action (CR 704.5a) that ends the game afterwards.
- *    Fires on [Triggers.YouAttack] (declare attackers, once per combat,
+ *    Fires on `Triggers.you.attacks()` (declare attackers, once per combat,
  *    regardless of whether the Kingpin himself attacks — he is a 1/5 that would rather stay home).
  *
  *  - **"creatures you control with toughness greater than their power"** stays a *dynamic* set for
@@ -81,7 +77,7 @@ val TheKingpinOfCrime = card("The Kingpin of Crime") {
     // Extort — whenever you cast a spell, you may pay {W/B}. If you do, each opponent loses 1
     // life and you gain that much life.
     triggeredAbility {
-        trigger = Triggers.YouCastSpell
+        trigger = Triggers.you.casts()
         effect = Patterns.Mechanic.extort()
         description = "Extort (Whenever you cast a spell, you may pay {W/B}. If you do, each " +
             "opponent loses 1 life and you gain that much life.)"
@@ -91,9 +87,9 @@ val TheKingpinOfCrime = card("The Kingpin of Crime") {
     // control with toughness greater than their power assign combat damage equal to their
     // toughness rather than their power.
     triggeredAbility {
-        trigger = Triggers.YouAttack
-        effect = GatedEffect(
-            gate = Gate.MayPay(PayLifeEffect(2)),
+        trigger = Triggers.you.attacks()
+        effect = Effects.MayPay(
+            cost = Effects.PayLife(2),
             then = Effects.GrantStaticAbility(
                 AssignDamageEqualToToughness(
                     filter = GroupFilter.AllCreaturesYouControl,

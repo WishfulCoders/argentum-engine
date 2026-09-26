@@ -19,12 +19,11 @@ import kotlin.reflect.KClass
  * against the configured minimum and delegates to the appropriate sub-effect.
  */
 class ConditionalOnCollectionExecutor(
-    private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult
+    private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult,
+    private val predicateEvaluator: PredicateEvaluator
 ) : EffectExecutor<ConditionalOnCollectionEffect> {
 
     override val effectType: KClass<ConditionalOnCollectionEffect> = ConditionalOnCollectionEffect::class
-
-    private val predicateEvaluator = PredicateEvaluator()
 
     override fun execute(
         state: GameState,

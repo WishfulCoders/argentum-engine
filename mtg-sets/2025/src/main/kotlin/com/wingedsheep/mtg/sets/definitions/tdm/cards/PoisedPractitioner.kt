@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
@@ -26,8 +26,8 @@ val PoisedPractitioner = card("Poised Practitioner") {
     oracleText = "Flurry — Whenever you cast your second spell each turn, put a +1/+1 counter on this creature. Scry 1."
 
     flurry {
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
-            .then(Patterns.Library.scry(1))
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self) then
+            Patterns.Library.scry(1)
     }
 
     metadata {

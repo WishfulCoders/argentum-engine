@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.mh3.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Wing It
@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Target creature gets +2/+2 until end of turn. Put a flying counter on it. Scry 1.
  *
  * One target, three sentences. "It" in the second sentence is the same chosen creature, so the pump
- * and the [Counters.FLYING] keyword counter both take the *same* target handle rather than each
+ * and the [CounterType.FLYING] keyword counter both take the *same* target handle rather than each
  * declaring one. The scry is not targeted at all — it's the spell's controller scrying — so it's
  * just a third step of the same resolution. Because there's a single target, an illegal target on
  * resolution counters the whole spell (CR 608.2b) and the scry doesn't happen either; that's
@@ -28,10 +28,10 @@ val WingIt = card("Wing It") {
     oracleText = "Target creature gets +2/+2 until end of turn. Put a flying counter on it. Scry 1."
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.ModifyStats(2, 2, creature)
-            .then(Effects.AddCounters(Counters.FLYING, 1, creature))
-            .then(Patterns.Library.scry(1))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 2, creature) then
+            Effects.AddCounters(CounterType.FLYING, 1, creature) then
+            Patterns.Library.scry(1)
     }
 
     metadata {

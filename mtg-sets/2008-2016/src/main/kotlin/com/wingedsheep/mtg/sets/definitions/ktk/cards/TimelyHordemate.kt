@@ -2,14 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
 
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -29,16 +27,9 @@ val TimelyHordemate = card("Timely Hordemate") {
     oracleText = "Raid — When Timely Hordemate enters, if you attacked this turn, return target creature card with mana value 2 or less from your graveyard to the battlefield."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouAttackedThisTurn
-        val t = target(
-            "target", TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.manaValueAtMost(2).ownedByYou(),
-                    zone = Zone.GRAVEYARD
-                )
-            )
-        )
+        val t = target(TargetFilter(GameObjectFilter.Creature.manaValueAtMost(2).ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.Move(t, Zone.BATTLEFIELD)
     }
 

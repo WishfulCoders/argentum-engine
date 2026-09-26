@@ -2,11 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Costs
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantProtection
-import com.wingedsheep.sdk.scripting.effects.GrantToEnchantedCreatureTypeGroupEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Crown of Awe
@@ -23,7 +24,7 @@ val CrownOfAwe = card("Crown of Awe") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature\nEnchanted creature has protection from black and from red.\nSacrifice Crown of Awe: Enchanted creature and other creatures that share a creature type with it gain protection from black and from red until end of turn."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = GrantProtection(Color.BLACK)
@@ -35,7 +36,7 @@ val CrownOfAwe = card("Crown of Awe") {
 
     activatedAbility {
         cost = Costs.SacrificeSelf
-        effect = GrantToEnchantedCreatureTypeGroupEffect(
+        effect = Effects.GrantToEnchantedCreatureTypeGroup(
             protectionColors = setOf(Color.BLACK, Color.RED)
         )
     }

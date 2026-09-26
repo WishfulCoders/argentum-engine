@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.collectEvidence
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 
 /**
@@ -25,7 +25,7 @@ import com.wingedsheep.sdk.scripting.effects.SearchDestination
  * The **branch** shape of the collect-evidence linkage, and the third distinct one in the set
  * alongside [VituGhaziInspector]'s intervening-if and [CrimestopperSprite]'s rider. Here neither
  * branch is optional and the spell always does *something*, so the condition is neither on the
- * trigger nor a bolted-on extra step: it is a [ConditionalEffect] whose `elseEffect` carries the
+ * trigger nor a bolted-on extra step: it is a [Effects.If] whose `elseEffect` carries the
  * un-upgraded search. "Instead" in the oracle text is literally an else.
  *
  * The optional cast cost rides the shared optional-additional-cost rail via `collectEvidence(8)`,
@@ -53,16 +53,16 @@ val AnalyzeThePollen = card("Analyze the Pollen") {
     collectEvidence(8)
 
     spell {
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.WasEvidenceCollected,
-            effect = Patterns.Library.searchLibrary(
+            then = Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.Creature or GameObjectFilter.Land,
                 count = 1,
                 destination = SearchDestination.HAND,
                 reveal = true,
                 shuffleAfter = true
             ),
-            elseEffect = Patterns.Library.searchLibrary(
+            otherwise = Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.BasicLand,
                 count = 1,
                 destination = SearchDestination.HAND,

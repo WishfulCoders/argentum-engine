@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Air Marshal
@@ -28,7 +27,7 @@ val AirMarshal = card("Air Marshal") {
 
     activatedAbility {
         cost = Costs.Mana("{3}")
-        val t = target("target", TargetPermanent(filter = TargetFilter.Permanent.withSubtype("Soldier")))
+        val t = target(TargetFilter.Permanent.withSubtype("Soldier"))
         effect = Effects.GrantKeyword(Keyword.FLYING, t)
     }
 

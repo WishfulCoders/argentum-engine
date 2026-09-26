@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -23,7 +22,7 @@ val EarlyFrost = card("Early Frost") {
     typeLine = "Instant"
     oracleText = "Tap up to three target lands."
     spell {
-        val t = target("target", TargetPermanent(optional = true, count = 3, filter = TargetFilter.Land))
+        targets(TargetFilter.Land, count = 3, optional = true)
         effect = Effects.TapEachTarget()
     }
     metadata {

@@ -71,8 +71,8 @@ class PersistentYieldsTest : ScenarioTestBase() {
                     triggeredAbilities = listOf(
                         TriggeredAbility(
                             id = seerAbilityId,
-                            trigger = Triggers.EntersBattlefield.event,
-                            binding = Triggers.EntersBattlefield.binding,
+                            trigger = Triggers.self.enters().event,
+                            binding = Triggers.self.enters().binding,
                             effect = GatedEffect(gate = Gate.MayDecide(), then = DrawCardsEffect(1))
                         )
                     )

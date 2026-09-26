@@ -9,8 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -30,11 +28,8 @@ val Cloudblazer = card("Cloudblazer") {
     toughness = 2
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            GainLifeEffect(2),
-            DrawCardsEffect(2)
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.GainLife(2) then Effects.DrawCards(2)
     }
     metadata {
         rarity = Rarity.UNCOMMON

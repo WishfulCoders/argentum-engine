@@ -1,16 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Altar of Shadows — Mirrodin #143 (canonical printing, only printing)
@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * At the beginning of your first main phase, add {B} for each charge counter on this artifact.
  * {7}, {T}: Destroy target creature. Then put a charge counter on this artifact.
  *
- * The mana trigger is [Triggers.FirstMainPhase] — the precombat main phase, which the 2004-10-04
+ * The mana trigger is `Triggers.you.beginningOf(Step.PRECOMBAT_MAIN)` — the precombat main phase, which the 2004-10-04
  * ruling is explicit about being the *first* main phase of the turn regardless of what else moved
  * around it. The amount is `countersOnSelf(charge)`, re-read each turn, so the altar ramps itself as
  * its activated ability feeds it counters.
@@ -36,20 +36,17 @@ val AltarOfShadows = card("Altar of Shadows") {
         "{7}, {T}: Destroy target creature. Then put a charge counter on this artifact."
 
     triggeredAbility {
-        trigger = Triggers.FirstMainPhase
+        trigger = Triggers.you.beginningOf(Step.PRECOMBAT_MAIN)
         effect = Effects.AddMana(
             Color.BLACK,
-            DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.CHARGE))
+            DynamicAmounts.countersOnSelf(CounterType.CHARGE)
         )
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{7}"), Costs.Tap)
-        val creature = target("creature", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.Destroy(creature),
-            Effects.AddCounters(Counters.CHARGE, 1, EffectTarget.Self)
-        )
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.Destroy(creature) then Effects.AddCounters(CounterType.CHARGE, 1, EffectTarget.Self)
         description = "{7}, {T}: Destroy target creature. Then put a charge counter on this artifact."
     }
 

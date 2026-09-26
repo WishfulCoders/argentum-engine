@@ -48,7 +48,7 @@ val FearlessSwashbuckler = card("Fearless Swashbuckler") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YouAttack
+        trigger = Triggers.you.attacks()
         interveningIf = Conditions.All(
             Conditions.YouControlAtLeast(
                 1,
@@ -59,10 +59,7 @@ val FearlessSwashbuckler = card("Fearless Swashbuckler") {
                 GameObjectFilter.Any.withSubtype(Subtype.VEHICLE).attackedThisCombat()
             ),
         )
-        effect = Effects.Composite(
-            Effects.DrawCards(3),
-            Effects.Discard(2),
-        )
+        effect = Effects.DrawCards(3) then Effects.Discard(2)
         description = "Whenever you attack, if a Pirate and a Vehicle attacked this combat, " +
             "draw three cards, then discard two cards."
     }

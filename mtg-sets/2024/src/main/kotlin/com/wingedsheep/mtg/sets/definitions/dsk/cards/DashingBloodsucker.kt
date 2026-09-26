@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -35,25 +34,18 @@ val DashingBloodsucker = card("Dashing Bloodsucker") {
 
     // Eerie trigger — part 1: whenever an enchantment you control enters
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Enchantment.youControl(),
-            binding = TriggerBinding.ANY,
-        )
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 0, EffectTarget.Self),
-            Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self),
-        )
+        trigger = Triggers.a(GameObjectFilter.Enchantment.youControl()).enters()
+        effect = Effects.ModifyStats(2, 0, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self)
         description = "Eerie — Whenever an enchantment you control enters, Dashing Bloodsucker " +
             "gets +2/+0 and gains lifelink until end of turn."
     }
 
     // Eerie trigger — part 2: whenever you fully unlock a Room
     triggeredAbility {
-        trigger = Triggers.RoomFullyUnlocked
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 0, EffectTarget.Self),
-            Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self),
-        )
+        trigger = Triggers.you.fullyUnlocksARoom()
+        effect = Effects.ModifyStats(2, 0, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self)
         description = "Eerie — Whenever you fully unlock a Room, Dashing Bloodsucker gets +2/+0 " +
             "and gains lifelink until end of turn."
     }

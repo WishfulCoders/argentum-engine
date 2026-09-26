@@ -5,12 +5,14 @@ plugins {
 }
 
 dependencies {
-    // The grammar parses straight into `mtg-sdk` types — there is no Assay IR — so the SDK is the
-    // ONLY production dependency. Deliberately NOT :rules-engine, NOT :mtg-sets, NOT :mtgish-tooling:
+    // The grammar parses straight into `mtg-sdk` types — there is no Assay IR — so the SDK (and its
+    // tooling module) are the ONLY production dependencies. Deliberately NOT :rules-engine, NOT :mtg-sets, NOT :mtgish-tooling:
     // Assay must never become a runtime card loader, and it must never inherit the incumbent
     // pipeline's vocabulary. kotlinx-serialization is here to read the Scryfall bulk, not to
     // (de)serialize SDK models.
     implementation(project(":mtg-sdk"))
+    // Card-JSON load/export and the validator — tooling over SDK data, not a card loader.
+    implementation(project(":mtg-sdk-tooling"))
     implementation(libs.kotlinxSerialization)
 
     testImplementation(libs.kotestRunner)

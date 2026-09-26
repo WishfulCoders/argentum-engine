@@ -54,10 +54,7 @@ val BolgsCompany = card("Bolg's Company") {
             Costs.Tap,
             Costs.SacrificeAnother(GameObjectFilter.Creature.withSubtype(Subtype.GOBLIN))
         )
-        effect = Effects.Composite(
-            Effects.AddMana(Color.BLACK),
-            Effects.AddMana(Color.RED)
-        )
+        effect = Effects.AddMana(Color.BLACK) then Effects.AddMana(Color.RED)
         manaAbility = true
         timing = TimingRule.ManaAbility
         description = "{T}, Sacrifice another Goblin: Add {B}{R}."

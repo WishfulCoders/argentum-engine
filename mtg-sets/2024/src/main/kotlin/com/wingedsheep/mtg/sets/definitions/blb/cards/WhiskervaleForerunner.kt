@@ -9,13 +9,6 @@ import com.wingedsheep.sdk.scripting.conditions.IsYourTurn
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -42,62 +35,39 @@ val WhiskervaleForerunner = card("Whiskervale Forerunner") {
     // Valiant trigger: look at top 5, may pick a creature MV≤3
     // If your turn: choose battlefield or hand. If not your turn: hand.
     triggeredAbility {
-        trigger = Triggers.Valiant
-        effect = Effects.Composite(listOf(
+        trigger = Triggers.self.becomesTarget(byYou = true, firstTimeEachTurn = true)
+        effect = Effects.Pipeline {
             // Look at top 5
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(5)),
-                storeAs = "looked"
-            ),
+            val looked = gather(CardSource.TopOfLibrary(5))
             // May reveal a creature with MV ≤ 3
-            SelectFromCollectionEffect(
-                from = "looked",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
+            val (kept, rest) = chooseUpToSplit(
+                1,
+                from = looked,
                 filter = GameObjectFilter.Creature.manaValueAtMost(3),
-                storeSelected = "kept",
-                storeRemainder = "rest",
                 prompt = "You may reveal a creature card with mana value 3 or less",
                 selectedLabel = "Reveal",
                 remainderLabel = "Put on bottom",
                 showAllCards = true
-            ),
+            )
             // Rest on bottom in random order
-            MoveCollectionEffect(
-                from = "rest",
-                destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
-                order = CardOrder.Random
-            ),
+            toLibraryBottom(rest, order = CardOrder.Random)
             // If your turn: choose to put on battlefield or hand
             // If not your turn: put in hand
-            ConditionalEffect(
+            run(Effects.If(
                 condition = IsYourTurn,
-                effect = Effects.Composite(listOf(
-                    SelectFromCollectionEffect(
-                        from = "kept",
-                        selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                        storeSelected = "toBattlefield",
-                        storeRemainder = "toHand",
+                then = Effects.Pipeline {
+                    val (toBattlefield, toHandCards) = chooseUpToSplit(
+                        1,
+                        from = kept,
                         selectedLabel = "Put onto the battlefield",
                         remainderLabel = "Put into your hand"
-                    ),
-                    MoveCollectionEffect(
-                        from = "toBattlefield",
-                        destination = CardDestination.ToZone(Zone.BATTLEFIELD),
-                        revealed = true
-                    ),
-                    MoveCollectionEffect(
-                        from = "toHand",
-                        destination = CardDestination.ToZone(Zone.HAND),
-                        revealed = true
                     )
-                )),
-                elseEffect = MoveCollectionEffect(
-                    from = "kept",
-                    destination = CardDestination.ToZone(Zone.HAND),
-                    revealed = true
-                )
-            )
-        ))
+                    move(toBattlefield, CardDestination.ToZone(Zone.BATTLEFIELD), revealed = true)
+                    toHand(toHandCards, revealed = true)
+                },
+                otherwise = Effects.Pipeline { toHand(kept, revealed = true) }
+            ))
+        }
     }
 
     metadata {

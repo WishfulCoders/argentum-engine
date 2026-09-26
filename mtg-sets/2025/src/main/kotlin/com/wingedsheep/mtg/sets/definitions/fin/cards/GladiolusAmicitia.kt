@@ -7,10 +7,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -29,7 +27,7 @@ val GladiolusAmicitia = card("Gladiolus Amicitia") {
     power = 6
     toughness = 6
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Land,
             destination = SearchDestination.BATTLEFIELD,
@@ -37,12 +35,9 @@ val GladiolusAmicitia = card("Gladiolus Amicitia") {
         )
     }
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(filter = GameObjectFilter.Land.youControl(), binding = TriggerBinding.ANY)
-        val t = target("target", TargetCreature(filter = TargetFilter.OtherCreatureYouControl))
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 2, t),
-            Effects.GrantKeyword(Keyword.TRAMPLE, t)
-        )
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
+        val t = target(TargetFilter.OtherCreatureYouControl)
+        effect = Effects.ModifyStats(2, 2, t) then Effects.GrantKeyword(Keyword.TRAMPLE, t)
     }
     metadata {
         rarity = Rarity.UNCOMMON

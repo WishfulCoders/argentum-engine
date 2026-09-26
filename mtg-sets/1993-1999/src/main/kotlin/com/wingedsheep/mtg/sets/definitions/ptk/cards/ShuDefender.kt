@@ -22,7 +22,7 @@ val ShuDefender = card("Shu Defender") {
     oracleText = "Whenever this creature blocks, it gets +0/+2 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         effect = Effects.ModifyStats(0, 2, EffectTarget.Self)
     }
 

@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.EntersWithChoice
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Edgewall Inn
@@ -56,12 +55,7 @@ val EdgewallInn = card("Edgewall Inn") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap, Costs.SacrificeSelf)
-        val adventurer = target(
-            "target card that has an Adventure in your graveyard",
-            TargetObject(
-                filter = TargetFilter(Filters.HasAdventure.ownedByYou(), zone = Zone.GRAVEYARD),
-            ),
-        )
+        val adventurer = target(TargetFilter(Filters.HasAdventure.ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.Move(adventurer, Zone.HAND)
         description = "{3}, {T}, Sacrifice this land: Return target card that has an Adventure " +
             "from your graveyard to your hand."

@@ -10,7 +10,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.events.SpellCastPredicate
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.TargetOther
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Appa, Steadfast Guardian — {2}{W}{W} Legendary Creature — Bison Ally — 3/4
@@ -41,16 +41,15 @@ val AppaSteadfastGuardian = card("Appa, Steadfast Guardian") {
     keywords(Keyword.FLASH, Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         target(
-            "any number of other target nonland permanents you control",
-            TargetOther(baseRequirement = TargetPermanent(unlimited = true, filter = TargetFilter.NonlandPermanent.youControl()))
+            TargetOther(baseRequirement = TargetObject(filter = TargetFilter.NonlandPermanent.youControl(), unlimited = true)),
         )
         effect = Effects.Airbend()
     }
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(requires = setOf(SpellCastPredicate.CastFromZone(Zone.EXILE)))
+        trigger = Triggers.you.casts(requires = setOf(SpellCastPredicate.CastFromZone(Zone.EXILE)))
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

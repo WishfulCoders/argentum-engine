@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 
 /**
  * Urza's Tome
@@ -24,16 +23,14 @@ val UrzasTome = card("Urza's Tome") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap)
-        effect = Effects.DrawCards(1)
-            .then(
-                PayOrSufferEffect(
-                    cost = Costs.pay.Exile(
-                        filter = GameObjectFilter.Historic,
-                        zone = Zone.GRAVEYARD,
-                        count = 1
-                    ),
-                    suffer = Patterns.Hand.discardCards(1)
-                )
+        effect = Effects.DrawCards(1) then
+            Effects.PayOrSuffer(
+                cost = Costs.pay.Exile(
+                    filter = GameObjectFilter.Historic,
+                    zone = Zone.GRAVEYARD,
+                    count = 1
+                ),
+                suffer = Patterns.Hand.discardCards(1)
             )
     }
 

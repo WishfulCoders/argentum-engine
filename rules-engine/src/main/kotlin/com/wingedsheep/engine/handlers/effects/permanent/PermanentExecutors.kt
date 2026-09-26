@@ -4,6 +4,7 @@ import com.wingedsheep.engine.handlers.DecisionHandler
 import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
 import com.wingedsheep.engine.handlers.effects.ExecutorModule
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.handlers.effects.permanent.abilities.GainAllActivatedAbilitiesOfExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.abilities.GrantActivatedAbilityExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.abilities.GrantActivatedAbilityToGroupExecutor
@@ -23,6 +24,7 @@ import com.wingedsheep.engine.handlers.effects.permanent.abilities.RemoveAllAbil
 import com.wingedsheep.engine.handlers.effects.permanent.abilities.RemoveKeywordExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.attachments.AttachEquipmentExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.attachments.AttachTargetEquipmentToCreatureExecutor
+import com.wingedsheep.engine.handlers.effects.permanent.attachments.AttachToChosenHostExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.attachments.UnattachEquipmentExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.attachments.GrantExileOnLeaveExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.control.ExchangeControlExecutor
@@ -51,6 +53,7 @@ import com.wingedsheep.engine.handlers.effects.permanent.protection.ChooseColorT
 import com.wingedsheep.engine.handlers.effects.permanent.protection.GrantCantBeBlockedByChosenColorExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.protection.GrantHexproofFromChosenColorExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.protection.GrantProtectionFromChosenColorExecutor
+import com.wingedsheep.engine.handlers.effects.permanent.protection.GrantProtectionsSharedByGroupExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.protection.GrantProtectionFromChosenCardTypeExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.stats.ModifyStatsExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.stats.SwitchPowerToughnessExecutor
@@ -93,11 +96,16 @@ import com.wingedsheep.engine.handlers.effects.permanent.types.ExileAndReturnTra
 import com.wingedsheep.engine.handlers.effects.permanent.types.ReturnSelfFromExileTransformedExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.types.ReturnSelfFromZoneTransformedExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.types.TransformEffectExecutor
+import com.wingedsheep.engine.handlers.effects.permanent.types.FlipEffectExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.types.TurnFaceDownExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.types.TurnFaceUpExecutor
 import com.wingedsheep.engine.handlers.effects.permanent.types.RevealFaceDownPermanentExecutor
 import com.wingedsheep.engine.mechanics.layers.StaticAbilityHandler
 import com.wingedsheep.engine.registry.CardRegistry
+import com.wingedsheep.sdk.scripting.effects.Effect
+import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.handlers.EffectContext
+import com.wingedsheep.engine.core.EffectResult
 
 /**
  * Module providing all permanent-related effect executors.
@@ -113,56 +121,43 @@ import com.wingedsheep.engine.registry.CardRegistry
  *  - `protection/` — color protection
  */
 class PermanentExecutors(
+    /**
+     * The registry's re-entrant entry point, so ExploreEffectExecutor / ConniveEffectExecutor can
+     * re-issue their action as a Composite(prefixEffect, action) when a ModifyKeywordAction
+     * replacement (CR 614) applies, and so the connive pipeline itself can be run.
+     */
+    private val recursion: (GameState, Effect, EffectContext) -> EffectResult,
+    private val zones: ZoneTransitionService,
     private val decisionHandler: DecisionHandler = DecisionHandler(),
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator(),
+    private val amountEvaluator: DynamicAmountEvaluator,
     private val cardRegistry: CardRegistry
 ) : ExecutorModule {
     private val staticAbilityHandler = StaticAbilityHandler(cardRegistry)
 
-    // Late-bound registry recursion, so ExploreEffectExecutor / ConniveEffectExecutor can re-issue
-    // their action as a Composite(prefixEffect, action) when a ModifyKeywordAction replacement
-    // (CR 614) applies, and so the connive pipeline itself can be run. Mirrors
-    // LibraryExecutors' recursion wiring; read through the ref at execution time so constructing
-    // this module before initialization (as some unit tests do) never trips over an unset property.
-    private val recursionRef =
-        java.util.concurrent.atomic.AtomicReference<((com.wingedsheep.engine.state.GameState, com.wingedsheep.sdk.scripting.effects.Effect, com.wingedsheep.engine.handlers.EffectContext) -> com.wingedsheep.engine.core.EffectResult)?>(null)
-
-    private val recursion: (com.wingedsheep.engine.state.GameState, com.wingedsheep.sdk.scripting.effects.Effect, com.wingedsheep.engine.handlers.EffectContext) -> com.wingedsheep.engine.core.EffectResult =
-        { state, effect, context ->
-            val executor = recursionRef.get()
-                ?: error("PermanentExecutors.initializeRecursion(...) was not called before a keyword-action executor ran")
-            executor(state, effect, context)
-        }
-
-    /** Late-bind the registry's recursive executor so the keyword-action executors can delegate. */
-    fun initializeRecursion(executor: (com.wingedsheep.engine.state.GameState, com.wingedsheep.sdk.scripting.effects.Effect, com.wingedsheep.engine.handlers.EffectContext) -> com.wingedsheep.engine.core.EffectResult) {
-        recursionRef.set(executor)
-    }
-
     override fun executors(): List<EffectExecutor<*>> = listOf(
         // counters
-        AddCountersExecutor(),
-        AddDynamicCountersExecutor(),
-        com.wingedsheep.engine.handlers.effects.permanent.counters.AddCountersUpToExecutor(),
-        MoveAllLastKnownCountersExecutor(),
-        AddCountersToCollectionExecutor(),
-        DoubleCountersExecutor(),
+        AddCountersExecutor(predicateEvaluator = zones.predicateEvaluator),
+        AddDynamicCountersExecutor(amountEvaluator = amountEvaluator),
+        com.wingedsheep.engine.handlers.effects.permanent.counters.AddCountersUpToExecutor(amountEvaluator = amountEvaluator),
+        MoveAllLastKnownCountersExecutor(predicateEvaluator = zones.predicateEvaluator),
+        AddCountersToCollectionExecutor(amountEvaluator = amountEvaluator),
+        DoubleCountersExecutor(predicateEvaluator = zones.predicateEvaluator),
         GrantCounterPlacementModifierExecutor(),
         RemoveCountersExecutor(),
-        RemoveAnyNumberOfCountersExecutor(),
+        RemoveAnyNumberOfCountersExecutor(amountEvaluator = amountEvaluator),
         com.wingedsheep.engine.handlers.effects.permanent.counters.PayCountersExecutor(),
         com.wingedsheep.engine.handlers.effects.permanent.counters.PayFixedCountersExecutor(),
         com.wingedsheep.engine.handlers.effects.permanent.counters.ConvertCountersToTokensExecutor(),
-        MoveCountersEachKindMissingExecutor(),
-        MoveCountersExecutor(),
+        MoveCountersEachKindMissingExecutor(predicateEvaluator = zones.predicateEvaluator),
+        MoveCountersExecutor(amountEvaluator = amountEvaluator),
         MoveChosenCountersToTargetExecutor(),
         RemoveAllCountersExecutor(),
         RemoveAllCountersOfTypeExecutor(),
         DistributeCountersFromSelfExecutor(),
-        DistributeCountersAmongTargetsExecutor(),
-        DistributeCountersAmongFilteredExecutor(),
-        ProliferateExecutor(),
-        com.wingedsheep.engine.handlers.effects.permanent.counters.EmitTrainedEventExecutor(),
+        DistributeCountersAmongTargetsExecutor(amountEvaluator = amountEvaluator),
+        DistributeCountersAmongFilteredExecutor(predicateEvaluator = zones.predicateEvaluator),
+        ProliferateExecutor(predicateEvaluator = zones.predicateEvaluator),
+        com.wingedsheep.engine.handlers.effects.permanent.counters.EmitTrainedEventExecutor(predicateEvaluator = zones.predicateEvaluator),
         // control
         ExchangeControlExecutor(),
         GainControlExecutor(),
@@ -178,7 +173,7 @@ class PermanentExecutors(
         AnimateLandExecutor(),
         BecomeArtifactExecutor(staticAbilityHandler),
         BecomeChosenManaColorExecutor(),
-        BecomeCreatureExecutor(),
+        BecomeCreatureExecutor(amountEvaluator = amountEvaluator),
         BecomeSaddledExecutor(),
         BecomeRenownedExecutor(),
         BecomeSolvedExecutor(),
@@ -190,23 +185,25 @@ class PermanentExecutors(
         ChooseColorForTargetExecutor(decisionHandler),
         ChangeColorExecutor(),
         ChangeColorToChosenExecutor(),
-        ChangeGroupColorExecutor(),
-        EachPermanentBecomesCopyOfTargetExecutor(),
+        ChangeGroupColorExecutor(predicateEvaluator = zones.predicateEvaluator),
+        EachPermanentBecomesCopyOfTargetExecutor(predicateEvaluator = zones.predicateEvaluator),
         BecomeCopyOfLinkedExileExecutor(),
         LoseAllCreatureTypesExecutor(),
-        MassAnimateExecutor(),
+        MassAnimateExecutor(predicateEvaluator = zones.predicateEvaluator),
         SetCreatureSubtypesExecutor(),
-        SetGroupCreatureSubtypesExecutor(),
-        TransformEffectExecutor(cardRegistry),
-        ReturnSelfFromExileTransformedExecutor(cardRegistry),
-        ReturnSelfFromZoneTransformedExecutor(cardRegistry),
-        ExileAndReturnTransformedExecutor(cardRegistry),
+        SetGroupCreatureSubtypesExecutor(predicateEvaluator = zones.predicateEvaluator),
+        TransformEffectExecutor(zones, cardRegistry),
+        FlipEffectExecutor(cardRegistry),
+        ReturnSelfFromExileTransformedExecutor(zones, cardRegistry),
+        ReturnSelfFromZoneTransformedExecutor(zones, cardRegistry),
+        ExileAndReturnTransformedExecutor(zones, cardRegistry),
         TurnFaceDownExecutor(),
         TurnFaceUpExecutor(cardRegistry),
         RevealFaceDownPermanentExecutor(),
         // attachments
         AttachEquipmentExecutor(),
-        AttachTargetEquipmentToCreatureExecutor(),
+        AttachTargetEquipmentToCreatureExecutor(zones.predicateEvaluator, cardRegistry),
+        AttachToChosenHostExecutor(zones.predicateEvaluator, cardRegistry),
         UnattachEquipmentExecutor(),
         GrantExileOnLeaveExecutor(),
         // stats
@@ -216,7 +213,7 @@ class PermanentExecutors(
         // abilities
         GrantActivatedAbilityExecutor(),
         GainAllActivatedAbilitiesOfExecutor(cardRegistry),
-        GrantActivatedAbilityToGroupExecutor(),
+        GrantActivatedAbilityToGroupExecutor(predicateEvaluator = zones.predicateEvaluator),
         GrantEmbalmExecutor(),
         GrantFlashbackExecutor(),
         GrantHarmonizeExecutor(),
@@ -231,11 +228,11 @@ class PermanentExecutors(
         LevelUpClassExecutor(staticAbilityHandler),
         IncrementAbilityResolutionCountExecutor(),
         MarkEnduringReturnExecutor(),
-        ExploreEffectExecutor(recursion),
+        ExploreEffectExecutor(zones, recursion),
         EmitExploredEventExecutor(),
         // connive (CR 701.50) — same shape as explore: the executor consults
         // ModifyKeywordAction replacements and delegates the pipeline through [recursion]
-        ConniveEffectExecutor(recursion),
+        ConniveEffectExecutor(recursion, predicateEvaluator = zones.predicateEvaluator),
         EmitConnivedEventExecutor(),
         // tapping
         TapUntapExecutor(),
@@ -253,6 +250,7 @@ class PermanentExecutors(
         ChooseColorThenExecutor(decisionHandler),
         GrantHexproofFromChosenColorExecutor(),
         GrantProtectionFromChosenColorExecutor(),
+        GrantProtectionsSharedByGroupExecutor(predicateEvaluator = zones.predicateEvaluator),
         GrantProtectionFromChosenCardTypeExecutor(),
         GrantCantBeBlockedByChosenColorExecutor()
     )

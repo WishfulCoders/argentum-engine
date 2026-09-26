@@ -6,10 +6,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Wisecrack
@@ -30,16 +28,14 @@ val Wisecrack = card("Wisecrack") {
         "Wisecrack deals 2 damage to that creature's controller."
 
     spell {
-        val creature = target("target creature", TargetCreature(filter = TargetFilter.Creature))
+        val creature = target(TargetFilter.Creature)
         effect = Effects.DealDamage(
-            DynamicAmounts.targetPower(0),
+            DynamicAmounts.powerOf(creature),
             creature,
             damageSource = creature,
-        ).then(
-            ConditionalEffect(
-                condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.attacking()),
-                effect = Effects.DealDamage(2, EffectTarget.TargetController),
-            ),
+        ) then Effects.If(
+            condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.attacking(), creature),
+            then = Effects.DealDamage(2, EffectTarget.TargetController),
         )
     }
 

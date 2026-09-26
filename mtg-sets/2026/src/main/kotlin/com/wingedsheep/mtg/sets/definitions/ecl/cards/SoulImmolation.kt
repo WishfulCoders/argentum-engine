@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.ChoiceSlot
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Costs
 
 /**
@@ -31,13 +30,13 @@ val SoulImmolation = card("Soul Immolation") {
 
     spell {
         effect = Effects.DealDamage(
-            DynamicAmount.CastChoice(ChoiceSlot.BLIGHT_AMOUNT),
+            DynamicAmounts.castChoice(ChoiceSlot.BLIGHT_AMOUNT),
             EffectTarget.PlayerRef(Player.EachOpponent)
         ) then Effects.ForEachInGroup(
             filter = GroupFilter.AllCreaturesOpponentsControl,
-            effect = DealDamageEffect(
-                DynamicAmount.CastChoice(ChoiceSlot.BLIGHT_AMOUNT),
-                EffectTarget.Self
+            effect = Effects.DealDamage(
+                DynamicAmounts.castChoice(ChoiceSlot.BLIGHT_AMOUNT),
+                EffectTarget.IterationEntity
             )
         )
     }

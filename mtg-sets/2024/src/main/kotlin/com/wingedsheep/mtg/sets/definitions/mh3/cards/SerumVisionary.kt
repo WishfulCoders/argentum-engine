@@ -27,8 +27,8 @@ val SerumVisionary = card("Serum Visionary") {
     oracleText = "When this creature enters, draw a card, then scry 2."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.DrawCards(1).then(Patterns.Library.scry(2))
+        trigger = Triggers.self.enters()
+        effect = Effects.DrawCards(1) then Patterns.Library.scry(2)
     }
 
     metadata {

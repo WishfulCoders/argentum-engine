@@ -10,20 +10,10 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -65,50 +55,25 @@ val FecundGreenshell = card("Fecund Greenshell") {
     // ETB: whenever this or another creature you control with toughness greater than
     // its power enters, look at the top card, if land may put onto battlefield tapped, else hand
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Creature.youControl().toughnessGreaterThanPower(),
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl().toughnessGreaterThanPower()).enters()
 
-        effect = Effects.Composite(listOf(
+        effect = Effects.Pipeline {
             // Look at top 1 card
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1)),
-                storeAs = "looked",
-            ),
+            val looked = gather(CardSource.TopOfLibrary(1))
             // Split into land and non-land
-            FilterCollectionEffect(
-                from = "looked",
-                filter = CollectionFilter.MatchesFilter(GameObjectFilter.Land),
-                storeMatching = "landCards",
-                storeNonMatching = "nonLandCards"
-            ),
+            val (landCards, nonLandCards) = filterSplit(looked, GameObjectFilter.Land)
             // For lands: player may put onto battlefield tapped, or keep in hand
-            SelectFromCollectionEffect(
-                from = "landCards",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "toBattlefield",
-                storeRemainder = "landsToHand",
+            val (toBattlefield, landsToHand) = chooseUpToSplit(
+                1,
+                from = landCards,
                 selectedLabel = "Put onto the battlefield tapped",
                 remainderLabel = "Put into your hand"
-            ),
-            MoveCollectionEffect(
-                from = "toBattlefield",
-                destination = CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped)
-            ),
-            MoveCollectionEffect(
-                from = "landsToHand",
-                destination = CardDestination.ToZone(Zone.HAND)
-            ),
-            // Non-lands go to hand
-            MoveCollectionEffect(
-                from = "nonLandCards",
-                destination = CardDestination.ToZone(Zone.HAND)
             )
-        ))
+            move(toBattlefield, CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped))
+            toHand(landsToHand)
+            // Non-lands go to hand
+            toHand(nonLandCards)
+        }
     }
 
     metadata {

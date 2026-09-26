@@ -18,13 +18,13 @@ import com.wingedsheep.sdk.scripting.filters.unified.Scope
  * Hexproof bypass is per-caster: only suppressors controlled by [casterId] grant the bypass.
  */
 object HexproofSuppression {
-    private val predicateEvaluator = PredicateEvaluator()
 
     fun isSuppressedForCaster(
         state: GameState,
         projected: ProjectedState,
         targetId: EntityId,
-        casterId: EntityId
+        casterId: EntityId,
+        predicateEvaluator: PredicateEvaluator
     ): Boolean {
         return state.getBattlefield().any { suppressorId ->
             val suppressorController = projected.getController(suppressorId)

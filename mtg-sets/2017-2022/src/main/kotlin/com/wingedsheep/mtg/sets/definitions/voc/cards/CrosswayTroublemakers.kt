@@ -2,15 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.voc.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -25,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * The two combat keywords are separate [GrantKeyword] statics over the same filter (attacking
  * Vampires you control — Crossway itself qualifies while attacking). The death trigger mirrors the
- * established "pay N life. If you do, draw" shape (Call of the Ring): a [MayEffect] whose
+ * established "pay N life. If you do, draw" shape (Call of the Ring): a [Effects.May] whose
  * consequence is `LoseLife` + `DrawCards`.
  */
 val CrosswayTroublemakers = card("Crossway Troublemakers") {
@@ -50,18 +47,9 @@ val CrosswayTroublemakers = card("Crossway Troublemakers") {
     }
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.withSubtype(Subtype.VAMPIRE).youControl(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY,
-        )
-        effect = MayEffect(
-            effect = Effects.Composite(
-                listOf(
-                    Effects.LoseLife(2, EffectTarget.Controller),
-                    Effects.DrawCards(1),
-                )
-            ),
+        trigger = Triggers.a(GameObjectFilter.Creature.withSubtype(Subtype.VAMPIRE).youControl()).dies()
+        effect = Effects.May(
+            effect = Effects.LoseLife(2, EffectTarget.Controller) then Effects.DrawCards(1),
             descriptionOverride = "You may pay 2 life. If you do, draw a card."
         )
     }

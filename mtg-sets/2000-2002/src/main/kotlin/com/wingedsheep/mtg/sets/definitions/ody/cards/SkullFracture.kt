@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -24,7 +24,7 @@ val SkullFracture = card("Skull Fracture") {
     typeLine = "Sorcery"
     oracleText = "Target player discards a card.\nFlashback {3}{B} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
     spell {
-        val t = target("target", TargetPlayer())
+        val t = target(Targets.Player)
         effect = Patterns.Hand.discardCards(1, t)
     }
     keywordAbility(KeywordAbility.flashback("{3}{B}"))

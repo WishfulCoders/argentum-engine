@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Badgermole
@@ -30,8 +29,8 @@ val Badgermole = card("Badgermole") {
         "Creatures you control with +1/+1 counters on them have trample."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val land = target("target land you control", TargetObject(filter = TargetFilter.Land.youControl()))
+        trigger = Triggers.self.enters()
+        val land = target(TargetFilter.Land.youControl())
         effect = Effects.Earthbend(2, land)
         description = "When this creature enters, earthbend 2."
     }
@@ -39,7 +38,7 @@ val Badgermole = card("Badgermole") {
     staticAbility {
         ability = GrantKeyword(
             Keyword.TRAMPLE,
-            GroupFilter(GameObjectFilter.Creature.youControl().withCounter(Counters.PLUS_ONE_PLUS_ONE)),
+            GroupFilter(GameObjectFilter.Creature.youControl().withCounter(CounterType.PLUS_ONE_PLUS_ONE)),
         )
     }
 

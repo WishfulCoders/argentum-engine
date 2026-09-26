@@ -1,11 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.m11.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * War Priest of Thune
@@ -28,10 +27,10 @@ val WarPriestOfThune = card("War Priest of Thune") {
     oracleText = "When this creature enters, you may destroy target enchantment."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        val enchantment = target(TargetFilter.Enchantment)
+        trigger = Triggers.self.enters()
         optional = true
-        target = Targets.Enchantment
-        effect = Effects.Destroy(EffectTarget.ContextTarget(0))
+        effect = Effects.Destroy(enchantment)
     }
 
     metadata {

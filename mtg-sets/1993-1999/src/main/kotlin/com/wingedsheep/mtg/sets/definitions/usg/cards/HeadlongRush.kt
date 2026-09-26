@@ -27,7 +27,7 @@ val HeadlongRush = card("Headlong Rush") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.attacking()),
-            Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.Self)
+            Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.IterationEntity)
         )
     }
     metadata {

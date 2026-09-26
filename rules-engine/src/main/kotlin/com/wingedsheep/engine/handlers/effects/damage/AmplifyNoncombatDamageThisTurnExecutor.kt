@@ -26,7 +26,7 @@ import kotlin.reflect.KClass
  * permanent or player this turn, it deals that much damage plus X instead."
  */
 class AmplifyNoncombatDamageThisTurnExecutor(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<AmplifyNoncombatDamageThisTurnEffect> {
 
     override val effectType: KClass<AmplifyNoncombatDamageThisTurnEffect> =

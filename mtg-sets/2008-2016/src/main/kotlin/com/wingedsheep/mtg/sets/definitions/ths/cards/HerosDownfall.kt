@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreatureOrPlaneswalker
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -23,7 +23,7 @@ val HerosDownfall = card("Hero's Downfall") {
     typeLine = "Instant"
     oracleText = "Destroy target creature or planeswalker."
     spell {
-        val t = target("target", TargetCreatureOrPlaneswalker())
+        val t = target(Targets.CreatureOrPlaneswalker)
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     metadata {

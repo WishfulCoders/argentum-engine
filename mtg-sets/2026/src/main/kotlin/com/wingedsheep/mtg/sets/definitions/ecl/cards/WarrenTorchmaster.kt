@@ -6,10 +6,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Warren Torchmaster
@@ -31,24 +29,20 @@ val WarrenTorchmaster = card("Warren Torchmaster") {
         "(To blight 1, put a -1/-1 counter on a creature you control.)"
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
         // The haste target is chosen at resolution of the reflexive trigger, not when this
         // ability triggers (per Scryfall ruling).
-        effect = ReflexiveTriggerEffect(
+        effect = Effects.ReflexiveTrigger(
             action = Patterns.Mechanic.blight(1),
             optional = true,
-            reflexiveEffect = Effects.GrantKeyword(
-                keyword = Keyword.HASTE,
-                target = EffectTarget.ContextTarget(0)
-            ),
-            reflexiveTargetRequirements = listOf(
-                TargetObject(
-                    filter = TargetFilter.Creature,
-                    id = "target creature to gain haste"
-                )
-            ),
             descriptionOverride = "You may blight 1. When you do, target creature gains haste until end of turn"
-        )
+        ) {
+            val creature = target(TargetFilter.Creature)
+            effect = Effects.GrantKeyword(
+                keyword = Keyword.HASTE,
+                target = creature
+            )
+        }
     }
 
     metadata {

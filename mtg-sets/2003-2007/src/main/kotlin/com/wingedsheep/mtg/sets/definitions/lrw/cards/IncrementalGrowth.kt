@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Incremental Growth
@@ -20,12 +20,12 @@ val IncrementalGrowth = card("Incremental Growth") {
     oracleText = "Put a +1/+1 counter on target creature, two +1/+1 counters on another target creature, and three +1/+1 counters on a third target creature."
 
     spell {
-        val first = target("first creature", TargetCreature())
-        val second = target("second creature", TargetCreature())
-        val third = target("third creature", TargetCreature())
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, first)
-            .then(Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, second))
-            .then(Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 3, third))
+        val first = target(TargetFilter.Creature)
+        val second = target(TargetFilter.Creature)
+        val third = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, first) then
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, second) then
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 3, third)
     }
 
     metadata {

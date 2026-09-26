@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
+import com.wingedsheep.sdk.core.CounterType
 
 /**
  * Effortless Master
@@ -29,7 +29,7 @@ val EffortlessMaster = card("Effortless Master") {
     keywords(Keyword.VIGILANCE, Keyword.MENACE)
 
     replacementEffect(EntersWithCounters(
-        counterType = CounterTypeFilter.PlusOnePlusOne,
+        counterType = CounterType.PLUS_ONE_PLUS_ONE,
         count = 2,
         selfOnly = true,
         condition = Conditions.YouCastSpellsThisTurn(atLeast = 2)

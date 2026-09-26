@@ -5,9 +5,9 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -23,7 +23,7 @@ val Tanglebloom = card("Tanglebloom") {
     oracleText = "{1}, {T}: You gain 1 life."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
-        effect = GainLifeEffect(1)
+        effect = Effects.GainLife(1)
     }
     metadata {
         rarity = Rarity.COMMON

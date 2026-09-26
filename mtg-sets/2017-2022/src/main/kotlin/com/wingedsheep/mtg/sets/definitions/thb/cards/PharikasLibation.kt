@@ -31,11 +31,11 @@ val PharikasLibation = card("Pharika's Libation") {
     spell {
         modal {
             mode("Target opponent sacrifices a creature of their choice") {
-                val opponent = target("target", Targets.Opponent)
+                val opponent = target(Targets.Opponent)
                 effect = Effects.Sacrifice(filter = GameObjectFilter.Creature, target = opponent)
             }
             mode("Target opponent sacrifices an enchantment of their choice") {
-                val opponent = target("target", Targets.Opponent)
+                val opponent = target(Targets.Opponent)
                 effect = Effects.Sacrifice(filter = GameObjectFilter.Enchantment, target = opponent)
             }
         }

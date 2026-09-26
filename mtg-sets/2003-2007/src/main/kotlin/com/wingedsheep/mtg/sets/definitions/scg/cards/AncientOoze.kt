@@ -1,12 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.Aggregation
-import com.wingedsheep.sdk.scripting.values.CardNumericProperty
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Ancient Ooze
@@ -22,13 +20,11 @@ val AncientOoze = card("Ancient Ooze") {
     oracleText = "Ancient Ooze's power and toughness are each equal to the total mana value of other creatures you control."
 
     dynamicStats(
-        DynamicAmount.AggregateBattlefield(
-            player = Player.You,
-            filter = GameObjectFilter.Creature,
-            aggregation = Aggregation.SUM,
-            property = CardNumericProperty.MANA_VALUE,
+        DynamicAmounts.battlefield(
+            Player.You,
+            GameObjectFilter.Creature,
             excludeSelf = true
-        )
+        ).sumManaValue()
     )
 
     metadata {

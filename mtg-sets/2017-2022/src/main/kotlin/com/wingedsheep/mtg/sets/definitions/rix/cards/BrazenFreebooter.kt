@@ -25,7 +25,7 @@ val BrazenFreebooter = card("Brazen Freebooter") {
     power = 3
     toughness = 3
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateTreasure(1)
     }
     metadata {

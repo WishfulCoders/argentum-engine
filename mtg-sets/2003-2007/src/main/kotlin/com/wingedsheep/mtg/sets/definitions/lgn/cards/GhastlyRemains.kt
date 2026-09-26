@@ -7,9 +7,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithRevealCounters
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Ghastly Remains
@@ -33,11 +33,11 @@ val GhastlyRemains = card("Ghastly Remains") {
     replacementEffect(EntersWithRevealCounters(countersPerReveal = 1))
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         triggerZone = Zone.GRAVEYARD
-        effect = MayPayManaEffect(
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{B}{B}{B}"),
-            effect = Effects.Move(EffectTarget.Self, Zone.HAND)
+            then = Effects.Move(EffectTarget.Self, Zone.HAND)
         )
     }
 

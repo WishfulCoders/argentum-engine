@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Flying
  * When you draw your third card in a turn, return this card from your graveyard to the battlefield tapped.
  *
- * Uses [Triggers.NthCardDrawn]`(3)` (CR 121.2) for the third-draw trigger, and
+ * Uses `Triggers.<player>.drawsNth(n)``(3)` (CR 121.2) for the third-draw trigger, and
  * [Effects.PutOntoBattlefieldFromGraveyard]`(Self, tapped = true)` for the recursion — the same
  * facade as Persistent Specimen / Reassembling Skeleton / Teacher's Pest, but triggered rather than
  * activated. The facade's `fromZone = GRAVEYARD` is the guard the printed line names: a Snacker
@@ -37,7 +37,7 @@ val SneakySnacker = card("Sneaky Snacker") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.NthCardDrawn(3)
+        trigger = Triggers.you.drawsNth(3)
         effect = Effects.PutOntoBattlefieldFromGraveyard(EffectTarget.Self, tapped = true)
         triggerZones = setOf(Zone.GRAVEYARD)
         description = "When you draw your third card in a turn, return this card from your graveyard to the battlefield tapped."

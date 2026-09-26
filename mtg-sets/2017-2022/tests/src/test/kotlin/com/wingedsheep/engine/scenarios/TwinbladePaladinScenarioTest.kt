@@ -15,7 +15,7 @@ import io.kotest.matchers.shouldBe
  * - Whenever you gain life, put a +1/+1 counter on this creature.
  * - As long as you have 25 or more life, this creature has double strike.
  *
- * Verifies the [com.wingedsheep.sdk.dsl.Triggers.YouGainLife] grow trigger and the
+ * Verifies the `Triggers.you.gainsLife()` grow trigger and the
  * [com.wingedsheep.sdk.dsl.Conditions.LifeAtLeast] (25) conditional double-strike static
  * ability, which turns on and off as the controller's life crosses the threshold.
  */

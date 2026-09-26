@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Unidentified Hovership
@@ -47,17 +46,14 @@ val UnidentifiedHovership = card("Unidentified Hovership") {
 
     // ETB: exile up to one target creature with toughness 5 or less, linked to this source.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target(
-            "up to one target creature with toughness 5 or less",
-            TargetCreature(optional = true, filter = TargetFilter.Creature.toughnessAtMost(5))
-        )
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature.toughnessAtMost(5), optional = true)
         effect = Effects.ExileUntilLeaves(creature)
     }
 
     // LTB: each owner of a card exiled with this Vehicle manifests dread.
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ForEachPlayer(
             players = Player.OwnersOfLinkedExile,
             effects = Patterns.Library.manifestDread().effects,

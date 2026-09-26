@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Eumidian Terrabotanist
@@ -21,7 +22,7 @@ val EumidianTerrabotanist = card("Eumidian Terrabotanist") {
 
     // Landfall trigger: whenever a land you control enters, you gain 1 life
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.GainLife(1, com.wingedsheep.sdk.scripting.targets.EffectTarget.Controller)
     }
 

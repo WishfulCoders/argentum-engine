@@ -23,7 +23,7 @@ val EnergyRefractor = card("Energy Refractor") {
         "{2}: Add one mana of any color."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1)
     }
 

@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Three Blind Mice
@@ -55,18 +54,12 @@ val ThreeBlindMice = card("Three Blind Mice") {
     }
 
     sagaChapter(2) {
-        val token = target(
-            "target token you control",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Permanent.token().youControl())),
-        )
+        val token = target(TargetFilter(GameObjectFilter.Permanent.token().youControl()))
         effect = Effects.CreateTokenCopyOfTarget(token)
     }
 
     sagaChapter(3) {
-        val token = target(
-            "target token you control",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Permanent.token().youControl())),
-        )
+        val token = target(TargetFilter(GameObjectFilter.Permanent.token().youControl()))
         effect = Effects.CreateTokenCopyOfTarget(token)
     }
 

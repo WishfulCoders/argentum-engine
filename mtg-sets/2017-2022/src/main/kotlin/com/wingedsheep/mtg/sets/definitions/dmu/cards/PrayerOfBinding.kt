@@ -9,9 +9,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -28,18 +26,12 @@ val PrayerOfBinding = card("Prayer of Binding") {
     oracleText = "Flash\nWhen this enchantment enters, exile up to one target nonland permanent an opponent controls until this enchantment leaves the battlefield. You gain 2 life."
     keywords(Keyword.FLASH)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "target",
-            TargetPermanent(optional = true, filter = TargetFilter.NonlandPermanentOpponentControls)
-        )
-        effect = Effects.Composite(
-            Effects.ExileUntilLeaves(t),
-            GainLifeEffect(2)
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.NonlandPermanentOpponentControls, optional = true)
+        effect = Effects.ExileUntilLeaves(t) then Effects.GainLife(2)
     }
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
     metadata {

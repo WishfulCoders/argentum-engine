@@ -22,7 +22,7 @@ val BeamsawProspector = card("Beamsaw Prospector") {
 
     // Death trigger: create a Lander token
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateLander()
     }
 

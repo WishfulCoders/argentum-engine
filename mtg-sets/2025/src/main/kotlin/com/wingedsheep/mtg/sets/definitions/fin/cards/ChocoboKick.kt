@@ -3,14 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Chocobo Kick
@@ -35,17 +34,17 @@ val ChocoboKick = card("Chocobo Kick") {
     keywordAbility(KeywordAbility.kicker(Costs.additional.ReturnToHand(GameObjectFilter.Land)))
 
     spell {
-        val yourCreature = target("creature you control", Targets.CreatureYouControl)
-        val theirCreature = target("creature an opponent controls", Targets.CreatureOpponentControls)
-        effect = ConditionalEffect(
+        val yourCreature = target(TargetFilter.CreatureYouControl)
+        val theirCreature = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.If(
             condition = WasKicked,
-            effect = Effects.DealDamage(
-                DynamicAmount.Multiply(DynamicAmounts.targetPower(0), 2),
+            then = Effects.DealDamage(
+                DynamicAmounts.powerOf(yourCreature) * 2,
                 theirCreature,
                 damageSource = yourCreature
             ),
-            elseEffect = Effects.DealDamage(
-                DynamicAmounts.targetPower(0),
+            otherwise = Effects.DealDamage(
+                DynamicAmounts.powerOf(yourCreature),
                 theirCreature,
                 damageSource = yourCreature
             )

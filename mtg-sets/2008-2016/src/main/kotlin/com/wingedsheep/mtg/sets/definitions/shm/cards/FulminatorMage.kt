@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Fulminator Mage
@@ -32,7 +31,7 @@ val FulminatorMage = card("Fulminator Mage") {
 
     activatedAbility {
         cost = Costs.SacrificeSelf
-        val t = target("target", TargetPermanent(filter = TargetFilter.NonbasicLand))
+        val t = target(TargetFilter.NonbasicLand)
         effect = Effects.Destroy(t)
     }
 

@@ -1,7 +1,8 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -9,10 +10,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantCardType
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.station
 
@@ -43,9 +42,9 @@ val InfiniteGuidelineStation = card("Infinite Guideline Station") {
 
     // ETB: create a tapped 2/2 colorless Robot artifact creature token for each multicolored permanent.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreateTokenEffect(
-            count = DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Multicolored),
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateToken(
+            count = DynamicAmounts.battlefield(Player.You, GameObjectFilter.Multicolored).count(),
             name = "Robot",
             power = 2,
             toughness = 2,
@@ -63,20 +62,20 @@ val InfiniteGuidelineStation = card("Infinite Guideline Station") {
 
     // Conditional type change: artifact creature at 12+ charge counters
     staticAbility {
-        condition = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 12)
+        condition = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 12)
         ability = GrantCardType("CREATURE", GroupFilter.source())
     }
 
     // Conditional keyword: flying at 12+ charge counters
     staticAbility {
-        condition = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 12)
+        condition = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 12)
         ability = GrantKeyword(Keyword.FLYING.name, GroupFilter.source())
     }
 
     // Whenever this attacks, draw a card for each multicolored permanent you control.
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.DrawCards(DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Multicolored))
+        trigger = Triggers.self.attacks()
+        effect = Effects.DrawCards(DynamicAmounts.battlefield(Player.You, GameObjectFilter.Multicolored).count())
         description = "Whenever Infinite Guideline Station attacks, draw a card for each multicolored permanent you control."
     }
 

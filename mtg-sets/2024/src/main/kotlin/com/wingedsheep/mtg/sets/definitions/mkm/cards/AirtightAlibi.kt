@@ -4,13 +4,14 @@ import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Airtight Alibi — Murders at Karlov Manor #149
@@ -54,15 +55,13 @@ val AirtightAlibi = card("Airtight Alibi") {
 
     keywords(Keyword.FLASH)
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Effects.Untap(EffectTarget.EnchantedCreature),
-            Effects.GrantHexproof(EffectTarget.EnchantedCreature),
+        trigger = Triggers.self.enters()
+        effect = Effects.Untap(EffectTarget.EnchantedCreature) then
+            Effects.GrantHexproof(EffectTarget.EnchantedCreature) then
             Effects.NoLongerSuspected(EffectTarget.EnchantedCreature)
-        )
         description = "When this Aura enters, untap enchanted creature. It gains hexproof until " +
             "end of turn. If it's suspected, it's no longer suspected."
     }

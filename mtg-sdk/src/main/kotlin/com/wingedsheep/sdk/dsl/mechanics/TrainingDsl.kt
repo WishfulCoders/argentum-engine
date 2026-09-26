@@ -1,6 +1,6 @@
 package com.wingedsheep.sdk.dsl
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
@@ -40,13 +40,13 @@ private const val TRAINING_REMINDER =
  * (Savior of Ollenbock) without any per-card wiring.
  */
 fun trainingTriggeredAbility(): TriggeredAbility {
-    val spec = Triggers.attacks(requires = setOf(AttackPredicate.AttackedAlongsideGreaterPower))
+    val spec = Triggers.self.attacks(setOf(AttackPredicate.AttackedAlongsideGreaterPower))
     return TriggeredAbility.create(
         trigger = spec.event,
         binding = spec.binding, // SELF
         effect = CompositeEffect(
             listOf(
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
+                Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
                 EmitTrainedEventEffect
             )
         ),

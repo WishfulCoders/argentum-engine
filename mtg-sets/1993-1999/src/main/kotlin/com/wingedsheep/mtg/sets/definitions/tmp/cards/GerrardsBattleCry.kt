@@ -24,7 +24,7 @@ val GerrardsBattleCry = card("Gerrard's Battle Cry") {
         cost = Costs.Mana("{2}{W}")
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(1, 1, EffectTarget.Self)
+            Effects.ModifyStats(1, 1, EffectTarget.IterationEntity)
         )
     }
 

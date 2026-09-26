@@ -30,14 +30,14 @@ val KeldonMarauders = card("Keldon Marauders") {
     keywordAbility(KeywordAbility.vanishing(2))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", Targets.PlayerOrPlaneswalker)
+        trigger = Triggers.self.enters()
+        val t = target(Targets.PlayerOrPlaneswalker)
         effect = Effects.DealDamage(1, t)
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
-        val t = target("target", Targets.PlayerOrPlaneswalker)
+        trigger = Triggers.self.leaves()
+        val t = target(Targets.PlayerOrPlaneswalker)
         effect = Effects.DealDamage(1, t)
     }
 

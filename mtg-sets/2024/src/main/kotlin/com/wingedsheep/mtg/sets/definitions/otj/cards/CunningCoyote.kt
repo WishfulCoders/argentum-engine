@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Cunning Coyote
@@ -34,12 +33,10 @@ val CunningCoyote = card("Cunning Coyote") {
     keywordAbility(KeywordAbility.plot("{1}{R}"))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetCreature(filter = TargetFilter.OtherCreatureYouControl))
-        effect = Effects.Composite(
-            Effects.ModifyStats(power = 1, toughness = 1, target = t),
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.OtherCreatureYouControl)
+        effect = Effects.ModifyStats(power = 1, toughness = 1, target = t) then
             Effects.GrantKeyword(Keyword.HASTE, target = t)
-        )
     }
 
     metadata {

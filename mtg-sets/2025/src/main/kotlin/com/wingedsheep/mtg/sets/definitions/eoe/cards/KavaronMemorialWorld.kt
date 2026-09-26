@@ -1,24 +1,18 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
-import com.wingedsheep.sdk.scripting.effects.AddManaEffect
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.station
 
@@ -40,14 +34,14 @@ val KavaronMemorialWorld = card("Kavaron, Memorial World") {
     // Basic mana ability: {T}: Add {R}
     activatedAbility {
         cost = Costs.Tap
-        effect = AddManaEffect(Color.RED)
+        effect = Effects.AddMana(Color.RED)
         manaAbility = true
     }
 
     // Station activated ability: tap another creature → add charge counters equal to its power
     station()
 
-    val charge12 = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 12)
+    val charge12 = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 12)
 
     activatedAbility {
         cost = Costs.Composite(
@@ -55,39 +49,26 @@ val KavaronMemorialWorld = card("Kavaron, Memorial World") {
             Costs.Tap,
             Costs.Sacrifice(GameObjectFilter.Land)
         )
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = charge12,
-            effect = Effects.Composite(
-                listOf(
-                    // Create a 2/2 colorless Robot artifact creature token
-                    CreateTokenEffect(
-                        power = 2,
-                        toughness = 2,
-                        colors = setOf(), // colorless
-                        creatureTypes = setOf("Robot"),
-                        artifactToken = true,
-                        imageUri = "https://cards.scryfall.io/normal/front/c/4/c46f9a07-005c-44b7-8057-b2f00b274dd6.jpg?1756281130"
-                    ),
-                    // Creatures you control get +1/+0 and gain haste until end of turn
-                    Effects.ForEachInGroup(
-                        GroupFilter.AllCreaturesYouControl,
-                        com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect(
-                            powerModifier = DynamicAmount.Fixed(1),
-                            toughnessModifier = DynamicAmount.Fixed(0),
-                            target = EffectTarget.Self,
-                            duration = com.wingedsheep.sdk.scripting.Duration.EndOfTurn
-                        )
-                    ),
-                    Effects.ForEachInGroup(
-                        GroupFilter.AllCreaturesYouControl,
-                        com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect(
-                            keyword = Keyword.HASTE,
-                            target = EffectTarget.Self,
-                            duration = com.wingedsheep.sdk.scripting.Duration.EndOfTurn
-                        )
-                    )
+            // Create a 2/2 colorless Robot artifact creature token
+            then = Effects.CreateToken(
+                power = 2,
+                toughness = 2,
+                colors = setOf(), // colorless
+                creatureTypes = setOf("Robot"),
+                artifactToken = true,
+                imageUri = "https://cards.scryfall.io/normal/front/c/4/c46f9a07-005c-44b7-8057-b2f00b274dd6.jpg?1756281130"
+            ) then
+                // Creatures you control get +1/+0 and gain haste until end of turn
+                Effects.ForEachInGroup(
+                    GroupFilter.AllCreaturesYouControl,
+                    Effects.ModifyStats(1, 0, EffectTarget.IterationEntity)
+                ) then
+                Effects.ForEachInGroup(
+                    GroupFilter.AllCreaturesYouControl,
+                    Effects.GrantKeyword(Keyword.HASTE, EffectTarget.IterationEntity)
                 )
-            )
         )
     }
 

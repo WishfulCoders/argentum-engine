@@ -10,7 +10,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Shadowfax, Lord of Horses
@@ -27,7 +27,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  *   `GrantKeyword(HASTE, Creature.withSubtype(Horse).youControl())`. Shadowfax is itself
  *   a Horse you control, so it grants itself haste too — matching the literal wording.
  * - "with lesser power" = the chosen hand card's power is strictly less than Shadowfax's
- *   (the source's) power, modeled with `GameObjectFilter.Creature.powerLessThanEntity(Source)`.
+ *   (the source's) power, modeled with `GameObjectFilter.Creature.powerLessThanEntity(Self)`.
  *   Hand cards are matched on their printed/characteristic power; Shadowfax's power is read
  *   from projected state (so anthems/+1/+1 counters on Shadowfax raise the cap).
  * - "tapped and attacking" reuses `Patterns.Hand.putFromHand(entersAttacking = true)`, which
@@ -55,9 +55,9 @@ val ShadowfaxLordOfHorses = card("Shadowfax, Lord of Horses") {
     // Whenever Shadowfax attacks, you may put a creature card with lesser power from your
     // hand onto the battlefield tapped and attacking.
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Hand.putFromHand(
-            filter = GameObjectFilter.Creature.powerLessThanEntity(EntityReference.Source),
+            filter = GameObjectFilter.Creature.powerLessThanEntity(EffectTarget.Self),
             entersAttacking = true
         )
     }

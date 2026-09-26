@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Aether Helix — Strixhaven: School of Mages #162 (canonical printing)
@@ -28,13 +27,8 @@ val AetherHelix = card("Aether Helix") {
         "Return target permanent to its owner's hand. Return target permanent card from your graveyard to your hand."
 
     spell {
-        val permanent = target("target", Targets.Permanent)
-        val graveyardCard = target(
-            "target 1",
-            TargetObject(
-                filter = TargetFilter(GameObjectFilter.Permanent.ownedByYou(), zone = Zone.GRAVEYARD)
-            )
-        )
+        val permanent = target(TargetFilter.Permanent)
+        val graveyardCard = target(TargetFilter(GameObjectFilter.Permanent.ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.ReturnToHand(permanent) then Effects.ReturnToHand(graveyardCard)
     }
 

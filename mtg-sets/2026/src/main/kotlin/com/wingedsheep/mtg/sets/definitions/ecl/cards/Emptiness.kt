@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Emptiness
@@ -34,21 +32,19 @@ val Emptiness = card("Emptiness") {
 
     // White gate first (goes on stack first, resolves second)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.ManaSpentToCastIncludes(requiredWhite = 2)
-        val graveyardCreature = target("graveyard creature", TargetObject(
-            filter = TargetFilter.CreatureInYourGraveyard.manaValueAtMost(3)
-        ))
+        val graveyardCreature = target(TargetFilter.CreatureInYourGraveyard.manaValueAtMost(3))
         effect = Effects.PutOntoBattlefield(graveyardCreature)
     }
 
     // Black gate second (goes on stack second, resolves first)
     // so -1/-1 counters resolve before the reanimated creature enters
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.ManaSpentToCastIncludes(requiredBlack = 2)
-        val creature = target("creature to put three -1/-1 counters on", TargetCreature(count = 1, optional = true))
-        effect = Effects.AddCounters(Counters.MINUS_ONE_MINUS_ONE, 3, creature)
+        val creature = target(TargetFilter.Creature, optional = true)
+        effect = Effects.AddCounters(CounterType.MINUS_ONE_MINUS_ONE, 3, creature)
     }
 
     metadata {

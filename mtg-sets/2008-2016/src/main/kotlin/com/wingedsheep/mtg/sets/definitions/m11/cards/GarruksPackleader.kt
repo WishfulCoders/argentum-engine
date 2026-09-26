@@ -1,14 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.m11.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.effects.MayEffect
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Garruk's Packleader
@@ -27,14 +23,8 @@ val GarruksPackleader = card("Garruk's Packleader") {
     oracleText = "Whenever another creature you control with power 3 or greater enters, you may draw a card."
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Creature.youControl().powerAtLeast(3),
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.OTHER
-        )
-        effect = MayEffect(Effects.DrawCards(1))
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl().powerAtLeast(3)).enters()
+        effect = Effects.May(Effects.DrawCards(1))
     }
 
     metadata {

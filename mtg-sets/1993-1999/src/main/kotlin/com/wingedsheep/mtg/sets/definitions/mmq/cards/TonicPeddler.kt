@@ -22,7 +22,7 @@ val TonicPeddler = card("Tonic Peddler") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{W}"), Costs.Tap, Costs.DiscardCard)
-        val t = target("target", Targets.Player)
+        val t = target(Targets.Player)
         effect = Effects.GainLife(3, t)
     }
 

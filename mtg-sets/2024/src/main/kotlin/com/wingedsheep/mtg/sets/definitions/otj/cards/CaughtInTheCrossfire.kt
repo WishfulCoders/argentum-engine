@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -21,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * and per-mode `additionalManaCost` (CR 702.166). Choosing both modes hits every
  * creature (2 damage each). Each mode is a non-targeted [Effects.ForEachInGroup]
  * over the outlaw / non-outlaw creature group; the iterated creature is the
- * damage recipient ([EffectTarget.Self] inside the iteration body). Outlaws are
+ * damage recipient ([EffectTarget.IterationEntity] inside the iteration body). Outlaws are
  * Assassins, Mercenaries, Pirates, Rogues, and Warlocks ([Filters.OutlawCreature]).
  */
 val CaughtInTheCrossfire = card("Caught in the Crossfire") {
@@ -34,12 +33,12 @@ val CaughtInTheCrossfire = card("Caught in the Crossfire") {
         "+ {1} — Caught in the Crossfire deals 2 damage to each non-outlaw creature."
 
     spell {
-        effect = ModalEffect(
+        effect = Effects.Modal(
             modes = listOf(
                 Mode(
                     effect = Effects.ForEachInGroup(
                         GroupFilter(Filters.OutlawCreature),
-                        Effects.DealDamage(2, EffectTarget.Self)
+                        Effects.DealDamage(2, EffectTarget.IterationEntity)
                     ),
                     description = "+ {1} — Caught in the Crossfire deals 2 damage to each outlaw creature. (Assassins, Mercenaries, Pirates, Rogues, and Warlocks are outlaws.)",
                     additionalManaCost = "{1}"
@@ -47,7 +46,7 @@ val CaughtInTheCrossfire = card("Caught in the Crossfire") {
                 Mode(
                     effect = Effects.ForEachInGroup(
                         GroupFilter(Filters.NonOutlawCreature),
-                        Effects.DealDamage(2, EffectTarget.Self)
+                        Effects.DealDamage(2, EffectTarget.IterationEntity)
                     ),
                     description = "+ {1} — Caught in the Crossfire deals 2 damage to each non-outlaw creature.",
                     additionalManaCost = "{1}"

@@ -16,7 +16,7 @@ import io.kotest.matchers.shouldBe
  * "Whenever this creature attacks, you may pay {R}. If you do, target creature can't block
  *  this turn."
  *
- * Modelled with `MayPayManaEffect` (the Lightning Rift / "Words of ..." shape): after the trigger
+ * Modelled with `Effects.MayPay` (the Lightning Rift / "Words of ..." shape): after the trigger
  * goes on the stack, the engine offers the optional {R} payment first, then — only if paid — asks
  * for the mana sources and the creature target (the deliberate pay → select-mana → choose-target
  * order, so the player isn't asked to pick a target before deciding whether to pay). Paying applies

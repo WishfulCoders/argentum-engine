@@ -21,8 +21,7 @@ val SwarmingOfMoria = card("Swarming of Moria") {
         "control an Army, create a 0/0 black Orc Army creature token first.)"
 
     spell {
-        effect = Effects.CreateTreasure()
-            .then(Effects.Amass(2, "Orc"))
+        effect = Effects.CreateTreasure() then Effects.Amass(2, "Orc")
     }
 
     metadata {

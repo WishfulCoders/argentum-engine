@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.AddColorlessManaEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -23,8 +22,8 @@ import io.kotest.matchers.shouldBe
  * its activation cost" trigger family (Haunting Wind, Powerleech, Artifact Possession).
  *
  * The feature is two composable halves:
- *  - [Triggers.becomesTapped] with a [GameObjectFilter] (the tap half) — fires off [TappedEvent].
- *  - [Triggers.activatesAbilityWithoutTap] (the ability half) — fires off the engine's
+ *  - `Triggers.<subject>.becomesTapped(reason, firstTimeEachTurn)` with a [GameObjectFilter] (the tap half) — fires off [TappedEvent].
+ *  - `Triggers.<player>.activatesAbility(of, withoutTapInCost = true)` (the ability half) — fires off the engine's
  *    [com.wingedsheep.engine.core.AbilityActivatedEvent] when its `costsTap` flag is false,
  *    regardless of whether the ability is a mana ability.
  *
@@ -44,10 +43,7 @@ class ArtifactTapActivateTriggerScenarioTest : FunSpec({
         oracleText = "Whenever a player activates an artifact's ability without {T} in its " +
             "activation cost, this deals 1 damage to that artifact's controller."
         triggeredAbility {
-            trigger = Triggers.activatesAbilityWithoutTap(
-                player = Player.Each,
-                sourceFilter = GameObjectFilter.Artifact
-            )
+            trigger = Triggers.anyPlayer.activatesAbility(of = GameObjectFilter.Artifact, withoutTapInCost = true)
             effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.TriggeringPlayer))
         }
     }
@@ -58,10 +54,7 @@ class ArtifactTapActivateTriggerScenarioTest : FunSpec({
         typeLine = "Enchantment"
         oracleText = "Whenever an artifact becomes tapped, you gain 1 life."
         triggeredAbility {
-            trigger = Triggers.becomesTapped(
-                binding = TriggerBinding.ANY,
-                filter = GameObjectFilter.Artifact
-            )
+            trigger = Triggers.a(GameObjectFilter.Artifact).becomesTapped()
             effect = Effects.GainLife(1)
         }
     }
@@ -215,10 +208,7 @@ class ArtifactTapActivateTriggerScenarioTest : FunSpec({
             typeLine = "Enchantment"
             oracleText = "Whenever an opponent activates an artifact's ability without {T}, you gain 1 life."
             triggeredAbility {
-                trigger = Triggers.activatesAbilityWithoutTap(
-                    player = Player.EachOpponent,
-                    sourceFilter = GameObjectFilter.Artifact.opponentControls()
-                )
+                trigger = Triggers.anOpponent.activatesAbility(of = GameObjectFilter.Artifact.opponentControls(), withoutTapInCost = true)
                 effect = Effects.GainLife(1)
             }
         }

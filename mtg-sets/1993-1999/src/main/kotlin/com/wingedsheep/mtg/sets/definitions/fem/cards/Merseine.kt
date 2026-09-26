@@ -1,11 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.fem.cards
 
 import com.wingedsheep.sdk.core.AbilityFlag
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
@@ -13,9 +12,10 @@ import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.AbilityCost
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Merseine
@@ -46,18 +46,18 @@ val Merseine = card("Merseine") {
         "Enchanted creature doesn't untap during its controller's untap step if this Aura has a net counter on it.\n" +
         "Pay enchanted creature's mana cost: Remove a net counter from this Aura. Only the " +
         "controller of the enchanted creature may activate this ability."
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.Named(Counters.NET),
+            counterType = CounterType.NET,
             count = 3,
             selfOnly = true
         )
     )
 
     staticAbility {
-        condition = Conditions.SourceCounterCountAtLeast(Counters.NET, 1)
+        condition = Conditions.SourceCounterCountAtLeast(CounterType.NET, 1)
         ability = GrantKeyword(
             AbilityFlag.DOESNT_UNTAP.name,
             filter = GroupFilter(GameObjectFilter.Any.attachedToBySource())
@@ -74,7 +74,7 @@ val Merseine = card("Merseine") {
                 )
             )
         )
-        effect = Effects.RemoveCounters(Counters.NET, 1, EffectTarget.Self)
+        effect = Effects.RemoveCounters(CounterType.NET, 1, EffectTarget.Self)
         description = "Pay enchanted creature's mana cost: Remove a net counter from this Aura. Only the controller of the enchanted creature may activate this ability."
     }
 

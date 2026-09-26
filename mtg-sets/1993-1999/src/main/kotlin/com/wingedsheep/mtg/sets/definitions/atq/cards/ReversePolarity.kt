@@ -3,8 +3,8 @@ package com.wingedsheep.mtg.sets.definitions.atq.cards
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Reverse Polarity
@@ -25,7 +25,7 @@ val ReversePolarity = card("Reverse Polarity") {
 
     spell {
         effect = Effects.GainLife(
-            DynamicAmount.Multiply(DynamicAmounts.damageReceivedFromArtifactsThisTurn(), 2)
+            DynamicAmounts.damageReceivedFromArtifactsThisTurn() * 2
         )
     }
 

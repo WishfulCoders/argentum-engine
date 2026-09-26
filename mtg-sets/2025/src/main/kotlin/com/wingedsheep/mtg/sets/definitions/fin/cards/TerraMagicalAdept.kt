@@ -1,33 +1,24 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Subtype
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CREATED_TOKENS
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.Effect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.ReturnFace
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Terra, Magical Adept // Esper Terra (Final Fantasy #245)
@@ -49,7 +40,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *
  * The chapter I–III copy is composed from atoms: `CreateTokenCopyOfTarget` (haste via addedKeywords,
  * sacrifice at the controller's next end step via sacrificeAtStep) publishes the token into
- * `CREATED_TOKENS`; a `ConditionalEffect` gated on that collection containing a Saga then runs
+ * `CREATED_TOKENS`; a `Effects.If` gated on that collection containing a Saga then runs
  * `AddCountersUpTo(LORE, 3, …)` so the controller may advance the copied Saga's chapters. Chapter IV
  * exile-returns Esper Terra front face up before the CR 714.4 final-chapter sacrifice applies (the
  * chapter is on the stack when lore reaches four, and on resolution the permanent is no longer a Saga),
@@ -62,25 +53,23 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  */
 
 // Shared chapter I–III effect, parameterized on the chosen target enchantment.
-private fun copyChapterEffect(chosen: EffectTarget): Effect = Effects.Composite(
-    Effects.CreateTokenCopyOfTarget(
-        target = chosen,
-        addedKeywords = setOf(Keyword.HASTE),
-        // "Sacrifice it at the beginning of your next end step."
-        sacrificeAtStep = Step.END,
-        sacrificeOnlyOnControllersTurn = true,
-    ),
+private fun copyChapterEffect(chosen: EffectTarget): Effect = Effects.CreateTokenCopyOfTarget(
+    target = chosen,
+    addedKeywords = setOf(Keyword.HASTE),
+    // "Sacrifice it at the beginning of your next end step."
+    sacrificeAtStep = Step.END,
+    sacrificeOnlyOnControllersTurn = true,
+) then
     // "If it's a Saga, put up to three lore counters on it." The created token is in CREATED_TOKENS;
     // gate on it being a Saga, then let the controller choose 0..3 lore counters (advancing its
     // chapters). Copying a non-Saga enchantment offers no lore prompt.
-    ConditionalEffect(
+    Effects.If(
         condition = Conditions.CollectionContainsMatch(
             CREATED_TOKENS,
             GameObjectFilter.Enchantment.withSubtype(Subtype.SAGA),
         ),
-        effect = Effects.AddCountersUpTo(Counters.LORE, 3, EffectTarget.PipelineTarget(CREATED_TOKENS, 0)),
-    ),
-)
+        then = Effects.AddCountersUpTo(CounterType.LORE, 3, EffectTarget.PipelineTarget(CREATED_TOKENS, 0)),
+    )
 
 private val EsperTerra = card("Esper Terra") {
     manaCost = ""
@@ -99,24 +88,19 @@ private val EsperTerra = card("Esper Terra") {
     // I, II, III — copy a nonlegendary enchantment you control.
     for (chapter in 1..3) {
         sagaChapter(chapter) {
-            val enchantment = target(
-                "enchantment",
-                TargetObject(filter = TargetFilter.Enchantment.youControl().nonlegendary()),
-            )
+            val enchantment = target(TargetFilter.Enchantment.youControl().nonlegendary())
             effect = copyChapterEffect(enchantment)
         }
     }
 
     // IV — Add {W}{W}{U}{U}{B}{B}{R}{R}{G}{G}, then exile Esper Terra and return it front face up.
     sagaChapter(4) {
-        effect = Effects.Composite(
-            Effects.AddMana(Color.WHITE, 2),
-            Effects.AddMana(Color.BLUE, 2),
-            Effects.AddMana(Color.BLACK, 2),
-            Effects.AddMana(Color.RED, 2),
-            Effects.AddMana(Color.GREEN, 2),
-            Effects.ExileAndReturnTransformed(EffectTarget.Self, ReturnFace.FRONT),
-        )
+        effect = Effects.AddMana(Color.WHITE, 2) then
+            Effects.AddMana(Color.BLUE, 2) then
+            Effects.AddMana(Color.BLACK, 2) then
+            Effects.AddMana(Color.RED, 2) then
+            Effects.AddMana(Color.GREEN, 2) then
+            Effects.ExileAndReturnTransformed(EffectTarget.Self, ReturnFace.FRONT)
     }
 
     metadata {
@@ -142,24 +126,20 @@ private val TerraMagicalAdeptFront = card("Terra, Magical Adept") {
 
     // When Terra enters, mill five cards. Put up to one enchantment card milled this way into hand.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Patterns.Library.mill(5),
-            SelectFromCollectionEffect(
-                from = "milled",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val milled = mill(5)
+            val selected = chooseUpTo(
+                1,
+                from = milled,
                 filter = GameObjectFilter.Enchantment,
-                storeSelected = "selected",
                 showAllCards = true,
                 prompt = "You may put an enchantment card milled this way into your hand",
                 selectedLabel = "Put in hand",
                 remainderLabel = "Leave in graveyard",
-            ),
-            MoveCollectionEffect(
-                from = "selected",
-                destination = CardDestination.ToZone(Zone.HAND),
-            ),
-        )
+            )
+            toHand(selected)
+        }
     }
 
     // Trance — {4}{R}{G}, {T}: Exile Terra, then return it transformed. Activate only as a sorcery.

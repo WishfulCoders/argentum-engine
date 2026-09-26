@@ -25,7 +25,7 @@ val ScreechingBuzzard = card("Screeching Buzzard") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Patterns.Hand.eachOpponentDiscards(1)
     }
 

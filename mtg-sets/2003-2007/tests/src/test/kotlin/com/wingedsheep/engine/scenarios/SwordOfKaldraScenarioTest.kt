@@ -92,7 +92,7 @@ class SwordOfKaldraScenarioTest : ScenarioTestBase() {
                 ).error shouldBe null
                 game.resolveStack()
 
-                withClue("RecipientFilter.AnyCreature — a face ping is not a creature") {
+                withClue("Recipient.AnyCreature — a face ping is not a creature") {
                     game.getLifeTotal(2) shouldBe 19
                     game.isOnBattlefield("Centaur Courser") shouldBe true
                     game.isInExile(2, "Centaur Courser") shouldBe false

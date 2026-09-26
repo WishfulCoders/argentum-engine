@@ -30,7 +30,7 @@ val VileEntomber = card("Vile Entomber") {
     toughness = 2
     keywords(Keyword.DEATHTOUCH)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Any,
             destination = SearchDestination.GRAVEYARD

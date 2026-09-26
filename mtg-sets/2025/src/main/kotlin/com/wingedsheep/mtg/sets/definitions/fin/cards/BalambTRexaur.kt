@@ -33,7 +33,7 @@ val BalambTRexaur = card("Balamb T-Rexaur") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(3)
     }
 

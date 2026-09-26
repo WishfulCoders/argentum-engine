@@ -60,7 +60,7 @@ data class CollectionContainsMatch(
  * Models "if two cards that share a card type were [milled/revealed] this way" — e.g. The Tale of
  * Tamiyo's "Mill two cards. If two cards that share a card type were milled this way, draw a card
  * and repeat this process." Pair it with a prior mill/reveal that stores the cards under
- * [collection], inside both an [com.wingedsheep.sdk.scripting.effects.ConditionalEffect] (for the
+ * [collection], inside both an [com.wingedsheep.sdk.dsl.Effects.If] (for the
  * "draw a card") and a [com.wingedsheep.sdk.scripting.effects.RepeatCondition.WhileCondition] (for
  * the "repeat this process").
  */

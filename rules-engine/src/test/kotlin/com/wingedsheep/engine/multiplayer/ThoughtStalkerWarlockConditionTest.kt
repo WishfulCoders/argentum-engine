@@ -1,9 +1,9 @@
 package com.wingedsheep.engine.multiplayer
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.GameConfig
 import com.wingedsheep.engine.core.GameInitializer
 import com.wingedsheep.engine.core.PlayerConfig
-import com.wingedsheep.engine.handlers.ConditionEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.components.player.LifeLostThisTurnComponent
@@ -53,7 +53,7 @@ class ThoughtStalkerWarlockConditionTest : FunSpec({
         // players[3] lost life this turn; players[1] and players[2] did not.
         val state = initial.updateEntity(players[3]) { it.with(LifeLostThisTurnComponent) }
 
-        val evaluator = ConditionEvaluator()
+        val evaluator = PredicateEvaluator(cardRegistry = null).conditions
         val fixed = Conditions.PlayerLostLifeThisTurn(Player.ContextPlayer(0))
 
         fun contextTargeting(target: com.wingedsheep.sdk.model.EntityId) = EffectContext(

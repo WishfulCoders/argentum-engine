@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
@@ -36,7 +36,7 @@ val UnderwaterTunnelSlimyAquarium = card("Underwater Tunnel // Slimy Aquarium") 
         oracleText = "When you unlock this door, surveil 2."
 
         triggeredAbility {
-            trigger = Triggers.OnDoorUnlocked
+            trigger = Triggers.self.doorUnlocked()
             effect = Effects.Surveil(2)
             description = "When you unlock this door, surveil 2."
         }
@@ -48,15 +48,13 @@ val UnderwaterTunnelSlimyAquarium = card("Underwater Tunnel // Slimy Aquarium") 
         oracleText = "When you unlock this door, manifest dread, then put a +1/+1 counter on that creature."
 
         triggeredAbility {
-            trigger = Triggers.OnDoorUnlocked
-            effect = Effects.Composite(
-                Patterns.Library.manifestDread(),
+            trigger = Triggers.self.doorUnlocked()
+            effect = Patterns.Library.manifestDread() then
                 Effects.AddCounters(
-                    Counters.PLUS_ONE_PLUS_ONE,
+                    CounterType.PLUS_ONE_PLUS_ONE,
                     1,
                     EffectTarget.PipelineTarget("manifestDreadManifested")
                 )
-            )
             description = "When you unlock this door, manifest dread, then put a +1/+1 counter on that creature."
         }
     }

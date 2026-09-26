@@ -1,15 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CostGating
 import com.wingedsheep.sdk.scripting.CostModification
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.MarkExileOnDeathEffect
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Wilt in the Heat — Secrets of Strixhaven #243
@@ -43,8 +42,8 @@ val WiltInTheHeat = card("Wilt in the Heat") {
     }
 
     spell {
-        val t = target("target creature", TargetCreature())
-        effect = DealDamageEffect(5, t) then MarkExileOnDeathEffect(t)
+        val t = target(TargetFilter.Creature)
+        effect = Effects.DealDamage(5, t) then Effects.MarkExileOnDeath(t)
     }
 
     metadata {

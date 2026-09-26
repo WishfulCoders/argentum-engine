@@ -5,9 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.TakeExtraTurnEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
@@ -29,11 +26,10 @@ val KarnsTemporalSundering = card("Karn's Temporal Sundering") {
         castOnlyIf(Conditions.ControlLegendaryCreatureOrPlaneswalker)
         selfExile()
 
-        val player = target("player", Targets.Player)
-        val permanent = target("nonland permanent", TargetPermanent(optional = true, filter = TargetFilter.NonlandPermanent))
+        val player = target(Targets.Player)
+        val permanent = target(TargetFilter.NonlandPermanent, optional = true)
 
-        effect = TakeExtraTurnEffect(target = player)
-            .then(Effects.ReturnToHand(permanent))
+        effect = Effects.TakeExtraTurn(target = player) then Effects.ReturnToHand(permanent)
     }
 
     metadata {

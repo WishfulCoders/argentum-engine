@@ -2,7 +2,7 @@
 
 **Set Size:** 312 cards
 **Release Date:** August 2, 2024
-**Implemented:** 120 / 312
+**Implemented:** 139 / 312
 | Color      | Total | Done |
 |------------|-------|------|
 | White      | 37    | 0    |
@@ -21,7 +21,7 @@
 - [x] Adarkar Wastes
 - [ ] Aether Channeler
 - [x] Aetherize
-- [ ] Agate Instigator
+- [x] Agate Instigator
 - [x] Alchemist's Talent
 - [ ] An Offer You Can't Refuse
 - [ ] Angel of the Ruins
@@ -46,7 +46,7 @@
 - [ ] Birds of Paradise
 - [ ] Blade Splicer
 - [x] Blasphemous Act
-- [ ] Bloodroot Apothecary
+- [x] Bloodroot Apothecary
 - [ ] Body of Knowledge
 - [ ] Bojuka Bog
 - [x] Bootleggers' Stash
@@ -114,7 +114,7 @@
 - [ ] Garruk, Cursed Huntsman
 - [ ] Generous Gift
 - [x] Ghalta, Primal Hunger
-- [ ] Ghirapur Orrery
+- [x] Ghirapur Orrery
 - [ ] Gilded Goose
 - [x] Gilded Lotus
 - [ ] Glacial Fortress
@@ -150,7 +150,7 @@
 - [ ] Ishai, Ojutai Dragonspeaker
 - [ ] Izzet Signet
 - [x] Jace, the Mind Sculptor
-- [ ] Jacked Rabbit
+- [x] Jacked Rabbit
 - [ ] Jazal Goldmane
 - [ ] Jolrael, Mwonvuli Recluse
 - [x] Jungle Hollow
@@ -177,7 +177,7 @@
 - [ ] Maskwood Nexus
 - [x] Mind Stone
 - [ ] Moldervine Reclamation
-- [ ] Moonstone Eulogist
+- [x] Moonstone Eulogist
 - [ ] Morbid Opportunist
 - [x] Mossfire Valley
 - [x] Mosswort Bridge
@@ -201,10 +201,10 @@
 - [ ] Path to Exile
 - [ ] Perch Protection
 - [ ] Perplexing Test
-- [ ] Plaguecrafter
+- [x] Plaguecrafter
 - [ ] Plumb the Forbidden
 - [ ] Poison-Tip Archer
-- [ ] Pollywog Prodigy
+- [x] Pollywog Prodigy
 - [ ] Prairie Stream
 - [x] Primeval Bounty
 - [ ] Promise of Loyalty
@@ -218,7 +218,7 @@
 - [x] Rain of Riches
 - [x] Rampaging Baloths
 - [x] Rampant Growth
-- [ ] Rapid Augmenter
+- [x] Rapid Augmenter
 - [ ] Rapid Hybridization
 - [ ] Ravenous Squirrel
 - [x] Razorverge Thicket
@@ -227,7 +227,7 @@
 - [ ] Restoration Angel
 - [ ] Riot Control
 - [ ] Rishkar, Peema Renegade
-- [ ] Rites of Flourishing
+- [x] Rites of Flourishing
 - [x] Rolling Hamsphere
 - [x] Rootbound Crag
 - [ ] Rootcast Apprenticeship
@@ -274,9 +274,9 @@
 - [ ] Sunscorch Regent
 - [ ] Sunscorched Divide
 - [ ] Swarmyard
-- [ ] Swarmyard Massacre
+- [x] Swarmyard Massacre
 - [ ] Swiftfoot Boots
-- [ ] Sword of the Squeak
+- [x] Sword of the Squeak
 - [x] Swords to Plowshares
 - [ ] Tainted Wood
 - [x] Talisman of Impulse
@@ -291,29 +291,29 @@
 - [x] Temple of Mystery
 - [x] Temple of Plenty
 - [x] Temple of Triumph
-- [ ] Tempt with Bunnies
-- [ ] Tempt with Discovery
+- [x] Tempt with Bunnies
+- [x] Tempt with Discovery
 - [x] Tendershoot Dryad
 - [ ] Tenuous Truce
 - [x] Terramorphic Expanse
 - [x] Tetsuko Umezawa, Fugitive
 - [x] The Gitrog Monster
-- [ ] The Odd Acorn Gang
+- [x] The Odd Acorn Gang
 - [x] Thickest in the Thicket
 - [ ] Thopter Engineer
 - [x] Thought Vessel
 - [x] Thran Dynamo
-- [ ] Thriving Bluff
-- [ ] Thriving Grove
-- [ ] Thriving Heath
-- [ ] Thriving Isle
+- [x] Thriving Bluff
+- [x] Thriving Grove
+- [x] Thriving Heath
+- [x] Thriving Isle
 - [ ] Time Wipe
 - [ ] Tireless Provisioner
 - [ ] Toski, Bearer of Secrets
 - [x] Trailtracker Scout
 - [x] Tranquil Thicket
 - [ ] Triskaidekaphile
-- [ ] Twenty-Toed Toad
+- [x] Twenty-Toed Toad
 - [ ] Twilight Mire
 - [x] Unnatural Growth
 - [ ] Viridescent Bog

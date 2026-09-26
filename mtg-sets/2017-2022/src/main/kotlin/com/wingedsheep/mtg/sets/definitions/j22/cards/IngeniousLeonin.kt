@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.j22.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
@@ -8,9 +8,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Ingenious Leonin
@@ -24,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * [com.wingedsheep.sdk.model.Printing] row (see `.../definitions/fdn/cards/IngeniousLeoninReprint.kt`).
  *
  * The activated ability always adds the counter; the first-strike grant is a resolution-time state
- * test ([ConditionalEffect], lowering to `Gate.WhenCondition`) on the chosen target being a Cat —
+ * test ([Effects.If], lowering to `Gate.WhenCondition`) on the chosen target being a Cat —
  * [Conditions.TargetMatchesFilter] reads the same target index the counter landed on.
  */
 val IngeniousLeonin = card("Ingenious Leonin") {
@@ -39,21 +37,12 @@ val IngeniousLeonin = card("Ingenious Leonin") {
 
     activatedAbility {
         cost = Costs.Mana("{3}{W}")
-        val t = target(
-            "target",
-            TargetCreature(filter = TargetFilter.Creature.attacking().youControl().other()),
-        )
-        effect = Effects.Composite(
-            listOf(
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, t),
-                ConditionalEffect(
-                    condition = Conditions.TargetMatchesFilter(
-                        GameObjectFilter.Creature.withSubtype("Cat"),
-                    ),
-                    effect = Effects.GrantKeyword(Keyword.FIRST_STRIKE, t),
-                ),
-            ),
-        )
+        val t = target(TargetFilter.Creature.attacking().youControl().other())
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, t) then
+            Effects.If(
+                condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.withSubtype("Cat"), t),
+                then = Effects.GrantKeyword(Keyword.FIRST_STRIKE, t),
+            )
     }
 
     metadata {

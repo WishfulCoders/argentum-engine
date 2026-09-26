@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Tanglespan Lookout
@@ -30,10 +29,7 @@ val TanglespanLookout = card("Tanglespan Lookout") {
     oracleText = "Whenever an Aura you control enters, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Enchantment.withSubtype(Subtype.AURA).youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Enchantment.withSubtype(Subtype.AURA).youControl()).enters()
         effect = Effects.DrawCards(1)
     }
 

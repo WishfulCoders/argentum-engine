@@ -5,8 +5,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.PreventDamage
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
-import com.wingedsheep.sdk.scripting.events.SourceFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Sphere of Purity — Mirrodin #26
@@ -19,7 +18,7 @@ import com.wingedsheep.sdk.scripting.events.SourceFilter
  *   every instance for as long as the Sphere is on the battlefield, and there is nothing to
  *   "use up". `amount = 1` is a *partial* prevention — a Triskelion ping is fully stopped, an
  *   Arcbound Ravager swing for 4 still deals 3.
- * - Recipient is [RecipientFilter.You], i.e. the Sphere's controller only; it does nothing for
+ * - Recipient is [Recipient.You], i.e. the Sphere's controller only; it does nothing for
  *   your creatures or planeswalkers, and nothing for your teammates.
  * - The source filter is `GameObjectFilter.Artifact`, not artifact *creature* — the damage
  *   source only has to be an artifact, so an artifact creature attacking you is covered too.
@@ -36,8 +35,8 @@ val SphereOfPurity = card("Sphere of Purity") {
         PreventDamage(
             amount = 1,
             appliesTo = EventPattern.DamageEvent(
-                recipient = RecipientFilter.You,
-                source = SourceFilter.Matching(GameObjectFilter.Artifact)
+                recipient = Recipient.You,
+                source = GameObjectFilter.Artifact
             )
         )
     )

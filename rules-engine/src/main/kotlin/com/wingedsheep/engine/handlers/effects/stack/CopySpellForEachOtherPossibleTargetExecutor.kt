@@ -8,7 +8,7 @@ import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.TargetFinder
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
-import com.wingedsheep.engine.mechanics.stack.StackResolver
+import com.wingedsheep.engine.mechanics.stack.StackPlacement
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.identity.CantBeCopiedComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
@@ -17,6 +17,7 @@ import com.wingedsheep.engine.state.components.stack.TargetsComponent
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.effects.CopySpellForEachOtherPossibleTargetEffect
 import kotlin.reflect.KClass
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Executor for [CopySpellForEachOtherPossibleTargetEffect] — CR 707.10d, the Zada / Mirrorwing Dragon
@@ -47,9 +48,8 @@ import kotlin.reflect.KClass
  * A spell flagged can't-be-copied (CR 707.10) yields no copies at all.
  */
 class CopySpellForEachOtherPossibleTargetExecutor(
-    private val cardRegistry: com.wingedsheep.engine.registry.CardRegistry,
-    private val targetFinder: TargetFinder = TargetFinder(),
-    private val predicateEvaluator: PredicateEvaluator = PredicateEvaluator()
+    private val targetFinder: TargetFinder,
+    private val predicateEvaluator: PredicateEvaluator
 ) : EffectExecutor<CopySpellForEachOtherPossibleTargetEffect> {
 
     override val effectType: KClass<CopySpellForEachOtherPossibleTargetEffect> =
@@ -114,7 +114,6 @@ class CopySpellForEachOtherPossibleTargetExecutor(
         // both, or the copy's mode would still point at the original target.
         val sourceModeTargets = container.get<SpellOnStackComponent>()?.modeTargetsOrdered
 
-        val stackResolver = StackResolver(cardRegistry = cardRegistry)
         var currentState = state
         val allEvents = mutableListOf<GameEvent>()
         candidates.forEachIndexed { index, candidateId ->
@@ -123,7 +122,7 @@ class CopySpellForEachOtherPossibleTargetExecutor(
             val copyModeTargets = sourceModeTargets
                 ?.map { perMode -> perMode.map { ChosenTarget.Permanent(candidateId) } }
                 ?.takeIf { it.isNotEmpty() }
-            val copyResult: ExecutionResult = stackResolver.putSpellCopy(
+            val copyResult: ExecutionResult = StackPlacement.putSpellCopy(
                 state = currentState,
                 sourceSpellId = spellEntityId,
                 targets = copyTargets,
@@ -132,7 +131,7 @@ class CopySpellForEachOtherPossibleTargetExecutor(
                 copyTotal = candidates.size,
                 controllerId = casterId
             )
-            if (copyResult.isSuccess) {
+            if (copyResult.outcome is Outcome.Done) {
                 currentState = copyResult.newState
                 allEvents.addAll(copyResult.events)
             }

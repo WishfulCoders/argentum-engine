@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.rna.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Get the Point — Ravnica Allegiance #176
@@ -19,11 +19,8 @@ val GetThePoint = card("Get the Point") {
     oracleText = "Destroy target creature. Scry 1."
 
     spell {
-        val creature = target("target", Targets.Creature)
-        effect = Effects.Composite(listOf(
-            Effects.Destroy(creature),
-            Effects.Scry(1)
-        ))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.Destroy(creature) then Effects.Scry(1)
     }
 
     metadata {

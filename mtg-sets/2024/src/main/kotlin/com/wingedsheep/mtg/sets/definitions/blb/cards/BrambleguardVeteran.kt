@@ -34,7 +34,7 @@ val BrambleguardVeteran = card("Brambleguard Veteran") {
     val raccoonsYouControl = GroupFilter(GameObjectFilter.Permanent.withSubtype("Raccoon").youControl())
 
     triggeredAbility {
-        trigger = Triggers.Expend(4)
+        trigger = Triggers.you.expends(4)
         effect = Patterns.Group.pumpAndGrantToAll(1, 1, Keyword.VIGILANCE, raccoonsYouControl)
     }
 

@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.bro.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
@@ -14,15 +14,8 @@ import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Teferi, Temporal Pilgrim
@@ -50,8 +43,8 @@ val TeferiTemporalPilgrim = card("Teferi, Temporal Pilgrim") {
 
     // Whenever you draw a card, put a loyalty counter on Teferi.
     triggeredAbility {
-        trigger = Triggers.YouDraw
-        effect = Effects.AddCounters(Counters.LOYALTY, 1, EffectTarget.Self)
+        trigger = Triggers.you.draws()
+        effect = Effects.AddCounters(CounterType.LOYALTY, 1, EffectTarget.Self)
     }
 
     // 0: Draw a card.
@@ -62,7 +55,7 @@ val TeferiTemporalPilgrim = card("Teferi, Temporal Pilgrim") {
     // −2: Create a 2/2 blue Spirit creature token with vigilance and
     //     "Whenever you draw a card, put a +1/+1 counter on this token."
     loyaltyAbility(-2) {
-        effect = CreateTokenEffect(
+        effect = Effects.CreateToken(
             power = 2,
             toughness = 2,
             colors = setOf(Color.BLUE),
@@ -70,9 +63,8 @@ val TeferiTemporalPilgrim = card("Teferi, Temporal Pilgrim") {
             keywords = setOf(Keyword.VIGILANCE),
             triggeredAbilities = listOf(
                 TriggeredAbility.create(
-                    trigger = Triggers.YouDraw.event,
-                    binding = Triggers.YouDraw.binding,
-                    effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+                    trigger = Triggers.you.draws(),
+                    effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
                 )
             ),
             imageUri = "https://cards.scryfall.io/normal/front/3/4/349e3241-8f9d-4c52-9848-e01b575fd372.jpg?1675455446"
@@ -82,44 +74,34 @@ val TeferiTemporalPilgrim = card("Teferi, Temporal Pilgrim") {
     // −12: Target opponent chooses a permanent they control and returns it to its owner's
     //      hand. Then they shuffle each nonland permanent they control into its owner's library.
     loyaltyAbility(-12) {
-        target("opponent", Targets.Opponent)
-        effect = Effects.Composite(
-            listOf(
-                // Target opponent picks a permanent they control; return it to its owner's hand.
-                GatherCardsEffect(
-                    source = CardSource.ControlledPermanents(Player.ContextPlayer(0)),
-                    storeAs = "their_permanents"
-                ),
-                SelectFromCollectionEffect(
-                    from = "their_permanents",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                    chooser = Chooser.TargetPlayer,
-                    storeSelected = "chosen",
-                    prompt = "Choose a permanent you control to return to its owner's hand",
-                    useTargetingUI = true
-                ),
-                MoveCollectionEffect(
-                    from = "chosen",
-                    destination = CardDestination.ToZone(Zone.HAND, Player.ContextPlayer(0))
-                ),
-                // Then shuffle each remaining nonland permanent they control into its owner's library.
-                GatherCardsEffect(
-                    source = CardSource.ControlledPermanents(
-                        Player.ContextPlayer(0),
-                        GameObjectFilter.NonlandPermanent
-                    ),
-                    storeAs = "their_nonlands"
-                ),
-                MoveCollectionEffect(
-                    from = "their_nonlands",
-                    destination = CardDestination.ToZone(
-                        Zone.LIBRARY,
-                        Player.ContextPlayer(0),
-                        ZonePlacement.Shuffled
-                    )
+        val opponent = target(Targets.Opponent)
+        effect = Effects.Pipeline {
+            // Target opponent picks a permanent they control; return it to its owner's hand.
+            val theirPermanents = gather(CardSource.ControlledPermanents(opponent.asPlayer))
+            val chosen = chooseExactly(
+                1,
+                from = theirPermanents,
+                chooser = Chooser.TargetPlayer,
+                prompt = "Choose a permanent you control to return to its owner's hand",
+                useTargetingUI = true
+            )
+            toHand(chosen, opponent.asPlayer)
+            // Then shuffle each remaining nonland permanent they control into its owner's library.
+            val theirNonlands = gather(
+                CardSource.ControlledPermanents(
+                    opponent.asPlayer,
+                    GameObjectFilter.NonlandPermanent
                 )
             )
-        )
+            move(
+                theirNonlands,
+                CardDestination.ToZone(
+                    Zone.LIBRARY,
+                    opponent.asPlayer,
+                    ZonePlacement.Shuffled
+                )
+            )
+        }
     }
 
     metadata {

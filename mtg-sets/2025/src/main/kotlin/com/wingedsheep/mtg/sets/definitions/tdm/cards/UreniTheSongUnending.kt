@@ -3,13 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.tdm.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.ProtectionScope
-import com.wingedsheep.sdk.scripting.effects.DividedDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.TargetObject
 
@@ -41,7 +41,7 @@ val UreniTheSongUnending = card("Ureni, the Song Unending") {
     keywordAbility(KeywordAbility.Protection(ProtectionScope.Colors(setOf(Color.WHITE, Color.BLACK))))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         // "any number of target" — but divided damage requires at least 1 per chosen target, so
         // the number of targets can never exceed X (lands you control). dynamicMaxCount enforces
         // that cap at the moment the trigger goes on the stack; optional allows choosing zero.
@@ -51,8 +51,8 @@ val UreniTheSongUnending = card("Ureni, the Song Unending") {
             dynamicMaxCount = DynamicAmounts.landsYouControl(),
             id = "target creatures and/or planeswalkers your opponents control"
         )
-        effect = DividedDamageEffect(
-            totalDamage = 0,
+        effect = Effects.DividedDamage(
+            total = 0,
             dynamicTotal = DynamicAmounts.landsYouControl()
         )
         description = "When Ureni enters, it deals X damage divided as you choose among any number of " +

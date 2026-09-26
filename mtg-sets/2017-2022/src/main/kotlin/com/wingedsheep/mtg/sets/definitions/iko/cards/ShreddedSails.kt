@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.iko.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Shredded Sails
@@ -25,11 +25,11 @@ val ShreddedSails = card("Shredded Sails") {
     spell {
         modal(chooseCount = 1) {
             mode("Destroy target artifact") {
-                val t = target("target artifact", Targets.Artifact)
+                val t = target(TargetFilter.Artifact)
                 effect = Effects.Destroy(t)
             }
             mode("Shredded Sails deals 4 damage to target creature with flying") {
-                val t = target("target creature with flying", Targets.CreatureWithKeyword(Keyword.FLYING))
+                val t = target(TargetFilter.Creature.withKeyword(Keyword.FLYING))
                 effect = Effects.DealDamage(4, t)
             }
         }

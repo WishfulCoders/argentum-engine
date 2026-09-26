@@ -21,7 +21,7 @@ val RiverHeraldScout = card("River Herald Scout") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Explore(EffectTarget.Self)
     }
 

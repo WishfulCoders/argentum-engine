@@ -3,6 +3,7 @@ package com.wingedsheep.assay.grammar
 import com.wingedsheep.assay.syntax.ParseOutcome
 import com.wingedsheep.assay.syntax.parseLine
 import com.wingedsheep.assay.syntax.printLine
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.model.CardScript
@@ -73,12 +74,8 @@ class RecursionTest : StringSpec({
     // source, which is how the corpus spells "with a finality counter on it".
     "the counter rider composes onto the move" {
         fragment("{8}: Return ~ from your graveyard to the battlefield tapped with a finality counter on it.")
-            .script.activatedAbilities.single().effect shouldBe Effects.Composite(
-            listOf(
-                Effects.PutOntoBattlefieldFromGraveyard(EffectTarget.Self, tapped = true),
-                Effects.AddCounters("finality", 1, EffectTarget.Self),
-            )
-        )
+            .script.activatedAbilities.single().effect shouldBe (Effects.PutOntoBattlefieldFromGraveyard(EffectTarget.Self, tapped = true) then
+                Effects.AddCounters(CounterType.FINALITY, 1, EffectTarget.Self))
         roundTrips("{8}: Return ~ from your graveyard to the battlefield tapped with a finality counter on it.")
         roundTrips("{3}{B}: Return ~ from your graveyard to the battlefield tapped with two +1/+1 counters on it.")
     }

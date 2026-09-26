@@ -1,23 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Inti, Seneschal of the Sun
@@ -34,7 +26,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * reflexive ability — which targets an attacking creature chosen as it goes on the stack —
  * only fires if a card is actually discarded ([ReflexiveTriggerEffect]).
  *
- * Ability 2 uses [Triggers.YouDiscardOneOrMore] — the batch discard trigger (CR 603.2c):
+ * Ability 2 uses `Triggers.you.discards(batch = true)` — the batch discard trigger (CR 603.2c):
  * discarding several cards in one discard event fires it once, matching the printed "one or
  * more cards" wording (a per-card trigger would impulse-exile once per discarded card). The
  * impulse-exile grants play permission until the controller's next end step
@@ -54,33 +46,25 @@ val IntiSeneschalOfTheSun = card("Inti, Seneschal of the Sun") {
     // "Whenever you attack, you may discard a card. When you do, put a +1/+1 counter on
     // target attacking creature. It gains trample until end of turn."
     triggeredAbility {
-        trigger = Triggers.YouAttack
-        effect = ReflexiveTriggerEffect(
+        trigger = Triggers.you.attacks()
+        effect = Effects.ReflexiveTrigger(
             action = Effects.Discard(1),
-            optional = true,
-            reflexiveEffect = Effects.Composite(listOf(
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0)),
-                Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.ContextTarget(0), Duration.EndOfTurn)
-            )),
-            reflexiveTargetRequirements = listOf(Targets.AttackingCreature)
-        )
+            optional = true) {
+            val attackingCreature = target(TargetFilter.AttackingCreature)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, attackingCreature) then
+                Effects.GrantKeyword(Keyword.TRAMPLE, attackingCreature, Duration.EndOfTurn)
+        }
     }
 
     // "Whenever you discard one or more cards, exile the top card of your library. You may
     // play that card until your next end step."
     triggeredAbility {
-        trigger = Triggers.YouDiscardOneOrMore
-        effect = Effects.Composite(listOf(
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1)),
-                storeAs = "intiExiled"
-            ),
-            MoveCollectionEffect(
-                from = "intiExiled",
-                destination = CardDestination.ToZone(Zone.EXILE)
-            ),
-            GrantMayPlayFromExileEffect("intiExiled", MayPlayExpiry.UntilNextEndStep)
-        ))
+        trigger = Triggers.you.discards(batch = true)
+        effect = Effects.Pipeline {
+            val intiExiled = gather(CardSource.TopOfLibrary(1))
+            exile(intiExiled)
+            run(Effects.GrantMayPlayFromExile(intiExiled, MayPlayExpiry.UntilNextEndStep))
+        }
     }
 
     metadata {

@@ -15,6 +15,8 @@ import com.wingedsheep.sdk.scripting.DistributedCounterRemoval
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import io.kotest.matchers.shouldNotBe
 
 /**
  * BDD test for the [Costs.RemoveCounters] atom-based cost primitive.
@@ -46,7 +48,7 @@ class RemoveCountersAtomCostTest : FunSpec({
         activatedAbility {
             cost = Costs.RemoveCounters(
                 count = 2,
-                counterType = "+1/+1",
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
                 filter = GameObjectFilter.Creature
             )
             effect = Effects.DrawCards(1)
@@ -68,10 +70,10 @@ class RemoveCountersAtomCostTest : FunSpec({
         removeCountersCard.activatedAbilities[0].cost.description shouldBe
             "Remove two +1/+1 counters from among creatures you control"
         // specific type singular
-        Costs.RemoveCounters(count = 1, counterType = "+1/+1", filter = GameObjectFilter.Creature).description shouldBe
+        Costs.RemoveCounters(count = 1, counterType = CounterType.PLUS_ONE_PLUS_ONE, filter = GameObjectFilter.Creature).description shouldBe
             "Remove a +1/+1 counter from a creature you control"
         // x counters specific type
-        Costs.RemoveXCounters(counterType = "+1/+1", filter = GameObjectFilter.Creature).description shouldBe
+        Costs.RemoveXCounters(counterType = CounterType.PLUS_ONE_PLUS_ONE, filter = GameObjectFilter.Creature).description shouldBe
             "Remove X +1/+1 counters from among creatures you control"
         // x counters any type
         Costs.RemoveXCounters().description shouldBe "Remove X counters from among permanents you control"
@@ -82,9 +84,9 @@ class RemoveCountersAtomCostTest : FunSpec({
         // singular self non-specific type
         Costs.RemoveCounterFromSelf(null).description shouldBe "Remove a counter from this permanent"
         // singular self specific type
-        Costs.RemoveCounterFromSelf("+1/+1").description shouldBe "Remove a +1/+1 counter from this permanent"
+        Costs.RemoveCounterFromSelf(CounterType.PLUS_ONE_PLUS_ONE).description shouldBe "Remove a +1/+1 counter from this permanent"
         // multi self specific type
-        Costs.RemoveCounterFromSelf(count = 2, counterType = "+1/+1").description shouldBe
+        Costs.RemoveCounterFromSelf(count = 2, counterType = CounterType.PLUS_ONE_PLUS_ONE).description shouldBe
             "Remove two +1/+1 counters from this permanent"
     }
 
@@ -124,7 +126,7 @@ class RemoveCountersAtomCostTest : FunSpec({
             )
         )
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         val c1 = driver.state.getEntity(creature1)
             ?.get<CountersComponent>()?.getCount(CounterType.PLUS_ONE_PLUS_ONE) ?: 0
@@ -164,7 +166,7 @@ class RemoveCountersAtomCostTest : FunSpec({
             )
         )
 
-        result.isSuccess shouldBe false
+        result.outcome shouldNotBe Outcome.Done
     }
 
     test("remove counters of any type (counterType = null, Tayam-style)") {
@@ -216,7 +218,7 @@ class RemoveCountersAtomCostTest : FunSpec({
             )
         )
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         val after = driver.state.getEntity(target)?.get<CountersComponent>()
         after?.getCount(CounterType.PLUS_ONE_PLUS_ONE) shouldBe 0
         after?.getCount(CounterType.STUN) shouldBe 0
@@ -228,7 +230,7 @@ class RemoveCountersAtomCostTest : FunSpec({
             typeLine = "Artifact"
             oracleText = "Remove two charge counters from this permanent: Draw a card."
             activatedAbility {
-                cost = Costs.RemoveCounterFromSelf("charge", 2)
+                cost = Costs.RemoveCounterFromSelf(CounterType.CHARGE, 2)
                 effect = Effects.DrawCards(1)
             }
         }
@@ -253,7 +255,7 @@ class RemoveCountersAtomCostTest : FunSpec({
             )
         )
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         driver.state.getEntity(source)?.get<CountersComponent>()?.getCount(CounterType.CHARGE) shouldBe 0
     }
 })

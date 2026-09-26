@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Static Snare
@@ -50,17 +49,14 @@ val StaticSnare = card("Static Snare") {
 
     // ETB: exile target artifact or creature an opponent controls until this leaves.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val permanent = target(
-            "artifact or creature an opponent controls",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrArtifact.opponentControls()))
-        )
+        trigger = Triggers.self.enters()
+        val permanent = target(TargetFilter(GameObjectFilter.CreatureOrArtifact.opponentControls()))
         effect = Effects.ExileUntilLeaves(permanent)
     }
 
     // LTB: return the exiled card under its owner's control.
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 

@@ -9,6 +9,8 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.AdditionalCostPayment
 import io.kotest.assertions.withClue
+import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 
 /**
@@ -25,15 +27,19 @@ import io.kotest.matchers.shouldBe
  */
 class WickerfolkIndomitableScenarioTest : ScenarioTestBase() {
 
-    private fun graveyardGame() = scenario()
+    private fun graveyardGame(withBears: Boolean = true) = scenario()
         .withPlayers("Player", "Opponent")
         .withCardInGraveyard(1, "Wickerfolk Indomitable")
-        .withCardOnBattlefield(1, "Grizzly Bears")
+        .apply { if (withBears) withCardOnBattlefield(1, "Grizzly Bears") }
         .withLandsOnBattlefield(1, "Swamp", 4)
         .withLifeTotal(1, 20)
         .withActivePlayer(1)
         .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
         .build()
+
+    private fun TestGame.graveyardCast() = getLegalActions(1)
+        .firstOrNull { (it.action as? CastSpell)?.cardId == wickerfolkInGraveyard() }
+        .shouldNotBeNull()
 
     private fun TestGame.wickerfolkInGraveyard(): EntityId =
         state.getGraveyard(player1Id).first {
@@ -86,6 +92,22 @@ class WickerfolkIndomitableScenarioTest : ScenarioTestBase() {
                 withClue("the filter is artifact|creature, not any permanent") {
                     (result.error != null) shouldBe true
                 }
+            }
+            test("the graveyard cast action offers the sacrifice picker over artifacts and creatures") {
+                val game = graveyardGame()
+                val bears = game.findPermanent("Grizzly Bears")!!
+
+                val cast = game.graveyardCast()
+                cast.isAffordable shouldBe true
+                val info = withClue("the sacrifice step of the composite cost reaches the client") {
+                    cast.additionalCostInfo.shouldNotBeNull()
+                }
+                info.costType shouldBe "SacrificePermanent"
+                info.validSacrificeTargets shouldContainExactly listOf(bears)
+            }
+
+            test("with no artifact or creature to sacrifice, the graveyard cast is not affordable") {
+                graveyardGame(withBears = false).graveyardCast().isAffordable shouldBe false
             }
         }
     }

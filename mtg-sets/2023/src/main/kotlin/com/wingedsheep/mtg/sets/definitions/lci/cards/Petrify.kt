@@ -1,6 +1,5 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantAttack
@@ -8,6 +7,8 @@ import com.wingedsheep.sdk.scripting.CantBlock
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.PreventActivatedAbilities
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Petrify
@@ -32,7 +33,7 @@ val Petrify = card("Petrify") {
         "Enchanted permanent can't attack or block, and its activated abilities can't " +
         "be activated."
 
-    auraTarget = Targets.CreatureOrArtifact
+    auraTarget = TargetObject(filter = TargetFilter.CreatureOrArtifact)
 
     staticAbility {
         ability = CantAttack(filter = GroupFilter.attachedCreature())

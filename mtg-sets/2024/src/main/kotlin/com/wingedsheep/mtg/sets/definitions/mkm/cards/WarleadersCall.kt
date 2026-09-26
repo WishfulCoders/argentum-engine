@@ -4,13 +4,12 @@
 
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -36,11 +35,8 @@ val WarleadersCall = card("Warleader's Call") {
         )
     }
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.youControl(),
-            binding = TriggerBinding.ANY
-        )
-        effect = DealDamageEffect(1, EffectTarget.PlayerRef(Player.EachOpponent))
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).enters()
+        effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent))
     }
     metadata {
         rarity = Rarity.RARE

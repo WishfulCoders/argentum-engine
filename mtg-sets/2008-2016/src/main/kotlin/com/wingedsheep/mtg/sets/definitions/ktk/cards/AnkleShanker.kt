@@ -27,15 +27,13 @@ val AnkleShanker = card("Ankle Shanker") {
     keywords(Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Group.grantKeywordToAll(
             keyword = Keyword.FIRST_STRIKE,
             filter = GroupFilter.AllCreaturesYouControl
-        ).then(
-            Patterns.Group.grantKeywordToAll(
-                keyword = Keyword.DEATHTOUCH,
-                filter = GroupFilter.AllCreaturesYouControl
-            )
+        ) then Patterns.Group.grantKeywordToAll(
+            keyword = Keyword.DEATHTOUCH,
+            filter = GroupFilter.AllCreaturesYouControl
         )
     }
 

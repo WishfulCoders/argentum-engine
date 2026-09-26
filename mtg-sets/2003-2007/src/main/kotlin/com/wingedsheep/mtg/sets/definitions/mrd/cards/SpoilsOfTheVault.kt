@@ -1,17 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.namedFromVariable
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.GatherUntilMatchEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -42,46 +36,20 @@ val SpoilsOfTheVault = card("Spoils of the Vault") {
         "and you lose 1 life for each of the exiled cards."
 
     spell {
-        val named = GameObjectFilter.Any.namedFromVariable("chosenName")
-
-        effect = Effects.Composite(
-            listOf(
-                // 1. Choose a card name — any name, basic lands included.
-                Effects.ChooseCardName(
-                    storeAs = "chosenName",
-                    prompt = "Choose a card name"
-                ),
-                // 2. Walk the top of the library until that name shows up (or it runs out).
-                GatherUntilMatchEffect(
-                    player = Player.You,
-                    filter = named,
-                    storeMatch = "match",
-                    storeRevealed = "revealed"
-                ),
-                RevealCollectionEffect(from = "revealed"),
-                // 3. Partition the reveal: the named card vs. everything seen on the way to it.
-                SelectFromCollectionEffect(
-                    from = "revealed",
-                    selection = SelectionMode.All,
-                    filter = named,
-                    storeSelected = "toHand",
-                    storeRemainder = "toExile"
-                ),
-                MoveCollectionEffect(
-                    from = "toHand",
-                    destination = CardDestination.ToZone(Zone.HAND, Player.You)
-                ),
-                MoveCollectionEffect(
-                    from = "toExile",
-                    destination = CardDestination.ToZone(Zone.EXILE, Player.You)
-                ),
-                // 4. One life per exiled card — counted after the move, by entity id.
-                Effects.LoseLife(
-                    amount = DynamicAmounts.distinctEntitiesIn("toExile"),
-                    target = EffectTarget.Controller
-                )
-            )
-        )
+        effect = Effects.Pipeline {
+            // 1. Choose a card name — any name, basic lands included.
+            val chosenName = chooseCardName(prompt = "Choose a card name")
+            val named = GameObjectFilter.Any.namedFromVariable(chosenName)
+            // 2. Walk the top of the library until that name shows up (or it runs out).
+            val (_, revealed) = gatherUntilMatch(named, player = Player.You)
+            reveal(revealed)
+            // 3. Partition the reveal: the named card vs. everything seen on the way to it.
+            val (toHandCards, toExile) = selectAllSplit(from = revealed, filter = named)
+            toHand(toHandCards)
+            exile(toExile)
+            // 4. One life per exiled card — counted after the move, by entity id.
+            run(Effects.LoseLife(amount = DynamicAmounts.distinctEntitiesIn(toExile), target = EffectTarget.Controller))
+        }
     }
 
     metadata {

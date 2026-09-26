@@ -12,8 +12,8 @@
                 "amount": 4
             },
             "target": {
-                "type": "ContextTarget",
-                "index": 0
+                "type": "BoundVariable",
+                "name": "t0"
             }
         },
         "targetRequirements": [
@@ -21,7 +21,8 @@
                 "type": "TargetObject",
                 "filter": {
                     "baseFilter": "creature"
-                }
+                },
+                "id": "t0"
             }
         ]
     },
@@ -50,12 +51,15 @@
                 "amount": 3
             },
             "target": {
-                "type": "ContextTarget",
-                "index": 0
+                "type": "BoundVariable",
+                "name": "t0"
             }
         },
         "targetRequirements": [
-            "AnyTarget"
+            {
+                "type": "AnyTarget",
+                "id": "t0"
+            }
         ],
         "additionalCosts": [
             {
@@ -115,7 +119,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Flamewake Phoenix:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "BEGIN_COMBAT"
@@ -221,7 +225,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Mardu Strike Leader:1",
                 "trigger": "AttackEvent",
                 "effect": {
                     "type": "CreateToken",
@@ -265,7 +269,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Monastery Mentor:1",
                 "trigger": {
                     "type": "SpellCastEvent",
                     "spellFilter": {
@@ -289,7 +293,7 @@
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Monastery Mentor:2",
                 "trigger": {
                     "type": "SpellCastEvent",
                     "spellFilter": {
@@ -359,7 +363,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Noxious Dragon:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield",
@@ -372,7 +376,7 @@
                         "type": "MoveToZone",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target"
+                            "name": "t0"
                         },
                         "destination": "Graveyard",
                         "byDestruction": true
@@ -383,7 +387,7 @@
                     "filter": {
                         "baseFilter": "creature mv<=3"
                     },
-                    "id": "target"
+                    "id": "t0"
                 }
             }
         ]
@@ -409,7 +413,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Outpost Siege:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP"
@@ -427,11 +431,11 @@
                                     "amount": 1
                                 }
                             },
-                            "storeAs": "exiledCard"
+                            "storeAs": "gathered0"
                         },
                         {
                             "type": "MoveCollection",
-                            "from": "exiledCard",
+                            "from": "gathered0",
                             "destination": {
                                 "type": "ToZone",
                                 "zone": "Exile"
@@ -439,7 +443,7 @@
                         },
                         {
                             "type": "GrantMayPlayFromExile",
-                            "from": "exiledCard"
+                            "from": "gathered0"
                         }
                     ]
                 },
@@ -449,7 +453,7 @@
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Outpost Siege:2",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "creature ctrl:you",
@@ -464,12 +468,12 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirement": {
                     "type": "AnyTarget",
-                    "id": "target"
+                    "id": "t0"
                 },
                 "triggerRestriction": {
                     "type": "SourceChosenModeIs",
@@ -525,7 +529,7 @@
                         "keyword": "INDESTRUCTIBLE",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target"
+                            "name": "t0"
                         }
                     },
                     "targetRequirements": [
@@ -534,7 +538,7 @@
                             "filter": {
                                 "baseFilter": "creature"
                             },
-                            "id": "target"
+                            "id": "t0"
                         }
                     ],
                     "description": "Target creature gains indestructible until end of turn. (Damage and effects that say \"destroy\" don't destroy it.)"
@@ -544,7 +548,7 @@
                         "type": "MoveToZone",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target"
+                            "name": "t1"
                         },
                         "destination": "Graveyard",
                         "byDestruction": true
@@ -555,7 +559,7 @@
                             "filter": {
                                 "baseFilter": "creature tou>=4"
                             },
-                            "id": "target"
+                            "id": "t1"
                         }
                     ],
                     "description": "Destroy target creature with toughness 4 or greater"

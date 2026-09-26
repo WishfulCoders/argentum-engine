@@ -1,18 +1,18 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.unaryMinus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Stalactite Stalker — {B}
@@ -29,7 +29,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * won't trigger unless you've already descended when the step begins).
  *
  * The activated ability sacrifices Stalactite Stalker as a cost, then reads its power for X. Because
- * the source is gone by resolution, X is last-known information: `EntityProperty(Source, Power)`
+ * the source is gone by resolution, X is last-known information: `EntityProperty(Self, Power)`
  * resolves via the source's LKI snapshot captured at cost-payment time (CR 113.7a / 608.2h),
  * including any +1/+1 counters it had accrued. (`Source` — not `Sacrificed()` — is the correct
  * reference for a `SacrificeSelf` cost: the self-sacrifice target is implicit, so it never lands in
@@ -51,18 +51,15 @@ val StalactiteStalker = card("Stalactite Stalker") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.YouDescendedThisTurn()
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{B}"), Costs.SacrificeSelf)
-        val creature = target("target", Targets.Creature)
-        val negativePower = DynamicAmount.Multiply(
-            DynamicAmount.EntityProperty(EntityReference.Source, EntityNumericProperty.Power),
-            -1
-        )
+        val creature = target(TargetFilter.Creature)
+        val negativePower = -DynamicAmounts.sourcePower()
         effect = Effects.ModifyStats(negativePower, negativePower, creature)
     }
 

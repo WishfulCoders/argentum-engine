@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.khm.cards
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
@@ -10,7 +11,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Immersturm Predator
@@ -44,21 +44,17 @@ val ImmersturmPredator = card("Immersturm Predator") {
     // Whenever this creature becomes tapped, exile up to one target card from a graveyard and
     // put a +1/+1 counter on this creature.
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
-        val exiled = target("target card in a graveyard", TargetObject(optional = true, filter = TargetFilter.CardInGraveyard))
-        effect = Effects.Composite(
-            Effects.Move(exiled, Zone.EXILE),
-            Effects.AddCounters("+1/+1", 1, EffectTarget.Self)
-        )
+        trigger = Triggers.self.becomesTapped()
+        val exiled = target(TargetFilter.CardInGraveyard, optional = true)
+        effect = Effects.Move(exiled, Zone.EXILE) then
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     // Sacrifice another creature: This creature gains indestructible until end of turn. Tap it.
     activatedAbility {
         cost = Costs.SacrificeAnother(GameObjectFilter.Creature)
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self),
+        effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self) then
             Effects.Tap(EffectTarget.Self)
-        )
     }
 
     metadata {

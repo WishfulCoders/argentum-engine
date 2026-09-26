@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ala.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Dragon Fodder
@@ -21,7 +21,7 @@ val DragonFodder = card("Dragon Fodder") {
     oracleText = "Create two 1/1 red Goblin creature tokens."
 
     spell {
-        effect = CreateTokenEffect(
+        effect = Effects.CreateToken(
             count = 2,
             power = 1,
             toughness = 1,

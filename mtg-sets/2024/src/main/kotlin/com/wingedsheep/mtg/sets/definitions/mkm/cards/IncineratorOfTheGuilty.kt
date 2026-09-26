@@ -1,15 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /** Pipeline slot the chosen X rides from the collect-evidence action to the reflexive payoff. */
 private const val EVIDENCE_X = "incineratorEvidenceX"
@@ -58,12 +58,12 @@ val IncineratorOfTheGuilty = card("Incinerator of the Guilty") {
     keywords(Keyword.FLYING, Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = ReflexiveTriggerEffect(
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.ReflexiveTrigger(
             action = Effects.CollectEvidenceChosenAmount(EVIDENCE_X),
             optional = true,
             reflexiveEffect = Patterns.Group.dealDamageToAll(
-                DynamicAmount.VariableReference(EVIDENCE_X),
+                DynamicAmounts.storedNumber(EVIDENCE_X),
                 GroupFilter(GameObjectFilter.CreatureOrPlaneswalker.controlledByTriggeringPlayer()),
             ),
             descriptionOverride = "You may collect evidence X. When you do, this creature deals X " +

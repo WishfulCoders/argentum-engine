@@ -1,11 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.mid.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Raze the Effigy
@@ -27,11 +25,11 @@ val RazeTheEffigy = card("Raze the Effigy") {
     spell {
         modal(chooseCount = 1) {
             mode("Destroy target artifact") {
-                val t = target("target", Targets.Artifact)
+                val t = target(TargetFilter.Artifact)
                 effect = Effects.Destroy(t)
             }
             mode("Target attacking creature gets +2/+2 until end of turn") {
-                val t = target("target", TargetCreature(filter = TargetFilter.AttackingCreature))
+                val t = target(TargetFilter.AttackingCreature)
                 effect = Effects.ModifyStats(2, 2, t)
             }
         }

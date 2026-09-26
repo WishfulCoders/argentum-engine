@@ -21,7 +21,7 @@ val AutomaticLibrarian = card("Automatic Librarian") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Scry(2)
     }
 

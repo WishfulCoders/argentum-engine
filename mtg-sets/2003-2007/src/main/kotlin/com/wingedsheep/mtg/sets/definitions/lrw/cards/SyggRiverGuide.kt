@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Sygg, River Guide
@@ -36,10 +35,7 @@ val SyggRiverGuide = card("Sygg, River Guide") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{W}")
-        val t = target(
-            "target Merfolk you control",
-            TargetCreature(filter = TargetFilter.Creature.youControl().withSubtype(Subtype.MERFOLK)),
-        )
+        val t = target(TargetFilter.Creature.youControl().withSubtype(Subtype.MERFOLK))
         effect = Effects.ChooseColorThen(Effects.GrantProtectionFromChosenColor(t))
         description = "Target Merfolk you control gains protection from the color of your choice until end of turn."
     }

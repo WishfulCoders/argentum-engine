@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Slickshot Lockpicker
@@ -34,11 +33,9 @@ val SlickshotLockpicker = card("Slickshot Lockpicker") {
         "on a later turn without paying its mana cost. Plot only as a sorcery.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = TargetObject(
-            filter = TargetFilter.InstantOrSorceryInGraveyard.ownedByYou()
-        )
-        effect = Effects.GrantFlashback()
+        val target = target(TargetFilter.InstantOrSorceryInGraveyard.ownedByYou())
+        trigger = Triggers.self.enters()
+        effect = Effects.GrantFlashback(target = target)
         description = "When this creature enters, target instant or sorcery card in your graveyard " +
             "gains flashback until end of turn. The flashback cost is equal to its mana cost."
     }

@@ -5,8 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.flurry
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CounterDestination
-import com.wingedsheep.sdk.scripting.effects.CounterEffect
-import com.wingedsheep.sdk.scripting.effects.CounterTargetSource
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -49,16 +47,11 @@ val TaigamMasterOpportunist = card("Taigam, Master Opportunist") {
     flurry {
         description = "copy it, then exile the spell you cast with four time counters on it. " +
             "If it doesn't have suspend, it gains suspend"
-        effect = Effects.Composite(
-            listOf(
-                Effects.CopyTargetSpell(EffectTarget.TriggeringEntity),
-                CounterEffect(
-                    targetSource = CounterTargetSource.TriggeringEntity,
-                    counterDestination = CounterDestination.Exile(),
-                ),
-                Effects.Suspend(EffectTarget.TriggeringEntity, timeCounters = 4),
-            )
-        )
+        effect = Effects.CopyTargetSpell(EffectTarget.TriggeringEntity) then
+            Effects.CounterTriggeringSpell(
+                counterDestination = CounterDestination.Exile(),
+            ) then
+            Effects.Suspend(EffectTarget.TriggeringEntity, timeCounters = 4)
     }
 
     metadata {

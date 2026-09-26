@@ -45,15 +45,13 @@ val SpinewoodsArmadillo = card("Spinewoods Armadillo") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{G}"), Costs.DiscardSelf)
         activateFromZone = Zone.HAND
-        effect = Effects.Composite(
-            Patterns.Library.searchLibrary(
-                filter = GameObjectFilter.BasicLand or GameObjectFilter.Land.withSubtype(Subtype.DESERT),
-                destination = SearchDestination.HAND,
-                reveal = true,
-                shuffleAfter = true
-            ),
+        effect = Patterns.Library.searchLibrary(
+            filter = GameObjectFilter.BasicLand or GameObjectFilter.Land.withSubtype(Subtype.DESERT),
+            destination = SearchDestination.HAND,
+            reveal = true,
+            shuffleAfter = true
+        ) then
             Effects.GainLife(3)
-        )
     }
 
     metadata {

@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Sunseed Nurturer
@@ -17,7 +18,7 @@ import com.wingedsheep.sdk.scripting.TimingRule
  * At the beginning of your end step, if you control a creature with power 5 or greater, you may gain 2 life.
  * {T}: Add {C}.
  *
- * The printed "if …" is an intervening-if on [Triggers.YourEndStep], so it is checked both when the
+ * The printed "if …" is an intervening-if on `Triggers.you.beginningOf(Step.END)`, so it is checked both when the
  * ability would trigger and again on resolution — [Conditions.YouControl] over
  * `GameObjectFilter.Creature.powerAtLeast(5)`, the mere-existence form (never
  * `YouControlAtLeast(1, …)`). "You may" is the `optional = true` shorthand, which lowers to a
@@ -35,7 +36,7 @@ val SunseedNurturer = card("Sunseed Nurturer") {
         "{T}: Add {C}."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.YouControl(GameObjectFilter.Creature.powerAtLeast(5))
         optional = true
         effect = Effects.GainLife(2)

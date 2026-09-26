@@ -4,9 +4,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern.YouAttackEvent
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Seasoned Consultant — Murders at Karlov Manor #33
@@ -31,7 +30,7 @@ val SeasonedConsultant = card("Seasoned Consultant") {
     oracleText = "Whenever you attack with three or more creatures, this creature gets +2/+0 until end of turn."
 
     triggeredAbility {
-        trigger = TriggerSpec(YouAttackEvent(minAttackers = 3), TriggerBinding.ANY)
+        trigger = Triggers.you.attacks(minAttackers = 3)
         effect = Effects.ModifyStats(2, 0, EffectTarget.Self)
         description = "Whenever you attack with three or more creatures, this creature gets +2/+0 until end of turn."
     }

@@ -4,9 +4,8 @@ import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.values.AttachmentKind
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Golem-Skin Gauntlets — Mirrodin #181
@@ -35,10 +34,10 @@ val GolemSkinGauntlets = card("Golem-Skin Gauntlets") {
         "Equip {2}"
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = Filters.EquippedCreature,
             powerBonus = DynamicAmounts.attachmentsOnEnchantedCreature(AttachmentKind.EQUIPMENT),
-            toughnessBonus = DynamicAmount.Fixed(0)
+            toughnessBonus = DynamicAmounts.fixed(0)
         )
     }
 

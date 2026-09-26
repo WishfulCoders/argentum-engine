@@ -10,14 +10,9 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Bramble Familiar // Fetch Quest
@@ -79,46 +74,36 @@ val BrambleFamiliar = card("Bramble Familiar") {
             "(Then exile this card. You may cast the creature later from exile.)"
 
         spell {
-            effect = Effects.Composite(
-                listOf(
-                    GatherCardsEffect(
-                        source = CardSource.TopOfLibrary(
-                            count = DynamicAmount.Fixed(7),
-                            player = Player.You,
-                            isMill = true,
-                        ),
-                        storeAs = "fetch_milled",
-                    ),
-                    MoveCollectionEffect(
-                        from = "fetch_milled",
-                        destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.You),
-                    ),
-                    SelectFromCollectionEffect(
-                        from = "fetch_milled",
-                        selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                        filter = GameObjectFilter(
-                            cardPredicates = listOf(
-                                CardPredicate.Or(
-                                    listOf(
-                                        CardPredicate.IsCreature,
-                                        CardPredicate.IsEnchantment,
-                                        CardPredicate.IsLand,
-                                    ),
+            effect = Effects.Pipeline {
+                val fetchMilled = gather(
+                    CardSource.TopOfLibrary(
+                        count = 7,
+                        player = Player.You,
+                        isMill = true,
+                    )
+                )
+                toGraveyard(fetchMilled)
+                val fetchSelected = chooseExactly(
+                    1,
+                    from = fetchMilled,
+                    filter = GameObjectFilter(
+                        cardPredicates = listOf(
+                            CardPredicate.Or(
+                                listOf(
+                                    CardPredicate.IsCreature,
+                                    CardPredicate.IsEnchantment,
+                                    CardPredicate.IsLand,
                                 ),
                             ),
                         ),
-                        storeSelected = "fetch_selected",
-                        showAllCards = true,
-                        prompt = "Put a creature, enchantment, or land card onto the battlefield",
-                        selectedLabel = "Put onto the battlefield",
-                        remainderLabel = "Leave in graveyard",
                     ),
-                    MoveCollectionEffect(
-                        from = "fetch_selected",
-                        destination = CardDestination.ToZone(Zone.BATTLEFIELD, Player.You),
-                    ),
-                ),
-            )
+                    showAllCards = true,
+                    prompt = "Put a creature, enchantment, or land card onto the battlefield",
+                    selectedLabel = "Put onto the battlefield",
+                    remainderLabel = "Leave in graveyard"
+                )
+                move(fetchSelected, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You))
+            }
         }
     }
 

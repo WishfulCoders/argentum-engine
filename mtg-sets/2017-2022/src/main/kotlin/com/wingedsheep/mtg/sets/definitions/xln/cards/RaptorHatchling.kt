@@ -26,7 +26,7 @@ val RaptorHatchling = card("Raptor Hatchling") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.TakesDamage
+        trigger = Triggers.self.isDealtDamage()
         effect = Effects.CreateToken(
             power = 3,
             toughness = 3,

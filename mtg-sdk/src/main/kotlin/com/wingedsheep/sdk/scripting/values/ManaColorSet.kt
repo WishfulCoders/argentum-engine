@@ -113,6 +113,22 @@ sealed interface ManaColorSet {
     data object SourceChosenColor : ManaColorSet {
         override val description: String = "the chosen color"
     }
+
+    /**
+     * The union of several pools — the player picks one color from any of them. Models a mana
+     * ability that names a fixed color *or* a looked-up one: the Thriving lands' "Add {R} or one
+     * mana of the chosen color" is `Union(listOf(Specific(setOf(RED)), SourceChosenColor))`, which
+     * produces only {R} until a color has been chosen. Duplicates across members collapse (a set).
+     */
+    @SerialName("ManaColorSet.Union")
+    @Serializable
+    data class Union(val members: List<ManaColorSet>) : ManaColorSet {
+        init {
+            require(members.size >= 2) { "ManaColorSet.Union needs at least two members" }
+        }
+
+        override val description: String = members.joinToString(" or ") { it.description }
+    }
 }
 
 /**

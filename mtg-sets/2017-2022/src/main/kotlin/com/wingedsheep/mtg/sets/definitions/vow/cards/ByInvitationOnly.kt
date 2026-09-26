@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * By Invitation Only
@@ -36,7 +36,7 @@ val ByInvitationOnly = card("By Invitation Only") {
         effect = Effects.ChooseNumberThen(
             then = Effects.Sacrifice(
                 GameObjectFilter.Creature,
-                count = DynamicAmount.XValue,
+                count = DynamicAmounts.xValue(),
                 target = EffectTarget.PlayerRef(Player.Each),
             ),
             minValue = 0,

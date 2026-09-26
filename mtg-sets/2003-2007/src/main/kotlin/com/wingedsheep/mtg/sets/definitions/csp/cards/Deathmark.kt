@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -25,7 +24,7 @@ val Deathmark = card("Deathmark") {
     typeLine = "Sorcery"
     oracleText = "Destroy target green or white creature."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.withAnyColor(Color.GREEN, Color.WHITE)))
+        val t = target(TargetFilter.Creature.withAnyColor(Color.GREEN, Color.WHITE))
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     metadata {

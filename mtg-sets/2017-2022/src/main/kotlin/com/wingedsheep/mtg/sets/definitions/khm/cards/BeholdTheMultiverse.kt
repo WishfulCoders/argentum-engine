@@ -24,10 +24,7 @@ val BeholdTheMultiverse = card("Behold the Multiverse") {
         "Foretell {1}{U} (During your turn, you may pay {2} and exile this card from your hand face down. Cast it on a later turn for its foretell cost.)"
 
     spell {
-        effect = Effects.Composite(
-            Effects.Scry(2),
-            Effects.DrawCards(2)
-        )
+        effect = Effects.Scry(2) then Effects.DrawCards(2)
     }
 
     keywordAbility(KeywordAbility.foretell("{1}{U}"))

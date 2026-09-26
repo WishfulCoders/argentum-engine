@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * 1/3
  * Whenever an artifact you control enters, this creature deals 1 damage to each opponent.
  *
- * The Weldfast Wingsmith trigger shape — [Triggers.entersBattlefield] over
+ * The Weldfast Wingsmith trigger shape — `Triggers.a(filter).enters()` over
  * `Artifact.youControl()` with [TriggerBinding.ANY], so it watches every artifact rather than only
  * the source. "Each opponent" is a single [EffectTarget.PlayerRef] over [Player.EachOpponent];
  * the damage source defaults to the ability's own source, so no `damageSource` is spelled here.
@@ -30,10 +30,7 @@ val RecklessFireweaver = card("Reckless Fireweaver") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Artifact.youControl()).enters()
         effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent))
         description = "This creature deals 1 damage to each opponent."
     }

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.mana.CostCalculator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.support.GameTestDriver
@@ -138,7 +139,7 @@ class TemurBattlecrierTest : FunSpec({
 
     test("counts the Battlecrier itself (a 4-power creature) — {4}{R} → {3}{R}") {
         val registry = createRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val driver = createDriver()
         val me = driver.activePlayer!!
 
@@ -151,7 +152,7 @@ class TemurBattlecrierTest : FunSpec({
 
     test("power-3 creatures do not count, power-4 creatures do") {
         val registry = createRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val driver = createDriver()
         val me = driver.activePlayer!!
 
@@ -167,7 +168,7 @@ class TemurBattlecrierTest : FunSpec({
 
     test("reduction reads projected power — an anthem lifts a 3-power creature to 4") {
         val registry = createRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val driver = createDriver()
         val me = driver.activePlayer!!
 
@@ -185,7 +186,7 @@ class TemurBattlecrierTest : FunSpec({
 
     test("reduction never reduces colored pips below the cost (floors generic at 0)") {
         val registry = createRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val driver = createDriver()
         val me = driver.activePlayer!!
 
@@ -200,7 +201,7 @@ class TemurBattlecrierTest : FunSpec({
 
     test("'During your turn' — no reduction on an opponent's turn") {
         val registry = createRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val driver = createDriver()
         val me = driver.activePlayer!!
         val opponent = driver.getOpponent(me)
@@ -220,7 +221,7 @@ class TemurBattlecrierTest : FunSpec({
 
     test("reduction is controller-scoped — opponents get no discount from my Battlecrier") {
         val registry = createRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val driver = createDriver()
         val me = driver.activePlayer!!
         val opponent = driver.getOpponent(me)
@@ -234,7 +235,7 @@ class TemurBattlecrierTest : FunSpec({
 
     test("migrated SelfCast OnlyIf(IsYourTurn): {4}{U} → {3}{U} on your turn, full otherwise") {
         val registry = createRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val driver = createDriver()
         val me = driver.activePlayer!!
         val opponent = driver.getOpponent(me)
@@ -249,7 +250,7 @@ class TemurBattlecrierTest : FunSpec({
 
     test("migrated SelfCast OnlyIf(Compare): discount only when opponents control 3+ creatures") {
         val registry = createRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val driver = createDriver()
         val me = driver.activePlayer!!
         val opponent = driver.getOpponent(me)

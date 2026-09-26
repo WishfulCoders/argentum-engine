@@ -37,7 +37,7 @@ val GrandWarlordRadha = card("Grand Warlord Radha") {
     keywords(Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.YouAttack
+        trigger = Triggers.you.attacks()
         effect = Effects.AddDynamicMana(
             amount = DynamicAmounts.battlefield(Player.You, GameObjectFilter.Creature.attacking()).count(),
             allowedColors = setOf(Color.RED, Color.GREEN)

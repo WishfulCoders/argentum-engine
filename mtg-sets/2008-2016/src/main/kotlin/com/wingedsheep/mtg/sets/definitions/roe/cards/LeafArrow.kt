@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Leaf Arrow
@@ -30,7 +31,7 @@ val LeafArrow = card("Leaf Arrow") {
     oracleText = "Leaf Arrow deals 3 damage to target creature with flying."
 
     spell {
-        val flier = target("target creature with flying", Targets.CreatureWithKeyword(Keyword.FLYING))
+        val flier = target(TargetFilter.Creature.withKeyword(Keyword.FLYING))
         effect = Effects.DealDamage(3, flier)
     }
 

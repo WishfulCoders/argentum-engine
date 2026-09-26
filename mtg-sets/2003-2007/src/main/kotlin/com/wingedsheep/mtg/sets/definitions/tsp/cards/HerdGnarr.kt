@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Herd Gnarr
@@ -22,7 +23,7 @@ val HerdGnarr = card("Herd Gnarr") {
     oracleText = "Whenever another creature you control enters, this creature gets +2/+2 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.OtherCreatureEnters
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
     }
 

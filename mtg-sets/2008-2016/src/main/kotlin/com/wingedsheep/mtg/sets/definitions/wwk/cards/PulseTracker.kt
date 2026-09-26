@@ -27,7 +27,7 @@ val PulseTracker = card("Pulse Tracker") {
     power = 1
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent))
     }
     metadata {

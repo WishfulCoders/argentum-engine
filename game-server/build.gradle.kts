@@ -10,6 +10,7 @@ plugins {
 dependencies {
     implementation(project(":rules-engine"))
     implementation(project(":mtg-sdk"))
+    implementation(project(":mtg-sdk-tooling"))
     implementation(project(":mtg-sets"))
     implementation(project(":mtg-search"))
     implementation(project(":ai"))

@@ -1,19 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.minus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Isildur's Fateful Strike
@@ -31,37 +28,25 @@ val IsildursFatefulStrike = card("Isildur's Fateful Strike") {
         "Destroy target creature. If its controller has more than four cards in hand, they exile cards from their hand equal to the difference."
 
     spell {
-        val creature = target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         val controller = Player.ControllerOf("target creature")
 
         // Number of cards to exile = (controller's hand size − 4), but never negative.
-        val excess = DynamicAmount.IfPositive(
-            DynamicAmount.Subtract(
-                DynamicAmount.Count(controller, Zone.HAND),
-                DynamicAmount.Fixed(4)
-            )
+        val excess = DynamicAmounts.nonNegative(
+            DynamicAmounts.count(controller, Zone.HAND) - 4
         )
 
-        effect = Effects.Composite(
-            listOf(
-                Effects.Move(creature, Zone.GRAVEYARD, byDestruction = true),
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.HAND, controller),
-                    storeAs = "controllerHand"
-                ),
-                SelectFromCollectionEffect(
-                    from = "controllerHand",
-                    selection = SelectionMode.ChooseExactly(excess),
-                    chooser = Chooser.TargetPlayer,
-                    storeSelected = "exiled",
-                    prompt = "Choose cards to exile from your hand"
-                ),
-                MoveCollectionEffect(
-                    from = "exiled",
-                    destination = CardDestination.ToZone(Zone.EXILE, controller)
-                )
+        effect = Effects.Pipeline {
+            run(Effects.Move(creature, Zone.GRAVEYARD, byDestruction = true))
+            val controllerHand = gather(CardSource.FromZone(Zone.HAND, controller))
+            val exiled = chooseExactly(
+                excess,
+                from = controllerHand,
+                chooser = Chooser.TargetPlayer,
+                prompt = "Choose cards to exile from your hand"
             )
-        )
+            move(exiled, CardDestination.ToZone(Zone.EXILE, controller))
+        }
     }
 
     metadata {

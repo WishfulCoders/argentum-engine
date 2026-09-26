@@ -23,10 +23,7 @@ val ImpassionedOrator = card("Impassioned Orator") {
     oracleText = "Whenever another creature you control enters, you gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.youControl(),
-            binding = TriggerBinding.OTHER
-        )
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
         effect = Effects.GainLife(1)
     }
 

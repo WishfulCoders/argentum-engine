@@ -1,14 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Welcome to Sweettooth
@@ -49,16 +49,13 @@ val WelcomeToSweettooth = card("Welcome to Sweettooth") {
     }
 
     sagaChapter(3) {
-        val creature = target("target creature you control", Targets.CreatureYouControl)
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.AddDynamicCounters(
-            Counters.PLUS_ONE_PLUS_ONE,
-            DynamicAmount.Add(
-                DynamicAmount.Fixed(1),
-                DynamicAmounts.battlefield(
-                    Player.You,
-                    GameObjectFilter.Artifact.withSubtype("Food"),
-                ).count(),
-            ),
+            CounterType.PLUS_ONE_PLUS_ONE,
+            1 + DynamicAmounts.battlefield(
+                Player.You,
+                GameObjectFilter.Artifact.withSubtype("Food"),
+            ).count(),
             creature,
         )
     }

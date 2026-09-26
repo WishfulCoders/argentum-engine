@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.WardCost
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Armored Armadillo
@@ -33,7 +32,7 @@ val ArmoredArmadillo = card("Armored Armadillo") {
         cost = Costs.Mana("{3}{W}")
         effect = Effects.ModifyStats(
             power = DynamicAmounts.sourceToughness(),
-            toughness = DynamicAmount.Fixed(0),
+            toughness = DynamicAmounts.fixed(0),
             target = EffectTarget.Self
         )
         description = "{3}{W}: This creature gets +X/+0 until end of turn, where X is its toughness."

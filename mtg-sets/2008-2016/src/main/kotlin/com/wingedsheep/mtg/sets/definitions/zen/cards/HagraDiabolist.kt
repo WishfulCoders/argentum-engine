@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -34,12 +33,9 @@ val HagraDiabolist = card("Hagra Diabolist") {
     oracleText = "Whenever this creature or another Ally you control enters, you may have target player lose life equal to the number of Allies you control."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Permanent.withSubtype("Ally").youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Permanent.withSubtype("Ally").youControl()).enters()
         optional = true
-        val player = target("player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Effects.LoseLife(
             DynamicAmounts.battlefield(Player.You, GameObjectFilter.Permanent.withSubtype("Ally")).count(),
             player,

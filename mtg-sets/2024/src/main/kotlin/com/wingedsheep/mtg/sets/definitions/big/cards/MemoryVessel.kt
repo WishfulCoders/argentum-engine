@@ -1,22 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.big.cards
 
 import com.wingedsheep.sdk.core.Step
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Memory Vessel
@@ -51,21 +45,15 @@ val MemoryVessel = card("Memory Vessel") {
         timing = TimingRule.SorcerySpeed
         effect = Effects.ForEachPlayer(
             Player.ActivePlayerFirst,
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(7), Player.You),
-                    storeAs = "memoryVesselExiled"
-                ),
-                MoveCollectionEffect(
-                    from = "memoryVesselExiled",
-                    destination = CardDestination.ToZone(Zone.EXILE)
-                ),
-                GrantMayPlayFromExileEffect(
-                    from = "memoryVesselExiled",
+            Effects.Pipeline {
+                val memoryVesselExiled = gather(CardSource.TopOfLibrary(7, Player.You))
+                exile(memoryVesselExiled)
+                run(Effects.GrantMayPlayFromExile(
+                    from = memoryVesselExiled,
                     expiry = MayPlayExpiry.UntilControllerStep(Step.UPKEEP, includeCurrentTurn = false)
-                ),
-                Effects.CantPlayCardsFromHand(EffectTarget.Controller, Duration.UntilYourNextTurn)
-            )
+                ))
+                run(Effects.CantPlayCardsFromHand(EffectTarget.Controller, Duration.UntilYourNextTurn))
+            }
         )
         description = "{T}, Exile this artifact: Each player exiles the top seven cards of their " +
             "library. Until your next turn, players may play cards they exiled this way, and " +

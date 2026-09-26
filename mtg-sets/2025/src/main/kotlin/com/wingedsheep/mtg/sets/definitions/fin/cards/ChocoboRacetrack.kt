@@ -10,9 +10,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 
@@ -28,8 +26,8 @@ val ChocoboRacetrack = card("Chocobo Racetrack") {
     typeLine = "Artifact"
     oracleText = "Landfall — Whenever a land you control enters, create a 2/2 green Bird creature token with \"Whenever a land you control enters, this token gets +1/+0 until end of turn.\""
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(filter = GameObjectFilter.Land.youControl(), binding = TriggerBinding.ANY)
-        effect = CreateTokenEffect(
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
+        effect = Effects.CreateToken(
             power = 2,
             toughness = 2,
             colors = setOf(Color.GREEN),
@@ -37,14 +35,7 @@ val ChocoboRacetrack = card("Chocobo Racetrack") {
             imageUri = "https://cards.scryfall.io/normal/front/1/f/1fbc471d-5948-47fc-b7cc-81cc13a4cd15.jpg?1748704082",
             triggeredAbilities = listOf(
                 TriggeredAbility.create(
-                    trigger = Triggers.entersBattlefield(
-                        filter = GameObjectFilter.Land.youControl(),
-                        binding = TriggerBinding.ANY
-                    ).event,
-                    binding = Triggers.entersBattlefield(
-                        filter = GameObjectFilter.Land.youControl(),
-                        binding = TriggerBinding.ANY
-                    ).binding,
+                    trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters(),
                     effect = Effects.ModifyStats(1, 0, EffectTarget.Self)
                 )
             )

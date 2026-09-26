@@ -1,18 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.lgn.cards
 
 import com.wingedsheep.sdk.core.Subtype
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.effects.FlipCoinEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
-import com.wingedsheep.sdk.scripting.effects.ForceSacrificeEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Goblin Assassin
@@ -33,22 +28,14 @@ val GoblinAssassin = card("Goblin Assassin") {
     oracleText = "Whenever Goblin Assassin or another Goblin enters, each player flips a coin. Each player whose coin comes up tails sacrifices a creature."
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Creature.withSubtype(Subtype.GOBLIN),
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.ANY
-        )
-        effect = ForEachPlayerEffect(
+        trigger = Triggers.a(GameObjectFilter.Creature.withSubtype(Subtype.GOBLIN)).enters()
+        effect = Effects.ForEachPlayer(
             players = Player.Each,
-            effects = listOf(
-                FlipCoinEffect(
-                    lostEffect = ForceSacrificeEffect(
-                        filter = GameObjectFilter.Creature,
-                        count = 1,
-                        target = EffectTarget.Controller
-                    )
+            effect = Effects.FlipCoin(
+                lostEffect = Effects.Sacrifice(
+                    filter = GameObjectFilter.Creature,
+                    count = 1,
+                    target = EffectTarget.Controller
                 )
             )
         )

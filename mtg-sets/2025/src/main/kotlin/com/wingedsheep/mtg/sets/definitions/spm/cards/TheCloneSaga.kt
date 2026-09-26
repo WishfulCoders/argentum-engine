@@ -3,13 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.spm.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.namedFromVariable
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -25,7 +23,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Implementation:
  *  - **I** — `Effects.Surveil(3)`.
- *  - **II** — a one-shot event-based delayed trigger on `Triggers.YouCastCreature` (SpellCastEvent,
+ *  - **II** — a one-shot event-based delayed trigger on `Triggers.you.casts(GameObjectFilter.Creature)` (SpellCastEvent,
  *    Player.You, creature) whose effect copies the triggering spell with `removeLegendary = true`
  *    (the copy is a non-legendary token — same primitive as Jackal, Genius Geneticist). `fireOnce`
  *    makes it "the next" creature spell; `TriggeringEntity` binds to the just-cast spell at fire
@@ -55,8 +53,8 @@ val TheCloneSaga = card("The Clone Saga") {
 
     // II — When you next cast a creature spell this turn, copy it, except the copy isn't legendary.
     sagaChapter(2) {
-        effect = CreateDelayedTriggerEffect(
-            trigger = Triggers.YouCastCreature,
+        effect = Effects.CreateDelayedTrigger(
+            trigger = Triggers.you.casts(GameObjectFilter.Creature),
             effect = Effects.CopyTargetSpell(
                 target = EffectTarget.TriggeringEntity,
                 removeLegendary = true,
@@ -69,20 +67,15 @@ val TheCloneSaga = card("The Clone Saga") {
     // III — Choose a card name. Whenever a creature with the chosen name deals combat damage to a
     // player this turn, draw a card.
     sagaChapter(3) {
-        effect = Effects.Composite(
-            Effects.ChooseCardName(storeAs = "clonedName"),
-            CreateDelayedTriggerEffect(
-                trigger = Triggers.dealsDamage(
-                    damageType = DamageType.Combat,
-                    recipient = RecipientFilter.AnyPlayer,
-                    sourceFilter = GameObjectFilter.Creature.namedFromVariable("clonedName"),
-                    binding = TriggerBinding.ANY,
-                ),
+        effect = Effects.Pipeline {
+            val clonedName = chooseCardName()
+            run(Effects.CreateDelayedTrigger(
+                trigger = Triggers.a(GameObjectFilter.Creature.namedFromVariable(clonedName)).dealsCombatDamage(Recipient.AnyPlayer),
                 effect = Effects.DrawCards(1),
                 fireOnce = false,
                 expiry = DelayedTriggerExpiry.EndOfTurn,
-            ),
-        )
+            ))
+        }
     }
 
     metadata {

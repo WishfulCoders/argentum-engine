@@ -5,12 +5,8 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.AddManaEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 
@@ -40,17 +36,11 @@ val TheBathSong = card("The Bath Song") {
     }
 
     sagaChapter(3) {
-        target(
-            "target cards from your graveyard",
-            TargetObject(
-                unlimited = true,
-                filter = TargetFilter(GameObjectFilter.Any.ownedByYou(), zone = Zone.GRAVEYARD)
-            )
-        )
-        effect = ForEachTargetEffect(
-            effects = listOf(Effects.Move(EffectTarget.ContextTarget(0), Zone.LIBRARY))
-        ).then(ShuffleLibraryEffect())
-            .then(AddManaEffect(Color.BLUE, 2))
+        targets(TargetFilter(GameObjectFilter.Any.ownedByYou(), zone = Zone.GRAVEYARD), unlimited = true)
+        effect = Effects.ForEachTarget(
+            Effects.Move(EffectTarget.ContextTarget(0), Zone.LIBRARY)
+        ) then Effects.ShuffleLibrary() then
+            Effects.AddMana(Color.BLUE, 2)
     }
 
     metadata {

@@ -2,10 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.m11.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Brittle Effigy
@@ -27,13 +26,13 @@ val BrittleEffigy = card("Brittle Effigy") {
     oracleText = "{4}, {T}, Exile this artifact: Exile target creature."
 
     activatedAbility {
+        val creature = target(TargetFilter.Creature)
         cost = Costs.Composite(
             Costs.Mana("{4}"),
             Costs.Tap,
             Costs.ExileSelf,
         )
-        target = Targets.Creature
-        effect = Effects.Exile(EffectTarget.ContextTarget(0))
+        effect = Effects.Exile(creature)
     }
 
     metadata {

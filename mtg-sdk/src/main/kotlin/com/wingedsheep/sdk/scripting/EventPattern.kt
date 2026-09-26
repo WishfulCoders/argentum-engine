@@ -1,5 +1,6 @@
 package com.wingedsheep.sdk.scripting
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.BendType
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
@@ -46,15 +47,14 @@ enum class ExploreReveal { ANY, LAND, NONLAND }
  * ```kotlin
  * // "Combat damage from red sources to creatures you control"
  * EventPattern.DamageEvent(
- *     recipient = RecipientFilter.CreatureYouControl,
- *     source = SourceFilter.HasColor(Color.RED),
+ *     recipient = Recipient.CreatureYouControl,
+ *     source = GameObjectFilter.Any.withColor(Color.RED),
  *     damageType = DamageType.Combat
  * )
  * ```
  *
  * Supporting filter types are organized in the events/ subdirectory:
- * - EventFilters.kt - RecipientFilter, SourceFilter, DamageType,
- *                     CounterTypeFilter, ControllerFilter, Player
+ * - EventFilters.kt - Recipient, DamageType, AmountFilter and the per-event predicate sets
  * - Zone.kt - Zone enumeration
  */
 @Serializable
@@ -85,15 +85,15 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
      * When damage would be dealt (used by replacement effects).
      *
      * Examples:
-     * - "damage would be dealt to you" → DamageEvent(recipient = RecipientFilter.You)
+     * - "damage would be dealt to you" → DamageEvent(recipient = Recipient.You)
      * - "combat damage would be dealt" → DamageEvent(damageType = DamageType.Combat)
-     * - "damage from red sources" → DamageEvent(source = SourceFilter.HasColor(RED))
+     * - "damage from red sources" → DamageEvent(source = GameObjectFilter.Any.withColor(RED))
      */
     @SerialName("DamageEvent")
     @Serializable
     data class DamageEvent(
-        val recipient: RecipientFilter = RecipientFilter.Any,
-        val source: SourceFilter = SourceFilter.Any,
+        val recipient: Recipient = Recipient.Any,
+        val source: GameObjectFilter = GameObjectFilter.Any,
         val damageType: DamageType = DamageType.Any,
         val amount: AmountFilter = AmountFilter.Any
     ) : EventPattern {
@@ -108,7 +108,7 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
             }
             append("damage would be dealt to ")
             append(recipient.description)
-            if (source != SourceFilter.Any) {
+            if (source != GameObjectFilter.Any) {
                 append(" from ")
                 append(source.description)
             }
@@ -208,17 +208,17 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
      *
      * Examples:
      * - "counters would be placed" → CounterPlacementEvent()
-     * - "+1/+1 counters on creatures you control" → CounterPlacementEvent(counterType = CounterTypeFilter.PlusOnePlusOne, recipient = RecipientFilter.CreatureYouControl)
+     * - "+1/+1 counters on creatures you control" → CounterPlacementEvent(counterType = CounterType.PLUS_ONE_PLUS_ONE, recipient = Recipient.CreatureYouControl)
      */
     @SerialName("CounterPlacementEvent")
     @Serializable
     data class CounterPlacementEvent(
-        val counterType: CounterTypeFilter = CounterTypeFilter.Any,
-        val recipient: RecipientFilter = RecipientFilter.Any
+        val counterType: CounterType? = null,
+        val recipient: Recipient = Recipient.Any
     ) : EventPattern {
         override val description: String = buildString {
-            if (counterType != CounterTypeFilter.Any) {
-                append(counterType.description)
+            if (counterType != null) {
+                append(counterType.printed)
                 append(" ")
             }
             append("counters would be placed on ")
@@ -234,13 +234,17 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
      * When tokens would be created.
      *
      * Examples:
-     * - "tokens under your control" → TokenCreationEvent(controller = ControllerFilter.You)
-     * - "any tokens" → TokenCreationEvent(controller = ControllerFilter.Any)
+     * - "tokens under your control" → TokenCreationEvent(controller = Player.You)
+     * - "tokens under an opponent's control" → TokenCreationEvent(controller = Player.EachOpponent)
+     * - "any tokens" → TokenCreationEvent(controller = Player.Any)
+     *
+     * [controller] names the player the tokens are created under, read relative to the observing
+     * ability's controller — the same [Player] vocabulary as [LifeLossEvent.player].
      */
     @SerialName("TokenCreationEvent")
     @Serializable
     data class TokenCreationEvent(
-        val controller: ControllerFilter = ControllerFilter.You,
+        val controller: Player = Player.You,
         val tokenFilter: GameObjectFilter? = null
     ) : EventPattern {
         override val description: String = buildString {
@@ -250,9 +254,11 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
                 append(" ")
             }
             append("tokens would be created")
-            if (controller != ControllerFilter.Any) {
-                append(" ")
-                append(controller.description)
+            when (controller) {
+                Player.Any, Player.Each -> {}
+                Player.You -> append(" under your control")
+                Player.EachOpponent -> append(" under an opponent's control")
+                else -> append(" under ${controller.description}'s control")
             }
         }
 
@@ -410,18 +416,6 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
         val player: Player = Player.You
     ) : EventPattern {
         override val description: String = "${player.description} would pay life"
-    }
-
-    /**
-     * When a player would gain or lose life.
-     * Used for cards like Moonstone Harbinger: "Whenever you gain or lose life during your turn".
-     */
-    @SerialName("LifeGainOrLossEvent")
-    @Serializable
-    data class LifeGainOrLossEvent(
-        val player: Player = Player.You
-    ) : EventPattern {
-        override val description: String = "${player.description} would gain or lose life"
     }
 
     /**
@@ -690,7 +684,7 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
      * (CR 701.65b Airbend / 701.66b Earthbend / 701.67c Waterbend / 702.189b Firebending). Fires
      * once per bend. The default [types] set is all four, backing "Whenever you waterbend,
      * earthbend, firebend, or airbend, …" (Avatar Aang); pass a narrower set for a single-element
-     * variant ("whenever you earthbend, …"). See [com.wingedsheep.sdk.dsl.Triggers.YouBend].
+     * variant ("whenever you earthbend, …"). See `Triggers.you.bends(types)`.
      */
     @SerialName("BendPerformedEvent")
     @Serializable
@@ -739,6 +733,25 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
         val player: Player = Player.Each
     ) : EventPattern {
         override val description: String = "${player.description} would take an extra turn"
+    }
+
+    // =========================================================================
+    // Counter Events
+    // =========================================================================
+
+    /**
+     * When a spell or ability controlled by [counterer] would counter a spell. Replacement-only —
+     * used by [com.wingedsheep.sdk.scripting.ExileCounteredSpellInstead] (Guile).
+     */
+    @SerialName("CounterSpellEvent")
+    @Serializable
+    data class CounterSpellEvent(
+        val counterer: Player = Player.You
+    ) : EventPattern {
+        override val description: String = when (counterer) {
+            Player.You -> "a spell or ability you control would counter a spell"
+            else -> "a spell or ability ${counterer.description} controls would counter a spell"
+        }
     }
 
     // =========================================================================
@@ -994,17 +1007,27 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
      * the blocking-side mirror of [CreaturesAttackYourOpponentEvent.minAttackers]. It fires **once**
      * for the whole combat rather than once per blocked attacker, because "blocks two or more
      * creatures" is one event no matter how many are blocked. SELF binding only — the detector's
-     * ANY branch fans out per blocker and has no count to read — and [Triggers.blocks] rejects the
+     * ANY branch fans out per blocker and has no count to read — and `Triggers.<subject>.blocks(attackerFilter, minBlockedAttackers)` rejects the
      * other combinations rather than silently misfiring.
+     *
+     * [batch] is the "whenever one or more [filter] block" wording (Tide of War): one trigger per
+     * block declaration however many matching creatures block, and none when no matching creature
+     * blocks (CR 603.2c). ANY binding only; incompatible with [attackerFilter] and
+     * [minBlockedAttackers], which are per-blocker questions.
      */
     @SerialName("BlockEvent")
     @Serializable
     data class BlockEvent(
         val filter: GameObjectFilter? = null,
         val attackerFilter: GameObjectFilter? = null,
-        val minBlockedAttackers: Int = 1
+        val minBlockedAttackers: Int = 1,
+        val batch: Boolean = false
     ) : EventPattern {
         override val description: String = buildString {
+            if (batch) {
+                append(if (filter != null) "one or more ${filter.description} block" else "one or more creatures block")
+                return@buildString
+            }
             append(if (filter != null) "a ${filter.description} blocks" else "a creature blocks")
             if (minBlockedAttackers > 1) {
                 append(" $minBlockedAttackers or more creatures")
@@ -1132,7 +1155,7 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
     @Serializable
     data class DealsDamageEvent(
         val damageType: DamageType = DamageType.Any,
-        val recipient: RecipientFilter = RecipientFilter.Any,
+        val recipient: Recipient = Recipient.Any,
         val sourceFilter: GameObjectFilter? = null,
         /** Extensible, conjunctive facts about the damage event and its source. */
         val requires: Set<com.wingedsheep.sdk.scripting.events.DamagePredicate> = emptySet(),
@@ -1161,7 +1184,7 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
             if (batch) {
                 // Recipient-side batch wording: "one or more [recipients] are dealt … damage".
                 append("one or more ")
-                append(if (recipient != RecipientFilter.Any) recipient.description else "permanents or players")
+                append(if (recipient != Recipient.Any) recipient.description else "permanents or players")
                 append(" are dealt ")
                 if (requireExcess) append("excess ")
                 if (damageType != DamageType.Any) {
@@ -1185,7 +1208,7 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
                     append(" ")
                 }
                 append("damage")
-                if (recipient != RecipientFilter.Any) {
+                if (recipient != Recipient.Any) {
                     append(" to ")
                     append(recipient.description)
                 }
@@ -1209,11 +1232,11 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
     @SerialName("DamageReceivedEvent")
     @Serializable
     data class DamageReceivedEvent(
-        val source: SourceFilter = SourceFilter.Any
+        val source: GameObjectFilter = GameObjectFilter.Any
     ) : EventPattern {
         override val description: String = buildString {
             append("this is dealt damage")
-            if (source != SourceFilter.Any) {
+            if (source != GameObjectFilter.Any) {
                 append(" by ")
                 append(source.description)
             }
@@ -1338,9 +1361,11 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
             append(" casts ")
             val wasKicked = SpellCastPredicate.WasKicked in requires
             val isModal = SpellCastPredicate.IsModal in requires
+            val isPrepared = SpellCastPredicate.CastAsPrepareSpell in requires
             val prefixedQualifiers = listOfNotNull(
                 "kicked".takeIf { wasKicked },
-                "modal".takeIf { isModal }
+                "modal".takeIf { isModal },
+                "prepared".takeIf { isPrepared }
             )
             val filterDesc = spellFilter.description
             val anyPrefix = prefixedQualifiers.isNotEmpty()
@@ -1358,7 +1383,10 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
             }
             // Suffix qualifiers (cast-from-zone, mana-source, …) in registration order.
             requires
-                .filter { it !is SpellCastPredicate.WasKicked && it !is SpellCastPredicate.IsModal }
+                .filter {
+                    it !is SpellCastPredicate.WasKicked && it !is SpellCastPredicate.IsModal &&
+                        it !is SpellCastPredicate.CastAsPrepareSpell
+                }
                 .forEach { append(" ").append(it.description) }
         }
     }
@@ -1534,7 +1562,7 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
 
     /**
      * When an Aura, Equipment, or Fortification becomes attached to a permanent or player
-     * (CR 603.2e — "becomes" triggers fire only at the moment of attaching, not on a state that
+     * (CR 603.2f — "becomes" triggers fire only at the moment of attaching, not on a state that
      * already exists, and not on phasing in/out per CR 702.26j).
      *
      * The triggering entity is the *attachment* (the aura/equipment that became attached); the
@@ -1957,9 +1985,10 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
      * (relative to the trigger's controller — `Each` for any player, `Opponent`, `You`).
      * [landFilter] optionally restricts which lands count (e.g. only basic lands).
      *
-     * Fires on the manual mana-ability activation path; automatic cost payment adds mana via the
-     * solver and does not emit this event, matching how the engine handles mana-ability side
-     * effects during auto-payment.
+     * Fires however the land was tapped to pay — a manual activation or the auto-payer — but only
+     * for a mana ability with {T} in its cost. [TriggerBinding.SELF] is "whenever you tap this land
+     * for mana" (Forbidden Orchard). A non-mana rider: it uses the stack. A trigger that *adds* mana
+     * is a triggered mana ability (CR 605.1b) — author that as `AdditionalManaOnSourceTap`.
      */
     @SerialName("LandTappedForMana")
     @Serializable
@@ -2134,19 +2163,19 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
      *
      * Examples:
      * - "Whenever you put one or more +1/+1 counters on a creature you control"
-     *   → CountersPlacedEvent(counterType = Counters.PLUS_ONE_PLUS_ONE, filter = GameObjectFilter.Creature.youControl())
+     *   → CountersPlacedEvent(counterType = CounterType.PLUS_ONE_PLUS_ONE, filter = GameObjectFilter.Creature.youControl())
      * - "Whenever you put one or more +1/+1 counters on one or more other Heroes you control"
-     *   → CountersPlacedEvent(counterType = Counters.PLUS_ONE_PLUS_ONE, placedBy = Player.You,
+     *   → CountersPlacedEvent(counterType = CounterType.PLUS_ONE_PLUS_ONE, placedBy = Player.You,
      *     filter = GameObjectFilter.Creature.youControl().withSubtype(Subtype.HERO), batch = true)
      *     with [TriggerBinding.OTHER]
      *
-     * @property counterType The counter type to match (e.g., "+1/+1", "LORE")
+     * @property counterType The counter type to match, or `null` for counters of any kind.
      * @property filter Filter for the permanent receiving counters
      */
     @SerialName("CountersPlacedEvent")
     @Serializable
     data class CountersPlacedEvent(
-        val counterType: String,
+        val counterType: CounterType?,
         val filter: GameObjectFilter = GameObjectFilter.Any,
         /**
          * When true, the trigger fires only the first time counters are put on the affected
@@ -2193,7 +2222,7 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
          * exposed as the trigger's captured collection, as [UntapEvent.batch] does.
          *
          * Note that [firstTimeEachTurn] defaults to `false` here but to `!batch` in the
-         * `Triggers.countersPlacedOn(...)` facade: a batch template essentially never carries a
+         * `Triggers.a(...).getsCounters(firstTimeEachTurn = true)` facade: a batch template essentially never carries a
          * printed "for the first time this turn" rider, so the facade stops handing one to it. The
          * combination remains expressible on both — it just has to be asked for.
          *
@@ -2205,7 +2234,7 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
         val batch: Boolean = false
     ) : EventPattern {
         override val description: String = buildString {
-            val typeLabel = if (counterType == com.wingedsheep.sdk.core.Counters.ANY) "" else "$counterType "
+            val typeLabel = counterType?.let { "${it.printed} " } ?: ""
             if (placedBy != null) {
                 append("${placedBy.description} put one or more ${typeLabel}counters on ")
             } else {
@@ -2239,14 +2268,13 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
      *
      * Examples:
      * - "When the last defense counter is removed from this permanent"
-     *   → CountersRemovedEvent(counterType = Counters.DEFENSE, lastRemoved = true) with
+     *   → CountersRemovedEvent(counterType = CounterType.DEFENSE, lastRemoved = true) with
      *     [TriggerBinding.SELF]
      * - "Whenever one or more +1/+1 counters are removed from a creature you control"
-     *   → CountersRemovedEvent(counterType = Counters.PLUS_ONE_PLUS_ONE, filter =
+     *   → CountersRemovedEvent(counterType = CounterType.PLUS_ONE_PLUS_ONE, filter =
      *     GameObjectFilter.Creature.youControl())
      *
-     * @property counterType The counter type to match, or [com.wingedsheep.sdk.core.Counters.ANY]
-     *   for counters of any kind.
+     * @property counterType The counter type to match, or `null` for counters of any kind.
      * @property filter Filter for the permanent the counters were removed from.
      * @property lastRemoved When true, fires only for the removal that takes the permanent's count
      *   of [counterType] to zero.
@@ -2254,7 +2282,7 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
     @SerialName("CountersRemovedEvent")
     @Serializable
     data class CountersRemovedEvent(
-        val counterType: String,
+        val counterType: CounterType?,
         val filter: GameObjectFilter = GameObjectFilter.Any,
         val lastRemoved: Boolean = false,
         /**
@@ -2266,7 +2294,7 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
         val byDamagePrevention: Boolean = false,
     ) : EventPattern {
         override val description: String = buildString {
-            val typeLabel = if (counterType == com.wingedsheep.sdk.core.Counters.ANY) "" else "$counterType "
+            val typeLabel = counterType?.let { "${it.printed} " } ?: ""
             if (lastRemoved) {
                 append("the last ${typeLabel}counter is removed from ")
             } else {
@@ -2307,7 +2335,7 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
      * [targetMatch] optionally narrows the trigger to abilities that target a particular kind of
      * object or player. When non-null, the activated ability must have at least one chosen target
      * satisfying it — a non-targeting ability never fires. Ertha Jo, Frontier Mentor uses
-     * [com.wingedsheep.sdk.scripting.events.AbilityTargetMatch.CreatureOrPlayer] for
+     * [com.wingedsheep.sdk.scripting.events.Recipient.CreatureOrPlayer] for
      * "Whenever you activate an ability that targets a creature or player".
      *
      * [sourceFilter] optionally restricts which permanent the activated ability must belong to
@@ -2333,19 +2361,44 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
      * [excludeManaAbilities], which subtracts mana abilities from the *exhaust* semantic; this one
      * adds them to the default semantic. A trigger that sets it must not itself be able to produce
      * mana, or CR 605.1b would make it a mana ability.
+     *
+     * [requireLoyalty] narrows to loyalty abilities (CR 606) — "whenever you activate a loyalty
+     * ability" (Way of the Paradox), "whenever an opponent activates a loyalty ability" (Gideon the
+     * Oathless). Loyalty abilities are never mana abilities, so the default gate is unaffected.
+     *
+     * [minLoyaltyRemoved] further narrows a [requireLoyalty] trigger to activations whose cost
+     * removed at least that many loyalty counters — a [−N] cost with N ≥ the threshold, or a [−X]
+     * cost with X chosen at least that high (Way of the Mind Sculptor: "if you removed two or more
+     * loyalty counters to activate it"). A [+N] or [0] cost removes none. The number is a fact of
+     * the activation, fixed once the cost is paid, so checking it as the trigger is matched is the
+     * same as checking it again on resolution. 0 (the default) imposes nothing.
      */
     @SerialName("AbilityActivatedEvent")
     @Serializable
     data class AbilityActivatedEvent(
         val player: Player = Player.You,
-        val targetMatch: com.wingedsheep.sdk.scripting.events.AbilityTargetMatch? = null,
+        val targetMatch: com.wingedsheep.sdk.scripting.events.Recipient? = null,
         val sourceFilter: GameObjectFilter? = null,
         val requireNoTapInCost: Boolean = false,
         val requireExhaust: Boolean = false,
         val excludeManaAbilities: Boolean = false,
         val includeManaAbilities: Boolean = false,
+        val requireLoyalty: Boolean = false,
+        val minLoyaltyRemoved: Int = 0,
     ) : EventPattern {
         override val description: String = buildString {
+            if (requireLoyalty) {
+                append(player.description)
+                append(" activates a loyalty ability")
+                if (minLoyaltyRemoved > 0) {
+                    append(", if ")
+                    append(player.description)
+                    append(" removed ")
+                    append(if (minLoyaltyRemoved == 1) "one or more loyalty counters" else "$minLoyaltyRemoved or more loyalty counters")
+                    append(" to activate it")
+                }
+                return@buildString
+            }
             // The clause that narrows *which* abilities count, appended after "...ability".
             // Empty for the unqualified [includeManaAbilities] wording, where the source filter
             // alone does the narrowing ("you activate a creature's ability" — Elrond).
@@ -2618,7 +2671,7 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
      * payoff can say "from among **them**". Note CR 111.7 has already swept any token out of that
      * collection by the time the ability resolves, and a card that has since left exile is likewise
      * no longer choosable (Kaya, Spirits' Justice's ruling) — filter the collection with
-     * `CollectionFilter.InZone(Zone.EXILE)` when the payoff must still find the card in exile.
+     * `GameObjectFilter.Any.currentlyIn(Zone.EXILE)` when the payoff must still find the card in exile.
      *
      * The common "during your turn" timing restriction is expressed on the card via
      * `triggerRestriction = Conditions.IsYourTurn` rather than baked into the event.
@@ -2906,6 +2959,24 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
         }
     }
 
+    /**
+     * Whenever one or more of *your opponents* (the trigger controller's opponents, CR 102.3) are
+     * dealt combat damage. Batching trigger keyed on the *damaged players* rather than the sources:
+     * it fires at most once per combat-damage batch however many opponents were hit and whatever
+     * dealt the damage — unlike [OneOrMoreDealCombatDamageToPlayerEvent], which fires once per
+     * damaged player and only counts sources you control.
+     *
+     * Examples:
+     *   → OpponentsDealtCombatDamageEvent + `triggerRestriction = Conditions.IsYourTurn`
+     *     "When one or more of your opponents are dealt combat damage during your turn"
+     *     (Fblthp, Impossibly Lost)
+     */
+    @SerialName("OpponentsDealtCombatDamageEvent")
+    @Serializable
+    data object OpponentsDealtCombatDamageEvent : EventPattern {
+        override val description: String = "one or more of your opponents are dealt combat damage"
+    }
+
     // =========================================================================
     // Leave Battlefield Without Dying Batch Triggers
     // =========================================================================
@@ -3127,6 +3198,7 @@ private val IRREGULAR_PLURAL_HEAD_NOUNS: Map<String, String> = mapOf(
     "Homunculus" to "Homunculi",
     "Octopus" to "Octopuses",
     // invariant plurals
+    "Equipment" to "Equipment",
     "Fish" to "Fish",
     "Jellyfish" to "Jellyfish",
     "Merfolk" to "Merfolk",

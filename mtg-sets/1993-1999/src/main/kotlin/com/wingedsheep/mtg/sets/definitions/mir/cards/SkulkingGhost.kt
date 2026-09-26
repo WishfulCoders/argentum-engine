@@ -26,7 +26,7 @@ val SkulkingGhost = card("Skulking Ghost") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.BecomesTarget
+        trigger = Triggers.self.becomesTarget()
         effect = Effects.SacrificeTarget(EffectTarget.Self)
     }
 

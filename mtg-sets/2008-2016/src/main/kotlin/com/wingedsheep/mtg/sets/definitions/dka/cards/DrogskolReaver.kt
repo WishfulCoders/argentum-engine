@@ -5,10 +5,10 @@
 package com.wingedsheep.mtg.sets.definitions.dka.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -30,8 +30,8 @@ val DrogskolReaver = card("Drogskol Reaver") {
     toughness = 5
     keywords(Keyword.FLYING, Keyword.DOUBLE_STRIKE, Keyword.LIFELINK)
     triggeredAbility {
-        trigger = Triggers.YouGainLife
-        effect = DrawCardsEffect(1)
+        trigger = Triggers.you.gainsLife()
+        effect = Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.MYTHIC

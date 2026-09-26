@@ -33,7 +33,7 @@ val MerchantShip = card("Merchant Ship") {
     }
 
     triggeredAbility {
-        trigger = Triggers.AttacksAndIsntBlocked
+        trigger = Triggers.self.attacksAndIsntBlocked()
         effect = Effects.GainLife(2, EffectTarget.Controller)
     }
 

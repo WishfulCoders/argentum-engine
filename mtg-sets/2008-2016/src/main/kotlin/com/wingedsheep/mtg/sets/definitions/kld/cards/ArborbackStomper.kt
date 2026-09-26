@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Trample
  * When this creature enters, you gain 5 life.
  *
- * Trample is a plain keyword; the life gain is an untargeted [Triggers.EntersBattlefield] trigger,
+ * Trample is a plain keyword; the life gain is an untargeted `Triggers.self.enters()` trigger,
  * so it resolves for the controller with no target slot.
  */
 val ArborbackStomper = card("Arborback Stomper") {
@@ -29,7 +29,7 @@ val ArborbackStomper = card("Arborback Stomper") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(5)
     }
 

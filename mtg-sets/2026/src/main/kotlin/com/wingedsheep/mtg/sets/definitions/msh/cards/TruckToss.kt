@@ -42,7 +42,7 @@ val TruckToss = card("Truck Toss") {
     }
 
     spell {
-        val victim = target("any target", Targets.Any)
+        val victim = target(Targets.Any)
         effect = Effects.DealDamage(4, victim)
     }
 

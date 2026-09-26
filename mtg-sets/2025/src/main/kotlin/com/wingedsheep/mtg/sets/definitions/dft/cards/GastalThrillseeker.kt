@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.maxSpeed
 import com.wingedsheep.sdk.dsl.startYourEngines
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Gastal Thrillseeker — Aetherdrift #205
@@ -41,12 +41,9 @@ val GastalThrillseeker = card("Gastal Thrillseeker") {
     startYourEngines()
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val opponent = target("target opponent", TargetOpponent())
-        effect = Effects.Composite(
-            Effects.DealDamage(1, opponent, damageSource = EffectTarget.Self),
-            Effects.GainLife(1),
-        )
+        trigger = Triggers.self.enters()
+        val opponent = target(Targets.Opponent)
+        effect = Effects.DealDamage(1, opponent, damageSource = EffectTarget.Self) then Effects.GainLife(1)
         description = "When this creature enters, it deals 1 damage to target opponent and you gain 1 life."
     }
 

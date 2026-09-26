@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -26,7 +26,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * engine's entered-this-turn marker, which a game-start permanent is never stamped with.
  *
  * Both counters are keyword/stat counters placed by the same [Effects.Composite]; double strike
- * is [Counters.DOUBLE_STRIKE] (CR 122.1d) rather than a granted keyword.
+ * is [CounterType.DOUBLE_STRIKE] (CR 122.1d) rather than a granted keyword.
  */
 val QuicksilverBrashBlur = card("Quicksilver, Brash Blur") {
     manaCost = "{R}"
@@ -48,10 +48,8 @@ val QuicksilverBrashBlur = card("Quicksilver, Brash Blur") {
     activatedAbility {
         isPowerUp = true
         cost = Costs.Mana("{4}{R}")
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
-            Effects.AddCounters(Counters.DOUBLE_STRIKE, 1, EffectTarget.Self)
-        )
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self) then
+            Effects.AddCounters(CounterType.DOUBLE_STRIKE, 1, EffectTarget.Self)
     }
 
     metadata {

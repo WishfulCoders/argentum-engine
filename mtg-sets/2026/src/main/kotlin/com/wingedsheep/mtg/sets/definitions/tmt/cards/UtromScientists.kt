@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Utrom Scientists
@@ -26,13 +25,9 @@ val UtromScientists = card("Utrom Scientists") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target(
-            "up to one target creature",
-            TargetCreature(count = 1, optional = true)
-        )
-        effect = Effects.Tap(creature)
-            .then(Effects.AddCounters(Counters.STUN, 1, creature))
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature, optional = true)
+        effect = Effects.Tap(creature) then Effects.AddCounters(CounterType.STUN, 1, creature)
     }
 
     metadata {

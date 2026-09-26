@@ -1,26 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherUntilMatchEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Part in Friendship — The Hobbit #134
@@ -55,49 +46,23 @@ val PartInFriendship = card("Part in Friendship") {
         "triggers only once each turn."
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.youControl().nontoken(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl().nontoken()).dies()
         oncePerTurn = true
-        effect = Effects.Composite(
-            listOf(
-                GatherUntilMatchEffect(
-                    filter = GameObjectFilter.Creature,
-                    storeMatch = "ignored",
-                    storeRevealed = "revealed"
+        effect = Effects.Pipeline {
+            val (_, revealed) = gatherUntilMatch(GameObjectFilter.Creature)
+            reveal(revealed)
+            val (found, rest) = filterSplit(revealed, GameObjectFilter.Creature)
+            run(Effects.If(
+                condition = Conditions.CompareAmounts(
+                    left = DynamicAmounts.manaValueOf(found),
+                    operator = ComparisonOperator.LTE,
+                    right = DynamicAmounts.battlefield(Player.You, GameObjectFilter.Land).count()
                 ),
-                RevealCollectionEffect(from = "revealed"),
-                FilterCollectionEffect(
-                    from = "revealed",
-                    filter = CollectionFilter.MatchesFilter(GameObjectFilter.Creature),
-                    storeMatching = "found",
-                    storeNonMatching = "rest"
-                ),
-                ConditionalEffect(
-                    condition = Compare(
-                        left = DynamicAmount.StoredCardManaValue("found"),
-                        operator = ComparisonOperator.LTE,
-                        right = DynamicAmounts.battlefield(Player.You, GameObjectFilter.Land).count()
-                    ),
-                    effect = MoveCollectionEffect(
-                        from = "found",
-                        destination = CardDestination.ToZone(Zone.BATTLEFIELD)
-                    ),
-                    elseEffect = MoveCollectionEffect(
-                        from = "found",
-                        destination = CardDestination.ToZone(Zone.HAND),
-                        revealed = true
-                    )
-                ),
-                MoveCollectionEffect(
-                    from = "rest",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
-                    order = CardOrder.Random
-                )
-            )
-        )
+                then = Effects.Pipeline { move(found, CardDestination.ToZone(Zone.BATTLEFIELD)) },
+                otherwise = Effects.Pipeline { toHand(found, revealed = true) }
+            ))
+            toLibraryBottom(rest, order = CardOrder.Random)
+        }
         description = "Whenever a nontoken creature you control dies, reveal cards from the top " +
             "of your library until you reveal a creature card. If its mana value is less than or " +
             "equal to the number of lands you control, put it onto the battlefield. Otherwise, " +

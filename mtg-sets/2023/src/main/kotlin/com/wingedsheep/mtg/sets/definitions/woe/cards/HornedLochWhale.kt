@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Horned Loch-Whale // Lagoon Breach
@@ -45,7 +45,7 @@ val HornedLochWhale = card("Horned Loch-Whale") {
     toughness = 6
 
     keywords(Keyword.FLASH)
-    keywordAbility(KeywordAbility.ward("{2}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
 
     replacementEffect(EntersTapped(unlessCondition = Conditions.IsYourTurn))
 
@@ -57,10 +57,7 @@ val HornedLochWhale = card("Horned Loch-Whale") {
             "(Then exile this card. You may cast the creature later from exile.)"
 
         spell {
-            val attacker = target(
-                "target attacking creature you don't control",
-                TargetCreature(filter = TargetFilter.AttackingCreature.opponentControls()),
-            )
+            val attacker = target(TargetFilter.AttackingCreature.opponentControls())
             effect = Effects.PutOnTopOrBottomOfLibrary(attacker)
         }
     }

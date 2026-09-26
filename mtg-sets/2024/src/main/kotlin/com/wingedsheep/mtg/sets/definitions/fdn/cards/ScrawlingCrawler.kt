@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Scrawling Crawler
@@ -17,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever an opponent draws a card, that player loses 1 life.
  *
  * The symmetric group-draw uses `DrawCards(Player.Each)`; the punisher clause fires per card an
- * opponent draws ([Triggers.OpponentDraws], CR 121.2), draining the player who drew via
+ * opponent draws (`Triggers.anOpponent.draws()`, CR 121.2), draining the player who drew via
  * `Player.TriggeringPlayer`. Cards an opponent draws from the upkeep clause therefore also drain
  * them — the two abilities compose without special-casing.
  */
@@ -30,13 +31,13 @@ val ScrawlingCrawler = card("Scrawling Crawler") {
         "Whenever an opponent draws a card, that player loses 1 life."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.DrawCards(1, EffectTarget.PlayerRef(Player.Each))
         description = "At the beginning of your upkeep, each player draws a card."
     }
 
     triggeredAbility {
-        trigger = Triggers.OpponentDraws
+        trigger = Triggers.anOpponent.draws()
         effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.TriggeringPlayer))
         description = "Whenever an opponent draws a card, that player loses 1 life."
     }

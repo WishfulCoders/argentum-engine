@@ -27,10 +27,7 @@ val GibberingBarricade = card("Gibbering Barricade") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{B}"), Costs.Sacrifice(GameObjectFilter.Creature))
-        effect = Effects.Composite(
-            Effects.GainLife(1),
-            Effects.DrawCards(1)
-        )
+        effect = Effects.GainLife(1) then Effects.DrawCards(1)
     }
 
     metadata {

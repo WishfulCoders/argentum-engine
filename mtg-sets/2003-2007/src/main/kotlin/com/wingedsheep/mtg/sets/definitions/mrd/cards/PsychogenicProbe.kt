@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * 2 damage to that player.
  *
  * A symmetric observer trigger on the shuffle event (CR 701.24), built on
- * [Triggers.WheneverAPlayerShufflesTheirLibrary] — the shuffle twin of the library-search trigger.
+ * `Triggers.player(Player.Any).shufflesLibrary()` — the shuffle twin of the library-search trigger.
  * `Player.Any` is the printed "a player", so the Probe punishes its own controller too, and
  * `Player.TriggeringPlayer` carries "that player" through to the damage.
  *
@@ -34,7 +34,7 @@ val PsychogenicProbe = card("Psychogenic Probe") {
         "this artifact deals 2 damage to that player."
 
     triggeredAbility {
-        trigger = Triggers.WheneverAPlayerShufflesTheirLibrary
+        trigger = Triggers.player(Player.Any).shufflesLibrary()
         effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.TriggeringPlayer))
     }
 

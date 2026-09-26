@@ -32,7 +32,7 @@ class NoTargetMayElseTriggerScenarioTest : ScenarioTestBase() {
         toughness = 1
         oracleText = "At the beginning of your upkeep, you may gain 2 life. If you don't, you lose 1 life."
         triggeredAbility {
-            trigger = Triggers.YourUpkeep
+            trigger = Triggers.you.beginningOf(Step.UPKEEP)
             optional = true
             effect = Effects.GainLife(2)
             elseEffect = Effects.LoseLife(1, EffectTarget.Controller)

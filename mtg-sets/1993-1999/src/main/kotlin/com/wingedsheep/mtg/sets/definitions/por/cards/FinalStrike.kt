@@ -6,11 +6,11 @@ package com.wingedsheep.mtg.sets.definitions.por.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.targets.TargetOpponentOrPlaneswalker
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -27,8 +27,8 @@ val FinalStrike = card("Final Strike") {
     oracleText = "As an additional cost to cast this spell, sacrifice a creature.\nFinal Strike deals damage to target opponent or planeswalker equal to the sacrificed creature's power."
     additionalCost(Costs.additional.SacrificePermanent(GameObjectFilter.Creature))
     spell {
-        val t = target("target", TargetOpponentOrPlaneswalker())
-        effect = DealDamageEffect(DynamicAmounts.sacrificedPower(), t)
+        val t = target(Targets.OpponentOrPlaneswalker)
+        effect = Effects.DealDamage(DynamicAmounts.sacrificedPower(), t)
     }
     metadata {
         rarity = Rarity.RARE

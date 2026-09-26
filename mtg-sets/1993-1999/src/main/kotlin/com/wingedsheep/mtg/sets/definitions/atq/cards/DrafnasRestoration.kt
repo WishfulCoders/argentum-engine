@@ -6,15 +6,9 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Drafna's Restoration
@@ -40,29 +34,15 @@ val DrafnasRestoration = card("Drafna's Restoration") {
         "their library in any order."
 
     spell {
-        target("target player", Targets.Player)
-        target(
-            "any number of target artifact cards from that player's graveyard",
-            TargetObject(
-                unlimited = true,
-                filter = TargetFilter(
-                    GameObjectFilter.Artifact.ownedByTargetPlayer(),
-                    zone = Zone.GRAVEYARD
-                )
-            )
+        target(Targets.Player)
+        targets(
+            TargetFilter(GameObjectFilter.Artifact.ownedByTargetPlayer(), zone = Zone.GRAVEYARD),
+            unlimited = true,
         )
-        effect = Effects.Composite(
-            GatherCardsEffect(source = CardSource.ChosenTargets, storeAs = "drafna_cards"),
-            MoveCollectionEffect(
-                from = "drafna_cards",
-                destination = CardDestination.ToZone(
-                    Zone.LIBRARY,
-                    player = Player.TargetPlayer,
-                    placement = ZonePlacement.Top
-                ),
-                order = CardOrder.ControllerChooses
-            )
-        )
+        effect = Effects.Pipeline {
+            val drafnaCards = gather(CardSource.ChosenTargets)
+            toLibraryTop(drafnaCards, Player.TargetPlayer)
+        }
     }
 
     metadata {

@@ -2,16 +2,16 @@ package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Outcaster Greenblade
@@ -23,7 +23,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * reveal it, put it into your hand, then shuffle.
  * This creature gets +1/+1 for each Desert you control.
  *
- * The static self-buff is a [GrantDynamicStatsEffect] whose bonus counts Deserts you control;
+ * The static self-buff is a [GrantDynamicStats] whose bonus counts Deserts you control;
  * the count is read through projected state so it updates live as Deserts enter/leave.
  */
 val OutcasterGreenblade = card("Outcaster Greenblade") {
@@ -37,7 +37,7 @@ val OutcasterGreenblade = card("Outcaster Greenblade") {
         "for each Desert you control."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.BasicLand or GameObjectFilter.Land.withSubtype(Subtype.DESERT),
             destination = SearchDestination.HAND,
@@ -47,12 +47,12 @@ val OutcasterGreenblade = card("Outcaster Greenblade") {
     }
 
     staticAbility {
-        val deserts = DynamicAmount.Count(
-            player = Player.You,
-            zone = Zone.BATTLEFIELD,
-            filter = GameObjectFilter.Land.withSubtype(Subtype.DESERT)
+        val deserts = DynamicAmounts.count(
+            Player.You,
+            Zone.BATTLEFIELD,
+            GameObjectFilter.Land.withSubtype(Subtype.DESERT)
         )
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
             powerBonus = deserts,
             toughnessBonus = deserts

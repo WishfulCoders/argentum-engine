@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.p02.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Brutal Nightstalker
@@ -25,9 +25,9 @@ val BrutalNightstalker = card("Brutal Nightstalker") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val opponent = target("target", TargetOpponent())
-        effect = MayEffect(Patterns.Hand.discardCards(1, opponent))
+        trigger = Triggers.self.enters()
+        val opponent = target(Targets.Opponent)
+        effect = Effects.May(Patterns.Hand.discardCards(1, opponent))
     }
 
     metadata {

@@ -1,6 +1,5 @@
 package com.wingedsheep.engine.mechanics.combat.rules
 
-import com.wingedsheep.engine.handlers.ConditionEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.PredicateEvaluator
@@ -11,7 +10,7 @@ import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.FaceDownComponent
 import com.wingedsheep.engine.mechanics.combat.AttackSacrificeCosts
 import com.wingedsheep.engine.state.components.identity.LifeTotalComponent
-import com.wingedsheep.engine.state.components.identity.ControllerComponent
+import com.wingedsheep.engine.mechanics.combat.CombatDefenders
 import com.wingedsheep.engine.state.components.player.InAdditionalCombatPhaseComponent
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.model.EntityId
@@ -31,6 +30,11 @@ class MustBeCreatureAttackRule : AttackRestrictionRule {
         if (!ctx.projected.isCreature(ctx.attackerId)) {
             val name = ctx.state.getEntity(ctx.attackerId)?.get<CardComponent>()?.name ?: "Entity"
             return "Only creatures can attack: $name"
+        }
+        // CR 508.1a / 506.3f: a creature that is also a battle can't attack.
+        if (ctx.projected.isBattle(ctx.attackerId)) {
+            val name = ctx.state.getEntity(ctx.attackerId)?.get<CardComponent>()?.name ?: "Entity"
+            return "A battle can't attack: $name"
         }
         return null
     }
@@ -86,14 +90,16 @@ class SummoningSicknessAttackRule : AttackRestrictionRule {
 /**
  * Cannot have defender keyword, unless the creature has a conditional ability to bypass defender.
  */
-class DefenderAttackRule : AttackRestrictionRule {
+class DefenderAttackRule(
+    private val predicateEvaluator: PredicateEvaluator
+) : AttackRestrictionRule {
     override fun check(ctx: AttackCheckContext): String? {
         if (!ctx.projected.hasKeyword(ctx.attackerId, Keyword.DEFENDER)) return null
 
         // The Defender restriction is lifted by a temporary "attack this turn as though it didn't
         // have defender" grant or a satisfied CanAttackDespiteDefender static ability. Both live in
         // DefenderBypass so this enforcement path and the client's "can attack" badge agree exactly.
-        if (DefenderBypass.isActive(ctx.state, ctx.attackerId, ctx.attackingPlayer, ctx.cardRegistry)) return null
+        if (DefenderBypass.isActive(ctx.state, ctx.attackerId, ctx.attackingPlayer, ctx.cardRegistry, predicateEvaluator = predicateEvaluator)) return null
 
         return errorMsg(ctx)
     }
@@ -129,7 +135,9 @@ class CantAttackProjectedRule : AttackRestrictionRule {
  * The filter is matched with projected state so animated lands read as the land *creatures* they are
  * ("land creatures" = `GameObjectFilter.Creature and GameObjectFilter.Land`).
  */
-class AdditionalCombatPhaseAttackerRule : AttackRestrictionRule {
+class AdditionalCombatPhaseAttackerRule(
+    private val predicateEvaluator: PredicateEvaluator
+) : AttackRestrictionRule {
     override fun check(ctx: AttackCheckContext): String? {
         val activePlayer = ctx.state.activePlayerId ?: return null
         val restriction = ctx.state.getEntity(activePlayer)
@@ -150,7 +158,6 @@ class AdditionalCombatPhaseAttackerRule : AttackRestrictionRule {
     }
 
     companion object {
-        private val predicateEvaluator = PredicateEvaluator()
     }
 }
 
@@ -177,7 +184,9 @@ class NotAlreadyAttackingRule : AttackRestrictionRule {
  * to the defender (e.g., Goblin Goon — "can't attack unless you control more
  * creatures than defending player").
  */
-class CantAttackUnlessDefenderRule : AttackDefenderRule {
+class CantAttackUnlessDefenderRule(
+    private val predicateEvaluator: PredicateEvaluator
+) : AttackDefenderRule {
     override fun check(ctx: AttackCheckContext, defenderId: EntityId): String? {
         val container = ctx.state.getEntity(ctx.attackerId) ?: return null
         if (container.has<FaceDownComponent>()) return null
@@ -195,14 +204,13 @@ class CantAttackUnlessDefenderRule : AttackDefenderRule {
             controllerId = ctx.attackingPlayer,
             defendingPlayerId = defendingPlayer,
         )
-        if (!conditionEvaluator.evaluate(ctx.state, restriction.condition, effectContext)) {
+        if (!predicateEvaluator.conditions.evaluate(ctx.state, restriction.condition, effectContext)) {
             return "${cardComponent.name} ${restriction.description}"
         }
         return null
     }
 
     companion object {
-        private val conditionEvaluator = ConditionEvaluator()
     }
 }
 
@@ -226,7 +234,9 @@ class CantAttackUnlessDefenderRule : AttackDefenderRule {
  *
  * A face-down permanent has no abilities (CR 708.2), so it never contributes a restriction.
  */
-class CantBeAttackedByDefenderRule : AttackDefenderRule {
+class CantBeAttackedByDefenderRule(
+    private val predicateEvaluator: PredicateEvaluator
+) : AttackDefenderRule {
     override fun check(ctx: AttackCheckContext, defenderId: EntityId): String? {
         // Attacking a planeswalker/battle a player controls is not attacking *them*, so the only
         // defender this rule speaks about is a player — the one thing on the battlefield-adjacent
@@ -259,9 +269,6 @@ class CantBeAttackedByDefenderRule : AttackDefenderRule {
         return null
     }
 
-    companion object {
-        private val predicateEvaluator = PredicateEvaluator()
-    }
 }
 
 /** Prevents an attached permanent with [CantBeAttackedWhileAttached] from being attacked. */
@@ -280,7 +287,7 @@ class CantBeAttackedWhileAttachedDefenderRule : AttackDefenderRule {
 
 /**
  * AttackMode (CR 802 / 803): when the game uses attack-left or attack-right, a creature may only
- * attack the opponent in the adjacent seat (or a planeswalker/battle that opponent controls). The
+ * attack the opponent in the adjacent seat (or a planeswalker that opponent controls or a battle they protect). The
  * set of legal opponents is computed centrally by
  * [com.wingedsheep.engine.mechanics.combat.CombatDefenders.legalDefendingPlayers], so this rule and
  * the legal-action enumerator never disagree. A no-op under [com.wingedsheep.sdk.core.AttackMode.MULTIPLE]
@@ -310,7 +317,8 @@ private fun findDefendingPlayer(ctx: AttackCheckContext, defenderId: EntityId): 
     if (ctx.state.getEntity(defenderId)?.has<LifeTotalComponent>() == true) {
         return defenderId
     }
-    return ctx.state.getEntity(defenderId)?.get<ControllerComponent>()?.playerId ?: defenderId
+    // A battle is defended by its protector, not its controller (CR 310.9d).
+    return CombatDefenders.defendingPlayerOf(ctx.state, defenderId)
 }
 
 // =========================================================================
@@ -328,12 +336,15 @@ private fun findDefendingPlayer(ctx: AttackCheckContext, defenderId: EntityId): 
  * The cost is per *creature*, so two Leviathans attacking together owe two sacrifices of two
  * Islands each; the affordability check totals them.
  */
-class CantAttackUnlessSacrificeRule : AttackRestrictionRule {
+class CantAttackUnlessSacrificeRule(
+    private val predicateEvaluator: PredicateEvaluator
+) : AttackRestrictionRule {
     override fun check(ctx: AttackCheckContext): String? {
         val requirement = AttackSacrificeCosts.requirementFor(ctx.state, ctx.attackerId, ctx.cardRegistry)
             ?: return null
         val available = AttackSacrificeCosts.eligiblePermanents(
-            ctx.state, ctx.attackingPlayer, ctx.attackerId, requirement
+            ctx.state, ctx.attackingPlayer, ctx.attackerId, requirement,
+            predicateEvaluator = predicateEvaluator
         )
         if (available.size < requirement.count) {
             val name = ctx.state.getEntity(ctx.attackerId)?.get<CardComponent>()?.name ?: "Creature"
@@ -343,21 +354,21 @@ class CantAttackUnlessSacrificeRule : AttackRestrictionRule {
     }
 }
 
-fun defaultAttackRestrictionRules(): List<AttackRestrictionRule> = listOf(
+fun defaultAttackRestrictionRules(predicateEvaluator: PredicateEvaluator): List<AttackRestrictionRule> = listOf(
     MustBeCreatureAttackRule(),
     ControlledByAttackerRule(),
     MustBeUntappedAttackRule(),
     SummoningSicknessAttackRule(),
-    DefenderAttackRule(),
+    DefenderAttackRule(predicateEvaluator = predicateEvaluator),
     CantAttackProjectedRule(),
-    CantAttackUnlessSacrificeRule(),
-    AdditionalCombatPhaseAttackerRule(),
+    CantAttackUnlessSacrificeRule(predicateEvaluator = predicateEvaluator),
+    AdditionalCombatPhaseAttackerRule(predicateEvaluator = predicateEvaluator),
     NotAlreadyAttackingRule()
 )
 
-fun defaultAttackDefenderRules(): List<AttackDefenderRule> = listOf(
-    CantAttackUnlessDefenderRule(),
-    CantBeAttackedByDefenderRule(),
+fun defaultAttackDefenderRules(predicateEvaluator: PredicateEvaluator): List<AttackDefenderRule> = listOf(
+    CantAttackUnlessDefenderRule(predicateEvaluator = predicateEvaluator),
+    CantBeAttackedByDefenderRule(predicateEvaluator = predicateEvaluator),
     CantBeAttackedWhileAttachedDefenderRule(),
     AttackModeDefenderRule()
 )

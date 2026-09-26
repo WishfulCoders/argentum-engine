@@ -1,13 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Hamlet Vanguard
@@ -45,18 +47,15 @@ val HamletVanguard = card("Hamlet Vanguard") {
         "opponent controls, counter it unless that player pays {2}.)\n" +
         "This creature enters with two +1/+1 counters on it for each other nontoken Human you control."
 
-    keywordAbility(KeywordAbility.ward("{2}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
 
     replacementEffect(
         EntersWithDynamicCounters(
-            count = DynamicAmount.Multiply(
-                DynamicAmount.AggregateBattlefield(
-                    player = Player.You,
-                    filter = GameObjectFilter.Permanent.withSubtype(Subtype.HUMAN).nontoken(),
-                    excludeSelf = true,
-                ),
-                multiplier = 2,
-            )
+            count = DynamicAmounts.battlefield(
+                Player.You,
+                GameObjectFilter.Permanent.withSubtype(Subtype.HUMAN).nontoken(),
+                excludeSelf = true,
+            ).count() * 2
         )
     )
 

@@ -22,14 +22,12 @@ val MarchFromTheBlackGate = card("March from the Black Gate") {
         "create a 0/0 black Orc Army creature token first.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Amass(1, "Orc")
     }
 
     triggeredAbility {
-        trigger = Triggers.YouAttackWithFilter(
-            GameObjectFilter.Creature.withSubtype("Army").youControl()
-        )
+        trigger = Triggers.you.attacks(GameObjectFilter.Creature.withSubtype("Army").youControl())
         effect = Effects.Amass(1, "Orc")
     }
 

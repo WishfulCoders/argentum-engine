@@ -43,7 +43,7 @@ val TheSwarmweaver = card("The Swarmweaver") {
         "Insects and Spiders you control get +1/+1 and have deathtouch."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

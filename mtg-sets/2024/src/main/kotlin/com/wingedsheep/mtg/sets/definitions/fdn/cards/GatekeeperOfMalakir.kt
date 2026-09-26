@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.effects.ForceSacrificeEffect
 
 /**
  * Gatekeeper of Malakir
@@ -31,10 +30,10 @@ val GatekeeperOfMalakir = card("Gatekeeper of Malakir") {
 
     // When this creature enters, if it was kicked, target player sacrifices a creature of their choice.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = WasKicked
-        val player = target("target player", Targets.Player)
-        effect = ForceSacrificeEffect(GameObjectFilter.Creature, 1, player)
+        val player = target(Targets.Player)
+        effect = Effects.Sacrifice(GameObjectFilter.Creature, 1, player)
     }
 
     metadata {

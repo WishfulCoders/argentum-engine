@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -10,10 +11,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Break Out {R}{G}
@@ -29,7 +27,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *  1. `chooseUpToSplit` of 1 creature card — the optional reveal. Declining leaves `revealed`
  *     empty and every later step is a no-op over an empty slot, so all six cards fall through to
  *     the bottom-of-library move.
- *  2. `filterSplit` on [CollectionFilter.ManaValueAtMost] splits the revealed card into the
+ *  2. `filterSplit` on a `manaValueAtMostDynamic` filter splits the revealed card into the
  *     battlefield-eligible `cheap` slot and `tooExpensive`. The mana-value test is *not* a player
  *     choice, matching the card: only "you may put it onto the battlefield" is optional.
  *  3. A second `chooseUpToSplit` over `cheap` is that second "may". What the player declines lands
@@ -58,7 +56,7 @@ val BreakOut = card("Break Out") {
 
     spell {
         effect = Effects.Pipeline {
-            val looked = gather(CardSource.TopOfLibrary(DynamicAmount.Fixed(6)))
+            val looked = gather(CardSource.TopOfLibrary(6))
             val (revealed, rest) = chooseUpToSplit(
                 count = 1,
                 from = looked,
@@ -69,7 +67,7 @@ val BreakOut = card("Break Out") {
             reveal(revealed, revealToSelf = false)
             val (cheap, tooExpensive) = filterSplit(
                 from = revealed,
-                filter = CollectionFilter.ManaValueAtMost(DynamicAmount.Fixed(2))
+                filter = GameObjectFilter.Any.manaValueAtMostDynamic(DynamicAmounts.fixed(2))
             )
             val (toBattlefield, declined) = chooseUpToSplit(
                 count = 1,
@@ -81,9 +79,9 @@ val BreakOut = card("Break Out") {
                 destination = CardDestination.ToZone(Zone.BATTLEFIELD)
             )
             run(
-                ForEachInCollectionEffect(
-                    collection = entered.key,
-                    effect = Effects.GrantKeyword(Keyword.HASTE, EffectTarget.Self, Duration.EndOfTurn)
+                Effects.ForEachInCollection(
+                    entered,
+                    Effects.GrantKeyword(Keyword.HASTE, EffectTarget.IterationEntity, Duration.EndOfTurn)
                 )
             )
             toHand(tooExpensive)

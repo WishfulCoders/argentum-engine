@@ -6,6 +6,8 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.exploit
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Overcharged Amalgam
@@ -41,7 +43,7 @@ val OverchargedAmalgam = card("Overcharged Amalgam") {
 
     exploit(
         onExploit = Effects.CounterSpellOrAbility(),
-        onExploitTargets = listOf(Targets.SpellOrAbility)
+        onExploitTargets = listOf(TargetObject(filter = TargetFilter.SpellOrAbilityOnStack))
     )
 
     metadata {

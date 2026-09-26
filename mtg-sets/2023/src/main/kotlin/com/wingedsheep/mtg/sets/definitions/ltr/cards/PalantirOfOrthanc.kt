@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
@@ -8,9 +8,8 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Palantír of Orthanc
@@ -23,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * the total mana value of those cards.
  *
  * The "target opponent may" is routed to the targeted opponent (not the controller) via
- * [MayEffect]'s `decisionMaker`. On yes → the controller draws a card; on no → the else-branch
+ * [Effects.May]'s `decisionMaker`. On yes → the controller draws a card; on no → the else-branch
  * mills X cards into the "milled" collection and the opponent loses life equal to their total
  * mana value (DynamicAmount.ManaValueSumOfCollection / DynamicAmounts.manaValueSumOf).
  */
@@ -36,28 +35,20 @@ val PalantirOfOrthanc = card("Palantír of Orthanc") {
         "mana value of those cards."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
-        val opponent = target("target opponent", Targets.Opponent)
+        trigger = Triggers.you.beginningOf(Step.END)
+        val opponent = target(Targets.Opponent)
 
-        val influenceCount = DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.INFLUENCE))
+        val influenceCount = DynamicAmounts.countersOnSelf(CounterType.INFLUENCE)
 
-        effect = Effects.Composite(
-            listOf(
-                Effects.AddCounters(Counters.INFLUENCE, 1, EffectTarget.Self),
-                Patterns.Library.scry(2),
-                MayEffect(
-                    effect = Effects.DrawCards(1, EffectTarget.Controller),
-                    descriptionOverride = "Have Palantír of Orthanc's controller draw a card?",
-                    decisionMaker = opponent,
-                    otherwise = Effects.Composite(
-                        listOf(
-                            Patterns.Library.mill(influenceCount, EffectTarget.Controller),
-                            Effects.LoseLife(DynamicAmounts.manaValueSumOf("milled"), opponent)
-                        )
-                    )
-                )
+        effect = Effects.AddCounters(CounterType.INFLUENCE, 1, EffectTarget.Self) then
+            Patterns.Library.scry(2) then
+            Effects.May(
+                effect = Effects.DrawCards(1, EffectTarget.Controller),
+                descriptionOverride = "Have Palantír of Orthanc's controller draw a card?",
+                decisionMaker = opponent,
+                otherwise = Patterns.Library.mill(influenceCount, EffectTarget.Controller) then
+                    Effects.LoseLife(DynamicAmounts.manaValueSumOf(Patterns.Library.milled), opponent)
             )
-        )
     }
 
     metadata {

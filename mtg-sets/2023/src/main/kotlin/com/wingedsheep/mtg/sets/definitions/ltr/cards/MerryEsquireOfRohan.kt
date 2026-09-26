@@ -44,7 +44,7 @@ val MerryEsquireOfRohan = card("Merry, Esquire of Rohan") {
 
     // "Whenever you attack with Merry and another legendary creature, draw a card."
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         triggerRestriction = Exists(
             player = Player.You,
             zone = Zone.BATTLEFIELD,

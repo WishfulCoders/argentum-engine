@@ -9,11 +9,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.costs.PayCost
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Perforating Artist
@@ -47,20 +45,20 @@ val PerforatingArtist = card("Perforating Artist") {
     keywords(Keyword.DEATHTOUCH)
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.YouAttackedThisTurn
         effect = Effects.ForEachPlayer(
             Player.EachOpponent,
             listOf(
-                PayOrSufferEffect(
+                Effects.PayOrSuffer(
                     cost = Costs.pay.Choice(
                         listOf(
                             Costs.pay.Sacrifice(filter = GameObjectFilter.Nonland),
                             Costs.pay.Discard()
                         )
                     ),
-                    suffer = LoseLifeEffect(
-                        amount = DynamicAmount.Fixed(3),
+                    suffer = Effects.LoseLife(
+                        amount = 3,
                         target = EffectTarget.Controller
                     ),
                     player = EffectTarget.Controller

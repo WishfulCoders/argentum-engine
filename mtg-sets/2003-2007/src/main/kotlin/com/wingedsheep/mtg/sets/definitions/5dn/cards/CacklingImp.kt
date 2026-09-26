@@ -6,10 +6,10 @@ package com.wingedsheep.mtg.sets.definitions.`5dn`.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -30,8 +30,8 @@ val CacklingImp = card("Cackling Imp") {
     keywords(Keyword.FLYING)
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", TargetPlayer())
-        effect = LoseLifeEffect(1, t)
+        val t = target(Targets.Player)
+        effect = Effects.LoseLife(1, t)
     }
     metadata {
         rarity = Rarity.COMMON

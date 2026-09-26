@@ -29,7 +29,7 @@ val DwynensElite = card("Dwynen's Elite") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouControl(GameObjectFilter.Creature.withSubtype(Subtype.ELF), excludeSelf = true)
         effect = Effects.CreateToken(
             power = 1,

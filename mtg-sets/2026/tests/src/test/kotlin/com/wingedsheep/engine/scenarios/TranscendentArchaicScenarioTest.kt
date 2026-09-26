@@ -11,6 +11,7 @@ import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Transcendent Archaic ({7}, 6/6 Avatar, Vigilance):
@@ -19,7 +20,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  *
  * Pins the Converge-driven ETB looter:
  *  - X = `DynamicAmount.DistinctColorsManaSpent`, read off the entering creature's recorded payment.
- *  - The draw is optional (a `MayEffect` yes/no). Declining draws and discards nothing.
+ *  - The draw is optional (a `Effects.May` yes/no). Declining draws and discards nothing.
  *  - The discard is gated on "you drew one or more this way" — i.e. X >= 1. A `yes` with X = 0
  *    (all-colourless payment) draws nothing and must NOT force the discard.
  */
@@ -57,7 +58,7 @@ class TranscendentArchaicScenarioTest : FunSpec({
         driver.giveMana(p, Color.BLUE, 3)
 
         val handBeforeCast = driver.getHandSize(p)
-        driver.castSpell(p, spell).isSuccess shouldBe true
+        driver.castSpell(p, spell).outcome shouldBe Outcome.Done
         resolveUntilMayPrompt(driver)
 
         // The "may draw X" prompt.
@@ -85,7 +86,7 @@ class TranscendentArchaicScenarioTest : FunSpec({
         driver.giveColorlessMana(p, 7) // 0 colors → X = 0
 
         val handBeforeCast = driver.getHandSize(p)
-        driver.castSpell(p, spell).isSuccess shouldBe true
+        driver.castSpell(p, spell).outcome shouldBe Outcome.Done
         resolveUntilMayPrompt(driver)
 
         // Still get the optional "draw X" prompt (X just happens to be 0).
@@ -106,7 +107,7 @@ class TranscendentArchaicScenarioTest : FunSpec({
         driver.giveMana(p, Color.GREEN, 4) // X would be 2 if drawn
 
         val handBeforeCast = driver.getHandSize(p)
-        driver.castSpell(p, spell).isSuccess shouldBe true
+        driver.castSpell(p, spell).outcome shouldBe Outcome.Done
         resolveUntilMayPrompt(driver)
 
         driver.pendingDecision.shouldBeInstanceOf<YesNoDecision>()

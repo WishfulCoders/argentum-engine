@@ -26,7 +26,7 @@ val FlameJavelin = card("Flame Javelin") {
         "Flame Javelin deals 4 damage to any target."
 
     spell {
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(4, t)
     }
 

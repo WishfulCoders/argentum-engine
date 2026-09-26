@@ -21,7 +21,7 @@ import kotlinx.serialization.Serializable
  * Most conditions (life totals, hand/graveyard counts, control checks) are expressed via
  * the generic Compare and Exists primitives through the Conditions DSL facade.
  *
- * Note: ConditionalEffect (an Effect that checks a Condition) is in effects/ConditionalEffect.kt
+ * Note: Effects.If (an Effect that checks a Condition) is in effects/Effects.If.kt
  */
 @Serializable
 sealed interface Condition : TextReplaceable<Condition> {

@@ -1,11 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.snc.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Celebrity Fencer
@@ -14,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * 3 / 2
  * Alliance — Whenever another creature you control enters, put a +1/+1 counter on this creature.
  *
- * "Alliance" is a pure ability word, so this is the plain [Triggers.OtherCreatureEnters] (OTHER
+ * "Alliance" is a pure ability word, so this is the plain `Triggers.another(GameObjectFilter.Creature.youControl()).enters()` (OTHER
  * binding over creatures you control); the ability word lives only in the printed text.
  */
 val CelebrityFencer = card("Celebrity Fencer") {
@@ -26,8 +27,8 @@ val CelebrityFencer = card("Celebrity Fencer") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.OtherCreatureEnters
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Alliance — Whenever another creature you control enters, put a +1/+1 counter on this creature."
     }
 

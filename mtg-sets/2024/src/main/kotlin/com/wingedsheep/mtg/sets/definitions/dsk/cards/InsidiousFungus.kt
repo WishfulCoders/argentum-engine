@@ -3,13 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.dsk.cards
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Insidious Fungus
@@ -42,21 +42,17 @@ val InsidiousFungus = card("Insidious Fungus") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.SacrificeSelf)
         effect = ModalEffect.chooseOne(
-            Mode.withTarget(
-                Effects.Destroy(EffectTarget.ContextTarget(0)),
-                Targets.Artifact,
-                "Destroy target artifact"
-            ),
-            Mode.withTarget(
-                Effects.Destroy(EffectTarget.ContextTarget(0)),
-                Targets.Enchantment,
-                "Destroy target enchantment"
-            ),
+            mode("Destroy target artifact") {
+                val artifact = target(TargetFilter.Artifact)
+                effect = Effects.Destroy(artifact)
+            },
+            mode("Destroy target enchantment") {
+                val enchantment = target(TargetFilter.Enchantment)
+                effect = Effects.Destroy(enchantment)
+            },
             Mode.noTarget(
-                Effects.Composite(
-                    Effects.DrawCards(1),
-                    Patterns.Hand.putFromHand(GameObjectFilter.Land, entersTapped = true)
-                ),
+                Effects.DrawCards(1) then
+                    Patterns.Hand.putFromHand(GameObjectFilter.Land, entersTapped = true),
                 "Draw a card. Then you may put a land card from your hand onto the battlefield tapped"
             )
         )

@@ -6,11 +6,11 @@ package com.wingedsheep.mtg.sets.definitions.sth.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -31,7 +31,7 @@ val Revenant = card("Revenant") {
     keywords(Keyword.FLYING)
     // Creature *cards in your graveyard* — not creatures on the battlefield, which is what the
     // generated draft counted. Found by Assay's differential the day it could read the line.
-    dynamicStats(DynamicAmount.Count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Creature))
+    dynamicStats(DynamicAmounts.creatureCardsInYourGraveyard())
     metadata {
         rarity = Rarity.RARE
         collectorNumber = "68"

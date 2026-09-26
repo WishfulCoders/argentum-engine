@@ -1,19 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
 import com.wingedsheep.sdk.core.Speed
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Spikeshell Harrier — Aetherdrift #65
@@ -52,35 +50,30 @@ val SpikeshellHarrier = card("Spikeshell Harrier") {
         "reduce that opponent's speed by 1. This effect can't reduce their speed below 1."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val bounced = target(
-            "target creature or Vehicle an opponent controls",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrVehicle.opponentControls()))
-        )
+        trigger = Triggers.self.enters()
+        val bounced = target(TargetFilter(GameObjectFilter.CreatureOrVehicle.opponentControls()))
         val thatOpponent = Player.ControllerOf("target creature or Vehicle an opponent controls")
 
-        effect = Effects.Composite(
-            Effects.ReturnToHand(bounced),
-            ConditionalEffect(
-                condition = Compare(
-                    left = DynamicAmount.CountPlayersWith(
+        effect = Effects.ReturnToHand(bounced) then
+            Effects.If(
+                condition = Conditions.CompareAmounts(
+                    left = DynamicAmounts.countPlayersWith(
                         scope = Player.Each,
-                        condition = Compare(
-                            left = DynamicAmount.Speed(Player.You),
+                        condition = Conditions.CompareAmounts(
+                            left = DynamicAmounts.speed(Player.You),
                             operator = ComparisonOperator.GTE,
-                            right = DynamicAmount.Speed(thatOpponent)
+                            right = DynamicAmounts.speed(thatOpponent)
                         )
                     ),
                     operator = ComparisonOperator.EQ,
-                    right = DynamicAmount.Fixed(1)
+                    right = 1
                 ),
-                effect = Effects.ReduceSpeed(
-                    amount = DynamicAmount.Fixed(1),
+                then = Effects.ReduceSpeed(
+                    amount = DynamicAmounts.fixed(1),
                     target = EffectTarget.PlayerRef(thatOpponent),
                     minimum = Speed.STARTING
                 )
             )
-        )
         description = "When this creature enters, return target creature or Vehicle an opponent " +
             "controls to its owner's hand. If that opponent's speed is greater than each other " +
             "player's speed, reduce that opponent's speed by 1. This effect can't reduce their " +

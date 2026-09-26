@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * Haste is a plain keyword, but [Keyword.CASCADE] is display-only — nothing in the rules engine
  * reads it. Cascade is itself a "when you cast this spell" triggered ability (CR 702.85a), so the
- * behavior lives in the [Triggers.WhenYouCastThisSpell] trigger feeding [Effects.Cascade], with the
+ * behavior lives in the `Triggers.self.isCast()` trigger feeding [Effects.Cascade], with the
  * keyword kept only for the printed line — the same shape as `cmr/cards/AnnoyedAltisaur.kt`.
  */
 val BloodbraidElf = card("Bloodbraid Elf") {
@@ -34,7 +34,7 @@ val BloodbraidElf = card("Bloodbraid Elf") {
 
     // Cascade — the cast trigger the keyword abbreviates.
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
+        trigger = Triggers.self.isCast()
         effect = Effects.Cascade
         description = "Cascade"
     }

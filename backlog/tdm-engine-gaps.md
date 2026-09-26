@@ -108,7 +108,7 @@ the overwhelming majority of the set.
 
 7. **New keyword counter types.** ✅ **DONE.** The engine has flying / first-strike / lifelink / indestructible /
    stun / finality / deathtouch / trample / hexproof counters via `KEYWORD_COUNTER_MAP`, plus the **decayed**
-   counter (`Counters.DECAYED`) — a *composite-ability* counter (not a single keyword): `StateProjector` grants the
+   counter (`CounterType.DECAYED`) — a *composite-ability* counter (not a single keyword): `StateProjector` grants the
    `DECAYED` keyword + `cantBlock = true`, and `TriggerDetector.detectDecayedCounterAttackTriggers` schedules the
    end-of-combat self-sacrifice when a decayed-countered creature attacks (CR 702.147a).
    → Champion of Dusan (trample), Qarsi Revenant (deathtouch), Kheru Goldkeeper (flying — exists),

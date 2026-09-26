@@ -7,9 +7,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Tune Up — Aetherdrift #33
@@ -19,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  * an artifact creature.
  *
  * Two ordered steps on the same chosen target: [Effects.Move] to the battlefield, then a
- * [ConditionalEffect] that re-reads that target *as a permanent* — [Conditions.TargetMatchesFilter]
+ * [Effects.If] that re-reads that target *as a permanent* — [Conditions.TargetMatchesFilter]
  * on the Vehicle subtype — and adds the Creature card type. The animation has no stated duration,
  * so it's [com.wingedsheep.sdk.scripting.Duration.Permanent] (the default of [Effects.AddCardType]):
  * the Vehicle stays a creature for as long as it stays on the battlefield, unlike crew's
@@ -38,19 +36,10 @@ val TuneUp = card("Tune Up") {
         "Vehicle, it becomes an artifact creature."
 
     spell {
-        val artifact = target(
-            "target artifact card in your graveyard",
-            TargetObject(
-                filter = TargetFilter.ArtifactInYourGraveyard
-            )
-        )
-        effect = Effects.Move(artifact, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD).then(
-            ConditionalEffect(
-                condition = Conditions.TargetMatchesFilter(
-                    GameObjectFilter.Permanent.withSubtype(Subtype.VEHICLE)
-                ),
-                effect = Effects.AddCardType("Creature", artifact),
-            )
+        val artifact = target(TargetFilter.ArtifactInYourGraveyard)
+        effect = Effects.Move(artifact, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD) then Effects.If(
+            condition = Conditions.TargetMatchesFilter(GameObjectFilter.Permanent.withSubtype(Subtype.VEHICLE), artifact),
+            then = Effects.AddCardType("Creature", artifact),
         )
     }
 

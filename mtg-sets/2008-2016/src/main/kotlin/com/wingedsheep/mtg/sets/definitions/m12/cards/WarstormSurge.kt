@@ -1,16 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.m12.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Warstorm Surge
@@ -30,14 +27,8 @@ val WarstormSurge = card("Warstorm Surge") {
     oracleText = "Whenever a creature you control enters, it deals damage equal to its power to any target."
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Creature.youControl(),
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.ANY
-        )
-        val any = target("any target", Targets.Any)
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).enters()
+        val any = target(Targets.Any)
         effect = Effects.DealDamage(
             amount = DynamicAmounts.triggeringPower(),
             target = any,

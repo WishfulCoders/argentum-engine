@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Haste Magic
@@ -26,12 +25,10 @@ val HasteMagic = card("Haste Magic") {
     oracleText = "Target creature gets +3/+1 and gains haste until end of turn. Exile the top card of your library. You may play it until your next end step."
 
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.ModifyStats(3, 1, t),
-            Effects.GrantKeyword(Keyword.HASTE, t),
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(3, 1, t) then
+            Effects.GrantKeyword(Keyword.HASTE, t) then
             Patterns.Exile.impulse(count = 1, expiry = MayPlayExpiry.UntilNextEndStep)
-        )
     }
 
     metadata {

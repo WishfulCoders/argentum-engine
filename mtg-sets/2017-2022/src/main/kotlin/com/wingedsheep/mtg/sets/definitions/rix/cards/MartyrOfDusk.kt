@@ -23,7 +23,7 @@ val MartyrOfDusk = card("Martyr of Dusk") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

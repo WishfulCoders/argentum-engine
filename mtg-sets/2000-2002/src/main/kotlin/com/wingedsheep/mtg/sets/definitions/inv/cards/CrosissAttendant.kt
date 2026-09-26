@@ -27,11 +27,9 @@ val CrosissAttendant = card("Crosis's Attendant") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeSelf)
-        effect = Effects.Composite(
-            Effects.AddMana(Color.BLUE),
-            Effects.AddMana(Color.BLACK),
+        effect = Effects.AddMana(Color.BLUE) then
+            Effects.AddMana(Color.BLACK) then
             Effects.AddMana(Color.RED)
-        )
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

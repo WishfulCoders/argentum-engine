@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.emerge
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Abundant Maw
@@ -37,12 +37,9 @@ val AbundantMaw = card("Abundant Maw") {
     emerge("{6}{B}")
 
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
-        val victim = target("target opponent", TargetOpponent())
-        effect = Effects.Composite(
-            Effects.LoseLife(3, target = victim),
-            Effects.GainLife(3),
-        )
+        trigger = Triggers.self.isCast()
+        val victim = target(Targets.Opponent)
+        effect = Effects.LoseLife(3, target = victim) then Effects.GainLife(3)
         description = "When you cast this spell, target opponent loses 3 life and you gain 3 life."
     }
 

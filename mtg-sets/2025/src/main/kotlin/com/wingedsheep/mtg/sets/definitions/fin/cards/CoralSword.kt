@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -30,12 +29,9 @@ val CoralSword = card("Coral Sword") {
     oracleText = "Flash\nWhen this Equipment enters, attach it to target creature you control. That creature gains first strike until end of turn.\nEquipped creature gets +1/+0.\nEquip {1}"
     keywords(Keyword.FLASH)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.youControl()))
-        effect = Effects.Composite(
-            Effects.AttachEquipment(t),
-            Effects.GrantKeyword(Keyword.FIRST_STRIKE, t)
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature.youControl())
+        effect = Effects.AttachEquipment(t) then Effects.GrantKeyword(Keyword.FIRST_STRIKE, t)
     }
     staticAbility {
         ability = ModifyStats(1, 0)

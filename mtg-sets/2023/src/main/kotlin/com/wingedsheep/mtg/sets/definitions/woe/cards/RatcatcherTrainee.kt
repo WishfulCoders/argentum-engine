@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Ratcatcher Trainee // Pest Problem
@@ -48,7 +48,7 @@ val RatcatcherTrainee = card("Ratcatcher Trainee") {
         oracleText = "Create two 1/1 black Rat creature tokens with \"This token can't block.\" " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            effect = woeRatToken(DynamicAmount.Fixed(2))
+            effect = woeRatToken(DynamicAmounts.fixed(2))
         }
     }
 

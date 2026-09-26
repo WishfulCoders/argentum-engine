@@ -25,7 +25,7 @@ val MesaCavalier = card("Mesa Cavalier") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(2)
     }
 

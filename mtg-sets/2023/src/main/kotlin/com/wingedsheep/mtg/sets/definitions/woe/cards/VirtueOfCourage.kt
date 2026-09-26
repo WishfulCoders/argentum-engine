@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Targets
@@ -8,12 +9,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.Gate
-import com.wingedsheep.sdk.scripting.effects.GatedEffect
 import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Virtue of Courage // Embereth Blaze
@@ -48,16 +45,10 @@ val VirtueOfCourage = card("Virtue of Courage") {
         "exile that many cards from the top of your library. You may play those cards this turn."
 
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            damageType = DamageType.NonCombat,
-            recipient = RecipientFilter.Opponent,
-            sourceFilter = GameObjectFilter.Any.youControl(),
-            binding = TriggerBinding.ANY
-        )
-        effect = GatedEffect(
-            gate = Gate.MayDecide(),
-            then = Patterns.Exile.impulse(
-                DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_DAMAGE_AMOUNT)
+        trigger = Triggers.a(GameObjectFilter.Any.youControl()).dealsDamage(Recipient.Opponent, damageType = DamageType.NonCombat)
+        effect = Effects.May(
+            effect = Patterns.Exile.impulse(
+                DynamicAmounts.triggerDamageAmount()
             ),
             // Becomes the yes/no prompt text — the pipeline's auto-description would read as
             // gather/move/grant plumbing.
@@ -75,7 +66,7 @@ val VirtueOfCourage = card("Virtue of Courage") {
         oracleText = "Embereth Blaze deals 2 damage to any target. (Then exile this card. You may " +
             "cast the enchantment later from exile.)"
         spell {
-            val anyTarget = target("any target", Targets.Any)
+            val anyTarget = target(Targets.Any)
             effect = Effects.DealDamage(2, anyTarget)
         }
     }

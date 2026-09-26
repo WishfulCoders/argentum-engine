@@ -1,20 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
 import com.wingedsheep.sdk.scripting.AddCreatureTypeByCounter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.GrantKeywordByCounter
 import com.wingedsheep.sdk.dsl.Triggers
-import com.wingedsheep.sdk.scripting.EventPattern.DealsDamageEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.effects.RemoveCountersEffect
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.dsl.Effects
 
@@ -37,19 +31,16 @@ val Aurification = card("Aurification") {
     triggeredAbility {
         // "a creature deals damage to you" — the creature restriction is the trigger's own
         // sourceFilter, not an assumption the detector makes on its behalf.
-        trigger = TriggerSpec(
-            DealsDamageEvent(recipient = RecipientFilter.You, sourceFilter = GameObjectFilter.Creature),
-            TriggerBinding.ANY
-        )
-        effect = AddCountersEffect(Counters.GOLD, 1, EffectTarget.TriggeringEntity)
+        trigger = Triggers.you.isDealtDamage(GameObjectFilter.Creature)
+        effect = Effects.AddCounters(CounterType.GOLD, 1, EffectTarget.TriggeringEntity)
     }
 
-    staticAbility { ability = AddCreatureTypeByCounter("Wall", Counters.GOLD) }
-    staticAbility { ability = GrantKeywordByCounter(Keyword.DEFENDER, Counters.GOLD) }
+    staticAbility { ability = AddCreatureTypeByCounter("Wall", CounterType.GOLD) }
+    staticAbility { ability = GrantKeywordByCounter(Keyword.DEFENDER, CounterType.GOLD) }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
-        effect = Effects.ForEachInGroup(GroupFilter.AllCreatures, RemoveCountersEffect(Counters.GOLD, Int.MAX_VALUE, EffectTarget.Self))
+        trigger = Triggers.self.leaves()
+        effect = Effects.ForEachInGroup(GroupFilter.AllCreatures, Effects.RemoveCounters(CounterType.GOLD, Int.MAX_VALUE, EffectTarget.IterationEntity))
     }
 
     metadata {

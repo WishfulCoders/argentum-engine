@@ -2,15 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Awaken the Honored Dead — Tarkir: Dragonstorm #170
@@ -36,7 +32,7 @@ val AwakenTheHonoredDead = card("Awaken the Honored Dead") {
         "III — You may discard a card. When you do, return target creature or land card from your graveyard to your hand."
 
     sagaChapter(1) {
-        val permanent = target("nonland permanent", Targets.NonlandPermanent)
+        val permanent = target(TargetFilter.NonlandPermanent)
         effect = Effects.Destroy(permanent)
     }
 
@@ -45,19 +41,12 @@ val AwakenTheHonoredDead = card("Awaken the Honored Dead") {
     }
 
     sagaChapter(3) {
-        effect = ReflexiveTriggerEffect(
+        effect = Effects.ReflexiveTrigger(
             action = Effects.Discard(1),
-            optional = true,
-            reflexiveEffect = Effects.ReturnToHand(EffectTarget.ContextTarget(0)),
-            reflexiveTargetRequirements = listOf(
-                TargetObject(
-                    filter = TargetFilter(
-                        GameObjectFilter.CreatureOrLand.ownedByYou(),
-                        zone = Zone.GRAVEYARD
-                    )
-                )
-            )
-        )
+            optional = true) {
+            val creatureOrLand = target(TargetFilter(GameObjectFilter.CreatureOrLand.ownedByYou(), zone = Zone.GRAVEYARD))
+            effect = Effects.ReturnToHand(creatureOrLand)
+        }
     }
 
     metadata {

@@ -17,7 +17,6 @@ import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.MoveToZoneEffect
 import com.wingedsheep.sdk.scripting.effects.Gate
 import com.wingedsheep.sdk.scripting.effects.GatedEffect
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
 import com.wingedsheep.sdk.scripting.effects.PayLifeEffect
 import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
@@ -25,10 +24,9 @@ import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
 import com.wingedsheep.sdk.scripting.effects.WardCost
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
-import com.wingedsheep.sdk.scripting.events.SourceFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.EventPattern
@@ -43,6 +41,9 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Subtype
 
 /**
  * Tests for the Card Definition DSL.
@@ -321,9 +322,9 @@ class CardDslTest : DescribeSpec({
                 toughness = 2
 
                 triggeredAbility {
-                    trigger = Triggers.EntersBattlefield
+                    trigger = Triggers.self.enters()
                     effect = Effects.DealDamage(4, EffectTarget.ContextTarget(0))
-                    target = Targets.Creature
+                    target = TargetObject(filter = TargetFilter.Creature)
                 }
             }
 
@@ -343,12 +344,12 @@ class CardDslTest : DescribeSpec({
                 toughness = 3
 
                 triggeredAbility {
-                    trigger = Triggers.EntersBattlefield
+                    trigger = Triggers.self.enters()
                     effect = Effects.GainLife(5)
                 }
 
                 triggeredAbility {
-                    trigger = Triggers.LeavesBattlefield
+                    trigger = Triggers.self.leaves()
                     effect = Effects.CreateToken(power = 3, toughness = 3, creatureTypes = setOf("Beast"))
                 }
             }
@@ -435,7 +436,7 @@ class CardDslTest : DescribeSpec({
                 manaCost = "{G}"
                 typeLine = "Enchantment — Aura"
 
-                auraTarget = Targets.Creature
+                auraTarget = TargetObject(filter = TargetFilter.Creature)
 
                 staticAbility {
                     ability = ModifyStats(+2, +0, Filters.EnchantedCreature)
@@ -445,7 +446,7 @@ class CardDslTest : DescribeSpec({
                 }
 
                 triggeredAbility {
-                    trigger = Triggers.PutIntoGraveyardFromBattlefield
+                    trigger = Triggers.self.dies()
                     effect = Effects.ReturnToHand(EffectTarget.Self)
                 }
             }
@@ -493,7 +494,7 @@ class CardDslTest : DescribeSpec({
 
                 loyaltyAbility(+1) {
                     effect = Patterns.Hand.discardCards(1)
-                    target = Targets.AllPlayers
+                    target = Targets.Player
                 }
 
                 loyaltyAbility(-2) {
@@ -522,10 +523,7 @@ class CardDslTest : DescribeSpec({
                 typeLine = "Sorcery"
 
                 spell {
-                    effect = Effects.Composite(
-                        Effects.DrawCards(3),
-                        Patterns.Hand.discardCards(2)
-                    )
+                    effect = Effects.DrawCards(3) then Patterns.Hand.discardCards(2)
                 }
             }
 
@@ -574,14 +572,12 @@ class CardDslTest : DescribeSpec({
 
                 spell {
                     // Named target bindings - each gets an index
-                    val firstTarget = target("first target", Targets.Any)
-                    val secondTarget = target("second target", Targets.Any)
+                    val firstTarget = target(Targets.Any)
+                    val secondTarget = target(Targets.Any)
 
-                    effect = Effects.Composite(
-                        Effects.DealDamage(1, firstTarget),
-                        Effects.DealDamage(1, secondTarget),
+                    effect = Effects.DealDamage(1, firstTarget) then
+                        Effects.DealDamage(1, secondTarget) then
                         Effects.DrawCards(1)
-                    )
                 }
             }
 
@@ -593,13 +589,13 @@ class CardDslTest : DescribeSpec({
             val composite = electrolyze.spellEffect as CompositeEffect
             composite.effects shouldHaveSize 3
 
-            // First effect targets BoundVariable("first target")
+            // First effect reads the first declared target
             val damage1 = composite.effects[0] as DealDamageEffect
-            damage1.target shouldBe EffectTarget.BoundVariable("first target")
+            damage1.target shouldBe EffectTarget.BoundVariable("t0")
 
-            // Second effect targets BoundVariable("second target")
+            // Second effect reads the second
             val damage2 = composite.effects[1] as DealDamageEffect
-            damage2.target shouldBe EffectTarget.BoundVariable("second target")
+            damage2.target shouldBe EffectTarget.BoundVariable("t1")
         }
     }
 
@@ -613,11 +609,11 @@ class CardDslTest : DescribeSpec({
                 spell {
                     modal(chooseCount = 2) {
                         mode("Counter target spell") {
-                            val spell = target("spell", Targets.Spell)
+                            val spell = target(TargetFilter.SpellOnStack)
                             effect = CounterEffect()
                         }
                         mode("Return target permanent to its owner's hand") {
-                            val permanent = target("permanent", Targets.Permanent)
+                            val permanent = target(TargetFilter.Permanent)
                             effect = Effects.ReturnToHand(permanent)
                         }
                         mode("Tap all creatures your opponents control") {
@@ -661,11 +657,11 @@ class CardDslTest : DescribeSpec({
                     modal {
                         mode("Destroy target artifact", Effects.Destroy(EffectTarget.ContextTarget(0)))
                         mode("Put target creature on the bottom of its owner's library") {
-                            val creature = target("creature", Targets.Creature)
+                            val creature = target(TargetFilter.Creature)
                             effect = MoveToZoneEffect(creature, Zone.LIBRARY, ZonePlacement.Top)
                         }
                         mode("Counter target instant spell") {
-                            val instant = target("instant", Targets.Spell)
+                            val instant = target(TargetFilter.SpellOnStack)
                             effect = CounterEffect()
                         }
                     }
@@ -803,8 +799,8 @@ class CardDslTest : DescribeSpec({
             val counterAdder = ModifyCounterPlacement(
                 modifier = 1,
                 appliesTo = EventPattern.CounterPlacementEvent(
-                    counterType = CounterTypeFilter.PlusOnePlusOne,
-                    recipient = RecipientFilter.CreatureYouControl
+                    counterType = CounterType.PLUS_ONE_PLUS_ONE,
+                    recipient = Recipient.CreatureYouControl
                 )
             )
             counterAdder.modifier shouldBe 1
@@ -828,11 +824,11 @@ class CardDslTest : DescribeSpec({
 
             // Combat damage from red sources to creatures you control
             val damageFilter = EventPattern.DamageEvent(
-                recipient = RecipientFilter.CreatureYouControl,
-                source = SourceFilter.HasColor(com.wingedsheep.sdk.core.Color.RED),
+                recipient = Recipient.CreatureYouControl,
+                source = GameObjectFilter.Any.withColor(com.wingedsheep.sdk.core.Color.RED),
                 damageType = DamageType.Combat
             )
-            damageFilter.recipient shouldBe RecipientFilter.CreatureYouControl
+            damageFilter.recipient shouldBe Recipient.CreatureYouControl
             damageFilter.damageType shouldBe DamageType.Combat
         }
 
@@ -850,20 +846,20 @@ class CardDslTest : DescribeSpec({
     describe("Optional Cost Effects") {
 
         it("should support may-pay pattern") {
-            val optionalEffect = OptionalCostEffect(
+            val optionalEffect = Effects.MayPay(
                 cost = PayLifeEffect(2),
-                ifPaid = DrawCardsEffect(1),
-                ifNotPaid = null
+                then = DrawCardsEffect(1),
+                otherwise = null
             )
 
             optionalEffect.description shouldBe "You may pay 2 life. If you do, draw a card"
         }
 
         it("should support may-pay-or-else pattern") {
-            val optionalEffect = OptionalCostEffect(
+            val optionalEffect = Effects.MayPay(
                 cost = SacrificeEffect(GameObjectFilter.Creature),
-                ifPaid = DealDamageEffect(3, EffectTarget.ContextTarget(0)),
-                ifNotPaid = LoseLifeEffect(3, EffectTarget.Controller)
+                then = DealDamageEffect(3, EffectTarget.ContextTarget(0)),
+                otherwise = LoseLifeEffect(3, EffectTarget.Controller)
             )
 
             optionalEffect.description shouldBe "You may sacrifice a creature. If you do, deal 3 damage to target. Otherwise, you lose 3 life"
@@ -995,7 +991,7 @@ class CardDslTest : DescribeSpec({
                     typeLine = "Enchantment — Room"
                     oracleText = "At the beginning of your end step, draw a card."
                     triggeredAbility {
-                        trigger = Triggers.YourEndStep
+                        trigger = Triggers.you.beginningOf(Step.END)
                         effect = Effects.DrawCards(1)
                     }
                 }
@@ -1005,7 +1001,7 @@ class CardDslTest : DescribeSpec({
                     typeLine = "Enchantment — Room"
                     oracleText = "When this enters, do something."
                     triggeredAbility {
-                        trigger = Triggers.EntersBattlefield
+                        trigger = Triggers.self.enters()
                         effect = Effects.DrawCards(1)
                     }
                 }
@@ -1052,17 +1048,12 @@ class CardDslTest : DescribeSpec({
             // attackerFilter is only honored by the SELF detector branch; the ANY branch
             // ignores it, so the combination must fail fast rather than silently misfire.
             val ex = io.kotest.assertions.throwables.shouldThrow<IllegalArgumentException> {
-                Triggers.blocks(
-                    binding = TriggerBinding.ANY,
-                    attackerFilter = GameObjectFilter.Creature.withKeyword(Keyword.FLYING),
-                )
+                Triggers.a().blocks(attackerFilter = GameObjectFilter.Creature.withKeyword(Keyword.FLYING))
             }
             ex.message?.contains("attackerFilter") shouldBe true
 
             // SELF binding (the default) is accepted.
-            Triggers.blocks(
-                attackerFilter = GameObjectFilter.Creature.withKeyword(Keyword.FLYING),
-            ).binding shouldBe TriggerBinding.SELF
+            Triggers.self.blocks(attackerFilter = GameObjectFilter.Creature.withKeyword(Keyword.FLYING)).binding shouldBe TriggerBinding.SELF
         }
     }
 })

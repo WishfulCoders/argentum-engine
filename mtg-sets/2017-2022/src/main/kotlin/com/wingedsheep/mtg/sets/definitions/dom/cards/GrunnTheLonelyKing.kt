@@ -9,7 +9,7 @@ import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
 import com.wingedsheep.sdk.scripting.events.AttackPredicate
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -33,14 +33,14 @@ val GrunnTheLonelyKing = card("Grunn, the Lonely King") {
 
     // "Enters with a counter" is a replacement effect (rule 614.1c), not an ETB trigger
     replacementEffect(EntersWithCounters(
-        counterType = CounterTypeFilter.PlusOnePlusOne,
+        counterType = CounterType.PLUS_ONE_PLUS_ONE,
         count = 5,
         selfOnly = true,
         condition = WasKicked
     ))
 
     triggeredAbility {
-        trigger = Triggers.attacks(requires = setOf(AttackPredicate.Alone))
+        trigger = Triggers.self.attacks(setOf(AttackPredicate.Alone))
         effect = Effects.ModifyStats(DynamicAmounts.sourcePower(), DynamicAmounts.sourceToughness(), EffectTarget.Self)
     }
 

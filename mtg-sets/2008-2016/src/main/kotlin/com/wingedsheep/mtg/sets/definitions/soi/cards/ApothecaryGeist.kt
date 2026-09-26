@@ -7,11 +7,11 @@ package com.wingedsheep.mtg.sets.definitions.soi.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -31,9 +31,9 @@ val ApothecaryGeist = card("Apothecary Geist") {
     toughness = 3
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouControl(GameObjectFilter.Creature.withSubtype(Subtype.SPIRIT))
-        effect = GainLifeEffect(3)
+        effect = Effects.GainLife(3)
     }
     metadata {
         rarity = Rarity.COMMON

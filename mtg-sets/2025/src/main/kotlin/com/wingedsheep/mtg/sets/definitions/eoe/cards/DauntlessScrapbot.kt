@@ -21,11 +21,8 @@ val DauntlessScrapbot = card("Dauntless Scrapbot") {
 
     // ETB: exile each opponent's graveyard and create a Lander token
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(listOf(
-            Effects.ExileOpponentsGraveyards(),
-            Effects.CreateLander()
-        ))
+        trigger = Triggers.self.enters()
+        effect = Effects.ExileOpponentsGraveyards() then Effects.CreateLander()
         description = "When this creature enters, exile each opponent's graveyard. Create a Lander token."
     }
 

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
@@ -10,12 +10,11 @@ import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
 import com.wingedsheep.sdk.scripting.effects.EmitLibrarySearchedEventEffect
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Restorative Technique — Marvel Super Heroes #183
@@ -40,35 +39,29 @@ val RestorativeTechnique = card("Restorative Technique") {
         "to one target creature."
 
     spell {
-        val player = target("target player", TargetPlayer())
-        val creature = target(
-            "up to one target creature",
-            TargetCreature(optional = true, filter = TargetFilter.Creature)
-        )
+        val player = target(Targets.Player)
+        val creature = target(TargetFilter.Creature, optional = true)
 
-        effect = Effects.Composite(
-            Effects.GainLife(2, player),
+        effect = Effects.GainLife(2, player) then
             Effects.Pipeline {
                 val basics = gather(
                     CardSource.FromZone(Zone.LIBRARY, Player.TargetPlayer, GameObjectFilter.BasicLand),
-                    name = "basicLands"
+                    search = true
                 )
                 val found = chooseUpTo(
                     1,
                     from = basics,
                     chooser = Chooser.TargetPlayer,
-                    prompt = "Search your library for a basic land card",
-                    name = "foundBasic"
+                    prompt = "Search your library for a basic land card"
                 )
                 move(
                     found,
                     CardDestination.ToZone(Zone.BATTLEFIELD, Player.TargetPlayer, ZonePlacement.Tapped)
                 )
-                run(ShuffleLibraryEffect(player))
+                run(Effects.ShuffleLibrary(player))
                 run(EmitLibrarySearchedEventEffect)
-            },
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creature)
-        )
+            } then
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature)
     }
 
     metadata {

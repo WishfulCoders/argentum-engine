@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 /**
  * Catapult Master
  * {3}{W}{W}
@@ -24,7 +24,7 @@ val CatapultMaster = card("Catapult Master") {
 
     activatedAbility {
         cost = Costs.TapPermanents(5, GameObjectFilter.Permanent.withSubtype("Soldier"))
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.Move(t, Zone.EXILE)
     }
 

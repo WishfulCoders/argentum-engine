@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -25,11 +24,8 @@ val TelJiladJustice = card("Tel-Jilad Justice") {
     typeLine = "Instant"
     oracleText = "Destroy target artifact. Scry 2. (Look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.)"
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter.Artifact))
-        effect = Effects.Composite(
-            Effects.Move(t, Zone.GRAVEYARD, byDestruction = true),
-            Patterns.Library.scry(2)
-        )
+        val t = target(TargetFilter.Artifact)
+        effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true) then Patterns.Library.scry(2)
     }
     metadata {
         rarity = Rarity.UNCOMMON

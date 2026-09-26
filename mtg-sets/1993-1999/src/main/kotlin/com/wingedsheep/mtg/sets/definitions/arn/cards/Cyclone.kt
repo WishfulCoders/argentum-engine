@@ -1,18 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.arn.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Cyclone
@@ -23,8 +21,8 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * damage equal to the number of wind counters on it to each creature and each player.
  *
  * Composition:
- *  - Each upkeep adds a wind counter (passive [Counters.WIND]), then the pay-or-sacrifice is an
- *    `OptionalCostEffect` (Gate.MayPay): pay {G} per wind counter (a colored dynamic mana cost via
+ *  - Each upkeep adds a wind counter (passive [CounterType.WIND]), then the pay-or-sacrifice is an
+ *    `Effects.MayPay` (Gate.MayPay): pay {G} per wind counter (a colored dynamic mana cost via
  *    `Effects.PayDynamicMana(..., color = GREEN)`) → deal damage; decline → sacrifice.
  *  - Both the cost amount and the damage scale off `DynamicAmounts.countersOnSelf(WIND)`, evaluated
  *    after the counter is added so they see the incremented total (CR 608.2c sequencing).
@@ -40,26 +38,22 @@ val Cyclone = card("Cyclone") {
         "and each player."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
 
-        val windCount = DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.WIND))
+        val windCount = DynamicAmounts.countersOnSelf(CounterType.WIND)
 
-        val dealDamageToAll = Effects.Composite(
-            Effects.ForEachInGroup(
-                GroupFilter.AllCreatures,
-                DealDamageEffect(windCount, EffectTarget.Self)
-            ),
+        val dealDamageToAll = Effects.ForEachInGroup(
+            GroupFilter.AllCreatures,
+            Effects.DealDamage(windCount, EffectTarget.IterationEntity)
+        ) then
             Effects.ForEachPlayer(Player.Each, listOf(Effects.DealDamage(windCount, EffectTarget.Controller)))
-        )
 
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.WIND, 1, EffectTarget.Self),
-            OptionalCostEffect(
+        effect = Effects.AddCounters(CounterType.WIND, 1, EffectTarget.Self) then
+            Effects.MayPay(
                 cost = Effects.PayDynamicMana(windCount, color = Color.GREEN),
-                ifPaid = dealDamageToAll,
-                ifNotPaid = Effects.SacrificeTarget(EffectTarget.Self)
+                then = dealDamageToAll,
+                otherwise = Effects.SacrificeTarget(EffectTarget.Self)
             )
-        )
         description = "At the beginning of your upkeep, put a wind counter on this enchantment, then " +
             "sacrifice this enchantment unless you pay {G} for each wind counter on it. If you pay, " +
             "this enchantment deals damage equal to the number of wind counters on it to each creature and each player."

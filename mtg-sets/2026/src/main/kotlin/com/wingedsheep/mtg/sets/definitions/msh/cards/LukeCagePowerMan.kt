@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * "Unbreakable Skin" is an ability word (CR 207.2c) — flavor only, no rules meaning, so it lives
  * in the oracle text / description rather than as a keyword. The trigger is the SELF-bound
- * "attacks alone" shape (Rogue Kavu): [Triggers.attacks] with [AttackPredicate.Alone] and the
+ * "attacks alone" shape (Rogue Kavu): `Triggers.<subject>.attacks(requires)` with [AttackPredicate.Alone] and the
  * default SELF binding, buffing [EffectTarget.Self].
  */
 val LukeCagePowerMan = card("Luke Cage, Power Man") {
@@ -31,11 +31,9 @@ val LukeCagePowerMan = card("Luke Cage, Power Man") {
         "indestructible until end of turn. (Damage and effects that say \"destroy\" don't destroy him.)"
 
     triggeredAbility {
-        trigger = Triggers.attacks(requires = setOf(AttackPredicate.Alone))
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 0, EffectTarget.Self),
-            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self, Duration.EndOfTurn),
-        )
+        trigger = Triggers.self.attacks(setOf(AttackPredicate.Alone))
+        effect = Effects.ModifyStats(2, 0, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self, Duration.EndOfTurn)
         description = "Unbreakable Skin — Whenever Luke Cage attacks alone, he gets +2/+0 and " +
             "gains indestructible until end of turn."
     }

@@ -22,7 +22,7 @@ import io.kotest.matchers.string.shouldContain as stringShouldContain
  */
 class OmenStackDisplayTest : ScenarioTestBase() {
 
-    private val transformer = com.wingedsheep.engine.view.ClientStateTransformer(cardRegistry)
+    private val transformer = com.wingedsheep.engine.view.ClientStateTransformer(cardRegistry, predicateEvaluator = services.predicateEvaluator)
     private val p1 = EntityId.of("player-1")
 
     init {

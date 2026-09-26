@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Fiery Inscription
@@ -23,12 +24,12 @@ val FieryInscription = card("Fiery Inscription") {
         "Whenever you cast an instant or sorcery spell, this enchantment deals 2 damage to each opponent."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.TheRingTemptsYou()
     }
 
     triggeredAbility {
-        trigger = Triggers.YouCastInstantOrSorcery
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
         effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.EachOpponent))
     }
 

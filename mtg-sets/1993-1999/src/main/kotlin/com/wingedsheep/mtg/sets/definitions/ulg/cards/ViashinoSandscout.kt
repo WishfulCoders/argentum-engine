@@ -11,6 +11,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 
 /**
@@ -30,7 +31,7 @@ val ViashinoSandscout = card("Viashino Sandscout") {
     toughness = 1
     keywords(Keyword.HASTE)
     triggeredAbility {
-        trigger = Triggers.EachEndStep
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
         effect = Effects.Move(EffectTarget.Self, Zone.HAND)
     }
     metadata {

@@ -35,7 +35,7 @@ import kotlinx.serialization.json.JsonObject
 /**
  * Erode: `[DestroyPermanent(Ref_TargetPermanent),
  *          PlayerMayAction(ControllerOfTargetPermanent, SearchLibrary(basic land → battlefield tapped, shuffle))]`
- * → `Effects.Destroy(t) then MayEffect(<controller-of-target basic-land fetch pipeline>)`.
+ * → `Effects.Destroy(t) then Effects.May(<controller-of-target basic-land fetch pipeline>)`.
  *
  * "Destroy target creature or planeswalker. Its controller may search their library for a basic land
  * card, put it onto the battlefield tapped, then shuffle." The searcher is the *destroyed permanent's
@@ -97,7 +97,7 @@ internal fun EmitCtx.erodeDestroyControllerFetchEffect(actions: List<JsonObject>
         ),
     )
     val may = call(
-        "MayEffect",
+        "Effects.May",
         arg("effect", fetch),
         arg("decisionMaker", "EffectTarget.TargetController"),
     )
@@ -108,7 +108,7 @@ internal fun EmitCtx.erodeDestroyControllerFetchEffect(actions: List<JsonObject>
  * Heated Argument: `[SpellDealsDamage(6, Ref_TargetPermanent),
  *                    MayCost(Exile a card from your graveyard),
  *                    If(CostWasPaid)[SpellDealsDamage(2, ControllerOfPermanent Ref_TargetPermanent)]]`
- * → `Effects.DealDamage(6, t) then MayEffect(IfYouDoEffect(<exile-one-from-graveyard pipeline>,
+ * → `Effects.DealDamage(6, t) then Effects.May(Effects.IfYouDo(<exile-one-from-graveyard pipeline>,
  *      ifYouDo = Effects.DealDamage(2, TargetController), CollectionNonEmpty))`.
  *
  * The optional graveyard exile + "if you do" rider fuse into one gate: the IR's `MayCost(Exile)` becomes
@@ -164,12 +164,12 @@ internal fun EmitCtx.heatedArgumentExileRiderEffect(actions: List<JsonObject>): 
         ),
     )
     val ifYouDo = call(
-        "IfYouDoEffect",
+        "Effects.IfYouDo",
         arg("action", exilePipeline),
-        arg("ifYouDo", call("Effects.DealDamage", arg("$riderAmt"), arg("EffectTarget.TargetController"))),
+        arg("then", call("Effects.DealDamage", arg("$riderAmt"), arg("EffectTarget.TargetController"))),
         arg("successCriterion", "SuccessCriterion.CollectionNonEmpty(\"toExile\", min = 1)"),
     )
-    return Composite(listOf(firstDamage, call("MayEffect", arg(ifYouDo))))
+    return Composite(listOf(firstDamage, call("Effects.May", arg(ifYouDo))))
 }
 
 /**
@@ -340,7 +340,7 @@ internal fun EmitCtx.renderSpeechlessDiscardCountersEffect(actions: List<JsonObj
  *                If(PlayerPassesFilter(You, ControlsA(Wizard)))
  *                  [CreateFutureTrigger(AtTheBeginningOfPlayersNextMainPhase(You),
  *                     [AddManaRepeated(C, AmountOfManaSpentToCastSpell(Ref_TargetSpell))])]]`
- * → `ConditionalEffect(YouControl(Wizard), CreateDelayedTriggerEffect(PRECOMBAT_MAIN, fireOnPlayer = You,
+ * → `Effects.If(YouControl(Wizard), CreateDelayedTriggerEffect(PRECOMBAT_MAIN, fireOnPlayer = You,
  *      AddColorlessManaEffect(targetManaSpent(0)))) then Effects.CounterSpell()`.
  *
  * "Counter target spell. If you control a Wizard, add an amount of {C} equal to the amount of mana spent
@@ -390,9 +390,9 @@ internal fun EmitCtx.manaSculptCounterWizardManaEffect(actions: List<JsonObject>
         arg("effect", call("Effects.AddColorlessMana", arg(Lit("DynamicAmounts.targetManaSpent(0)")))),
     )
     val gated = call(
-        "ConditionalEffect",
+        "Effects.If",
         arg("condition", "Conditions.YouControl(GameObjectFilter.Creature.withSubtype(${subtypeArg("Wizard")}))"),
-        arg("effect", delayedTrigger),
+        arg("then", delayedTrigger),
     )
     return Composite(listOf(gated, call("Effects.CounterSpell")))
 }
@@ -858,7 +858,7 @@ private fun EmitCtx.enchantmentSubtypeTargetExpr(tnode: JsonObject): Dsl? {
  * →
  * ```
  * triggeredAbility {
- *     trigger = Triggers.WhenYouCastThisSpell()
+ *     trigger = Triggers.self.isCast()
  *     triggerCondition = Conditions.YouGainedLifeThisTurn
  *     effect = Effects.CopyTargetSpell(target = EffectTarget.TriggeringEntity)
  * }
@@ -906,7 +906,7 @@ internal fun EmitCtx.lumaretsFavorInfusionCopyBlock(rule: JsonObject): List<Stmt
 
     return listOf(
         Sub(Block("triggeredAbility", listOf(
-            Assign("trigger", call("Triggers.WhenYouCastThisSpell")),
+            Assign("trigger", call("Triggers.self.isCast")),
             Assign("triggerCondition", Lit("Conditions.YouGainedLifeThisTurn")),
             Assign("effect", call("Effects.CopyTargetSpell", arg("target", "EffectTarget.TriggeringEntity"))),
         ))),

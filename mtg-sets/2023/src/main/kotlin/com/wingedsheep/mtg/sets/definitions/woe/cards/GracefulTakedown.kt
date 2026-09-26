@@ -1,19 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.targets.TargetOther
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Graceful Takedown
@@ -27,8 +23,8 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * be `IterationSpace.Targets` (that iterates *every* target, which would make the victim deal damage
  * to itself). The pipeline expresses "iterate one slice of the targets" out of steps that already
  * exist: gather [CardSource.ChosenTargets], `filter` it down to the creatures you control, and run
- * the damage body once per member with `EffectTarget.Self` bound to it. Each dealer is its own damage
- * source (`damageSource = Self`), so lifelink/deathtouch and "dealt damage by a creature" reactions
+ * the damage body once per member with `EffectTarget.IterationEntity` bound to it. Each dealer is
+ * its own damage source (`damageSource = IterationEntity`), so lifelink/deathtouch and "dealt damage by a creature" reactions
  * see the creature, not the sorcery.
  *
  * **Requirement order is load-bearing.** The victim is declared *first* even though it is printed
@@ -52,34 +48,22 @@ val GracefulTakedown = card("Graceful Takedown") {
         "control."
 
     spell {
-        val victim = target(
-            "target creature you don't control",
-            TargetCreature(filter = TargetFilter.CreatureOpponentControls)
-        )
-        target(
-            "up to one other target creature you control",
-            TargetOther(TargetCreature(optional = true, filter = TargetFilter.CreatureYouControl))
-        )
-        target(
-            "any number of target enchanted creatures you control",
-            TargetOther(
-                TargetCreature(unlimited = true, filter = TargetFilter.CreatureYouControl.enchanted())
-            )
-        )
+        val victim = target(TargetFilter.CreatureOpponentControls)
+        target(TargetOther(TargetObject(filter = TargetFilter.CreatureYouControl, optional = true)))
+        target(TargetOther(
+                TargetObject(filter = TargetFilter.CreatureYouControl.enchanted(), unlimited = true)
+            ))
 
         effect = Effects.Pipeline {
             val chosen = gather(CardSource.ChosenTargets)
             val dealers = filter(chosen, GameObjectFilter.Creature.youControl())
             run(
-                ForEachInCollectionEffect(
-                    collection = dealers.key,
-                    effect = DealDamageEffect(
-                        amount = DynamicAmount.EntityProperty(
-                            EntityReference.IterationEntity,
-                            EntityNumericProperty.Power
-                        ),
+                Effects.ForEachInCollection(
+                    collection = dealers,
+                    effect = Effects.DealDamage(
+                        amount = DynamicAmounts.powerOf(EffectTarget.IterationEntity),
                         target = victim,
-                        damageSource = EffectTarget.Self
+                        damageSource = EffectTarget.IterationEntity
                     )
                 )
             )

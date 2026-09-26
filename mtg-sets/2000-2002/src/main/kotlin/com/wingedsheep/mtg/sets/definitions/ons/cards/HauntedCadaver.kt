@@ -1,11 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Haunted Cadaver
@@ -25,8 +26,8 @@ val HauntedCadaver = card("Haunted Cadaver") {
     oracleText = "Whenever Haunted Cadaver deals combat damage to a player, you may sacrifice it. If you do, that player discards three cards.\nMorph {1}{B}"
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = MayEffect(
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.May(
             SacrificeSelfEffect then Patterns.Hand.eachOpponentDiscards(3)
         )
     }

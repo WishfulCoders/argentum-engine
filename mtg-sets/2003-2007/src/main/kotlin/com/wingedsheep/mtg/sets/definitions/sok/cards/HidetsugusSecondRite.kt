@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.sok.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Hidetsugu's Second Rite
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *
  * Not an intervening-if — the spell targets a player at cast time and simply checks their life
  * total when it resolves. If they aren't at exactly 10, the spell resolves doing nothing (it does
- * not fizzle for having no legal target). Modeled as a [ConditionalEffect] whose gate compares the
+ * not fizzle for having no legal target). Modeled as a [Effects.If] whose gate compares the
  * targeted player's current life ([DynamicAmount.LifeTotal] of [Player.ContextPlayer]`(0)` — the
  * single player target) against 10.
  *
@@ -32,14 +31,14 @@ val HidetsugusSecondRite = card("Hidetsugu's Second Rite") {
     oracleText = "If target player has exactly 10 life, Hidetsugu's Second Rite deals 10 damage to that player."
 
     spell {
-        val targetPlayer = target("target player", Targets.Player)
-        effect = ConditionalEffect(
+        val targetPlayer = target(Targets.Player)
+        effect = Effects.If(
             condition = Conditions.CompareAmounts(
-                DynamicAmount.LifeTotal(Player.ContextPlayer(0)),
+                DynamicAmounts.lifeTotal(targetPlayer.asPlayer),
                 ComparisonOperator.EQ,
-                DynamicAmount.Fixed(10),
+                10,
             ),
-            effect = Effects.DealDamage(10, targetPlayer),
+            then = Effects.DealDamage(10, targetPlayer),
         )
     }
 

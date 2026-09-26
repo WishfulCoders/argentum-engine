@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.registry.CardRegistry
@@ -16,6 +17,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Tests for Groundchuck & Dirtbag ({4}{G}{G}, 8/8 Ox Mole Mutant).
@@ -73,7 +75,7 @@ class GroundchuckAndDirtbagTest : FunSpec({
         val result = driver.submit(
             ActivateAbility(playerId = activePlayer, sourceId = land, abilityId = manaAbilityId)
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         // 1 from the land + 1 bonus from Groundchuck = 2 green, available right now.
         val pool = driver.state.getEntity(activePlayer)?.get<ManaPoolComponent>()!!
@@ -93,7 +95,7 @@ class GroundchuckAndDirtbagTest : FunSpec({
         driver.putCreatureOnBattlefield(activePlayer, "Groundchuck & Dirtbag")
         driver.putLandOnBattlefield(activePlayer, "Tap-for-Green Land")
 
-        val solver = ManaSolver(createRegistry())
+        val solver = ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         // 1 from the land + 1 bonus from Groundchuck = 2 green available
         solver.canPay(driver.state, activePlayer, ManaCost.parse("{G}{G}")) shouldBe true
         solver.canPay(driver.state, activePlayer, ManaCost.parse("{G}{G}{G}")) shouldBe false
@@ -119,7 +121,7 @@ class GroundchuckAndDirtbagTest : FunSpec({
         val result = driver.submit(
             ActivateAbility(playerId = activePlayer, sourceId = land, abilityId = manaAbilityId)
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         val activePool = driver.state.getEntity(activePlayer)?.get<ManaPoolComponent>()!!
         val opponentPool = driver.state.getEntity(opponent)?.get<ManaPoolComponent>()!!

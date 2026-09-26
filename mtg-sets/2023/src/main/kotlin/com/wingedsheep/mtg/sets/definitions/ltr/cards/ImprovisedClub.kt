@@ -28,7 +28,7 @@ val ImprovisedClub = card("Improvised Club") {
     )
 
     spell {
-        val target = target("any target", Targets.Any)
+        val target = target(Targets.Any)
         effect = Effects.DealDamage(4, target)
     }
 

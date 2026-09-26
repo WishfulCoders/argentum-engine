@@ -2,20 +2,17 @@ package com.wingedsheep.mtg.sets.definitions.fdn.cards
 
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Kaito, Cunning Infiltrator
@@ -70,13 +67,8 @@ val KaitoCunningInfiltrator = card("Kaito, Cunning Infiltrator") {
 
     // Whenever a creature you control deals combat damage to a player, put a loyalty counter on Kaito.
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            damageType = DamageType.Combat,
-            recipient = RecipientFilter.AnyPlayer,
-            sourceFilter = GameObjectFilter.Creature.youControl(),
-            binding = TriggerBinding.ANY,
-        )
-        effect = Effects.AddCounters(Counters.LOYALTY, 1, EffectTarget.Self)
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.AddCounters(CounterType.LOYALTY, 1, EffectTarget.Self)
         description = "Whenever a creature you control deals combat damage to a player, put a " +
             "loyalty counter on Kaito."
     }
@@ -84,12 +76,8 @@ val KaitoCunningInfiltrator = card("Kaito, Cunning Infiltrator") {
     // +1: Up to one target creature you control can't be blocked this turn.
     //     Draw a card, then discard a card.
     loyaltyAbility(+1) {
-        val creature = target(
-            "up to one target creature you control",
-            TargetCreature(optional = true, filter = TargetFilter.CreatureYouControl),
-        )
-        effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, creature) then
-            Patterns.Hand.loot()
+        val creature = target(TargetFilter.CreatureYouControl, optional = true)
+        effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, creature) then Patterns.Hand.loot()
     }
 
     // −2: Create a 2/1 blue Ninja creature token.
@@ -102,8 +90,7 @@ val KaitoCunningInfiltrator = card("Kaito, Cunning Infiltrator") {
     loyaltyAbility(-9) {
         effect = Effects.CreateGlobalTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.AnyPlayerCastsSpell.event,
-                binding = Triggers.AnyPlayerCastsSpell.binding,
+                trigger = Triggers.anyPlayer.casts(),
                 effect = ninjaToken,
                 descriptionOverride = "Whenever a player casts a spell, you create a 2/1 blue " +
                     "Ninja creature token.",

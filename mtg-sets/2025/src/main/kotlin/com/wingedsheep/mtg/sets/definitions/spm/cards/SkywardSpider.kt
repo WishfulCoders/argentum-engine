@@ -29,7 +29,7 @@ val SkywardSpider = card("Skyward Spider") {
     oracleText = "Ward {2} (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {2}.)\nThis creature has flying as long as it's modified. (Equipment, Auras you control, and counters are modifications.)"
 
     keywords(Keyword.WARD)
-    keywordAbility(KeywordAbility.ward("{2}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
 
     staticAbility {
         ability = ConditionalStaticAbility(

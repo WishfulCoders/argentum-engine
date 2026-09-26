@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Saruman the White
@@ -26,10 +27,10 @@ val SarumanTheWhite = card("Saruman the White") {
         "Whenever you cast your second spell each turn, amass Orcs 2. (Put two +1/+1 counters on an Army " +
         "you control. It's also an Orc. If you don't control an Army, create a 0/0 black Orc Army creature token first.)"
 
-    keywordAbility(KeywordAbility.ward("{2}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
 
     triggeredAbility {
-        trigger = Triggers.NthSpellCast(2, Player.You)
+        trigger = Triggers.you.castsNth(2)
         effect = Effects.Amass(2, "Orc")
     }
 

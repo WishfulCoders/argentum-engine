@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.TimingRule
  * {T}: Add {G}.
  *
  * The gainland shape with the life swapped for a body: an [EntersTapped] replacement effect for
- * the printed first line, a [Triggers.EntersBattlefield] trigger, and a single [Effects.AddMana]
+ * the printed first line, a `Triggers.self.enters()` trigger, and a single [Effects.AddMana]
  * ability on [Costs.Tap] (`manaAbility = true` with [TimingRule.ManaAbility], so it resolves
  * without using the stack). The token is the plain [Effects.CreateToken] facade with the printed
  * P/T, colour and creature type — no name or art is baked in here, so the Plant resolves through
@@ -36,7 +36,7 @@ val KhalniGarden = card("Khalni Garden") {
     replacementEffect(EntersTapped())
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 0,
             toughness = 1,

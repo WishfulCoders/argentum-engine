@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.arn.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Desert Twister
@@ -18,7 +18,7 @@ val DesertTwister = card("Desert Twister") {
     oracleText = "Destroy target permanent."
 
     spell {
-        val t = target("target permanent", Targets.Permanent)
+        val t = target(TargetFilter.Permanent)
         effect = Effects.Destroy(t)
     }
 

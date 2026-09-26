@@ -9,6 +9,6 @@ import com.wingedsheep.engine.handlers.actions.ActionHandlerModule
  */
 class LandModule(private val services: EngineServices) : ActionHandlerModule {
     override fun handlers(): List<ActionHandler<*>> = listOf(
-        PlayLandHandler.create(services)
+        services.playLandHandler
     )
 }

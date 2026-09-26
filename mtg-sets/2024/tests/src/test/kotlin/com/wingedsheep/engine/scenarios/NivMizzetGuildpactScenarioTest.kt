@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ChooseTargetsDecision
 import com.wingedsheep.engine.handlers.TargetingSourceType
 import com.wingedsheep.engine.mechanics.targeting.TargetValidator
@@ -14,11 +15,12 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Niv-Mizzet, Guildpact (MKM) — {W}{U}{B}{R}{G} Legendary Creature — Dragon Avatar 6/6.
@@ -146,9 +148,9 @@ class NivMizzetGuildpactScenarioTest : FunSpec({
 
         val niv = driver.putCreatureOnBattlefield(me, "Niv-Mizzet, Guildpact")
 
-        val validator = TargetValidator()
+        val validator = TargetValidator(PredicateEvaluator(cardRegistry = null))
         val target = listOf<ChosenTarget>(ChosenTarget.Permanent(niv))
-        val req = listOf(TargetCreature())
+        val req = listOf(TargetObject(filter = TargetFilter.Creature))
 
         // A multicolored opponent source is blocked.
         validator.validateTargets(
@@ -176,7 +178,7 @@ class NivMizzetGuildpactScenarioTest : FunSpec({
         ).shouldBeNull()
 
         // The client DTO carries the quality so the FE renders the shield chip.
-        val view = ClientStateTransformer(cardRegistry = driver.cardRegistry).transform(driver.state, viewingPlayerId = opponent)
+        val view = ClientStateTransformer(cardRegistry = driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)).transform(driver.state, viewingPlayerId = opponent)
         view.cards[niv]?.hexproofFromMulticolored shouldBe true
     }
 })

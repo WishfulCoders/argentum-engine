@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Vona, Butcher of Magan
@@ -32,10 +31,7 @@ val VonaButcherOfMagan = card("Vona, Butcher of Magan") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.PayLife(7))
-        val victim = target(
-            "target",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Nonland and GameObjectFilter.Permanent))
-        )
+        val victim = target(TargetFilter(GameObjectFilter.Nonland and GameObjectFilter.Permanent))
         effect = Effects.Destroy(victim)
         restrictions = listOf(ActivationRestriction.OnlyDuringYourTurn)
     }

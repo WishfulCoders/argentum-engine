@@ -7,8 +7,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Serendib Djinn
@@ -24,7 +24,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *  - Upkeep trigger fires `Effects.Sacrifice(Land, target = Controller)` so you choose which
  *    land to sacrifice during resolution (CR ruling: the land is chosen on resolution). The
  *    sacrificed permanent's snapshot flows into `EffectContext.sacrificedPermanents`.
- *  - The self-damage rider is a `ConditionalEffect` gated on `SacrificedHadSubtype("Island")`,
+ *  - The self-damage rider is a `Effects.If` gated on `SacrificedHadSubtype("Island")`,
  *    reading that snapshot — same pattern as Rise of the Witch-king's "if you sacrificed a
  *    creature this way" rider. `damageSource = Self` so the 3 damage comes from this creature.
  *  - "When you control no lands, sacrifice this creature" is a `stateTriggeredAbility`
@@ -43,19 +43,17 @@ val SerendibDjinn = card("Serendib Djinn") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.Sacrifice(
             GameObjectFilter.Land,
             count = 1,
             target = EffectTarget.Controller
-        ).then(
-            ConditionalEffect(
-                condition = Conditions.SacrificedHadSubtype("Island"),
-                effect = Effects.DealDamage(
-                    3,
-                    EffectTarget.Controller,
-                    damageSource = EffectTarget.Self
-                )
+        ) then Effects.If(
+            condition = Conditions.SacrificedHadSubtype("Island"),
+            then = Effects.DealDamage(
+                3,
+                EffectTarget.Controller,
+                damageSource = EffectTarget.Self
             )
         )
         description = "At the beginning of your upkeep, sacrifice a land. " +

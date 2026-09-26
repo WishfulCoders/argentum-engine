@@ -19,7 +19,7 @@ import kotlin.reflect.KClass
  * A resolved count of 0 (e.g. zero coins came up heads on Ral Zarek's ultimate) is a no-op.
  */
 class SkipNextTurnExecutor(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<SkipNextTurnEffect> {
 
     override val effectType: KClass<SkipNextTurnEffect> = SkipNextTurnEffect::class

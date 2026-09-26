@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 /**
  * Personify
  * {1}{W}
@@ -22,17 +22,15 @@ val Personify = card("Personify") {
     oracleText = "Exile target creature you control, then return that card to the battlefield under its owner's control. Create a 1/1 colorless Shapeshifter creature token with changeling. (It's every creature type.)"
 
     spell {
-        val creature = target("creature you control", Targets.CreatureYouControl)
-        effect = Effects.Move(creature, Zone.EXILE)
-            .then(Effects.Move(creature, Zone.BATTLEFIELD))
-            .then(
-                Effects.CreateToken(
-                    power = 1,
-                    toughness = 1,
-                    creatureTypes = setOf("Shapeshifter"),
-                    keywords = setOf(Keyword.CHANGELING),
-                    imageUri = "https://cards.scryfall.io/normal/front/c/2/c2963ce1-f9d8-437a-9489-e0913a8b8d26.jpg?1767660071"
-                )
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.Move(creature, Zone.EXILE) then
+            Effects.Move(creature, Zone.BATTLEFIELD) then
+            Effects.CreateToken(
+                power = 1,
+                toughness = 1,
+                creatureTypes = setOf("Shapeshifter"),
+                keywords = setOf(Keyword.CHANGELING),
+                imageUri = "https://cards.scryfall.io/normal/front/c/2/c2963ce1-f9d8-437a-9489-e0913a8b8d26.jpg?1767660071"
             )
     }
 

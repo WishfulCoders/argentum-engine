@@ -1,14 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.CREATED_TOKENS
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Intrude on the Mind
@@ -35,9 +35,8 @@ val IntrudeOnTheMind = card("Intrude on the Mind") {
     spell {
         effect = Effects.Pipeline {
             val revealed = gather(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(5)),
-                revealed = true,
-                name = "revealed"
+                source = CardSource.TopOfLibrary(5),
+                revealed = true
             )
             val separated = chooseAnyNumberSplit(
                 from = revealed,
@@ -46,18 +45,14 @@ val IntrudeOnTheMind = card("Intrude on the Mind") {
                     "Pile 1; the rest form Pile 2.",
                 selectedLabel = "Pile 1",
                 remainderLabel = "Pile 2",
-                alwaysPrompt = true,
-                name = "pileOne",
-                remainderName = "pileTwo"
+                alwaysPrompt = true
             )
             val chosen = choosePile(
                 pileA = separated.selected,
                 pileB = separated.remainder,
                 chooser = Chooser.Opponent,
                 prompt = "Choose a pile. That pile goes to your opponent's hand; the other goes " +
-                    "to their graveyard.",
-                chosenName = "handPile",
-                otherName = "graveyardPile"
+                    "to their graveyard."
             )
             toHand(chosen.chosen)
             toGraveyard(chosen.other)
@@ -76,8 +71,8 @@ val IntrudeOnTheMind = card("Intrude on the Mind") {
             run(
                 Effects.AddCountersToCollection(
                     CREATED_TOKENS,
-                    Counters.PLUS_ONE_PLUS_ONE,
-                    DynamicAmount.DistinctEntitiesInCollections(listOf(chosen.other.key))
+                    CounterType.PLUS_ONE_PLUS_ONE,
+                    DynamicAmounts.distinctEntitiesIn(chosen.other)
                 )
             )
         }

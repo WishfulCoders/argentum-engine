@@ -35,7 +35,7 @@ val AnnoyedAltisaur = card("Annoyed Altisaur") {
     keywords(Keyword.REACH, Keyword.TRAMPLE, Keyword.CASCADE)
 
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
+        trigger = Triggers.self.isCast()
         effect = Effects.Cascade
         description = "Cascade"
     }

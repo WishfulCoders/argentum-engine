@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Lotusguard Disciple — Aetherdrift #21
@@ -31,15 +30,10 @@ val LotusguardDisciple = card("Lotusguard Disciple") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "target creature or Vehicle",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrVehicle))
-        )
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.LIFELINK, t),
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter(GameObjectFilter.CreatureOrVehicle))
+        effect = Effects.GrantKeyword(Keyword.LIFELINK, t) then
             Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t)
-        )
         description = "When this creature enters, target creature or Vehicle gains lifelink and " +
             "indestructible until end of turn."
     }

@@ -1,21 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.core.Subtype
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Cantankerous Keepers
@@ -43,31 +36,15 @@ val CantankerousKeepers = card("Cantankerous Keepers") {
     keywordAbility(KeywordAbility.AffinityForSubtype(Subtype.ELF))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            listOf(
-                // Mill four cards.
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(4), Player.You, isMill = true),
-                    storeAs = "milled"
-                ),
-                MoveCollectionEffect(
-                    from = "milled",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD)
-                ),
-                // Then put all Elf cards from among them into your hand.
-                FilterCollectionEffect(
-                    from = "milled",
-                    filter = CollectionFilter.MatchesFilter(GameObjectFilter.Any.withSubtype(Subtype.ELF)),
-                    storeMatching = "elves",
-                    storeNonMatching = "rest"
-                ),
-                MoveCollectionEffect(
-                    from = "elves",
-                    destination = CardDestination.ToZone(Zone.HAND)
-                )
-            )
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            // Mill four cards.
+            val milled = gather(CardSource.TopOfLibrary(4, Player.You, isMill = true))
+            toGraveyard(milled)
+            // Then put all Elf cards from among them into your hand.
+            val elves = filter(milled, GameObjectFilter.Any.withSubtype(Subtype.ELF))
+            toHand(elves)
+        }
     }
 
     metadata {

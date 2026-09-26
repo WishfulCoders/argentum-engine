@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantCardType
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -43,20 +42,18 @@ val LarvalScoutlander = card("Larval Scoutlander") {
     // When this Spacecraft enters, you may sacrifice a land or Lander. If you do, search your
     // library for up to two basic land cards, put them onto the battlefield tapped, then shuffle.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.May(
             Effects.Sacrifice(
                 GameObjectFilter.Land.or(GameObjectFilter.Permanent.withSubtype("Lander")),
                 count = 1,
                 target = EffectTarget.Controller
-            ).then(
-                Patterns.Library.searchLibrary(
-                    filter = GameObjectFilter.BasicLand,
-                    count = 2,
-                    destination = SearchDestination.BATTLEFIELD,
-                    entersTapped = true,
-                    shuffleAfter = true
-                )
+            ) then Patterns.Library.searchLibrary(
+                filter = GameObjectFilter.BasicLand,
+                count = 2,
+                destination = SearchDestination.BATTLEFIELD,
+                entersTapped = true,
+                shuffleAfter = true
             )
         )
         description = "When this Spacecraft enters, you may sacrifice a land or Lander. If you do, " +
@@ -68,13 +65,13 @@ val LarvalScoutlander = card("Larval Scoutlander") {
 
     // Conditional type change: artifact creature at 7+ charge counters
     staticAbility {
-        condition = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 7)
+        condition = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 7)
         ability = GrantCardType("CREATURE", GroupFilter.source())
     }
 
     // Conditional keyword: flying at 7+ charge counters
     staticAbility {
-        condition = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 7)
+        condition = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 7)
         ability = GrantKeyword(Keyword.FLYING.name, GroupFilter.source())
     }
 

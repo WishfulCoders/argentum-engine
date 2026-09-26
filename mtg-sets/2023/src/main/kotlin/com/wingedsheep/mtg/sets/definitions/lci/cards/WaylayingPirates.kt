@@ -4,16 +4,14 @@
 
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -31,16 +29,11 @@ val WaylayingPirates = card("Waylaying Pirates") {
     power = 3
     toughness = 3
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouControl(GameObjectFilter.Artifact)
-        val t = target(
-            "target",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrArtifact.opponentControls()))
-        )
-        effect = Effects.Composite(
-            Effects.Tap(t),
-            AddCountersEffect(counterType = Counters.STUN, count = 1, target = t)
-        )
+        val t = target(TargetFilter(GameObjectFilter.CreatureOrArtifact.opponentControls()))
+        effect = Effects.Tap(t) then
+            Effects.AddCounters(counterType = CounterType.STUN, count = 1, target = t)
     }
     metadata {
         rarity = Rarity.COMMON

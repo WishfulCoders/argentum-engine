@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Conceited Witch // Price of Beauty
@@ -44,7 +45,7 @@ val ConceitedWitch = card("Conceited Witch") {
             "gets +1/+1. When this Role is put into a graveyard, each opponent loses 1 life.) " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            val t = target("target", Targets.CreatureYouControl)
+            val t = target(TargetFilter.CreatureYouControl)
             effect = Effects.CreateRoleToken("Wicked Role", t)
         }
     }

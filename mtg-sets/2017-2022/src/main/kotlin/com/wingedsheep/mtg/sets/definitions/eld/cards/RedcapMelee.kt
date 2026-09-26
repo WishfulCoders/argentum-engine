@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 
 /**
  * Redcap Melee — Throne of Eldraine #135 (canonical printing)
@@ -46,10 +45,10 @@ val RedcapMelee = card("Redcap Melee") {
         "permanent is dealt damage this way, you sacrifice a land."
 
     spell {
-        val t = target("target creature or planeswalker", Targets.CreatureOrPlaneswalker)
-        effect = Effects.DealDamage(4, t) then ConditionalEffect(
-            condition = Conditions.TargetMatchesFilter(GameObjectFilter.Permanent.notColor(Color.RED)),
-            effect = Effects.SacrificeOwn(Filters.Land)
+        val t = target(Targets.CreatureOrPlaneswalker)
+        effect = Effects.DealDamage(4, t) then Effects.If(
+            condition = Conditions.TargetMatchesFilter(GameObjectFilter.Permanent.notColor(Color.RED), t),
+            then = Effects.SacrificeOwn(Filters.Land)
         )
     }
 

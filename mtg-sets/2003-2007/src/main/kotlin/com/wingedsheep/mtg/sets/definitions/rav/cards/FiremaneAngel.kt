@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -54,10 +53,10 @@ val FiremaneAngel = card("Firemane Angel") {
     keywords(Keyword.FLYING, Keyword.FIRST_STRIKE)
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         triggerZones = setOf(Zone.BATTLEFIELD, Zone.GRAVEYARD)
         interveningIf = Conditions.SourceInZone(Zone.BATTLEFIELD, Zone.GRAVEYARD)
-        effect = MayEffect(Effects.GainLife(1))
+        effect = Effects.May(Effects.GainLife(1))
         description = "At the beginning of your upkeep, if Firemane Angel is in your graveyard or " +
             "on the battlefield, you may gain 1 life."
     }

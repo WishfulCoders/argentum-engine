@@ -26,7 +26,7 @@ val AimSynthoids = card("A.I.M. Synthoids") {
         "then put any number of them into your graveyard and the rest on top of your library in any order.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.surveil(2)
     }
 

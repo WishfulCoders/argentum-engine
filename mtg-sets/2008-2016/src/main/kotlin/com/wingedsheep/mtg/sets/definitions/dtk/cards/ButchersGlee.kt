@@ -2,10 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.dtk.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Butcher's Glee
@@ -27,14 +26,10 @@ val ButchersGlee = card("Butcher's Glee") {
     oracleText = "Target creature gets +3/+0 and gains lifelink until end of turn. Regenerate it. (Damage dealt by a creature with lifelink also causes its controller to gain that much life.)"
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.Composite(
-                Effects.ModifyStats(3, 0, t),
-                Effects.GrantKeyword(Keyword.LIFELINK, t)
-            ),
-            RegenerateEffect(t)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(3, 0, t) then
+            Effects.GrantKeyword(Keyword.LIFELINK, t) then
+            Effects.Regenerate(t)
     }
 
     metadata {

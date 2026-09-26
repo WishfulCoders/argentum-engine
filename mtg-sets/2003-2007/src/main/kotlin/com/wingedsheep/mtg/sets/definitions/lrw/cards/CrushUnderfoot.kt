@@ -1,18 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.SelectTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Crush Underfoot
@@ -31,7 +25,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  *    resolves rather than as it stood when you cast it.
  *
  * The chosen Giant lands in the resolution pipeline's `crushGiant` collection, which the damage
- * step then reads twice: [EntityReference.FromCostStorage] for "equal to its power" (the generic
+ * step then reads twice: [EffectTarget.PipelineTarget] for "equal to its power" (the generic
  * `storedCollections` reader — the linter pairs it with `SelectTarget.storeAs`) and
  * [EffectTarget.PipelineTarget] as the `damageSource`, so the damage is dealt *by the Giant*.
  * That distinction is load-bearing: it makes the damage red-creature damage rather than spell
@@ -59,24 +53,17 @@ val CrushUnderfoot = card("Crush Underfoot") {
     oracleText = "Choose a Giant creature you control. It deals damage equal to its power to target creature."
 
     spell {
-        val victim = target("target creature", Targets.Creature)
-        effect = Effects.Composite(
-            SelectTargetEffect(
-                requirement = TargetCreature(
-                    filter = TargetFilter.Creature.youControl().withSubtype(Subtype.GIANT),
-                    id = "a Giant creature you control"
-                ),
-                storeAs = "crushGiant"
-            ),
-            DealDamageEffect(
-                amount = DynamicAmount.EntityProperty(
-                    EntityReference.FromCostStorage("crushGiant"),
-                    EntityNumericProperty.Power
-                ),
-                target = victim,
-                damageSource = EffectTarget.PipelineTarget("crushGiant")
+        val victim = target(TargetFilter.Creature)
+        effect = Effects.Pipeline {
+            val crushGiant = selectTarget(
+                TargetObject(filter = TargetFilter.Creature.youControl().withSubtype(Subtype.GIANT), id = "a Giant creature you control")
             )
-        )
+            run(Effects.DealDamage(
+                amount = DynamicAmounts.powerOf(crushGiant.asTarget),
+                target = victim,
+                damageSource = crushGiant.asTarget
+            ))
+        }
     }
 
     metadata {

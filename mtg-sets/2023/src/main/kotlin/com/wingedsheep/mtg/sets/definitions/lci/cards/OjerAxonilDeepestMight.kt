@@ -15,10 +15,8 @@ import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.SetMinimumDamage
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
-import com.wingedsheep.sdk.scripting.events.SourceFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -43,7 +41,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *    red source you control to an opponent player. It raises the would-be amount up to Axonil's
  *    power; larger amounts are untouched.
  *  - Dies-return uses the shared [Effects.ReturnSelfFromGraveyardTransformed]`(tapped = true)`
- *    wired to [Triggers.Dies].
+ *    wired to `Triggers.self.dies()`.
  *  - Back land: `{T}: Add {R}` mana ability + a `{2}{R}, {T}` sorcery-speed [TransformEffect]
  *    gated on [Conditions.YouDealtRedNoncombatDamageThisTurn]`(4)` (backed by the per-player
  *    RED_NONCOMBAT_DAMAGE_DEALT tracker).
@@ -68,15 +66,15 @@ private val OjerAxonilDeepestMightFront = card("Ojer Axonil, Deepest Might") {
         SetMinimumDamage(
             dynamicMinimum = DynamicAmounts.sourcePower(),
             appliesTo = EventPattern.DamageEvent(
-                recipient = RecipientFilter.Opponent,
-                source = SourceFilter.Matching(GameObjectFilter.Any.withColor(Color.RED).youControl()),
+                recipient = Recipient.Opponent,
+                source = GameObjectFilter.Any.withColor(Color.RED).youControl(),
                 damageType = DamageType.NonCombat,
             ),
         )
     )
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.ReturnSelfFromGraveyardTransformed(tapped = true)
         description = "When Ojer Axonil dies, return it to the battlefield tapped and transformed " +
             "under its owner's control."
@@ -108,7 +106,7 @@ private val TempleOfPower = card("Temple of Power") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{R}"), Costs.Tap)
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
         timing = TimingRule.SorcerySpeed
         restrictions = listOf(
             ActivationRestriction.OnlyIfCondition(

@@ -9,10 +9,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.EffectChoice
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.RevealHandEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Cloak and Dagger, Entwined — Marvel Super Heroes #211 (rare)
@@ -46,7 +43,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  *    that is not hypothetical: `backlog/multiplayer.md` is an active Free-for-All plan (CR 806) and
  *    the AI harness already runs three-seat games, so this card is on the list of things a
  *    multiplayer pass has to revisit.
- *  - **The either/or is an [Effects.ChooseAction]**, wrapped in [MayEffect] for the "You may".
+ *  - **The either/or is an [Effects.ChooseAction]**, wrapped in [Effects.May] for the "You may".
  *    The two branches exile from different zones, which is the whole point of this card:
  *      * the hand branch is [Patterns.Hand.revealHandAndExileChosen] — the Cruelclaw's Heist /
  *        Soul Search recipe — with `linkToSource = true`, which is what puts the card into Cloak
@@ -91,17 +88,13 @@ val CloakAndDaggerEntwined = card("Cloak and Dagger, Entwined") {
     keywords(Keyword.DEATHTOUCH, Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val opponent = target("target opponent", Targets.Opponent)
-        val creature = target(
-            // Printed wording. The *filter* is the two-player approximation (see the KDoc); the
-            // label is what the targeting prompt shows, so it stays faithful to the card.
-            "up to one target creature they control",
-            TargetCreature(optional = true, filter = TargetFilter.CreatureOpponentControls),
-        )
-        effect = Effects.Composite(
-            RevealHandEffect(opponent),
-            MayEffect(
+        trigger = Triggers.self.enters()
+        val opponent = target(Targets.Opponent)
+        // Printed wording. The *filter* is the two-player approximation (see the KDoc); the
+        // label is what the targeting prompt shows, so it stays faithful to the card.
+        val creature = target(TargetFilter.CreatureOpponentControls, optional = true)
+        effect = Effects.RevealHand(opponent) then
+            Effects.May(
                 Effects.ChooseAction(
                     listOf(
                         EffectChoice(
@@ -110,7 +103,6 @@ val CloakAndDaggerEntwined = card("Cloak and Dagger, Entwined") {
                             effect = Patterns.Hand.revealHandAndExileChosen(
                                 target = opponent,
                                 filter = GameObjectFilter.Nonland,
-                                storeChosenAs = "cloakDaggerExiled",
                                 revealHand = false,
                                 linkToSource = true,
                             ),
@@ -121,15 +113,14 @@ val CloakAndDaggerEntwined = card("Cloak and Dagger, Entwined") {
                         ),
                     ),
                 ),
-            ),
-        )
+            )
         description = "When Cloak and Dagger enter, choose target opponent and up to one target " +
             "creature they control. They reveal their hand. You may exile a nonland card from " +
             "their hand or the chosen creature until Cloak and Dagger leave the battlefield."
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileToZoneExiledFrom()
         description = "When Cloak and Dagger leave the battlefield, return the exiled card to " +
             "the zone it was exiled from."

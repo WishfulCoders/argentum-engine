@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * The activated ability is the Shalai, Voice of Plenty group-counter shape: an
  * [Effects.ForEachInGroup] over a [GroupFilter] of Heroes you control with `excludeSelf`
  * (so Coulson — himself a Hero — is skipped, per "each *other* Hero"), whose body puts one
- * +1/+1 counter on the iteration entity ([EffectTarget.Self] inside a group loop).
+ * +1/+1 counter on the iteration entity ([EffectTarget.IterationEntity] inside a group loop).
  * The group is snapshotted before the first counter lands, and the filter is a permanent
  * filter rather than a creature filter so a noncreature Hero permanent would still be
  * counted, matching the oracle wording literally.
@@ -43,7 +43,7 @@ val AgentPhilCoulson = card("Agent Phil Coulson") {
                 GameObjectFilter.Permanent.withSubtype(Subtype.HERO).youControl(),
                 excludeSelf = true,
             ),
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity),
         )
     }
 

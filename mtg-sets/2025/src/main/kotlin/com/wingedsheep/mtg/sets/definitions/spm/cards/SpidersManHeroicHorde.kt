@@ -37,7 +37,7 @@ val SpidersManHeroicHorde = card("Spiders-Man, Heroic Horde") {
     webSlinging("{4}{G}{G}")
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.WebSlungCostWasPaid
         effect = Effects.GainLife(3) then Effects.CreateToken(
             power = 2,

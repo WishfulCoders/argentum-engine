@@ -21,7 +21,7 @@ val ExiledBoggart = card("Exiled Boggart") {
     oracleText = "When this creature dies, discard a card."
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.Discard(1)
         description = "When this creature dies, discard a card."
     }

@@ -1,16 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Beorn's Hospitality
@@ -22,7 +22,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * "This creature's power and toughness are each equal to the number of lands you control."
  * (This effect doesn't end.)
  *
- * The landfall half is the plain [Triggers.LandYouControlEnters] shape — an enchantment can never be
+ * The landfall half is the plain `Triggers.a(GameObjectFilter.Land.youControl()).enters()` shape — an enchantment can never be
  * the entering land, so the trigger's OTHER binding costs nothing here.
  *
  * The activated half animates the enchantment *itself* with `Duration.Permanent` ("This effect
@@ -47,9 +47,9 @@ val BeornsHospitality = card("Beorn's Hospitality") {
         "control.\" (This effect doesn't end.)"
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
-        val creature = target("target creature you control", Targets.CreatureYouControl)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creature)
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature)
         description = "Landfall — Whenever a land you control enters, put a +1/+1 counter on " +
             "target creature you control."
     }
@@ -58,8 +58,8 @@ val BeornsHospitality = card("Beorn's Hospitality") {
         cost = Costs.Mana("{5}{G}{G}")
         effect = Effects.BecomeCreature(
             target = EffectTarget.Self,
-            power = DynamicAmount.Fixed(0),
-            toughness = DynamicAmount.Fixed(0),
+            power = DynamicAmounts.fixed(0),
+            toughness = DynamicAmounts.fixed(0),
             creatureTypes = setOf("Bear"),
             duration = Duration.Permanent,
             dynamicPower = DynamicAmounts.landsYouControl(),

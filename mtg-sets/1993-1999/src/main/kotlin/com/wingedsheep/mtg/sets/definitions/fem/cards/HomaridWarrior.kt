@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -32,15 +31,13 @@ val HomaridWarrior = card("Homarid Warrior") {
 
     activatedAbility {
         cost = Costs.Mana("{U}")
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.SHROUD, EffectTarget.Self),
-            GrantKeywordEffect(
-                AbilityFlag.DOESNT_UNTAP.name,
+        effect = Effects.GrantKeyword(Keyword.SHROUD, EffectTarget.Self) then
+            Effects.GrantKeyword(
+                AbilityFlag.DOESNT_UNTAP,
                 EffectTarget.Self,
                 Duration.UntilAfterAffectedControllersNextUntap,
-            ),
-            Effects.Tap(EffectTarget.Self),
-        )
+            ) then
+            Effects.Tap(EffectTarget.Self)
         description = "{U}: This creature gains shroud until end of turn and doesn't untap during your next untap step. Tap it."
     }
 

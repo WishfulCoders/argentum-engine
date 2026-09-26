@@ -116,7 +116,7 @@ class AmaliaBenavidesAguirreScenarioTest : FunSpec({
         // by the decision's own id (matching ScenarioTestBase.selectCards) rather than the
         // hard-cast submitCardSelection helper, which requires a SelectCardsDecision.
         driver.submitDecision(controller, CardsSelectedResponse(decision.id, listOf(bearsId)))
-        // Continuation resumes: ConditionalEffect runs → power (3) ≠ 20 → no wrath.
+        // Continuation resumes: Effects.If runs → power (3) ≠ 20 → no wrath.
 
         plusOneCounters(driver, amalia) shouldBe 1
         // Amalia is still on the battlefield.
@@ -153,7 +153,7 @@ class AmaliaBenavidesAguirreScenarioTest : FunSpec({
         driver.bothPass() // resolve Test Life Gain → gains 3 life → trigger on stack
         driver.bothPass() // resolve YouGainLife trigger:
                           //   explore: Forest → hand (no counter, power stays 20)
-                          //   ConditionalEffect: power == 20 → destroyAll(other creatures)
+                          //   Effects.If: power == 20 → destroyAll(other creatures)
 
         // Amalia is still on the battlefield.
         driver.findPermanent(controller, "Amalia Benavides Aguirre").shouldNotBeNull()

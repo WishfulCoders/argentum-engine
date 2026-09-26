@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.msh.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -11,6 +10,7 @@ import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.GrantWard
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.effects.WardCost
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Falcon's Wing Harness — Marvel Super Heroes #53
@@ -37,8 +37,8 @@ val FalconsWingHarness = card("Falcon's Wing Harness") {
         "Equip {2}{U} ({2}{U}: Attach to target creature you control. Equip only as a sorcery.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("target creature you control", Targets.CreatureYouControl)
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.AttachEquipment(creature)
         description = "When this Equipment enters, attach it to target creature you control."
     }

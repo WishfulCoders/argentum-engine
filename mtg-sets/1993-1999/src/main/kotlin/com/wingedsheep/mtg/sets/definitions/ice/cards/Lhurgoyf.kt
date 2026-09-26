@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ice.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Lhurgoyf
@@ -27,7 +27,7 @@ val Lhurgoyf = card("Lhurgoyf") {
     colorIdentity = "G"
     typeLine = "Creature — Lhurgoyf"
     dynamicStats(
-        DynamicAmount.Count(Player.Each, Zone.GRAVEYARD, GameObjectFilter.Creature),
+        DynamicAmounts.count(Player.Each, Zone.GRAVEYARD, GameObjectFilter.Creature),
         toughnessOffset = 1
     )
     oracleText = "Lhurgoyf's power is equal to the number of creature cards in all graveyards and " +

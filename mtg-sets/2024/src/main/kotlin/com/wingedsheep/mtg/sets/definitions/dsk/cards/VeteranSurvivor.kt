@@ -1,21 +1,20 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Veteran Survivor
@@ -39,10 +38,10 @@ val VeteranSurvivor = card("Veteran Survivor") {
     // Survival — At the beginning of your second main phase, if this creature is tapped,
     // exile up to one target card from a graveyard (linked to this creature).
     triggeredAbility {
-        trigger = Triggers.YourPostcombatMain
+        trigger = Triggers.you.beginningOf(Step.POSTCOMBAT_MAIN)
         interveningIf = Conditions.SourceIsTapped
         optional = true
-        val card = target("card in a graveyard", Targets.CardInGraveyard)
+        val card = target(TargetFilter.CardInGraveyard)
         effect = Effects.Move(
             target = card,
             destination = Zone.EXILE,
@@ -50,10 +49,10 @@ val VeteranSurvivor = card("Veteran Survivor") {
         )
     }
 
-    val threeOrMoreExiled = Compare(
-        DynamicAmount.ContextProperty(ContextPropertyKey.LINKED_EXILE_CARD_COUNT),
+    val threeOrMoreExiled = Conditions.CompareAmounts(
+        DynamicAmounts.linkedExileCardCount(),
         ComparisonOperator.GTE,
-        DynamicAmount.Fixed(3)
+        3
     )
 
     staticAbility {

@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.ReplaceDamageWithCounters
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Phytohydra — Ravnica: City of Guilds #218 (canonical printing; reprinted in RVR)
@@ -13,7 +13,7 @@ import com.wingedsheep.sdk.scripting.events.RecipientFilter
  *
  * If damage would be dealt to this creature, put that many +1/+1 counters on it instead.
  *
- * One [ReplaceDamageWithCounters] with `RecipientFilter.Self` — the Anti-Venom clause, unchanged.
+ * One [ReplaceDamageWithCounters] with `Recipient.Self` — the Anti-Venom clause, unchanged.
  * The "instead" matters and the primitive already gets it right (CR 614.1a): the damage is
  * *replaced*, never dealt and never prevented. Two rulings fall out of that for free:
  *
@@ -37,8 +37,8 @@ val Phytohydra = card("Phytohydra") {
 
     replacementEffect(
         ReplaceDamageWithCounters(
-            counterType = Counters.PLUS_ONE_PLUS_ONE,
-            appliesTo = EventPattern.DamageEvent(recipient = RecipientFilter.Self),
+            counterType = CounterType.PLUS_ONE_PLUS_ONE,
+            appliesTo = EventPattern.DamageEvent(recipient = Recipient.Self),
         )
     )
 

@@ -10,7 +10,6 @@ import com.wingedsheep.mtg.sets.tokens.PredefinedTokens
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
@@ -20,6 +19,9 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Scientist Supreme of A.I.M. (MSH #225) — {U}{B} Legendary Creature — Human Scientist Villain, 2/2.
@@ -46,7 +48,7 @@ class ScientistSupremeOfAimScenarioTest : FunSpec({
         activatedAbility {
             cost = AbilityCost.Tap
             effect = Effects.ModifyStats(1, 0, EffectTarget.ContextTarget(0))
-            target = Targets.CreatureYouControl
+            target = TargetObject(filter = TargetFilter.CreatureYouControl)
             timing = TimingRule.InstantSpeed
         }
     }
@@ -61,7 +63,7 @@ class ScientistSupremeOfAimScenarioTest : FunSpec({
         activatedAbility {
             cost = AbilityCost.Tap
             effect = Effects.ModifyStats(1, 0, EffectTarget.ContextTarget(0))
-            target = Targets.CreatureYouControl
+            target = TargetObject(filter = TargetFilter.CreatureYouControl)
             timing = TimingRule.InstantSpeed
         }
     }
@@ -146,7 +148,7 @@ class ScientistSupremeOfAimScenarioTest : FunSpec({
             driver.bothPass(); guard++
         }
         (driver.state.pendingDecision is ChooseTargetsDecision) shouldBe true
-        driver.submitTargetSelection(me, listOf(creatureB)).isSuccess shouldBe true
+        driver.submitTargetSelection(me, listOf(creatureB)).outcome shouldBe Outcome.Done
 
         guard = 0
         while (driver.stackSize > 0 && guard < 20) { driver.bothPass(); guard++ }
@@ -231,7 +233,7 @@ class ScientistSupremeOfAimScenarioTest : FunSpec({
 
         val dossier = driver.putCardInHand(me, "Scientist Test Dossier")
         driver.giveColorlessMana(me, 1)
-        driver.castSpell(me, dossier).isSuccess shouldBe true
+        driver.castSpell(me, dossier).outcome shouldBe Outcome.Done
         driver.bothPass() // Investigate resolves
         val clue = driver.findPermanent(me, "Clue")!!
 

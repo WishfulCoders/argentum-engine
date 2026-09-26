@@ -40,7 +40,7 @@ class PayManaCostRepeatedlyTest : ScenarioTestBase() {
         power = 1
         toughness = 1
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             effect = ReflexiveTriggerEffect(
                 action = Effects.PayRepeatedly("{1}", upTo = 3),
                 optional = true,
@@ -62,7 +62,7 @@ class PayManaCostRepeatedlyTest : ScenarioTestBase() {
         power = 1
         toughness = 1
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             effect = ReflexiveTriggerEffect(
                 action = Effects.PayRepeatedly("{G}", upTo = 3),
                 optional = true,
@@ -84,7 +84,7 @@ class PayManaCostRepeatedlyTest : ScenarioTestBase() {
         power = 1
         toughness = 1
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             effect = GatedEffect(
                 gate = Gate.MayPay(Effects.PayRepeatedly("{1}", upTo = 3)),
                 then = Effects.GainLife(DynamicAmounts.timesPaid())
@@ -101,7 +101,7 @@ class PayManaCostRepeatedlyTest : ScenarioTestBase() {
         power = 1
         toughness = 1
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             effect = ReflexiveTriggerEffect(
                 action = Effects.PayRepeatedly("{1}"),
                 optional = true,

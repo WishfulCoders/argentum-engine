@@ -42,8 +42,8 @@ filter (`Ice Cream Kitty`, `Metalhead`), Sacrifice-self for activated abilities,
 .OncePerTurn` on activated abilities (`Shredder's Armor`), `ModifySpellCost`
 with `CostReductionSource.FixedIfControlFilter` (`Saved by the Shell`).
 
-Counters — `Counters.PLUS_ONE_PLUS_ONE`, `Counters.CHARGE` (`Weather Maker`),
-`Counters.STUN` (`Utrom Scientists`), counter-count read via
+Counters — `CounterType.PLUS_ONE_PLUS_ONE`, `CounterType.CHARGE` (`Weather Maker`),
+`CounterType.STUN` (`Utrom Scientists`), counter-count read via
 `EntityNumericProperty.CounterCount` (`Savanti Romero`'s scaling draw).
 
 Dynamic amounts — `DynamicAmount.Count` of permanents/cards-in-hand/cards-in-

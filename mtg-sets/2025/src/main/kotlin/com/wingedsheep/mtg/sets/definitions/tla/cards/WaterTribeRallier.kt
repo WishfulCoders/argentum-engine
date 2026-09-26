@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Water Tribe Rallier
@@ -41,7 +40,7 @@ val WaterTribeRallier = card("Water Tribe Rallier") {
         cost = Costs.Mana("{5}")
         hasWaterbend = true
         effect = Patterns.Library.lookAtTopRevealMatchingToHand(
-            count = DynamicAmount.Fixed(4),
+            count = 4,
             filter = GameObjectFilter.Creature.powerAtMost(3),
             prompt = "You may reveal a creature card with power 3 or less and put it into your hand"
         )

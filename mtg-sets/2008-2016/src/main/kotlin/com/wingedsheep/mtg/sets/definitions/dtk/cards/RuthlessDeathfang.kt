@@ -18,8 +18,8 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  * Whenever you sacrifice a creature, target opponent sacrifices a creature of their choice.
  *
  * The printed article is bare — "a creature", not "another creature" — so this is
- * [Triggers.YouSacrificeA], the per-permanent template that *counts the Dragon sacrificing itself*
- * ([com.wingedsheep.sdk.scripting.TriggerBinding.ANY]), and not [Triggers.YouSacrificeAnother].
+ * `Triggers.you.sacrifices(filter)`, the per-permanent template that *counts the Dragon sacrificing itself*
+ * ([com.wingedsheep.sdk.scripting.TriggerBinding.ANY]), and not `Triggers.you.sacrificesAnother(filter)`.
  * Per-permanent also means CR 603.2c multiplicity: sacrificing two creatures to one cost fires it
  * twice, which is the whole point of the singular wording.
  *
@@ -40,8 +40,8 @@ val RuthlessDeathfang = card("Ruthless Deathfang") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YouSacrificeA(GameObjectFilter.Creature)
-        val opponent = target("target opponent", Targets.Opponent)
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Creature)
+        val opponent = target(Targets.Opponent)
         effect = Effects.Sacrifice(GameObjectFilter.Creature, 1, opponent)
     }
 

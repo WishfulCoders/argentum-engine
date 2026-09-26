@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.ths.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ashen Rider
@@ -31,14 +31,14 @@ val AshenRider = card("Ashen Rider") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", Targets.Permanent)
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Permanent)
         effect = Effects.Exile(t)
     }
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val t = target("target", Targets.Permanent)
+        trigger = Triggers.self.dies()
+        val t = target(TargetFilter.Permanent)
         effect = Effects.Exile(t)
     }
 

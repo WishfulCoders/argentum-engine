@@ -3,20 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.ons.cards
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
+import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Head Games
@@ -33,34 +24,15 @@ val HeadGames = card("Head Games") {
     oracleText = "Target opponent puts the cards from their hand on top of their library. Search that player's library for that many cards. The player puts those cards into their hand, then shuffles."
 
     spell {
-        target = TargetOpponent()
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.HAND, Player.ContextPlayer(0)),
-                    storeAs = "opponentHand"
-                ),
-                MoveCollectionEffect(
-                    from = "opponentHand",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, Player.ContextPlayer(0), ZonePlacement.Top)
-                ),
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.LIBRARY, Player.ContextPlayer(0)),
-                    storeAs = "searchable"
-                ),
-                SelectFromCollectionEffect(
-                    from = "searchable",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.VariableReference("opponentHand_count")),
-                    chooser = Chooser.Controller,
-                    storeSelected = "found"
-                ),
-                MoveCollectionEffect(
-                    from = "found",
-                    destination = CardDestination.ToZone(Zone.HAND, Player.ContextPlayer(0))
-                ),
-                ShuffleLibraryEffect(EffectTarget.ContextTarget(0))
-            )
-        )
+        val opponent = target(Targets.Opponent)
+        effect = Effects.Pipeline {
+            val opponentHand = gather(CardSource.FromZone(Zone.HAND, opponent.asPlayer))
+            toLibraryTop(opponentHand, opponent.asPlayer, order = CardOrder.Preserve)
+            val searchable = gather(CardSource.FromZone(Zone.LIBRARY, opponent.asPlayer), search = true)
+            val found = chooseUpTo(opponentHand.count, from = searchable, chooser = Chooser.Controller)
+            toHand(found, opponent.asPlayer)
+            run(Effects.ShuffleLibrary(opponent))
+        }
     }
 
     metadata {

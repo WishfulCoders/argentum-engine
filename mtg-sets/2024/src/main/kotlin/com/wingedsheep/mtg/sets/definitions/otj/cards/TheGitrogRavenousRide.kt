@@ -13,6 +13,7 @@ import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * The Gitrog, Ravenous Ride
@@ -54,7 +55,7 @@ val TheGitrogRavenousRide = card("The Gitrog, Ravenous Ride") {
     keywordAbility(KeywordAbility.saddle(1))
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         effect = Effects.Pipeline {
             // You may sacrifice a creature that saddled The Gitrog this turn.
             val saddlers = gather(CardSource.CreaturesThatSaddledSource)

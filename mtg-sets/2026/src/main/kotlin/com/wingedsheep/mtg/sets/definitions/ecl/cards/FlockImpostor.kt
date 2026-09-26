@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Flock Impostor
@@ -33,11 +32,8 @@ val FlockImpostor = card("Flock Impostor") {
     keywords(Keyword.CHANGELING, Keyword.FLASH, Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target(
-            "up to one other target creature you control",
-            TargetCreature(optional = true, filter = TargetFilter.OtherCreatureYouControl)
-        )
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.OtherCreatureYouControl, optional = true)
         effect = Effects.ReturnToHand(creature)
     }
 

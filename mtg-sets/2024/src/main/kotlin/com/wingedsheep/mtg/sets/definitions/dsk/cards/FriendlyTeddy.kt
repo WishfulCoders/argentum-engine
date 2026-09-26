@@ -23,7 +23,7 @@ val FriendlyTeddy = card("Friendly Teddy") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.DrawCards(1, EffectTarget.PlayerRef(Player.Each))
     }
 

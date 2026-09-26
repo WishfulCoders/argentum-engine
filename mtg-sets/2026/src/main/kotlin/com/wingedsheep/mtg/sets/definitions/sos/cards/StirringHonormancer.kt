@@ -30,10 +30,10 @@ val StirringHonormancer = card("Stirring Honormancer") {
         "into your graveyard."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.lookAtTopAndKeep(
             count = DynamicAmounts.creaturesYouControl(),
-            keepCount = com.wingedsheep.sdk.scripting.values.DynamicAmount.Fixed(1),
+            keepCount = DynamicAmounts.fixed(1),
         )
     }
 

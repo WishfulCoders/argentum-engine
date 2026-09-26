@@ -12,7 +12,6 @@ import com.wingedsheep.mtg.sets.definitions.msh.cards.TitaniaRuggedRumbler
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import io.kotest.assertions.withClue
@@ -23,6 +22,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Titania, Rugged Rumbler (MSH #235) — "As an additional cost to cast this spell, discard a card or
@@ -43,7 +43,7 @@ class TitaniaRuggedRumblerScenarioTest : FunSpec({
         manaCost = "{R}"
         typeLine = "Instant"
         spell {
-            val victim = target("target creature", Targets.Creature)
+            val victim = target(TargetFilter.Creature)
             effect = Effects.DealDamage(3, victim)
         }
     }

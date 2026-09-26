@@ -7,8 +7,8 @@ import com.wingedsheep.sdk.dsl.exploit
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Skull Skaab
@@ -42,10 +42,7 @@ val SkullSkaab = card("Skull Skaab") {
     exploit()
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            EventPattern.ExploitedEvent(player = Player.You, requireNontokenExploited = true),
-            TriggerBinding.ANY
-        )
+        trigger = Triggers.you.exploits(true)
         effect = Effects.CreateToken(
             power = 2,
             toughness = 2,

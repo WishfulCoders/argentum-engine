@@ -14,12 +14,14 @@ import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.model.CreatureStats
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.*
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Subtype
 
 /**
  * Tests for Tempting Wurm's ETB trigger.
@@ -38,6 +40,7 @@ class TemptingWurmTest : FunSpec({
         creatureStats = CreatureStats(5, 5),
         script = CardScript.creature(
             TriggeredAbility.create(
+                id = AbilityId("TemptingWurmTest_1"),
                 trigger = EventPattern.ZoneChangeEvent(to = Zone.BATTLEFIELD),
                 binding = TriggerBinding.SELF,
                 effect = Patterns.Hand.eachOpponentMayPutFromHand(
@@ -64,7 +67,7 @@ class TemptingWurmTest : FunSpec({
         ),
         oracleText = "Enchant creature\nEnchanted creature can't attack or block.",
         script = CardScript.aura(
-            enchantTarget = TargetCreature(),
+            enchantTarget = TargetObject(filter = TargetFilter.Creature),
             staticAbilities = listOf(
                 CantAttack(filter = GroupFilter.attachedCreature()),
                 CantBlock(filter = GroupFilter.attachedCreature())

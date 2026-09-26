@@ -7,9 +7,7 @@ package com.wingedsheep.mtg.sets.definitions.bro.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.MarkExileOnDeathEffect
-import com.wingedsheep.sdk.scripting.targets.TargetCreatureOrPlaneswalker
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -24,11 +22,8 @@ val ObliteratingBolt = card("Obliterating Bolt") {
     typeLine = "Sorcery"
     oracleText = "Obliterating Bolt deals 4 damage to target creature or planeswalker. If that creature or planeswalker would die this turn, exile it instead."
     spell {
-        val t = target("target", TargetCreatureOrPlaneswalker())
-        effect = Effects.Composite(
-            DealDamageEffect(4, t),
-            MarkExileOnDeathEffect(t)
-        )
+        val t = target(Targets.CreatureOrPlaneswalker)
+        effect = Effects.DealDamage(4, t) then Effects.MarkExileOnDeath(t)
     }
     metadata {
         rarity = Rarity.UNCOMMON

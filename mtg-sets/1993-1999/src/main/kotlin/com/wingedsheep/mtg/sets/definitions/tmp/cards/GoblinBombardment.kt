@@ -22,7 +22,7 @@ val GoblinBombardment = card("Goblin Bombardment") {
 
     activatedAbility {
         cost = Costs.Sacrifice(GameObjectFilter.Creature)
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
         description = "Sacrifice a creature: This enchantment deals 1 damage to any target."
     }

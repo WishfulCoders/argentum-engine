@@ -21,7 +21,7 @@ val HighlandGame = card("Highland Game") {
     oracleText = "When this creature dies, you gain 2 life."
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.GainLife(2)
     }
 

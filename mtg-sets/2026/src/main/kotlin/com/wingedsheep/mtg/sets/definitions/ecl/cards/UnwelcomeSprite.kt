@@ -29,7 +29,7 @@ val UnwelcomeSprite = card("Unwelcome Sprite") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YouCastSpell
+        trigger = Triggers.you.casts()
         triggerRestriction = Conditions.IsNotYourTurn
         effect = Patterns.Library.surveil(2)
     }

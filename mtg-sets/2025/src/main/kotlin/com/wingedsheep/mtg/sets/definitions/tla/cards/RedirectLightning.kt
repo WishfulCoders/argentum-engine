@@ -7,6 +7,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Redirect Lightning
@@ -37,7 +39,7 @@ val RedirectLightning = card("Redirect Lightning") {
             // Pay 5 life
             Mode(
                 effect = Effects.ChangeTarget(),
-                targetRequirements = listOf(Targets.SpellOrAbilityWithSingleTarget),
+                targetRequirements = listOf(TargetObject(filter = TargetFilter.SpellOrAbilityOnStack)),
                 description = "Pay 5 life — change the target of target spell or ability " +
                     "with a single target",
                 additionalCosts = listOf(Costs.additional.PayLife(amount = 5))
@@ -45,7 +47,7 @@ val RedirectLightning = card("Redirect Lightning") {
             // Pay {2}
             Mode(
                 effect = Effects.ChangeTarget(),
-                targetRequirements = listOf(Targets.SpellOrAbilityWithSingleTarget),
+                targetRequirements = listOf(TargetObject(filter = TargetFilter.SpellOrAbilityOnStack)),
                 description = "Pay {2} — change the target of target spell or ability " +
                     "with a single target",
                 additionalManaCost = "{2}"

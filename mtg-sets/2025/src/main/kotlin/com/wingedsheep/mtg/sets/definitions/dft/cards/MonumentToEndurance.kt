@@ -31,7 +31,7 @@ val MonumentToEndurance = card("Monument to Endurance") {
         "• Each opponent loses 3 life."
 
     triggeredAbility {
-        trigger = Triggers.YouDiscard
+        trigger = Triggers.you.discards()
         effect = ModalEffect.chooseOneNotYetChosenThisTurn(
             Mode.noTarget(Effects.DrawCards(1), "Draw a card"),
             Mode.noTarget(Effects.CreateTreasure(1), "Create a Treasure token"),

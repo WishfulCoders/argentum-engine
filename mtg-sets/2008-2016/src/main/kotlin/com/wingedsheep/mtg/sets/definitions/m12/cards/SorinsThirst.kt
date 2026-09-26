@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.m12.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sorin's Thirst — Magic 2012 #110 (canonical printing; reprinted in WAR and M20)
@@ -22,11 +22,8 @@ val SorinsThirst = card("Sorin's Thirst") {
     oracleText = "Sorin's Thirst deals 2 damage to target creature and you gain 2 life."
 
     spell {
-        val creature = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.DealDamage(2, creature),
-            Effects.GainLife(2)
-        )
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.DealDamage(2, creature) then Effects.GainLife(2)
     }
 
     metadata {

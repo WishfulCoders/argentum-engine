@@ -113,7 +113,7 @@ data class DeflectDamageSourceChoiceContinuation(
 ) : AnswerContinuation
 
 /**
- * Continuation for PreventNextDamageFromChosenSourceEffect.
+ * Continuation for a [com.wingedsheep.sdk.scripting.effects.PreventDamageEffect] over a chosen source.
  *
  * Resume after a player chooses a damage source. Creates a prevention shield
  * on the target that only prevents damage from the chosen source.

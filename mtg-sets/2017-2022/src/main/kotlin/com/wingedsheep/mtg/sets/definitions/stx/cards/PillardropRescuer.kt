@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Pillardrop Rescuer — Strixhaven: School of Mages #23 (canonical printing)
@@ -15,7 +14,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  * Flying
  * When this creature enters, return target creature card with mana value 3 or less from your graveyard to your hand.
  *
- * Flying is the bare keyword. The ETB is a non-optional [Triggers.EntersBattlefield] whose target is
+ * Flying is the bare keyword. The ETB is a non-optional `Triggers.self.enters()` whose target is
  * [TargetFilter.CreatureInYourGraveyard] narrowed to `manaValueAtMost(3)`, returned with a plain
  * [Effects.ReturnToHand] — the graveyard restriction lives in the target's zone, not in the move.
  */
@@ -32,11 +31,8 @@ val PillardropRescuer = card("Pillardrop Rescuer") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val rescued = target(
-            "target",
-            TargetObject(filter = TargetFilter.CreatureInYourGraveyard.manaValueAtMost(3))
-        )
+        trigger = Triggers.self.enters()
+        val rescued = target(TargetFilter.CreatureInYourGraveyard.manaValueAtMost(3))
         effect = Effects.ReturnToHand(rescued)
     }
 

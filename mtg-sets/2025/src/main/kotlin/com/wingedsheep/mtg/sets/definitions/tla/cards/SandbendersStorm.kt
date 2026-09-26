@@ -2,12 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Sandbenders' Storm
@@ -36,26 +34,14 @@ val SandbendersStorm = card("Sandbenders' Storm") {
 
     spell {
         effect = ModalEffect.chooseOne(
-            Mode(
-                effect = Effects.Destroy(EffectTarget.ContextTarget(0)),
-                targetRequirements = listOf(
-                    TargetObject(
-                        filter = TargetFilter.Creature.powerAtLeast(4),
-                        id = "target creature with power 4 or greater",
-                    ),
-                ),
-                description = "Destroy target creature with power 4 or greater",
-            ),
-            Mode(
-                effect = Effects.Earthbend(3, EffectTarget.ContextTarget(0)),
-                targetRequirements = listOf(
-                    TargetObject(
-                        filter = TargetFilter.Land.youControl(),
-                        id = "target land you control",
-                    ),
-                ),
-                description = "Earthbend 3",
-            ),
+            mode("Destroy target creature with power 4 or greater") {
+                val creature = target(TargetFilter.Creature.powerAtLeast(4))
+                effect = Effects.Destroy(creature)
+            },
+            mode("Earthbend 3") {
+                val land = target(TargetFilter.Land.youControl())
+                effect = Effects.Earthbend(3, land)
+            },
         )
     }
 

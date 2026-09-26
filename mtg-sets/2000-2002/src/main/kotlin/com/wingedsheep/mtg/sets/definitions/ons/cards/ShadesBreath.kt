@@ -2,16 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.ActivatedAbility
-import com.wingedsheep.sdk.scripting.effects.ChangeGroupColorEffect
+import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.effects.GrantActivatedAbilityToGroupEffect
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
-import com.wingedsheep.sdk.scripting.effects.SetGroupCreatureSubtypesEffect
 import com.wingedsheep.sdk.scripting.Duration
 
 /**
@@ -27,17 +25,17 @@ val ShadesBreath = card("Shade's Breath") {
     typeLine = "Instant"
 
     spell {
-        effect = SetGroupCreatureSubtypesEffect(
+        effect = Effects.SetGroupCreatureSubtypes(
             subtypes = setOf("Shade")
-        ) then ChangeGroupColorEffect(
-            colors = setOf("BLACK")
-        ) then GrantActivatedAbilityToGroupEffect(
+        ) then Effects.ChangeGroupColor(
+            colors = setOf(Color.BLACK)
+        ) then Effects.GrantActivatedAbilityToGroup(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Mana(ManaCost.parse("{B}")),
-                effect = ModifyStatsEffect(
-                    powerModifier = 1,
-                    toughnessModifier = 1,
+                effect = Effects.ModifyStats(
+                    power = 1,
+                    toughness = 1,
                     target = EffectTarget.Self,
                     duration = Duration.EndOfTurn
                 )

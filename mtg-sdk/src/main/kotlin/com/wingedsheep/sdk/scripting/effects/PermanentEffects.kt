@@ -99,7 +99,7 @@ data class BecomeCreatureEffect(
      * Optional dynamic base power. When non-null, the Layer 7b base-P/T floating effect uses
      * [SerializableModification.SetPowerToughnessDynamic] with this amount instead of the fixed
      * [power], recomputed continuously at projection. Use `DynamicAmount.EntityProperty(
-     * EntityReference.AffectedEntity, EntityNumericProperty.ManaValue)` for "power equal to its
+     * EffectTarget.AffectedEntity, EntityNumericProperty.ManaValue)` for "power equal to its
      * mana value" (Xenic Poltergeist). Both [dynamicPower] and [dynamicToughness] must be supplied
      * together; the fixed [power]/[toughness] then serve only as the rules-text display.
      */
@@ -438,6 +438,30 @@ data class AttachTargetEquipmentToCreatureEffect(
     val creatureTarget: EffectTarget = EffectTarget.ContextTarget(1)
 ) : Effect {
     override val description: String = "Attach ${equipmentTarget.description} to ${creatureTarget.description}"
+}
+
+/**
+ * Attach an Aura or Equipment that is already on the battlefield to **another** permanent that the
+ * effect's controller chooses at resolution — the new host is not a target. Models "Attach target
+ * Aura attached to a creature to another creature" (Autumn-Tail, Kitsune Sage; Crown of the Ages)
+ * and "Attach it to another permanent it can enchant" (Aura Graft).
+ *
+ * Only hosts the attachment could legally be attached to are offered (CR 701.3a — an Aura's enchant
+ * restriction and protection, an Equipment's "creature" requirement), and the permanent it is
+ * currently attached to is excluded ("another"). With no such host the effect does nothing and the
+ * attachment stays where it is (CR 701.3b). Hexproof and shroud don't matter: the host isn't targeted.
+ *
+ * @property attachment The Aura or Equipment to move (e.g. the ability's target).
+ * @property hostFilter Which permanents are eligible new hosts, before the legality check.
+ */
+@SerialName("AttachToChosenHost")
+@Serializable
+data class AttachToChosenHostEffect(
+    val attachment: EffectTarget = EffectTarget.ContextTarget(0),
+    val hostFilter: GameObjectFilter = GameObjectFilter.Creature
+) : Effect {
+    override val description: String =
+        "Attach ${attachment.description} to another ${hostFilter.description}"
 }
 
 /**

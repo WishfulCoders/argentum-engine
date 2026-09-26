@@ -1,16 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Railway Brawler
@@ -22,10 +21,10 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * Whenever another creature you control enters, put X +1/+1 counters on it, where X is its power.
  * Plot {3}{G}
  *
- * The ETB trigger fires for any OTHER creature you control entering ([Triggers.OtherCreatureEnters],
+ * The ETB trigger fires for any OTHER creature you control entering (`Triggers.another(GameObjectFilter.Creature.youControl()).enters()`,
  * OTHER binding) and addresses that entering creature via [EffectTarget.TriggeringEntity]. The counter
  * count "X is its power" reads the entering creature's power through
- * [DynamicAmount.EntityProperty]([EntityReference.Triggering], [EntityNumericProperty.Power]) — the same
+ * [DynamicAmount.EntityProperty]([EffectTarget.TriggeringEntity], [EntityNumericProperty.Power]) — the same
  * triggering-creature property idiom Terror of the Peaks uses. A 0- or negative-power creature yields
  * 0 counters (the dynamic-counter executor no-ops on amounts <= 0), matching CR intuition.
  *
@@ -47,10 +46,10 @@ val RailwayBrawler = card("Railway Brawler") {
     keywordAbility(KeywordAbility.plot("{3}{G}"))
 
     triggeredAbility {
-        trigger = Triggers.OtherCreatureEnters
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
         effect = Effects.AddDynamicCounters(
-            counterType = Counters.PLUS_ONE_PLUS_ONE,
-            amount = DynamicAmount.EntityProperty(EntityReference.Triggering, EntityNumericProperty.Power),
+            counterType = CounterType.PLUS_ONE_PLUS_ONE,
+            amount = DynamicAmounts.triggeringPower(),
             target = EffectTarget.TriggeringEntity
         )
         description = "Whenever another creature you control enters, put X +1/+1 counters on it, " +

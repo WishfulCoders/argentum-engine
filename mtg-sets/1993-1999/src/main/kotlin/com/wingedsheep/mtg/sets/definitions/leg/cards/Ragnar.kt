@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.leg.cards
 
 import com.wingedsheep.sdk.dsl.Costs
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ragnar
@@ -24,8 +24,8 @@ val Ragnar = card("Ragnar") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{G}{W}{U}"), Costs.Tap)
-        val creature = target("target creature", Targets.Creature)
-        effect = RegenerateEffect(creature)
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.Regenerate(creature)
     }
 
     metadata {

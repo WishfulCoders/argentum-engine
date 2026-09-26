@@ -2,13 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Rise of the Varmints
@@ -30,11 +30,7 @@ val RiseOfTheVarmints = card("Rise of the Varmints") {
 
     spell {
         effect = Effects.CreateToken(
-            count = DynamicAmount.Count(
-                player = Player.You,
-                zone = Zone.GRAVEYARD,
-                filter = GameObjectFilter.Creature
-            ),
+            count = DynamicAmounts.creatureCardsInYourGraveyard(),
             power = 2,
             toughness = 1,
             colors = setOf(Color.GREEN),

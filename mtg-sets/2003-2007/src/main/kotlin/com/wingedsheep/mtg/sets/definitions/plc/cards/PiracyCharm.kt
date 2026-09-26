@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Piracy Charm
@@ -31,15 +32,15 @@ val PiracyCharm = card("Piracy Charm") {
     spell {
         modal(chooseCount = 1) {
             mode("Target creature gains islandwalk until end of turn") {
-                val t = target("target", Targets.Creature)
+                val t = target(TargetFilter.Creature)
                 effect = Effects.GrantKeyword(Keyword.ISLANDWALK, t)
             }
             mode("Target creature gets +2/-1 until end of turn") {
-                val t = target("target", Targets.Creature)
+                val t = target(TargetFilter.Creature)
                 effect = Effects.ModifyStats(2, -1, t)
             }
             mode("Target player discards a card") {
-                val p = target("target", Targets.Player)
+                val p = target(Targets.Player)
                 effect = Patterns.Hand.discardCards(1, p)
             }
         }

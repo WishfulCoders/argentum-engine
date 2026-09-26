@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Relic's Roar
@@ -29,19 +28,14 @@ val RelicsRoar = card("Relic's Roar") {
     oracleText = "Until end of turn, target artifact or creature becomes a Dinosaur artifact creature with base power and toughness 4/3 in addition to its other types."
 
     spell {
-        val t = target(
-            "target artifact or creature",
-            TargetPermanent(filter = TargetFilter.CreatureOrArtifact)
-        )
-        effect = Effects.Composite(
-            Effects.BecomeCreature(
-                target = t,
-                power = 4,
-                toughness = 3,
-                addTypes = setOf("ARTIFACT")
-            ),
+        val t = target(TargetFilter.CreatureOrArtifact)
+        effect = Effects.BecomeCreature(
+            target = t,
+            power = 4,
+            toughness = 3,
+            addTypes = setOf("ARTIFACT")
+        ) then
             Effects.AddSubtype("DINOSAUR", target = t)
-        )
     }
 
     metadata {

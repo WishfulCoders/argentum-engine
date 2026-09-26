@@ -1,10 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.MayPlayLandsFromGraveyard
-import com.wingedsheep.sdk.scripting.effects.CreatePredefinedTokenEffect
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Mole Man, Moloid Master (MSH #177) — {2}{G} Legendary Creature — Human Villain · 1/1
@@ -15,7 +16,7 @@ import com.wingedsheep.sdk.scripting.effects.CreatePredefinedTokenEffect
  *
  * The graveyard land permission is the Icetill Explorer static ([MayPlayLandsFromGraveyard]) — it
  * grants permission only, so the normal one-land-per-turn limit still applies. "Landfall" is an
- * ability word, so it lives in the text and not in the trigger: [Triggers.LandYouControlEnters]
+ * ability word, so it lives in the text and not in the trigger: `Triggers.a(GameObjectFilter.Land.youControl()).enters()`
  * fires once per land entering under your control, including lands that enter without being
  * played.
  *
@@ -35,8 +36,8 @@ val MoleManMoloidMaster = card("Mole Man, Moloid Master") {
     staticAbility { ability = MayPlayLandsFromGraveyard }
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
-        effect = CreatePredefinedTokenEffect("Moloid")
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
+        effect = Effects.CreatePredefinedToken("Moloid")
         description = "Landfall — Whenever a land you control enters, create a 1/1 green Minion " +
             "creature token named Moloid with \"Whenever this token attacks, you may mill a card.\""
     }

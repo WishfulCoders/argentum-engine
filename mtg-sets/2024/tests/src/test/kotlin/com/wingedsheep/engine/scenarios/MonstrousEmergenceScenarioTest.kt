@@ -16,7 +16,7 @@ import io.kotest.matchers.shouldBe
  * power of the creature you chose or the card you revealed to target creature."
  *
  * Exercises the `AdditionalCost.ChooseEntity` (battlefield creature / hand creature card) feeding a
- * power snapshot into `DealDamage(EntityReference.FromCostStorage)` (the Close Encounter pattern).
+ * power snapshot into `DealDamage(EffectTarget.PipelineTarget)` (the Close Encounter pattern).
  */
 class MonstrousEmergenceScenarioTest : ScenarioTestBase() {
 

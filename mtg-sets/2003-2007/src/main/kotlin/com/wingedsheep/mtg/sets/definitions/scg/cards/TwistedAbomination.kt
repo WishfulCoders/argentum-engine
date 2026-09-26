@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.scg.cards
 
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 
 /**
  * Twisted Abomination
@@ -27,7 +27,7 @@ val TwistedAbomination = card("Twisted Abomination") {
 
     activatedAbility {
         cost = Costs.Mana("{B}")
-        effect = RegenerateEffect(EffectTarget.Self)
+        effect = Effects.Regenerate(EffectTarget.Self)
     }
 
     keywordAbility(KeywordAbility.typecycling("Swamp", ManaCost.parse("{2}")))

@@ -9,10 +9,10 @@ import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * The One Ring — {4} Legendary Artifact
@@ -35,7 +35,7 @@ class TheOneRingScenarioTest : ScenarioTestBase() {
         manaCost = "{1}"
         typeLine = "Sorcery"
         spell {
-            val t = target("target card in a graveyard", Targets.CardInGraveyard)
+            val t = target(TargetFilter.CardInGraveyard)
             effect = Effects.Move(t, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)
         }
     }

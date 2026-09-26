@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.stx.cards
 
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Arcane Subtraction — Strixhaven: School of Mages #36 (canonical printing)
@@ -28,7 +28,7 @@ val ArcaneSubtraction = card("Arcane Subtraction") {
         "hand, or discard a card to draw a card.)"
 
     spell {
-        val creature = target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(-4, 0, creature) then Patterns.Mechanic.learn()
     }
 

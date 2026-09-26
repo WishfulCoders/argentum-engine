@@ -10,6 +10,7 @@ import com.wingedsheep.engine.core.YesNoResponse
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.drawing.DrawCardsExecutor
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.core.Outcome
 
 class DrawReplacementContinuationResumer(
     private val services: EngineServices
@@ -66,13 +67,13 @@ class DrawReplacementContinuationResumer(
             val effectResult = services.effectExecutorRegistry.execute(
                 newState, continuation.replacementEffect, effectContext
             ).toExecutionResult()
-            if (effectResult.isPaused) {
+            if (effectResult.outcome is Outcome.Paused) {
                 return ExecutionResult.propagatePause(
                     effectResult.state,
                     events + effectResult.events
                 )
             }
-            if (effectResult.isSuccess) {
+            if (effectResult.outcome is Outcome.Done) {
                 newState = effectResult.newState
                 events.addAll(effectResult.events)
             }
@@ -89,14 +90,15 @@ class DrawReplacementContinuationResumer(
             val singleDrawExecutor = DrawCardsExecutor(
                 cardRegistry = services.cardRegistry,
                 effectExecutor = services.effectExecutorRegistry::execute,
-                replacementProcessor = services.replacementEffectProcessor
+                replacementProcessor = services.replacementEffectProcessor,
+                amountEvaluator = services.dynamicAmountEvaluator
             )
             // announce = false: this is one card of a draw instruction that already went
             // through the CR 121.2a announcement before it paused on the prompt.
             val singleDrawResult = singleDrawExecutor.executeDraws(
                 stateWithDeclined, playerId, 1, announce = false
             ).toExecutionResult()
-            if (singleDrawResult.isPaused) {
+            if (singleDrawResult.outcome is Outcome.Paused) {
                 return ExecutionResult.propagatePause(
                     singleDrawResult.state,
                     events + singleDrawResult.events

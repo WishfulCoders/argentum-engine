@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Rescue
@@ -19,7 +18,7 @@ val Rescue = card("Rescue") {
     oracleText = "Return target permanent you control to its owner's hand."
 
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter.PermanentYouControl))
+        val t = target(TargetFilter.PermanentYouControl)
         effect = Effects.ReturnToHand(t)
     }
 

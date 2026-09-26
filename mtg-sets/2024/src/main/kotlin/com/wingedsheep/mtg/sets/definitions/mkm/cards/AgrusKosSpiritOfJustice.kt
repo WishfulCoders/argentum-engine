@@ -8,8 +8,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Agrus Kos, Spirit of Justice — Murders at Karlov Manor #184
@@ -62,12 +61,12 @@ val AgrusKosSpiritOfJustice = card("Agrus Kos, Spirit of Justice") {
     keywords(Keyword.DOUBLE_STRIKE, Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         exileIfSuspectedOtherwiseSuspect()
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         exileIfSuspectedOtherwiseSuspect()
     }
 
@@ -108,11 +107,11 @@ val AgrusKosSpiritOfJustice = card("Agrus Kos, Spirit of Justice") {
 
 /** The rider shared by the enters and attacks triggers. */
 private fun TriggeredAbilityBuilder.exileIfSuspectedOtherwiseSuspect() {
-    val suspect = target("up to one target creature", TargetCreature(optional = true))
-    effect = ConditionalEffect(
-        condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.suspected()),
-        effect = Effects.Exile(suspect),
-        elseEffect = Effects.Suspect(suspect)
+    val suspect = target(TargetFilter.Creature, optional = true)
+    effect = Effects.If(
+        condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.suspected(), suspect),
+        then = Effects.Exile(suspect),
+        otherwise = Effects.Suspect(suspect)
     )
     description = "Choose up to one target creature. If it's suspected, exile it. Otherwise, " +
         "suspect it."

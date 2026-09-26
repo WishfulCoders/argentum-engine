@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Whenever you attack, amass Goblins 2.
  *
  * "Whenever you attack" is the once-per-combat declare-attackers trigger
- * ([Triggers.YouAttack]), not a per-attacker one — it fires once no matter how many creatures
+ * (`Triggers.you.attacks()`), not a per-attacker one — it fires once no matter how many creatures
  * were declared, and it fires even when the Raider itself stays home.
  */
 val MistyMountainsRaider = card("Misty Mountains Raider") {
@@ -28,7 +28,7 @@ val MistyMountainsRaider = card("Misty Mountains Raider") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.YouAttack
+        trigger = Triggers.you.attacks()
         effect = Effects.Amass(2, "Goblin")
     }
 

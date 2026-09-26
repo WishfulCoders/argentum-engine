@@ -34,11 +34,9 @@ val SavageVentmaw = card("Savage Ventmaw") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(
-            Effects.AddMana(Color.RED, 3, expiry = ManaExpiry.UNTIL_END_OF_TURN),
-            Effects.AddMana(Color.GREEN, 3, expiry = ManaExpiry.UNTIL_END_OF_TURN),
-        )
+        trigger = Triggers.self.attacks()
+        effect = Effects.AddMana(Color.RED, 3, expiry = ManaExpiry.UNTIL_END_OF_TURN) then
+            Effects.AddMana(Color.GREEN, 3, expiry = ManaExpiry.UNTIL_END_OF_TURN)
     }
 
     metadata {

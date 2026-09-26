@@ -20,8 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Saddle 2 (Tap any number of other creatures you control with total power 2 or more: This Mount
  * becomes saddled until end of turn. Saddle only as a sorcery.)
  *
- * "Becomes saddled for the first time each turn" is `Triggers.becomesSaddled(firstTimeEachTurn =
- * true)` (CR 702.171b) — a SELF-bound trigger fired off `BecameSaddledEvent`, gated on the event's
+ * "Becomes saddled for the first time each turn" is `Triggers.<subject>.becomesSaddled(firstTimeEachTurn)` (CR 702.171b) — a SELF-bound trigger fired off `BecameSaddledEvent`, gated on the event's
  * `firstThisTurn` flag so re-saddling the same turn doesn't re-fire. The "then" sequences the mill
  * before the buff (CR 608.2k): X (`creatureCardsInYourGraveyard`) is evaluated as the
  * `ModifyStatsEffect` resolves, after the two milled cards have landed in the graveyard, and is
@@ -42,15 +41,13 @@ val StubbornBurrowfiend = card("Stubborn Burrowfiend") {
     keywordAbility(KeywordAbility.saddle(2))
 
     triggeredAbility {
-        trigger = Triggers.becomesSaddled(firstTimeEachTurn = true)
-        effect = Effects.Composite(
-            Patterns.Library.mill(2),
+        trigger = Triggers.self.becomesSaddled(true)
+        effect = Patterns.Library.mill(2) then
             Effects.ModifyStats(
                 power = DynamicAmounts.creatureCardsInYourGraveyard(),
                 toughness = DynamicAmounts.creatureCardsInYourGraveyard(),
                 target = EffectTarget.Self
             )
-        )
         description = "Whenever this creature becomes saddled for the first time each turn, mill " +
             "two cards, then this creature gets +X/+X until end of turn, where X is the number of " +
             "creature cards in your graveyard."

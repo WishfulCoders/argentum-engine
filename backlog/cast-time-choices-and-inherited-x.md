@@ -5,7 +5,7 @@ Krasis. Phase 2 — `CastChoicesComponent` generalized to a `ChoiceSlot` bag (X 
 creature + kicked + blight), `DynamicAmount.CastChoice` + `Conditions.CastChoiceMade`/`CastChoiceIs`,
 Riptide Replicator off `CreateChosenTokenEffect`, blight off `ContextProperty`. Phases 3–4 (`declare { }`
 DSL, emitter payoff) not started. **Owner:** TBD. **Related:**
-[`sdk-language-design.md`](sdk-language-design.md), [`forge-parity-harness.md`](forge-parity-harness.md),
+[`engine-sdk-architecture-review.md`](engine-sdk-architecture-review.md), [`forge-parity-harness.md`](forge-parity-harness.md),
 and the `:mtgish-tooling` *"Creator's note: extra costs & chosen / inherited values"* in
 [`../mtgish-tooling/README.md`](../mtgish-tooling/README.md) (this doc is the design that note asks for).
 
@@ -142,7 +142,7 @@ val HydroidKrasis = card("Hydroid Krasis") {
     keyword(Keyword.FLYING); keyword(Keyword.TRAMPLE)
 
     // Enters with X +1/+1 counters — reads the SAME binding, not a separate X.
-    replacementEffect(EntersWithDynamicCounters(CounterTypeFilter.PlusOnePlusOne, DynamicAmount.CastX))
+    replacementEffect(EntersWithDynamicCounters(CounterType.PLUS_ONE_PLUS_ONE, DynamicAmount.CastX))
 }
 ```
 

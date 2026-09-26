@@ -20,8 +20,8 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Back  — Infested Werewolf (4/5): "Whenever this creature enters or attacks, create two 1/1 green Insect
  *          creature tokens"; Nightbound.
  *
- * "Enters or attacks" is two separate triggered abilities per face — an [Triggers.EntersBattlefield] and
- * an [Triggers.Attacks] — each minting Insect tokens ([Effects.CreateToken], same-set Insect art). The
+ * "Enters or attacks" is two separate triggered abilities per face — an `Triggers.self.enters()` and
+ * an `Triggers.self.attacks()` — each minting Insect tokens ([Effects.CreateToken], same-set Insect art). The
  * night face makes two per event by asking for `count = 2`. The back is a transformed face with no mana
  * cost, so its color comes from a color indicator (CR 204): `colorIndicator = "G"`.
  */
@@ -39,7 +39,7 @@ private val InfestationExpertFront = card("Infestation Expert") {
         "Daybound (If a player casts no spells during their own turn, it becomes night next turn.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
@@ -51,7 +51,7 @@ private val InfestationExpertFront = card("Infestation Expert") {
         description = "Create a 1/1 green Insect creature token."
     }
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
@@ -83,7 +83,7 @@ private val InfestedWerewolf = card("Infested Werewolf") {
         "Nightbound (If a player casts at least two spells during their own turn, it becomes day next turn.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
@@ -96,7 +96,7 @@ private val InfestedWerewolf = card("Infested Werewolf") {
         description = "Create two 1/1 green Insect creature tokens."
     }
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

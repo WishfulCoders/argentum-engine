@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Mirri's Guile
@@ -18,7 +19,7 @@ val MirrisGuile = card("Mirri's Guile") {
     oracleText = "At the beginning of your upkeep, you may look at the top three cards of your library, then put them back in any order."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         optional = true
         effect = Patterns.Library.lookAtTopAndReorder(3)
     }

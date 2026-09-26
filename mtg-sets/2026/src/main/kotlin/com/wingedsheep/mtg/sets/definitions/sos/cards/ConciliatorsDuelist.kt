@@ -7,11 +7,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Conciliator's Duelist
@@ -41,34 +39,21 @@ val ConciliatorsDuelist = card("Conciliator's Duelist") {
         "at the beginning of the next end step."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            listOf(
-                Effects.DrawCards(1, EffectTarget.Controller),
-                Effects.LoseLife(1, EffectTarget.PlayerRef(Player.Each)),
-            )
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.DrawCards(1, EffectTarget.Controller) then
+            Effects.LoseLife(1, EffectTarget.PlayerRef(Player.Each))
     }
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.InstantOrSorcery.targetsMatching(GameObjectFilter.Creature)
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery.targetsMatching(GameObjectFilter.Creature))
 
-        val creature = target(
-            "target creature",
-            TargetCreature(optional = true, filter = TargetFilter.Creature),
-        )
+        val creature = target(TargetFilter.Creature, optional = true)
 
-        effect = Effects.Composite(
-            listOf(
-                Effects.Move(creature, Zone.EXILE),
-                CreateDelayedTriggerEffect(
-                    step = Step.END,
-                    effect = Effects.Move(creature, Zone.BATTLEFIELD),
-                ),
+        effect = Effects.Move(creature, Zone.EXILE) then
+            Effects.CreateDelayedTrigger(
+                step = Step.END,
+                effect = Effects.Move(creature, Zone.BATTLEFIELD),
             )
-        )
     }
 
     metadata {

@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Jhessian Balmgiver
@@ -34,13 +35,13 @@ val JhessianBalmgiver = card("Jhessian Balmgiver") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", AnyTarget())
+        val t = target(Targets.Any)
         effect = Effects.PreventNextDamage(1, t)
     }
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, t)
     }
 

@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.model.Rarity
  * When this creature enters, you gain 4 life.
  *
  * Modeling notes:
- *  - "**When** this creature enters" is the one-shot [Triggers.EntersBattlefield]; there is no
+ *  - "**When** this creature enters" is the one-shot `Triggers.self.enters()`; there is no
  *    "whenever" and no other-permanent watcher to model.
  *  - "**You** gain 4 life" is [Effects.GainLife]'s default recipient (`EffectTarget.Controller`),
  *    so the target argument is left off — writing it explicitly would restate a default.
@@ -28,7 +28,7 @@ val LoneMissionary = card("Lone Missionary") {
     oracleText = "When this creature enters, you gain 4 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(4)
         description = "When this creature enters, you gain 4 life."
     }

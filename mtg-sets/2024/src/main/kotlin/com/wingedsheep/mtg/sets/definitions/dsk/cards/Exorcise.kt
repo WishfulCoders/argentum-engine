@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Exorcise
@@ -27,14 +26,11 @@ val Exorcise = card("Exorcise") {
 
     spell {
         val permanent = target(
-            "target artifact, enchantment, or creature with power 4 or greater",
-            TargetPermanent(
-                filter = TargetFilter(
-                    GameObjectFilter.Artifact or
-                        GameObjectFilter.Enchantment or
-                        GameObjectFilter.Creature.powerAtLeast(4)
-                )
-            )
+            TargetFilter(
+                GameObjectFilter.Artifact or
+                    GameObjectFilter.Enchantment or
+                    GameObjectFilter.Creature.powerAtLeast(4)
+            ),
         )
         effect = Effects.Exile(permanent)
     }

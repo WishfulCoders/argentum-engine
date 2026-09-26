@@ -17,10 +17,7 @@ val Meditate = card("Meditate") {
     oracleText = "Draw four cards. You skip your next turn."
 
     spell {
-        effect = Effects.Composite(
-            Effects.DrawCards(4),
-            Effects.SkipNextTurn()
-        )
+        effect = Effects.DrawCards(4) then Effects.SkipNextTurn()
     }
 
     metadata {

@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Drop of Honey
@@ -32,7 +33,7 @@ val DropOfHoney = card("Drop of Honey") {
         "When there are no creatures on the battlefield, sacrifice this enchantment."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.DestroyLeastPowerCreature(noRegenerate = true)
         description = "At the beginning of your upkeep, destroy the creature with the least power. " +
             "It can't be regenerated. If two or more creatures are tied for least power, you choose one of them."

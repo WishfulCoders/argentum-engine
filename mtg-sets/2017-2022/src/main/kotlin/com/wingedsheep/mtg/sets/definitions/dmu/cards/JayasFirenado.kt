@@ -18,11 +18,8 @@ val JayasFirenado = card("Jaya's Firenado") {
     oracleText = "Jaya's Firenado deals 5 damage to target creature or planeswalker. Scry 1. (Look at the top card of your library. You may put that card on the bottom.)"
 
     spell {
-        val t = target("target", Targets.CreatureOrPlaneswalker)
-        effect = Effects.Composite(
-            Effects.DealDamage(5, t),
-            Effects.Scry(1)
-        )
+        val t = target(Targets.CreatureOrPlaneswalker)
+        effect = Effects.DealDamage(5, t) then Effects.Scry(1)
     }
 
     metadata {

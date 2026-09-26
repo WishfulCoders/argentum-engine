@@ -27,23 +27,19 @@ val MidnightMayhem = card("Midnight Mayhem") {
     typeLine = "Sorcery"
     oracleText = "Create three 1/1 red Gremlin creature tokens. Gremlins you control gain menace, lifelink, and haste until end of turn. (A creature with menace can't be blocked except by two or more creatures.)"
     spell {
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                power = 1,
-                toughness = 1,
-                colors = setOf(Color.RED),
-                creatureTypes = setOf("Gremlin"),
-                count = 3
-            ),
+        effect = Effects.CreateToken(
+            power = 1,
+            toughness = 1,
+            colors = setOf(Color.RED),
+            creatureTypes = setOf("Gremlin"),
+            count = 3
+        ) then
             Effects.ForEachInGroup(
                 GroupFilter(GameObjectFilter.Creature.withSubtype(Subtype.GREMLIN).youControl()),
-                Effects.Composite(
-                    Effects.GrantKeyword(Keyword.MENACE, EffectTarget.Self),
-                    Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self),
-                    Effects.GrantKeyword(Keyword.HASTE, EffectTarget.Self)
-                )
+                Effects.GrantKeyword(Keyword.MENACE, EffectTarget.IterationEntity) then
+                    Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.IterationEntity) then
+                    Effects.GrantKeyword(Keyword.HASTE, EffectTarget.IterationEntity)
             )
-        )
     }
     metadata {
         rarity = Rarity.UNCOMMON

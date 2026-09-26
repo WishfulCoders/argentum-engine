@@ -9,15 +9,8 @@ import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.CollectionFilter
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * End of the Hunt
@@ -47,36 +40,24 @@ val EndOfTheHunt = card("End of the Hunt") {
         "mana value among creatures and planeswalkers they control."
 
     spell {
-        target = TargetOpponent()
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.BattlefieldMatching(
-                        filter = GameObjectFilter.CreatureOrPlaneswalker,
-                        player = Player.ContextPlayer(0)
-                    ),
-                    storeAs = "controlled"
-                ),
-                FilterCollectionEffect(
-                    from = "controlled",
-                    filter = CollectionFilter.GreatestManaValue,
-                    storeMatching = "greatestManaValue"
-                ),
-                SelectFromCollectionEffect(
-                    from = "greatestManaValue",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                    chooser = Chooser.TargetPlayer,
-                    storeSelected = "exiled",
-                    useTargetingUI = true,
-                    prompt = "Exile a creature or planeswalker you control with the greatest mana value."
-                ),
-                MoveCollectionEffect(
-                    from = "exiled",
-                    destination = CardDestination.ToZone(Zone.EXILE),
-                    moveType = MoveType.Default
+        val opponent = target(Targets.Opponent)
+        effect = Effects.Pipeline {
+            val controlled = gather(
+                CardSource.BattlefieldMatching(
+                    filter = GameObjectFilter.CreatureOrPlaneswalker,
+                    player = opponent.asPlayer
                 )
             )
-        )
+            val greatestManaValue = filter(controlled, CollectionFilter.GreatestManaValue)
+            val exiled = chooseExactly(
+                1,
+                from = greatestManaValue,
+                chooser = Chooser.TargetPlayer,
+                useTargetingUI = true,
+                prompt = "Exile a creature or planeswalker you control with the greatest mana value."
+            )
+            move(exiled, CardDestination.ToZone(Zone.EXILE), moveType = MoveType.Default)
+        }
     }
 
     metadata {

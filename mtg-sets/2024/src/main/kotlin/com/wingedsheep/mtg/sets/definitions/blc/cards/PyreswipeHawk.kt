@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.blc.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -10,10 +11,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.values.Aggregation
-import com.wingedsheep.sdk.scripting.values.CardNumericProperty
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Pyreswipe Hawk
@@ -39,25 +36,20 @@ val PyreswipeHawk = card("Pyreswipe Hawk") {
     keywords(Keyword.FLYING, Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ModifyStats(
-            power = DynamicAmount.AggregateBattlefield(
-                player = Player.You,
-                filter = GameObjectFilter.Artifact,
-                aggregation = Aggregation.MAX,
-                property = CardNumericProperty.MANA_VALUE
-            ),
-            toughness = DynamicAmount.Fixed(0),
+            power = DynamicAmounts.battlefield(
+                Player.You,
+                GameObjectFilter.Artifact
+            ).maxManaValue(),
+            toughness = DynamicAmounts.fixed(0),
             target = EffectTarget.Self
         )
     }
 
     triggeredAbility {
-        trigger = Triggers.Expend(6)
-        val artifact = target(
-            "up to one target artifact",
-            TargetPermanent(optional = true, filter = TargetFilter.Artifact)
-        )
+        trigger = Triggers.you.expends(6)
+        val artifact = target(TargetFilter.Artifact, optional = true)
         effect = Effects.GainControl(
             target = artifact,
             duration = Duration.WhileSourceOnBattlefield("Pyreswipe Hawk")

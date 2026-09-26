@@ -24,7 +24,7 @@ val AuronsInspiration = card("Auron's Inspiration") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.attacking()),
-            Effects.ModifyStats(2, 0, EffectTarget.Self)
+            Effects.ModifyStats(2, 0, EffectTarget.IterationEntity)
         )
     }
     keywordAbility(KeywordAbility.flashback("{2}{W}{W}"))

@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.soi.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Pyre Hound (Shadows over Innistrad #174)
@@ -18,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever you cast an instant or sorcery spell, put a +1/+1 counter on this creature.
  *
  * The counters are permanent — this is the counter-stacking cousin of prowess, so
- * [Triggers.YouCastInstantOrSorcery] plus a plain [Effects.AddCounters] on the source.
+ * `Triggers.you.casts(GameObjectFilter.InstantOrSorcery)` plus a plain [Effects.AddCounters] on the source.
  */
 val PyreHound = card("Pyre Hound") {
     manaCost = "{3}{R}"
@@ -32,8 +33,8 @@ val PyreHound = card("Pyre Hound") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.YouCastInstantOrSorcery
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     metadata {

@@ -325,7 +325,9 @@ class Differential(private val touchstone: Touchstone = Touchstone()) {
                 Folds.dropModeDescriptions(
                     Folds.dropPresentation(
                         Folds.flattenComposites(
-                            canonicalizeGrantedAbilities(canonicalizeAbilities(normalizeSlots(tree))),
+                            Folds.renamePipelineKeys(
+                                canonicalizeGrantedAbilities(canonicalizeAbilities(normalizeSlots(tree))),
+                            ),
                         ),
                     ),
                 ),
@@ -343,12 +345,13 @@ class Differential(private val touchstone: Touchstone = Touchstone()) {
      * present. So a model whose id the serializer emitted and an identical model whose id it did not
      * produced the same fields in two orders, and the string comparison called that a divergence.
      *
-     * Whether the serializer emits an `AbilityId` at all is **not stable across calls**, which is
-     * what made this present as a phantom: `encodeDefaults` is false and `AbilityId.generate()` is a
-     * global counter, so kotlinx re-evaluates the default to decide whether to skip the field and a
-     * golden holding `ability_2` is omitted exactly when the counter next returns `ability_2`. Two
-     * encodes of the *same* card therefore differ, and Blasting Station — whose models are equal
-     * field for field — reported as divergent on some runs and confirmed on others.
+     * Whether the serializer emitted an `AbilityId` at all used to be **unstable across calls**,
+     * which is what made this present as a phantom: `encodeDefaults` is false and the id's default
+     * was a global counter, so kotlinx re-evaluated the default to decide whether to skip the field
+     * and a golden holding `ability_2` was omitted exactly when the counter next returned
+     * `ability_2`. Two encodes of the *same* card therefore differed, and Blasting Station — whose
+     * models are equal field for field — reported as divergent on some runs and confirmed on others.
+     * (Ids are now minted per card and always encoded, but the sort still closes the class.)
      *
      * Sorting is the fix rather than "always stamp in position", because it closes the whole class:
      * any later pass that adds a key, and any field the serializer omits on one side, is now
@@ -434,13 +437,13 @@ class Differential(private val touchstone: Touchstone = Touchstone()) {
      * [Folds.dropPresentation], which drops the same class of field wherever it is nested.)
      *
      * An `AbilityId` is arbitrary in exactly the way a target slot's name is, and more obviously so:
-     * the DSL generates them from a counter, which is why Kavu Climber's golden says `"ability_1"`.
-     * Comparing it would measure the order the cards happened to be constructed in.
-     * `CardDefinitionSnapshotTest.normalizeAbilityIds` does the same for the goldens themselves.
+     * the DSL numbers them per card in construction order, which is why Kavu Climber's golden says
+     * `"Kavu Climber:1"`. Comparing it would measure the order the card's abilities happened to be
+     * written in.
      *
-     * Both lists get the same treatment, because a card's activated abilities are generated from the
-     * same counter its triggered ones are — Blasting Station's golden numbers its trigger `ability_1`
-     * and its activated ability `ability_2` purely because that is the order they were constructed
+     * Both lists get the same treatment, because a card's activated abilities are numbered from the
+     * same per-card counter its triggered ones are — Blasting Station's golden numbers its trigger
+     * `:1` and its activated ability `:2` purely because that is the order they were constructed
      * in, and the grammar mints a fixed constant for each.
      */
     private fun canonicalizeAbilities(script: JsonElement): JsonElement {
@@ -458,7 +461,7 @@ class Differential(private val touchstone: Touchstone = Touchstone()) {
      * …and the ability a **static hands out**, which is nested one level further in.
      *
      * `GrantTriggeredAbility` and `GrantActivatedAbility` carry a whole ability inside the static,
-     * and its id is generated exactly as a top-level one is — `AbilityId.generate()` on the card, a
+     * and its id is generated exactly as a top-level one is — `AbilityId.next()` on the card, a
      * fixed constant in the grammar. Leaving it out of [canonicalizeAbilities] made the gate report
      * six Sliver lords as divergent over a counter: a difference in neither model, and the same
      * class of self-deception as the slot-name and per-owner numbering bugs before it. Found the way
@@ -468,8 +471,8 @@ class Differential(private val touchstone: Touchstone = Touchstone()) {
      * there is no list to index into.
      *
      * Stamped whether or not the ability *has* an `id` in the JSON, for the reason [sortKeys]
-     * records: the serializer's decision to emit an `AbilityId` is not stable across calls, so
-     * keying this on the field's presence would canonicalize one side of a pair and not the other.
+     * records: the serializer's decision to emit an `AbilityId` was not always stable across calls,
+     * so keying this on the field's presence would canonicalize one side of a pair and not the other.
      * A `GrantStaticAbility` carries an ability with no id at all and picks up a stamp it does not
      * need — harmless, because both sides get the same one and no printed word ever determined it.
      */
@@ -505,9 +508,13 @@ class Differential(private val touchstone: Touchstone = Touchstone()) {
      * wrote an `id` — makes the comparison about *which requirement an effect reads*, which is the
      * thing that carries meaning. It stays closed on the case that matters: `ContextTarget(1)`
      * normalizes to `slot_1` and still diverges from anything reading `slot_0`.
+     *
+     * `Player.ContextPlayer(i)` is the same positional reference in a player-typed slot, and its
+     * named form — `Player.BoundVariable`, what a card's `handle.asPlayer` builds — deliberately
+     * shares `BoundVariable`'s serial name, so it folds the same way.
      */
     private fun positionalReference(element: JsonObject): JsonElement? {
-        if ((element["type"] as? JsonPrimitive)?.content != "ContextTarget") return null
+        if ((element["type"] as? JsonPrimitive)?.content !in setOf("ContextTarget", "ContextPlayer")) return null
         val index = (element["index"] as? JsonPrimitive)?.content?.toIntOrNull() ?: return null
         return JsonObject(
             mapOf("type" to JsonPrimitive("BoundVariable"), "name" to JsonPrimitive(slotName(index)))
@@ -644,7 +651,7 @@ internal object Folds {
     private const val MODAL_TYPE = "Modal"
 
     // `liftTriggerConsent` used to live here, bridging `TriggeredAbility.optional = true` (106 cards)
-    // and a `MayEffect` around the effect (214 cards) — two SDK spellings of "you may" that the
+    // and a `Effects.May` around the effect (214 cards) — two SDK spellings of "you may" that the
     // engine already lowered one into the other on every game. It is gone because the *SDK* is: the
     // flag was deleted and the gate is the model, so both sides now produce the same value and there
     // is nothing left to fold. That is the outcome a fold entry should be aiming at; the fold list
@@ -691,7 +698,10 @@ internal object Folds {
         is JsonObject -> {
             val walked = JsonObject(element.mapValues { flattenComposites(it.value) })
             if (isPlainComposite(walked)) {
-                JsonObject(walked + ("effects" to JsonArray(spliceMembers(walked))))
+                // A plain composite of one effect runs exactly that effect — `Effects.Pipeline { move(…) }`
+                // in a branch is the bare step it wraps.
+                spliceMembers(walked).singleOrNull()
+                    ?: JsonObject(walked + ("effects" to JsonArray(spliceMembers(walked))))
             } else {
                 walked
             }
@@ -699,6 +709,105 @@ internal object Folds {
 
         is JsonArray -> JsonArray(element.map(::flattenComposites))
         else -> element
+    }
+
+    /**
+     * **Pipeline keys are names, not meaning.** A pipeline step writes a collection (or number, or
+     * chosen value) under a key and a later step reads it back by that key; which string links the
+     * two says nothing about the model. Kotlin cards write pipelines with `Effects.Pipeline { }`,
+     * whose keys are generated (`gathered0`, `selected1`), while the grammar mints readable ones
+     * (`graveyards`, `exiled`) — the same situation [normalizeSlotNames] already folds for target
+     * slots. Each write gets a fresh positional name and each read takes the name of the latest
+     * write of its key, in document order (a key written twice is two slots). An optional secondary
+     * output nobody reads (`storeRemainder`, `storeNonMatching`, `storeMovedAs`) is dropped: the
+     * builder only emits one when a later step asks for the handle, and an unread write changes
+     * nothing. Keys a step reads but nothing in the tree wrote — engine-seeded collections, a
+     * pattern's fixed output — are left as they are, so a difference in *those* still diverges.
+     */
+    fun renamePipelineKeys(element: JsonElement): JsonElement {
+        val reads = PipelineKeyWalker(consumedIds = null).also { it.walk(element) }.consumed
+        return PipelineKeyWalker(consumedIds = reads).walk(element)
+    }
+
+    private val PIPELINE_WRITERS = setOf(
+        "storeAs", "storeSelected", "storeRemainder", "storeMatching", "storeNonMatching", "storeMatch",
+        "storeRevealed", "storeChosenAs", "storeOtherAs", "storeMovedAs", "countVariable", "storeCastTo",
+        "storeCountAs", "excessDamageVariable", "storeHeadsAs", "storeGuessedRightAs", "storeWinsAs",
+        "storeDestroyedAs", "storeExiledAs", "storeDiscoveredAs",
+    )
+    private val OPTIONAL_WRITERS = setOf("storeRemainder", "storeNonMatching", "storeMovedAs")
+    private val PIPELINE_READERS = setOf(
+        "from", "collection", "collectionName", "variableName", "pileA", "pileB", "otherCollectionName",
+        "originalCollection", "controllerSnapshot", "collections", "carryCollections", "fromChosenValueKey",
+        "chosenSubtypeKey", "groupName", "listName", "chosenValueKey", "promptNameVariable",
+    )
+
+    /** One document-order pass; the second pass (with [consumedIds]) rewrites and drops. */
+    private class PipelineKeyWalker(private val consumedIds: Set<Int>?) {
+        private val current = HashMap<String, Int>()
+        private var written = 0
+        val consumed = HashSet<Int>()
+        private val names = HashMap<Int, String>()
+
+        private fun nameOf(id: Int) = names.getOrPut(id) { "pipeline_${names.size}" }
+
+        private fun write(key: String): Int {
+            written += 1
+            current[key] = written
+            return written
+        }
+
+        private fun read(value: String): String {
+            val (base, suffix) = if (value.endsWith("_count") && value.removeSuffix("_count") in current) {
+                value.removeSuffix("_count") to "_count"
+            } else {
+                value to ""
+            }
+            val id = current[base] ?: return value
+            consumed += id
+            return nameOf(id) + suffix
+        }
+
+        fun walk(element: JsonElement): JsonElement = when (element) {
+            is JsonObject -> walkObject(element)
+            is JsonArray -> JsonArray(element.map(::walk))
+            else -> element
+        }
+
+        private fun walkObject(obj: JsonObject): JsonObject {
+            val isStoreNumber = (obj["type"] as? JsonPrimitive)?.content == "StoreNumber"
+            val out = LinkedHashMap<String, JsonElement>()
+            for ((field, value) in obj) {
+                if (field == "collectCollections") continue
+                val text = (value as? JsonPrimitive)?.takeIf { it.isString }?.content
+                when {
+                    text != null && (field in PIPELINE_WRITERS || (isStoreNumber && field == "name")) -> {
+                        val id = write(text)
+                        if (consumedIds != null && field in OPTIONAL_WRITERS && id !in consumedIds) continue
+                        out[field] = JsonPrimitive(nameOf(id))
+                    }
+                    text != null && field in PIPELINE_READERS -> out[field] = JsonPrimitive(read(text))
+                    value is JsonArray && field in PIPELINE_READERS -> out[field] = JsonArray(
+                        value.map { item ->
+                            val itemText = (item as? JsonPrimitive)?.takeIf { it.isString }?.content
+                            if (itemText != null) JsonPrimitive(read(itemText)) else walk(item)
+                        },
+                    )
+                    else -> out[field] = walk(value)
+                }
+            }
+            // A per-iteration collection unioned into an aggregate: read the inner, write the outer.
+            (obj["collectCollections"] as? JsonObject)?.let { collected ->
+                out["collectCollections"] = JsonObject(
+                    collected.entries.associate { (inner, aggregate) ->
+                        val innerName = read(inner)
+                        val aggregateId = write((aggregate as JsonPrimitive).content)
+                        innerName to JsonPrimitive(nameOf(aggregateId))
+                    },
+                )
+            }
+            return JsonObject(out)
+        }
     }
 
     /** A composite with nothing said about how it runs or reads — the only shape safe to splice. */

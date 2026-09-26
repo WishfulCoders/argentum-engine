@@ -22,7 +22,7 @@ val DeepwoodTantiv = card("Deepwood Tantiv") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
+        trigger = Triggers.self.becomesBlocked()
         effect = Effects.GainLife(2)
     }
 

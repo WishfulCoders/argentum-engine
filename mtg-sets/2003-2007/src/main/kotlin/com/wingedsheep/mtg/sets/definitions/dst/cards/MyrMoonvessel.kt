@@ -25,7 +25,7 @@ val MyrMoonvessel = card("Myr Moonvessel") {
     power = 1
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.AddColorlessMana(1)
     }
     metadata {

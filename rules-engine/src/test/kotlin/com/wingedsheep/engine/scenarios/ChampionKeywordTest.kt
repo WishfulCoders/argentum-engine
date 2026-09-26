@@ -11,19 +11,18 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.champion
 import com.wingedsheep.sdk.dsl.championCreature
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * The Champion keyword (CR 702.72) end to end: the enters "sacrifice it unless you exile another
@@ -62,7 +61,7 @@ class ChampionKeywordTest : FunSpec({
         toughness = 4
         champion(Subtype.FAERIE)
         triggeredAbility {
-            trigger = Triggers.championedWith()
+            trigger = Triggers.self.champions()
             effect = Effects.DrawCards(1)
             description = "When a Faerie is championed with this creature, draw a card."
         }
@@ -100,7 +99,7 @@ class ChampionKeywordTest : FunSpec({
         manaCost = "{U}"
         typeLine = "Instant"
         spell {
-            val creature = target("creature", Targets.Creature)
+            val creature = target(TargetFilter.Creature)
             effect = Effects.Exile(creature)
         }
     }
@@ -109,8 +108,8 @@ class ChampionKeywordTest : FunSpec({
         manaCost = "{U}"
         typeLine = "Instant"
         spell {
-            val creature = target("creature", Targets.Creature)
-            effect = Effects.Exile(creature).then(Effects.PutOntoBattlefield(creature))
+            val creature = target(TargetFilter.Creature)
+            effect = Effects.Exile(creature) then Effects.PutOntoBattlefield(creature)
         }
     }
 
@@ -118,7 +117,7 @@ class ChampionKeywordTest : FunSpec({
         manaCost = "{U}"
         typeLine = "Sorcery"
         spell {
-            val creature = target("creature", TargetCreature())
+            val creature = target(TargetFilter.Creature)
             effect = Effects.GainControl(creature)
         }
     }
@@ -128,7 +127,7 @@ class ChampionKeywordTest : FunSpec({
         manaCost = "{B}"
         typeLine = "Sorcery"
         spell {
-            val creature = target("creature", Targets.Creature)
+            val creature = target(TargetFilter.Creature)
             effect = Effects.AddCreatureType("Goblin", creature)
         }
     }

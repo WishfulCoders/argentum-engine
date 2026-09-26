@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * The Second Harvest / Kindred Charge shape: [Effects.ForEachInGroup] snapshots the group before
  * any iteration (CR 611.2c), so the freshly created copies are never themselves re-iterated, and
- * inside the body [EffectTarget.Self] is the creature currently being iterated. The
+ * inside the body [EffectTarget.IterationEntity] is the creature currently being iterated. The
  * `nontoken()` predicate is the printed restriction — token creatures you control are skipped.
  *
  * "Except it isn't legendary" is the copy modifier [Effects.CreateTokenCopyOfTarget]'s
@@ -36,7 +36,7 @@ val MultiversalIncursion = card("Multiversal Incursion") {
         effect = Effects.ForEachInGroup(
             filter = GroupFilter(GameObjectFilter.Creature.youControl().nontoken()),
             effect = Effects.CreateTokenCopyOfTarget(
-                target = EffectTarget.Self,
+                target = EffectTarget.IterationEntity,
                 removedSupertypes = setOf(Supertype.LEGENDARY)
             )
         )

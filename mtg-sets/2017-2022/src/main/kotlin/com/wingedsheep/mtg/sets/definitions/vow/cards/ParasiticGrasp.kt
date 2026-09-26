@@ -2,13 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Parasitic Grasp
@@ -39,15 +37,12 @@ val ParasiticGrasp = card("Parasitic Grasp") {
 
     spell {
         // Printed (brackets present): 3 damage to target Human creature, gain 3 life.
-        val human = target(
-            "Human creature",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.withSubtype(Subtype.HUMAN))),
-        )
-        effect = Effects.DealDamage(3, human).then(Effects.GainLife(3))
+        val human = target(TargetFilter(GameObjectFilter.Creature.withSubtype(Subtype.HUMAN)))
+        effect = Effects.DealDamage(3, human) then Effects.GainLife(3)
 
         // Cleaved (brackets removed): 3 damage to target creature, gain 3 life.
-        val anyCreature = cleaveTarget("creature", Targets.Creature)
-        cleaveEffect = Effects.DealDamage(3, anyCreature).then(Effects.GainLife(3))
+        val anyCreature = cleaveTarget(TargetFilter.Creature)
+        cleaveEffect = Effects.DealDamage(3, anyCreature) then Effects.GainLife(3)
     }
 
     metadata {

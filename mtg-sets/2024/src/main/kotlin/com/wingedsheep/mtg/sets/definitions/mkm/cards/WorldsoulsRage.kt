@@ -1,20 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Worldsoul's Rage — Murders at Karlov Manor #244
@@ -54,30 +50,25 @@ val WorldsoulsRage = card("Worldsoul's Rage") {
         "hand and/or graveyard onto the battlefield tapped."
 
     spell {
-        val victim = target("any target", AnyTarget())
-        effect = Effects.Composite(
-            Effects.DealXDamage(victim),
-            GatherCardsEffect(
-                source = CardSource.FromMultipleZones(
+        val victim = target(Targets.Any)
+        effect = Effects.Pipeline {
+            run(Effects.DealXDamage(victim))
+            val worldsoulLands = gather(
+                CardSource.FromMultipleZones(
                     zones = listOf(Zone.HAND, Zone.GRAVEYARD),
                     player = Player.You,
                     filter = GameObjectFilter.Land
-                ),
-                storeAs = "worldsoulLands"
-            ),
-            SelectFromCollectionEffect(
-                from = "worldsoulLands",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.XValue),
-                storeSelected = "worldsoulLandsChosen"
-            ),
-            MoveCollectionEffect(
-                from = "worldsoulLandsChosen",
-                destination = CardDestination.ToZone(
+                )
+            )
+            val worldsoulLandsChosen = chooseUpTo(DynamicAmounts.xValue(), from = worldsoulLands)
+            move(
+                worldsoulLandsChosen,
+                CardDestination.ToZone(
                     zone = Zone.BATTLEFIELD,
                     placement = ZonePlacement.Tapped
                 )
             )
-        )
+        }
     }
 
     metadata {

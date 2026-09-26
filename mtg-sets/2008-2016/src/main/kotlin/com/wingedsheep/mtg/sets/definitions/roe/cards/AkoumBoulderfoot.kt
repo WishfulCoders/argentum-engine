@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.model.Rarity
  * When this creature enters, it deals 1 damage to any target.
  *
  * Modeling notes:
- *  - "**When** this creature enters" is a one-shot [Triggers.EntersBattlefield] on the card itself,
+ *  - "**When** this creature enters" is a one-shot `Triggers.self.enters()` on the card itself,
  *    not a `whenever another … enters` watcher — the printed word is "when", and the trigger binds
  *    to the source.
  *  - "Any target" is [Targets.Any] (creature, player, or planeswalker), matching Assay's
@@ -33,8 +33,8 @@ val AkoumBoulderfoot = card("Akoum Boulderfoot") {
     oracleText = "When this creature enters, it deals 1 damage to any target."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", Targets.Any)
+        trigger = Triggers.self.enters()
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
         description = "When this creature enters, it deals 1 damage to any target."
     }

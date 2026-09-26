@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Champions of the Shoal
@@ -35,19 +36,19 @@ val ChampionsOfTheShoal = card("Champions of the Shoal") {
     additionalCost(Costs.additional.BeholdAndExile(filter = Filters.WithSubtype("Merfolk")))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val victim = target("creature", TargetCreature(optional = true))
-        effect = Effects.Tap(victim).then(Effects.AddCounters("STUN", 1, victim))
+        trigger = Triggers.self.enters()
+        val victim = target(TargetFilter.Creature, optional = true)
+        effect = Effects.Tap(victim) then Effects.AddCounters(CounterType.STUN, 1, victim)
     }
 
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
-        val victim = target("creature", TargetCreature(optional = true))
-        effect = Effects.Tap(victim).then(Effects.AddCounters("STUN", 1, victim))
+        trigger = Triggers.self.becomesTapped()
+        val victim = target(TargetFilter.Creature, optional = true)
+        effect = Effects.Tap(victim) then Effects.AddCounters(CounterType.STUN, 1, victim)
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileToHand()
     }
 

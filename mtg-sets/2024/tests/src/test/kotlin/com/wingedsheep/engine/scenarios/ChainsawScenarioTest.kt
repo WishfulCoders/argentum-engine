@@ -18,7 +18,7 @@ import io.kotest.matchers.shouldBe
  *
  *  - "When this Equipment enters, it deals 3 damage to up to one target creature."
  *  - "Whenever one or more creatures die, put a rev counter on this Equipment." (any controller,
- *    once per death batch — [com.wingedsheep.sdk.dsl.Triggers.OneOrMoreCreaturesDie]).
+ *    once per death batch — `Triggers.oneOrMore(filter.anyController()).die()`).
  *  - "Equipped creature gets +X/+0, where X is the number of rev counters on this Equipment."
  *  - "Equip {3}".
  */

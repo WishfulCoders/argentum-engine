@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CounterEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Discombobulate
@@ -19,8 +19,8 @@ val Discombobulate = card("Discombobulate") {
     oracleText = "Counter target spell. Look at the top four cards of your library, then put them back in any order."
 
     spell {
-        target = Targets.Spell
-        effect = CounterEffect() then Patterns.Library.lookAtTopAndReorder(4)
+        val spell = target(TargetFilter.SpellOnStack)
+        effect = Effects.CounterSpell() then Patterns.Library.lookAtTopAndReorder(4)
     }
 
     metadata {

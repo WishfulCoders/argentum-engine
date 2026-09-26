@@ -18,7 +18,7 @@ val ShieldmatesBlessing = card("Shieldmate's Blessing") {
     oracleText = "Prevent the next 3 damage that would be dealt to any target this turn."
 
     spell {
-        val anyTarget = target("any target", Targets.Any)
+        val anyTarget = target(Targets.Any)
         effect = Effects.PreventNextDamage(3, anyTarget)
     }
 

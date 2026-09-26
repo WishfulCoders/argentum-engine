@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -33,7 +32,7 @@ val CoastalDrake = card("Coastal Drake") {
     keywords(Keyword.FLYING)
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{U}"), Costs.Tap)
-        val t = target("target", TargetCreature(filter = TargetFilter(GameObjectFilter.Permanent.withSubtype("Kavu"))))
+        val t = target(TargetFilter(GameObjectFilter.Permanent.withSubtype("Kavu")))
         effect = Effects.Move(t, Zone.HAND)
     }
     metadata {

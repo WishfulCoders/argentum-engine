@@ -10,9 +10,9 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.EntityId
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Scenario test for `Effects.UntapEachTarget()` — the untap twin of `Effects.TapEachTarget()`
@@ -42,7 +42,7 @@ class UntapEachTargetScenarioTest : ScenarioTestBase() {
                 typeLine = "Sorcery"
                 oracleText = "Untap up to three target creatures."
                 spell {
-                    target("target", TargetCreature(optional = true, count = 3))
+                    targets(TargetFilter.Creature, count = 3, optional = true)
                     effect = Effects.UntapEachTarget()
                 }
             }

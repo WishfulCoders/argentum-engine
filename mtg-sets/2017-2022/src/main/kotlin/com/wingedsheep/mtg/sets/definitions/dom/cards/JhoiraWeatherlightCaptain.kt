@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Jhoira, Weatherlight Captain
@@ -22,7 +23,7 @@ val JhoiraWeatherlightCaptain = card("Jhoira, Weatherlight Captain") {
     oracleText = "Whenever you cast a historic spell, draw a card. (Artifacts, legendaries, and Sagas are historic.)"
 
     triggeredAbility {
-        trigger = Triggers.YouCastHistoric
+        trigger = Triggers.you.casts(GameObjectFilter.Historic)
         effect = Effects.DrawCards(1)
     }
 

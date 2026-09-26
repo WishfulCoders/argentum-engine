@@ -36,7 +36,7 @@ class RowdyResearchScenarioTest : ScenarioTestBase() {
                     .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
                     .build()
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Rowdy Research"),
                     game.player1Id,
@@ -64,7 +64,7 @@ class RowdyResearchScenarioTest : ScenarioTestBase() {
                     mapOf("Grizzly Bears" to 2, "Hill Giant" to 2)
                 ).error shouldBe null
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Rowdy Research"),
                     game.player1Id,
@@ -99,7 +99,7 @@ class RowdyResearchScenarioTest : ScenarioTestBase() {
                     game.findPermanent("Grizzly Bears") shouldBe null
                 }
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Rowdy Research"),
                     game.player1Id,
@@ -130,7 +130,7 @@ class RowdyResearchScenarioTest : ScenarioTestBase() {
                     mapOf("Grizzly Bears" to 1, "Hill Giant" to 1)
                 ).error shouldBe null
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Rowdy Research"),
                     game.player1Id,
@@ -169,7 +169,7 @@ class RowdyResearchScenarioTest : ScenarioTestBase() {
                     )
                 ).error shouldBe null
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Rowdy Research"),
                     game.player1Id,

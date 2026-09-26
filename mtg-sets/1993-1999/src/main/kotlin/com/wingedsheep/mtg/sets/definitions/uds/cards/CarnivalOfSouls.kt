@@ -10,8 +10,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 
@@ -27,11 +25,8 @@ val CarnivalOfSouls = card("Carnival of Souls") {
     typeLine = "Enchantment"
     oracleText = "Whenever a creature enters, you lose 1 life and add {B}."
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(filter = GameObjectFilter.Creature, binding = TriggerBinding.ANY)
-        effect = Effects.Composite(
-            LoseLifeEffect(1, EffectTarget.Controller),
-            Effects.AddMana(Color.BLACK)
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature).enters()
+        effect = Effects.LoseLife(1, EffectTarget.Controller) then Effects.AddMana(Color.BLACK)
     }
     metadata {
         rarity = Rarity.RARE

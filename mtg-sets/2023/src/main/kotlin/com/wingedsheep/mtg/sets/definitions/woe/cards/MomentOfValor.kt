@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -29,15 +28,13 @@ val MomentOfValor = card("Moment of Valor") {
     spell {
         modal(chooseCount = 1) {
             mode("Untap target creature. It gets +1/+0 and gains indestructible until end of turn") {
-                val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-                effect = Effects.Composite(
-                    Effects.Untap(t),
-                    Effects.ModifyStats(1, 0, t),
+                val t = target(TargetFilter.Creature)
+                effect = Effects.Untap(t) then
+                    Effects.ModifyStats(1, 0, t) then
                     Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t)
-                )
             }
             mode("Destroy target creature with power 4 or greater") {
-                val t = target("target", TargetCreature(filter = TargetFilter.Creature.powerAtLeast(4)))
+                val t = target(TargetFilter.Creature.powerAtLeast(4))
                 effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
             }
         }

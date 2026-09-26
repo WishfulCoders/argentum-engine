@@ -13,12 +13,9 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CREATED_TOKENS
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Old Hob, Alleycat Blues
@@ -50,22 +47,20 @@ val OldHobAlleycatBlues = card("Old Hob, Alleycat Blues") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        effect = CreateTokenEffect(
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        effect = Effects.CreateToken(
             power = 2,
             toughness = 2,
             colors = setOf(Color.RED),
             creatureTypes = setOf("Mutant"),
             keywords = setOf(Keyword.HASTE),
             imageUri = "https://cards.scryfall.io/normal/front/5/1/51e33613-7a24-461c-8d9f-12680af4b92a.jpg?1771590526"
-        ).then(
-            CreateDelayedTriggerEffect(
-                step = Step.END,
-                effect = Effects.Move(
-                    target = EffectTarget.PipelineTarget(CREATED_TOKENS, 0),
-                    destination = Zone.GRAVEYARD,
-                    byDestruction = true,
-                )
+        ) then Effects.CreateDelayedTrigger(
+            step = Step.END,
+            effect = Effects.Move(
+                target = EffectTarget.PipelineTarget(CREATED_TOKENS, 0),
+                destination = Zone.GRAVEYARD,
+                byDestruction = true,
             )
         )
         description = "At the beginning of combat on your turn, create a 2/2 red Mutant creature token. It gains haste until end of turn. Destroy it at the beginning of the next end step."
@@ -76,10 +71,7 @@ val OldHobAlleycatBlues = card("Old Hob, Alleycat Blues") {
         val attackingTokenFilter = GameObjectFilter.Creature.attacking().let { base ->
             base.copy(cardPredicates = base.cardPredicates + CardPredicate.IsToken)
         }
-        val token = target(
-            "target attacking creature token",
-            TargetPermanent(filter = TargetFilter(attackingTokenFilter)),
-        )
+        val token = target(TargetFilter(attackingTokenFilter))
         effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, token, Duration.EndOfTurn)
     }
 

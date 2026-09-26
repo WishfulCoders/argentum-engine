@@ -5,14 +5,12 @@
 package com.wingedsheep.mtg.sets.definitions.jud.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -32,8 +30,8 @@ val AncestorsChosen = card("Ancestor's Chosen") {
     toughness = 4
     keywords(Keyword.FIRST_STRIKE)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = GainLifeEffect(DynamicAmount.Count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Any))
+        trigger = Triggers.self.enters()
+        effect = Effects.GainLife(DynamicAmounts.cardsInYourGraveyard())
     }
     metadata {
         rarity = Rarity.UNCOMMON

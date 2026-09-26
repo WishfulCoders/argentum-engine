@@ -6,11 +6,11 @@ package com.wingedsheep.mtg.sets.definitions.por.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
 
 
@@ -29,8 +29,8 @@ val PrimevalForce = card("Primeval Force") {
     power = 8
     toughness = 8
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = PayOrSufferEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.PayOrSuffer(
             cost = Costs.pay.Sacrifice(GameObjectFilter.Land.withSubtype(Subtype.FOREST), count = 3),
             suffer = SacrificeSelfEffect
         )

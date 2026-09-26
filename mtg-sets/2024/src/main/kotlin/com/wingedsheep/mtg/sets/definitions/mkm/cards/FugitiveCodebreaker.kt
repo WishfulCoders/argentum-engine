@@ -48,7 +48,8 @@ val FugitiveCodebreaker = card("Fugitive Codebreaker") {
         "When this creature is turned face up, discard your hand, then draw three cards."
     power = 2
     toughness = 1
-    keywords(Keyword.PROWESS, Keyword.HASTE)
+    keywords(Keyword.HASTE)
+    prowess()
 
     disguise = "{5}{R}"
     disguiseCostReduction = CostReductionSource.CardsInGraveyardMatchingFilter(
@@ -57,11 +58,8 @@ val FugitiveCodebreaker = card("Fugitive Codebreaker") {
     )
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        effect = Effects.Composite(
-            Patterns.Hand.discardHand(),
-            Effects.DrawCards(3)
-        )
+        trigger = Triggers.self.turnedFaceUp()
+        effect = Patterns.Hand.discardHand() then Effects.DrawCards(3)
         description = "When this creature is turned face up, discard your hand, then draw three cards."
     }
 

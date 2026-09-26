@@ -1,11 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Jeskai Elder
@@ -26,8 +27,8 @@ val JeskaiElder = card("Jeskai Elder") {
     prowess()
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = MayEffect(Patterns.Hand.loot())
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.May(Patterns.Hand.loot())
     }
 
     metadata {

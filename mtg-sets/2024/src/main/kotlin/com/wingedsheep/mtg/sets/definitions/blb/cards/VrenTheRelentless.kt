@@ -1,5 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Subtype
@@ -10,12 +12,10 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.WardCost
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.RedirectZoneChange
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.TurnTracker
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Vren, the Relentless
@@ -57,27 +57,27 @@ val VrenTheRelentless = card("Vren, the Relentless") {
 
     // At the beginning of each end step, create X Rat tokens
     triggeredAbility {
-        trigger = Triggers.EachEndStep
-        effect = CreateTokenEffect(
-            count = DynamicAmount.TurnTracking(Player.You, TurnTracker.OPPONENT_CREATURES_EXILED),
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
+        effect = Effects.CreateToken(
+            count = DynamicAmounts.opponentCreaturesExiledThisTurn(),
             power = 1,
             toughness = 1,
             colors = setOf(Color.BLACK),
             creatureTypes = setOf("Rat"),
             imageUri = "https://cards.scryfall.io/normal/front/1/c/1c0977b2-3342-4b7e-b1c7-f06bd8ab7fbf.jpg?1721428982",
             staticAbilities = listOf(
-                GrantDynamicStatsEffect(
+                GrantDynamicStats(
                     filter = GroupFilter.source(),
-                    powerBonus = DynamicAmount.AggregateBattlefield(
-                        player = Player.You,
-                        filter = GameObjectFilter.Creature.withSubtype(Subtype("Rat")),
+                    powerBonus = DynamicAmounts.battlefield(
+                        Player.You,
+                        GameObjectFilter.Creature.withSubtype(Subtype("Rat")),
                         excludeSelf = true
-                    ),
-                    toughnessBonus = DynamicAmount.AggregateBattlefield(
-                        player = Player.You,
-                        filter = GameObjectFilter.Creature.withSubtype(Subtype("Rat")),
+                    ).count(),
+                    toughnessBonus = DynamicAmounts.battlefield(
+                        Player.You,
+                        GameObjectFilter.Creature.withSubtype(Subtype("Rat")),
                         excludeSelf = true
-                    )
+                    ).count()
                 )
             )
         )

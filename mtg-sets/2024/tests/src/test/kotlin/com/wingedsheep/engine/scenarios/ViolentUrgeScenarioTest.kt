@@ -16,7 +16,7 @@ import io.kotest.matchers.shouldBe
  *  gains double strike until end of turn."
  *
  * Exercises the [com.wingedsheep.sdk.dsl.Conditions.Delirium] gate on a resolution-time
- * [com.wingedsheep.sdk.scripting.effects.ConditionalEffect] that grants an extra keyword to the
+ * [com.wingedsheep.sdk.dsl.Effects.If] that grants an extra keyword to the
  * same targeted creature.
  */
 class ViolentUrgeScenarioTest : ScenarioTestBase() {

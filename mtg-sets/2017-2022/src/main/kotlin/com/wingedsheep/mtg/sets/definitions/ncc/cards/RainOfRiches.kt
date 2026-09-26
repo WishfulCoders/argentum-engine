@@ -34,14 +34,12 @@ val RainOfRiches = card("Rain of Riches") {
         "its mana cost. Put the exiled cards on the bottom in a random order.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateTreasure(2)
     }
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            requires = setOf(SpellCastPredicate.PaidWithManaFromSubtype(Subtype.TREASURE)),
-        )
+        trigger = Triggers.you.casts(requires = setOf(SpellCastPredicate.PaidWithManaFromSubtype(Subtype.TREASURE)))
         triggerRestriction = Conditions.IsFirstSpellPaidWithTreasureManaCastThisTurn
         effect = Effects.Cascade
     }

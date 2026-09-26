@@ -1,18 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Plumecreed Mentor
@@ -37,22 +32,9 @@ val PlumecreedMentor = card("Plumecreed Mentor") {
 
     // Whenever this creature or another creature you control with flying enters
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Creature.youControl().withKeyword(Keyword.FLYING),
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.ANY
-        )
-        val creatureWithoutFlying = target(
-            "creature you control without flying",
-            TargetCreature(
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.youControl().withoutKeyword(Keyword.FLYING)
-                )
-            )
-        )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creatureWithoutFlying)
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl().withKeyword(Keyword.FLYING)).enters()
+        val creatureWithoutFlying = target(TargetFilter(GameObjectFilter.Creature.youControl().withoutKeyword(Keyword.FLYING)))
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creatureWithoutFlying)
     }
 
     metadata {

@@ -27,7 +27,7 @@ val KinTreeNurturer = card("Kin-Tree Nurturer") {
     keywords(Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Endure(1)
         description = "When this creature enters, it endures 1."
     }

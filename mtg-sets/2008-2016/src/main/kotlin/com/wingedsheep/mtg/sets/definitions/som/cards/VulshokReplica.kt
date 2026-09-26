@@ -24,7 +24,7 @@ val VulshokReplica = card("Vulshok Replica") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{R}"), Costs.SacrificeSelf)
-        val t = target("target", Targets.PlayerOrPlaneswalker)
+        val t = target(Targets.PlayerOrPlaneswalker)
         effect = Effects.DealDamage(3, t)
     }
 

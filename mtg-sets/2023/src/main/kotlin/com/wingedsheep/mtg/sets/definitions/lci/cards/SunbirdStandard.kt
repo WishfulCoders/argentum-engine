@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.craft
@@ -9,7 +10,6 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Sunbird Standard // Sunbird Effigy (CR 702.167, The Lost Caverns of Ixalan)
@@ -80,7 +80,7 @@ private val SunbirdEffigy = card("Sunbird Effigy") {
     typeLine = "Artifact Creature — Bird Construct"
     // P/T CDA: each equal to the number of colors among the cards exiled to craft it
     // (CR 702.167c). Reads CraftedFromExiledComponent on this entity each projection pass.
-    dynamicStats(DynamicAmount.CraftedMaterialsColorCount)
+    dynamicStats(DynamicAmounts.craftedMaterialsColorCount())
     oracleText = "Flying, vigilance, haste\n" +
         "Sunbird Effigy's power and toughness are each equal to the number of colors among the exiled cards used to craft it.\n" +
         "{T}: For each color among the exiled cards used to craft this creature, add one mana of that color."

@@ -2,11 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Teo, Spirited Glider
@@ -40,10 +41,8 @@ val TeoSpiritedGlider = card("Teo, Spirited Glider") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YouAttackWithFilter(
-            GameObjectFilter.Creature.youControl().withKeyword(Keyword.FLYING)
-        )
-        effect = Effects.ConniveTargeting(Targets.CreatureYouControl)
+        trigger = Triggers.you.attacks(GameObjectFilter.Creature.youControl().withKeyword(Keyword.FLYING))
+        effect = Effects.ConniveTargeting(TargetObject(filter = TargetFilter.CreatureYouControl))
     }
 
     metadata {

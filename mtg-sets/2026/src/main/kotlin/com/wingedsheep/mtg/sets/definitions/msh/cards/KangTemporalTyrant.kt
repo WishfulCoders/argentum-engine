@@ -21,9 +21,9 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *    [EffectTarget.Self] — the Mob Lookout facade with the self target instead of a chosen one.
  *    The facade carries the whole draw → discard → conditional +1/+1 counter package, so the
  *    "if you discarded a nonland card" clause is not re-modelled here.
- *  - `Triggers.Attacks` is SELF-bound: it fires only for Kang attacking, matching "Whenever Kang
+ *  - `Triggers.self.attacks()` is SELF-bound: it fires only for Kang attacking, matching "Whenever Kang
  *    attacks" (as opposed to the batch "whenever you attack").
- *  - "Whenever you draw your second card each turn" is [Triggers.NthCardDrawn], which reads the
+ *  - "Whenever you draw your second card each turn" is `Triggers.<player>.drawsNth(n)`, which reads the
  *    per-turn draw counter and fires exactly once even when a single multi-card draw crosses the
  *    threshold (Knights of Dol Amroth's precedent).
  *  - The second ability is *not* a drain: "each opponent loses 1 life **and** you gain 1 life" is a
@@ -43,18 +43,15 @@ val KangTemporalTyrant = card("Kang, Temporal Tyrant") {
 
     // Whenever Kang attacks, he connives.
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.Connive(EffectTarget.Self)
         description = "Whenever Kang attacks, he connives."
     }
 
     // Whenever you draw your second card each turn, each opponent loses 1 life and you gain 1 life.
     triggeredAbility {
-        trigger = Triggers.NthCardDrawn(2)
-        effect = Effects.Composite(
-            Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)),
-            Effects.GainLife(1),
-        )
+        trigger = Triggers.you.drawsNth(2)
+        effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(1)
         description = "Whenever you draw your second card each turn, each opponent loses 1 life " +
             "and you gain 1 life."
     }

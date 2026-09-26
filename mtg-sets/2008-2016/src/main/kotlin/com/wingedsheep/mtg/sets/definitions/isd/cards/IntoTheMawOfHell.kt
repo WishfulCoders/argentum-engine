@@ -8,10 +8,7 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -26,12 +23,9 @@ val IntoTheMawOfHell = card("Into the Maw of Hell") {
     typeLine = "Sorcery"
     oracleText = "Destroy target land. Into the Maw of Hell deals 13 damage to target creature."
     spell {
-        val t1 = target("t1", TargetPermanent(filter = TargetFilter.Land))
-        val t2 = target("t2", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.Move(t1, Zone.GRAVEYARD, byDestruction = true),
-            DealDamageEffect(13, t2)
-        )
+        val t1 = target(TargetFilter.Land)
+        val t2 = target(TargetFilter.Creature)
+        effect = Effects.Move(t1, Zone.GRAVEYARD, byDestruction = true) then Effects.DealDamage(13, t2)
     }
     metadata {
         rarity = Rarity.UNCOMMON

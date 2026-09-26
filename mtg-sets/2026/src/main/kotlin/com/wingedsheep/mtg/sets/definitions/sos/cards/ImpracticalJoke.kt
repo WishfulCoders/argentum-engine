@@ -3,7 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.sos.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreatureOrPlaneswalker
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Impractical Joke
@@ -26,10 +26,7 @@ val ImpracticalJoke = card("Impractical Joke") {
         "Impractical Joke deals 3 damage to up to one target creature or planeswalker."
 
     spell {
-        val victim = target(
-            "up to one target creature or planeswalker",
-            TargetCreatureOrPlaneswalker(optional = true),
-        )
+        val victim = target(Targets.CreatureOrPlaneswalker, optional = true)
         effect = Effects.DamageCantBePreventedThisTurn() then Effects.DealDamage(3, victim)
     }
 

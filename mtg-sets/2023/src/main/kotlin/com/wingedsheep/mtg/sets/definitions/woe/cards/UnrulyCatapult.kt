@@ -10,9 +10,9 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 
 /**
@@ -34,10 +34,10 @@ val UnrulyCatapult = card("Unruly Catapult") {
     keywords(Keyword.DEFENDER)
     activatedAbility {
         cost = Costs.Tap
-        effect = DealDamageEffect(1, EffectTarget.PlayerRef(Player.EachOpponent))
+        effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent))
     }
     triggeredAbility {
-        trigger = Triggers.YouCastInstantOrSorcery
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
         effect = Effects.Untap(EffectTarget.Self)
     }
     metadata {

@@ -23,7 +23,7 @@ val GlimpseTheUnthinkable = card("Glimpse the Unthinkable") {
     oracleText = "Target player mills ten cards."
 
     spell {
-        val p = target("target player", Targets.Player)
+        val p = target(Targets.Player)
         effect = Patterns.Library.mill(10, p)
     }
 

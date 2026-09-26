@@ -5,14 +5,13 @@
 package com.wingedsheep.mtg.sets.definitions.isd.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 
 /**
@@ -32,9 +31,9 @@ val Splinterfright = card("Splinterfright") {
     power = 0
     toughness = 0
     keywords(Keyword.TRAMPLE)
-    dynamicStats(DynamicAmount.Count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Creature))
+    dynamicStats(DynamicAmounts.creatureCardsInYourGraveyard())
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Patterns.Library.mill(2)
     }
     metadata {

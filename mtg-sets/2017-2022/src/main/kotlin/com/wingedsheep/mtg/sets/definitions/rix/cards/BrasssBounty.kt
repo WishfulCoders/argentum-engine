@@ -4,12 +4,12 @@
 
 package com.wingedsheep.mtg.sets.definitions.rix.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -24,7 +24,7 @@ val BrasssBounty = card("Brass's Bounty") {
     typeLine = "Sorcery"
     oracleText = "For each land you control, create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")"
     spell {
-        effect = Effects.CreateTreasure(count = DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land))
+        effect = Effects.CreateTreasure(count = DynamicAmounts.landsYouControl())
     }
     metadata {
         rarity = Rarity.RARE

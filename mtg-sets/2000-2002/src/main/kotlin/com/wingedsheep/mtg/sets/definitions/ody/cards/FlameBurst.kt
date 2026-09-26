@@ -4,10 +4,10 @@
 
 package com.wingedsheep.mtg.sets.definitions.ody.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -22,8 +22,8 @@ val FlameBurst = card("Flame Burst") {
     typeLine = "Instant"
     oracleText = "Flame Burst deals X damage to any target, where X is 2 plus the number of cards named Flame Burst in all graveyards."
     spell {
-        val t = target("target", AnyTarget())
-        effect = DealDamageEffect(2, t)
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(2, t)
     }
     metadata {
         rarity = Rarity.COMMON

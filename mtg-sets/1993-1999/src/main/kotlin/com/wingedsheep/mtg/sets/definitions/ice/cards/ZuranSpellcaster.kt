@@ -28,7 +28,7 @@ val ZuranSpellcaster = card("Zuran Spellcaster") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
     }
 

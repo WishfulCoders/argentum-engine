@@ -33,7 +33,7 @@ val AncestorDragon = card("Ancestor Dragon") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YouAttack
+        trigger = Triggers.you.attacks()
         effect = Effects.GainLife(
             DynamicAmounts.battlefield(Player.You, GameObjectFilter.Creature.attacking()).count()
         )

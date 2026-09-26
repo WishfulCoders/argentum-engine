@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.firebending
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -23,13 +22,13 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * `firebending(2)` is the Avatar set keyword helper (CR 702.189): an attack-triggered combat-duration
  * "add {R}{R}" ability ([com.wingedsheep.sdk.dsl.firebendingAttackTrigger]).
  *
- * The sacrifice payoff is the per-permanent [Triggers.YouSacrificeAnother] (OTHER binding) over any
+ * The sacrifice payoff is the per-permanent `Triggers.you.sacrificesAnother(filter)` (OTHER binding) over any
  * permanent — the Mazirek/Savra template: it fires once for EACH permanent sacrificed, even when
  * several are sacrificed simultaneously (CR 603.2c), so sacrificing three permanents pumps the team
  * +3/+0. "Another" excludes Zhao sacrificing itself; when Zhao is sacrificed alongside other
  * permanents it still reacts to those others, pumping only the creatures you control that remain.
  * The team pump is a [Effects.ForEachInGroup] over [GroupFilter.AllCreaturesYouControl] applying a
- * +1/+0 [ModifyStatsEffect] to each ([EffectTarget.Self] = current iteration creature) until end of
+ * +1/+0 [ModifyStatsEffect] to each ([EffectTarget.IterationEntity] = current iteration creature) until end of
  * turn.
  */
 val ZhaoRuthlessAdmiral = card("Zhao, Ruthless Admiral") {
@@ -45,13 +44,13 @@ val ZhaoRuthlessAdmiral = card("Zhao, Ruthless Admiral") {
 
     // Whenever you sacrifice another permanent, creatures you control get +1/+0 until end of turn.
     triggeredAbility {
-        trigger = Triggers.YouSacrificeAnother(GameObjectFilter.Permanent)
+        trigger = Triggers.you.sacrificesAnother(GameObjectFilter.Permanent)
         effect = Effects.ForEachInGroup(
             filter = GroupFilter.AllCreaturesYouControl,
-            effect = ModifyStatsEffect(
-                powerModifier = 1,
-                toughnessModifier = 0,
-                target = EffectTarget.Self,
+            effect = Effects.ModifyStats(
+                power = 1,
+                toughness = 0,
+                target = EffectTarget.IterationEntity,
                 duration = Duration.EndOfTurn
             )
         )

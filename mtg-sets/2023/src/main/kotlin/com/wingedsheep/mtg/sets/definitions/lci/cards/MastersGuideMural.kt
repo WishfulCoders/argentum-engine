@@ -28,7 +28,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  *   artifact or another artifact entered the battlefield under your control this turn.
  *
  * Implementation:
- *  - Front ETB: [Triggers.EntersBattlefield] + [Effects.CreateToken] (4/4 WU Golem,
+ *  - Front ETB: `Triggers.self.enters()` + [Effects.CreateToken] (4/4 WU Golem,
  *    `artifactToken = true`, official LCI token art).
  *  - Craft: the `craft(...)` DSL helper — "Craft with artifact" is an exact-count craft
  *    (`minCount = 1, maxCount = 1`) over [GameObjectFilter.Artifact]; the material may come
@@ -61,7 +61,7 @@ private val MastersGuideMuralFront = card("Master's Guide-Mural") {
 
     // ETB: create a 4/4 white and blue Golem artifact creature token.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = GolemToken
     }
 

@@ -7,17 +7,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.RevealHandEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Rag Man
@@ -46,29 +37,20 @@ val RagMan = card("Rag Man") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{B}{B}{B}"), Costs.Tap)
-        val victim = target("target opponent", TargetOpponent())
+        val victim = target(Targets.Opponent)
         restrictions = listOf(ActivationRestriction.OnlyDuringYourTurn)
-        effect = Effects.Composite(
-            RevealHandEffect(victim),
-            GatherCardsEffect(
-                source = CardSource.FromZone(
+        effect = Effects.Pipeline {
+            run(Effects.RevealHand(victim))
+            val ragManCandidates = gather(
+                CardSource.FromZone(
                     zone = Zone.HAND,
-                    player = Player.ContextPlayer(0),
+                    player = victim.asPlayer,
                     filter = GameObjectFilter.Creature,
-                ),
-                storeAs = "ragManCandidates",
-            ),
-            SelectFromCollectionEffect(
-                from = "ragManCandidates",
-                selection = SelectionMode.Random(DynamicAmount.Fixed(1)),
-                storeSelected = "ragManVictim",
-            ),
-            MoveCollectionEffect(
-                from = "ragManVictim",
-                destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
-                moveType = MoveType.Discard,
-            ),
-        )
+                )
+            )
+            val ragManVictim = chooseRandom(1, from = ragManCandidates)
+            discard(ragManVictim, victim.asPlayer)
+        }
         description = "{B}{B}{B}, {T}: Target opponent reveals their hand and discards a creature " +
             "card at random. Activate only during your turn."
     }

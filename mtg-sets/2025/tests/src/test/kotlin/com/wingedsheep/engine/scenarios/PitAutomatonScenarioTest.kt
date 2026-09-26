@@ -7,7 +7,6 @@ import com.wingedsheep.engine.state.components.player.ManaPoolComponent
 import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.CounterType
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Costs
@@ -30,7 +29,7 @@ import io.kotest.matchers.shouldBe
  *  - a *non*-exhaust activated ability leaves it armed;
  *  - an exhaust **mana** ability leaves it armed — the "that isn't a mana ability" clause Pit
  *    Automaton's Oracle text was updated to add, and the reason it can't reuse the plain
- *    `Triggers.YouActivateExhaustAbility` the set's other exhaust payoffs use;
+ *    `Triggers.you.activatesAbility(exhaust = true)` the set's other exhaust payoffs use;
  *  - the mana ability produces two colorless restricted to activating abilities.
  */
 class PitAutomatonScenarioTest : ScenarioTestBase() {
@@ -44,7 +43,7 @@ class PitAutomatonScenarioTest : ScenarioTestBase() {
         activatedAbility {
             isExhaust = true
             cost = Costs.Mana("{1}")
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         }
     }
 
@@ -56,7 +55,7 @@ class PitAutomatonScenarioTest : ScenarioTestBase() {
         toughness = 1
         activatedAbility {
             cost = Costs.Mana("{1}")
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         }
     }
 

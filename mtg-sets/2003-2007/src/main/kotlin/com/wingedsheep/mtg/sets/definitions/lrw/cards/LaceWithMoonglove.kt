@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Lace with Moonglove
@@ -21,11 +21,8 @@ val LaceWithMoonglove = card("Lace with Moonglove") {
         "creature is enough to destroy that creature.)\nDraw a card."
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.DEATHTOUCH, t),
-            Effects.DrawCards(1)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.GrantKeyword(Keyword.DEATHTOUCH, t) then Effects.DrawCards(1)
     }
 
     metadata {

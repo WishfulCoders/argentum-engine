@@ -32,7 +32,7 @@ val RictusRobber = card("Rictus Robber") {
     keywordAbility(KeywordAbility.plot("{2}{B}"))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         // Intervening "if": checked both on trigger and on resolution.
         interveningIf = Conditions.CreatureDiedThisTurn
         effect = Effects.CreateToken(

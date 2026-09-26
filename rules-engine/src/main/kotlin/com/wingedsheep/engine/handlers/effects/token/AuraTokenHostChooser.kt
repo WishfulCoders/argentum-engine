@@ -45,10 +45,11 @@ internal object AuraTokenHostChooser {
         controllerId: EntityId,
         remaining: Int,
         cardRegistry: CardRegistry?,
+        targetFinder: TargetFinder
     ): EffectResult {
         if (remaining <= 0) return EffectResult.success(state)
 
-        val hosts = legalHosts(state, auraDefinitionId, controllerId, cardRegistry)
+        val hosts = legalHosts(state, auraDefinitionId, controllerId, cardRegistry, targetFinder = targetFinder)
         if (hosts.isEmpty()) {
             // Nothing legal to enchant — the Aura token can't enter (CR 303.4g), and neither can
             // any of the ones still owed, since they would all copy the same Aura.
@@ -97,10 +98,11 @@ internal object AuraTokenHostChooser {
         auraDefinitionId: String,
         controllerId: EntityId,
         cardRegistry: CardRegistry?,
+        targetFinder: TargetFinder
     ): List<EntityId> {
         val auraTarget = cardRegistry?.getCard(auraDefinitionId)?.script?.auraTarget
             ?: return emptyList()
-        return TargetFinder().findLegalTargets(
+        return targetFinder.findLegalTargets(
             state = state,
             requirement = auraTarget,
             controllerId = controllerId,

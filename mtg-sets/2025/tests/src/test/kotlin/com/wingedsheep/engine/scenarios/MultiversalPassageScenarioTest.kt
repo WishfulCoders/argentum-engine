@@ -25,12 +25,14 @@ import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Multiversal Passage (SPM #180): "As this land enters, choose a basic land type. Then you may
  * pay 2 life. If you don't, it enters tapped. This land is the chosen type."
  *
- * The whole clause is one [com.wingedsheep.sdk.scripting.OnEnterRunEffect] composing three atoms:
+ * The whole clause is one [com.wingedsheep.sdk.scripting.OnEnterRun] composing three atoms:
  * ChooseOption(BASIC_LAND_TYPE) → SetLandType(Self, Permanent, fromChosen) → an optional pay-2-life
  * gate whose decline branch taps the land. These tests prove the chosen type sticks (subtype +
  * intrinsic mana), and that the pay/decline branch controls tapped-ness.
@@ -49,7 +51,7 @@ private val LandfallWatcher = card("Landfall Watcher") {
     oracleText = "Whenever a land you control enters, you gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.GainLife(1)
     }
 }
@@ -69,7 +71,7 @@ class MultiversalPassageScenarioTest : FunSpec({
 
     fun GameTestDriver.playPassageChoosing(player: EntityId, landType: String): EntityId {
         val passage = putCardInHand(player, "Multiversal Passage")
-        playLand(player, passage).isPaused shouldBe true
+        (playLand(player, passage).outcome is Outcome.Paused) shouldBe true
 
         // First decision: choose a basic land type.
         val choice = pendingDecision

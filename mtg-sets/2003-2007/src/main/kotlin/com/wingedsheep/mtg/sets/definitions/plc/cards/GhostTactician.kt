@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * 2/5
  * {W}, {T}, Discard a card: Creatures you control get +1/+0 until end of turn.
  *
- * A group pump is [Effects.ForEachInGroup] over the snapshotted group; `EffectTarget.Self` inside
+ * A group pump is [Effects.ForEachInGroup] over the snapshotted group; `EffectTarget.IterationEntity` inside
  * the body is the creature being iterated, not the Tactician.
  */
 val GhostTactician = card("Ghost Tactician") {
@@ -30,7 +30,7 @@ val GhostTactician = card("Ghost Tactician") {
         cost = Costs.Composite(Costs.Mana("{W}"), Costs.Tap, Costs.DiscardCard)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(1, 0, EffectTarget.Self)
+            Effects.ModifyStats(1, 0, EffectTarget.IterationEntity)
         )
         description = "{W}, {T}, Discard a card: Creatures you control get +1/+0 until end of turn."
     }

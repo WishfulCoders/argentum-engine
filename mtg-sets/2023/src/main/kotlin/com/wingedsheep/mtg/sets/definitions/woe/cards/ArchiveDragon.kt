@@ -32,7 +32,7 @@ val ArchiveDragon = card("Archive Dragon") {
     keywords(Keyword.FLYING)
     keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.scry(2)
     }
     metadata {

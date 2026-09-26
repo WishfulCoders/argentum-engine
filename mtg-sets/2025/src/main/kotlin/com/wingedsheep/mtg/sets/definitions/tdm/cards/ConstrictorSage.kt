@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.renew
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Constrictor Sage — Tarkir: Dragonstorm #39
@@ -34,18 +34,16 @@ val ConstrictorSage = card("Constrictor Sage") {
         "controls and put a stun counter on it. Activate only as a sorcery."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("creature", Targets.CreatureOpponentControls)
-        effect = Effects.Tap(creature)
-            .then(Effects.AddCounters(Counters.STUN, 1, creature))
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.Tap(creature) then Effects.AddCounters(CounterType.STUN, 1, creature)
         description = "When this creature enters, tap target creature an opponent controls " +
             "and put a stun counter on it."
     }
 
     renew("{2}{U}") {
-        val creature = target("creature", Targets.CreatureOpponentControls)
-        effect = Effects.Tap(creature)
-            .then(Effects.AddCounters(Counters.STUN, 1, creature))
+        val creature = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.Tap(creature) then Effects.AddCounters(CounterType.STUN, 1, creature)
     }
 
     metadata {

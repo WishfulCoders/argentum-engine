@@ -7,14 +7,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Ghoulraiser
@@ -33,26 +27,18 @@ val Ghoulraiser = card("Ghoulraiser") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.FromZone(
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val zombies = gather(
+                CardSource.FromZone(
                     Zone.GRAVEYARD,
                     Player.You,
                     GameObjectFilter.Any.withSubtype(Subtype.ZOMBIE),
-                ),
-                storeAs = "zombies",
-            ),
-            SelectFromCollectionEffect(
-                from = "zombies",
-                selection = SelectionMode.Random(DynamicAmount.Fixed(1)),
-                storeSelected = "chosen",
-            ),
-            MoveCollectionEffect(
-                from = "chosen",
-                destination = CardDestination.ToZone(Zone.HAND),
-            ),
-        )
+                )
+            )
+            val chosen = chooseRandom(1, from = zombies)
+            toHand(chosen)
+        }
     }
 
     metadata {

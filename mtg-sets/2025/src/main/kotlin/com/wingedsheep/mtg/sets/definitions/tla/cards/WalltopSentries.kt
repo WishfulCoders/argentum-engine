@@ -29,7 +29,7 @@ val WalltopSentries = card("Walltop Sentries") {
     keywords(Keyword.REACH, Keyword.DEATHTOUCH)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         interveningIf = Conditions.GraveyardContainsSubtype(Subtype.LESSON)
         effect = Effects.GainLife(2)
         description = "When this creature dies, if there's a Lesson card in your graveyard, you gain 2 life."

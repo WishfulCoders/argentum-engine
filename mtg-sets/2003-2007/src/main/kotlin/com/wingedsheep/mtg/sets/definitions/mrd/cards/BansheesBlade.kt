@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.events.DamageType
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -21,14 +20,14 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever equipped creature deals combat damage, put a charge counter on this Equipment.
  * Equip {2}
  *
- * The Withering Hex shape, on an Equipment instead of an Aura: a [GrantDynamicStatsEffect] over
+ * The Withering Hex shape, on an Equipment instead of an Aura: a [GrantDynamicStats] over
  * [GroupFilter.attachedCreature] whose bonus reads the charge counters off the *Equipment*
- * ([DynamicAmounts.countersOnSelf] — `EntityReference.Source` is the permanent bearing the static,
+ * ([DynamicAmounts.countersOnSelf] — `EffectTarget.Self` is the permanent bearing the static,
  * not the creature it buffs). It recomputes continuously, so the bonus tracks counters as they
  * accrue and follows the Blade when it moves.
  *
  * The counter trigger is [TriggerBinding.ATTACHED] over a combat [DamageType] with the default
- * `RecipientFilter.Any` — the printed text says "deals combat damage", full stop, so damage to a
+ * `Recipient.Any` — the printed text says "deals combat damage", full stop, so damage to a
  * blocking creature counts exactly as much as damage to a player. Counters live on the Equipment
  * and are untouched by unattaching or re-equipping (2004 ruling); nothing here reads the creature,
  * so that falls out for free.
@@ -42,8 +41,8 @@ val BansheesBlade = card("Banshee's Blade") {
         "Equip {2}"
 
     staticAbility {
-        val chargeCounters = DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.CHARGE))
-        ability = GrantDynamicStatsEffect(
+        val chargeCounters = DynamicAmounts.countersOnSelf(CounterType.CHARGE)
+        ability = GrantDynamicStats(
             filter = GroupFilter.attachedCreature(),
             powerBonus = chargeCounters,
             toughnessBonus = chargeCounters,
@@ -51,11 +50,8 @@ val BansheesBlade = card("Banshee's Blade") {
     }
 
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            damageType = DamageType.Combat,
-            binding = TriggerBinding.ATTACHED,
-        )
-        effect = AddCountersEffect(Counters.CHARGE, 1, EffectTarget.Self)
+        trigger = Triggers.attached.dealsCombatDamage()
+        effect = Effects.AddCounters(CounterType.CHARGE, 1, EffectTarget.Self)
     }
 
     equipAbility("{2}")

@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -10,13 +10,11 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Sidequest: Catch a Fish // Cooking Campsite — Final Fantasy #31
@@ -65,7 +63,7 @@ private val CookingCampsite = card("Cooking Campsite") {
         timing = TimingRule.SorcerySpeed
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            AddCountersEffect(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity)
         )
     }
 
@@ -88,10 +86,10 @@ private val SidequestCatchAFishFront = card("Sidequest: Catch a Fish") {
         "card into your hand this way, create a Food token and transform this enchantment."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.Pipeline {
             // Look at the top card of your library.
-            val looked = gather(CardSource.TopOfLibrary(DynamicAmount.Fixed(1), player = Player.You))
+            val looked = gather(CardSource.TopOfLibrary(1, player = Player.You))
             // If it's an artifact or creature card, you may reveal it and put it into your hand.
             val kept = chooseUpTo(
                 count = 1,
@@ -105,7 +103,7 @@ private val SidequestCatchAFishFront = card("Sidequest: Catch a Fish") {
             ifNotEmpty(kept) {
                 toHand(kept, revealed = true)
                 run(Effects.CreateFood())
-                run(TransformEffect(EffectTarget.Self))
+                run(Effects.Transform(EffectTarget.Self))
             }
         }
     }

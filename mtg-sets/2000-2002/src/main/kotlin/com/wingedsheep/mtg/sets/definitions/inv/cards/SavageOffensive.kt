@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 
 /**
  * Savage Offensive
@@ -29,9 +29,9 @@ val SavageOffensive = card("Savage Offensive") {
 
     spell {
         effect = Patterns.Group.grantKeywordToAll(Keyword.FIRST_STRIKE, Filters.Group.creaturesYouControl) then
-            ConditionalEffect(
+            Effects.If(
                 condition = WasKicked,
-                effect = Patterns.Group.modifyStatsForAll(1, 1, Filters.Group.creaturesYouControl)
+                then = Patterns.Group.modifyStatsForAll(1, 1, Filters.Group.creaturesYouControl)
             )
     }
 

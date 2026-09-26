@@ -68,7 +68,7 @@ data class StateTriggeredAbility(
             activeZone: Zone = Zone.BATTLEFIELD,
             descriptionOverride: String? = null
         ): StateTriggeredAbility = StateTriggeredAbility(
-            id = AbilityId.generate(),
+            id = AbilityId.next(),
             condition = condition,
             effect = effect,
             activeZone = activeZone,

@@ -108,7 +108,7 @@ object CombatMath {
                 val attackerDef = cardRegistry.getCard(attackerCard.cardDefinitionId)
                 if (attackerDef != null) {
                     val attackerController = projected.getController(attacker)
-                    val predicateEvaluator = PredicateEvaluator()
+                    val predicateEvaluator = PredicateEvaluator(cardRegistry)
                     for (ability in attackerDef.staticAbilities.filterIsInstance<CantBeBlockedBy>()) {
                         if (ability.filter.scope is com.wingedsheep.sdk.scripting.filters.unified.Scope.Self && attackerController != null) {
                             val ctx = PredicateContext(controllerId = attackerController, sourceId = attacker)
@@ -125,7 +125,7 @@ object CombatMath {
             if (canOnlyBlockFilters.isNotEmpty()) {
                 val blockerController = projected.getController(blocker)
                 if (blockerController != null) {
-                    val predicateEvaluator = PredicateEvaluator()
+                    val predicateEvaluator = PredicateEvaluator(cardRegistry)
                     val ctx = PredicateContext(controllerId = blockerController, sourceId = blocker)
                     for (filter in canOnlyBlockFilters) {
                         if (!predicateEvaluator.matches(state, projected, attacker, filter, ctx)) {

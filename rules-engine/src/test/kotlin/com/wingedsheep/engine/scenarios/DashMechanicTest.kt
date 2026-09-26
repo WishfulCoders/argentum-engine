@@ -3,7 +3,6 @@ package com.wingedsheep.engine.scenarios
 import com.wingedsheep.engine.core.AlternativeCostType
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.PaymentStrategy
-import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.legalactions.LegalActionEnumerator
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.battlefield.DashedComponent
@@ -18,7 +17,6 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
@@ -26,6 +24,8 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 class DashMechanicTest : FunSpec({
 
@@ -55,9 +55,8 @@ class DashMechanicTest : FunSpec({
         manaCost = "{R}"
         typeLine = "Sorcery"
         spell {
-            val creature = target("creature you control", Targets.CreatureYouControl)
-            effect = Effects.Move(creature, Zone.EXILE)
-                .then(Effects.Move(creature, Zone.BATTLEFIELD))
+            val creature = target(TargetFilter.CreatureYouControl)
+            effect = Effects.Move(creature, Zone.EXILE) then Effects.Move(creature, Zone.BATTLEFIELD)
         }
     }
 
@@ -89,7 +88,7 @@ class DashMechanicTest : FunSpec({
                 paymentStrategy = PaymentStrategy.FromPool
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         driver.stackSize shouldBe 1
     }
 
@@ -212,7 +211,7 @@ class DashMechanicTest : FunSpec({
                 targets = listOf(ChosenTarget.Permanent(dashed)),
                 paymentStrategy = PaymentStrategy.FromPool
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         val returned = driver.findPermanent(player, "Dash Test Creature")
@@ -249,7 +248,7 @@ class DashMechanicTest : FunSpec({
 
         val dashed = driver.findPermanent(player, "Dash Test Creature")!!
 
-        val transitionResult = ZoneTransitionService.moveToZone(
+        val transitionResult = driver.zones.moveToZone(
             state = driver.state,
             entityId = dashed,
             destinationZone = Zone.GRAVEYARD
@@ -406,7 +405,7 @@ class DashMechanicTest : FunSpec({
                 paymentStrategy = PaymentStrategy.FromPool
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         driver.bothPass()
 
         val permanent = driver.findPermanent(player, "Dash X Creature")
@@ -465,7 +464,7 @@ class DashMechanicTest : FunSpec({
                 paymentStrategy = PaymentStrategy.FromPool
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         driver.bothPass()
 
         val recastPermanent = driver.findPermanent(player, "Dash Test Creature")
@@ -496,7 +495,7 @@ class DashMechanicTest : FunSpec({
                 paymentStrategy = PaymentStrategy.FromPool
             )
         )
-        result.isSuccess shouldBe false
+        result.outcome shouldNotBe Outcome.Done
         driver.getGraveyardCardNames(player).contains("Dash Test Creature") shouldBe true
         driver.findPermanent(player, "Dash Test Creature") shouldBe null
     }
@@ -535,7 +534,7 @@ class DashMechanicTest : FunSpec({
             )
         )
 
-        result.isSuccess shouldBe false
+        result.outcome shouldNotBe Outcome.Done
         driver.state.getExile(player).contains(cardId) shouldBe true
         driver.findPermanent(player, "Dash Test Creature") shouldBe null
     }

@@ -1,12 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Conduct Electricity
@@ -22,16 +20,9 @@ val ConductElectricity = card("Conduct Electricity") {
     oracleText = "Conduct Electricity deals 6 damage to target creature and 2 damage to up to one target creature token."
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        val creatureToken = target(
-            "up to one target creature token",
-            TargetObject(
-                filter = TargetFilter(GameObjectFilter.Creature and GameObjectFilter.Token),
-                optional = true
-            )
-        )
-        effect = Effects.DealDamage(6, creature)
-            .then(Effects.DealDamage(2, creatureToken))
+        val creature = target(TargetFilter.Creature)
+        val creatureToken = target(TargetFilter(GameObjectFilter.Creature and GameObjectFilter.Token), optional = true)
+        effect = Effects.DealDamage(6, creature) then Effects.DealDamage(2, creatureToken)
     }
 
     metadata {

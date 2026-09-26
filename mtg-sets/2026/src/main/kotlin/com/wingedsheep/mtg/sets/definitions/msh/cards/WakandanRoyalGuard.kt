@@ -1,16 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Wakandan Royal Guard — Marvel Super Heroes #195
@@ -22,7 +21,7 @@ import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
  * another Hero, put two +1/+1 counters on it instead.
  *
  * The "instead" clause is a resolution-time branch on the chosen target, not a replacement
- * effect: a [ConditionalEffect] that puts two counters when the target is a Hero *other than*
+ * effect: a [Effects.If] that puts two counters when the target is a Hero *other than*
  * this creature (the Guard is itself a Hero, so targeting itself takes the one-counter branch —
  * hence [Conditions.TargetIsSource] under [Conditions.Not]).
  */
@@ -39,15 +38,15 @@ val WakandanRoyalGuard = card("Wakandan Royal Guard") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("target creature", Targets.Creature)
-        effect = ConditionalEffect(
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.If(
             condition = Conditions.All(
-                Conditions.TargetMatchesFilter(GameObjectFilter.Creature.withSubtype(Subtype.HERO)),
+                Conditions.TargetMatchesFilter(GameObjectFilter.Creature.withSubtype(Subtype.HERO), creature),
                 Conditions.Not(Conditions.TargetIsSource())
             ),
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, creature),
-            elseEffect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creature)
+            then = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, creature),
+            otherwise = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature)
         )
         description = "When this creature enters, put a +1/+1 counter on target creature. If " +
             "that creature is another Hero, put two +1/+1 counters on it instead."

@@ -10,10 +10,10 @@ import com.wingedsheep.sdk.dsl.sneak
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Dark Leo & Shredder
@@ -30,7 +30,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * you control — only creatures attack, so the group is creatures with subtype Ninja that you
  * control and that are attacking, re-evaluated each application (same shape as Bone-Cairn Butcher).
  *
- * The combat-damage trigger creates the token first, then runs a [ConditionalEffect] gated on
+ * The combat-damage trigger creates the token first, then runs a [Effects.If] gated on
  * [Conditions.YouControlAtLeast] 5 Ninjas: because the token is itself a Ninja and is created
  * before the check, it counts toward the five ("create … Then if you control five or more"). When
  * the gate holds, the damaged player ([Player.TriggeringPlayer]) loses half their own life rounded
@@ -54,24 +54,22 @@ val DarkLeoAndShredder = card("Dark Leo & Shredder") {
     }
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                power = 1,
-                toughness = 1,
-                colors = setOf(Color.BLACK),
-                creatureTypes = setOf("Ninja"),
-                imageUri = "https://cards.scryfall.io/normal/front/a/7/a7b76498-d696-40d1-b7c7-91657525b44f.jpg?1771590477"
-            ),
-            ConditionalEffect(
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.CreateToken(
+            power = 1,
+            toughness = 1,
+            colors = setOf(Color.BLACK),
+            creatureTypes = setOf("Ninja"),
+            imageUri = "https://cards.scryfall.io/normal/front/a/7/a7b76498-d696-40d1-b7c7-91657525b44f.jpg?1771590477"
+        ) then
+            Effects.If(
                 condition = Conditions.YouControlAtLeast(5, GameObjectFilter.Creature.withSubtype("Ninja")),
-                effect = Effects.LoseHalfLife(
+                then = Effects.LoseHalfLife(
                     roundUp = true,
                     target = EffectTarget.PlayerRef(Player.TriggeringPlayer),
                     lifePlayer = Player.TriggeringPlayer
                 )
             )
-        )
     }
 
     metadata {

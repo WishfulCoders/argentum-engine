@@ -13,7 +13,7 @@ import com.wingedsheep.sdk.model.Rarity
  * 1 / 1
  * When this creature dies, create a 1/1 green Saproling creature token.
  *
- * A plain [Triggers.Dies] self-trigger over [Effects.CreateToken]. The token's characteristics are
+ * A plain `Triggers.self.dies()` self-trigger over [Effects.CreateToken]. The token's characteristics are
  * printed literally, so nothing is read off the dying Fungus — no last-known information is needed
  * here — and the token's controller defaults to the ability's controller.
  */
@@ -26,7 +26,7 @@ val TukatongueThallid = card("Tukatongue Thallid") {
     oracleText = "When this creature dies, create a 1/1 green Saproling creature token."
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

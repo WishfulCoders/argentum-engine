@@ -29,16 +29,14 @@ val PlanarEngineering = card("Planar Engineering") {
         "onto the battlefield tapped, then shuffle."
 
     spell {
-        effect = Effects.Composite(
-            Effects.Sacrifice(GameObjectFilter.Land, count = 2, target = EffectTarget.PlayerRef(Player.You)),
+        effect = Effects.Sacrifice(GameObjectFilter.Land, count = 2, target = EffectTarget.PlayerRef(Player.You)) then
             Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.BasicLand,
                 count = 4,
                 destination = SearchDestination.BATTLEFIELD,
                 entersTapped = true,
                 shuffleAfter = true,
-            ),
-        )
+            )
     }
 
     metadata {

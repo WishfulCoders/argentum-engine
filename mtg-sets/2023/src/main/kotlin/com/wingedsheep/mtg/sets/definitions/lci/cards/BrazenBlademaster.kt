@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * it gets +2/+1 until end of turn.
  *
  * Implementation notes:
- * - `Triggers.Attacks` fires per AttackEvent for the creature itself (SELF binding).
+ * - `Triggers.self.attacks()` fires per AttackEvent for the creature itself (SELF binding).
  * - "while you control two or more artifacts" is a trigger-time condition, NOT an intervening-if
  *   clause (CR 603.4 applies only to an "if" immediately after the trigger event). It is checked
  *   as `Conditions.YouControlAtLeast(2, GameObjectFilter.Artifact)` only when the creature attacks;
@@ -35,7 +35,7 @@ val BrazenBlademaster = card("Brazen Blademaster") {
     oracleText = "Whenever this creature attacks while you control two or more artifacts, it gets +2/+1 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         triggerRestriction = Conditions.YouControlAtLeast(2, GameObjectFilter.Artifact)
         effect = Effects.ModifyStats(power = 2, toughness = 1, target = EffectTarget.Self)
     }

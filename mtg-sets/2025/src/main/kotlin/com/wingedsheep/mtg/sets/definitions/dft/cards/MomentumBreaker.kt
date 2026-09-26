@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.dft.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
@@ -10,11 +11,8 @@ import com.wingedsheep.sdk.dsl.startYourEngines
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Momentum Breaker
@@ -26,7 +24,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * {2}, Sacrifice this enchantment: You gain life equal to your speed.
  *
  * The "each opponent … / each opponent who can't …" split is Entropic Battlecruiser's idiom: one
- * [ForEachPlayerEffect] over [Player.EachOpponent] whose body is a [ConditionalEffect] evaluated
+ * [ForEachPlayerEffect] over [Player.EachOpponent] whose body is a [Effects.If] evaluated
  * per iterated opponent. Inside the loop the controller is rebound to that opponent, so
  * `Exists(Player.You, Zone.BATTLEFIELD, CreatureOrVehicle)` asks "does *this* opponent control a
  * creature or Vehicle" and [EffectTarget.Controller] is that opponent. Modelling it as one
@@ -52,29 +50,27 @@ val MomentumBreaker = card("Momentum Breaker") {
     startYourEngines()
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ForEachPlayerEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.ForEachPlayer(
             players = Player.EachOpponent,
-            effects = listOf(
-                ConditionalEffect(
-                    condition = Exists(
-                        player = Player.You,
-                        zone = Zone.BATTLEFIELD,
-                        filter = GameObjectFilter.CreatureOrVehicle
-                    ),
-                    effect = Effects.Sacrifice(
-                        GameObjectFilter.CreatureOrVehicle,
-                        target = EffectTarget.Controller
-                    ),
-                    elseEffect = Patterns.Hand.discardCards(1, EffectTarget.Controller)
-                )
+            effect = Effects.If(
+                condition = Exists(
+                    player = Player.You,
+                    zone = Zone.BATTLEFIELD,
+                    filter = GameObjectFilter.CreatureOrVehicle
+                ),
+                then = Effects.Sacrifice(
+                    GameObjectFilter.CreatureOrVehicle,
+                    target = EffectTarget.Controller
+                ),
+                otherwise = Patterns.Hand.discardCards(1, EffectTarget.Controller)
             )
         )
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.SacrificeSelf)
-        effect = Effects.GainLife(DynamicAmount.Speed(Player.You))
+        effect = Effects.GainLife(DynamicAmounts.speed(Player.You))
         description = "{2}, Sacrifice this enchantment: You gain life equal to your speed."
     }
 

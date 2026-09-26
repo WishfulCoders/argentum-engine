@@ -1,15 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CostModification
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Krosan Warchief
@@ -36,10 +35,8 @@ val KrosanWarchief = card("Krosan Warchief") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{G}")
-        val t = target("target", TargetPermanent(
-            filter = TargetFilter(GameObjectFilter.Creature.withSubtype("Beast"))
-        ))
-        effect = RegenerateEffect(t)
+        val t = target(TargetFilter(GameObjectFilter.Creature.withSubtype("Beast")))
+        effect = Effects.Regenerate(t)
     }
 
     metadata {

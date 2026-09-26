@@ -1,14 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Cursed Recording
@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * {T}: When you next cast an instant or sorcery spell this turn, copy that spell. You may choose new
  *      targets for the copy.
  *
- * The "Then if ..." clause is a resolution-time check ([ConditionalEffect] +
+ * The "Then if ..." clause is a resolution-time check ([Effects.If] +
  * [Conditions.SourceCounterCountAtLeast]), not an intervening-if on the trigger. Because the count
  * is checked after every single counter is added, it can only ever reach exactly seven, so removing
  * seven time counters is faithful to "remove those counters". The activated ability arms a
@@ -37,17 +37,13 @@ val CursedRecording = card("Cursed Recording") {
         "copy that spell. You may choose new targets for the copy."
 
     triggeredAbility {
-        trigger = Triggers.YouCastInstantOrSorcery
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.TIME, 1, EffectTarget.Self),
-            ConditionalEffect(
-                condition = Conditions.SourceCounterCountAtLeast(Counters.TIME, 7),
-                effect = Effects.Composite(
-                    Effects.RemoveCounters(Counters.TIME, 7, EffectTarget.Self),
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
+        effect = Effects.AddCounters(CounterType.TIME, 1, EffectTarget.Self) then
+            Effects.If(
+                condition = Conditions.SourceCounterCountAtLeast(CounterType.TIME, 7),
+                then = Effects.RemoveCounters(CounterType.TIME, 7, EffectTarget.Self) then
                     Effects.DealDamage(20, EffectTarget.Controller, damageSource = EffectTarget.Self),
-                ),
-            ),
-        )
+            )
     }
 
     activatedAbility {

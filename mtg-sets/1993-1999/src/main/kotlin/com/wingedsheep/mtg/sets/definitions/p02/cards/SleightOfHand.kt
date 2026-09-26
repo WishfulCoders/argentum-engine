@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Sleight of Hand
@@ -30,8 +29,8 @@ val SleightOfHand = card("Sleight of Hand") {
 
     spell {
         effect = Patterns.Library.lookAtTopAndKeep(
-            count = DynamicAmount.Fixed(2),
-            keepCount = DynamicAmount.Fixed(1),
+            count = 2,
+            keepCount = 1,
             keepDestination = CardDestination.ToZone(Zone.HAND),
             restDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom)
         )

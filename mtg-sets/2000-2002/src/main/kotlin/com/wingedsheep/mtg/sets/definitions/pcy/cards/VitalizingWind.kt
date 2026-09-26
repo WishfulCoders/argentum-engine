@@ -26,7 +26,7 @@ val VitalizingWind = card("Vitalizing Wind") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(7, 7, EffectTarget.Self)
+            Effects.ModifyStats(7, 7, EffectTarget.IterationEntity)
         )
     }
     metadata {

@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Bespoke Battlegarb
@@ -50,12 +50,9 @@ val BespokeBattlegarb = card("Bespoke Battlegarb") {
     }
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
         interveningIf = Conditions.Celebration
-        val creature = target(
-            "up to one target creature you control",
-            TargetCreature(optional = true, filter = TargetFilter.CreatureYouControl),
-        )
+        val creature = target(TargetFilter.CreatureYouControl, optional = true)
         effect = Effects.AttachEquipment(creature)
         description = "At the beginning of combat on your turn, if two or more nonland permanents " +
             "entered the battlefield under your control this turn, attach this Equipment to up to " +

@@ -15,6 +15,7 @@ import io.kotest.core.spec.style.FunSpec
 import com.wingedsheep.engine.core.SelectCardsDecision
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Case of the Stashed Skeleton — {1}{B} Enchantment — Case.
@@ -32,12 +33,7 @@ class CaseOfTheStashedSkeletonScenarioTest : FunSpec({
         typeLine = "Sorcery"
         oracleText = "Destroy target creature."
         spell {
-            val t = target(
-                "target",
-                com.wingedsheep.sdk.scripting.targets.TargetCreature(
-                    filter = com.wingedsheep.sdk.scripting.filters.unified.TargetFilter.Creature
-                )
-            )
+            val t = target(com.wingedsheep.sdk.scripting.filters.unified.TargetFilter.Creature)
             effect = com.wingedsheep.sdk.dsl.Effects.Destroy(t)
         }
     }
@@ -59,7 +55,7 @@ class CaseOfTheStashedSkeletonScenarioTest : FunSpec({
     fun GameTestDriver.playCase(): EntityId {
         val card = putCardInHand(player1, "Case of the Stashed Skeleton")
         giveMana(player1, Color.BLACK, 2)
-        castSpell(player1, card).isSuccess shouldBe true
+        castSpell(player1, card).outcome shouldBe Outcome.Done
         bothPass()
         bothPass()
         return card
@@ -97,7 +93,7 @@ class CaseOfTheStashedSkeletonScenarioTest : FunSpec({
 
         val removal = driver.putCardInHand(driver.player1, "Test Execute")
         driver.giveColorlessMana(driver.player1, 1)
-        driver.castSpell(driver.player1, removal, listOf(token)).isSuccess shouldBe true
+        driver.castSpell(driver.player1, removal, listOf(token)).outcome shouldBe Outcome.Done
         driver.bothPass()
         driver.state.getBattlefield().contains(token) shouldBe false
 
@@ -113,7 +109,7 @@ class CaseOfTheStashedSkeletonScenarioTest : FunSpec({
 
         val removal = driver.putCardInHand(driver.player1, "Test Execute")
         driver.giveColorlessMana(driver.player1, 1)
-        driver.castSpell(driver.player1, removal, listOf(token)).isSuccess shouldBe true
+        driver.castSpell(driver.player1, removal, listOf(token)).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         driver.passPriorityUntil(Step.END)

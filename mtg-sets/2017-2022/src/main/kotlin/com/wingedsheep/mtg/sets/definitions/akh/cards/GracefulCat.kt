@@ -22,7 +22,7 @@ val GracefulCat = card("Graceful Cat") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }
 

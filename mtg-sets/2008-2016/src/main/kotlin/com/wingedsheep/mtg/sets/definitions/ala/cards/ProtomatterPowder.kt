@@ -28,12 +28,7 @@ val ProtomatterPowder = card("Protomatter Powder") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{4}{W}"), Costs.Tap, Costs.SacrificeSelf)
-        val t = target(
-            "target",
-            TargetObject(
-                filter = TargetFilter.ArtifactInYourGraveyard
-            )
-        )
+        val t = target(TargetFilter.ArtifactInYourGraveyard)
         effect = Effects.PutOntoBattlefieldFromGraveyard(t)
     }
 

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.multiplayer
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.GameConfig
 import com.wingedsheep.engine.core.GameInitializer
 import com.wingedsheep.engine.core.PlayerConfig
@@ -99,7 +100,7 @@ class ReplacementTeamAwarenessTest : FunSpec({
             source, "Opposing Draw Preventer",
             PreventDraw(appliesTo = EventPattern.DrawEvent(player = Player.EachOpponent))
         )
-        val processor = ReplacementEffectProcessor()
+        val processor = ReplacementEffectProcessor(conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
 
         withClue("Sanity: the pattern does fire for a player on the opposing team") {
             processor.gatherReplacements(state, PendingGameEvent.DrawPending(opponent, 1)).size shouldBe 1
@@ -129,7 +130,7 @@ class ReplacementTeamAwarenessTest : FunSpec({
                 appliesTo = EventPattern.DrawCardsEvent(player = Player.EachOpponent)
             )
         )
-        val processor = ReplacementEffectProcessor()
+        val processor = ReplacementEffectProcessor(conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
 
         withClue("Sanity: the pattern does fire for a player on the opposing team") {
             processor.gatherReplacements(state, PendingGameEvent.DrawAmountPending(opponent, 1)).size shouldBe 1
@@ -171,9 +172,9 @@ class ReplacementTeamAwarenessTest : FunSpec({
             source, "Opposing Lifegain Doubler",
             ModifyLifeGain(multiplier = 2, appliesTo = EventPattern.LifeGainEvent(player = Player.EachOpponent))
         )
-        com.wingedsheep.engine.handlers.effects.LifeGainModifiers.apply(state, opponent, 3) shouldBe 6
-        com.wingedsheep.engine.handlers.effects.LifeGainModifiers.apply(state, teammate, 3) shouldBe 3
-        com.wingedsheep.engine.handlers.effects.LifeGainModifiers.apply(state, source, 3) shouldBe 3
+        com.wingedsheep.engine.handlers.effects.LifeGainModifiers.apply(state, opponent, 3, predicateEvaluator = PredicateEvaluator(cardRegistry = null)) shouldBe 6
+        com.wingedsheep.engine.handlers.effects.LifeGainModifiers.apply(state, teammate, 3, predicateEvaluator = PredicateEvaluator(cardRegistry = null)) shouldBe 3
+        com.wingedsheep.engine.handlers.effects.LifeGainModifiers.apply(state, source, 3, predicateEvaluator = PredicateEvaluator(cardRegistry = null)) shouldBe 3
     }
 
     test("'whenever an opponent gains life' does not trigger off a teammate's gain") {
@@ -182,8 +183,8 @@ class ReplacementTeamAwarenessTest : FunSpec({
         val (source, teammate) = players[0] to players[1]
         val opponent = players[2]
         val matcher = com.wingedsheep.engine.event.TriggerMatcher(
-            com.wingedsheep.engine.handlers.PredicateEvaluator(),
-            com.wingedsheep.engine.handlers.ConditionEvaluator()
+            PredicateEvaluator(cardRegistry = null),
+            PredicateEvaluator(cardRegistry = null).conditions
         )
         fun gainBy(player: EntityId) = com.wingedsheep.engine.core.LifeChangedEvent(
             player, 30, 32, com.wingedsheep.engine.core.LifeChangeReason.LIFE_GAIN
@@ -210,7 +211,7 @@ class ReplacementTeamAwarenessTest : FunSpec({
             source, "Opposing Draw Preventer",
             PreventDraw(appliesTo = EventPattern.DrawEvent(player = Player.EachOpponent))
         )
-        val processor = ReplacementEffectProcessor()
+        val processor = ReplacementEffectProcessor(conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
 
         withClue("No TeamComponent means every other seat is an opponent") {
             processor.gatherReplacements(state, PendingGameEvent.DrawPending(players[1], 1)).size shouldBe 1

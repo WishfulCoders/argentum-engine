@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -30,8 +29,8 @@ val CatOwl = card("Cat-Owl") {
     toughness = 3
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val t = target("target", TargetPermanent(filter = TargetFilter.CreatureOrArtifact))
+        trigger = Triggers.self.attacks()
+        val t = target(TargetFilter.CreatureOrArtifact)
         effect = Effects.Untap(t)
     }
     metadata {

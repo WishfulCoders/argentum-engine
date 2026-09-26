@@ -1,11 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ala.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.PreventDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Godtoucher
@@ -16,8 +15,8 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  *
  * The activated cost is a [Costs.Composite] of mana plus [Costs.Tap]. The power threshold rides the
  * target itself — [TargetFilter.Creature]`.powerAtLeast(5)` — so it is checked on announcement and
- * rechecked on resolution. The shield is [PreventDamageEffect] with every field left at its default:
- * a null `amount` means "prevent all", `PreventionScope.AllDamage` covers non-combat damage too,
+ * rechecked on resolution. The shield is [Effects.PreventDamage] with every other parameter at its
+ * default: a null `amount` means "prevent all", non-combat damage is covered too,
  * `PreventionDirection.ToTarget` is the printed "dealt to", and `Duration.EndOfTurn` is "this turn".
  */
 val Godtoucher = card("Godtoucher") {
@@ -30,8 +29,8 @@ val Godtoucher = card("Godtoucher") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{W}"), Costs.Tap)
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.powerAtLeast(5)))
-        effect = PreventDamageEffect(target = t)
+        val t = target(TargetFilter.Creature.powerAtLeast(5))
+        effect = Effects.PreventDamage(target = t)
     }
 
     metadata {

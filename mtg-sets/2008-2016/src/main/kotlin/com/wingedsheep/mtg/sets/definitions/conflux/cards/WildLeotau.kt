@@ -1,11 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.conflux.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Wild Leotau
@@ -14,7 +15,7 @@ import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
  * 5/4
  * At the beginning of your upkeep, sacrifice this creature unless you pay {G}.
  *
- * [Triggers.YourUpkeep] is `StepEvent(UPKEEP, You)` bound `ANY`. The "unless" is a **cost paid on
+ * `Triggers.you.beginningOf(Step.UPKEEP)` is `StepEvent(UPKEEP, You)` bound `ANY`. The "unless" is a **cost paid on
  * resolution**, not a may-gate: [PayOrSufferEffect] pairs [Costs.pay.Mana] with
  * [SacrificeSelfEffect], so declining — or being unable to pay — sacrifices the creature.
  */
@@ -27,8 +28,8 @@ val WildLeotau = card("Wild Leotau") {
     oracleText = "At the beginning of your upkeep, sacrifice this creature unless you pay {G}."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = PayOrSufferEffect(cost = Costs.pay.Mana("{G}"), suffer = SacrificeSelfEffect)
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.PayOrSuffer(cost = Costs.pay.Mana("{G}"), suffer = SacrificeSelfEffect)
         description = "At the beginning of your upkeep, sacrifice this creature unless you pay {G}."
     }
 

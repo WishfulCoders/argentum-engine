@@ -4,13 +4,10 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.events.ControllerFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Mirkwood Bats
@@ -33,19 +30,13 @@ val MirkwoodBats = card("Mirkwood Bats") {
 
     // Whenever you create a token, each opponent loses 1 life.
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = EventPattern.TokenCreationEvent(controller = ControllerFilter.You),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.you.createsToken()
         effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent))
     }
 
     // Whenever you sacrifice a token, each opponent loses 1 life.
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = EventPattern.PermanentsSacrificedEvent(filter = GameObjectFilter.Token),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Token, batch = true)
         effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent))
     }
 

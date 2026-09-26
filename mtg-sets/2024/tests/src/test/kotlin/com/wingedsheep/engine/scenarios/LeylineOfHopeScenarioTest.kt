@@ -275,7 +275,7 @@ class LeylineOfHopeScenarioTest : ScenarioTestBase() {
                     leylineEntity?.get<ReplacementEffectSourceComponent>() shouldNotBe null
                 }
                 withClue("LifeGainModifiers should add 1 to a 3-life gain when Leyline of Hope is on P1's battlefield") {
-                    LifeGainModifiers.apply(state, p1Id, 3) shouldBe 4
+                    LifeGainModifiers.apply(state, p1Id, 3, predicateEvaluator = services.predicateEvaluator) shouldBe 4
                 }
             }
 

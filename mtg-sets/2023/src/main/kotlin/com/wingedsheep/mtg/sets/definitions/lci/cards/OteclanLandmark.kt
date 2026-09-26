@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Oteclan Landmark // Oteclan Levitator (CR 702.167, The Lost Caverns of Ixalan)
@@ -29,13 +28,13 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  *   flying until end of turn.
  *
  * Implementation:
- *  - Front ETB: [Triggers.EntersBattlefield] → [Patterns.Library.scry] (2).
+ *  - Front ETB: `Triggers.self.enters()` → [Patterns.Library.scry] (2).
  *  - Craft: the `craft(...)` helper wires [com.wingedsheep.sdk.scripting.AbilityCost.Craft]
  *    (material filter [GameObjectFilter.Artifact], exactly one material — minCount = maxCount = 1
  *    per "Craft with artifact") paired with the {2}{W} mana cost, resolving via
  *    [com.wingedsheep.sdk.scripting.effects.ReturnSelfFromExileTransformedEffect] at
  *    sorcery speed.
- *  - Back attack trigger: [Triggers.Attacks] targeting
+ *  - Back attack trigger: `Triggers.self.attacks()` targeting
  *    [TargetFilter.AttackingCreature].withoutKeyword(FLYING) →
  *    [Effects.GrantKeyword] (FLYING, until end of turn).
  */
@@ -49,7 +48,7 @@ private val OteclanLandmarkFront = card("Oteclan Landmark") {
 
     // When this artifact enters, scry 2.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.scry(2)
     }
 
@@ -84,11 +83,8 @@ private val OteclanLevitator = card("Oteclan Levitator") {
     // Whenever this creature attacks, target attacking creature without flying
     // gains flying until end of turn.
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val creature = target(
-            "attacking creature without flying",
-            TargetCreature(filter = TargetFilter.AttackingCreature.withoutKeyword(Keyword.FLYING))
-        )
+        trigger = Triggers.self.attacks()
+        val creature = target(TargetFilter.AttackingCreature.withoutKeyword(Keyword.FLYING))
         effect = Effects.GrantKeyword(Keyword.FLYING, creature)
     }
 

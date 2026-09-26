@@ -16,11 +16,11 @@ import io.kotest.matchers.shouldBe
  * When this creature enters, create a Food token.
  * Whenever you sacrifice a Food, create a 1/1 black Rat creature token with "This token can't block."
  *
- * These cover the new [Triggers.YouSacrificeA] vocabulary — the per-permanent "you sacrifice **a**
+ * These cover the new `Triggers.you.sacrifices(filter)` vocabulary — the per-permanent "you sacrifice **a**
  * <filter>" template with an ANY binding. Two things distinguish it from the pre-existing pair:
- *  - vs [Triggers.YouSacrificeOneOrMore] (batch): three simultaneously-sacrificed Foods must make
+ *  - vs `Triggers.you.sacrifices(filter, batch = true)` (batch): three simultaneously-sacrificed Foods must make
  *    three Rats, not one (CR 603.2c).
- *  - vs [Triggers.YouSacrificeAnother] (OTHER binding): a source that is itself a Food counts its
+ *  - vs `Triggers.you.sacrificesAnother(filter)` (OTHER binding): a source that is itself a Food counts its
  *    own sacrifice. The Confectioner is a Human Peasant so it can never hit that path; a Food
  *    artifact creature carrying the same trigger is registered below to prove it.
  */
@@ -55,7 +55,7 @@ class ExperimentalConfectionerScenarioTest : ScenarioTestBase() {
         toughness = 1
         oracleText = "Whenever you sacrifice a Food, you gain 2 life."
         triggeredAbility {
-            trigger = Triggers.YouSacrificeA(GameObjectFilter.Artifact.withSubtype("Food"))
+            trigger = Triggers.you.sacrifices(GameObjectFilter.Artifact.withSubtype("Food"))
             effect = Effects.GainLife(2)
         }
     }
@@ -159,7 +159,7 @@ class ExperimentalConfectionerScenarioTest : ScenarioTestBase() {
             }
         }
 
-        context("Triggers.YouSacrificeA binding") {
+        context("Triggers.you.sacrifices binding") {
 
             // The ANY binding is what separates YouSacrificeA from YouSacrificeAnother: a source
             // that is itself a Food reacts to its own sacrifice.

@@ -1,6 +1,7 @@
 package com.wingedsheep.engine.mechanics.stack
 
 import com.wingedsheep.engine.core.AbilityCounteredEvent
+import com.wingedsheep.engine.core.EngineServices
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.ComponentContainer
 import com.wingedsheep.engine.state.GameState
@@ -19,7 +20,7 @@ import io.kotest.matchers.shouldBe
  * there is nothing left to read them off.
  */
 class CounteredAbilityTest : FunSpec({
-    val resolver = StackResolver(cardRegistry = CardRegistry())
+    val resolver = EngineServices(CardRegistry()).stackResolver
 
     test("countering a triggered ability destroys the ability object") {
         val abilityId = EntityId.of("countered-ability")

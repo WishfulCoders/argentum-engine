@@ -11,7 +11,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 /**
  * Call of the Ring — upkeep "the Ring tempts you" + "Whenever you choose a creature as your
  * Ring-bearer, you may pay 2 life. If you do, draw a card." Exercises the new
- * `Triggers.WheneverYouChooseRingBearer` (RingTemptedEvent with requireBearerChosen): it fires
+ * `Triggers.you.isTemptedByTheRing(true)` (RingTemptedEvent with requireBearerChosen): it fires
  * only when a creature is actually chosen.
  */
 class CallOfTheRingScenarioTest : ScenarioTestBase() {

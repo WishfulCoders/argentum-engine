@@ -5,12 +5,13 @@
 package com.wingedsheep.mtg.sets.definitions.apc.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ControlEnchantedPermanent
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -26,7 +27,7 @@ val YavimayasEmbrace = card("Yavimaya's Embrace") {
     colorIdentity = "UG"
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature\nYou control enchanted creature.\nEnchanted creature gets +2/+2 and has trample."
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
     staticAbility {
         ability = ControlEnchantedPermanent
     }

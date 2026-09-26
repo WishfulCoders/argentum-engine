@@ -12,9 +12,6 @@ import com.wingedsheep.sdk.scripting.SkipDrawStep
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.FaceDownMode
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Colfenor's Plans
@@ -61,20 +58,17 @@ val ColfenorsPlans = card("Colfenor's Plans") {
         "You can't cast more than one spell each turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(7)),
-                storeAs = "colfenorsPlansExiled",
-            ),
-            MoveCollectionEffect(
-                from = "colfenorsPlansExiled",
-                destination = CardDestination.ToZone(Zone.EXILE),
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val colfenorsPlansExiled = gather(CardSource.TopOfLibrary(7))
+            move(
+                colfenorsPlansExiled,
+                CardDestination.ToZone(Zone.EXILE),
                 faceDown = FaceDownMode.HIDDEN,
                 linkToSource = true,
-                lookableInExile = true,
-            ),
-        )
+                lookableInExile = true
+            )
+        }
         description = "When this enchantment enters, exile the top seven cards of your library " +
             "face down."
     }

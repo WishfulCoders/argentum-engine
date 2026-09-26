@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Searing Flesh
@@ -18,8 +18,8 @@ val SearingFlesh = card("Searing Flesh") {
     oracleText = "Searing Flesh deals 7 damage to target opponent."
 
     spell {
-        val t = target("target", TargetOpponent())
-        effect = DealDamageEffect(7, t)
+        val t = target(Targets.Opponent)
+        effect = Effects.DealDamage(7, t)
     }
 
     metadata {

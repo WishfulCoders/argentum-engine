@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.AddColorlessManaEffect
-import com.wingedsheep.sdk.scripting.references.Player
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
@@ -38,11 +37,7 @@ class ManaAbilityActivationTriggerScenarioTest : FunSpec({
         typeLine = "Enchantment"
         oracleText = "Whenever a player activates a land's ability, you gain 1 life."
         triggeredAbility {
-            trigger = Triggers.activatesAbilityOf(
-                GameObjectFilter.Land,
-                player = Player.Each,
-                includeManaAbilities = true
-            )
+            trigger = Triggers.anyPlayer.activatesAbility(of = GameObjectFilter.Land, includeManaAbilities = true)
             effect = Effects.GainLife(1)
         }
     }
@@ -55,7 +50,7 @@ class ManaAbilityActivationTriggerScenarioTest : FunSpec({
         oracleText = "Whenever a player activates a land's ability that isn't a mana ability, " +
             "you gain 1 life."
         triggeredAbility {
-            trigger = Triggers.activatesAbilityOf(GameObjectFilter.Land, player = Player.Each)
+            trigger = Triggers.anyPlayer.activatesAbility(of = GameObjectFilter.Land)
             effect = Effects.GainLife(1)
         }
     }

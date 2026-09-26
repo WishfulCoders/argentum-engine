@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.MustBeBlocked
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Frodo Baggins
@@ -35,10 +34,7 @@ val FrodoBaggins = card("Frodo Baggins") {
         "As long as Frodo Baggins is your Ring-bearer, it must be blocked if able."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.legendary().youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.legendary().youControl()).enters()
         effect = Effects.TheRingTemptsYou()
     }
 

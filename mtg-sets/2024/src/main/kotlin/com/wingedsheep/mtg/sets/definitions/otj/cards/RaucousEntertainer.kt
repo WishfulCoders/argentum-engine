@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * The group is restricted to creatures you control with [GameObjectFilter.enteredThisTurn]
  * (backed by the engine's EnteredThisTurnComponent, cleared each turn). Inside the per-member
- * iteration, the counter goes on [EffectTarget.Self] (the iterated creature).
+ * iteration, the counter goes on [EffectTarget.IterationEntity] (the iterated creature).
  */
 val RaucousEntertainer = card("Raucous Entertainer") {
     manaCost = "{1}{G}"
@@ -33,7 +33,7 @@ val RaucousEntertainer = card("Raucous Entertainer") {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl().enteredThisTurn()),
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity)
         )
         description = "{1}, {T}: Put a +1/+1 counter on each creature you control that entered this turn."
     }

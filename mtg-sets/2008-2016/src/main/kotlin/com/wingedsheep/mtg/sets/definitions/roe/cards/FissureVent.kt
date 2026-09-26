@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Fissure Vent
@@ -30,11 +29,11 @@ val FissureVent = card("Fissure Vent") {
     spell {
         modal(chooseCount = 2, minChooseCount = 1) {
             mode("Destroy target artifact") {
-                val t = target("target", TargetPermanent(filter = TargetFilter.Artifact))
+                val t = target(TargetFilter.Artifact)
                 effect = Effects.Destroy(t)
             }
             mode("Destroy target nonbasic land") {
-                val t = target("target", TargetPermanent(filter = TargetFilter.NonbasicLand))
+                val t = target(TargetFilter.NonbasicLand)
                 effect = Effects.Destroy(t)
             }
         }

@@ -27,7 +27,7 @@ val WeaponizeTheMonsters = card("Weaponize the Monsters") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Sacrifice(GameObjectFilter.Creature))
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(2, t)
     }
 

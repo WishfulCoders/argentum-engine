@@ -26,7 +26,6 @@ import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.player.ManaPoolComponent
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
@@ -270,7 +269,7 @@ class SuspendCardFromHandHandler(
         events.add(
             CountersAddedEvent(
                 entityId = action.cardId,
-                counterType = Counters.TIME,
+                counterType = CounterType.TIME,
                 amount = suspend.timeCounters,
                 entityName = cardComponent.name,
                 firstThisTurn = false,

@@ -7,7 +7,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Twining Twins // Swift Spiral
@@ -43,7 +43,7 @@ val TwiningTwins = card("Twining Twins") {
     toughness = 4
 
     keywords(Keyword.FLYING, Keyword.VIGILANCE)
-    keywordAbility(KeywordAbility.ward("{1}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{1}")))
 
     adventure("Swift Spiral") {
         manaCost = "{1}{W}"
@@ -53,10 +53,7 @@ val TwiningTwins = card("Twining Twins") {
             "(Then exile this card. You may cast the creature later from exile.)"
 
         spell {
-            val creature = target(
-                "target nontoken creature",
-                TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.nontoken())),
-            )
+            val creature = target(TargetFilter(GameObjectFilter.Creature.nontoken()))
             effect = Patterns.Exile.exileUntilEndStep(creature)
         }
     }

@@ -1,11 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.lea.cards
 
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ChoiceType
 import com.wingedsheep.sdk.scripting.EntersWithChoice
 import com.wingedsheep.sdk.scripting.SetEnchantedLandTypeFromChosen
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Phantasmal Terrain
@@ -24,7 +25,7 @@ val PhantasmalTerrain = card("Phantasmal Terrain") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant land\nAs this Aura enters, choose a basic land type.\nEnchanted land is the chosen type."
 
-    auraTarget = Targets.Land
+    auraTarget = TargetObject(filter = TargetFilter.Land)
 
     replacementEffect(EntersWithChoice(ChoiceType.BASIC_LAND_TYPE))
 

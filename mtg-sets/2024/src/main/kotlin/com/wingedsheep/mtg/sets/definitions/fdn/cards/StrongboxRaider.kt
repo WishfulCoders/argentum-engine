@@ -1,20 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.fdn.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Strongbox Raider
@@ -39,30 +31,21 @@ val StrongboxRaider = card("Strongbox Raider") {
         "of your library. Choose one of them. Until the end of your next turn, you may play that card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouAttackedThisTurn
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(2)),
-                    storeAs = "exiled"
-                ),
-                MoveCollectionEffect(
-                    from = "exiled",
-                    destination = CardDestination.ToZone(Zone.EXILE)
-                ),
-                SelectFromCollectionEffect(
-                    from = "exiled",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                    storeSelected = "chosen",
-                    prompt = "Choose a card you may play until the end of your next turn"
-                ),
-                GrantMayPlayFromExileEffect(
-                    from = "chosen",
-                    expiry = MayPlayExpiry.UntilEndOfNextTurn
-                )
+        effect = Effects.Pipeline {
+            val exiled = gather(CardSource.TopOfLibrary(2))
+            exile(exiled)
+            val chosen = chooseExactly(
+                1,
+                from = exiled,
+                prompt = "Choose a card you may play until the end of your next turn"
             )
-        )
+            run(Effects.GrantMayPlayFromExile(
+                from = chosen,
+                expiry = MayPlayExpiry.UntilEndOfNextTurn
+            ))
+        }
     }
 
     metadata {

@@ -1,14 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Aura Mutation
@@ -31,12 +28,9 @@ val AuraMutation = card("Aura Mutation") {
         "where X is that enchantment's mana value."
 
     spell {
-        val t = target("target", Targets.Enchantment)
-        effect = Effects.Destroy(t) then CreateTokenEffect(
-            count = DynamicAmount.EntityProperty(
-                entity = EntityReference.Target(0),
-                numericProperty = EntityNumericProperty.ManaValue
-            ),
+        val t = target(TargetFilter.Enchantment)
+        effect = Effects.Destroy(t) then Effects.CreateToken(
+            count = DynamicAmounts.manaValueOf(t),
             power = 1,
             toughness = 1,
             colors = setOf(Color.GREEN),

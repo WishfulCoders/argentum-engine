@@ -40,7 +40,7 @@ val TangledColony = card("Tangled Colony") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateToken(
             count = DynamicAmounts.lastKnownDamageDealtToSource(),
             power = 1,

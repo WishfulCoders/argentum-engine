@@ -32,10 +32,7 @@ val ScourAllPossibilities = card("Scour All Possibilities") {
     keywordAbility(KeywordAbility.flashback("{4}{U}"))
 
     spell {
-        effect = Effects.Composite(
-            Effects.Scry(2),
-            Effects.DrawCards(1)
-        )
+        effect = Effects.Scry(2) then Effects.DrawCards(1)
     }
 
     metadata {

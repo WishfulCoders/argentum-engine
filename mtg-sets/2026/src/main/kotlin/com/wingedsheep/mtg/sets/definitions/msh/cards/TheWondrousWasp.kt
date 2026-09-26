@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * The Wondrous Wasp — Marvel Super Heroes #84 (rare)
@@ -48,18 +47,13 @@ val TheWondrousWasp = card("The Wondrous Wasp") {
     keywords(Keyword.FLASH, Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val victim = target(
-            "up to one target creature",
-            TargetCreature(optional = true, filter = TargetFilter.Creature)
-        )
-        effect = Effects.Composite(
-            Effects.Tap(victim),
+        trigger = Triggers.self.enters()
+        val victim = target(TargetFilter.Creature, optional = true)
+        effect = Effects.Tap(victim) then
             Effects.RemoveAllAbilities(
                 victim,
                 Duration.WhileSourceOnBattlefield("The Wondrous Wasp")
-            ),
-        )
+            )
         description = "Wasp's Sting — When The Wondrous Wasp enters, tap up to one target " +
             "creature. It loses all abilities for as long as The Wondrous Wasp remains on the " +
             "battlefield."

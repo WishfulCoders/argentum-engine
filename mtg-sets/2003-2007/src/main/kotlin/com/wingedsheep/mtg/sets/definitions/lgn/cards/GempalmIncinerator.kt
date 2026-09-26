@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.lgn.cards
 
 import com.wingedsheep.sdk.dsl.DynamicAmounts
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Gempalm Incinerator
@@ -30,10 +29,10 @@ val GempalmIncinerator = card("Gempalm Incinerator") {
     keywordAbility(KeywordAbility.cycling("{1}{R}"))
 
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
-        val t = target("target", Targets.Creature)
-        effect = MayEffect(
-            DealDamageEffect(
+        trigger = Triggers.self.isCycled()
+        val t = target(TargetFilter.Creature)
+        effect = Effects.May(
+            Effects.DealDamage(
                 DynamicAmounts.permanentsWithSubtype(Subtype("Goblin")),
                 t
             )

@@ -31,8 +31,6 @@ import com.wingedsheep.sdk.model.EntityId
  */
 object MadnessGrants {
 
-    private val predicateEvaluator = PredicateEvaluator()
-
     /**
      * The madness cost [cardId] effectively has, or null if it has none. Printed madness on the
      * card wins; otherwise the first matching battlefield grant applies at the card's own mana
@@ -44,10 +42,11 @@ object MadnessGrants {
     fun effectiveMadnessCost(
         state: GameState,
         cardId: EntityId,
-        container: ComponentContainer
+        container: ComponentContainer,
+        predicateEvaluator: PredicateEvaluator
     ): ManaCost? {
         container.get<MadnessComponent>()?.let { return it.cost }
-        return grantedMadnessCost(state, cardId, container)
+        return grantedMadnessCost(state, cardId, container, predicateEvaluator = predicateEvaluator)
     }
 
     /**
@@ -60,7 +59,8 @@ object MadnessGrants {
     private fun grantedMadnessCost(
         state: GameState,
         cardId: EntityId,
-        container: ComponentContainer
+        container: ComponentContainer,
+        predicateEvaluator: PredicateEvaluator
     ): ManaCost? {
         val card = container.get<CardComponent>() ?: return null
         val ownerId = card.ownerId ?: return null

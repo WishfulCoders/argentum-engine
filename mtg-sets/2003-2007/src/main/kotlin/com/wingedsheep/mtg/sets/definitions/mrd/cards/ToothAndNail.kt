@@ -1,19 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Tooth and Nail
@@ -49,18 +45,15 @@ val ToothAndNail = card("Tooth and Nail") {
                 )
             }
             mode("Put up to two creature cards from your hand onto the battlefield") {
-                effect = GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Creature),
-                    storeAs = "toothAndNailCandidates",
-                ) then SelectFromCollectionEffect(
-                    from = "toothAndNailCandidates",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(2)),
-                    storeSelected = "toothAndNailChosen",
-                    prompt = "Choose up to two creature cards to put onto the battlefield",
-                ) then MoveCollectionEffect(
-                    from = "toothAndNailChosen",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD, Player.You),
-                )
+                effect = Effects.Pipeline {
+                    val candidates = gather(CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Creature))
+                    val chosen = chooseUpTo(
+                        2,
+                        from = candidates,
+                        prompt = "Choose up to two creature cards to put onto the battlefield"
+                    )
+                    move(chosen, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You))
+                }
             }
         }
     }

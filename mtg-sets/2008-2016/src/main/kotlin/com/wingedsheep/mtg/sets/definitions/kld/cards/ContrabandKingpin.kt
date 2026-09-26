@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.TriggerBinding
  * Lifelink
  * Whenever an artifact you control enters, scry 1.
  *
- * The same shape as Weldfast Wingsmith — [Triggers.entersBattlefield] over
+ * The same shape as Weldfast Wingsmith — `Triggers.a(filter).enters()` over
  * `Artifact.youControl()` with [TriggerBinding.ANY], which widens the trigger past the source to
  * every artifact you control.
  */
@@ -32,10 +32,7 @@ val ContrabandKingpin = card("Contraband Kingpin") {
     keywords(Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Artifact.youControl()).enters()
         effect = Effects.Scry(1)
     }
 

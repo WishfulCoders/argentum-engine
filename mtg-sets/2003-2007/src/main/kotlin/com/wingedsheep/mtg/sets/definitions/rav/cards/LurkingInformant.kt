@@ -1,20 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
+import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Lurking Informant — Ravnica: City of Guilds #249
@@ -46,33 +39,18 @@ val LurkingInformant = card("Lurking Informant") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        target("target player", Targets.Player)
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1), Player.ContextPlayer(0)),
-                storeAs = "peeked"
-            ),
-            SelectFromCollectionEffect(
-                from = "peeked",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "toGraveyard",
-                storeRemainder = "toTop",
+        val player = target(Targets.Player)
+        effect = Effects.Pipeline {
+            val peeked = gather(CardSource.TopOfLibrary(1, player.asPlayer))
+            val (toGraveyardCards, toTop) = chooseUpToSplit(
+                1,
+                from = peeked,
                 selectedLabel = "Put into that player's graveyard",
                 remainderLabel = "Leave on top of that player's library"
-            ),
-            MoveCollectionEffect(
-                from = "toGraveyard",
-                destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.ContextPlayer(0))
-            ),
-            MoveCollectionEffect(
-                from = "toTop",
-                destination = CardDestination.ToZone(
-                    Zone.LIBRARY,
-                    Player.ContextPlayer(0),
-                    placement = ZonePlacement.Top
-                )
             )
-        )
+            toGraveyard(toGraveyardCards, player.asPlayer)
+            toLibraryTop(toTop, player.asPlayer, order = CardOrder.Preserve)
+        }
         description = "{2}, {T}: Look at the top card of target player's library. You may put " +
             "that card into that player's graveyard."
     }

@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -33,10 +32,7 @@ val SenseisDiviningTop = card("Sensei's Divining Top") {
     }
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.Composite(
-            DrawCardsEffect(1),
-            Effects.Move(EffectTarget.Self, Zone.LIBRARY, ZonePlacement.Top)
-        )
+        effect = Effects.DrawCards(1) then Effects.Move(EffectTarget.Self, Zone.LIBRARY, ZonePlacement.Top)
     }
     metadata {
         rarity = Rarity.UNCOMMON

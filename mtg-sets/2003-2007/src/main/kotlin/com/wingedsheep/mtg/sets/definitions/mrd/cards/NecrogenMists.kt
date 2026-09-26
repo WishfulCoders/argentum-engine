@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Necrogen Mists
@@ -13,7 +14,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Enchantment
  * At the beginning of each player's upkeep, that player discards a card.
  *
- * Drafted by mtgish-tooling (Triggers.EachUpkeep — the each-player upkeep scope) and verified
+ * Drafted by mtgish-tooling (Triggers.anyPlayer.beginningOf(Step.UPKEEP) — the each-player upkeep scope) and verified
  * against Scryfall; behaviour pinned by NecrogenMistsScenarioTest.
  */
 val NecrogenMists = card("Necrogen Mists") {
@@ -22,7 +23,7 @@ val NecrogenMists = card("Necrogen Mists") {
     typeLine = "Enchantment"
     oracleText = "At the beginning of each player's upkeep, that player discards a card."
     triggeredAbility {
-        trigger = Triggers.EachUpkeep
+        trigger = Triggers.anyPlayer.beginningOf(Step.UPKEEP)
         effect = Patterns.Hand.discardCards(1, EffectTarget.PlayerRef(Player.TriggeringPlayer))
     }
     metadata {

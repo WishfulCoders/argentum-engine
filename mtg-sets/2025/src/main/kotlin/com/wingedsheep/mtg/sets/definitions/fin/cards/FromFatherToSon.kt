@@ -10,14 +10,7 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasCastFromZone
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * From Father to Son
@@ -44,37 +37,28 @@ val FromFatherToSon = card("From Father to Son") {
         "Flashback {4}{W}{W}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
 
     spell {
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.FromZone(
+        effect = Effects.Pipeline {
+            val searchable = gather(
+                CardSource.FromZone(
                     zone = Zone.LIBRARY,
                     player = Player.You,
                     filter = GameObjectFilter.Artifact.withSubtype(Subtype.VEHICLE)
                 ),
-                storeAs = "searchable"
-            ),
-            SelectFromCollectionEffect(
-                from = "searchable",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "found",
+                search = true
+            )
+            val found = chooseUpTo(
+                1,
+                from = searchable,
                 prompt = "Search for a Vehicle card",
-                selectedLabel = "Reveal it",
-            ),
-            ConditionalEffect(
+                selectedLabel = "Reveal it"
+            )
+            run(Effects.If(
                 condition = WasCastFromZone(Zone.GRAVEYARD),
-                effect = MoveCollectionEffect(
-                    from = "found",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD),
-                    revealed = true
-                ),
-                elseEffect = MoveCollectionEffect(
-                    from = "found",
-                    destination = CardDestination.ToZone(Zone.HAND),
-                    revealed = true
-                )
-            ),
-            ShuffleLibraryEffect()
-        )
+                then = Effects.Pipeline { move(found, CardDestination.ToZone(Zone.BATTLEFIELD), revealed = true) },
+                otherwise = Effects.Pipeline { toHand(found, revealed = true) }
+            ))
+            run(Effects.ShuffleLibrary())
+        }
     }
 
     keywordAbility(KeywordAbility.flashback("{4}{W}{W}{W}"))

@@ -5,13 +5,15 @@
 package com.wingedsheep.mtg.sets.definitions.isd.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.div
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 
 /**
@@ -26,13 +28,9 @@ val EndlessRanksOfTheDead = card("Endless Ranks of the Dead") {
     typeLine = "Enchantment"
     oracleText = "At the beginning of your upkeep, create X 2/2 black Zombie creature tokens, where X is half the number of Zombies you control, rounded down."
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.CreateToken(
-            count = DynamicAmount.Divide(
-                DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Creature.withSubtype("Zombie")),
-                DynamicAmount.Fixed(2),
-                roundUp = false
-            ),
+            count = DynamicAmounts.battlefield(Player.You, GameObjectFilter.Creature.withSubtype("Zombie")).count() / 2,
             power = 2,
             toughness = 2,
             colors = setOf(Color.BLACK),

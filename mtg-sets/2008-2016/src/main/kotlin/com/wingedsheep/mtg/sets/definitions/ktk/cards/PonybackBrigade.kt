@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Ponyback Brigade
@@ -22,7 +22,7 @@ val PonybackBrigade = card("Ponyback Brigade") {
     toughness = 2
     oracleText = "When Ponyback Brigade enters or is turned face up, create three 1/1 red Goblin creature tokens.\nMorph {2}{R}{W}{B} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)"
 
-    val tokenEffect = CreateTokenEffect(
+    val tokenEffect = Effects.CreateToken(
         count = 3,
         power = 1,
         toughness = 1,
@@ -32,12 +32,12 @@ val PonybackBrigade = card("Ponyback Brigade") {
     )
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = tokenEffect
     }
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
+        trigger = Triggers.self.turnedFaceUp()
         effect = tokenEffect
     }
 

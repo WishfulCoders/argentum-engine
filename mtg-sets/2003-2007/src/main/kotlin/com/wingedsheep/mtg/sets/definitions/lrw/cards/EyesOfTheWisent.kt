@@ -27,7 +27,7 @@ val EyesOfTheWisent = card("Eyes of the Wisent") {
         "4/4 green Elemental creature token."
 
     triggeredAbility {
-        trigger = Triggers.opponentCasts(GameObjectFilter.Any.withColor(Color.BLUE))
+        trigger = Triggers.anOpponent.casts(GameObjectFilter.Any.withColor(Color.BLUE))
         triggerRestriction = Conditions.IsYourTurn
         optional = true
         effect = Effects.CreateToken(

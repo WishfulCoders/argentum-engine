@@ -3,11 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.drk.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /** Ashes to Ashes — exile two nonartifact creatures, then deal 5 damage to you. */
 val AshesToAshes = card("Ashes to Ashes") {
@@ -17,11 +16,9 @@ val AshesToAshes = card("Ashes to Ashes") {
     oracleText = "Exile two target nonartifact creatures. Ashes to Ashes deals 5 damage to you."
 
     spell {
-        target = TargetCreature(count = 2, filter = TargetFilter.Creature.nonartifact())
-        effect = Effects.Composite(
-            ForEachTargetEffect(listOf(Effects.Exile(EffectTarget.ContextTarget(0)))),
-            Effects.DealDamage(5, EffectTarget.PlayerRef(Player.You)),
-        )
+        target = TargetObject(filter = TargetFilter.Creature.nonartifact(), count = 2)
+        effect = Effects.ForEachTarget(Effects.Exile(EffectTarget.ContextTarget(0))) then
+            Effects.DealDamage(5, EffectTarget.PlayerRef(Player.You))
     }
 
     metadata {

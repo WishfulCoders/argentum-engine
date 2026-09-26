@@ -25,7 +25,7 @@ val CaoRenWeiCommander = card("Cao Ren, Wei Commander") {
     keywords(Keyword.HORSEMANSHIP)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.LoseLife(3, EffectTarget.Controller)
     }
 

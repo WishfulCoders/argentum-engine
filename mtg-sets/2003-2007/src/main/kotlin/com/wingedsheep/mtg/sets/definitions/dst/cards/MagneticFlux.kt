@@ -27,7 +27,7 @@ val MagneticFlux = card("Magnetic Flux") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.ArtifactCreature.youControl()),
-            Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
+            Effects.GrantKeyword(Keyword.FLYING, EffectTarget.IterationEntity)
         )
     }
     metadata {

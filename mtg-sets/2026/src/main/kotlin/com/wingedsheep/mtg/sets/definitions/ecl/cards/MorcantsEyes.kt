@@ -3,6 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -10,9 +11,8 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Morcant's Eyes
@@ -34,14 +34,14 @@ val MorcantsEyes = card("Morcant's Eyes") {
         "where X is the number of Elf cards in your graveyard. Activate only as a sorcery."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Patterns.Library.surveil(1)
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{4}{G}{G}"), Costs.SacrificeSelf)
-        effect = CreateTokenEffect(
-            count = DynamicAmount.Count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Any.withSubtype("Elf")),
+        effect = Effects.CreateToken(
+            count = DynamicAmounts.count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Any.withSubtype("Elf")),
             power = 2,
             toughness = 2,
             colors = setOf(Color.BLACK, Color.GREEN),

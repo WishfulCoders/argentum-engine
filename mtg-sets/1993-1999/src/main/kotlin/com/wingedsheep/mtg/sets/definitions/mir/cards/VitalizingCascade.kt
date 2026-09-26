@@ -4,10 +4,11 @@
 
 package com.wingedsheep.mtg.sets.definitions.mir.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -22,7 +23,7 @@ val VitalizingCascade = card("Vitalizing Cascade") {
     typeLine = "Instant"
     oracleText = "You gain X plus 3 life."
     spell {
-        effect = GainLifeEffect(DynamicAmount.Add(DynamicAmount.XValue, DynamicAmount.Fixed(3)))
+        effect = Effects.GainLife(DynamicAmounts.xValue() + 3)
     }
     metadata {
         rarity = Rarity.UNCOMMON

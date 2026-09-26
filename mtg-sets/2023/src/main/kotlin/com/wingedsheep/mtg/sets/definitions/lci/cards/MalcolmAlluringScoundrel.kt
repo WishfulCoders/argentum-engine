@@ -1,28 +1,19 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantFreeCastTargetFromExileEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Malcolm, Alluring Scoundrel {1}{U}
@@ -55,44 +46,30 @@ val MalcolmAlluringScoundrel = card("Malcolm, Alluring Scoundrel") {
     keywords(Keyword.FLASH, Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = Effects.Composite(
-            listOf(
-                // Put a chorus counter on Malcolm.
-                Effects.AddCounters(Counters.CHORUS, 1, EffectTarget.Self),
-                // Draw a card.
-                Effects.DrawCards(1, EffectTarget.Controller),
-                // Discard a card: gather hand → select one → move to graveyard.
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.HAND, Player.You),
-                    storeAs = "hand"
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.Pipeline {
+            // Put a chorus counter on Malcolm.
+            run(Effects.AddCounters(CounterType.CHORUS, 1, EffectTarget.Self))
+            // Draw a card.
+            run(Effects.DrawCards(1, EffectTarget.Controller))
+            // Discard a card: gather hand → select one → move to graveyard.
+            val hand = gather(CardSource.FromZone(Zone.HAND, Player.You))
+            val discarded = chooseExactly(1, from = hand, prompt = "Choose a card to discard")
+            discard(discarded)
+            // If Malcolm has four or more chorus counters, the controller may cast
+            // the discarded card for free. The card stays in the graveyard per oracle
+            // text — we just grant the permission on the graveyard card.
+            run(Effects.If(
+                condition = Conditions.CompareAmounts(
+                    DynamicAmounts.countersOnSelf(CounterType.CHORUS),
+                    ComparisonOperator.GTE,
+                    4
                 ),
-                SelectFromCollectionEffect(
-                    from = "hand",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                    storeSelected = "discarded",
-                    prompt = "Choose a card to discard"
-                ),
-                MoveCollectionEffect(
-                    from = "discarded",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.You),
-                    moveType = MoveType.Discard
-                ),
-                // If Malcolm has four or more chorus counters, the controller may cast
-                // the discarded card for free. The card stays in the graveyard per oracle
-                // text — we just grant the permission on the graveyard card.
-                ConditionalEffect(
-                    condition = Compare(
-                        DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.CHORUS)),
-                        ComparisonOperator.GTE,
-                        DynamicAmount.Fixed(4)
-                    ),
-                    effect = GrantFreeCastTargetFromExileEffect(
-                        target = EffectTarget.PipelineTarget("discarded", 0)
-                    )
+                then = Effects.GrantFreeCastTargetFromExile(
+                    target = discarded.asTarget
                 )
-            )
-        )
+            ))
+        }
     }
 
     metadata {

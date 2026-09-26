@@ -34,7 +34,7 @@ val DarkRevenant = card("Dark Revenant") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.PutOnTopOfLibrary(EffectTarget.Self)
     }
 

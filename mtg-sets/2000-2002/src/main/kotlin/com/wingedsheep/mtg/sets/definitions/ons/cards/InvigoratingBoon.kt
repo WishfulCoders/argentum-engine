@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.dsl.Triggers
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Invigorating Boon
@@ -21,11 +20,11 @@ val InvigoratingBoon = card("Invigorating Boon") {
     oracleText = "Whenever a player cycles a card, you may put a +1/+1 counter on target creature."
 
     triggeredAbility {
-        trigger = Triggers.AnyPlayerCycles
-        val t = target("target", Targets.Creature)
-        effect = MayEffect(
-            AddCountersEffect(
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
+        trigger = Triggers.anyPlayer.cycles()
+        val t = target(TargetFilter.Creature)
+        effect = Effects.May(
+            Effects.AddCounters(
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
                 count = 1,
                 target = t
             )

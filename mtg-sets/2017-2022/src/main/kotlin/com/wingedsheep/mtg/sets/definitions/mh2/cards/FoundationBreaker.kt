@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Foundation Breaker — Modern Horizons 2 #160
@@ -14,7 +15,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Evoke {1}{G} (You may cast this spell for its evoke cost. If you do, it's sacrificed when it enters.)
  *
  * Reclamation Sage's body on an evoke chassis. The enters trigger is the ordinary
- * [Triggers.EntersBattlefield]; the printed "you may" is written as the builder's `optional = true`,
+ * `Triggers.self.enters()`; the printed "you may" is written as the builder's `optional = true`,
  * which is shorthand the DSL lowers into a `Gate.MayDecide` around the effect — there is no
  * `optional` field on the `TriggeredAbility` model itself. The consent is asked at resolution, but
  * the target is still chosen when the ability goes on the stack (CR 603.3d), so with no artifact or
@@ -42,9 +43,9 @@ val FoundationBreaker = card("Foundation Breaker") {
     evoke = "{1}{G}"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
-        val t = target("target", Targets.ArtifactOrEnchantment)
+        val t = target(TargetFilter.ArtifactOrEnchantment)
         effect = Effects.Destroy(t)
     }
 

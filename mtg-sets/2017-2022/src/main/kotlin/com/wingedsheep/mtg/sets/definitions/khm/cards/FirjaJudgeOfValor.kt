@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.references.Player
  * Whenever you cast your second spell each turn, look at the top three cards of your library. Put one of them into your hand and the rest into your graveyard.
  *
  * The payoff is [Patterns.Library.lookAtTopAndKeep] at its defaults — gather three, choose exactly
- * one for hand, remainder to the graveyard. The "second spell" ordinal is [Triggers.NthSpellCast]
+ * one for hand, remainder to the graveyard. The "second spell" ordinal is `Triggers.<player>.castsNth(n, spell)`
  * with n = 2 scoped to [Player.You]; the engine already tracks each player's per-turn cast count.
  */
 val FirjaJudgeOfValor = card("Firja, Judge of Valor") {
@@ -31,7 +31,7 @@ val FirjaJudgeOfValor = card("Firja, Judge of Valor") {
     keywords(Keyword.FLYING, Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = Triggers.NthSpellCast(2, Player.You)
+        trigger = Triggers.you.castsNth(2)
         effect = Patterns.Library.lookAtTopAndKeep(count = 3, keepCount = 1)
     }
 

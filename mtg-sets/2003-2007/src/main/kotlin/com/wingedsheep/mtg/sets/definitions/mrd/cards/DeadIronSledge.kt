@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -30,7 +29,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *    attachment at resolution and destroy the wrong pair.
  *  - "Destroy **both** creatures" = the equipped creature ([EffectTarget.Self] of the granted
  *    ability) and the combat partner ([EffectTarget.TriggeringEntity], which
- *    [Triggers.BlocksOrBecomesBlockedBy] sets to the blocking/blocked creature). They are
+ *    `Triggers.<subject>.blocksOrBecomesBlocked(by, oncePerCombat)` sets to the blocking/blocked creature). They are
  *    destroyed by one resolution; dies-triggers from both still go on the stack together
  *    afterwards, since triggers wait for the resolving ability to finish (CR 603.3b).
  *  - Nothing targets, so a creature with hexproof/shroud is still destroyed, and neither
@@ -47,12 +46,9 @@ val DeadIronSledge = card("Dead-Iron Sledge") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.BlocksOrBecomesBlockedBy(GameObjectFilter.Creature).event,
-                binding = TriggerBinding.SELF,
-                effect = Effects.Composite(
-                    Effects.Destroy(EffectTarget.Self),
-                    Effects.Destroy(EffectTarget.TriggeringEntity)
-                ),
+                trigger = Triggers.self.blocksOrBecomesBlocked(GameObjectFilter.Creature),
+                effect = Effects.Destroy(EffectTarget.Self) then
+                    Effects.Destroy(EffectTarget.TriggeringEntity),
                 descriptionOverride = "Whenever this creature blocks or becomes blocked by a creature, destroy both creatures."
             ),
             filter = Filters.EquippedCreature

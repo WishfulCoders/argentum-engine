@@ -29,7 +29,7 @@ val DonAndRaphHardScience = card("Don & Raph, Hard Science") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.GrantNextSpellAffinity(GameObjectFilter.Noncreature, CardType.ARTIFACT)
         description = "Whenever Don & Raph attack, the next noncreature spell you cast this turn has affinity for artifacts."
     }

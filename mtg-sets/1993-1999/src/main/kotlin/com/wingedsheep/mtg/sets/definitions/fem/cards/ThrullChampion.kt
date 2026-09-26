@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Thrull Champion
@@ -39,10 +38,7 @@ val ThrullChampion = card("Thrull Champion") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target(
-            "target Thrull",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Permanent.withSubtype(Subtype.THRULL)))
-        )
+        val t = target(TargetFilter(GameObjectFilter.Permanent.withSubtype(Subtype.THRULL)))
         effect = Effects.GainControl(t, Duration.WhileYouControlSource("this creature"))
         description = "{T}: Gain control of target Thrull for as long as you control this creature."
     }

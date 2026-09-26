@@ -4,15 +4,16 @@ import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Dreadlight Monstrosity
@@ -23,7 +24,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Ward {2}
  * {3}{U}{U}: This creature can't be blocked this turn. Activate only if you own a card in exile.
  *
- * Ward {2} is the standard [KeywordAbility.ward] keyword ability. The activated ability grants
+ * Ward {2} is the standard [WardCost.Mana] keyword ability. The activated ability grants
  * CANT_BE_BLOCKED to itself until end of turn (the default [GrantKeywordEffect] duration = "this
  * turn"), gated by [ActivationRestriction.OnlyIfCondition] on "you own a card in exile" — modeled
  * as `Exists(Player.You, Zone.EXILE)` since exile is owner-keyed (a card in your exile is one you
@@ -39,11 +40,11 @@ val DreadlightMonstrosity = card("Dreadlight Monstrosity") {
         "opponent controls, counter it unless that player pays {2}.)\n" +
         "{3}{U}{U}: This creature can't be blocked this turn. Activate only if you own a card in exile."
 
-    keywordAbility(KeywordAbility.ward("{2}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
 
     activatedAbility {
         cost = Costs.Mana("{3}{U}{U}")
-        effect = GrantKeywordEffect(AbilityFlag.CANT_BE_BLOCKED.name, EffectTarget.Self)
+        effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, EffectTarget.Self)
         restrictions = listOf(
             ActivationRestriction.OnlyIfCondition(Exists(Player.You, Zone.EXILE))
         )

@@ -292,7 +292,7 @@ val Blaze = card("Blaze") {
     manaCost = "{X}{R}"
     typeLine = "Sorcery"
     spell {
-        val t = target("target", AnyTarget())
+        val t = target(Targets.Any)
         effect = DealDamageEffect(DynamicAmount.XValue, t)
     }
 }
@@ -337,18 +337,27 @@ data class ProcessedAction(
 
 `ProcessedAction` pairs the core result with an undo checkpoint policy — the engine computes
 the policy based on game rules, and the server follows it mechanically. `ExecutionResult` itself
-captures the three possible outcomes of any action:
+records which of the three possible outcomes an action had, as a sealed type callers `when` over:
 
 ```kotlin
 data class ExecutionResult(
     val state: GameState,
     val events: List<GameEvent> = emptyList(),
-    val error: String? = null,
-    val pendingDecision: PendingDecision? = null
+    val outcome: Outcome = Outcome.Done
 )
+
+sealed interface Outcome {
+    data object Done : Outcome
+    data class Paused(val decision: PendingDecision) : Outcome
+    data class Rejected(val reason: Rejection) : Outcome   // IllegalAction | ExecutionFailed
+}
 ```
 
-The `PausedForDecision` case is central to how the engine handles player input mid-resolution — when a
+A pause is not a failure, and a rejection says whose fault it is. `IllegalAction` means validation
+refused the action (a stale or wrong client request). `ExecutionFailed` means the action passed
+validation and then failed partway, which points at a validator gap or an engine bug.
+
+The `Paused` case is central to how the engine handles player input mid-resolution — when a
 spell requires a choice (e.g., "search your library for a card"), the engine doesn't block. It returns a
 paused result with a `PendingDecision` describing what input is needed and a `ContinuationFrame` on the
 state's continuation stack describing how to resume (see [Section 2.4](#24-reentrant-continuations)).
@@ -708,6 +717,16 @@ class TriggerDetector {
 }
 ```
 
+**Detection happens in exactly one place: the settle boundary.** Handlers, resumers and executors
+only emit events. After every accepted action, `ActionProcessor` runs `Settler.settle`, which is the
+only caller of event-based detection. It detects triggers from the action's events (plus phase/step
+and delayed triggers for a step the action began) and parks them in `GameState.pendingTriggers`,
+the triggered abilities waiting to be put on the stack (CR 603.3). If the action ended on a
+question, they wait there. Otherwise the boundary performs state-based actions, queues the triggers
+those cause, and puts the whole queue on the stack in APNAP order, repeating until nothing is left
+(CR 117.5, 704.3). A trigger is detected once no matter how many handlers its events pass through,
+so there is no "already processed" flag to thread, and no path has its own copy of the loop.
+
 **Why explicit events instead of polling or observer patterns?**
 
 - **Decoupling.** The `CombatManager` dealing damage doesn't need to know about "Enrage" abilities.
@@ -769,9 +788,14 @@ backed `LiveEntityView` both implement one `EntityView` interface, so a read sit
 of an entity — live if it is still on the battlefield, otherwise its snapshot — and reads the same
 accessors either way. Whether a given reference falls back to its snapshot once the permanent has
 left is a declared property, not ad-hoc per-call logic: `lkiPolicyFor(reference)` is an exhaustive
-`when` over `EntityReference` returning `LIVE_THEN_LKI` or `LIVE_ONLY`, so a new reference variant is
-a compile error until its last-known behavior is classified — and filtered enumeration
+`when` over `EffectTarget.SingleEntity` returning `LIVE_THEN_LKI` or `LIVE_ONLY`, so a new reference
+variant is a compile error until its last-known behavior is classified — and filtered enumeration
 (Gather/ForEach) is deliberately `LIVE_ONLY`: a permanent that has left simply is not in the set.
+This is the *value-read* rule. `EffectTarget` is also what effects *act* on, and every reference
+resolves through one mapping (`TargetResolutionUtils`) entered two ways: `resolveEntity` for value
+reads, which then apply the policy above, and `resolveTarget` for actions, which instead refuse an
+object that has changed zones since the ability captured it (CR 400.7) — the source (`Self`), the
+triggering object, or the object a `ForEach` loop is visiting (`IterationEntity`).
 
 ### 2.6 Strategy-Based Registries
 
@@ -842,8 +866,8 @@ data class MultiplyTokenCreation(
 data class ModifyCounterPlacement(
     val modifier: Int,
     override val appliesTo: EventPattern = EventPattern.CounterPlacementEvent(
-        counterType = CounterTypeFilter.PlusOnePlusOne,
-        recipient = RecipientFilter.CreatureYouControl
+        counterType = CounterType.PLUS_ONE_PLUS_ONE,
+        recipient = Recipient.CreatureYouControl
     )
 ) : ReplacementEffect
 
@@ -867,8 +891,8 @@ serialize the state even when a replacement choice is pending.
   points mirrors the rules naturally.
 - **Composability.** The `appliesTo` field uses the same `EventPattern` pattern system as trigger
   conditions. A replacement effect that applies to "damage dealt to creatures you control" reuses
-  the same predicate composition as a trigger that fires on the same event — `RecipientFilter`,
-  `SourceFilter`, and `DamageType` are shared between both systems.
+  the same predicate composition as a trigger that fires on the same event — `Recipient`,
+  `GameObjectFilter` (for the source), and `DamageType` are shared between both systems.
 
 **Ordering multiple replacement effects (Rule 616.1).** When multiple replacement effects would apply
 to the same event, the `ReplacementEffectProcessor` implements the full CR 616.1 pipeline as a
@@ -911,7 +935,7 @@ A floating effect with this duration is removed after its replacement effect is 
 end of turn if never used. The Words cycle cards (Words of War, Words of Wind, etc.) use this mechanism.
 An activated ability creates a `Duration.NextUse` floating
 shield that replaces the next draw with a stored effect. Activation-time variables (`{X}` value,
-targets, named targets) are captured in `SerializableModification.ReplaceDrawWithEffect` and
+targets, named targets) are captured in `SerializableModification.ReplaceDrawWith` and
 replayed when the shield is consumed.
 
 **Why a central processor instead of per-category dispatchers?**
@@ -1033,9 +1057,9 @@ val priorityPassedBy: Set<EntityId> = emptySet() // players who passed this roun
 When a player passes priority, the engine adds them to `priorityPassedBy` and checks
 `allPlayersPassed()`. Two outcomes are possible:
 
-1. **Stack is non-empty:** The top item resolves. After resolution, the engine runs state-based
-   actions, detects triggers, and gives priority back to the active player with `priorityPassedBy`
-   reset.
+1. **Stack is non-empty:** The top item resolves and the handler names who receives priority
+   next. The settle boundary then runs state-based actions and puts waiting triggers on the stack,
+   and that player receives priority with `priorityPassedBy` reset.
 2. **Stack is empty:** The `TurnManager` advances to the next step. `priorityPassedBy` is cleared,
    step-specific actions execute (draw a card, deal combat damage, etc.), and priority goes to the
    active player.
@@ -1054,12 +1078,15 @@ behavior:
 - **CLEANUP:** Discard to hand size, remove damage, expire end-of-turn effects. Normally no
   priority — but if SBAs or triggers occur during cleanup, a new cleanup step begins with priority.
 
-**Trigger detection at step boundaries.** When the stack empties and the game advances, the engine
+**Trigger detection at step boundaries.** When an action begins a new step, the settle boundary
 runs three rounds of trigger detection: standard event-based triggers (from events emitted during
 advancement), delayed triggers (scheduled for specific future steps, e.g., Astral Slide's "return at
 end of turn"), and phase/step triggers (permanents with "at the beginning of your upkeep" abilities).
-All detected triggers are processed via `TriggerProcessor`, which may pause for targeting decisions
-using the continuation system.
+All detected triggers are placed via `TriggerProcessor`, which may pause for targeting decisions
+using the continuation system. That holds whether the step began from a priority pass or from the
+answer to a question: a turn-based action that stops for a choice (an untap choice, the discard to
+hand size) parks the rest of its turn beneath that choice (`AdvanceStepContinuation`,
+`FinishUntapStepContinuation`), so the answer carries the game on into the next step.
 
 **Why model priority as a passed-by set?**
 

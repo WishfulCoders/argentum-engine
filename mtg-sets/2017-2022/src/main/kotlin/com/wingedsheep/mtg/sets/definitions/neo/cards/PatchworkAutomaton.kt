@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.neo.cards
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -7,6 +8,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Patchwork Automaton — Kamigawa: Neon Dynasty #254 (canonical printing)
@@ -28,11 +30,11 @@ val PatchworkAutomaton = card("Patchwork Automaton") {
         "opponent controls, counter it unless that player pays {2}.)\n" +
         "Whenever you cast an artifact spell, put a +1/+1 counter on this creature."
 
-    keywordAbility(KeywordAbility.ward("{2}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(GameObjectFilter.Artifact)
-        effect = Effects.AddCounters("+1/+1", 1, EffectTarget.Self)
+        trigger = Triggers.you.casts(GameObjectFilter.Artifact)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Whenever you cast an artifact spell, put a +1/+1 counter on this creature."
     }
 

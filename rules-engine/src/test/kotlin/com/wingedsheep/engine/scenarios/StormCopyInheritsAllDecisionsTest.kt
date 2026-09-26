@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.sdk.scripting.ChoiceSlot
 import com.wingedsheep.engine.core.ManaSpentEvent
 import com.wingedsheep.engine.core.SpellCastEvent
@@ -27,6 +29,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Phase 3 of `backlog/storm-implementation-correctness.md`: per rule 707.10 the copy
@@ -42,6 +45,7 @@ import io.kotest.matchers.shouldNotBe
  * trigger flow is not needed to verify propagation.
  */
 class StormCopyInheritsAllDecisionsTest : FunSpec({
+    val zones = ZoneTransitionService(CardRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
     fun buildState(
         p1: EntityId,
@@ -72,10 +76,7 @@ class StormCopyInheritsAllDecisionsTest : FunSpec({
     }
 
     fun runStorm(state: GameState, spellEntity: EntityId, p1: EntityId) =
-        StormCopyEffectExecutor(
-            cardRegistry = CardRegistry(),
-            targetFinder = TargetFinder()
-        ).execute(
+        StormCopyEffectExecutor(targetFinder = TargetFinder(PredicateEvaluator(cardRegistry = null))).execute(
             state,
             StormCopyEffect(
                 copyCount = 1,
@@ -123,7 +124,7 @@ class StormCopyInheritsAllDecisionsTest : FunSpec({
         )
 
         val result = runStorm(buildState(p1, spellEntity, source), spellEntity, p1)
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         val copy = copyComponent(result.state)
         copy.casterId shouldBe p1
@@ -153,7 +154,7 @@ class StormCopyInheritsAllDecisionsTest : FunSpec({
         val source = SpellOnStackComponent(casterId = p1, xValue = 4)
 
         val result = runStorm(buildState(p1, spellEntity, source), spellEntity, p1)
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         val copyId = result.state.stack.single { id ->
             val c = result.state.getEntity(id)
@@ -174,7 +175,7 @@ class StormCopyInheritsAllDecisionsTest : FunSpec({
         )
 
         val result = runStorm(buildState(p1, spellEntity, source), spellEntity, p1)
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         result.events.none { it is ManaSpentEvent } shouldBe true
         result.events.none { it is SpellCastEvent } shouldBe true

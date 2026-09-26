@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Kishla Skimmer — Tarkir: Dragonstorm #201
@@ -32,7 +33,7 @@ val KishlaSkimmer = card("Kishla Skimmer") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.CardsLeaveYourGraveyard()
+        trigger = Triggers.oneOrMore(GameObjectFilter.Any).leaveYourGraveyard()
         triggerRestriction = Conditions.IsYourTurn
         oncePerTurn = true
         effect = Effects.DrawCards(1)

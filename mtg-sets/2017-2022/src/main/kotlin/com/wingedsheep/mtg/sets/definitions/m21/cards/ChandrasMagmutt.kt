@@ -26,7 +26,7 @@ val ChandrasMagmutt = card("Chandra's Magmutt") {
 
     activatedAbility {
         cost = Costs.Tap
-        val victim = target("player or planeswalker", Targets.PlayerOrPlaneswalker)
+        val victim = target(Targets.PlayerOrPlaneswalker)
         effect = Effects.DealDamage(1, victim)
     }
 

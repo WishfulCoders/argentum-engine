@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
 
 /**
  * Artifact Blast
@@ -21,10 +20,7 @@ val ArtifactBlast = card("Artifact Blast") {
     oracleText = "Counter target artifact spell."
 
     spell {
-        target(
-            "artifact spell",
-            TargetSpell(filter = TargetFilter(GameObjectFilter.Artifact, zone = Zone.STACK))
-        )
+        target(TargetFilter(GameObjectFilter.Artifact, zone = Zone.STACK))
         effect = Effects.CounterSpell()
     }
 

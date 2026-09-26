@@ -49,7 +49,7 @@ val ArachnePsionicWeaver = card("Arachne, Psionic Weaver") {
     webSlinging("{W}")
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ChooseCardTypeForSource(
             allowedCardTypes = listOf(
                 "Artifact", "Battle", "Enchantment", "Instant", "Land", "Planeswalker", "Sorcery"

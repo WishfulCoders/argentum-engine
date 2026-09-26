@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * 3/3
  * Whenever an artifact you control enters, this creature gains flying until end of turn.
  *
- * The Tidus, Blitzball Star trigger shape — [Triggers.entersBattlefield] over
+ * The Tidus, Blitzball Star trigger shape — `Triggers.a(filter).enters()` over
  * `Artifact.youControl()` with [TriggerBinding.ANY] — feeding a self-targeted
  * [Effects.GrantKeyword] (default `Duration.EndOfTurn`).
  */
@@ -29,10 +29,7 @@ val WeldfastWingsmith = card("Weldfast Wingsmith") {
     oracleText = "Whenever an artifact you control enters, this creature gains flying until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Artifact.youControl()).enters()
         effect = Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
         description = "This creature gains flying until end of turn."
     }

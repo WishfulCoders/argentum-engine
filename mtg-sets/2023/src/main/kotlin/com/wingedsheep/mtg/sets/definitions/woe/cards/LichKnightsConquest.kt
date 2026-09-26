@@ -50,34 +50,18 @@ val LichKnightsConquest = card("Lich-Knights' Conquest") {
         "creature cards from your graveyard to the battlefield."
 
     spell {
-        effect = Effects.SacrificeAnyNumber(GameObjectFilter.ArtifactEnchantmentOrToken)
-            .then(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        zone = Zone.GRAVEYARD,
-                        player = Player.You,
-                        filter = GameObjectFilter.Creature,
-                    ),
-                    storeAs = "graveyardCreatures",
-                )
+        effect = Effects.Pipeline {
+            run(Effects.SacrificeAnyNumber(GameObjectFilter.ArtifactEnchantmentOrToken))
+            val graveyardCreatures = gather(
+                CardSource.FromZone(zone = Zone.GRAVEYARD, player = Player.You, filter = GameObjectFilter.Creature)
             )
-            .then(
-                SelectFromCollectionEffect(
-                    from = "graveyardCreatures",
-                    selection = SelectionMode.ChooseExactly(
-                        DynamicAmounts.permanentsSacrificedThisWay()
-                    ),
-                    storeSelected = "returning",
-                    prompt = "Return that many creature cards from your graveyard to the battlefield",
-                )
+            val returning = chooseExactly(
+                DynamicAmounts.permanentsSacrificedThisWay(),
+                from = graveyardCreatures,
+                prompt = "Return that many creature cards from your graveyard to the battlefield"
             )
-            .then(
-                MoveCollectionEffect(
-                    from = "returning",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD),
-                    underOwnersControl = true,
-                )
-            )
+            move(returning, CardDestination.ToZone(Zone.BATTLEFIELD), underOwnersControl = true)
+        }
     }
 
     metadata {

@@ -1,5 +1,6 @@
 package com.wingedsheep.sdk.scripting.effects
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.CardType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
@@ -94,6 +95,25 @@ sealed interface CounterDestination {
     @SerialName("CounterDestination.Hand")
     @Serializable
     data object Hand : CounterDestination
+
+    /**
+     * Spell is put into its owner's **library** instead of their graveyard. One position is a
+     * fixed placement (Memory Lapse's "on top"); several are a choice made by the *counter's*
+     * controller, not the countered spell's (Hinder's 2020-08-07 ruling — "your choice of the
+     * top or bottom").
+     *
+     * Still a genuine counter, like [Hand]: an uncounterable spell is untouched and no choice is
+     * asked, a `SpellCounteredEvent` fires, and a counter replacement or a flashback card's own
+     * exile rider wins over the library. That is why this is a [CounterDestination] rather than
+     * `PutOnLibraryPositionOfChoiceEffect` on a spell, which moves it without countering it.
+     */
+    @SerialName("CounterDestination.Library")
+    @Serializable
+    data class Library(val positions: List<LibraryChoicePosition>) : CounterDestination {
+        init {
+            require(positions.isNotEmpty()) { "CounterDestination.Library needs at least one position" }
+        }
+    }
 }
 
 /**
@@ -208,6 +228,18 @@ data class CounterEffect(
                             append(". If that spell is countered this way, put it into its owner's hand instead of into that player's graveyard")
                         }
                     }
+                    is CounterDestination.Library -> {
+                        val where = if (dest.positions.size == 1) {
+                            "on the ${dest.positions.single().phrase} of its owner's library"
+                        } else {
+                            "on your choice of the ${dest.positions.joinToString(" or ") { it.phrase }} of its owner's library"
+                        }
+                        if (condition is CounterCondition.UnlessPaysMana || condition is CounterCondition.UnlessPaysDynamic) {
+                            append(". If countered, put it $where")
+                        } else {
+                            append(". If that spell is countered this way, put that card $where instead of into that player's graveyard")
+                        }
+                    }
                 }
             }
         }
@@ -240,7 +272,7 @@ data class CounterEffect(
  * It exiles the spell regardless of can't-be-countered (Aven Interrupter's ruling: "Spells that
  * can't be countered can still be exiled. They won't resolve."), and it fires no
  * "whenever a spell is countered" trigger. The spell still fails to resolve because it leaves
- * the stack. The target is the chosen spell ([com.wingedsheep.sdk.dsl.Targets.Spell] supplies
+ * the stack. The target is the chosen spell (`target(TargetFilter.SpellOnStack)` supplies
  * the requirement).
  *
  * @property makePlotted When true, the exiled card becomes *plotted* for its **owner** (CR 718.2):
@@ -256,7 +288,7 @@ data class CounterEffect(
  *   countered (see [exileSpell]'s non-counter semantics).
  * @property emitAirbend When true, exiling the spell counts as an **airbend** (CR 701.65b): the
  *   executor records a [com.wingedsheep.sdk.core.BendType.AIR] bend for the controller and fires
- *   [com.wingedsheep.sdk.dsl.Triggers.YouBend], but only if the spell was actually exiled (a target
+ *   `Triggers.you.bends(types)`, but only if the spell was actually exiled (a target
  *   that already left the stack exiles nothing → no bend). Set via [com.wingedsheep.sdk.dsl.Effects.AirbendSpell];
  *   left false for a plain non-airbend exile-spell (Aven Interrupter).
  * @property linkToSource When true, the exiled card is appended to the effect source's
@@ -273,10 +305,17 @@ data class ExileTargetSpellEffect(
     val makePlotted: Boolean = false,
     val fixedAlternativeManaCost: ManaCost? = null,
     val emitAirbend: Boolean = false,
-    val linkToSource: Boolean = false
+    val linkToSource: Boolean = false,
+    /**
+     * Which spell is exiled: the chosen spell target ([CounterTargetSource.Chosen], the default),
+     * or the spell that fired the trigger ([CounterTargetSource.TriggeringEntity]) — "whenever a
+     * player casts an instant or sorcery card, exile it" (Eye of the Storm), which targets
+     * nothing. The same axis [CounterEffect.targetSource] carries for Decree of Silence.
+     */
+    val spell: CounterTargetSource = CounterTargetSource.Chosen
 ) : Effect {
     override val description: String = buildString {
-        append("Exile target spell")
+        append(if (spell == CounterTargetSource.TriggeringEntity) "Exile that spell" else "Exile target spell")
         if (makePlotted) append(". It becomes plotted")
         if (fixedAlternativeManaCost != null) {
             append(". Its owner may cast it for $fixedAlternativeManaCost rather than its mana cost")
@@ -482,7 +521,7 @@ sealed interface WardCost {
      * ([com.wingedsheep.sdk.dsl.DynamicAmounts.sourcePower]). The amount is evaluated when the
      * ward triggered ability *resolves* (CR 702.21b), reading the source's power at that time,
      * or its last-known value if the source has left the battlefield (CR 113.7a) — both handled
-     * by [com.wingedsheep.sdk.scripting.values.EntityReference.Source]'s last-known-information
+     * by [com.wingedsheep.sdk.scripting.targets.EffectTarget.Self]'s last-known-information
      * fallback. The fixed-Int [Life] stays the common case; this variant covers only costs that
      * read live game state.
      */
@@ -535,8 +574,7 @@ sealed interface WardCost {
     /**
      * Ward with a cost paid in **counters placed on the paying player** (CR 122.1 — a counter is a
      * marker placed on an object *or player*) — "Ward—Get five poison counters." (The Serpent
-     * Society). [counterType] is a `Counters.*` symbol (`Counters.POISON`, `Counters.ENERGY`, …),
-     * matching every other player-scoped counter surface in the SDK.
+     * Society). [counterType] is the kind placed (`CounterType.POISON`, `CounterType.ENERGY`, …).
      *
      * Unlike every other ward cost this one has no affordability precondition: a player can always
      * get counters, so the payment is a plain yes/no and can never be "unpayable" the way an empty
@@ -551,9 +589,9 @@ sealed interface WardCost {
      */
     @SerialName("WardCost.PlayerCounters")
     @Serializable
-    data class PlayerCounters(val counterType: String, val amount: Int) : WardCost {
+    data class PlayerCounters(val counterType: CounterType, val amount: Int) : WardCost {
         override val description: String =
-            if (amount == 1) "a $counterType counter" else "${numberToWord(amount)} $counterType counters"
+            if (amount == 1) "a ${counterType.printed} counter" else "${numberToWord(amount)} ${counterType.printed} counters"
         override val clause: String = "get $description"
     }
 
@@ -840,8 +878,7 @@ data class StormCopyEffect(
 /**
  * Grant a keyword to a spell or ability on the stack until it leaves the stack.
  * Used for cards like Spinerock Tyrant: "those spells gain wither" — the granted
- * keyword applies for damage/source checks while the spell resolves, then
- * disappears with the spell.
+ * keyword applies for damage/source checks while the spell resolves, then * disappears with the spell.
  *
  * @property keyword The keyword to grant (enum name)
  * @property target The effect target referencing the spell on the stack
@@ -1225,19 +1262,19 @@ data class ReduceSpellCostsThisTurnEffect(
  * `onlyIfResolved` flag on the underlying AfterResolveDestinationComponent.
  *
  * @property target The spell on the stack to mark (typically the triggering entity).
- * @property counterType Counter type string (see [com.wingedsheep.sdk.core.Counters]).
+ * @property counterType The kind of counter.
  * @property count How many counters of [counterType] to add when the spell exiles.
  */
 @SerialName("MarkSpellExileWithCounters")
 @Serializable
 data class MarkSpellExileWithCountersEffect(
     val target: com.wingedsheep.sdk.scripting.targets.EffectTarget = com.wingedsheep.sdk.scripting.targets.EffectTarget.TriggeringEntity,
-    val counterType: String = com.wingedsheep.sdk.core.Counters.PLUS_ONE_PLUS_ONE,
+    val counterType: CounterType = com.wingedsheep.sdk.core.CounterType.PLUS_ONE_PLUS_ONE,
     val count: Int = 1
 ) : Effect {
     override val description: String = buildString {
         append("Exile that card with ")
-        if (count == 1) append("a $counterType counter") else append("$count $counterType counters")
+        if (count == 1) append("a ${counterType.printed} counter") else append("$count ${counterType.printed} counters")
         append(" on it instead of putting it into your graveyard as it resolves")
     }
 }

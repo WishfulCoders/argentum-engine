@@ -39,7 +39,7 @@ val ThoughtMonitor = card("Thought Monitor") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(2)
         description = "When this creature enters, draw two cards."
     }

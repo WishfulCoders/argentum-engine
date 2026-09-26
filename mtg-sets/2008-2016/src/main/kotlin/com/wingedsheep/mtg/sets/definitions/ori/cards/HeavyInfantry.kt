@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Heavy Infantry
@@ -24,8 +23,8 @@ val HeavyInfantry = card("Heavy Infantry") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target creature an opponent controls", TargetCreature(filter = TargetFilter.Creature.opponentControls()))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature.opponentControls())
         effect = Effects.Tap(t)
     }
 

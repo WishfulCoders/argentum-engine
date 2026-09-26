@@ -12,6 +12,7 @@ import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantActivatedAbility
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Brightcap Badger // Fungus Frolic
@@ -41,7 +42,7 @@ val BrightcapBadger = card("Brightcap Badger") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Tap,
                 effect = Effects.AddMana(Color.GREEN),
                 isManaAbility = true,
@@ -55,7 +56,7 @@ val BrightcapBadger = card("Brightcap Badger") {
 
     // At the beginning of your end step, create a 1/1 green Saproling creature token.
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Serpentine Ambush — Innistrad: Crimson Vow #77
@@ -30,7 +30,7 @@ val SerpentineAmbush = card("Serpentine Ambush") {
     oracleText = "Until end of turn, target creature becomes a blue Serpent with base power and toughness 5/5."
 
     spell {
-        val creature = target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.BecomeCreature(
             target = creature,
             power = 5,

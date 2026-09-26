@@ -44,7 +44,7 @@ val NervousGardener = card("Nervous Gardener") {
     disguise = "{G}"
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
+        trigger = Triggers.self.turnedFaceUp()
         effect = Patterns.Library.searchLibrary(
             filter = Filters.Land.withAnyOfSubtypes(Subtype.ALL_BASIC_LAND_TYPES.map { Subtype(it) }),
             destination = SearchDestination.HAND,

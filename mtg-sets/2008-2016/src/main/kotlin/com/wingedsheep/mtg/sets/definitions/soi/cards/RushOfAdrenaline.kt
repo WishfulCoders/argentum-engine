@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.soi.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Rush of Adrenaline
@@ -19,11 +19,9 @@ val RushOfAdrenaline = card("Rush of Adrenaline") {
     oracleText = "Target creature gets +2/+1 and gains trample until end of turn."
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(power = 2, toughness = 1, target = t),
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(power = 2, toughness = 1, target = t) then
             Effects.GrantKeyword(Keyword.TRAMPLE, target = t)
-        )
     }
 
     metadata {

@@ -1,10 +1,9 @@
 package com.wingedsheep.sdk.scripting.effects
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.text.TextReplacer
@@ -23,12 +22,12 @@ import kotlinx.serialization.Serializable
 @SerialName("AddCounters")
 @Serializable
 data class AddCountersEffect(
-    val counterType: String,
+    val counterType: CounterType,
     val count: Int,
     val target: EffectTarget
 ) : Effect {
     override val description: String =
-        "Put $count $counterType counter${if (count != 1) "s" else ""} on ${target.description}"
+        "Put $count ${counterType.printed} counter${if (count != 1) "s" else ""} on ${target.description}"
 }
 
 /**
@@ -38,12 +37,12 @@ data class AddCountersEffect(
 @SerialName("AddDynamicCounters")
 @Serializable
 data class AddDynamicCountersEffect(
-    val counterType: String,
+    val counterType: CounterType,
     val amount: DynamicAmount,
     val target: EffectTarget
 ) : Effect {
     override val description: String =
-        "Put ${amount.description} $counterType counters on ${target.description}"
+        "Put ${amount.description} ${counterType.printed} counters on ${target.description}"
 }
 
 /**
@@ -58,19 +57,19 @@ data class AddDynamicCountersEffect(
  * Scales) and downstream triggers (Saga chapter abilities off lore counters) fire normally.
  * No-op when the target can't receive counters or [max] resolves to <= 0. Choosing 0 places none.
  *
- * @property counterType Which counter kind to place (e.g. [com.wingedsheep.sdk.core.Counters.LORE]).
+ * @property counterType Which counter kind to place (e.g. [com.wingedsheep.sdk.core.CounterType.LORE]).
  * @property max Ceiling on the controller's choice (a [DynamicAmount] so "up to X" is expressible).
  * @property target The permanent to put counters on.
  */
 @SerialName("AddCountersUpTo")
 @Serializable
 data class AddCountersUpToEffect(
-    val counterType: String,
+    val counterType: CounterType,
     val max: DynamicAmount,
     val target: EffectTarget = EffectTarget.ContextTarget(0)
 ) : Effect {
     override val description: String =
-        "Put up to ${max.description} $counterType counter${if (max is DynamicAmount.Fixed && max.amount == 1) "" else "s"} on ${target.description}"
+        "Put up to ${max.description} ${counterType.printed} counter${if (max is DynamicAmount.Fixed && max.amount == 1) "" else "s"} on ${target.description}"
 }
 
 /**
@@ -112,12 +111,12 @@ data class MoveAllLastKnownCountersEffect(
 @SerialName("DoubleCounters")
 @Serializable
 data class DoubleCountersEffect(
-    val counterType: String? = Counters.PLUS_ONE_PLUS_ONE,
+    val counterType: CounterType? = CounterType.PLUS_ONE_PLUS_ONE,
     val target: EffectTarget = EffectTarget.ContextTarget(0)
 ) : Effect {
     override val description: String =
         if (counterType == null) "Double the number of each kind of counter on ${target.description}"
-        else "Double the number of $counterType counters on ${target.description}"
+        else "Double the number of ${counterType.printed} counters on ${target.description}"
 }
 
 /**
@@ -127,12 +126,12 @@ data class DoubleCountersEffect(
 @SerialName("RemoveCounters")
 @Serializable
 data class RemoveCountersEffect(
-    val counterType: String,
+    val counterType: CounterType,
     val count: Int,
     val target: EffectTarget
 ) : Effect {
     override val description: String =
-        "Remove $count $counterType counter${if (count != 1) "s" else ""} from ${target.description}"
+        "Remove $count ${counterType.printed} counter${if (count != 1) "s" else ""} from ${target.description}"
 }
 
 /**
@@ -215,25 +214,25 @@ data class RemoveAnyNumberOfCountersEffect(
  *
  * "You get {E}{E}{E} (three energy counters), then you may pay any amount of {E}. [~] deals that
  * much damage to that permanent." (Galvanic Discharge) composes as:
- * `Effects.Composite(Effects.GetEnergy(3), PayCountersEffect(Counters.ENERGY, storeAmountAs = "paid"), Effects.DealDamage(VariableReference("paid"), target))`.
+ * `Effects.GetEnergy(3) then PayCountersEffect(CounterType.ENERGY, storeAmountAs = "paid") then Effects.DealDamage(VariableReference("paid"), target)`.
  *
  * Paying 0 is always legal (a `ChooseNumberDecision` with `minValue = 0`) — "may pay" is
  * honored by the player being free to choose 0, not by a separate opt-out step. No prompt at all
  * when the player currently has zero of [counterType] (nothing to choose).
  *
- * @property counterType Which player-scoped counter kind to pay (e.g. [Counters.ENERGY]).
+ * @property counterType Which player-scoped counter kind to pay (e.g. [CounterType.ENERGY]).
  * @property player Whose counters are paid. Defaults to the effect's controller.
  * @property storeAmountAs Pipeline variable name the chosen/paid amount is stored under.
  */
 @SerialName("PayCounters")
 @Serializable
 data class PayCountersEffect(
-    val counterType: String,
+    val counterType: CounterType,
     val player: Player = Player.You,
     val storeAmountAs: String
 ) : Effect {
     override val description: String =
-        "${player.possessive} may pay any amount of $counterType counters"
+        "${player.possessive} may pay any amount of ${counterType.printed} counters"
 }
 
 /**
@@ -252,22 +251,22 @@ data class PayCountersEffect(
  * ever runs when the payment is guaranteed to succeed; the failure path is defense in depth.
  *
  * Composes as:
- * `ReflexiveTriggerEffect(action = Effects.PayFixedCounters(Counters.ENERGY, 3), reflexiveEffect
+ * `ReflexiveTriggerEffect(action = Effects.PayFixedCounters(CounterType.ENERGY, 3), reflexiveEffect
  * = ..., reflexiveTargetRequirements = [...])`.
  *
- * @property counterType Which player-scoped counter kind to pay (e.g. [Counters.ENERGY]).
+ * @property counterType Which player-scoped counter kind to pay (e.g. [CounterType.ENERGY]).
  * @property amount The exact number of counters paid — not a cap, not a choice.
  * @property player Whose counters are paid. Defaults to the effect's controller.
  */
 @SerialName("PayFixedCounters")
 @Serializable
 data class PayFixedCountersEffect(
-    val counterType: String,
+    val counterType: CounterType,
     val amount: Int,
     val player: Player = Player.You
 ) : Effect {
     override val description: String =
-        "${player.possessive} pay $amount $counterType counter${if (amount != 1) "s" else ""}"
+        "${player.possessive} pay $amount ${counterType.printed} counter${if (amount != 1) "s" else ""}"
 }
 
 /**
@@ -290,11 +289,11 @@ data class PayFixedCountersEffect(
 @SerialName("ConvertCountersToTokens")
 @Serializable
 data class ConvertCountersToTokensEffect(
-    val counterType: CounterTypeFilter = CounterTypeFilter.PlusOnePlusOne,
+    val counterType: CounterType = CounterType.PLUS_ONE_PLUS_ONE,
     val tokenFactory: CreateTokenEffect
 ) : Effect {
     override val description: String =
-        "Remove any number of ${counterType.description} counters from this permanent. " +
+        "Remove any number of ${counterType.printed} counters from this permanent. " +
             "For each counter removed this way, ${tokenFactory.description.replaceFirstChar { it.lowercase() }}"
 
     override fun applyTextReplacement(replacer: TextReplacer): Effect {
@@ -327,11 +326,11 @@ data class RemoveAllCountersEffect(
 @SerialName("RemoveAllCountersOfType")
 @Serializable
 data class RemoveAllCountersOfTypeEffect(
-    val counterType: String,
+    val counterType: CounterType,
     val target: EffectTarget = EffectTarget.ContextTarget(0)
 ) : Effect {
     override val description: String =
-        "Remove all $counterType counters from ${target.description}"
+        "Remove all ${counterType.printed} counters from ${target.description}"
 }
 
 /**
@@ -343,7 +342,7 @@ data class RemoveAllCountersOfTypeEffect(
 @Serializable
 data class AddCountersToCollectionEffect(
     val collectionName: String,
-    val counterType: String,
+    val counterType: CounterType,
     val count: Int = 1,
     /**
      * Optional resolution-time count. When non-null it overrides [count] — the executor
@@ -355,9 +354,9 @@ data class AddCountersToCollectionEffect(
 ) : Effect {
     override val description: String =
         if (amount != null) {
-            "Put ${amount.description} $counterType counters on each of those permanents"
+            "Put ${amount.description} ${counterType.printed} counters on each of those permanents"
         } else {
-            "Put $count $counterType counter${if (count != 1) "s" else ""} on each of those permanents"
+            "Put $count ${counterType.printed} counter${if (count != 1) "s" else ""} on each of those permanents"
         }
 }
 
@@ -443,13 +442,13 @@ data class MoveChosenCountersToTargetEffect(
 @SerialName("MoveCounters")
 @Serializable
 data class MoveCountersEffect(
-    val counterType: String,
+    val counterType: CounterType,
     val amount: DynamicAmount,
     val source: EffectTarget,
     val destination: EffectTarget
 ) : Effect {
     override val description: String =
-        "Move ${amount.description} $counterType counters from ${source.description} onto ${destination.description}"
+        "Move ${amount.description} ${counterType.printed} counters from ${source.description} onto ${destination.description}"
 }
 
 /**
@@ -471,10 +470,10 @@ data class MoveCountersEffect(
 @SerialName("DistributeCountersFromSelf")
 @Serializable
 data class DistributeCountersFromSelfEffect(
-    val counterType: String = Counters.PLUS_ONE_PLUS_ONE
+    val counterType: CounterType = CounterType.PLUS_ONE_PLUS_ONE
 ) : Effect {
     override val description: String =
-        "Move any number of $counterType counters from this creature onto other creatures"
+        "Move any number of ${counterType.printed} counters from this creature onto other creatures"
 }
 
 /**
@@ -535,11 +534,11 @@ data class ProliferateEffect(
 @Serializable
 data class DistributeCountersAmongTargetsEffect(
     val totalCounters: DynamicAmount,
-    val counterType: String = Counters.PLUS_ONE_PLUS_ONE,
+    val counterType: CounterType = CounterType.PLUS_ONE_PLUS_ONE,
     val minPerTarget: Int = 1
 ) : Effect {
     override val description: String =
-        "Distribute ${totalCounters.description} $counterType counters among targets"
+        "Distribute ${totalCounters.description} ${counterType.printed} counters among targets"
 }
 
 /**
@@ -551,10 +550,10 @@ data class DistributeCountersAmongTargetsEffect(
  * Distinct from [DistributeCountersAmongTargetsEffect] (which uses the spell's targets) and from
  * [DistributeCountersFromSelfEffect] (which *moves* existing counters off the source). Used by
  * Crashing Wave: "distribute three stun counters among any number of tapped creatures your opponents
- * control" — `DistributeCountersAmongFilteredEffect(3, Counters.STUN, Creature.tapped().opponentControls())`.
+ * control" — `DistributeCountersAmongFilteredEffect(3, CounterType.STUN, Creature.tapped().opponentControls())`.
  *
  * @property totalCounters How many counters to place in total.
- * @property counterType The counter to place (e.g. [Counters.STUN]).
+ * @property counterType The counter to place (e.g. [CounterType.STUN]).
  * @property filter Which permanents are eligible to receive counters (resolved at execution).
  * @property minPerTarget Minimum counters a chosen recipient must receive (0 = "any number of").
  */
@@ -562,12 +561,12 @@ data class DistributeCountersAmongTargetsEffect(
 @Serializable
 data class DistributeCountersAmongFilteredEffect(
     val totalCounters: Int,
-    val counterType: String = Counters.PLUS_ONE_PLUS_ONE,
+    val counterType: CounterType = CounterType.PLUS_ONE_PLUS_ONE,
     val filter: GameObjectFilter = GameObjectFilter.Creature,
     val minPerTarget: Int = 0,
 ) : Effect {
     override val description: String =
-        "Distribute $totalCounters $counterType counter${if (totalCounters != 1) "s" else ""} among ${filter.description}s"
+        "Distribute $totalCounters ${counterType.printed} counter${if (totalCounters != 1) "s" else ""} among ${filter.description}s"
 }
 
 /**
@@ -610,17 +609,17 @@ data class DistributeCountersAmongFilteredEffect(
 data class GrantCounterPlacementModifierEffect(
     val modifier: Int = 1,
     val duration: Duration = Duration.EndOfTurn,
-    val counterType: CounterTypeFilter = CounterTypeFilter.PlusOnePlusOne,
-    val recipient: RecipientFilter = RecipientFilter.CreatureYouControl
+    val counterType: CounterType = CounterType.PLUS_ONE_PLUS_ONE,
+    val recipient: Recipient = Recipient.CreatureYouControl
 ) : Effect {
     override val description: String = buildString {
         val durationText = if (duration == Duration.Permanent) "" else "${duration.description.replaceFirstChar { it.uppercase() }}, "
         append(durationText)
-        append("if you would put one or more ${counterType.description} counters on ${recipient.description}, ")
+        append("if you would put one or more ${counterType.printed} counters on ${recipient.description}, ")
         if (modifier >= 0) {
-            append("put that many plus $modifier ${counterType.description} counter${if (modifier != 1) "s" else ""} on it instead")
+            append("put that many plus $modifier ${counterType.printed} counter${if (modifier != 1) "s" else ""} on it instead")
         } else {
-            append("put that many minus ${-modifier} ${counterType.description} counter${if (-modifier != 1) "s" else ""} on it instead")
+            append("put that many minus ${-modifier} ${counterType.printed} counter${if (-modifier != 1) "s" else ""} on it instead")
         }
     }
 }

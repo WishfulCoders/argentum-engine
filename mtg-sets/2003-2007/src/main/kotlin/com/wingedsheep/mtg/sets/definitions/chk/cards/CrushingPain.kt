@@ -4,11 +4,10 @@
 
 package com.wingedsheep.mtg.sets.definitions.chk.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -23,8 +22,8 @@ val CrushingPain = card("Crushing Pain") {
     typeLine = "Instant — Arcane"
     oracleText = "Crushing Pain deals 6 damage to target creature that was dealt damage this turn."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.wasDealtDamageThisTurn()))
-        effect = DealDamageEffect(6, t)
+        val t = target(TargetFilter.Creature.wasDealtDamageThisTurn())
+        effect = Effects.DealDamage(6, t)
     }
     metadata {
         rarity = Rarity.COMMON

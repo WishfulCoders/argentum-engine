@@ -9,9 +9,7 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -41,15 +39,15 @@ val BattleMenu = card("Battle Menu") {
                 )
             }
             mode("Ability — Target creature gets +0/+4 until end of turn") {
-                val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+                val t = target(TargetFilter.Creature)
                 effect = Effects.ModifyStats(0, 4, t)
             }
             mode("Magic — Destroy target creature with power 4 or greater") {
-                val t = target("target", TargetCreature(filter = TargetFilter.Creature.powerAtLeast(4)))
+                val t = target(TargetFilter.Creature.powerAtLeast(4))
                 effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
             }
             mode("Item — You gain 4 life") {
-                effect = GainLifeEffect(4)
+                effect = Effects.GainLife(4)
             }
         }
     }

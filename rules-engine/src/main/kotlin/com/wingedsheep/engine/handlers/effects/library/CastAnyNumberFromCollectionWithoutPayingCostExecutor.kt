@@ -38,6 +38,10 @@ import kotlin.reflect.KClass
  * them" wording: an exhausted budget (`<= 0`) ends the loop before the decision is offered, and
  * the budget rides on the continuation so the resumer can re-enter with one fewer once a cast
  * actually initiates (a pick that can't be cast for want of a legal target doesn't spend one).
+ *
+ * A non-null `maxTotalManaValue` is the remaining budget for the "spells with total mana value N
+ * or less" wording: only cards whose mana value fits are offered, and the resumer re-enters with
+ * the cast card's mana value spent (again only once the cast actually initiates).
  */
 class CastAnyNumberFromCollectionWithoutPayingCostExecutor :
     EffectExecutor<CastAnyNumberFromCollectionWithoutPayingCostEffect> {
@@ -53,7 +57,13 @@ class CastAnyNumberFromCollectionWithoutPayingCostExecutor :
         val remainingCasts = effect.maxCasts
         if (remainingCasts != null && remainingCasts <= 0) return EffectResult.success(state)
 
+        val remainingManaValue = effect.maxTotalManaValue
+        if (remainingManaValue != null && remainingManaValue < 0) return EffectResult.success(state)
+
+        // A "total mana value N or less" budget offers only the cards that still fit in it; a card
+        // that doesn't fit now never will (the budget only shrinks), so it leaves the pool.
         val candidates = stillCastable(state, context.pipeline.storedCollections[effect.from].orEmpty())
+            .filter { id -> remainingManaValue == null || manaValueOf(state, id) <= remainingManaValue }
         if (candidates.isEmpty()) return EffectResult.success(state)
 
         val controllerId = context.controllerId
@@ -77,6 +87,7 @@ class CastAnyNumberFromCollectionWithoutPayingCostExecutor :
                 append(if (effect.payManaCost) "Choose a spell to cast" else "Choose a spell to cast for free")
                 // "$n remaining", not "$n more": the card being chosen right now is one of them.
                 if (remainingCasts != null) append(" ($remainingCasts remaining)")
+                if (remainingManaValue != null) append(" (total mana value $remainingManaValue remaining)")
                 append(", or select none to stop")
             },
             context = DecisionContext(
@@ -103,9 +114,16 @@ class CastAnyNumberFromCollectionWithoutPayingCostExecutor :
             effectContext = normalizedContext,
             payManaCost = effect.payManaCost,
             maxCasts = effect.maxCasts,
+            maxTotalManaValue = effect.maxTotalManaValue,
         )
 
         return EffectResult.from(state.withPriority(controllerId).suspendForDecision(decision, continuation, emptyList()))
+    }
+
+    companion object {
+        /** A card's mana value off the stack — X counts as 0, which a free cast also forces (CR 107.3b). */
+        fun manaValueOf(state: GameState, id: EntityId): Int =
+            state.getEntity(id)?.get<CardComponent>()?.manaValue ?: 0
     }
 
     /** Cards from the collection that are still in their owner's exile (castable from there). */

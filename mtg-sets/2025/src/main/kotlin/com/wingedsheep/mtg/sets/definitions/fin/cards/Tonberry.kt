@@ -9,7 +9,7 @@ import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
+import com.wingedsheep.sdk.core.CounterType
 
 /**
  * Tonberry
@@ -39,7 +39,7 @@ val Tonberry = card("Tonberry") {
     replacementEffect(EntersTapped())
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.Named("stun"),
+            counterType = CounterType.STUN,
             count = 1,
             selfOnly = true,
         )

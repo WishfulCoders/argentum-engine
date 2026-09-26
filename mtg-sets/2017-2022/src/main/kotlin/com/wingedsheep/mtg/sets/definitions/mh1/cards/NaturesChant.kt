@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Nature's Chant — Modern Horizons #210
@@ -23,10 +22,7 @@ val NaturesChant = card("Nature's Chant") {
     oracleText = "Destroy target artifact or enchantment."
 
     spell {
-        val t = target(
-            "target",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Enchantment))
-        )
+        val t = target(TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Enchantment))
         effect = Effects.Destroy(t)
     }
 

@@ -2,13 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.thb.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Irreverent Revelers
@@ -31,13 +32,12 @@ val IrreverentRevelers = card("Irreverent Revelers") {
     oracleText = "When this creature enters, choose one —\n• Destroy target artifact.\n• This creature gains haste until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseOne(
-            Mode.withTarget(
-                effect = Effects.Destroy(EffectTarget.ContextTarget(0)),
-                target = Targets.Artifact,
-                description = "Destroy target artifact."
-            ),
+            mode("Destroy target artifact.") {
+                val artifact = target(TargetFilter.Artifact)
+                effect = Effects.Destroy(artifact)
+            },
             Mode.noTarget(
                 effect = Effects.GrantKeyword(Keyword.HASTE, EffectTarget.Self),
                 description = "This creature gains haste until end of turn."

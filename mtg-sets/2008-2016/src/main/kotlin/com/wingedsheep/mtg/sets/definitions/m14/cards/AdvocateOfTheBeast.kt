@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.m14.cards
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -7,7 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Advocate of the Beast
@@ -25,14 +26,9 @@ val AdvocateOfTheBeast = card("Advocate of the Beast") {
     oracleText = "At the beginning of your end step, put a +1/+1 counter on target Beast creature you control."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
-        val beast = target(
-            "target Beast creature you control",
-            TargetCreature(
-                filter = TargetFilter(GameObjectFilter.Creature.withSubtype(Subtype.BEAST).youControl())
-            )
-        )
-        effect = Effects.AddCounters("+1/+1", 1, beast)
+        trigger = Triggers.you.beginningOf(Step.END)
+        val beast = target(TargetFilter(GameObjectFilter.Creature.withSubtype(Subtype.BEAST).youControl()))
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, beast)
         description = "At the beginning of your end step, put a +1/+1 counter on target Beast creature you control."
     }
 

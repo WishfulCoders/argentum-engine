@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Glint
@@ -24,11 +25,8 @@ val Glint = card("Glint") {
     oracleText = "Target creature you control gets +0/+3 and gains hexproof until end of turn. (It can't be the target of spells or abilities your opponents control.)"
 
     spell {
-        val t = target("target", Targets.CreatureYouControl)
-        effect = Effects.Composite(
-            Effects.ModifyStats(0, 3, t),
-            Effects.GrantKeyword(Keyword.HEXPROOF, t)
-        )
+        val t = target(TargetFilter.CreatureYouControl)
+        effect = Effects.ModifyStats(0, 3, t) then Effects.GrantKeyword(Keyword.HEXPROOF, t)
     }
 
     metadata {

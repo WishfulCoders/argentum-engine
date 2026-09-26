@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Dredger's Insight
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * When this enchantment enters, mill four cards. You may put an artifact, creature, or land card
  * from among the milled cards into your hand.
  *
- * The first ability is a *batching* trigger ([Triggers.CardsLeaveYourGraveyard]): it fires at most
+ * The first ability is a *batching* trigger (`Triggers.oneOrMore(filter).leaveYourGraveyard()`): it fires at most
  * once per batch no matter how many cards left and no matter where they went — cast, exiled,
  * reanimated, returned to hand — so escaping three creature cards at once gains 1 life, not 3.
  *
@@ -40,17 +39,17 @@ val DredgersInsight = card("Dredger's Insight") {
         "cards of your library into your graveyard.)"
 
     triggeredAbility {
-        trigger = Triggers.CardsLeaveYourGraveyard(GameObjectFilter.CreatureOrArtifact)
+        trigger = Triggers.oneOrMore(GameObjectFilter.CreatureOrArtifact).leaveYourGraveyard()
         effect = Effects.GainLife(1)
         description = "Whenever one or more artifact and/or creature cards leave your graveyard, you gain 1 life."
     }
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Pipeline {
             // "mill four cards"
             val milled = gather(
-                CardSource.TopOfLibrary(DynamicAmount.Fixed(4), Player.You, isMill = true)
+                CardSource.TopOfLibrary(4, Player.You, isMill = true)
             )
             toGraveyard(milled)
             // "You may put an artifact, creature, or land card from among the milled cards into your hand."

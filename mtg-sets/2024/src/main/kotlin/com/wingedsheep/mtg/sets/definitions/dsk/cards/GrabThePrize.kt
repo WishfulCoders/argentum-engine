@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -34,9 +33,9 @@ val GrabThePrize = card("Grab the Prize") {
 
     spell {
         effect = Effects.DrawCards(2) then
-            ConditionalEffect(
+            Effects.If(
                 condition = Conditions.Not(Conditions.DiscardedCardMatches(GameObjectFilter.Land)),
-                effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.EachOpponent))
+                then = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.EachOpponent))
             )
     }
 

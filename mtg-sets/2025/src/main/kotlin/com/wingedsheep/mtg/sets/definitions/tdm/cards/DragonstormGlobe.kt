@@ -3,13 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.tdm.cards
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Dragonstorm Globe — Tarkir: Dragonstorm #241
@@ -31,7 +31,7 @@ val DragonstormGlobe = card("Dragonstorm Globe") {
 
     replacementEffect(
         EntersWithDynamicCounters(
-            count = DynamicAmount.Fixed(1),
+            count = DynamicAmounts.fixed(1),
             // otherOnly = true routes this through the battlefield-scan path in
             // EntersWithReplacements, so the artifact grants counters to *other*
             // permanents (Dragons you control) as they enter, not to itself.

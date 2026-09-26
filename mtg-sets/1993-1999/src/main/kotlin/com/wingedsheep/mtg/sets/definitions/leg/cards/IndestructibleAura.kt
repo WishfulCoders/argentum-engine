@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.leg.cards
 
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.PreventDamageEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Indestructible Aura
@@ -12,9 +12,8 @@ import com.wingedsheep.sdk.scripting.effects.PreventDamageEffect
  *
  * Prevent all damage that would be dealt to target creature this turn.
  *
- * No `Effects.*` facade spells the plain "prevent all damage that would be dealt to
- * target this turn" shield — every parameter is [PreventDamageEffect]'s own default except the
- * recipient — so the card constructs it directly (it is not one of the facade-boundary types).
+ * The plain "prevent all damage that would be dealt to target this turn" shield:
+ * [Effects.PreventDamage] with every parameter at its default except the recipient.
  */
 val IndestructibleAura = card("Indestructible Aura") {
     manaCost = "{W}"
@@ -23,8 +22,8 @@ val IndestructibleAura = card("Indestructible Aura") {
     oracleText = "Prevent all damage that would be dealt to target creature this turn."
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = PreventDamageEffect(target = creature)
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.PreventDamage(target = creature)
     }
 
     metadata {

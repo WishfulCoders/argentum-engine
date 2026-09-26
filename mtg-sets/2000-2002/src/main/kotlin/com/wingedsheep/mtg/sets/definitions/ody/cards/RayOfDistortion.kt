@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -26,7 +25,7 @@ val RayOfDistortion = card("Ray of Distortion") {
     typeLine = "Instant"
     oracleText = "Destroy target artifact or enchantment.\nFlashback {4}{W}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter.ArtifactOrEnchantment))
+        val t = target(TargetFilter.ArtifactOrEnchantment)
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     keywordAbility(KeywordAbility.flashback("{4}{W}{W}"))

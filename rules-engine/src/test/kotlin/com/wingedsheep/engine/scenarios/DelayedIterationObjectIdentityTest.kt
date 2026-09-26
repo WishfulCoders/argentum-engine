@@ -4,7 +4,6 @@ import com.wingedsheep.engine.core.engineSerializersModule
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.ObjectReferenceEnvironment
 import com.wingedsheep.engine.handlers.PipelineState
-import com.wingedsheep.engine.handlers.effects.EffectExecutorRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.support.GameTestDriver
@@ -35,7 +34,7 @@ class DelayedIterationObjectIdentityTest : FunSpec({
 
     for (sacrifice in listOf(false, true)) {
         for (blinkOne in listOf(false, true)) {
-            test("serialized delayed collection Self affects each original object: sacrifice=$sacrifice blinkOne=$blinkOne") {
+            test("serialized delayed collection IterationEntity affects each original object: sacrifice=$sacrifice blinkOne=$blinkOne") {
                 val d = GameTestDriver().apply {
                     registerCards(TestCards.all)
                     initMirrorMatch(Deck.of("Plains" to 40), startingPlayer = 0)
@@ -48,9 +47,9 @@ class DelayedIterationObjectIdentityTest : FunSpec({
                 val firstObject = d.state.objectRef(first)!!
                 val secondObject = d.state.objectRef(second)!!
                 val destination = if (sacrifice) Zone.GRAVEYARD else Zone.HAND
-                val cleanup = if (sacrifice) Effects.SacrificeTarget(EffectTarget.Self)
-                    else Effects.ReturnToHand(EffectTarget.Self)
-                val result = EffectExecutorRegistry(cardRegistry = d.cardRegistry).execute(d.state,
+                val cleanup = if (sacrifice) Effects.SacrificeTarget(EffectTarget.IterationEntity)
+                    else Effects.ReturnToHand(EffectTarget.IterationEntity)
+                val result = d.services.effectExecutorRegistry.execute(d.state,
                     ForEachInCollectionEffect("cleanup", CreateDelayedTriggerEffect(step = Step.END, effect = cleanup)),
                     EffectContext(sourceId = source, controllerId = d.player1,
                         objectReferences = ObjectReferenceEnvironment(captured = true,

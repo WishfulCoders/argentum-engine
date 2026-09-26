@@ -1,25 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.HasAbilitiesOfChosenLinkedExiledCard
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Koh, the Face Stealer
@@ -37,7 +28,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *  - The ETB exiles up to one other target creature into Koh's [Effects.ExileLinkedToSource] pile
  *    (a permanent exile with no return — unlike Aang's Iceberg's exile-until-leaves).
  *  - A dies trigger ([TriggerBinding.OTHER], nontoken creatures) offers to exile the dying creature
- *    from its graveyard into the same pile ([MayEffect] + [EffectTarget.TriggeringEntity]).
+ *    from its graveyard into the same pile ([Effects.May] + [EffectTarget.TriggeringEntity]).
  *  - "Pay 1 life: Choose a creature card exiled with Koh" gathers the linked-exile pile, lets the
  *    controller pick one creature card, and stamps it as the last chosen card via
  *    [Effects.RecordChosenLinkedExile].
@@ -62,26 +53,16 @@ val KohTheFaceStealer = card("Koh, the Face Stealer") {
 
     // "When Koh enters, exile up to one other target creature." — permanent exile into Koh's pile.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target(
-            "up to one other target creature",
-            TargetPermanent(optional = true, filter = TargetFilter.Creature.other())
-        )
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature.other(), optional = true)
         effect = Effects.ExileLinkedToSource(creature)
     }
 
     // "Whenever another nontoken creature dies, you may exile it." — exile the dying card from its
     // graveyard into Koh's pile.
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Creature.nontoken(),
-                from = Zone.BATTLEFIELD,
-                to = Zone.GRAVEYARD
-            ),
-            binding = TriggerBinding.OTHER
-        )
-        effect = MayEffect(
+        trigger = Triggers.another(GameObjectFilter.Creature.nontoken()).dies()
+        effect = Effects.May(
             Effects.ExileLinkedToSource(EffectTarget.TriggeringEntity),
             inlineOnTrigger = true
         )
@@ -90,17 +71,16 @@ val KohTheFaceStealer = card("Koh, the Face Stealer") {
     // "Pay 1 life: Choose a creature card exiled with Koh." — record the last chosen card.
     activatedAbility {
         cost = Costs.PayLife(1)
-        effect = Effects.Composite(
-            GatherCardsEffect(source = CardSource.FromLinkedExile(), storeAs = "koh_exile"),
-            SelectFromCollectionEffect(
-                from = "koh_exile",
-                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
+        effect = Effects.Pipeline {
+            val kohExile = gather(CardSource.FromLinkedExile())
+            val kohChosen = chooseExactly(
+                1,
+                from = kohExile,
                 filter = GameObjectFilter.Creature,
-                storeSelected = "koh_chosen",
                 prompt = "Choose a creature card exiled with Koh"
-            ),
-            Effects.RecordChosenLinkedExile("koh_chosen")
-        )
+            )
+            run(Effects.RecordChosenLinkedExile(kohChosen))
+        }
     }
 
     // "Koh has all activated and triggered abilities of the last chosen card."

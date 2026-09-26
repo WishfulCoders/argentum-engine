@@ -13,13 +13,8 @@ import com.wingedsheep.sdk.scripting.effects.Chooser
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Takenuma, Abandoned Mire — Kamigawa: Neon Dynasty #278 (canonical printing)
@@ -60,32 +55,24 @@ val TakenumaAbandonedMire = card("Takenuma, Abandoned Mire") {
         cost = Costs.Composite(Costs.Mana("{3}{B}"), Costs.DiscardSelf)
         activateFromZone = Zone.HAND
         genericCostReduction = DynamicAmounts.legendaryCreaturesYouControl()
-        effect = Effects.Composite(
-            listOf(
-                Patterns.Library.mill(3),
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        zone = Zone.GRAVEYARD,
-                        player = Player.You,
-                        filter = GameObjectFilter.CreatureOrPlaneswalker
-                    ),
-                    storeAs = "takenumaGraveyard"
-                ),
-                SelectFromCollectionEffect(
-                    from = "takenumaGraveyard",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                    chooser = Chooser.Controller,
-                    storeSelected = "takenumaReturned",
-                    prompt = "Choose a creature or planeswalker card to return to your hand",
-                    showAllCards = true
-                ),
-                MoveCollectionEffect(
-                    from = "takenumaReturned",
-                    destination = CardDestination.ToZone(Zone.HAND, Player.You),
-                    moveType = MoveType.Default
+        effect = Effects.Pipeline {
+            run(Patterns.Library.mill(3))
+            val takenumaGraveyard = gather(
+                CardSource.FromZone(
+                    zone = Zone.GRAVEYARD,
+                    player = Player.You,
+                    filter = GameObjectFilter.CreatureOrPlaneswalker
                 )
             )
-        )
+            val takenumaReturned = chooseExactly(
+                1,
+                from = takenumaGraveyard,
+                chooser = Chooser.Controller,
+                prompt = "Choose a creature or planeswalker card to return to your hand",
+                showAllCards = true
+            )
+            move(takenumaReturned, CardDestination.ToZone(Zone.HAND, Player.You), moveType = MoveType.Default)
+        }
     }
 
     metadata {

@@ -273,9 +273,9 @@ internal fun EmitCtx.creatureFilterExpr(filterNode: JsonElement?): Dsl? {
     }
     // "target creature with a <kind> counter on it" (HasACounterOfType) — Floodpits Drowner's "target
     // creature with a stun counter on it". The named state predicate lives on GameObjectFilter
-    // (.withCounter(Counters.X)), not on the TargetFilter surface, so render the GameObjectFilter form
+    // (.withCounter(CounterType.X)), not on the TargetFilter surface, so render the GameObjectFilter form
     // wrapped in TargetFilter — matching the hand-authored `TargetFilter(GameObjectFilter.Creature
-    // .withCounter(Counters.STUN))`. Guard strictly: only the bare Creature + counter shape (optionally a
+    // .withCounter(CounterType.STUN))`. Guard strictly: only the bare Creature + counter shape (optionally a
     // You/Opponent controller); any other predicate would be silently dropped, so decline -> SCAFFOLD.
     // The counter kind must be one counterTypeDsl can name exactly, else decline rather than widen.
     run {
@@ -1129,7 +1129,7 @@ internal fun EmitCtx.gameObjectFilterExpr(filterNode: JsonElement?): Dsl? {
     if ("DealtDamageThisTurn" in blob) return null
     // "creatures you control WITH +1/+1 counters on them" (Emil, Vastlands Roamer / Badgermole's
     // trample lord): a `HasACounterOfType` predicate. The SDK expresses it via
-    // `.withCounter(Counters.X)`; recover the counter kind here and compose it onto the base node
+    // `.withCounter(CounterType.X)`; recover the counter kind here and compose it onto the base node
     // below. Decline (-> SCAFFOLD) only when the counter can't be named exactly, so the restriction
     // is never silently dropped (which would widen the grant to every creature).
     val counterFilterDsl: String? = filterNode.nodesTagged("HasACounterOfType").firstOrNull()?.let {
@@ -1260,7 +1260,7 @@ internal fun EmitCtx.gameObjectFilterExpr(filterNode: JsonElement?): Dsl? {
     if ("EnteredTheBattlefieldThisTurn" in blob) {
         node = node.dot("enteredThisTurn")
     }
-    // "...with a <kind> counter on it" (HasACounterOfType, recovered above) -> `.withCounter(Counters.X)`.
+    // "...with a <kind> counter on it" (HasACounterOfType, recovered above) -> `.withCounter(CounterType.X)`.
     if (counterFilterDsl != null) node = node.dot("withCounter", arg(counterFilterDsl))
     // The `.youControl()`/`.opponentControls()` suffix is a *controller* predicate — only a
     // `ControlledByAPlayer` clause carries it. Inspect that clause's player scope directly rather than

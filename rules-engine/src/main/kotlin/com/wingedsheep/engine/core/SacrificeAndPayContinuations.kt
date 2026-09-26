@@ -1,6 +1,7 @@
 package com.wingedsheep.engine.core
 
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
@@ -101,7 +102,7 @@ data class PayOrSufferContinuation(
     val namedTargets: Map<String, ChosenTarget> = emptyMap(),
     val manaCost: ManaCost? = null,
     val zone: Zone? = null,
-    val counterType: String? = null,
+    val counterType: CounterType? = null,
     /**
      * How many counters of [counterType] the payment places, for
      * [PayOrSufferCostType.PUT_COUNTERS]. Distinct from [requiredCount], which is how many
@@ -139,15 +140,6 @@ data class PayOrSufferContinuation(
      * Mirrors the same field on [AnyPlayerMayPayContinuation], for the same reason.
      */
     val storedCollections: Map<String, List<EntityId>> = emptyMap(),
-    /**
-     * The enclosing `ForEachInGroup` loop's current entity, when the pay-or-suffer sits inside one
-     * (Tidal Flats: "for each attacking creature ... its controller may pay {1}"). The consequence
-     * refers back to it — "creatures you control blocking *that creature*" — so the resumed context
-     * has to rebind `PipelineState.iterationTarget`. Without it the auto-suffer path (nothing to
-     * pay with, no prompt) worked while the far more common declined-a-prompt path silently
-     * matched nothing.
-     */
-    val iterationEntityId: EntityId? = null,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
 ) : AnswerContinuation
 
@@ -207,8 +199,6 @@ data class PayOrSufferChoiceContinuation(
     val consequenceDescription: String? = null,
     /** Mirror of [PayOrSufferContinuation.storedCollections] for the multi-option path. */
     val storedCollections: Map<String, List<EntityId>> = emptyMap(),
-    /** Mirror of [PayOrSufferContinuation.iterationEntityId] for the multi-option path. */
-    val iterationEntityId: EntityId? = null,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
 ) : AnswerContinuation
 
@@ -234,11 +224,10 @@ data class PayOrSufferChoiceContinuation(
  *   referencing [com.wingedsheep.sdk.scripting.references.Player.TriggeringPlayer] still resolves
  *   after the async pay-or-decline round-trip (mirrors [PayOrSufferContinuation]).
  * @property triggeringPlayerId See [triggeringEntityId].
- * @property iterationTarget The permanent the enclosing `ForEachInGroup` / `ForEachInCollection`
- *   loop is currently on, preserved across the pay-or-decline round-trip so a consequence written
- *   as `EffectTarget.Self` still means *that* permanent. Cleansing ("for each land, destroy that
- *   land unless any player pays 1 life") is the shape that needs it: without this the consequence
- *   resolves `Self` to the resolving spell and destroys nothing.
+ * @property objectReferences The resolution's object identities — among them the permanent an
+ *   enclosing `ForEachInGroup` / `ForEachInCollection` loop is on, so a consequence written as
+ *   `EffectTarget.IterationEntity` still means *that* permanent after the pay-or-decline
+ *   round-trip (Cleansing: "for each land, destroy that land unless any player pays 1 life").
  */
 @Serializable
 data class AnyPlayerMayPayContinuation(
@@ -255,7 +244,6 @@ data class AnyPlayerMayPayContinuation(
     val storedCollections: Map<String, List<EntityId>> = emptyMap(),
     val triggeringEntityId: EntityId? = null,
     val triggeringPlayerId: EntityId? = null,
-    val iterationTarget: EntityId? = null,
     val objectReferences: com.wingedsheep.engine.handlers.ObjectReferenceEnvironment = com.wingedsheep.engine.handlers.ObjectReferenceEnvironment(),
 ) : AnswerContinuation
 

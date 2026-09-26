@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.leg.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Adun Oakenshield
@@ -28,10 +28,7 @@ val AdunOakenshield = card("Adun Oakenshield") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{B}{R}{G}"), Costs.Tap)
-        val creatureCard = target(
-            "target creature card from your graveyard",
-            Targets.CreatureCardInYourGraveyard,
-        )
+        val creatureCard = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.ReturnToHand(creatureCard)
     }
 

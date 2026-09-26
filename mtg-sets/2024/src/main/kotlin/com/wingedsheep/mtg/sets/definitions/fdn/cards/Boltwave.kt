@@ -4,9 +4,9 @@
 
 package com.wingedsheep.mtg.sets.definitions.fdn.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -23,7 +23,7 @@ val Boltwave = card("Boltwave") {
     typeLine = "Sorcery"
     oracleText = "Boltwave deals 3 damage to each opponent."
     spell {
-        effect = DealDamageEffect(3, EffectTarget.PlayerRef(Player.EachOpponent))
+        effect = Effects.DealDamage(3, EffectTarget.PlayerRef(Player.EachOpponent))
     }
     metadata {
         rarity = Rarity.UNCOMMON

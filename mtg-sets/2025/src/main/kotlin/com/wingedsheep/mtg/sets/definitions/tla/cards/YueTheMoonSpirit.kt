@@ -8,10 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Yue, the Moon Spirit
@@ -43,19 +39,13 @@ val YueTheMoonSpirit = card("Yue, the Moon Spirit") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{5}"), Costs.Tap)
         hasWaterbend = true
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                CardSource.FromZone(Zone.HAND, filter = GameObjectFilter.Nonland.notCreature()),
-                storeAs = "yueCandidates",
-            ),
-            SelectFromCollectionEffect(
-                from = "yueCandidates",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "yueChosen",
-                selectedLabel = "Cast without paying its mana cost",
-            ),
-            Effects.CastFromCollectionWithoutPayingCost("yueChosen"),
-        )
+        effect = Effects.Pipeline {
+            val yueCandidates = gather(
+                CardSource.FromZone(Zone.HAND, filter = GameObjectFilter.Nonland.notCreature())
+            )
+            val yueChosen = chooseUpTo(1, from = yueCandidates, selectedLabel = "Cast without paying its mana cost")
+            run(Effects.CastFromCollectionWithoutPayingCost(yueChosen))
+        }
         description = "You may cast a noncreature spell from your hand without paying its mana cost."
     }
 

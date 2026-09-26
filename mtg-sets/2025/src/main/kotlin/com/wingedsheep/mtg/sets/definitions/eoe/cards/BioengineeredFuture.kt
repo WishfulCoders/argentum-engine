@@ -37,7 +37,7 @@ val BioengineeredFuture = card("Bioengineered Future") {
         "land that entered the battlefield under your control this turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateLander()
     }
 

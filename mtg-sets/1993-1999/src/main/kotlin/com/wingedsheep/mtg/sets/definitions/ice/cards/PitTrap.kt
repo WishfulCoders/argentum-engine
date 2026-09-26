@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Pit Trap
@@ -27,10 +26,7 @@ val PitTrap = card("Pit Trap") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap, Costs.SacrificeSelf)
-        val t = target(
-            "target",
-            TargetCreature(filter = TargetFilter.Creature.withoutKeyword(Keyword.FLYING).attacking())
-        )
+        val t = target(TargetFilter.Creature.withoutKeyword(Keyword.FLYING).attacking())
         effect = Effects.Destroy(t, noRegenerate = true)
     }
 

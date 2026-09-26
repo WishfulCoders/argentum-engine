@@ -28,7 +28,7 @@ val WreckageWickerfolk = card("Wreckage Wickerfolk") {
     toughness = 3
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.surveil(2)
     }
     metadata {

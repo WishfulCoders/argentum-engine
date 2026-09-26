@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.scripting.AbilityCost
+import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.costs.CostAtom
@@ -39,9 +40,12 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * This factory is shared by printed embalm ([embalm] below) and the runtime grant
  * ([com.wingedsheep.sdk.scripting.effects.GrantEmbalmEffect], Cursecloth Wrappings), so both
- * produce exactly the same ability.
+ * produce exactly the same ability. The id is keyword-scoped rather than minted from the card being
+ * built, because the engine builds the granted one mid-game, with no card around it; the cost is part
+ * of it so a card with printed embalm that is granted a different embalm keeps the two apart.
  */
 fun embalmAbility(cost: ManaCost): ActivatedAbility = ActivatedAbility(
+    id = AbilityId("embalm_$cost"),
     cost = AbilityCost.Composite(
         listOf(AbilityCost.Atom(CostAtom.Mana(cost)), AbilityCost.ExileSelf)
     ),

@@ -1,7 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
@@ -9,20 +8,13 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.LookAudience
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Curse of Hospitality
@@ -49,7 +41,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *    too, and a creature attacking a planeswalker the cursed player controls does not.
  *
  *  - **The damage trigger** is an ANY-bound observer with
- *    [RecipientFilter.EnchantedPlayer] and `sourceFilter = Creature`, the shape Gonti, Night
+ *    [Recipient.EnchantedPlayer] and `sourceFilter = Creature`, the shape Gonti, Night
  *    Minister uses for the same "creature deals combat damage to a player, *its controller* may play
  *    the exiled card" text. The source filter is what makes the engine bind the *damaging creature*
  *    as the triggering entity and the *damaged player* as the triggering player — the exact pair the
@@ -84,32 +76,23 @@ val CurseOfHospitality = card("Curse of Hospitality") {
 
     // Whenever a creature deals combat damage to enchanted player, …
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            damageType = DamageType.Combat,
-            recipient = RecipientFilter.EnchantedPlayer,
-            sourceFilter = GameObjectFilter.Creature,
-            binding = TriggerBinding.ANY,
-        )
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(
-                    count = DynamicAmount.Fixed(1),
+        trigger = Triggers.a(GameObjectFilter.Creature).dealsCombatDamage(Recipient.EnchantedPlayer)
+        effect = Effects.Pipeline {
+            val cursedCard = gather(
+                CardSource.TopOfLibrary(
+                    count = 1,
                     player = Player.TriggeringPlayer,
                 ),
-                storeAs = "cursedCard",
-                lookAudience = LookAudience.None,
-            ),
-            MoveCollectionEffect(
-                from = "cursedCard",
-                destination = CardDestination.ToZone(Zone.EXILE, Player.TriggeringPlayer),
-            ),
-            GrantMayPlayFromExileEffect(
-                from = "cursedCard",
+                lookAudience = LookAudience.None
+            )
+            exile(cursedCard, Player.TriggeringPlayer)
+            run(Effects.GrantMayPlayFromExile(
+                from = cursedCard,
                 expiry = MayPlayExpiry.EndOfTurn,
                 withAnyManaType = true,
                 recipient = EffectTarget.ControllerOfTriggeringEntity,
-            ),
-        )
+            ))
+        }
         description = "Whenever a creature deals combat damage to enchanted player, that player " +
             "exiles the top card of their library. Until end of turn, that creature's controller " +
             "may play that card and they may spend mana as though it were mana of any color to " +

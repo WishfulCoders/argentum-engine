@@ -2,10 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Winnow
@@ -28,10 +27,10 @@ val Winnow = card("Winnow") {
         "Draw a card."
 
     spell {
-        val permanent = target("target nonland permanent", Targets.NonlandPermanent)
-        effect = ConditionalEffect(
+        val permanent = target(TargetFilter.NonlandPermanent)
+        effect = Effects.If(
             condition = Conditions.AnotherPermanentWithSameNameAsTarget(),
-            effect = Effects.Destroy(permanent),
+            then = Effects.Destroy(permanent),
         ) then Effects.DrawCards(1)
     }
 

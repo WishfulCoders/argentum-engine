@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Isolate
@@ -20,7 +19,7 @@ val Isolate = card("Isolate") {
     oracleText = "Exile target permanent with mana value 1."
 
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter.Permanent.manaValue(1)))
+        val t = target(TargetFilter.Permanent.manaValue(1))
         effect = Effects.Move(t, Zone.EXILE)
     }
 

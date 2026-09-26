@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets
 
-import com.wingedsheep.sdk.serialization.CardExporter
-import com.wingedsheep.sdk.serialization.CardLoader
+import com.wingedsheep.sdk.tooling.CardExporter
+import com.wingedsheep.sdk.tooling.CardLoader
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
@@ -25,13 +25,12 @@ import io.kotest.matchers.shouldBe
  *
  * A green re-bless with an expected diff is the normal workflow — see [GoldenSnapshot].
  *
- * **Determinism.** [com.wingedsheep.sdk.scripting.AbilityId.generate] draws from a process-global
- * counter, so the raw `ability_N` numbers depend on JVM load order and are not stable across runs.
- * We renumber them per card (first-appearance order) so the snapshot is deterministic while still
- * preserving any intra-card cross-references between abilities. Cards are sorted by name so set
- * iteration order never leaks into the file.
+ * **Determinism.** Ability ids are minted per card by
+ * [com.wingedsheep.sdk.scripting.AbilityIdScope] (`"Card Name:N"` in construction order), so the raw
+ * tree is already stable across runs; cards are sorted by name so set iteration order never leaks
+ * into the file either.
  *
- * The second test round-trips every card through [CardLoader.fromJson] — a corpus-wide check of the
+ * The second test round-trips every card through [CardLoader.fromJsonPreservingIds] — a corpus-wide check of the
  * *decode* path (export → load → re-export) that the hand-picked round-trip tests only spot-check.
  * It is the acceptance net for `CompactJsonTransformer`'s schema-driven expand: any new polymorphic
  * SDK field that the compactor shrinks but the expander can't restore fails here for the whole
@@ -44,7 +43,7 @@ class CardDefinitionSnapshotTest : FunSpec({
 
         test("${set.code} (${set.displayName}): card trees match golden") {
             val actual = sorted.joinToString("\n\n") { card ->
-                "// ${card.name}\n${normalizeAbilityIds(CardExporter.exportToJson(card))}"
+                "// ${card.name}\n${CardExporter.exportToJson(card)}"
             }
             GoldenSnapshot.verify("snapshots/cards/${GoldenSnapshot.fileSafe(set.code)}.json", actual)
         }
@@ -52,22 +51,10 @@ class CardDefinitionSnapshotTest : FunSpec({
         test("${set.code} (${set.displayName}): cards survive a JSON round-trip") {
             for (card in sorted) {
                 val exported = CardExporter.exportToJson(card)
-                val reExported = CardExporter.exportToJson(CardLoader.fromJson(exported))
-                normalizeAbilityIds(reExported) shouldBe normalizeAbilityIds(exported)
+                val reExported = CardExporter.exportToJson(CardLoader.fromJsonPreservingIds(exported))
+                reExported shouldBe exported
             }
         }
     }
 })
 
-/**
- * Replace each distinct `ability_<n>` with a per-card sequential id in first-appearance order, so the
- * process-global ability counter (and thus JVM load order) cannot leak into the snapshot while
- * cross-references within a single card stay consistent. Deterministic ids minted elsewhere
- * (`class_level_up_*`, `intrinsic_mana_*`) are left untouched.
- */
-private fun normalizeAbilityIds(json: String): String {
-    val mapping = LinkedHashMap<String, String>()
-    return Regex("""ability_\d+""").replace(json) { match ->
-        mapping.getOrPut(match.value) { "ability_${mapping.size + 1}" }
-    }
-}

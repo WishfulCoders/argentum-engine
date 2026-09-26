@@ -26,8 +26,7 @@ val WinternightStories = card("Winternight Stories") {
         "Then exile this spell.)"
 
     spell {
-        effect = Effects.DrawCards(3)
-            .then(Effects.DiscardUnlessMatching(2, GameObjectFilter.Creature))
+        effect = Effects.DrawCards(3) then Effects.DiscardUnlessMatching(2, GameObjectFilter.Creature)
     }
 
     keywordAbility(KeywordAbility.harmonize("{4}{U}"))

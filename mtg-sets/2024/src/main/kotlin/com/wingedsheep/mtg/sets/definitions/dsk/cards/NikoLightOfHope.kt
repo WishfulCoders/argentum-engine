@@ -10,8 +10,6 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Niko, Light of Hope — Duskmourn: House of Horror #224
@@ -53,7 +51,7 @@ val NikoLightOfHope = card("Niko, Light of Hope") {
         "control at the beginning of the next end step."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateShard(2)
         description = "When Niko enters, create two Shard tokens."
     }
@@ -63,19 +61,14 @@ val NikoLightOfHope = card("Niko, Light of Hope") {
             Costs.Mana("{2}"),
             Costs.Tap
         )
-        target(
-            "target nonlegendary creature you control",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Creature.nonlegendary().youControl())),
-        )
-        effect = Effects.Composite(
-            Patterns.Exile.exileUntilEndStep(EffectTarget.ContextTarget(0)),
+        val nonlegendaryCreatureYouControl = target(TargetFilter(GameObjectFilter.Creature.nonlegendary().youControl()))
+        effect = Patterns.Exile.exileUntilEndStep(nonlegendaryCreatureYouControl) then
             Effects.EachPermanentBecomesCopyOfTarget(
-                target = EffectTarget.ContextTarget(0),
+                target = nonlegendaryCreatureYouControl,
                 filter = GroupFilter(GameObjectFilter.Any.named("Shard").youControl()),
                 duration = Duration.UntilNextEndStep,
                 sourceFromAnyZone = true,
-            ),
-        )
+            )
         description = "{2}, {T}: Exile target nonlegendary creature you control. Shards you " +
             "control become copies of it until the next end step. Return it to the battlefield " +
             "under its owner's control at the beginning of the next end step."

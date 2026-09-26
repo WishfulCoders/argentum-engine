@@ -8,8 +8,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Sidequest: Card Collection // Magicked Card — Final Fantasy #73
@@ -57,19 +57,16 @@ private val SidequestCardCollectionFront = card("Sidequest: Card Collection") {
 
     // When this enchantment enters, draw three cards, then discard two cards.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Effects.DrawCards(3),
-            Effects.Discard(2),
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.DrawCards(3) then Effects.Discard(2)
     }
 
     // At the beginning of your end step, if eight or more cards are in your graveyard,
     // transform this enchantment.
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.CardsInGraveyardAtLeast(8)
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
     }
 
     metadata {

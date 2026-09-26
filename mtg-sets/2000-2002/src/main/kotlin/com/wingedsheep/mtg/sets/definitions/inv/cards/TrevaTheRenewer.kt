@@ -2,14 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Treva, the Renewer
@@ -38,15 +38,15 @@ val TrevaTheRenewer = card("Treva, the Renewer") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = MayPayManaEffect(
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{2}{W}"),
-            effect = Effects.ChooseColorThen(
+            then = Effects.ChooseColorThen(
                 then = Effects.GainLife(
-                    amount = DynamicAmount.AggregateBattlefield(
-                        player = Player.Each,
-                        filter = GameObjectFilter.Permanent.withChosenColor()
-                    )
+                    amount = DynamicAmounts.battlefield(
+                        Player.Each,
+                        GameObjectFilter.Permanent.withChosenColor()
+                    ).count()
                 ),
                 prompt = "Choose a color"
             )

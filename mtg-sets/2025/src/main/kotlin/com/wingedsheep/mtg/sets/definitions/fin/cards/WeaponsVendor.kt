@@ -4,14 +4,12 @@ import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Weapons Vendor
@@ -23,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  *   you do, attach target Equipment you control to target creature you control.
  *
  * The combat ability is the Spellbook Vendor shape: an intervening-"if" gates the trigger on
- * controlling an Equipment, then [MayPayManaEffect] models the optional {1} payment whose
+ * controlling an Equipment, then [Effects.MayPay] models the optional {1} payment whose
  * "when you do" reflexive ability chooses its targets as it goes on the stack (Scryfall
  * ruling). The reflexive payoff reuses [Effects.AttachTargetEquipmentToCreature], moving the
  * chosen Equipment onto the chosen creature.
@@ -39,27 +37,22 @@ val WeaponsVendor = card("Weapons Vendor") {
         "When you do, attach target Equipment you control to target creature you control."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1)
     }
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
         interveningIf = Conditions.YouControl(
             GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT)
         )
         val equipment = target(
-            "target Equipment you control",
-            TargetPermanent(
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl()
-                )
-            )
+            TargetFilter(baseFilter = GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl()),
         )
-        val creature = target("target creature you control", Targets.CreatureYouControl)
-        effect = MayPayManaEffect(
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{1}"),
-            effect = Effects.AttachTargetEquipmentToCreature(equipment, creature)
+            then = Effects.AttachTargetEquipmentToCreature(equipment, creature)
         )
     }
 

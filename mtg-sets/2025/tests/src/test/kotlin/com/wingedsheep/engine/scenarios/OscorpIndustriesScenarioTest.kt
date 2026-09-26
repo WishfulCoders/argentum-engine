@@ -79,7 +79,7 @@ class OscorpIndustriesScenarioTest : FunSpec({
         driver.submit(PlayLand(player, oscorp)).error shouldBe null
         resolveStack(driver)
         driver.state.getBattlefield().contains(oscorp) shouldBe true
-        // Entered from hand — the ConditionalEffect's graveyard check is false, so no life loss.
+        // Entered from hand — the Effects.If's graveyard check is false, so no life loss.
         driver.getLifeTotal(player) shouldBe 20
     }
 })

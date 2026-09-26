@@ -4,12 +4,10 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.SpellCastEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Enraged Flamecaster
@@ -31,13 +29,7 @@ val EnragedFlamecaster = card("Enraged Flamecaster") {
     keywords(Keyword.REACH)
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            SpellCastEvent(
-                spellFilter = GameObjectFilter.Any.manaValueAtLeast(4),
-                player = Player.You
-            ),
-            TriggerBinding.ANY
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.Any.manaValueAtLeast(4))
         effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.EachOpponent))
     }
 

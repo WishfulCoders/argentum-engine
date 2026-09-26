@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Seedship Broodtender
@@ -30,7 +29,7 @@ val SeedshipBroodtender = card("Seedship Broodtender") {
 
     // ETB ability: mill three cards
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.mill(3)
     }
 
@@ -42,12 +41,12 @@ val SeedshipBroodtender = card("Seedship Broodtender") {
         )
         timing = TimingRule.SorcerySpeed
         
-        val graveyardTarget = target("creature or Spacecraft card from your graveyard", TargetObject(
-            filter = TargetFilter(
+        val graveyardTarget = target(
+            TargetFilter(
                 GameObjectFilter.Companion.Creature.ownedByYou().or(GameObjectFilter.Companion.Permanent.withSubtype("Spacecraft").ownedByYou()),
                 zone = Zone.GRAVEYARD
-            )
-        ))
+            ),
+        )
         effect = Effects.PutOntoBattlefield(graveyardTarget)
     }
 

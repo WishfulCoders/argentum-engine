@@ -3,14 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.rav.cards
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedActivatedAbility
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.AbilityId
-import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.GrantActivatedAbilityEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Flame Fusillade — Ravnica: City of Guilds #123
@@ -36,18 +34,17 @@ val FlameFusillade = card("Flame Fusillade") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter.AllPermanentsYouControl,
-            GrantActivatedAbilityEffect(
-                ability = ActivatedAbility(
-                    id = AbilityId.generate(),
-                    cost = Costs.Tap,
+            Effects.GrantActivatedAbility(
+                ability = grantedActivatedAbility {
+                    cost = Costs.Tap
+                    val anyTarget = target(Targets.Any)
                     effect = Effects.DealDamage(
                         amount = 1,
-                        target = EffectTarget.ContextTarget(0),
+                        target = anyTarget,
                         damageSource = EffectTarget.Self
-                    ),
-                    targetRequirements = listOf(AnyTarget())
-                ),
-                target = EffectTarget.Self,
+                    )
+                },
+                target = EffectTarget.IterationEntity,
                 duration = Duration.EndOfTurn
             )
         )

@@ -3,11 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Glen Elendra Pranksters
@@ -38,10 +37,10 @@ val GlenElendraPranksters = card("Glen Elendra Pranksters") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YouCastSpell
+        trigger = Triggers.you.casts()
         triggerRestriction = Conditions.IsNotYourTurn
-        val creature = target("target creature you control", Targets.CreatureYouControl)
-        effect = MayEffect(Effects.ReturnToHand(creature))
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.May(Effects.ReturnToHand(creature))
         description = "Whenever you cast a spell during an opponent's turn, you may return target " +
             "creature you control to its owner's hand."
     }

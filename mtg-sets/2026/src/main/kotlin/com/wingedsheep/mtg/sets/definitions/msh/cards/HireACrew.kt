@@ -38,13 +38,11 @@ val HireACrew = card("Hire a Crew") {
             creatureTypes = setOf(Subtype.VILLAIN.value),
             keywords = setOf(Keyword.MENACE),
             imageUri = "https://cards.scryfall.io/normal/front/4/a/4a51b6a0-9a54-4f01-b959-0a28c15d103f.jpg?1783902804"
-        ).then(
-            Patterns.Group.modifyStatsForAll(
-                power = 1,
-                toughness = 0,
-                filter = GroupFilter.AllCreaturesYouControl,
-                duration = Duration.EndOfTurn
-            )
+        ) then Patterns.Group.modifyStatsForAll(
+            power = 1,
+            toughness = 0,
+            filter = GroupFilter.AllCreaturesYouControl,
+            duration = Duration.EndOfTurn
         )
     }
 

@@ -9,15 +9,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
-import com.wingedsheep.sdk.scripting.effects.TapUntapCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Elven Passage — The Hobbit #181
@@ -47,30 +40,26 @@ val ElvenPassage = card("Elven Passage") {
             Costs.PayLife(1),
             Costs.SacrificeSelf
         )
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.BasicLand),
-                    storeAs = "passage_searchable"
-                ),
-                SelectFromCollectionEffect(
-                    from = "passage_searchable",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    storeSelected = "passage_found",
-                    prompt = "Search for a basic land card to put onto the battlefield tapped"
-                ),
-                MoveCollectionEffect(
-                    from = "passage_found",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped),
-                    storeMovedAs = "passage_movedLand"
-                ),
-                ShuffleLibraryEffect(),
-                Effects.Behold(
-                    filter = GameObjectFilter.Any.withSubtype(Subtype.ELF),
-                    ifBeheld = TapUntapCollectionEffect(collectionName = "passage_movedLand", tap = false)
-                )
+        effect = Effects.Pipeline {
+            val passageSearchable = gather(
+                CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.BasicLand),
+                search = true
             )
-        )
+            val passageFound = chooseUpTo(
+                1,
+                from = passageSearchable,
+                prompt = "Search for a basic land card to put onto the battlefield tapped"
+            )
+            val passageMovedLand = moveTracked(
+                passageFound,
+                CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped)
+            )
+            run(Effects.ShuffleLibrary())
+            run(Effects.Behold(
+                filter = GameObjectFilter.Any.withSubtype(Subtype.ELF),
+                ifBeheld = Effects.TapCollection(collection = passageMovedLand, tap = false)
+            ))
+        }
         manaAbility = false
         description = "Search your library for a basic land card, put it onto the battlefield " +
             "tapped, then shuffle. You may behold an Elf. If you do, untap that land."

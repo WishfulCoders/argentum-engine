@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 
 /**
  * Apothecary Initiate
@@ -18,10 +17,10 @@ import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
  * Whenever a player casts a white spell, you may pay {1}. If you do, you gain 1 life.
  *
  * - "A player" is *every* player, the Initiate's controller included, so this is
- *   [Triggers.anyPlayerCasts] (ANY binding) rather than a "whenever you cast" trigger.
+ *   `Triggers.anyPlayer.casts(spell, requires)` (ANY binding) rather than a "whenever you cast" trigger.
  * - The spell filter is colour-based, not type-based: any white spell qualifies, including a white
  *   land-less permanent spell or a multicoloured spell that is partly white.
- * - "You may pay {1}. If you do, …" is the [MayPayManaEffect] gate — both the yes/no and the mana
+ * - "You may pay {1}. If you do, …" is the [Effects.MayPay] gate — both the yes/no and the mana
  *   payment happen on resolution, and declining simply does nothing. The Initiate's controller is
  *   always the one who pays and gains the life, whoever cast the spell.
  */
@@ -33,10 +32,10 @@ val ApothecaryInitiate = card("Apothecary Initiate") {
     oracleText = "Whenever a player casts a white spell, you may pay {1}. If you do, you gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.anyPlayerCasts(GameObjectFilter.Any.withColor(Color.WHITE))
-        effect = MayPayManaEffect(
+        trigger = Triggers.anyPlayer.casts(GameObjectFilter.Any.withColor(Color.WHITE))
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{1}"),
-            effect = Effects.GainLife(1)
+            then = Effects.GainLife(1)
         )
         description = "Whenever a player casts a white spell, you may pay {1}. If you do, you gain 1 life."
     }

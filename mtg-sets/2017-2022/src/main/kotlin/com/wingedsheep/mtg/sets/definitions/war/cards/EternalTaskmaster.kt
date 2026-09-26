@@ -2,12 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.war.cards
 
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Eternal Taskmaster
@@ -29,11 +28,11 @@ val EternalTaskmaster = card("Eternal Taskmaster") {
     replacementEffect(EntersTapped())
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val card = target("target creature card in your graveyard", Targets.CreatureCardInYourGraveyard)
-        effect = MayPayManaEffect(
+        trigger = Triggers.self.attacks()
+        val card = target(TargetFilter.CreatureInYourGraveyard)
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{2}{B}"),
-            effect = Effects.ReturnToHand(card),
+            then = Effects.ReturnToHand(card),
         )
         description = "Whenever this creature attacks, you may pay {2}{B}. If you do, return target " +
             "creature card from your graveyard to your hand."

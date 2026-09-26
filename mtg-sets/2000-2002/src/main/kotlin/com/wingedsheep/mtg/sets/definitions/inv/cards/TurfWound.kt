@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Turf Wound
@@ -21,11 +20,8 @@ val TurfWound = card("Turf Wound") {
     oracleText = "Target player can't play lands this turn.\nDraw a card."
 
     spell {
-        target = Targets.Player
-        effect = Effects.Composite(
-            Effects.CantPlayLandsThisTurn(EffectTarget.ContextTarget(0)),
-            Effects.DrawCards(1)
-        )
+        val player = target(Targets.Player)
+        effect = Effects.CantPlayLandsThisTurn(player) then Effects.DrawCards(1)
     }
 
     metadata {

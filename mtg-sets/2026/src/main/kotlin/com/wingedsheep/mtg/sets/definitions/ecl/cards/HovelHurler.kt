@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -8,9 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Hovel Hurler
@@ -31,7 +29,7 @@ val HovelHurler = card("Hovel Hurler") {
     oracleText = "This creature enters with two -1/-1 counters on it.\n{R/W}{R/W}, Remove a counter from this creature: Another target creature you control gets +1/+0 and gains flying until end of turn. Activate only as a sorcery."
 
     replacementEffect(EntersWithCounters(
-        counterType = CounterTypeFilter.MinusOneMinusOne,
+        counterType = CounterType.MINUS_ONE_MINUS_ONE,
         count = 2,
         selfOnly = true
     ))
@@ -39,11 +37,10 @@ val HovelHurler = card("Hovel Hurler") {
     activatedAbility {
         cost = Costs.Composite(
             Costs.Mana("{R/W}{R/W}"),
-            Costs.RemoveCounterFromSelf(Counters.MINUS_ONE_MINUS_ONE)
+            Costs.RemoveCounterFromSelf(CounterType.MINUS_ONE_MINUS_ONE)
         )
-        val creature = target("another creature you control", TargetCreature(filter = TargetFilter.OtherCreatureYouControl))
-        effect = Effects.ModifyStats(1, 0, creature)
-            .then(Effects.GrantKeyword(Keyword.FLYING, creature))
+        val creature = target(TargetFilter.OtherCreatureYouControl)
+        effect = Effects.ModifyStats(1, 0, creature) then Effects.GrantKeyword(Keyword.FLYING, creature)
         timing = TimingRule.SorcerySpeed
     }
 

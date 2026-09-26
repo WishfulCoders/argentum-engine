@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Slash of Talons
@@ -21,10 +20,7 @@ val SlashOfTalons = card("Slash of Talons") {
     oracleText = "Slash of Talons deals 2 damage to target attacking or blocking creature."
 
     spell {
-        val victim = target(
-            "target",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Creature.attackingOrBlocking()))
-        )
+        val victim = target(TargetFilter(GameObjectFilter.Creature.attackingOrBlocking()))
         effect = Effects.DealDamage(2, victim)
     }
 

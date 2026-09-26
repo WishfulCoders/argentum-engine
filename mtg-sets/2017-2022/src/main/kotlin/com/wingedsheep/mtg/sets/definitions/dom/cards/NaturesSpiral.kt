@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -21,12 +20,7 @@ val NaturesSpiral = card("Nature's Spiral") {
     oracleText = "Return target permanent card from your graveyard to your hand."
 
     spell {
-        val t = target("target", TargetObject(
-            filter = TargetFilter(
-                GameObjectFilter.Companion.Permanent.ownedByYou(),
-                zone = Zone.GRAVEYARD
-            )
-        ))
+        val t = target(TargetFilter(GameObjectFilter.Companion.Permanent.ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.Move(
             target = t,
             destination = Zone.HAND

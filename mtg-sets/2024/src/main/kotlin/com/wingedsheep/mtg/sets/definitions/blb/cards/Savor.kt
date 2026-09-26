@@ -1,10 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Savor
@@ -20,9 +19,8 @@ val Savor = card("Savor") {
     oracleText = "Target creature gets -2/-2 until end of turn. Create a Food token. (It's an artifact with \"{2}, {T}, Sacrifice this token: You gain 3 life.\")"
 
     spell {
-        val creature = target("target creature to get -2/-2", Targets.Creature)
-        effect = Effects.ModifyStats(-2, -2, creature)
-            .then(Effects.CreateFood(1))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(-2, -2, creature) then Effects.CreateFood(1)
     }
 
     metadata {

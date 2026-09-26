@@ -13,7 +13,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Step
 
 
 /**
@@ -29,12 +29,12 @@ val BroodheartEngine = card("Broodheart Engine") {
     typeLine = "Artifact"
     oracleText = "At the beginning of your upkeep, surveil 1.\n{2}{B}{G}, {T}, Sacrifice this artifact: Return target creature or Vehicle card from your graveyard to the battlefield. Activate only as a sorcery."
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Patterns.Library.surveil(1)
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{B}{G}"), Costs.Tap, Costs.SacrificeSelf)
-        val t = target("target", TargetObject(filter = TargetFilter.CreatureInYourGraveyard))
+        val t = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.Move(t, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)
         timing = TimingRule.SorcerySpeed
     }

@@ -26,7 +26,7 @@ val BlindCreeper = card("Blind Creeper") {
     power = 3
     toughness = 3
     triggeredAbility {
-        trigger = Triggers.AnyPlayerCastsSpell
+        trigger = Triggers.anyPlayer.casts()
         effect = Effects.ModifyStats(-1, -1, EffectTarget.Self)
     }
     metadata {

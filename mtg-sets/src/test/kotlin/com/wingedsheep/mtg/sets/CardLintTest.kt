@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets
 
-import com.wingedsheep.sdk.serialization.CardLinter
-import com.wingedsheep.sdk.serialization.LintSeverity
+import com.wingedsheep.sdk.tooling.CardLinter
+import com.wingedsheep.sdk.tooling.LintSeverity
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 

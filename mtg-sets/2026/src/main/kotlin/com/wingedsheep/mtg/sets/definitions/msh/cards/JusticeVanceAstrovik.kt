@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Justice, Vance Astrovik — Marvel Super Heroes #61
@@ -27,7 +26,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  * the *targeting* restriction, not a resolution check, so a token is never a legal choice.
  *
  * "Is returned to its owner's hand" is a battlefield → hand zone change of a permanent you
- * control, i.e. [Triggers.leavesBattlefield] with `to = Zone.HAND`. The [TriggerBinding.OTHER]
+ * control, i.e. `Triggers.<subject>.leaves(to, excludeTo, excludeSacrifice)` with `to = Zone.HAND`. The [TriggerBinding.OTHER]
  * binding supplies the "another" — Justice bouncing itself never triggers it. Note the second
  * ability, unlike the first, is not restricted to nontoken permanents (bouncing a token does
  * trigger it, even though the token ceases to exist).
@@ -45,25 +44,15 @@ val JusticeVanceAstrovik = card("Justice, Vance Astrovik") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "up to one target nonland, nontoken permanent",
-            TargetPermanent(
-                optional = true,
-                filter = TargetFilter(GameObjectFilter.NonlandPermanent.nontoken()),
-            )
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter(GameObjectFilter.NonlandPermanent.nontoken()), optional = true)
         effect = Effects.ReturnToHand(t)
         description = "When Justice enters, return up to one target nonland, nontoken permanent to its owner's hand."
     }
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.NonlandPermanent.youControl(),
-            to = Zone.HAND,
-            binding = TriggerBinding.OTHER,
-        )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.another(GameObjectFilter.NonlandPermanent.youControl()).leaves(to = Zone.HAND)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Whenever another nonland permanent you control is returned to its owner's hand, put a +1/+1 counter on Justice."
     }
 

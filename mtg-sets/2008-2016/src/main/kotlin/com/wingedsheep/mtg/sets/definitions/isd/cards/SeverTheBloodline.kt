@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.isd.cards
 
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.namedFromVariable
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sever the Bloodline
@@ -30,13 +30,12 @@ val SeverTheBloodline = card("Sever the Bloodline") {
         "Flashback {5}{B}{B} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
 
     spell {
-        target("target creature", Targets.Creature)
+        target(TargetFilter.Creature)
         effect = Effects.Pipeline {
-            val chosen = gather(CardSource.ChosenTargets, name = "target")
-            val chosenName = storeCardName(chosen, name = "name")
+            val chosen = gather(CardSource.ChosenTargets)
+            val chosenName = storeCardName(chosen)
             val sameNamed = gather(
-                GameObjectFilter.Creature.namedFromVariable(chosenName),
-                name = "sameNamed"
+                GameObjectFilter.Creature.namedFromVariable(chosenName)
             )
             exile(sameNamed)
         }

@@ -1,18 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Dark Confidant
@@ -35,24 +31,15 @@ val DarkConfidant = card("Dark Confidant") {
     oracleText = "At the beginning of your upkeep, reveal the top card of your library and put that card into your hand. You lose life equal to its mana value."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1), Player.You),
-                    storeAs = "revealed"
-                ),
-                MoveCollectionEffect(
-                    from = "revealed",
-                    destination = CardDestination.ToZone(Zone.HAND, Player.You),
-                    revealed = true
-                ),
-                LoseLifeEffect(
-                    DynamicAmount.StoredCardManaValue("revealed"),
-                    EffectTarget.Controller
-                )
-            )
-        )
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.Pipeline {
+            val revealed = gather(CardSource.TopOfLibrary(1, Player.You))
+            toHand(revealed, revealed = true)
+            run(Effects.LoseLife(
+                DynamicAmounts.manaValueOf(revealed),
+                EffectTarget.Controller
+            ))
+        }
     }
 
     metadata {

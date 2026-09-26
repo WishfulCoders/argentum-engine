@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
+import com.wingedsheep.sdk.core.CounterType
 
 /**
  * Patched Plaything
@@ -34,7 +34,7 @@ val PatchedPlaything = card("Patched Plaything") {
 
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.MinusOneMinusOne,
+            counterType = CounterType.MINUS_ONE_MINUS_ONE,
             count = 2,
             selfOnly = true,
             condition = Conditions.WasCastFromHand

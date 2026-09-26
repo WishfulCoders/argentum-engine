@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -26,7 +25,7 @@ val Expunge = card("Expunge") {
     typeLine = "Instant"
     oracleText = "Destroy target nonartifact, nonblack creature. It can't be regenerated.\nCycling {2} ({2}, Discard this card: Draw a card.)"
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.nonartifact().notColor(Color.BLACK)))
+        val t = target(TargetFilter.Creature.nonartifact().notColor(Color.BLACK))
         effect = Effects.Destroy(t, noRegenerate = true)
     }
     keywordAbility(KeywordAbility.cycling("{2}"))

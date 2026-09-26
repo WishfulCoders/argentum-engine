@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Branching Bolt
@@ -32,17 +31,11 @@ val BranchingBolt = card("Branching Bolt") {
     spell {
         modal(chooseCount = 2, minChooseCount = 1) {
             mode("Branching Bolt deals 3 damage to target creature with flying") {
-                val flier = target(
-                    "target",
-                    TargetCreature(filter = TargetFilter.Creature.withKeyword(Keyword.FLYING))
-                )
+                val flier = target(TargetFilter.Creature.withKeyword(Keyword.FLYING))
                 effect = Effects.DealDamage(3, flier)
             }
             mode("Branching Bolt deals 3 damage to target creature without flying") {
-                val grounded = target(
-                    "target",
-                    TargetCreature(filter = TargetFilter.Creature.withoutKeyword(Keyword.FLYING))
-                )
+                val grounded = target(TargetFilter.Creature.withoutKeyword(Keyword.FLYING))
                 effect = Effects.DealDamage(3, grounded)
             }
         }

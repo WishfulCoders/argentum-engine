@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 
 /**
  * Satoru, the Infiltrator
@@ -19,7 +18,7 @@ import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
  * Whenever Satoru and/or one or more other nontoken creatures you control enter, if none of them
  * were cast or no mana was spent to cast them, draw a card.
  *
- * The trigger is a batch enters over nontoken creatures you control ([Triggers.OneOrMorePermanentsEnter];
+ * The trigger is a batch enters over nontoken creatures you control (`Triggers.oneOrMore(filter).enter()`;
  * Satoru itself qualifies). The intervening "if none of them were cast or no mana was spent" is the
  * batch-level [Conditions.NoManaSpentToCastEntered], evaluated at resolution over the captured batch:
  * if every entered creature had no mana spent to cast it, draw a card. When Satoru is hard-cast for
@@ -39,10 +38,10 @@ val SatoruTheInfiltrator = card("Satoru, the Infiltrator") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.OneOrMorePermanentsEnter(GameObjectFilter.Creature.nontoken())
-        effect = ConditionalEffect(
+        trigger = Triggers.oneOrMore(GameObjectFilter.Creature.nontoken()).enter()
+        effect = Effects.If(
             condition = Conditions.NoManaSpentToCastEntered,
-            effect = Effects.DrawCards(1)
+            then = Effects.DrawCards(1)
         )
         description = "Whenever Satoru and/or one or more other nontoken creatures you control " +
             "enter, if none of them were cast or no mana was spent to cast them, draw a card."

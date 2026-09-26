@@ -14,17 +14,18 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.AdditionalCostPayment
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.mtg.sets.definitions.lci.cards.MarketGnome
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Market Gnome (LCI #22) — the two "gain 1 life and draw a card" triggers.
  *
- *  1. "When this creature dies, you gain 1 life and draw a card." — plain [Triggers.Dies].
+ *  1. "When this creature dies, you gain 1 life and draw a card." — plain `Triggers.self.dies()`.
  *  2. "When this creature is exiled from the battlefield while you're activating a craft
- *     ability, you gain 1 life and draw a card." — the new [Triggers.ExiledAsCraftMaterial]
+ *     ability, you gain 1 life and draw a card." — the new `Triggers.self.leaves(to = Zone.EXILE, asCraftMaterial = true)`
  *     SELF exile trigger, gated on the craft-material fact stamped by the Craft cost payment
  *     (CR 702.167).
  *
@@ -59,7 +60,7 @@ class MarketGnomeScenarioTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Exile target creature."
         spell {
-            val t = target("target creature", TargetCreature())
+            val t = target(TargetFilter.Creature)
             effect = Effects.Exile(t)
         }
     }
@@ -86,7 +87,7 @@ class MarketGnomeScenarioTest : FunSpec({
         // Lightning Bolt for 3 kills the 0/3 gnome for real, so its dies trigger fires.
         val bolt = driver.putCardInHand(p1, "Lightning Bolt")
         driver.giveMana(p1, Color.RED, 3)
-        driver.castSpell(p1, bolt, targets = listOf(gnome)).isSuccess shouldBe true
+        driver.castSpell(p1, bolt, targets = listOf(gnome)).outcome shouldBe Outcome.Done
         driver.bothPass() // resolve Bolt -> gnome dies, queue its dies trigger
         driver.bothPass() // resolve the dies trigger
 
@@ -137,7 +138,7 @@ class MarketGnomeScenarioTest : FunSpec({
 
         val banishId = driver.putCardInHand(p1, "Test Banish")
         driver.giveMana(p1, Color.RED, 1)
-        driver.castSpell(p1, banishId, targets = listOf(gnome)).isSuccess shouldBe true
+        driver.castSpell(p1, banishId, targets = listOf(gnome)).outcome shouldBe Outcome.Done
         driver.bothPass() // resolve Banish -> gnome exiled (non-craft)
         driver.bothPass()
 

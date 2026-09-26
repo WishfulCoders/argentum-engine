@@ -29,10 +29,8 @@ val LocthwainGargoyle = card("Locthwain Gargoyle") {
 
     activatedAbility {
         cost = Costs.Mana("{4}")
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 0, EffectTarget.Self),
+        effect = Effects.ModifyStats(2, 0, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
-        )
     }
 
     metadata {

@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.madness
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 
 /** Bloodhall Priest — Eldritch Moon #181. */
 val BloodhallPriest = card("Bloodhall Priest") {
@@ -22,16 +21,16 @@ val BloodhallPriest = card("Bloodhall Priest") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.EmptyHand
-        val damageTarget = target("any target", Targets.Any)
+        val damageTarget = target(Targets.Any)
         effect = Effects.DealDamage(2, damageTarget)
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         interveningIf = Conditions.EmptyHand
-        val damageTarget = target("any target", Targets.Any)
+        val damageTarget = target(Targets.Any)
         effect = Effects.DealDamage(2, damageTarget)
     }
 

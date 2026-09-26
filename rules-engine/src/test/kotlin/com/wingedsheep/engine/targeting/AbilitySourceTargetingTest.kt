@@ -66,7 +66,7 @@ class AbilitySourceTargetingTest : FunSpec({
 
         test("the Echo/Scientist target filter permits abilities") {
             val echoLike = (
-                Targets.ActivatedOrTriggeredAbilityYouControlFrom(GameObjectFilter.Artifact)
+                TargetObject(filter = TargetFilter.ActivatedOrTriggeredAbilityOnStack.youControl().abilitySourceMatches(GameObjectFilter.Artifact))
                     as TargetObject
                 ).filter
             StackObjectTargeting.permitsAbilities(echoLike.baseFilter) shouldBe true
@@ -84,7 +84,7 @@ class AbilitySourceTargetingTest : FunSpec({
             activatedAbility {
                 cost = AbilityCost.Tap
                 effect = Effects.ModifyStats(1, 0, EffectTarget.ContextTarget(0))
-                target = Targets.CreatureYouControl
+                target = TargetObject(filter = TargetFilter.CreatureYouControl)
                 timing = TimingRule.InstantSpeed
             }
         }
@@ -97,10 +97,7 @@ class AbilitySourceTargetingTest : FunSpec({
             oracleText = "{T}: Copy target activated or triggered ability you control."
             activatedAbility {
                 cost = AbilityCost.Tap
-                val ability = target(
-                    "target activated or triggered ability you control",
-                    Targets.ActivatedOrTriggeredAbilityYouControl
-                )
+                val ability = target(TargetFilter.ActivatedOrTriggeredAbilityOnStack.youControl())
                 effect = Effects.CopyTargetSpellOrAbility(ability)
                 timing = TimingRule.InstantSpeed
             }

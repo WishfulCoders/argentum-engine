@@ -5,10 +5,10 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Deceiver Exarch
@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * • Tap target permanent an opponent controls.
  *
  * Flash is a printed [Keyword]. The enters trigger is a [ModalEffect.chooseOne] on
- * [Triggers.EntersBattlefield], each mode carrying its own target — the mode is what decides
+ * `Triggers.self.enters()`, each mode carrying its own target — the mode is what decides
  * *whose* permanent is legal, so both are [Mode.withTarget] over [Targets.PermanentYouControl] and
  * [Targets.PermanentOpponentControls] rather than one shared requirement. The effects are the two
  * halves of the same tap/untap atom, [Effects.Untap] and [Effects.Tap], each reading its own
@@ -41,18 +41,16 @@ val DeceiverExarch = card("Deceiver Exarch") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseOne(
-            Mode.withTarget(
-                effect = Effects.Untap(EffectTarget.ContextTarget(0)),
-                target = Targets.PermanentYouControl,
-                description = "Untap target permanent you control."
-            ),
-            Mode.withTarget(
-                effect = Effects.Tap(EffectTarget.ContextTarget(0)),
-                target = Targets.PermanentOpponentControls,
-                description = "Tap target permanent an opponent controls."
-            )
+            mode("Untap target permanent you control.") {
+                val permanentYouControl = target(TargetFilter.PermanentYouControl)
+                effect = Effects.Untap(permanentYouControl)
+            },
+            mode("Tap target permanent an opponent controls.") {
+                val permanentOpponentControls = target(TargetFilter.PermanentOpponentControls)
+                effect = Effects.Tap(permanentOpponentControls)
+            }
         )
         description = "When this creature enters, choose one — Untap target permanent you control; " +
             "or tap target permanent an opponent controls."

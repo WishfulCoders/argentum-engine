@@ -34,13 +34,13 @@ val RoarOfTheKha = card("Roar of the Kha") {
             mode("Creatures you control get +1/+1 until end of turn") {
                 effect = Effects.ForEachInGroup(
                     GroupFilter(GameObjectFilter.Creature.youControl()),
-                    Effects.ModifyStats(1, 1, EffectTarget.Self)
+                    Effects.ModifyStats(1, 1, EffectTarget.IterationEntity)
                 )
             }
             mode("Untap all creatures you control") {
                 effect = Effects.ForEachInGroup(
                     GroupFilter(GameObjectFilter.Creature.youControl()),
-                    Effects.Untap(EffectTarget.Self)
+                    Effects.Untap(EffectTarget.IterationEntity)
                 )
             }
         }

@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
@@ -40,22 +40,18 @@ val SnarlSong = card("Snarl Song") {
             creatureTypes = setOf("Fractal"),
             count = 2,
             imageUri = "https://cards.scryfall.io/normal/front/d/e/de564776-9d88-4533-8717-842eecdd0594.jpg?1775828279"
-        )
-            .then(
-                Effects.AddDynamicCounters(
-                    Counters.PLUS_ONE_PLUS_ONE,
-                    DynamicAmounts.colorsOfManaSpent(),
-                    EffectTarget.PipelineTarget(CREATED_TOKENS, 0)
-                )
-            )
-            .then(
-                Effects.AddDynamicCounters(
-                    Counters.PLUS_ONE_PLUS_ONE,
-                    DynamicAmounts.colorsOfManaSpent(),
-                    EffectTarget.PipelineTarget(CREATED_TOKENS, 1)
-                )
-            )
-            .then(Effects.GainLife(DynamicAmounts.colorsOfManaSpent()))
+        ) then
+            Effects.AddDynamicCounters(
+                CounterType.PLUS_ONE_PLUS_ONE,
+                DynamicAmounts.colorsOfManaSpent(),
+                EffectTarget.PipelineTarget(CREATED_TOKENS, 0)
+            ) then
+            Effects.AddDynamicCounters(
+                CounterType.PLUS_ONE_PLUS_ONE,
+                DynamicAmounts.colorsOfManaSpent(),
+                EffectTarget.PipelineTarget(CREATED_TOKENS, 1)
+            ) then
+            Effects.GainLife(DynamicAmounts.colorsOfManaSpent())
     }
 
     metadata {

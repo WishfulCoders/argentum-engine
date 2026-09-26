@@ -9,7 +9,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 
 /**
- * Scenario test for the `Gate.MayPayX` gate kind — the lowered `MayPayXForEffect` wrapper
+ * Scenario test for the `Gate.MayPayX` gate kind — the lowered `Effects.MayPayX` wrapper
  * (gated-effect-migration handoff #5). Exercised through Decree of Justice (SCG):
  *
  * "Cycling {2}{W}

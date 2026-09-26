@@ -51,7 +51,7 @@ val ChampionOfTheClachan = card("Champion of the Clachan") {
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileToHand()
     }
 

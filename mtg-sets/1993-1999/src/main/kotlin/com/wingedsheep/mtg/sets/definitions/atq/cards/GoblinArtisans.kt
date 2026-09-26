@@ -6,11 +6,9 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.FlipCoinEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
 
 /**
  * Goblin Artisans
@@ -43,17 +41,14 @@ val GoblinArtisans = card("Goblin Artisans") {
     activatedAbility {
         cost = Costs.Tap
         target(
-            "target artifact spell you control",
-            TargetSpell(
-                filter = TargetFilter(
-                    GameObjectFilter.Artifact
-                        .youControl()
-                        .notTargetedByAbilityFromSameNamedSource(),
-                    zone = Zone.STACK
-                )
-            )
+            TargetFilter(
+                GameObjectFilter.Artifact
+                    .youControl()
+                    .notTargetedByAbilityFromSameNamedSource(),
+                zone = Zone.STACK
+            ),
         )
-        effect = FlipCoinEffect(
+        effect = Effects.FlipCoin(
             wonEffect = Effects.DrawCards(1, EffectTarget.PlayerRef(Player.You)),
             lostEffect = Effects.CounterSpell()
         )

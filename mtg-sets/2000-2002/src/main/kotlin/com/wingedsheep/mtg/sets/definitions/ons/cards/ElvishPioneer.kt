@@ -23,7 +23,7 @@ val ElvishPioneer = card("Elvish Pioneer") {
     oracleText = "When Elvish Pioneer enters the battlefield, you may put a basic land card from your hand onto the battlefield tapped."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Hand.putFromHand(
             filter = GameObjectFilter.BasicLand,
             entersTapped = true

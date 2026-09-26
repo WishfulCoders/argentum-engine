@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.som.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Trigon of Rage
@@ -33,7 +32,7 @@ val TrigonOfRage = card("Trigon of Rage") {
 
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.Named(Counters.CHARGE),
+            counterType = CounterType.CHARGE,
             count = 3,
             selfOnly = true
         )
@@ -41,7 +40,7 @@ val TrigonOfRage = card("Trigon of Rage") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{R}{R}"), Costs.Tap)
-        effect = Effects.AddCounters(Counters.CHARGE, 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.CHARGE, 1, EffectTarget.Self)
         description = "{R}{R}, {T}: Put a charge counter on this artifact."
     }
 
@@ -49,9 +48,9 @@ val TrigonOfRage = card("Trigon of Rage") {
         cost = Costs.Composite(
             Costs.Mana("{2}"),
             Costs.Tap,
-            Costs.RemoveCounterFromSelf(Counters.CHARGE)
+            Costs.RemoveCounterFromSelf(CounterType.CHARGE)
         )
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(3, 0, t)
         description = "{2}, {T}, Remove a charge counter from this artifact: " +
             "Target creature gets +3/+0 until end of turn."

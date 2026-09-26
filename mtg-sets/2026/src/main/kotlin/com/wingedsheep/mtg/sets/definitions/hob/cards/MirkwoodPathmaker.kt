@@ -4,11 +4,11 @@
 
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -25,7 +25,7 @@ val MirkwoodPathmaker = card("Mirkwood Pathmaker") {
     oracleText = "Mirkwood Pathmaker's power and toughness are each equal to the number of lands you control."
     power = 0
     toughness = 0
-    dynamicStats(DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land))
+    dynamicStats(DynamicAmounts.landsYouControl())
     metadata {
         rarity = Rarity.UNCOMMON
         collectorNumber = "129"

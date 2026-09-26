@@ -42,7 +42,7 @@ class ThroughTheBreachScenarioTest : FunSpec({
         colorIdentity = "R"
         typeLine = "Instant — Arcane"
         spell {
-            val t = target("spark", Targets.Player)
+            val t = target(Targets.Player)
             effect = Effects.DealDamage(1, t)
         }
     }

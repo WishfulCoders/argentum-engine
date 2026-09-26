@@ -29,7 +29,7 @@ val LosDiablosMissileBase = card("Los Diablos Missile Base") {
     replacementEffect(EntersTapped())
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(1)
     }
 

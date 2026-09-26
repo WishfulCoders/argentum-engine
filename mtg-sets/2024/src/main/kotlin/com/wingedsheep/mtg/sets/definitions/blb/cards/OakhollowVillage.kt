@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
@@ -10,11 +10,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddColorlessManaEffect
-import com.wingedsheep.sdk.scripting.effects.AddCountersToCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.AddManaEffect
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.dsl.Effects
@@ -37,23 +33,23 @@ val OakhollowVillage = card("Oakhollow Village") {
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddColorlessManaEffect(1)
+        effect = Effects.AddColorlessMana(1)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddManaEffect(Color.GREEN, restriction = ManaRestriction.CreatureSpellsOnly)
+        effect = Effects.AddMana(Color.GREEN, restriction = ManaRestriction.CreatureSpellsOnly)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{G}"), Costs.Tap)
-        effect = Effects.Composite(listOf(
-            GatherCardsEffect(
-                source = CardSource.FromZone(
+        effect = Effects.Pipeline {
+            val creatures = gather(
+                CardSource.FromZone(
                     Zone.BATTLEFIELD,
                     Player.You,
                     GameObjectFilter.Creature
@@ -66,11 +62,10 @@ val OakhollowVillage = card("Oakhollow Village") {
                             )
                         )
                         .enteredThisTurn()
-                ),
-                storeAs = "creatures"
-            ),
-            AddCountersToCollectionEffect("creatures", Counters.PLUS_ONE_PLUS_ONE, 1)
-        ))
+                )
+            )
+            run(Effects.AddCountersToCollection(creatures, CounterType.PLUS_ONE_PLUS_ONE, 1))
+        }
     }
 
     metadata {

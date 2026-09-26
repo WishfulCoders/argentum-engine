@@ -46,7 +46,7 @@ class MoveChosenCountersToTargetExecutor : EffectExecutor<MoveChosenCountersToTa
             ?: return EffectResult.success(state, emptyList())
         val present = counters.counters.entries
             .filter { it.value > 0 }
-            .map { counterTypeToString(it.key) to it.value }
+            .map { it.key to it.value }
 
         if (present.isEmpty()) return EffectResult.success(state, emptyList())
 
@@ -59,7 +59,7 @@ class MoveChosenCountersToTargetExecutor : EffectExecutor<MoveChosenCountersToTa
         val decision = { decisionId: String -> ChooseNumberDecision(
             id = decisionId,
             playerId = context.controllerId,
-            prompt = "Move how many $firstType counters from $sourceName onto $destName? (0-$firstMax)",
+            prompt = "Move how many ${firstType.printed} counters from $sourceName onto $destName? (0-$firstMax)",
             context = DecisionContext(
                 sourceId = context.sourceId,
                 sourceName = sourceName,

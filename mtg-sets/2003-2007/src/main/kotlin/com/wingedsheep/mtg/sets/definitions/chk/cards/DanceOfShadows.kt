@@ -27,10 +27,8 @@ val DanceOfShadows = card("Dance of Shadows") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.Composite(
-                Effects.ModifyStats(1, 0, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.FEAR, EffectTarget.Self)
-            )
+            Effects.ModifyStats(1, 0, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.FEAR, EffectTarget.IterationEntity)
         )
     }
     metadata {

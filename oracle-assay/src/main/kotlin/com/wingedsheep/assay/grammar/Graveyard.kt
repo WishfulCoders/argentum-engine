@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.scripting.effects.ForEachEffect
 import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
 import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.references.Player
@@ -164,7 +163,7 @@ object Graveyard {
      */
     private val putTargetFromThatPlayersGraveyard: Phrase<CardScript> = run {
         val script = CardScript(
-            spellEffect = MayEffect(Effects.PutOntoBattlefieldUnderYourControl(Targets.bound())),
+            spellEffect = Effects.May(Effects.PutOntoBattlefieldUnderYourControl(Targets.bound())),
             targetRequirements = listOf(
                 TargetObject(filter = TargetFilter.CreatureInGraveyard.ownedByOpponent(), id = Targets.SLOT)
             ),
@@ -236,25 +235,21 @@ object Graveyard {
      */
     private val shuffleChosenTypeFromGraveyard: Phrase<CardScript> = run {
         val script = CardScript(
-            spellEffect = Effects.Composite(
-                listOf(
-                    ChooseCreatureTypeEffect,
-                    GatherCardsEffect(
-                        source = CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Creature),
-                        storeAs = "graveyardCreatures",
-                    ),
-                    SelectFromCollectionEffect(
-                        from = "graveyardCreatures",
-                        selection = SelectionMode.All,
-                        matchChosenCreatureType = true,
-                        storeSelected = "chosen",
-                    ),
-                    MoveCollectionEffect(
-                        from = "chosen",
-                        destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Shuffled),
-                    ),
+            spellEffect = ChooseCreatureTypeEffect then
+                GatherCardsEffect(
+                    source = CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Creature),
+                    storeAs = "graveyardCreatures",
+                ) then
+                SelectFromCollectionEffect(
+                    from = "graveyardCreatures",
+                    selection = SelectionMode.All,
+                    matchChosenCreatureType = true,
+                    storeSelected = "chosen",
+                ) then
+                MoveCollectionEffect(
+                    from = "chosen",
+                    destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Shuffled),
                 )
-            )
         )
         phrase(
             "choose a creature type. shuffle all creature cards of that type from your graveyard " +
@@ -297,16 +292,14 @@ object Graveyard {
         val suffix = if (tapped) " tapped" else ""
         val placement = if (tapped) ZonePlacement.Tapped else ZonePlacement.Default
         fun scriptFor(filter: GameObjectFilter) = CardScript(
-            spellEffect = Effects.Composite(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.GRAVEYARD, Player.You, filter),
-                    storeAs = COLLECTED,
-                ),
+            spellEffect = GatherCardsEffect(
+                source = CardSource.FromZone(Zone.GRAVEYARD, Player.You, filter),
+                storeAs = COLLECTED,
+            ) then
                 MoveCollectionEffect(
                     from = COLLECTED,
                     destination = CardDestination.ToZone(Zone.BATTLEFIELD, placement = placement),
-                ),
-            )
+                )
         )
         return phrase(
             "return all {filter} from your graveyard to the battlefield$suffix",
@@ -397,7 +390,7 @@ object Graveyard {
      *
      * CR 607 makes this ability *linked* to a later one that says "the exiled card", and the SDK
      * carries that fact twice — on the move (`MoveCollectionEffect.linkToSource`) and on the read
-     * (`EntityReference.LinkedExiledCard`). Only the read is printed. So this rule builds the plain
+     * (`EffectTarget.LinkedExiledCard`). Only the read is printed. So this rule builds the plain
      * move and [CardFragment.deriveExileLinkage] sets the flag when some other line on the same
      * card turns out to read the pile, which is this module's "a value the SDK carries twice is
      * derived, not spelled" applied one scope out: the deriving evidence is on a different line, so

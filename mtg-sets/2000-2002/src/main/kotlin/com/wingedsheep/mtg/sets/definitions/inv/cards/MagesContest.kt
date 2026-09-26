@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Mages' Contest
@@ -23,7 +23,7 @@ val MagesContest = card("Mages' Contest") {
         "The high bidder loses life equal to the high bid. If you win the bidding, counter that spell."
 
     spell {
-        target = TargetSpell()
+        val spell = target(TargetFilter.SpellOnStack)
         effect = Effects.OpenLifeBid(Effects.CounterSpell(), Player.ControllerOf("target spell"))
     }
 

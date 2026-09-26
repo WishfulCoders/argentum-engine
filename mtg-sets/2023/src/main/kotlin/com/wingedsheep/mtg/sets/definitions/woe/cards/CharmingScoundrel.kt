@@ -4,12 +4,11 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Charming Scoundrel
@@ -43,21 +42,20 @@ val CharmingScoundrel = card("Charming Scoundrel") {
     keywords(Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseOne(
             Mode.noTarget(
-                Effects.Discard(1).then(Effects.DrawCards(1)),
+                Effects.Discard(1) then Effects.DrawCards(1),
                 "Discard a card, then draw a card."
             ),
             Mode.noTarget(
                 Effects.CreateTreasure(),
                 "Create a Treasure token."
             ),
-            Mode.withTarget(
-                Effects.CreateRoleToken("Wicked Role", EffectTarget.ContextTarget(0)),
-                TargetCreature(filter = TargetFilter.CreatureYouControl),
-                "Create a Wicked Role token attached to target creature you control."
-            )
+            mode("Create a Wicked Role token attached to target creature you control.") {
+                val creatureYouControl = target(TargetFilter.CreatureYouControl)
+                effect = Effects.CreateRoleToken("Wicked Role", creatureYouControl)
+            }
         )
         description = "When this creature enters, choose one."
     }

@@ -35,7 +35,7 @@ class ConvertCountersToTokensExecutor(
         val sourceId = context.sourceId ?: return EffectResult.success(state)
         val sourceEntity = state.getEntity(sourceId) ?: return EffectResult.success(state)
 
-        val counterType = EntersWithReplacements.resolveCounterType(effect.counterType)
+        val counterType = effect.counterType
         val available = sourceEntity.get<CountersComponent>()?.getCount(counterType) ?: 0
         if (available <= 0) return EffectResult.success(state)
 
@@ -53,7 +53,7 @@ class ConvertCountersToTokensExecutor(
             playerId = context.controllerId,
             sourceId = sourceId,
             sourceName = sourceName,
-            prompt = "Remove how many ${effect.counterType.description} counters from $sourceName? (0-$available)",
+            prompt = "Remove how many ${effect.counterType.printed} counters from $sourceName? (0-$available)",
             minValue = 0,
             maxValue = available,
             phase = DecisionPhase.RESOLUTION,

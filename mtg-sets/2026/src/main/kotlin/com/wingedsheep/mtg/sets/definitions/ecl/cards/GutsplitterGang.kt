@@ -5,8 +5,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Gutsplitter Gang
@@ -28,11 +28,11 @@ val GutsplitterGang = card("Gutsplitter Gang") {
         "(To blight 2, put two -1/-1 counters on a creature you control.)"
 
     triggeredAbility {
-        trigger = Triggers.FirstMainPhase
-        effect = OptionalCostEffect(
+        trigger = Triggers.you.beginningOf(Step.PRECOMBAT_MAIN)
+        effect = Effects.MayPay(
             cost = Patterns.Mechanic.blight(2),
-            ifPaid = Effects.Composite(emptyList()),
-            ifNotPaid = Effects.LoseLife(3, EffectTarget.Controller),
+            then = Effects.Nothing,
+            otherwise = Effects.LoseLife(3, EffectTarget.Controller),
             descriptionOverride = "You may blight 2. If you don't, you lose 3 life"
         )
     }

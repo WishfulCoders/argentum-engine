@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.mh3.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -11,12 +11,7 @@ import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Arcbound Condor — Modern Horizons 3 #81
@@ -67,7 +62,7 @@ val ArcboundCondor = card("Arcbound Condor") {
     // Modular, half one: "This creature enters with three +1/+1 counters on it."
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.PlusOnePlusOne,
+            counterType = CounterType.PLUS_ONE_PLUS_ONE,
             count = 3,
             selfOnly = true
         )
@@ -75,24 +70,21 @@ val ArcboundCondor = card("Arcbound Condor") {
 
     // Modular, half two: "When it dies, you may put its +1/+1 counters on target artifact creature."
     triggeredAbility {
-        trigger = Triggers.Dies
-        target = TargetPermanent(filter = TargetFilter(GameObjectFilter.ArtifactCreature))
+        val permanent = target(TargetFilter(GameObjectFilter.ArtifactCreature))
+        trigger = Triggers.self.dies()
         optional = true
         effect = Effects.AddDynamicCounters(
-            Counters.PLUS_ONE_PLUS_ONE,
-            DynamicAmount.ContextProperty(ContextPropertyKey.LAST_KNOWN_PLUS_ONE_COUNTER_COUNT),
-            EffectTarget.ContextTarget(0)
+            CounterType.PLUS_ONE_PLUS_ONE,
+            DynamicAmounts.lastKnownPlusOneCounters(),
+            permanent
         )
         description = "When this creature dies, you may put its +1/+1 counters on target artifact creature."
     }
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            binding = TriggerBinding.OTHER
-        )
-        target = Targets.CreatureOpponentControls
-        effect = Effects.ModifyStats(-1, -1, EffectTarget.ContextTarget(0))
+        val creatureOpponentControls = target(TargetFilter.CreatureOpponentControls)
+        trigger = Triggers.another(GameObjectFilter.Artifact.youControl()).enters()
+        effect = Effects.ModifyStats(-1, -1, creatureOpponentControls)
         description = "Whenever another artifact you control enters, target creature an opponent " +
             "controls gets -1/-1 until end of turn."
     }

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.view
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.PaymentStrategy
@@ -46,7 +47,6 @@ import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.RevealTopOfLibrary
 import com.wingedsheep.sdk.scripting.CastSpellTypesFromTopOfLibrary
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.assertions.withClue
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.FunSpec
@@ -57,6 +57,8 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * The game log must never print the name of a card that is face down on the battlefield.
@@ -100,8 +102,8 @@ class FaceDownGameLogMaskingTest : FunSpec({
         power = 1
         toughness = 1
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
-            target("target creature", TargetCreature())
+            trigger = Triggers.self.enters()
+            target(TargetFilter.Creature)
             effect = Effects.Tap(EffectTarget.ContextTarget(0))
             description = "When this creature enters, tap target creature."
         }
@@ -264,7 +266,7 @@ class FaceDownGameLogMaskingTest : FunSpec({
         d.registerCard(publicTopManaSource)
         val manaSource = d.putPermanentOnBattlefield(caster, publicTopManaSource.name)
         val cardId = d.putCardOnTopOfLibrary(caster, disguisedAngel.name)
-        val visibility = Visibility(d.cardRegistry)
+        val visibility = Visibility(d.cardRegistry, conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
         visibility.isCardIdentityVisibleTo(
             d.state, Zone.LIBRARY, cardId, opponent, isSpectator = true,
         ) shouldBe true
@@ -302,7 +304,7 @@ class FaceDownGameLogMaskingTest : FunSpec({
             container.with(container.get<CardComponent>()!!.copy(imageUri = hiddenImage))
         })
         val ability = ActivatedAbility(
-            id = AbilityId.generate(),
+            id = AbilityId("FaceDownGameLogMaskingTest_1"),
             cost = Costs.Tap,
             targetRequirements = listOf(AnyTarget()),
             effect = Effects.DealDamage(DynamicAmounts.sourcePower(), EffectTarget.ContextTarget(0)),
@@ -325,7 +327,7 @@ class FaceDownGameLogMaskingTest : FunSpec({
         val json = Json { serializersModule = engineSerializersModule }
         val opponentEvents = json.encodeToString(ClientEventTransformer.transform(result.events, opponent))
         val stackId = d.state.stack.last()
-        val transformer = ClientStateTransformer(d.cardRegistry)
+        val transformer = ClientStateTransformer(d.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val publicStackCards = listOf(
             transformer.transform(d.state, opponent).cards.getValue(stackId),
             transformer.transform(d.state, controller, isSpectator = true).cards.getValue(stackId),
@@ -372,12 +374,12 @@ class FaceDownGameLogMaskingTest : FunSpec({
         val bolt = d.putCardInHand(activePlayer, "Lightning Bolt")
         d.castSpellWithTargets(
             activePlayer, bolt, listOf(ChosenTarget.Permanent(hidden))
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
 
         val wardId = d.state.stack.single { id ->
             d.state.getEntity(id)?.has<TriggeredAbilityOnStackComponent>() == true
         }
-        val transformer = ClientStateTransformer(d.cardRegistry)
+        val transformer = ClientStateTransformer(d.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val publicWardCards = listOf(
             transformer.transform(d.state, activePlayer).cards.getValue(wardId),
             transformer.transform(d.state, opponent, isSpectator = true).cards.getValue(wardId),
@@ -427,7 +429,7 @@ class FaceDownGameLogMaskingTest : FunSpec({
         val counter = d.putCardInHand(opponent, "Counterspell")
         d.castSpellWithTargets(
             opponent, counter, listOf(ChosenTarget.Spell(cardId))
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
 
         val log = d.logAsSeenBy(caster)
         withClue("log: $log") {
@@ -488,7 +490,7 @@ class FaceDownGameLogMaskingTest : FunSpec({
         val controller = d.activePlayer!!
         val opponent = d.getOpponent(controller)
         val hidden = d.putFaceDown(controller, "Disguised Angel", FaceDownMode.DISGUISE)
-        val visibility = Visibility(d.cardRegistry)
+        val visibility = Visibility(d.cardRegistry, conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
 
         // CR 708.5 — you may look at a face-down permanent you control. Text with an audience asks
         // the shared identity authority and picks its label from that answer; the flat game-log

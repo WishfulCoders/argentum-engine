@@ -2,11 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Stir Up Trouble — The Hobbit #84
@@ -35,8 +34,8 @@ val StirUpTrouble = card("Stir Up Trouble") {
     )
 
     spell {
-        target = Targets.Creature
-        effect = Effects.Destroy(EffectTarget.ContextTarget(0))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.Destroy(creature)
     }
 
     metadata {

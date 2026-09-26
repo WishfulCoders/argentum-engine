@@ -5,19 +5,13 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -38,11 +32,11 @@ val DiversionSpecialist = card("Diversion Specialist") {
     keywords(Keyword.MENACE)
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeAnother(GameObjectFilter.CreatureOrEnchantment))
-        effect = Effects.Composite(
-            GatherCardsEffect(CardSource.TopOfLibrary(DynamicAmount.Fixed(1)), storeAs = "impulseExiled"),
-            MoveCollectionEffect(from = "impulseExiled", destination = CardDestination.ToZone(Zone.EXILE)),
-            GrantMayPlayFromExileEffect("impulseExiled", MayPlayExpiry.EndOfTurn)
-        )
+        effect = Effects.Pipeline {
+            val impulseExiled = gather(CardSource.TopOfLibrary(1))
+            exile(impulseExiled)
+            run(Effects.GrantMayPlayFromExile(impulseExiled, MayPlayExpiry.EndOfTurn))
+        }
     }
     metadata {
         rarity = Rarity.UNCOMMON

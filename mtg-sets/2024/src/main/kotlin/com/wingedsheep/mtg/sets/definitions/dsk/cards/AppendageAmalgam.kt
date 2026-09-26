@@ -28,7 +28,7 @@ val AppendageAmalgam = card("Appendage Amalgam") {
     toughness = 2
     keywords(Keyword.FLASH)
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Library.surveil(1)
     }
     metadata {

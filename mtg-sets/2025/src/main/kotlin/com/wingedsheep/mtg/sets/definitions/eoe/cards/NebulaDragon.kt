@@ -28,8 +28,8 @@ val NebulaDragon = card("Nebula Dragon") {
 
     // ETB: deals 3 damage to any target
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val target = target("any target", Targets.Any)
+        trigger = Triggers.self.enters()
+        val target = target(Targets.Any)
         effect = Effects.DealDamage(3, target)
     }
 

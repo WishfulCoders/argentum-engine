@@ -25,7 +25,7 @@ import io.kotest.matchers.shouldBe
  * the name axis of `SharesCardTypeWithLinkedExile` (Cemetery Illuminator). What these tests pin:
  *
  * - the pile is read **whole**, not at one index: a second exile has to lock out a second name
- *   while the first stays locked (an `EntityReference.LinkedExiledCard()` index could only ever
+ *   while the first stays locked (an `EffectTarget.LinkedExiledCard()` index could only ever
  *   name one of them);
  * - the prohibition is **opponents-only**, per the card's own second ruling — the controller can
  *   still cast a same-named card;

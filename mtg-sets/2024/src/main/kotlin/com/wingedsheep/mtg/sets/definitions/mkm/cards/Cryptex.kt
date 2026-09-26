@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -29,8 +29,8 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * applies: a graveyard that can't reach total mana value 3 makes the whole ability unactivatable
  * rather than offering a collection the player couldn't complete.
  *
- * **The unlock counter** is a new passive named counter ([Counters.UNLOCK]) with no inherent rule of
- * its own — the same accumulate-then-threshold shape as `Counters.POINT` and `Counters.PLAN`, and
+ * **The unlock counter** is a new passive named counter ([CounterType.UNLOCK]) with no inherent rule of
+ * its own — the same accumulate-then-threshold shape as `CounterType.POINT` and `CounterType.PLAN`, and
  * like them the payoff sacrifices its own source, so the "five or more" gate can never fire twice.
  * The gate is [ActivationRestriction.OnlyIfCondition] over
  * [Conditions.SourceCounterCountAtLeast], which reads the source's counters live rather than at
@@ -52,10 +52,7 @@ val Cryptex = card("Cryptex") {
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.CollectEvidence(3))
         manaAbility = true
-        effect = Effects.Composite(
-            Effects.AddManaOfChoice(),
-            Effects.AddCounters(Counters.UNLOCK, 1, EffectTarget.Self),
-        )
+        effect = Effects.AddManaOfChoice() then Effects.AddCounters(CounterType.UNLOCK, 1, EffectTarget.Self)
         description = "Add one mana of any color. Put an unlock counter on this artifact."
     }
 
@@ -63,13 +60,10 @@ val Cryptex = card("Cryptex") {
         cost = Costs.SacrificeSelf
         restrictions = listOf(
             ActivationRestriction.OnlyIfCondition(
-                Conditions.SourceCounterCountAtLeast(Counters.UNLOCK, 5)
+                Conditions.SourceCounterCountAtLeast(CounterType.UNLOCK, 5)
             )
         )
-        effect = Effects.Composite(
-            Effects.Surveil(3),
-            Effects.DrawCards(3),
-        )
+        effect = Effects.Surveil(3) then Effects.DrawCards(3)
         description = "Surveil 3, then draw three cards."
     }
 

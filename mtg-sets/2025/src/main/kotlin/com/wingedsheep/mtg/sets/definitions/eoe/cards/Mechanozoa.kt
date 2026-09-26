@@ -1,13 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 
@@ -29,14 +26,10 @@ val Mechanozoa = card("Mechanozoa") {
     toughness = 5
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target("target artifact or creature an opponent controls", TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrArtifact.opponentControls())))
-        effect = Effects.Composite(
-            listOf(
-                Effects.Tap(EffectTarget.ContextTarget(0)),
-                Effects.AddCounters(Counters.STUN, 1, EffectTarget.ContextTarget(0))
-            )
-        )
+        trigger = Triggers.self.enters()
+        val artifactOrCreatureOpponentControls = target(TargetFilter(GameObjectFilter.CreatureOrArtifact.opponentControls()))
+        effect = Effects.Tap(artifactOrCreatureOpponentControls) then
+            Effects.AddCounters(CounterType.STUN, 1, artifactOrCreatureOpponentControls)
     }
 
     warp = "{2}{U}"

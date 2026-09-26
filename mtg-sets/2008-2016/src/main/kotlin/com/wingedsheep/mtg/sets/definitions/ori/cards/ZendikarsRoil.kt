@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Zendikar's Roil
@@ -19,7 +20,7 @@ val ZendikarsRoil = card("Zendikar's Roil") {
     oracleText = "Landfall — Whenever a land you control enters, create a 2/2 green Elemental creature token."
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.CreateToken(
             power = 2,
             toughness = 2,

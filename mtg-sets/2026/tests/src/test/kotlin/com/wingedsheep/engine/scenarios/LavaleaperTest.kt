@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.mechanics.layers.StateProjector
@@ -16,6 +17,7 @@ import com.wingedsheep.sdk.dsl.basicLand
 import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Tests for Lavaleaper ({3}{R}, 4/4 Elemental).
@@ -62,7 +64,7 @@ class LavaleaperTest : FunSpec({
         val result = driver.submit(
             ActivateAbility(playerId = activePlayer, sourceId = mountain, abilityId = manaAbilityId)
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         val pool = driver.state.getEntity(activePlayer)?.get<ManaPoolComponent>()!!
         pool.red shouldBe 2
@@ -88,7 +90,7 @@ class LavaleaperTest : FunSpec({
         val result = driver.submit(
             ActivateAbility(playerId = activePlayer, sourceId = forest, abilityId = manaAbilityId)
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         val pool = driver.state.getEntity(activePlayer)?.get<ManaPoolComponent>()!!
         pool.green shouldBe 2
@@ -127,7 +129,7 @@ class LavaleaperTest : FunSpec({
         driver.putCreatureOnBattlefield(activePlayer, "Lavaleaper")
         driver.putPermanentOnBattlefield(activePlayer, "Mountain")
 
-        val solver = ManaSolver(createRegistry())
+        val solver = ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         // 1 Mountain + bonus = 2R total
         solver.canPay(driver.state, activePlayer, ManaCost.parse("{R}{R}")) shouldBe true
         solver.canPay(driver.state, activePlayer, ManaCost.parse("{R}{R}{R}")) shouldBe false

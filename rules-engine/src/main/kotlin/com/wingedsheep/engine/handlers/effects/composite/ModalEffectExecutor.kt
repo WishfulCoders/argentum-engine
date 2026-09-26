@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.composite
 
+import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.handlers.TargetingSourceType
 import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.handlers.EffectContext
@@ -48,12 +49,12 @@ import kotlin.reflect.KClass
  * @param effectExecutor Function to execute a sub-effect (provided by registry)
  */
 class ModalEffectExecutor(
-    private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult
+    private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult,
+    private val amountEvaluator: DynamicAmountEvaluator,
+    private val targetValidator: TargetValidator
 ) : EffectExecutor<ModalEffect> {
 
     override val effectType: KClass<ModalEffect> = ModalEffect::class
-
-    private val targetValidator = TargetValidator()
 
     override fun execute(
         state: GameState,
@@ -92,7 +93,7 @@ class ModalEffectExecutor(
         // three modes can absorb any number of picks and capping at `modes.size` would silently
         // shrink X. `forCast` makes the same distinction, so the two paths now agree on both bounds.
         val (effectiveChooseCount, effectiveMinChooseCount) = if (effect.dynamicChooseCount != null) {
-            val evaluator = com.wingedsheep.engine.handlers.DynamicAmountEvaluator()
+            val evaluator = amountEvaluator
             val raw = evaluator.evaluate(state, effect.dynamicChooseCount!!, context)
             val capped = if (effect.allowRepeat) {
                 raw.coerceAtLeast(0)
@@ -354,11 +355,11 @@ internal fun processPreTargetedEffectQueue(
     val result = effectExecutor(stateForExecution, head.effect, effectContext)
     val nextEvents = accumulatedEvents + result.events
 
-    if (result.isPaused) {
+    if (result.outcome is Outcome.Paused) {
         return EffectResult.propagatePause(result.state, nextEvents)
     }
-    if (result.error != null) {
-        return EffectResult(state = result.state, events = nextEvents, error = result.error)
+    if (result.outcome is Outcome.Rejected) {
+        return EffectResult(state = result.state, events = nextEvents, outcome = result.outcome)
     }
 
     // Success — pop the pre-pushed tail continuation and drain the rest synchronously.

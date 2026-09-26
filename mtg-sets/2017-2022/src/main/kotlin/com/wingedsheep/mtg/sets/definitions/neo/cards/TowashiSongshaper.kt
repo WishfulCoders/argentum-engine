@@ -26,10 +26,7 @@ val TowashiSongshaper = card("Towashi Songshaper") {
     oracleText = "Whenever another artifact you control enters, this creature gets +1/+0 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            binding = TriggerBinding.OTHER,
-        )
+        trigger = Triggers.another(GameObjectFilter.Artifact.youControl()).enters()
         effect = Effects.ModifyStats(1, 0, EffectTarget.Self)
         description = "Whenever another artifact you control enters, this creature gets +1/+0 until end of turn."
     }

@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Gogo, Master of Mimicry
@@ -42,11 +42,8 @@ val GogoMasterOfMimicry = card("Gogo, Master of Mimicry") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{X}{X}"), Costs.Tap)
-        val ability = target(
-            "target activated or triggered ability you control",
-            Targets.ActivatedOrTriggeredAbilityYouControl
-        )
-        effect = Effects.CopyTargetSpellOrAbility(ability, copies = DynamicAmount.XValue)
+        val ability = target(TargetFilter.ActivatedOrTriggeredAbilityOnStack.youControl())
+        effect = Effects.CopyTargetSpellOrAbility(ability, copies = DynamicAmounts.xValue())
         minimumXValue = 1
         cantBeCopied = true
         // Hold priority while an activated or triggered ability we control is on top of the stack —

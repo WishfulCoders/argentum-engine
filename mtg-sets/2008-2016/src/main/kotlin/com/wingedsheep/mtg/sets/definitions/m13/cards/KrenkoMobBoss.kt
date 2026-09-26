@@ -6,12 +6,12 @@ package com.wingedsheep.mtg.sets.definitions.m13.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -31,7 +31,7 @@ val KrenkoMobBoss = card("Krenko, Mob Boss") {
     activatedAbility {
         cost = Costs.Tap
         effect = Effects.CreateToken(
-            count = DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Creature.withSubtype("Goblin")),
+            count = DynamicAmounts.battlefield(Player.You, GameObjectFilter.Creature.withSubtype("Goblin")).count(),
             power = 1,
             toughness = 1,
             colors = setOf(Color.RED),

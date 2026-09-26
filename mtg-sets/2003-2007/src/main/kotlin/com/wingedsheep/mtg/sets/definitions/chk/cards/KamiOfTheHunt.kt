@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * The Kamigawa "Whenever you cast a Spirit or Arcane spell" trigger is a `SpellCastEvent` watching
  * *your* casts with an OR over the two subtypes — `withAnySubtype` builds the single
  * `CardPredicate.Or` the grammar expects, rather than the `anyOf` branch list that the `or` infix
- * on `GameObjectFilter` would produce. `Triggers.youCastSpell` supplies `Player.You` and
+ * on `GameObjectFilter` would produce. `Triggers.you.casts(spell, requires)` supplies `Player.You` and
  * `TriggerBinding.ANY`, so Kami of the Hunt also triggers off its own cast.
  *
  * The pump names `EffectTarget.Self` rather than the triggering entity: the boost belongs to the
@@ -31,9 +31,7 @@ val KamiOfTheHunt = card("Kami of the Hunt") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.Any.withAnySubtype("Spirit", "Arcane")
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withAnySubtype("Spirit", "Arcane"))
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }
     metadata {

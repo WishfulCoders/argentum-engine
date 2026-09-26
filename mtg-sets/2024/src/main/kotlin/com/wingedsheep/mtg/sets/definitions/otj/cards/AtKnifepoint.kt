@@ -5,19 +5,16 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedActivatedAbility
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
-import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * At Knifepoint
@@ -32,7 +29,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *
  * The first-strike grant is a [GrantKeyword] static over `outlaws you control`
  * ([Subtype.OUTLAW_TYPES]) gated by [Conditions.IsYourTurn] (the projection layer drops the grant
- * outside the controller's turn). The crime payoff is the standard [Triggers.YouCommitCrime]
+ * outside the controller's turn). The crime payoff is the standard `Triggers.you.commitsCrime()`
  * triggered ability with `oncePerTurn = true`; its Mercenary token mirrors the canonical OTJ
  * Mercenary (cf. Hellspur Posse Boss): a sorcery-speed `{T}` pump of a creature you control.
  */
@@ -57,21 +54,21 @@ val AtKnifepoint = card("At Knifepoint") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YouCommitCrime
+        trigger = Triggers.you.commitsCrime()
         oncePerTurn = true
-        effect = CreateTokenEffect(
-            count = DynamicAmount.Fixed(1),
+        effect = Effects.CreateToken(
+            count = 1,
             power = 1,
             toughness = 1,
             colors = setOf(Color.RED),
             creatureTypes = setOf("Mercenary"),
             activatedAbilities = listOf(
-                ActivatedAbility(
-                    cost = AbilityCost.Tap,
-                    effect = Effects.ModifyStats(1, 0, EffectTarget.ContextTarget(0)),
-                    targetRequirements = listOf(Targets.CreatureYouControl),
+                grantedActivatedAbility {
+                    cost = AbilityCost.Tap
+                    val creatureYouControl = target(TargetFilter.CreatureYouControl)
+                    effect = Effects.ModifyStats(1, 0, creatureYouControl)
                     timing = TimingRule.SorcerySpeed
-                )
+                }
             ),
             imageUri = "https://cards.scryfall.io/normal/front/5/f/5f04607f-eed2-462e-897f-82e41e5f7049.jpg?1712316319"
         )

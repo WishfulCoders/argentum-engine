@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.tmp.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AttackTax
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Propaganda
@@ -22,7 +22,7 @@ val Propaganda = card("Propaganda") {
     oracleText = "Creatures can't attack you unless their controller pays {2} for each creature they control that's attacking you."
 
     staticAbility {
-        ability = AttackTax(amountPerAttacker = DynamicAmount.Fixed(2))
+        ability = AttackTax(amountPerAttacker = DynamicAmounts.fixed(2))
     }
 
     metadata {

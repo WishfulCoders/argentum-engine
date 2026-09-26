@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Send in the Pest
@@ -17,7 +16,7 @@ import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
  * with "Whenever this token attacks, you gain 1 life."
  *
  * The created Pest carries its own self-attack life-gain trigger, granted via
- * [CreateTokenEffect.triggeredAbilities] — a `Triggers.Attacks` (SELF binding) event with
+ * [CreateTokenEffect.triggeredAbilities] — a `Triggers.self.attacks()` (SELF binding) event with
  * `Effects.GainLife(1)` as the payoff, gained by the token's controller.
  */
 val SendInThePest = card("Send in the Pest") {
@@ -28,22 +27,19 @@ val SendInThePest = card("Send in the Pest") {
         "token with \"Whenever this token attacks, you gain 1 life.\""
 
     spell {
-        effect = Effects.EachOpponentDiscards(1)
-            .then(
-                CreateTokenEffect(
-                    power = 1,
-                    toughness = 1,
-                    colors = setOf(Color.BLACK, Color.GREEN),
-                    creatureTypes = setOf("Pest"),
-                    triggeredAbilities = listOf(
-                        TriggeredAbility.create(
-                            trigger = Triggers.Attacks.event,
-                            binding = Triggers.Attacks.binding,
-                            effect = Effects.GainLife(1)
-                        )
-                    ),
-                    imageUri = "https://cards.scryfall.io/normal/front/b/a/ba854032-6ad2-4654-990a-64006e7f92fd.jpg?1777982237"
-                )
+        effect = Effects.EachOpponentDiscards(1) then
+            Effects.CreateToken(
+                power = 1,
+                toughness = 1,
+                colors = setOf(Color.BLACK, Color.GREEN),
+                creatureTypes = setOf("Pest"),
+                triggeredAbilities = listOf(
+                    TriggeredAbility.create(
+                        trigger = Triggers.self.attacks(),
+                        effect = Effects.GainLife(1)
+                    )
+                ),
+                imageUri = "https://cards.scryfall.io/normal/front/b/a/ba854032-6ad2-4654-990a-64006e7f92fd.jpg?1777982237"
             )
     }
 

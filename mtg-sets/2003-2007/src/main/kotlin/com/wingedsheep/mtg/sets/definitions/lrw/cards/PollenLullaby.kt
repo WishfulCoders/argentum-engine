@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.SkipUntapEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -36,14 +35,12 @@ val PollenLullaby = card("Pollen Lullaby") {
         "choice of the top or bottom. A player wins if their card had a greater mana value.)"
 
     spell {
-        effect = Effects.PreventAllCombatDamage()
-            .then(
-                Patterns.Mechanic.clash(
-                    SkipUntapEffect(
-                        target = EffectTarget.PlayerRef(Player.ChosenOpponent),
-                        affectsCreatures = true,
-                        affectsLands = false
-                    )
+        effect = Effects.PreventAllCombatDamage() then
+            Patterns.Mechanic.clash(
+                Effects.SkipUntap(
+                    target = EffectTarget.PlayerRef(Player.ChosenOpponent),
+                    affectsCreatures = true,
+                    affectsLands = false
                 )
             )
     }

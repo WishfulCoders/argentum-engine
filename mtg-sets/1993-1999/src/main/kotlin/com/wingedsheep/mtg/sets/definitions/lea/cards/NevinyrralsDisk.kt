@@ -32,7 +32,7 @@ val NevinyrralsDisk = card("Nevinyrral's Disk") {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
         effect = Effects.ForEachInGroup(
             filter = GroupFilter(GameObjectFilter.ArtifactCreatureOrEnchantment),
-            effect = Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true),
+            effect = Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true),
             noRegenerate = false
         )
     }

@@ -6,9 +6,9 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CantBeRegeneratedEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Phage the Untouchable
@@ -29,7 +29,7 @@ val PhageTheUntouchable = card("Phage the Untouchable") {
 
     // ETB: if you didn't cast it from your hand, you lose the game
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.Not(Conditions.WasCastFromHand)
         effect = Effects.LoseGame(
             target = EffectTarget.Controller,
@@ -39,14 +39,14 @@ val PhageTheUntouchable = card("Phage the Untouchable") {
 
     // Combat damage to creature: destroy, can't be regenerated
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToCreature
-        effect = CantBeRegeneratedEffect(EffectTarget.TriggeringEntity) then
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyCreature)
+        effect = Effects.CantBeRegenerated(EffectTarget.TriggeringEntity) then
                 Effects.Move(EffectTarget.TriggeringEntity, Zone.GRAVEYARD, byDestruction = true)
     }
 
     // Combat damage to player: that player loses the game
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         effect = Effects.LoseGame(
             target = EffectTarget.PlayerRef(Player.TriggeringPlayer),
             message = "Phage the Untouchable dealt combat damage"

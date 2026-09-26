@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Wingmate Roc
@@ -32,9 +31,9 @@ val WingmateRoc = card("Wingmate Roc") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouAttackedThisTurn
-        effect = CreateTokenEffect(
+        effect = Effects.CreateToken(
             count = 1,
             power = 3,
             toughness = 4,
@@ -46,7 +45,7 @@ val WingmateRoc = card("Wingmate Roc") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.GainLife(DynamicAmounts.attackingCreaturesYouControl())
     }
 

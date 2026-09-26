@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -38,12 +37,12 @@ val RubblebeltBraggart = card("Rubblebelt Braggart") {
     toughness = 5
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         interveningIf = Conditions.Not(Conditions.SourceIsSuspected)
         // `Effects.Suspect`'s own description is the sentence "this creature becomes suspected",
         // which reads as gibberish under the gate's "You may …" prefix. Spell the question out so
         // the yes/no prompt names the trade the player is actually making.
-        effect = MayEffect(
+        effect = Effects.May(
             Effects.Suspect(EffectTarget.Self),
             descriptionOverride = "Suspect Rubblebelt Braggart? (It gains menace but can't block.)"
         )

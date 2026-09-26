@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.m15.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ulcerate
@@ -19,10 +19,9 @@ val Ulcerate = card("Ulcerate") {
     oracleText = "Target creature gets -3/-3 until end of turn. You lose 3 life."
 
     spell {
-        val t = target("target creature", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         // The life loss isn't a cost — it only happens if the spell resolves.
-        effect = Effects.ModifyStats(-3, -3, t)
-            .then(Effects.LoseLife(3, EffectTarget.Controller))
+        effect = Effects.ModifyStats(-3, -3, t) then Effects.LoseLife(3, EffectTarget.Controller)
     }
 
     metadata {

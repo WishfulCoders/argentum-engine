@@ -14,12 +14,9 @@ import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
@@ -42,20 +39,13 @@ class TheCloneSagaChapterThreeTest : FunSpec({
         typeLine = TypeLine.parse("Sorcery"),
         oracleText = "",
         script = CardScript.spell(
-            effect = Effects.Composite(
-                Effects.ChooseCardName(storeAs = "clonedName"),
+            effect = Effects.ChooseCardName(storeAs = "clonedName") then
                 CreateDelayedTriggerEffect(
-                    trigger = Triggers.dealsDamage(
-                        damageType = DamageType.Combat,
-                        recipient = RecipientFilter.AnyPlayer,
-                        sourceFilter = GameObjectFilter.Creature.namedFromVariable("clonedName"),
-                        binding = TriggerBinding.ANY,
-                    ),
+                    trigger = Triggers.a(GameObjectFilter.Creature.namedFromVariable("clonedName")).dealsCombatDamage(Recipient.AnyPlayer),
                     effect = Effects.DrawCards(1),
                     fireOnce = false,
                     expiry = DelayedTriggerExpiry.EndOfTurn,
-                ),
-            )
+                )
         )
     )
 

@@ -3,11 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.mrd.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
-import com.wingedsheep.sdk.scripting.effects.SkipUntapEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Blinding Beam
@@ -34,12 +33,12 @@ val BlindingBeam = card("Blinding Beam") {
             additionalManaCostPerExtraMode = "{1}"
         ) {
             mode("Tap two target creatures") {
-                target = TargetCreature(count = 2)
-                effect = ForEachTargetEffect(listOf(Effects.Tap(EffectTarget.ContextTarget(0))))
+                target = TargetObject(filter = TargetFilter.Creature, count = 2)
+                effect = Effects.ForEachTarget(Effects.Tap(EffectTarget.ContextTarget(0)))
             }
             mode("Creatures don't untap during target player's next untap step") {
-                val player = target("target player", TargetPlayer())
-                effect = SkipUntapEffect(
+                val player = target(Targets.Player)
+                effect = Effects.SkipUntap(
                     target = player,
                     affectsCreatures = true,
                     affectsLands = false

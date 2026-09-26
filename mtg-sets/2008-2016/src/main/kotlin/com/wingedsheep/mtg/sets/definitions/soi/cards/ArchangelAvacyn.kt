@@ -12,15 +12,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.core.Zone
 
 /**
  * Archangel Avacyn // Avacyn, the Purifier (Shadows over Innistrad #5 — the card's earliest
@@ -44,7 +38,7 @@ import com.wingedsheep.sdk.core.Zone
  *  - The ETB grant is [Patterns.Group.grantKeywordToAll]`(INDESTRUCTIBLE, creaturesYouControl)`.
  *    It is a one-shot until-end-of-turn grant over the creatures present as it resolves, which is
  *    what the printed wording says — creatures entering later are not covered.
- *  - "When a non-Angel creature you control dies" is a [Triggers.leavesBattlefield] factory trigger
+ *  - "When a non-Angel creature you control dies" is a `Triggers.<subject>.leaves(to, excludeTo, excludeSacrifice)` factory trigger
  *    with an ANY binding over `Creature.youControl().notSubtype(ANGEL)`. Avacyn herself is an Angel,
  *    so she never triggers her own flip.
  *  - "…transform Archangel Avacyn at the beginning of the next upkeep" is a step-based
@@ -55,7 +49,7 @@ import com.wingedsheep.sdk.core.Zone
  *    died in one turn, each death queues its own delayed trigger, and the ones that resolve after
  *    the first must **not** flip her back to the front face. Checking the face by name is exactly
  *    "is she still Archangel Avacyn?".
- *  - The back's trigger is [Triggers.TransformsToBack] — it fires only on the front→back flip, never
+ *  - The back's trigger is `Triggers.self.transforms(true)` — it fires only on the front→back flip, never
  *    when some other effect turns her face up again. Its damage is
  *    [Effects.ForEachInGroup]`(`[GroupFilter.AllOtherCreatures]`, …)` — `excludeSelf` keeps Avacyn
  *    out of her own sweep — followed by 3 damage to [Player.EachOpponent]. Damage is sourced from
@@ -81,7 +75,7 @@ private val ArchangelAvacynFront = card("Archangel Avacyn") {
     keywords(Keyword.FLASH, Keyword.FLYING, Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Group.grantKeywordToAll(
             Keyword.INDESTRUCTIBLE,
             Filters.Group.creaturesYouControl,
@@ -90,18 +84,14 @@ private val ArchangelAvacynFront = card("Archangel Avacyn") {
     }
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = NonAngelCreatureYouControl,
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY,
-        )
-        effect = CreateDelayedTriggerEffect(
+        trigger = Triggers.a(NonAngelCreatureYouControl).dies()
+        effect = Effects.CreateDelayedTrigger(
             step = Step.UPKEEP,
-            effect = ConditionalEffect(
+            effect = Effects.If(
                 condition = Conditions.SourceMatches(
                     GameObjectFilter.Any.named("Archangel Avacyn"),
                 ),
-                effect = TransformEffect(EffectTarget.Self),
+                then = Effects.Transform(EffectTarget.Self),
             ),
         )
         description = "Transform Archangel Avacyn at the beginning of the next upkeep."
@@ -140,10 +130,10 @@ private val AvacynThePurifier = card("Avacyn, the Purifier") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.TransformsToBack
+        trigger = Triggers.self.transforms(true)
         effect = Effects.ForEachInGroup(
             GroupFilter.AllOtherCreatures,
-            DealDamageEffect(3, EffectTarget.Self),
+            Effects.DealDamage(3, EffectTarget.IterationEntity),
         ) then Effects.DealDamage(3, EffectTarget.PlayerRef(Player.EachOpponent))
         description = "Avacyn, the Purifier deals 3 damage to each other creature and each opponent."
     }

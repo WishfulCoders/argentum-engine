@@ -46,7 +46,7 @@ val SunSpiderNimbleWebber = card("Sun-Spider, Nimble Webber") {
     }
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Any.withAnySubtype("Aura", "Equipment"),
             count = 1,

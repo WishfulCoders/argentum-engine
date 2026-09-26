@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Defossilize — {4}{B}
@@ -38,10 +38,10 @@ val Defossilize = card("Defossilize") {
         "into your graveyard. Then repeat this process.)"
 
     spell {
-        val t = target("target creature card from your graveyard", Targets.CreatureCardInYourGraveyard)
-        effect = Effects.PutOntoBattlefield(t)
-            .then(Effects.Explore(t))
-            .then(Effects.Explore(t))
+        val t = target(TargetFilter.CreatureInYourGraveyard)
+        effect = Effects.PutOntoBattlefield(t) then
+            Effects.Explore(t) then
+            Effects.Explore(t)
     }
 
     metadata {

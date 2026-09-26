@@ -5,8 +5,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GainControlByActivePlayerEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Karona, False God
@@ -32,16 +32,13 @@ val KaronaFalseGod = card("Karona, False God") {
 
     // At the beginning of each player's upkeep, that player untaps Karona and gains control of it.
     triggeredAbility {
-        trigger = Triggers.EachUpkeep
-        effect = Effects.Composite(
-            Effects.Untap(EffectTarget.Self),
-            GainControlByActivePlayerEffect(EffectTarget.Self)
-        )
+        trigger = Triggers.anyPlayer.beginningOf(Step.UPKEEP)
+        effect = Effects.Untap(EffectTarget.Self) then Effects.GainControlByActivePlayer(EffectTarget.Self)
     }
 
     // Whenever Karona attacks, creatures of the creature type of your choice get +3/+3 until end of turn.
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ChooseCreatureTypeModifyStats(
             powerModifier = 3,
             toughnessModifier = 3

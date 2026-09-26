@@ -3,15 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.dsl.unaryMinus
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Wick's Patrol
@@ -32,15 +30,15 @@ val WicksPatrol = card("Wick's Patrol") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val greatestMV = DynamicAmounts.zone(Player.You, Zone.GRAVEYARD).maxManaValue()
-        val negX = DynamicAmount.Multiply(greatestMV, -1)
-        effect = ReflexiveTriggerEffect(
+        val negX = -greatestMV
+        effect = Effects.ReflexiveTrigger(
             action = Patterns.Library.mill(3),
-            optional = false,
-            reflexiveEffect = Effects.ModifyStats(negX, negX, EffectTarget.ContextTarget(0)),
-            reflexiveTargetRequirements = listOf(Targets.CreatureOpponentControls)
-        )
+            optional = false) {
+            val creatureOpponentControls = target(TargetFilter.CreatureOpponentControls)
+            effect = Effects.ModifyStats(negX, negX, creatureOpponentControls)
+        }
     }
 
     metadata {

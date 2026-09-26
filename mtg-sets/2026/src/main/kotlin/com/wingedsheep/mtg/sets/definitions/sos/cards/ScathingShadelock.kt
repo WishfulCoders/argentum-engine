@@ -7,7 +7,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Scathing Shadelock // Venomous Words — Secrets of Strixhaven #98
@@ -35,7 +35,7 @@ val ScathingShadelock = card("Scathing Shadelock") {
         "(While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)"
 
     triggeredAbility {
-        trigger = Triggers.FirstMainPhase
+        trigger = Triggers.you.beginningOf(Step.PRECOMBAT_MAIN)
         effect = Effects.BecomePrepared(EffectTarget.Self)
     }
 
@@ -45,11 +45,8 @@ val ScathingShadelock = card("Scathing Shadelock") {
         typeLine = "Sorcery"
         oracleText = "Target creature you control gets +2/+0 and gains deathtouch until end of turn."
         spell {
-            val t = target("target", TargetCreature(filter = TargetFilter.Creature.youControl()))
-            effect = Effects.Composite(
-                Effects.ModifyStats(2, 0, t),
-                Effects.GrantKeyword(Keyword.DEATHTOUCH, t),
-            )
+            val t = target(TargetFilter.Creature.youControl())
+            effect = Effects.ModifyStats(2, 0, t) then Effects.GrantKeyword(Keyword.DEATHTOUCH, t)
         }
     }
 

@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Flying
  * When this creature enters, draw a card.
  *
- * A colourless flier with a cantrip ETB — [Triggers.EntersBattlefield] (SELF binding) into
+ * A colourless flier with a cantrip ETB — `Triggers.self.enters()` (SELF binding) into
  * [Effects.DrawCards]`(1)`.
  */
 val Skyscanner = card("Skyscanner") {
@@ -29,7 +29,7 @@ val Skyscanner = card("Skyscanner") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1)
         description = "When this creature enters, draw a card."
     }

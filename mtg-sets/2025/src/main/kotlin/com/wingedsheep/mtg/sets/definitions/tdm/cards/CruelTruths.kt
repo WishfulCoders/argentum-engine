@@ -23,9 +23,9 @@ val CruelTruths = card("Cruel Truths") {
         "them into your graveyard and the rest on top of your library in any order.)"
 
     spell {
-        effect = Patterns.Library.surveil(2)
-            .then(Effects.DrawCards(2))
-            .then(Effects.LoseLife(2, EffectTarget.Controller))
+        effect = Patterns.Library.surveil(2) then
+            Effects.DrawCards(2) then
+            Effects.LoseLife(2, EffectTarget.Controller)
     }
 
     metadata {

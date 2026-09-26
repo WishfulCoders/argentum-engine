@@ -1,6 +1,6 @@
 package com.wingedsheep.sdk.scripting
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.scripting.references.Player
 import io.kotest.core.spec.style.DescribeSpec
@@ -117,7 +117,7 @@ class DescribeObjectsForEventTest : DescribeSpec({
          */
         it("reads as English for the shipped batch filter") {
             EventPattern.CountersPlacedEvent(
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
                 filter = GameObjectFilter.Creature.youControl().withSubtype(Subtype.HERO),
                 placedBy = Player.You,
                 batch = true,
@@ -127,13 +127,13 @@ class DescribeObjectsForEventTest : DescribeSpec({
 
         it("differs from the per-permanent template only in the recipient's multiplicity") {
             val perPermanent = EventPattern.CountersPlacedEvent(
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
                 filter = GameObjectFilter.Creature.youControl(),
                 placedBy = Player.You,
                 batch = false,
             ).description
             val batched = EventPattern.CountersPlacedEvent(
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
                 filter = GameObjectFilter.Creature.youControl(),
                 placedBy = Player.You,
                 batch = true,

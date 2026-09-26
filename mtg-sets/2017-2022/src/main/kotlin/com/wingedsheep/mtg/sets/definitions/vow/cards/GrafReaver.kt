@@ -8,6 +8,8 @@ import com.wingedsheep.sdk.dsl.exploit
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Graf Reaver
@@ -22,7 +24,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *  - The exploit payoff targets a planeswalker ([exploit]'s `onExploitTargets` = [Targets.Planeswalker]),
  *    chosen after the sacrifice resolves; the reflexive is only put on the stack when a legal
  *    planeswalker exists, so exploiting with no planeswalker in play just performs the sacrifice.
- *  - A [Triggers.YourUpkeep] drawback that deals 1 damage to you (the controller), mirroring
+ *  - A `Triggers.you.beginningOf(Step.UPKEEP)` drawback that deals 1 damage to you (the controller), mirroring
  *    Ravenous Giant.
  */
 val GrafReaver = card("Graf Reaver") {
@@ -35,13 +37,13 @@ val GrafReaver = card("Graf Reaver") {
         "When this creature exploits a creature, destroy target planeswalker.\n" +
         "At the beginning of your upkeep, this creature deals 1 damage to you."
 
-    exploit(
-        onExploit = Effects.Destroy(EffectTarget.ContextTarget(0)),
-        onExploitTargets = listOf(Targets.Planeswalker)
-    )
+    exploit {
+        val planeswalker = target(TargetFilter.Planeswalker)
+        effect = Effects.Destroy(planeswalker)
+    }
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.You))
         description = "At the beginning of your upkeep, this creature deals 1 damage to you."
     }

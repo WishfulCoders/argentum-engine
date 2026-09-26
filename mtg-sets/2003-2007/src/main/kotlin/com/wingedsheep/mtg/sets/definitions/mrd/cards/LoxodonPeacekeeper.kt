@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.RankTieBreak
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Loxodon Peacekeeper — Mirrodin #13 (canonical printing)
@@ -40,7 +41,7 @@ val LoxodonPeacekeeper = card("Loxodon Peacekeeper") {
         "choose one of them, and that player gains control of this creature."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.GainControlByLowestLife(tieBreak = RankTieBreak.CONTROLLER_CHOOSES)
         description = "At the beginning of your upkeep, the player with the lowest life total " +
             "gains control of this creature. If two or more players are tied for lowest life " +

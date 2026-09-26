@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.legalactions
 
+import com.wingedsheep.engine.legality.LegalityKernel
 import com.wingedsheep.engine.core.TurnManager
 import com.wingedsheep.engine.handlers.ConditionEvaluator
 import com.wingedsheep.engine.handlers.PredicateEvaluator
@@ -58,6 +59,8 @@ class EnumerationContext(
     val targetUtils by lazy { TargetEnumerationUtils(predicateEvaluator) }
     val costUtils by lazy { CostEnumerationUtils(manaSolver, costCalculator, predicateEvaluator, cardRegistry) }
     val castPermissionUtils by lazy { CastPermissionUtils(cardRegistry, predicateEvaluator, conditionEvaluator) }
+    // The one legality kernel the handlers' `validate` also asks, so what is offered is what is accepted.
+    val legality by lazy { LegalityKernel(cardRegistry, conditionEvaluator) }
     // Plot (CR 718) cost reduction — Doc Aurlock-style "plotting cards costs {N} less".
     val plotCostReducer by lazy { com.wingedsheep.engine.mechanics.mana.PlotCostReducer(cardRegistry) }
 
@@ -67,6 +70,12 @@ class EnumerationContext(
 
     // Projected state
     val projected: ProjectedState by lazy { state.projectedState }
+
+    // Global Layer 3 color-word changes (Swirl the Mists), computed once per pass; merge with a
+    // permanent's own rules via TextChanges.merge.
+    val globalTextChanges: List<com.wingedsheep.engine.state.components.identity.TextReplacement> by lazy {
+        com.wingedsheep.engine.state.components.identity.TextChanges.global(state)
+    }
 
     // Battlefield permanents controlled by player (via projected state)
     val battlefieldPermanents: List<EntityId> by lazy {
@@ -98,7 +107,7 @@ class EnumerationContext(
             // legal-action list that offers a land drop the handler will refuse is worse than
             // either check alone.
             !com.wingedsheep.engine.legalactions.utils.LandDropUtils
-                .playerCantPlayLands(state, playerId, cardRegistry)
+                .playerCantPlayLands(state, playerId, cardRegistry, conditionEvaluator = conditionEvaluator)
     }
 
     // Whether any battlefield permanent carries a *filtered* land-play lock at all — a cheap guard
@@ -123,7 +132,7 @@ class EnumerationContext(
     fun cantPlayLand(cardId: EntityId): Boolean =
         filteredLandLockPresent &&
             com.wingedsheep.engine.legalactions.utils.LandDropUtils
-                .playerCantPlayLands(state, playerId, cardRegistry, landCardId = cardId)
+                .playerCantPlayLands(state, playerId, cardRegistry, landCardId = cardId, conditionEvaluator = conditionEvaluator)
 
     // Cast restrictions — blanket, spell-independent locks (a Silence-style CantCastSpellsComponent
     // or a RestrictSpellsCastPerTurn per-turn limit). Cached once per enumeration pass.

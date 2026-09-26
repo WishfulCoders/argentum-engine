@@ -4,9 +4,9 @@
 
 package com.wingedsheep.mtg.sets.definitions.chk.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -21,7 +21,7 @@ val CounselOfTheSoratami = card("Counsel of the Soratami") {
     typeLine = "Sorcery"
     oracleText = "Draw two cards."
     spell {
-        effect = DrawCardsEffect(2)
+        effect = Effects.DrawCards(2)
     }
     metadata {
         rarity = Rarity.COMMON

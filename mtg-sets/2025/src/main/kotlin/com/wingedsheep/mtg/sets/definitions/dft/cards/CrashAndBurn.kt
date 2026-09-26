@@ -10,10 +10,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreatureOrPlaneswalker
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -32,15 +30,12 @@ val CrashAndBurn = card("Crash and Burn") {
     spell {
         modal(chooseCount = 1) {
             mode("Destroy target Vehicle") {
-                val t = target(
-                    "target",
-                    TargetPermanent(filter = TargetFilter(GameObjectFilter.Artifact.withSubtype(Subtype.VEHICLE)))
-                )
+                val t = target(TargetFilter(GameObjectFilter.Artifact.withSubtype(Subtype.VEHICLE)))
                 effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
             }
             mode("Crash and Burn deals 6 damage to target creature or planeswalker") {
-                val t = target("target", TargetCreatureOrPlaneswalker())
-                effect = DealDamageEffect(6, t)
+                val t = target(Targets.CreatureOrPlaneswalker)
+                effect = Effects.DealDamage(6, t)
             }
         }
     }

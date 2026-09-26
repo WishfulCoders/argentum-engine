@@ -2,13 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.FaceDownLookScope
-import com.wingedsheep.sdk.scripting.effects.LookAtFaceDownEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Aven Soulgazer
@@ -30,10 +29,8 @@ val AvenSoulgazer = card("Aven Soulgazer") {
 
     activatedAbility {
         cost = Costs.Mana("{2}{W}")
-        val t = target("target", TargetPermanent(
-            filter = TargetFilter(GameObjectFilter.Creature.faceDown())
-        ))
-        effect = LookAtFaceDownEffect(t, FaceDownLookScope.SINGLE_TARGET)
+        val t = target(TargetFilter(GameObjectFilter.Creature.faceDown()))
+        effect = Effects.LookAtFaceDown(t, FaceDownLookScope.SINGLE_TARGET)
     }
 
     metadata {

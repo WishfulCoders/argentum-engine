@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.m19.cards
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -32,7 +33,7 @@ val RavenousHarpy = card("Ravenous Harpy") {
             Costs.Mana("{1}"),
             Costs.SacrificeAnother(GameObjectFilter.Creature)
         )
-        effect = Effects.AddCounters("+1/+1", 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     metadata {

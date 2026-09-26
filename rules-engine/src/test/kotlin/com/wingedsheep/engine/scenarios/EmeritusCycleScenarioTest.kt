@@ -26,7 +26,7 @@ import io.kotest.matchers.shouldNotBe
  *  - Emeritus of Woe        // Demonic Tutor        — your end step, 2+ creatures died (enters prepared)
  *
  * These exercise existing primitives (NthSpellCast, attack/end-step triggers, intervening-if
- * conditions, MayEffect→IfYouDo, ConditionalEffect, BecomePrepared) — no new SDK was added.
+ * conditions, Effects.May→IfYouDo, Effects.If, BecomePrepared) — no new SDK was added.
  */
 class EmeritusCycleScenarioTest : ScenarioTestBase() {
 

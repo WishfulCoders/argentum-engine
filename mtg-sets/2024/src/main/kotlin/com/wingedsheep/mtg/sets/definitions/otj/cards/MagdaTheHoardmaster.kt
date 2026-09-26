@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.scripting.TimingRule
  * haste. Activate only as a sorcery.
  *
  * Modeling notes:
- * - The crime payoff is [Triggers.YouCommitCrime] with `oncePerTurn = true` (CR rules the
+ * - The crime payoff is `Triggers.you.commitsCrime()` with `oncePerTurn = true` (CR rules the
  *   ability triggers at most once per turn). The Treasure enters tapped.
  * - The activated ability pays by sacrificing three Treasures ([Costs.SacrificeMultiple] over
  *   the Treasure subtype) and is restricted to sorcery speed via [TimingRule.SorcerySpeed].
@@ -39,7 +39,7 @@ val MagdaTheHoardmaster = card("Magda, the Hoardmaster") {
         "flying and haste. Activate only as a sorcery."
 
     triggeredAbility {
-        trigger = Triggers.YouCommitCrime
+        trigger = Triggers.you.commitsCrime()
         oncePerTurn = true
         effect = Effects.CreateTreasure(1, tapped = true)
     }

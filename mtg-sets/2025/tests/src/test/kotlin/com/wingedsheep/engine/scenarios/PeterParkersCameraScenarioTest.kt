@@ -9,7 +9,6 @@ import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.mtg.sets.definitions.spm.cards.PeterParkersCamera
-import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
@@ -24,13 +23,16 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Peter Parker's Camera (SPM #171) — {1} Artifact.
  *
  * The whole card is covered here:
  *  - "This artifact enters with three film counters on it." — an [EntersWithCounters] replacement
- *    (`Counters.FILM`, count 3, self-only), exercised via a real cast from hand so the counters are
+ *    (`CounterType.FILM`, count 3, self-only), exercised via a real cast from hand so the counters are
  *    present immediately (replacement, not a trigger).
  *  - "{2}, {T}, Remove a film counter from this artifact: Copy target activated or triggered ability
  *    you control. You may choose new targets for the copy." — the cost pays {2}, taps the Camera, and
@@ -51,7 +53,7 @@ class PeterParkersCameraScenarioTest : FunSpec({
         activatedAbility {
             cost = AbilityCost.Tap
             effect = Effects.ModifyStats(1, 0, EffectTarget.ContextTarget(0))
-            target = Targets.CreatureYouControl
+            target = TargetObject(filter = TargetFilter.CreatureYouControl)
             timing = TimingRule.InstantSpeed
         }
     }
@@ -132,7 +134,7 @@ class PeterParkersCameraScenarioTest : FunSpec({
             driver.bothPass(); guard++
         }
         (driver.state.pendingDecision is ChooseTargetsDecision) shouldBe true
-        driver.submitTargetSelection(me, listOf(creatureB)).isSuccess shouldBe true
+        driver.submitTargetSelection(me, listOf(creatureB)).outcome shouldBe Outcome.Done
 
         // Resolve the copy (creatureB) then the original (creatureA): both get +1/+0.
         guard = 0

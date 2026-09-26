@@ -9,6 +9,7 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.CardScript
+import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.TriggeredAbility
@@ -20,7 +21,7 @@ import io.kotest.matchers.shouldBe
  * Vengeful Townsfolk (OTJ #37) — "Whenever one or more other creatures you control die, put a
  * +1/+1 counter on this creature."
  *
- * Exercises the once-per-batch death trigger ([com.wingedsheep.sdk.dsl.Triggers.OneOrMoreCreaturesYouControlDie]).
+ * Exercises the once-per-batch death trigger (`Triggers.oneOrMore(filter).die()`).
  * The critical case is a board wipe: several of your creatures dying simultaneously must add a
  * single counter, not one per creature (the over-counting a per-creature death trigger suffers).
  *
@@ -51,6 +52,7 @@ class VengefulTownsfolkScenarioTest : ScenarioTestBase() {
         oracleText = "Whenever one or more other creatures you control die, you gain 2 life.",
         script = CardScript.creature(
             TriggeredAbility.create(
+                id = AbilityId("VengefulTownsfolkScenarioTest_1"),
                 trigger = EventPattern.CreaturesYouControlDiedEvent(excludeSelf = true),
                 binding = TriggerBinding.ANY,
                 effect = GainLifeEffect(2)

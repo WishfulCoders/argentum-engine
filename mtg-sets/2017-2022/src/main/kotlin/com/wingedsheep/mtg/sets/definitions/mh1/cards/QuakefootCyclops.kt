@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.mh1.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Quakefoot Cyclops — Modern Horizons #142
@@ -41,14 +39,14 @@ val QuakefootCyclops = card("Quakefoot Cyclops") {
     keywordAbility(KeywordAbility.cycling("{1}{R}"))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target("up to two target creatures", TargetCreature(count = 2, optional = true))
-        effect = ForEachTargetEffect(listOf(Effects.CantBlock(EffectTarget.ContextTarget(0))))
+        trigger = Triggers.self.enters()
+        targets(TargetFilter.Creature, count = 2, optional = true)
+        effect = Effects.ForEachTarget(Effects.CantBlock(EffectTarget.ContextTarget(0)))
     }
 
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
-        val creature = target("target creature", Targets.Creature)
+        trigger = Triggers.self.isCycled()
+        val creature = target(TargetFilter.Creature)
         effect = Effects.CantBlock(creature)
     }
 

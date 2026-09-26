@@ -12,7 +12,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  *
  * Whenever you cast an artifact spell, draw a card.
  *
- * [Triggers.youCastSpell] over [GameObjectFilter.Artifact] — a cast trigger, so it fires as the
+ * `Triggers.you.casts(spell, requires)` over [GameObjectFilter.Artifact] — a cast trigger, so it fires as the
  * spell goes on the stack and the draw resolves *above* it. It is not once per turn and has no
  * "you may": every artifact spell you cast draws, including one that is later countered or that
  * never resolves.
@@ -26,7 +26,7 @@ val VedalkenArchmage = card("Vedalken Archmage") {
     oracleText = "Whenever you cast an artifact spell, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(spellFilter = GameObjectFilter.Artifact)
+        trigger = Triggers.you.casts(GameObjectFilter.Artifact)
         effect = Effects.DrawCards(1)
     }
 

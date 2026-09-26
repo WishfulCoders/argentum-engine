@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Isolation at Orthanc
@@ -18,7 +18,7 @@ val IsolationAtOrthanc = card("Isolation at Orthanc") {
     oracleText = "Put target creature into its owner's library second from the top."
 
     spell {
-        val creature = target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         // 0-indexed: position 1 = second from the top.
         effect = Effects.PutIntoLibraryNthFromTop(creature, 1)
     }

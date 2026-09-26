@@ -35,18 +35,14 @@ val WormwoodTreefolk = card("Wormwood Treefolk") {
 
     activatedAbility {
         cost = Costs.Mana("{G}{G}")
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.FORESTWALK, EffectTarget.Self, Duration.EndOfTurn),
-            Effects.DealDamage(2, EffectTarget.PlayerRef(Player.You)),
-        )
+        effect = Effects.GrantKeyword(Keyword.FORESTWALK, EffectTarget.Self, Duration.EndOfTurn) then
+            Effects.DealDamage(2, EffectTarget.PlayerRef(Player.You))
     }
 
     activatedAbility {
         cost = Costs.Mana("{B}{B}")
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.SWAMPWALK, EffectTarget.Self, Duration.EndOfTurn),
-            Effects.DealDamage(2, EffectTarget.PlayerRef(Player.You)),
-        )
+        effect = Effects.GrantKeyword(Keyword.SWAMPWALK, EffectTarget.Self, Duration.EndOfTurn) then
+            Effects.DealDamage(2, EffectTarget.PlayerRef(Player.You))
     }
 
     metadata {

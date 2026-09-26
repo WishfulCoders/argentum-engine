@@ -9,13 +9,11 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ChooseActionEffect
 import com.wingedsheep.sdk.scripting.effects.EffectChoice
 import com.wingedsheep.sdk.scripting.effects.FeasibilityCheck
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
-import com.wingedsheep.sdk.scripting.effects.ForceSacrificeEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Zoyowa Lava-Tongue {B}{R}
@@ -56,38 +54,36 @@ val ZoyowaLavaTongue = card("Zoyowa Lava-Tongue") {
     keywords(Keyword.DEATHTOUCH)
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.YouDescendedThisTurn()
-        effect = ForEachPlayerEffect(
+        effect = Effects.ForEachPlayer(
             players = Player.EachOpponent,
-            effects = listOf(
-                ChooseActionEffect(
-                    choices = listOf(
-                        EffectChoice(
-                            label = "Discard a card",
-                            effect = Patterns.Hand.discardCards(1, EffectTarget.Controller),
-                            feasibilityCheck = FeasibilityCheck.HasCardsInZone(Zone.HAND)
-                        ),
-                        EffectChoice(
-                            label = "Sacrifice a permanent",
-                            effect = ForceSacrificeEffect(
-                                filter = GameObjectFilter.Permanent,
-                                count = 1,
-                                target = EffectTarget.Controller
-                            ),
-                            feasibilityCheck = FeasibilityCheck.ControlsPermanentMatching(GameObjectFilter.Permanent)
-                        ),
-                        EffectChoice(
-                            label = "Take 3 damage from Zoyowa Lava-Tongue",
-                            effect = Effects.DealDamage(
-                                amount = 3,
-                                target = EffectTarget.Controller,
-                                damageSource = EffectTarget.Self
-                            )
-                        )
+            effect = Effects.ChooseAction(
+                choices = listOf(
+                    EffectChoice(
+                        label = "Discard a card",
+                        effect = Patterns.Hand.discardCards(1, EffectTarget.Controller),
+                        feasibilityCheck = FeasibilityCheck.HasCardsInZone(Zone.HAND)
                     ),
-                    player = EffectTarget.Controller
-                )
+                    EffectChoice(
+                        label = "Sacrifice a permanent",
+                        effect = Effects.Sacrifice(
+                            filter = GameObjectFilter.Permanent,
+                            count = 1,
+                            target = EffectTarget.Controller
+                        ),
+                        feasibilityCheck = FeasibilityCheck.ControlsPermanentMatching(GameObjectFilter.Permanent)
+                    ),
+                    EffectChoice(
+                        label = "Take 3 damage from Zoyowa Lava-Tongue",
+                        effect = Effects.DealDamage(
+                            amount = 3,
+                            target = EffectTarget.Controller,
+                            damageSource = EffectTarget.Self
+                        )
+                    )
+                ),
+                player = EffectTarget.Controller
             )
         )
     }

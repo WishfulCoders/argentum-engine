@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Prohibit
@@ -29,17 +28,17 @@ val Prohibit = card("Prohibit") {
     keywordAbility(KeywordAbility.kicker("{2}"))
 
     spell {
-        target = Targets.Spell
+        val spell = target(TargetFilter.SpellOnStack)
         // If kicked, counter when the target's mana value is 4 or less; otherwise 2 or less.
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = WasKicked,
-            effect = ConditionalEffect(
-                condition = Conditions.TargetSpellManaValueAtMost(DynamicAmount.Fixed(4)),
-                effect = Effects.CounterSpell()
+            then = Effects.If(
+                condition = Conditions.TargetSpellManaValueAtMost(DynamicAmounts.fixed(4), spell),
+                then = Effects.CounterSpell()
             ),
-            elseEffect = ConditionalEffect(
-                condition = Conditions.TargetSpellManaValueAtMost(DynamicAmount.Fixed(2)),
-                effect = Effects.CounterSpell()
+            otherwise = Effects.If(
+                condition = Conditions.TargetSpellManaValueAtMost(DynamicAmounts.fixed(2), spell),
+                then = Effects.CounterSpell()
             )
         )
     }

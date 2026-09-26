@@ -28,12 +28,12 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *   and `BeginningPhaseManager.performUntapStep` phases them back in (emitting `PhasedInEvent`)
  *   during their controller's untap step.
  * - The "becomes the target of a spell" wording (not abilities) is modeled by the new
- *   `Triggers.BecomesTargetOfSpell(filter)` — a `BecomesTargetEvent(spellsOnly = true)` that
+ *   `Triggers.a(filter).becomesTarget(spellsOnly = true)` — a `BecomesTargetEvent(spellsOnly = true)` that
  *   only matches when the targeting source is a spell on the stack (`sourceIsSpell`). The ANY
  *   binding with filter "a Spirit you control" covers both "King … or another Spirit you control"
  *   halves, because King itself is a Spirit you control. `EffectTarget.TriggeringEntity` resolves
  *   to the targeted Spirit, so "it phases out" affects exactly the targeted permanent.
- * - The "phases in" trigger is the new `Triggers.PhasesIn(filter)` over `PhasedInEvent`. King
+ * - The "phases in" trigger is the new `Triggers.a(filter).phasesIn()` over `PhasedInEvent`. King
  *   itself phasing back in (on its controller's untap step) is the common case and is covered by
  *   the same Spirit-you-control filter.
  */
@@ -55,18 +55,14 @@ val KingOfTheOathbreakers = card("King of the Oathbreakers") {
     // Whenever King of the Oathbreakers or another Spirit you control becomes the target
     // of a spell, it phases out.
     triggeredAbility {
-        trigger = Triggers.BecomesTargetOfSpell(
-            GameObjectFilter.Creature.withSubtype(Subtype.SPIRIT).youControl()
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.withSubtype(Subtype.SPIRIT).youControl()).becomesTarget(spellsOnly = true)
         effect = Effects.PhaseOut(EffectTarget.TriggeringEntity)
     }
 
     // Whenever King of the Oathbreakers or another Spirit you control phases in, create a
     // tapped 1/1 white Spirit creature token with flying.
     triggeredAbility {
-        trigger = Triggers.PhasesIn(
-            GameObjectFilter.Creature.withSubtype(Subtype.SPIRIT).youControl()
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.withSubtype(Subtype.SPIRIT).youControl()).phasesIn()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.IncrementAbilityResolutionCountEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -24,7 +23,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * The "Victor template" — a single escalating triggered ability keyed to how many times *this
  * ability* has resolved this turn (cf. Victor, Valgavoth's Seneschal; Elrond, Lord of Rivendell).
- * The trigger fires per sacrificed permanent ([Triggers.YouSacrificeAnother], per-permanent /
+ * The trigger fires per sacrificed permanent (`Triggers.you.sacrificesAnother(filter)`, per-permanent /
  * [com.wingedsheep.sdk.scripting.TriggerBinding.OTHER] so the source sacrificing itself never fires
  * it). On each resolution it first bumps the source's per-turn resolution counter
  * ([IncrementAbilityResolutionCountEffect]) and then runs exactly one tier via
@@ -45,23 +44,22 @@ val VitoFanaticOfAclazotz = card("Vito, Fanatic of Aclazotz") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YouSacrificeAnother(GameObjectFilter.Permanent)
-        effect = Effects.Composite(
-            IncrementAbilityResolutionCountEffect,
+        trigger = Triggers.you.sacrificesAnother(GameObjectFilter.Permanent)
+        effect = IncrementAbilityResolutionCountEffect then
             // 1st time — you gain 2 life.
-            ConditionalEffect(
+            Effects.If(
                 condition = Conditions.SourceAbilityResolvedNTimes(1),
-                effect = Effects.GainLife(2),
-            ),
+                then = Effects.GainLife(2),
+            ) then
             // 2nd time — each opponent loses 2 life.
-            ConditionalEffect(
+            Effects.If(
                 condition = Conditions.SourceAbilityResolvedNTimes(2),
-                effect = Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent)),
-            ),
+                then = Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent)),
+            ) then
             // 3rd time — create a 4/3 white and black Vampire Demon creature token with flying.
-            ConditionalEffect(
+            Effects.If(
                 condition = Conditions.SourceAbilityResolvedNTimes(3),
-                effect = Effects.CreateToken(
+                then = Effects.CreateToken(
                     power = 4,
                     toughness = 3,
                     colors = setOf(Color.WHITE, Color.BLACK),
@@ -69,8 +67,7 @@ val VitoFanaticOfAclazotz = card("Vito, Fanatic of Aclazotz") {
                     keywords = setOf(Keyword.FLYING),
                     imageUri = "https://cards.scryfall.io/normal/front/3/0/3005eb0a-5c96-4a07-a6b9-a907d1095cdf.jpg?1783913605",
                 ),
-            ),
-        )
+            )
         description = "Whenever you sacrifice another permanent, you gain 2 life if this is the " +
             "first time this ability has resolved this turn. If it's the second time, each opponent " +
             "loses 2 life. If it's the third time, create a 4/3 white and black Vampire Demon " +

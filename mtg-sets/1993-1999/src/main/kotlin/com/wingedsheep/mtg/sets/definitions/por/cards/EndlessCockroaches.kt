@@ -27,7 +27,7 @@ val EndlessCockroaches = card("Endless Cockroaches") {
     power = 1
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.Move(EffectTarget.Self, Zone.HAND)
     }
     metadata {

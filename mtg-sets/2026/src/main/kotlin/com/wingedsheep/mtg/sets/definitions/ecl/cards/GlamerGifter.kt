@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Glamer Gifter
@@ -31,17 +30,10 @@ val GlamerGifter = card("Glamer Gifter") {
     keywords(Keyword.FLASH, Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("creature", TargetCreature(
-            filter = TargetFilter.OtherCreature,
-            optional = true
-        ))
-        effect = Effects.Composite(
-            listOf(
-                Effects.SetBasePowerAndToughness(4, 4, creature, Duration.EndOfTurn),
-                Effects.GrantKeyword(Keyword.CHANGELING, creature)
-            )
-        )
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.OtherCreature, optional = true)
+        effect = Effects.SetBasePowerAndToughness(4, 4, creature, Duration.EndOfTurn) then
+            Effects.GrantKeyword(Keyword.CHANGELING, creature)
     }
 
     metadata {

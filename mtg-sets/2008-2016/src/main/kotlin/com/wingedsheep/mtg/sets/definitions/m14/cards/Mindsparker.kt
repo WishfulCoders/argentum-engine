@@ -36,9 +36,7 @@ val Mindsparker = card("Mindsparker") {
     keywords(Keyword.FIRST_STRIKE)
 
     triggeredAbility {
-        trigger = Triggers.opponentCasts(
-            GameObjectFilter.InstantOrSorcery.withAnyColor(Color.WHITE, Color.BLUE)
-        )
+        trigger = Triggers.anOpponent.casts(GameObjectFilter.InstantOrSorcery.withAnyColor(Color.WHITE, Color.BLUE))
         effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.TriggeringPlayer))
     }
 

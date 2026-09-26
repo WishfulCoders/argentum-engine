@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.CollectionSlot
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -8,13 +9,7 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Memories Returning
@@ -40,42 +35,31 @@ val MemoriesReturning = card("Memories Returning") {
         "your hand. Then they put one on the bottom of your library. Put the other into your hand.\n" +
         "Flashback {7}{U}{U}"
 
-    val toHand = CardDestination.ToZone(Zone.HAND)
     val toBottom = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom)
-    fun pickOne(from: String, chooser: Chooser, storeSelected: String, storeRemainder: String, prompt: String) =
-        SelectFromCollectionEffect(
-            from = from,
-            selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-            chooser = chooser,
-            storeSelected = storeSelected,
-            storeRemainder = storeRemainder,
-            showAllCards = true,
-            alwaysPrompt = true,
-            prompt = prompt,
-        )
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                // Reveal the top five cards.
-                GatherCardsEffect(source = CardSource.TopOfLibrary(DynamicAmount.Fixed(5)), storeAs = "revealed"),
-                RevealCollectionEffect(from = "revealed"),
-                // You put one of them into your hand.
-                pickOne("revealed", Chooser.Controller, "hand1", "rem1", "Put a card into your hand"),
-                MoveCollectionEffect(from = "hand1", destination = toHand),
-                // An opponent puts one on the bottom of your library.
-                pickOne("rem1", Chooser.Opponent, "bottom1", "rem2", "An opponent puts a card on the bottom of your library"),
-                MoveCollectionEffect(from = "bottom1", destination = toBottom),
-                // You put one into your hand.
-                pickOne("rem2", Chooser.Controller, "hand2", "rem3", "Put a card into your hand"),
-                MoveCollectionEffect(from = "hand2", destination = toHand),
-                // An opponent puts one on the bottom of your library.
-                pickOne("rem3", Chooser.Opponent, "bottom2", "rem4", "An opponent puts a card on the bottom of your library"),
-                MoveCollectionEffect(from = "bottom2", destination = toBottom),
-                // Put the other (the last remaining card) into your hand.
-                MoveCollectionEffect(from = "rem4", destination = toHand),
-            )
-        )
+        effect = Effects.Pipeline {
+            fun pickOne(from: CollectionSlot, chooser: Chooser, prompt: String) =
+                chooseExactlySplit(1, from = from, chooser = chooser, showAllCards = true, alwaysPrompt = true, prompt = prompt)
+
+            // Reveal the top five cards.
+            val revealed = gather(CardSource.TopOfLibrary(5))
+            reveal(revealed)
+            // You put one of them into your hand.
+            val (hand1, rem1) = pickOne(revealed, Chooser.Controller, "Put a card into your hand")
+            toHand(hand1)
+            // An opponent puts one on the bottom of your library.
+            val (bottom1, rem2) = pickOne(rem1, Chooser.Opponent, "An opponent puts a card on the bottom of your library")
+            move(bottom1, toBottom)
+            // You put one into your hand.
+            val (hand2, rem3) = pickOne(rem2, Chooser.Controller, "Put a card into your hand")
+            toHand(hand2)
+            // An opponent puts one on the bottom of your library.
+            val (bottom2, rem4) = pickOne(rem3, Chooser.Opponent, "An opponent puts a card on the bottom of your library")
+            move(bottom2, toBottom)
+            // Put the other (the last remaining card) into your hand.
+            toHand(rem4)
+        }
     }
 
     keywordAbility(KeywordAbility.flashback("{7}{U}{U}"))

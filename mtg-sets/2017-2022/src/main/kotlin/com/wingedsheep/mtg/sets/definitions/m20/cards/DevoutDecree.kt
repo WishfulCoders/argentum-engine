@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Devout Decree
@@ -27,18 +26,8 @@ val DevoutDecree = card("Devout Decree") {
         "(Look at the top card of your library. You may put that card on the bottom.)"
 
     spell {
-        val victim = target(
-            "target creature or planeswalker that's black or red",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.CreatureOrPlaneswalker.withAnyColor(Color.BLACK, Color.RED),
-                ),
-            ),
-        )
-        effect = Effects.Composite(
-            Effects.Exile(victim),
-            Effects.Scry(1),
-        )
+        val victim = target(TargetFilter(GameObjectFilter.CreatureOrPlaneswalker.withAnyColor(Color.BLACK, Color.RED)))
+        effect = Effects.Exile(victim) then Effects.Scry(1)
     }
 
     metadata {

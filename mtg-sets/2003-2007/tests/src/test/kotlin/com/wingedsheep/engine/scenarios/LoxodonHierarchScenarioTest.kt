@@ -19,7 +19,7 @@ import io.kotest.matchers.shouldBe
  *  {G}{W}, Sacrifice this creature: Regenerate each creature you control."
  *
  * The second ability is the corpus's first group regeneration — `ForEachInGroup` over the creatures
- * you control with a `RegenerateEffect(EffectTarget.Self)` body. The tests prove the three things
+ * you control with a `RegenerateEffect(EffectTarget.IterationEntity)` body. The tests prove the three things
  * that composition has to get right:
  *
  *  - every creature you control gets its own shield, not just one of them;

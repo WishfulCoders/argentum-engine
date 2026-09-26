@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.tmp.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.PreventionScope
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Safeguard
@@ -21,7 +21,7 @@ val Safeguard = card("Safeguard") {
 
     activatedAbility {
         cost = Costs.Mana("{2}{W}")
-        val creature = target("target", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.PreventAllDamageDealtBy(creature, scope = PreventionScope.CombatOnly)
     }
 

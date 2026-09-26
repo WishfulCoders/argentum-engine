@@ -6,9 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.RemoveAllAbilitiesEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Lizard, Connors's Curse
@@ -45,13 +43,9 @@ val LizardConnorssCurse = card("Lizard, Connors's Curse") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "up to one other target creature",
-            TargetCreature(optional = true, filter = TargetFilter.OtherCreature)
-        )
-        effect = Effects.Composite(
-            RemoveAllAbilitiesEffect(t, Duration.Permanent),
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.OtherCreature, optional = true)
+        effect = Effects.RemoveAllAbilities(t, Duration.Permanent) then
             Effects.BecomeCreature(
                 target = t,
                 power = 4,
@@ -60,7 +54,6 @@ val LizardConnorssCurse = card("Lizard, Connors's Curse") {
                 colors = setOf("GREEN"),
                 duration = Duration.Permanent
             )
-        )
     }
 
     metadata {

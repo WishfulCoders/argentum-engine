@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fdn.cards
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
@@ -8,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -22,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * is an Angel in addition to its other types.
  *
  * Modeled on the Vraska, the Silencer template: a filtered leaves-the-battlefield trigger
- * ([Triggers.leavesBattlefield] to [Zone.GRAVEYARD], ANY binding) whose filter restricts to
+ * (`Triggers.<subject>.leaves(to, excludeTo, excludeSacrifice)` to [Zone.GRAVEYARD], ANY binding) whose filter restricts to
  * nontoken, non-Angel creatures the controller controls. [EffectTarget.TriggeringEntity] is
  * the dying card, now in the graveyard; [Effects.Move] returns it to the battlefield (under
  * its owner's control — the reanimation default), then a +1/+1 counter and two
@@ -39,20 +39,14 @@ val ValkyriesCall = card("Valkyrie's Call") {
         "an Angel in addition to its other types."
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.nontoken().youControl().notSubtype(Subtype.ANGEL),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY
-        )
-        effect = Effects.Composite(
-            // Return that card to the battlefield under its owner's control.
-            Effects.Move(EffectTarget.TriggeringEntity, Zone.BATTLEFIELD),
+        trigger = Triggers.a(GameObjectFilter.Creature.nontoken().youControl().notSubtype(Subtype.ANGEL)).dies()
+        // Return that card to the battlefield under its owner's control.
+        effect = Effects.Move(EffectTarget.TriggeringEntity, Zone.BATTLEFIELD) then
             // ... with a +1/+1 counter on it.
-            Effects.AddCounters("+1/+1", 1, EffectTarget.TriggeringEntity),
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.TriggeringEntity) then
             // It has flying and is an Angel in addition to its other types.
-            Effects.AddCreatureType("Angel", EffectTarget.TriggeringEntity, Duration.Permanent),
+            Effects.AddCreatureType("Angel", EffectTarget.TriggeringEntity, Duration.Permanent) then
             Effects.GrantKeyword(Keyword.FLYING, EffectTarget.TriggeringEntity, Duration.Permanent)
-        )
     }
 
     metadata {

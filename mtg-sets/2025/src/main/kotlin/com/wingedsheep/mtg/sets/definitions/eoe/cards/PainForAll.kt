@@ -1,16 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Pain for All
@@ -29,13 +28,13 @@ val PainForAll = card("Pain for All") {
         "When this Aura enters, enchanted creature deals damage equal to its power to any other target.\n" +
         "Whenever enchanted creature is dealt damage, it deals that much damage to each opponent."
 
-    auraTarget = Targets.CreatureYouControl
+    auraTarget = TargetObject(filter = TargetFilter.CreatureYouControl)
 
     // ETB: enchanted creature deals damage equal to its power to any other target.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val victim = target("any other target", Targets.AnyOtherThanEnchantedCreature)
-        effect = DealDamageEffect(
+        trigger = Triggers.self.enters()
+        val victim = target(Targets.AnyOtherThanEnchantedCreature)
+        effect = Effects.DealDamage(
             amount = DynamicAmounts.enchantedCreaturePower(),
             target = victim,
             damageSource = EffectTarget.EnchantedCreature
@@ -44,9 +43,9 @@ val PainForAll = card("Pain for All") {
 
     // Whenever enchanted creature is dealt damage, it deals that much damage to each opponent.
     triggeredAbility {
-        trigger = Triggers.takesDamage(binding = TriggerBinding.ATTACHED)
-        effect = DealDamageEffect(
-            amount = DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_DAMAGE_AMOUNT),
+        trigger = Triggers.attached.isDealtDamage()
+        effect = Effects.DealDamage(
+            amount = DynamicAmounts.triggerDamageAmount(),
             target = EffectTarget.PlayerRef(Player.EachOpponent),
             damageSource = EffectTarget.EnchantedCreature
         )

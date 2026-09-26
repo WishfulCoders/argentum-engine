@@ -22,7 +22,7 @@ val ViciousKavu = card("Vicious Kavu") {
     oracleText = "Whenever this creature attacks, it gets +2/+0 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ModifyStats(power = 2, toughness = 0, target = EffectTarget.Self)
     }
 

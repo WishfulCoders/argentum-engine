@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
@@ -18,6 +17,8 @@ import com.wingedsheep.engine.state.components.battlefield.AttachedToComponent
 import com.wingedsheep.engine.state.components.battlefield.AttachmentsComponent
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Scenario tests for Stolen Uniform.
@@ -31,7 +32,7 @@ import io.kotest.matchers.shouldBe
  *  - [com.wingedsheep.sdk.dsl.Effects.UnattachEquipment] / `UnattachEquipmentEffect` + its executor.
  *  - The directional [com.wingedsheep.sdk.scripting.EventPattern.ControlChangeEvent] with
  *    [com.wingedsheep.sdk.scripting.ControlChangeDirection.LOST] used as an entity-scoped delayed
- *    trigger ([com.wingedsheep.sdk.dsl.Triggers.LoseControlOfWatched]) — "when you lose control of
+ *    trigger (`Triggers.self.controlChanges(ControlChangeDirection.LOST)`) — "when you lose control of
  *    that Equipment this turn".
  *  - The general [com.wingedsheep.sdk.scripting.predicates.StatePredicate.AttachedTo] host filter
  *    ("attached to a creature you control") via `GameObjectFilter.attachedTo(...)`.
@@ -61,7 +62,7 @@ class StolenUniformScenarioTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Gain control of target permanent."
         spell {
-            val perm = target("target permanent", Targets.Permanent)
+            val perm = target(TargetFilter.Permanent)
             effect = Effects.GainControl(perm)
         }
     }
@@ -102,7 +103,7 @@ class StolenUniformScenarioTest : FunSpec({
         val spell = driver.putCardInHand(me, "Stolen Uniform")
         driver.giveMana(me, Color.BLUE, 1)
         val result = driver.castSpell(me, spell, targets = listOf(myCreature, equipment))
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         driver.bothPass() // resolve the spell
 
         // Gained control of the Equipment, and it's force-attached to my creature.
@@ -123,7 +124,7 @@ class StolenUniformScenarioTest : FunSpec({
 
         val spell = driver.putCardInHand(me, "Stolen Uniform")
         driver.giveMana(me, Color.BLUE, 1)
-        driver.castSpell(me, spell, targets = listOf(myCreature, equipment)).isSuccess shouldBe true
+        driver.castSpell(me, spell, targets = listOf(myCreature, equipment)).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         driver.controllerOf(equipment) shouldBe me
@@ -136,7 +137,7 @@ class StolenUniformScenarioTest : FunSpec({
         driver.giveMana(opponent, Color.BLUE, 1)
         // Hand priority to the opponent so they can cast their instant.
         driver.passPriority(me)
-        driver.castSpell(opponent, reclaim, targets = listOf(equipment)).isSuccess shouldBe true
+        driver.castSpell(opponent, reclaim, targets = listOf(equipment)).outcome shouldBe Outcome.Done
         driver.bothPass() // resolve Reclaim → control moves to opponent, delayed trigger fires
         driver.bothPass() // resolve the delayed "unattach" trigger
 

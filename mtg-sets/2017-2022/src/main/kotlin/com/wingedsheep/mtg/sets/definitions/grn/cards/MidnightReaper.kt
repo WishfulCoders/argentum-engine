@@ -1,12 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.grn.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -32,15 +30,9 @@ val MidnightReaper = card("Midnight Reaper") {
         "to you and you draw a card."
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.youControl().nontoken(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY,
-        )
-        effect = Effects.Composite(
-            Effects.DealDamage(1, EffectTarget.Controller, damageSource = EffectTarget.Self),
-            Effects.DrawCards(1),
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl().nontoken()).dies()
+        effect = Effects.DealDamage(1, EffectTarget.Controller, damageSource = EffectTarget.Self) then
+            Effects.DrawCards(1)
     }
 
     metadata {

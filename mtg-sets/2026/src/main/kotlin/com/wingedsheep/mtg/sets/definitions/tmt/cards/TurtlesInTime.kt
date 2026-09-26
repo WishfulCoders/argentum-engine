@@ -7,9 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
@@ -30,37 +27,30 @@ val TurtlesInTime = card("Turtles in Time") {
     oracleText = "Return all creatures to their owners' hands. Each player may shuffle their hand and graveyard into their library, then each player who does draws seven cards.\nExile Turtles in Time."
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                Patterns.Group.returnAllToHand(GroupFilter.AllCreatures),
-                // ForEachPlayer sets the iterated player as the controller, so Player.You inside
-                // resolves to each player in turn — the gather/shuffle/draw is theirs, and the
-                // "may" lets each player decide independently ("each player who does draws seven").
-                Effects.ForEachPlayer(
-                    Player.Each,
-                    listOf(
-                        MayEffect(
-                            Effects.Composite(
-                                listOf(
-                                    GatherCardsEffect(
-                                        source = CardSource.FromMultipleZones(
-                                            zones = listOf(Zone.HAND, Zone.GRAVEYARD),
-                                            player = Player.You
-                                        ),
-                                        storeAs = "turtlesInTimeShuffle"
-                                    ),
-                                    MoveCollectionEffect(
-                                        from = "turtlesInTimeShuffle",
-                                        destination = CardDestination.ToZone(Zone.LIBRARY, Player.You, ZonePlacement.Shuffled)
-                                    ),
-                                    Effects.DrawCards(7)
+        effect = Patterns.Group.returnAllToHand(GroupFilter.AllCreatures) then
+            // ForEachPlayer sets the iterated player as the controller, so Player.You inside
+            // resolves to each player in turn — the gather/shuffle/draw is theirs, and the
+            // "may" lets each player decide independently ("each player who does draws seven").
+            Effects.ForEachPlayer(
+                Player.Each,
+                listOf(
+                    Effects.May(
+                        Effects.Pipeline {
+                            val turtlesInTimeShuffle = gather(
+                                CardSource.FromMultipleZones(
+                                    zones = listOf(Zone.HAND, Zone.GRAVEYARD),
+                                    player = Player.You
                                 )
                             )
-                        )
+                            move(
+                                turtlesInTimeShuffle,
+                                CardDestination.ToZone(Zone.LIBRARY, Player.You, ZonePlacement.Shuffled)
+                            )
+                            run(Effects.DrawCards(7))
+                        }
                     )
                 )
             )
-        )
         selfExile()
     }
 

@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Devout Lightcaster
@@ -32,8 +31,8 @@ val DevoutLightcaster = card("Devout Lightcaster") {
     keywordAbility(KeywordAbility.protectionFrom(Color.BLACK))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val permanent = target("permanent", TargetPermanent(filter = TargetFilter.Permanent.withColor(Color.BLACK)))
+        trigger = Triggers.self.enters()
+        val permanent = target(TargetFilter.Permanent.withColor(Color.BLACK))
         effect = Effects.Exile(permanent)
     }
 

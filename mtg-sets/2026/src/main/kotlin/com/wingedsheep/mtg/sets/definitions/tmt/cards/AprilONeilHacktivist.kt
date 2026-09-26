@@ -1,11 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * April O'Neil, Hacktivist
@@ -25,9 +26,9 @@ val AprilONeilHacktivist = card("April O'Neil, Hacktivist") {
     toughness = 5
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         effect = Effects.DrawCards(
-            DynamicAmount.SpellsCastThisTurn(Player.You, countDistinctCardTypes = true)
+            DynamicAmounts.spellsCastThisTurn(Player.You, countDistinctCardTypes = true)
         )
         description = "At the beginning of your end step, draw a card for each card type among spells you've cast this turn."
     }

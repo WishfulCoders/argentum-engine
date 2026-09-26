@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.sneak
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Shredder, Unrelenting
@@ -34,13 +34,13 @@ val ShredderUnrelenting = card("Shredder, Unrelenting") {
     keywords(Keyword.DEATHTOUCH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("another target creature you control", Targets.OtherCreatureYouControl)
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.OtherCreatureYouControl)
         effect = Effects.GrantKeyword(Keyword.DEATHTOUCH, t, duration = Duration.EndOfTurn)
     }
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val t = target("another target creature you control", Targets.OtherCreatureYouControl)
+        trigger = Triggers.self.attacks()
+        val t = target(TargetFilter.OtherCreatureYouControl)
         effect = Effects.GrantKeyword(Keyword.DEATHTOUCH, t, duration = Duration.EndOfTurn)
     }
 

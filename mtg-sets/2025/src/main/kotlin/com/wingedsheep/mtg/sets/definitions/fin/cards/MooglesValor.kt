@@ -36,9 +36,7 @@ val MooglesValor = card("Moogles' Valor") {
             creatureTypes = setOf("Moogle"),
             keywords = setOf(Keyword.LIFELINK),
             imageUri = "https://cards.scryfall.io/normal/front/2/9/295b78dc-b26d-4e92-8f75-916566c4db14.jpg?1748704063"
-        ).then(
-            Patterns.Group.grantKeywordToAll(Keyword.INDESTRUCTIBLE, Filters.Group.creaturesYouControl)
-        )
+        ) then Patterns.Group.grantKeywordToAll(Keyword.INDESTRUCTIBLE, Filters.Group.creaturesYouControl)
     }
 
     metadata {

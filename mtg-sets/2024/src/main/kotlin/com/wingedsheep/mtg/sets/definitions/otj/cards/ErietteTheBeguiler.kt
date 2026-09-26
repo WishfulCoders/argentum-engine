@@ -7,10 +7,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Eriette, the Beguiler
@@ -24,10 +22,10 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * long as that Aura is attached to it.
  *
  * Modeling:
- * - The trigger is [Triggers.becomesAttached] with an ANY binding (it watches *any* Aura you
+ * - The trigger is `Triggers.<subject>.becomesAttached(to, controller)` with an ANY binding (it watches *any* Aura you
  *   control, not just Eriette), gated by the attached-to filter "nonland permanent an opponent
  *   controls with mana value ≤ the Aura's mana value". The mana-value comparison uses
- *   [GameObjectFilter.manaValueAtMostEntity] with [EntityReference.Triggering] = the attaching Aura
+ *   [GameObjectFilter.manaValueAtMostEntity] with [EffectTarget.TriggeringEntity] = the attaching Aura
  *   (the trigger matcher exposes the attachment as the comparison reference).
  * - The payoff gains control of [EffectTarget.AttachedToTriggeringPermanent] (the permanent the
  *   Aura attached to) for [Duration.WhileSourceAttachedToAffected] — the control effect is sourced
@@ -48,14 +46,9 @@ val ErietteTheBeguiler = card("Eriette, the Beguiler") {
     keywords(Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = Triggers.becomesAttached(
-            attachmentFilter = GameObjectFilter.Enchantment.withSubtype("Aura"),
-            attachmentController = Player.You,
-            attachedToFilter = GameObjectFilter.NonlandPermanent
+        trigger = Triggers.a(GameObjectFilter.Enchantment.withSubtype("Aura")).becomesAttached(GameObjectFilter.NonlandPermanent
                 .opponentControls()
-                .manaValueAtMostEntity(EntityReference.Triggering),
-            binding = TriggerBinding.ANY,
-        )
+                .manaValueAtMostEntity(EffectTarget.TriggeringEntity), controller = Player.You)
         effect = Effects.GainControl(
             EffectTarget.AttachedToTriggeringPermanent,
             duration = Duration.WhileSourceAttachedToAffected,

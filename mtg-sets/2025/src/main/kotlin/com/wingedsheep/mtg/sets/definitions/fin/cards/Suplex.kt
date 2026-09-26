@@ -3,11 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.MarkExileOnDeathEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -26,14 +22,11 @@ val Suplex = card("Suplex") {
     spell {
         modal(chooseCount = 1) {
             mode("Suplex deals 3 damage to target creature. If that creature would die this turn, exile it instead") {
-                val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-                effect = Effects.Composite(
-                    DealDamageEffect(3, t),
-                    MarkExileOnDeathEffect(t)
-                )
+                val t = target(TargetFilter.Creature)
+                effect = Effects.DealDamage(3, t) then Effects.MarkExileOnDeath(t)
             }
             mode("Exile target artifact") {
-                val t = target("target", TargetPermanent(filter = TargetFilter.Artifact))
+                val t = target(TargetFilter.Artifact)
                 effect = Effects.Exile(t)
             }
         }

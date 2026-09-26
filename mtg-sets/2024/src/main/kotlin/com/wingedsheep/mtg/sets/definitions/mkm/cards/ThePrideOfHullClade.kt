@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -14,8 +13,9 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.GrantTriggeredAbilityEffect
 import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
+import com.wingedsheep.sdk.scripting.events.Recipient
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * The Pride of Hull Clade — Murders at Karlov Manor #172
@@ -36,7 +36,7 @@ import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
  *
  * The activated ability is three separate grants onto one target, not one bundled effect: a pump,
  * a granted quoted trigger, and a defender bypass. Inside the granted ability "this creature" is
- * the *host*, not The Pride — [Triggers.DealsCombatDamageToPlayer] is SELF-bound and
+ * the *host*, not The Pride — `Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)` is SELF-bound and
  * [DynamicAmounts.sourceToughness] reads the ability's source, so both re-point at whatever
  * creature received the grant. That is what makes the card's own 15 toughness a payload you can
  * hand to something with evasion.
@@ -74,19 +74,16 @@ val ThePrideOfHullClade = card("The Pride of Hull Clade") {
 
     activatedAbility {
         cost = Costs.Mana("{2}{U}{U}")
-        val creature = target("target creature you control", Targets.CreatureYouControl)
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 0, creature),
-            GrantTriggeredAbilityEffect(
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.ModifyStats(1, 0, creature) then
+            Effects.GrantTriggeredAbility(
                 ability = TriggeredAbility.create(
-                    trigger = Triggers.DealsCombatDamageToPlayer.event,
-                    binding = Triggers.DealsCombatDamageToPlayer.binding,
+                    trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer),
                     effect = Effects.DrawCards(DynamicAmounts.sourceToughness()),
                 ),
                 target = creature,
-            ),
-            Effects.CanAttackDespiteDefenderThisTurn(creature),
-        )
+            ) then
+            Effects.CanAttackDespiteDefenderThisTurn(creature)
         description = "Until end of turn, target creature you control gets +1/+0, gains " +
             "\"Whenever this creature deals combat damage to a player, draw cards equal to its " +
             "toughness,\" and can attack as though it didn't have defender."

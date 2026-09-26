@@ -36,7 +36,7 @@ val NullGroupBiologicalAssets = card("Null Group Biological Assets") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         optional = true
         effect = Patterns.Hand.rummage(1)
     }

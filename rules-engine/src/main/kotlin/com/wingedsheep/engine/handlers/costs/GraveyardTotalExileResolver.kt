@@ -48,8 +48,6 @@ import com.wingedsheep.sdk.scripting.costs.CostAtom
  */
 object GraveyardTotalExileResolver {
 
-    private val predicateEvaluator = PredicateEvaluator()
-
     /** The cost-payload discriminator the client switches on to raise the sum-gated exile picker. */
     const val COST_TYPE: String = "ExileForTotal"
 
@@ -78,6 +76,7 @@ object GraveyardTotalExileResolver {
         measure: CardMeasure,
         filter: GameObjectFilter = GameObjectFilter.Any,
         excludeCardId: EntityId? = null,
+        predicateEvaluator: PredicateEvaluator
     ): Candidates {
         val inZone = state.getZone(ZoneKey(playerId, Zone.GRAVEYARD)).filter { it != excludeCardId }
         val cards = if (filter == GameObjectFilter.Any) inZone else {
@@ -99,7 +98,8 @@ object GraveyardTotalExileResolver {
         minTotal: Int,
         filter: GameObjectFilter = GameObjectFilter.Any,
         excludeCardId: EntityId? = null,
-    ): Boolean = candidates(state, playerId, measure, filter, excludeCardId).canReach(minTotal)
+        predicateEvaluator: PredicateEvaluator
+    ): Boolean = candidates(state, playerId, measure, filter, excludeCardId, predicateEvaluator = predicateEvaluator).canReach(minTotal)
 
     /**
      * Whether [chosenCards] is a legal payment: a selection drawn entirely from [candidates] whose
@@ -191,15 +191,16 @@ object GraveyardTotalExileResolver {
         playerId: EntityId,
         atom: CostAtom.ExileFromGraveyardForTotal,
         excludeCardId: EntityId? = null,
+        predicateEvaluator: PredicateEvaluator
     ): AdditionalCostData? =
-        costInfo(atom, candidates(state, playerId, atom.measure, atom.filter, excludeCardId))
+        costInfo(atom, candidates(state, playerId, atom.measure, atom.filter, excludeCardId, predicateEvaluator = predicateEvaluator))
 
     /** Move [cards] to exile in order, accumulating the zone-change events. */
-    fun exile(state: GameState, cards: List<EntityId>): Pair<GameState, List<GameEvent>> {
+    fun exile(zones: ZoneTransitionService, state: GameState, cards: List<EntityId>): Pair<GameState, List<GameEvent>> {
         var newState = state
         val events = mutableListOf<GameEvent>()
         for (cardId in cards) {
-            val transition = ZoneTransitionService.moveToZone(newState, cardId, Zone.EXILE)
+            val transition = zones.moveToZone(newState, cardId, Zone.EXILE)
             newState = transition.state
             events.addAll(transition.events)
         }

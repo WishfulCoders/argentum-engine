@@ -17,7 +17,7 @@ import io.kotest.matchers.shouldBe
  *
  * Mode 0/1: destroy target artifact / enchantment. Mode 2 ({1}): put a +1/+1 counter
  * on each creature the targeted player controls (`ForEachInGroup` over a target-relative
- * group filter, counter placed on each iterated permanent via `EffectTarget.Self`).
+ * group filter, counter placed on each iterated permanent via `EffectTarget.IterationEntity`).
  */
 class OtjRequisitionRaidScenarioTest : FunSpec({
 

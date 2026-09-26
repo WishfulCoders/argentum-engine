@@ -1,6 +1,7 @@
 package com.wingedsheep.engine.mechanics.combat
 
 import com.wingedsheep.engine.core.*
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.combat.*
@@ -31,16 +32,17 @@ import com.wingedsheep.engine.mechanics.combat.rules.defaultBlockEvasionRules
  * 5. End of combat step
  */
 class CombatManager(
+    private val zones: ZoneTransitionService,
     private val cardRegistry: CardRegistry,
     private val manaAbilitySideEffectExecutor: com.wingedsheep.engine.mechanics.mana.ManaAbilitySideEffectExecutor,
-    private val damageCalculator: DamageCalculator = DamageCalculator(cardRegistry),
-    private val blockEvasionRules: List<BlockEvasionRule> = defaultBlockEvasionRules(),
-    private val attackRestrictionRules: List<AttackRestrictionRule> = defaultAttackRestrictionRules(),
-    private val attackDefenderRules: List<AttackDefenderRule> = defaultAttackDefenderRules(),
+    private val damageCalculator: DamageCalculator = DamageCalculator(cardRegistry, predicateEvaluator = zones.predicateEvaluator),
+    private val blockEvasionRules: List<BlockEvasionRule> = defaultBlockEvasionRules(zones.predicateEvaluator),
+    private val attackRestrictionRules: List<AttackRestrictionRule> = defaultAttackRestrictionRules(predicateEvaluator = zones.predicateEvaluator),
+    private val attackDefenderRules: List<AttackDefenderRule> = defaultAttackDefenderRules(predicateEvaluator = zones.predicateEvaluator)
 ) {
-    internal val attackPhase = AttackPhaseManager(cardRegistry, attackRestrictionRules, attackDefenderRules, manaAbilitySideEffectExecutor)
-    internal val blockPhase = BlockPhaseManager(cardRegistry, blockEvasionRules, manaAbilitySideEffectExecutor)
-    private val damagePhase = CombatDamageManager(cardRegistry, damageCalculator)
+    internal val attackPhase = AttackPhaseManager(cardRegistry, attackRestrictionRules, attackDefenderRules, manaAbilitySideEffectExecutor, predicateEvaluator = zones.predicateEvaluator)
+    internal val blockPhase = BlockPhaseManager(cardRegistry, blockEvasionRules, manaAbilitySideEffectExecutor, predicateEvaluator = zones.predicateEvaluator)
+    private val damagePhase = CombatDamageManager(zones, cardRegistry, damageCalculator)
 
     // =========================================================================
     // Declare Attackers
@@ -138,6 +140,7 @@ class CombatManager(
             entities = state.entities.mapValues { (_, container) ->
                 container
                     .without<AttackingComponent>()
+                    .without<com.wingedsheep.engine.state.components.combat.BeingAttackedComponent>()
                     .without<BlockingComponent>()
                     .without<BlockedComponent>()
                     .without<DamageAssignmentComponent>()

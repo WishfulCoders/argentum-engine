@@ -28,7 +28,7 @@ val HeartwoodGiant = card("Heartwood Giant") {
             Costs.Tap,
             Costs.Sacrifice(GameObjectFilter.Land.withSubtype(Subtype.FOREST))
         )
-        val victim = target("target", Targets.PlayerOrPlaneswalker)
+        val victim = target(Targets.PlayerOrPlaneswalker)
         effect = Effects.DealDamage(2, victim)
     }
 

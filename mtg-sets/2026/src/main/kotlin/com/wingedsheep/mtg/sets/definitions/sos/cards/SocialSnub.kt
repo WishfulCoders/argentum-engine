@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -19,8 +18,8 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * 1 life.
  *
  * The intervening-if cast trigger (CR 603.4) fires from the stack via
- * [Triggers.WhenYouCastThisSpell] with `triggerRestriction = Conditions.ControlCreature`; its
- * [MayEffect] optionally copies the spell with [Effects.CopyTargetSpell] of the triggering entity
+ * `Triggers.self.isCast()` with `triggerRestriction = Conditions.ControlCreature`; its
+ * [Effects.May] optionally copies the spell with [Effects.CopyTargetSpell] of the triggering entity
  * (a copy isn't cast, CR 707.10, so it doesn't re-trigger). Resolution is an edict —
  * [Effects.Sacrifice] of a creature for each player (`Player.Each`, each chooses their own) — then
  * each opponent loses 1 life and the controller gains 1.
@@ -34,21 +33,19 @@ val SocialSnub = card("Social Snub") {
         "gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
+        trigger = Triggers.self.isCast()
         triggerRestriction = Conditions.ControlCreature
-        effect = MayEffect(Effects.CopyTargetSpell(target = EffectTarget.TriggeringEntity))
+        effect = Effects.May(Effects.CopyTargetSpell(target = EffectTarget.TriggeringEntity))
         description = "When you cast this spell while you control a creature, you may copy this spell."
     }
 
     spell {
-        effect = Effects.Composite(
-            Effects.Sacrifice(
-                filter = GameObjectFilter.Creature,
-                target = EffectTarget.PlayerRef(Player.Each),
-            ),
-            Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)),
-            Effects.GainLife(1),
-        )
+        effect = Effects.Sacrifice(
+            filter = GameObjectFilter.Creature,
+            target = EffectTarget.PlayerRef(Player.Each),
+        ) then
+            Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)) then
+            Effects.GainLife(1)
     }
 
     metadata {

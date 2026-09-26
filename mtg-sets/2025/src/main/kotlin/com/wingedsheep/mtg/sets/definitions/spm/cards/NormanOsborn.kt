@@ -14,8 +14,8 @@ import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.GraveyardCardsHaveMayhem
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Norman Osborn // Green Goblin — Marvel's Spider-Man #39 (mythic)
@@ -60,7 +60,7 @@ private val NormanOsbornFront = card("Norman Osborn") {
 
     // Whenever Norman Osborn deals combat damage to a player, he connives.
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         effect = Effects.Connive(EffectTarget.Self)
         description = "Whenever Norman Osborn deals combat damage to a player, he connives."
     }
@@ -68,7 +68,7 @@ private val NormanOsbornFront = card("Norman Osborn") {
     // {1}{U}{B}{R}: Transform Norman Osborn. Activate only as a sorcery.
     activatedAbility {
         cost = Costs.Mana("{1}{U}{B}{R}")
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
         timing = TimingRule.SorcerySpeed
         description = "Transform Norman Osborn. Activate only as a sorcery."
     }

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  * The infect payoff in a set with no other poison: every Clue you cash in is two counters, so
  * five Clues is a kill on their own.
  *
- * [Triggers.YouSacrificeA] is the per-permanent form — "whenever you sacrifice **a** Clue"
+ * `Triggers.you.sacrifices(filter)` is the per-permanent form — "whenever you sacrifice **a** Clue"
  * triggers once per Clue (CR 603.2), so sacrificing two at once gives four counters across two
  * separate abilities, each with its own target. It fires on *any* sacrifice, including paying a
  * Clue's own "{2}, Sacrifice this token: Draw a card" cost, because costs are paid before the
@@ -42,15 +42,15 @@ val PersuasiveInterrogators = card("Persuasive Interrogators") {
         "ten or more poison counters loses the game.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Investigate()
         description = "When this creature enters, investigate."
     }
 
     triggeredAbility {
-        trigger = Triggers.YouSacrificeA(GameObjectFilter.Artifact.withSubtype("Clue"))
-        val opponent = target("target opponent", Targets.Opponent)
-        effect = Effects.AddCounters(Counters.POISON, 2, opponent)
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Artifact.withSubtype("Clue"))
+        val opponent = target(Targets.Opponent)
+        effect = Effects.AddCounters(CounterType.POISON, 2, opponent)
         description = "Whenever you sacrifice a Clue, target opponent gets two poison counters."
     }
 

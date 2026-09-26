@@ -77,9 +77,9 @@ sealed interface ProcessorResult {
  * 4. **Self-redirect components** via [SelfZoneRedirectComponent] on any
  *    entity
  */
-class ReplacementEffectProcessor {
-
-    private val conditionEvaluator = ConditionEvaluator()
+class ReplacementEffectProcessor(
+    private val conditionEvaluator: ConditionEvaluator
+) {
 
     /**
      * Process a pending game event through the replacement effect pipeline.

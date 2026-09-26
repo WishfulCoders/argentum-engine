@@ -288,7 +288,7 @@ internal val damageDrawLifeHandlers: Map<String, ActionHandler> = actionHandlers
 /** Render one mass-damage recipient clause of a `SpellDealsDamage`/`PermanentDealsDamage` action:
  *
  *  - `EachPermanent(<filter>)` ("each creature", "each creature and planeswalker they control") ->
- *    `Effects.ForEachInGroup(GroupFilter(<filter>), DealDamageEffect(amt, EffectTarget.Self))`.
+ *    `Effects.ForEachInGroup(GroupFilter(<filter>), DealDamageEffect(amt, EffectTarget.IterationEntity))`.
  *  - `EachPlayer(Opponent)` ("each opponent") -> `DealDamageEffect(amt,
  *    EffectTarget.PlayerRef(Player.EachOpponent))` — the same each-opponent shape the single-recipient
  *    [damageRecipientTarget] renders. NOT `ForEachPlayerEffect(Player.Each, …)`, which would also hit
@@ -304,7 +304,7 @@ private fun EmitCtx.massDamageClause(clause: JsonObject, amt: com.wingedsheep.to
             val filter = groupFilterExpr(clause["args"]) ?: return null
             call(
                 "Effects.ForEachInGroup", arg(filter),
-                arg(call("DealDamageEffect", arg(amt), arg("EffectTarget.Self"))),
+                arg(call("DealDamageEffect", arg(amt), arg("EffectTarget.IterationEntity"))),
             )
         }
         "EachPlayer" -> when {

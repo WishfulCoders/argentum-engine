@@ -6,7 +6,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.PreventDamage
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Daunting Defender
@@ -27,7 +27,7 @@ val DauntingDefender = card("Daunting Defender") {
         PreventDamage(
             amount = 1,
             appliesTo = EventPattern.DamageEvent(
-                recipient = RecipientFilter.Matching(
+                recipient = Recipient.Object(
                     GameObjectFilter.Creature.withSubtype(Subtype("Cleric")).youControl()
                 )
             )

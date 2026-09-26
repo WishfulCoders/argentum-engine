@@ -29,7 +29,7 @@ val MeticulousArtisan = card("Meticulous Artisan") {
     prowess()
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateTreasure(1)
         description = "When this creature enters, create a Treasure token."
     }

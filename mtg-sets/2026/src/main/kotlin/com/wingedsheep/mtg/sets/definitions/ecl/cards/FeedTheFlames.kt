@@ -1,10 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MarkExileOnDeathEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Feed the Flames
@@ -22,9 +21,8 @@ val FeedTheFlames = card("Feed the Flames") {
         "If that creature would die this turn, exile it instead."
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = MarkExileOnDeathEffect(creature)
-            .then(Effects.DealDamage(5, creature))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.MarkExileOnDeath(creature) then Effects.DealDamage(5, creature)
     }
 
     metadata {

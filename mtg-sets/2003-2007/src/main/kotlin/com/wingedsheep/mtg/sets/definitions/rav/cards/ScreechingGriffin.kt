@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Screeching Griffin
@@ -31,7 +30,7 @@ val ScreechingGriffin = card("Screeching Griffin") {
     keywords(Keyword.FLYING)
     activatedAbility {
         cost = Costs.Mana("{R}")
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+        val t = target(TargetFilter.Creature)
         effect = Effects.CantBlock(target = t, attacker = EffectTarget.Self)
     }
     metadata {

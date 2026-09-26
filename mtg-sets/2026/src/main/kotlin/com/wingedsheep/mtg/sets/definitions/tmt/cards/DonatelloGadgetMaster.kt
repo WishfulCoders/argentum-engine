@@ -7,7 +7,7 @@ import com.wingedsheep.sdk.dsl.sneak
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Donatello, Gadget Master
@@ -32,11 +32,8 @@ val DonatelloGadgetMaster = card("Donatello, Gadget Master") {
     sneak("{1}{U}")
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        val artifact = target(
-            "target artifact you control",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Artifact.youControl()))
-        )
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        val artifact = target(TargetFilter(GameObjectFilter.Artifact.youControl()))
         effect = Effects.CreateTokenCopyOfTarget(artifact)
     }
 

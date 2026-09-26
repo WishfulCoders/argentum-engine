@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Fell {1}{B}
@@ -18,7 +18,7 @@ val Fell = card("Fell") {
     oracleText = "Destroy target creature."
 
     spell {
-        val creature = target("target creature to destroy", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.Destroy(creature)
     }
 

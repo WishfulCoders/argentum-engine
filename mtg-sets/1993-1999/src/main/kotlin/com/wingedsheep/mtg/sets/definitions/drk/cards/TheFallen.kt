@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * The Fallen
@@ -38,7 +39,7 @@ val TheFallen = card("The Fallen") {
         "and planeswalker it has dealt damage to this game."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.DealDamage(1, EffectTarget.EachDamagedBySourceThisGame)
         description = "At the beginning of your upkeep, this creature deals 1 damage to each " +
             "opponent and planeswalker it has dealt damage to this game."

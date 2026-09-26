@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.eld.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Run Away Together
@@ -26,10 +26,9 @@ val RunAwayTogether = card("Run Away Together") {
     oracleText = "Choose two target creatures controlled by different players. Return those creatures to their owners' hands."
 
     spell {
-        val t1 = target("creature you control", Targets.CreatureYouControl)
-        val t2 = target("creature an opponent controls", Targets.CreatureOpponentControls)
-        effect = Effects.ReturnToHand(t1)
-            .then(Effects.ReturnToHand(t2))
+        val t1 = target(TargetFilter.CreatureYouControl)
+        val t2 = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.ReturnToHand(t1) then Effects.ReturnToHand(t2)
     }
 
     metadata {

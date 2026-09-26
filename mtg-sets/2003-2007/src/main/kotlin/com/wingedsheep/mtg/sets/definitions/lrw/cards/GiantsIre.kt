@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 
 /**
  * Giant's Ire
@@ -24,14 +23,12 @@ val GiantsIre = card("Giant's Ire") {
         "Giant, draw a card."
 
     spell {
-        val recipient = target("target player or planeswalker", Targets.PlayerOrPlaneswalker)
-        effect = Effects.Composite(
-            Effects.DealDamage(4, recipient),
-            ConditionalEffect(
+        val recipient = target(Targets.PlayerOrPlaneswalker)
+        effect = Effects.DealDamage(4, recipient) then
+            Effects.If(
                 condition = Conditions.ControlPermanentOfType(Subtype.GIANT),
-                effect = Effects.DrawCards(1)
+                then = Effects.DrawCards(1)
             )
-        )
     }
 
     metadata {

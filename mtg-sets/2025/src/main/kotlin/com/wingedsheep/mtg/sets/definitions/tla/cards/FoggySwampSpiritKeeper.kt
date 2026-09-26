@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CanOnlyBlockCreaturesWith
 import com.wingedsheep.sdk.scripting.CantBeBlockedExceptBy
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Foggy Swamp Spirit Keeper
@@ -33,9 +32,9 @@ val FoggySwampSpiritKeeper = card("Foggy Swamp Spirit Keeper") {
     keywords(Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = Triggers.NthCardDrawn(2)
-        effect = CreateTokenEffect(
-            count = DynamicAmount.Fixed(1),
+        trigger = Triggers.you.drawsNth(2)
+        effect = Effects.CreateToken(
+            count = 1,
             power = 1,
             toughness = 1,
             colors = emptySet(),

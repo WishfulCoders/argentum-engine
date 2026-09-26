@@ -27,7 +27,7 @@ val MinotaurSkullcleaver = card("Minotaur Skullcleaver") {
     keywords(Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ModifyStats(2, 0, EffectTarget.Self)
         description = "When this creature enters, it gets +2/+0 until end of turn."
     }

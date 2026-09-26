@@ -2,16 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.effects.EmitLibrarySearchedEventEffect
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Myr Incubator — Mirrodin #212
@@ -52,20 +50,19 @@ val MyrIncubator = card("Myr Incubator") {
         ) {
             val searchable = gather(
                 CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.Artifact),
-                name = "myrIncubatorSearchable"
+                search = true
             )
 
             val found = chooseAnyNumber(
                 from = searchable,
-                prompt = "Search your library for any number of artifact cards",
-                name = "myrIncubatorFound"
+                prompt = "Search your library for any number of artifact cards"
             )
 
             exile(found)
 
             run(
-                CreateTokenEffect(
-                    count = DynamicAmount.DistinctEntitiesInCollections(listOf(found.key)),
+                Effects.CreateToken(
+                    count = DynamicAmounts.distinctEntitiesIn(found),
                     power = 1,
                     toughness = 1,
                     colors = emptySet(),
@@ -77,7 +74,7 @@ val MyrIncubator = card("Myr Incubator") {
                 )
             )
 
-            run(ShuffleLibraryEffect())
+            run(Effects.ShuffleLibrary())
             run(EmitLibrarySearchedEventEffect)
         }
         description = "{6}, {T}, Sacrifice this artifact: Search your library for any number of " +

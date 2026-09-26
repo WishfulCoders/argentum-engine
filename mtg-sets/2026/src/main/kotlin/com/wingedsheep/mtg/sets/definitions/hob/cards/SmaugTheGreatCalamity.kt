@@ -2,10 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Smaug, the Great Calamity // Spew Flame — The Hobbit #109
@@ -41,8 +40,8 @@ val SmaugTheGreatCalamity = card("Smaug, the Great Calamity") {
         oracleText = "Spew Flame deals 5 damage to target creature. " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            target = Targets.Creature
-            effect = Effects.DealDamage(5, EffectTarget.ContextTarget(0))
+            val creature = target(TargetFilter.Creature)
+            effect = Effects.DealDamage(5, creature)
         }
     }
 

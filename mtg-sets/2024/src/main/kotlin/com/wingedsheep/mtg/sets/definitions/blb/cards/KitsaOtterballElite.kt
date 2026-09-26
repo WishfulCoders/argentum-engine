@@ -1,18 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Kitsa, Otterball Elite
@@ -48,15 +46,15 @@ val KitsaOtterballElite = card("Kitsa, Otterball Elite") {
     // Activate only if Kitsa's power is 3 or greater.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        val spell = target("target instant or sorcery spell you control to copy", Targets.InstantOrSorcerySpellYouControl)
+        val spell = target(TargetFilter.InstantOrSorcerySpellOnStack.youControl())
         effect = Effects.CopyTargetSpell(spell)
         holdPriority = true
         restrictions = listOf(
             ActivationRestriction.OnlyIfCondition(
-                Compare(
-                    left = DynamicAmount.EntityProperty(EntityReference.Source, EntityNumericProperty.Power),
+                Conditions.CompareAmounts(
+                    left = DynamicAmounts.sourcePower(),
                     operator = ComparisonOperator.GTE,
-                    right = DynamicAmount.Fixed(3)
+                    right = 3
                 )
             )
         )

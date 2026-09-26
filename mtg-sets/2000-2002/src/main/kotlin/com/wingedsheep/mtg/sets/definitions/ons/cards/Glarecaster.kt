@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.effects.RedirectNextDamageEffect
 import com.wingedsheep.sdk.scripting.effects.RedirectScope
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Glarecaster
@@ -30,8 +30,8 @@ val Glarecaster = card("Glarecaster") {
 
     activatedAbility {
         cost = Costs.Mana("{5}{W}")
-        val t = target("target", AnyTarget())
-        effect = RedirectNextDamageEffect(
+        val t = target(Targets.Any)
+        effect = Effects.RedirectNextDamage(
             protectedTargets = listOf(EffectTarget.Self, EffectTarget.Controller),
             redirectTo = t,
             // "The next TIME damage would be dealt" — combat damage is dealt simultaneously

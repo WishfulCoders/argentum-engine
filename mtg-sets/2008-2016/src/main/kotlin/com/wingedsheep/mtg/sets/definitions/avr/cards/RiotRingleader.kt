@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  *
  * Whenever this creature attacks, Human creatures you control get +1/+0 until end of turn.
  *
- * [Triggers.Attacks] is SELF-bound, so only the Ringleader's own attack fires it. The pump is
+ * `Triggers.self.attacks()` is SELF-bound, so only the Ringleader's own attack fires it. The pump is
  * [Patterns.Group.modifyStatsForAll] over the Humans you control — a group iteration rather than a
  * static lord, so the bonus is locked to the creatures present on resolution and expires at end of
  * turn. The Ringleader is itself a Human, so it pumps too.
@@ -29,7 +29,7 @@ val RiotRingleader = card("Riot Ringleader") {
     oracleText = "Whenever this creature attacks, Human creatures you control get +1/+0 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Group.modifyStatsForAll(
             1, 0,
             GroupFilter(GameObjectFilter.Creature.withSubtype("Human").youControl())

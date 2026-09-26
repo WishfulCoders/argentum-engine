@@ -202,6 +202,18 @@ object DecisionValidators {
             if (selectedIds.size != selectedIds.toSet().size) {
                 return "The same target can't be chosen more than once for requirement $reqIndex"
             }
+
+            // Separate requirements are separate "target" words, so they may share a pick (Seeds
+            // of Strength) — except an "another target" requirement, which must avoid every
+            // earlier requirement's picks.
+            if (decision.targetRequirements.first { it.index == reqIndex }.mustDifferFromEarlier) {
+                val earlier = response.selectedTargets
+                    .filterKeys { it < reqIndex }
+                    .values.flatten().toSet()
+                if (selectedIds.any { it in earlier }) {
+                    return "Target for requirement $reqIndex must differ from the other chosen targets"
+                }
+            }
         }
 
         // Every *declared* requirement is then checked against the group that answered it, so the
@@ -260,6 +272,13 @@ object DecisionValidators {
                 if (controllers.size != controllers.toSet().size) {
                     return "Targets for requirement $reqIndex must be controlled by different players"
                 }
+            }
+            // "Up to one target ... of each card type" (Uldaros Theorix). TargetValidator is
+            // authoritative; this rejects it interactively too.
+            if (req.onePerCardType && selectedIds.size > 1 && state != null &&
+                !com.wingedsheep.engine.mechanics.targeting.OnePerCardType.isSatisfied(state, selectedIds)
+            ) {
+                return "Targets for requirement $reqIndex must be at most one of each card type"
             }
         }
         return null
@@ -361,6 +380,22 @@ object DecisionValidators {
         if (response.color !in decision.availableColors) {
             return "Invalid color: ${response.color} is not available"
         }
+        if (response.colors.isNotEmpty()) {
+            // Multi-color answer ("the color or colors of your choice"): a nonempty set of
+            // distinct, offered colors, no larger than the decision allows, naming `color` too.
+            if (response.colors.size > decision.maxColors) {
+                return "Too many colors: at most ${decision.maxColors} may be chosen"
+            }
+            if (response.colors.toSet().size != response.colors.size) {
+                return "Duplicate colors in response"
+            }
+            response.colors.firstOrNull { it !in decision.availableColors }?.let {
+                return "Invalid color: $it is not available"
+            }
+            if (response.color !in response.colors) {
+                return "The primary color must be one of the chosen colors"
+            }
+        }
         return null
     }
 
@@ -401,6 +436,10 @@ object DecisionValidators {
             if (maxForTarget != null && amount > maxForTarget) {
                 return "Target $targetId cannot receive more than $maxForTarget"
             }
+        }
+        // A target left out of the map would receive nothing, so a minimum covers every target.
+        if (decision.minPerTarget > 0 && decision.targets.any { it !in response.distribution }) {
+            return "Each target must receive at least ${decision.minPerTarget}"
         }
         return null
     }

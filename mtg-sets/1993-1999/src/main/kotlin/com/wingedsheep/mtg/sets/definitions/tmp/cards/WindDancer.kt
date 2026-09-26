@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.tmp.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Wind Dancer
@@ -28,7 +28,7 @@ val WindDancer = card("Wind Dancer") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(Keyword.FLYING, t)
         description = "{T}: Target creature gains flying until end of turn."
     }

@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -32,7 +31,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * connives by declining the other. Once one has, the ability stops triggering for the turn and any
  * instance still on the stack does nothing as it resolves. The trigger cap would instead be spent by
  * the *first* trigger — even a declined one — and take that choice away. The engine lowers the flag
- * into [com.wingedsheep.sdk.scripting.effects.Gate.OnceEachTurn] gates around the [MayEffect]'s
+ * into [com.wingedsheep.sdk.scripting.effects.Gate.OnceEachTurn] gates around the [Effects.May]'s
  * consent gate, so only an action actually taken counts.
  *
  * "Another **Villain** you control" is deliberately `GameObjectFilter.Any` — the set puts the Villain
@@ -59,11 +58,8 @@ val BaronStruckerHydraOverlord = card("Baron Strucker, HYDRA Overlord") {
     }
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Any.withSubtype(Subtype.VILLAIN).youControl(),
-            binding = TriggerBinding.OTHER,
-        )
-        effect = MayEffect(Effects.Connive(EffectTarget.TriggeringEntity))
+        trigger = Triggers.another(GameObjectFilter.Any.withSubtype(Subtype.VILLAIN).youControl()).enters()
+        effect = Effects.May(Effects.Connive(EffectTarget.TriggeringEntity))
         effectOncePerTurn = true
         description = "Whenever another Villain you control enters, you may have it connive. " +
             "Do this only once each turn."

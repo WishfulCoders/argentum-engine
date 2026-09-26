@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.EntityId
@@ -20,6 +19,8 @@ import com.wingedsheep.sdk.scripting.effects.FaceDownMode
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * CR 306.5b — "A planeswalker has the intrinsic ability 'This permanent enters with a number of
@@ -71,7 +72,7 @@ class PlaneswalkerEntryLoyaltyScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Exile target creature, then return it to the battlefield transformed."
         spell {
-            target = Targets.Creature
+            target = TargetObject(filter = TargetFilter.Creature)
             effect = Effects.ExileAndReturnTransformed(EffectTarget.ContextTarget(0))
         }
     }
@@ -219,7 +220,7 @@ class PlaneswalkerEntryLoyaltyScenarioTest : ScenarioTestBase() {
                     game.state.getEntity(id)?.get<CardComponent>()?.name == "Ajani, Outland Chaperone"
                 }
 
-                val faceUp = ZoneTransitionService.moveToZone(
+                val faceUp = zones.moveToZone(
                     game.state, ajani, Zone.BATTLEFIELD,
                     ZoneEntryOptions(controllerId = game.player1Id)
                 )
@@ -227,7 +228,7 @@ class PlaneswalkerEntryLoyaltyScenarioTest : ScenarioTestBase() {
                     loyaltyOf(ajani, faceUp.state) shouldBe 3
                 }
 
-                val faceDown = ZoneTransitionService.moveToZone(
+                val faceDown = zones.moveToZone(
                     game.state, ajani, Zone.BATTLEFIELD,
                     ZoneEntryOptions(
                         controllerId = game.player1Id,
@@ -252,7 +253,7 @@ class PlaneswalkerEntryLoyaltyScenarioTest : ScenarioTestBase() {
                     game.state.getEntity(id)?.get<CardComponent>()?.name == "Grizzly Bears"
                 }
 
-                val result = ZoneTransitionService.moveToZone(
+                val result = zones.moveToZone(
                     game.state, bears, Zone.BATTLEFIELD,
                     ZoneEntryOptions(controllerId = game.player1Id)
                 )

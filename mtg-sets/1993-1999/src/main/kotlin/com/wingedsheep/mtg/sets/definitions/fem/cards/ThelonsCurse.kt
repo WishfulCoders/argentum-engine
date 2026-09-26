@@ -10,18 +10,11 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.ConditionalOnCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.Gate
-import com.wingedsheep.sdk.scripting.effects.GatedEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.SelectionRestriction
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Thelon's Curse
@@ -54,50 +47,42 @@ val ThelonsCurse = card("Thelon's Curse") {
     }
 
     triggeredAbility {
-        trigger = Triggers.EachUpkeep
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.ControlledPermanents(
-                        player = Player.TriggeringPlayer,
-                        filter = GameObjectFilter.Creature.withColor(Color.BLUE).tapped()
-                    ),
-                    storeAs = "eligible"
-                ),
-                SelectFromCollectionEffect(
-                    from = "eligible",
-                    selection = SelectionMode.ChooseAnyNumber,
-                    chooser = Chooser.TriggeringPlayer,
-                    storeSelected = "chosen",
-                    useTargetingUI = true,
-                    prompt = "Choose any number of tapped blue creatures to untap (pay {U} for each)",
-                    restrictions = listOf(
-                        SelectionRestriction.MaxAffordablePayment(
-                            manaPerSelected = 1,
-                            payer = Player.TriggeringPlayer
-                        )
-                    )
-                ),
-                ConditionalOnCollectionEffect(
-                    collection = "chosen",
-                    ifNotEmpty = GatedEffect(
-                        gate = Gate.MayPay(
-                            Effects.PayDynamicMana(
-                                amount = DynamicAmount.VariableReference("chosen_count"),
-                                payer = Player.TriggeringPlayer,
-                                color = Color.BLUE,
-                            )
-                        ),
-                        decisionMaker = EffectTarget.PlayerRef(Player.TriggeringPlayer),
-                        then = ForEachInCollectionEffect(
-                            collection = "chosen",
-                            effect = Effects.Untap(EffectTarget.Self)
-                        ),
-                        descriptionOverride = "Pay {U} for each chosen creature? If you do, untap them."
+        trigger = Triggers.anyPlayer.beginningOf(Step.UPKEEP)
+        effect = Effects.Pipeline {
+            val eligible = gather(
+                CardSource.ControlledPermanents(
+                    player = Player.TriggeringPlayer,
+                    filter = GameObjectFilter.Creature.withColor(Color.BLUE).tapped()
+                )
+            )
+            val chosen = chooseAnyNumber(
+                from = eligible,
+                chooser = Chooser.TriggeringPlayer,
+                useTargetingUI = true,
+                prompt = "Choose any number of tapped blue creatures to untap (pay {U} for each)",
+                restrictions = listOf(
+                    SelectionRestriction.MaxAffordablePayment(
+                        manaPerSelected = 1,
+                        payer = Player.TriggeringPlayer
                     )
                 )
             )
-        )
+            ifNotEmpty(chosen) {
+                run(Effects.MayPay(
+                    cost = Effects.PayDynamicMana(
+                            amount = chosen.count,
+                            payer = Player.TriggeringPlayer,
+                            color = Color.BLUE,
+                        ),
+                    decisionMaker = EffectTarget.PlayerRef(Player.TriggeringPlayer),
+                    then = Effects.ForEachInCollection(
+                        collection = chosen,
+                        effect = Effects.Untap(EffectTarget.IterationEntity)
+                    ),
+                    descriptionOverride = "Pay {U} for each chosen creature? If you do, untap them."
+                ))
+            }
+        }
     }
 
     metadata {

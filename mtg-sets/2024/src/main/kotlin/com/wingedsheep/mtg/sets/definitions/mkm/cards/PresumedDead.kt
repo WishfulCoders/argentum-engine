@@ -2,14 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.GrantTriggeredAbilityEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Presumed Dead — Murders at Karlov Manor #100
@@ -50,28 +49,23 @@ val PresumedDead = card("Presumed Dead") {
         "(A suspected creature has menace and can't block.)"
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 0, creature, Duration.EndOfTurn),
-            GrantTriggeredAbilityEffect(
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 0, creature, Duration.EndOfTurn) then
+            Effects.GrantTriggeredAbility(
                 ability = TriggeredAbility.create(
-                    trigger = Triggers.Dies.event,
-                    binding = Triggers.Dies.binding,
-                    effect = Effects.Composite(
-                        Effects.Move(
-                            target = EffectTarget.Self,
-                            destination = Zone.BATTLEFIELD,
-                            fromZone = Zone.GRAVEYARD
-                        ),
+                    trigger = Triggers.self.dies(),
+                    effect = Effects.Move(
+                        target = EffectTarget.Self,
+                        destination = Zone.BATTLEFIELD,
+                        fromZone = Zone.GRAVEYARD
+                    ) then
                         Effects.Suspect(EffectTarget.Self),
-                    ),
                     descriptionOverride = "When this creature dies, return it to the battlefield " +
                         "under its owner's control and suspect it."
                 ),
                 target = creature,
                 duration = Duration.EndOfTurn
-            ),
-        )
+            )
     }
 
     metadata {

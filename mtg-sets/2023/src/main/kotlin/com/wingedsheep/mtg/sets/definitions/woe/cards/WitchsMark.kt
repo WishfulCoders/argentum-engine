@@ -4,10 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Witch's Mark
@@ -24,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * is the engine's ordinary targeting behavior (CR 608.2b), so the two halves can sit in a plain
  * [Effects.Composite] rather than being separated.
  *
- * The loot half is the [MayEffect] + [IfYouDoEffect] shape: declining the "may" skips the draw,
+ * The loot half is the [Effects.May] + [Effects.IfYouDo] shape: declining the "may" skips the draw,
  * and so does an empty hand — the discard accomplishes nothing, so the `ifYouDo` never fires.
  * The one-Role-per-creature rule (a state-based action) lives behind [Effects.CreateRoleToken].
  */
@@ -38,20 +35,15 @@ val WitchsMark = card("Witch's Mark") {
         "+1/+1. When this token is put into a graveyard, each opponent loses 1 life.)"
 
     spell {
-        val t = target(
-            "up to one target creature you control",
-            TargetCreature(optional = true, filter = TargetFilter.CreatureYouControl)
-        )
-        effect = Effects.Composite(
-            MayEffect(
-                effect = IfYouDoEffect(
-                    action = Patterns.Hand.discardCards(1),
-                    ifYouDo = Effects.DrawCards(2)
-                ),
-                descriptionOverride = "You may discard a card. If you do, draw two cards."
+        val t = target(TargetFilter.CreatureYouControl, optional = true)
+        effect = Effects.May(
+            effect = Effects.IfYouDo(
+                action = Patterns.Hand.discardCards(1),
+                then = Effects.DrawCards(2)
             ),
+            descriptionOverride = "You may discard a card. If you do, draw two cards."
+        ) then
             Effects.CreateRoleToken("Wicked Role", t)
-        )
     }
 
     metadata {

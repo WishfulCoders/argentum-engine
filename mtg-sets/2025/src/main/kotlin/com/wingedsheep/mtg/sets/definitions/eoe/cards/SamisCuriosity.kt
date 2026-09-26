@@ -17,12 +17,7 @@ val SamisCuriosity = card("Sami's Curiosity") {
 
     // You gain 2 life, then create a Lander token
     spell {
-        effect = Effects.Composite(
-            listOf(
-                Effects.GainLife(2),
-                Effects.CreateLander()
-            )
-        )
+        effect = Effects.GainLife(2) then Effects.CreateLander()
     }
 
     metadata {

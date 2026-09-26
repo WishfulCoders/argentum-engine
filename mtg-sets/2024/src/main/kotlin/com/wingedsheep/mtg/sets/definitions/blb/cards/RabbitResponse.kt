@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
 /**
@@ -25,10 +25,10 @@ val RabbitResponse = card("Rabbit Response") {
         effect = Patterns.Group.modifyStatsForAll(
             2, 1,
             GroupFilter(GameObjectFilter.Creature.youControl())
-        ).then(ConditionalEffect(
+        ) then Effects.If(
             condition = Conditions.ControlPermanentOfType(Subtype("Rabbit")),
-            effect = Patterns.Library.scry(2)
-        ))
+            then = Patterns.Library.scry(2)
+        )
     }
 
     metadata {

@@ -30,15 +30,13 @@ val Chronosavant = card("Chronosavant") {
     activatedAbility {
         cost = Costs.Mana("{1}{W}")
         activateFromZone = Zone.GRAVEYARD
-        effect = Effects.Composite(
-            Effects.Move(
-                EffectTarget.Self,
-                Zone.BATTLEFIELD,
-                placement = ZonePlacement.Tapped,
-                fromZone = Zone.GRAVEYARD,
-            ),
-            Effects.SkipNextTurn(),
-        )
+        effect = Effects.Move(
+            EffectTarget.Self,
+            Zone.BATTLEFIELD,
+            placement = ZonePlacement.Tapped,
+            fromZone = Zone.GRAVEYARD,
+        ) then
+            Effects.SkipNextTurn()
     }
 
     metadata {

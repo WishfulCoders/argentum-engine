@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  * Whenever one or more Merfolk you control attack a player, draw a card.
  *
  * The lord is a Layer 7c [ModifyStats] over a `excludeSelf` [GroupFilter] of Merfolk you control
- * (Deepchannel Duelist idiom). The attack trigger is [Triggers.YouAttackWithFilter], which fires
+ * (Deepchannel Duelist idiom). The attack trigger is `Triggers.you.attacks(with)`, which fires
  * once per declare-attackers regardless of how many Merfolk attacked (Meriadoc Brandybuck idiom).
  */
 val AttumaAtlanteanWarlord = card("Attuma, Atlantean Warlord") {
@@ -42,9 +42,7 @@ val AttumaAtlanteanWarlord = card("Attuma, Atlantean Warlord") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YouAttackWithFilter(
-            GameObjectFilter.Creature.youControl().withSubtype("Merfolk")
-        )
+        trigger = Triggers.you.attacks(GameObjectFilter.Creature.youControl().withSubtype("Merfolk"))
         effect = Effects.DrawCards(1)
     }
 

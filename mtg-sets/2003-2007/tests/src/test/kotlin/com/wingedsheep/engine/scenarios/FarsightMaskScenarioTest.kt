@@ -18,8 +18,8 @@ import io.kotest.matchers.shouldBe
  * you may draw a card."
  *
  * Covers the source-filtered damage-to-you trigger
- * ([com.wingedsheep.sdk.dsl.Triggers.damageDealtToYou]) — a shape that previously routed into the
- * general observer index, where `RecipientFilter.You` never matches, so the ability never fired.
+ * (`Triggers.you.isDealtDamage(by, damageType)`) — a shape that previously routed into the
+ * general observer index, where `Recipient.You` never matches, so the ability never fired.
  */
 class FarsightMaskScenarioTest : FunSpec({
 

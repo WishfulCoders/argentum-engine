@@ -5,14 +5,13 @@ import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
-import com.wingedsheep.sdk.scripting.effects.CreatePredefinedTokenEffect
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Blacksmith's Talent {R}
@@ -40,27 +39,16 @@ val BlacksmithsTalent = card("Blacksmith's Talent") {
 
     // Level 1: ETB — create a Sword Equipment token
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreatePredefinedTokenEffect("Sword")
+        trigger = Triggers.self.enters()
+        effect = Effects.CreatePredefinedToken("Sword")
     }
 
     // Level 2: At the beginning of combat on your turn, attach target Equipment to up to one target creature
     classLevel(2, "{2}{R}") {
         triggeredAbility {
-            trigger = Triggers.BeginCombat
-            val equipment = target(
-                "Equipment you control",
-                TargetPermanent(
-                    filter = TargetFilter(GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl())
-                )
-            )
-            val creature = target(
-                "creature you control",
-                TargetPermanent(
-                    filter = TargetFilter(GameObjectFilter.Creature.youControl()),
-                    optional = true
-                )
-            )
+            trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+            val equipment = target(TargetFilter(GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl()))
+            val creature = target(TargetFilter(GameObjectFilter.Creature.youControl()), optional = true)
             effect = Effects.AttachTargetEquipmentToCreature(equipment, creature)
         }
     }

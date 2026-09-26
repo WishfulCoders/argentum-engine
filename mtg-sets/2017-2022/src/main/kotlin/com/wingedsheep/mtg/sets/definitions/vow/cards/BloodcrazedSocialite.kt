@@ -6,9 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.Gate
-import com.wingedsheep.sdk.scripting.effects.GatedEffect
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -37,14 +34,14 @@ val BloodcrazedSocialite = card("Bloodcrazed Socialite") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateBlood(1)
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = GatedEffect(
-            gate = Gate.MayPay(SacrificeEffect(filter = GameObjectFilter.Artifact.withSubtype("Blood"))),
+        trigger = Triggers.self.attacks()
+        effect = Effects.MayPay(
+            cost = Effects.SacrificeOwn(filter = GameObjectFilter.Artifact.withSubtype("Blood")),
             then = Effects.ModifyStats(2, 2, EffectTarget.Self)
         )
     }

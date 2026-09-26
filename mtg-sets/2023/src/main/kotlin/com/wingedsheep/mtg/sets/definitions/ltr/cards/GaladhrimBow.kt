@@ -3,12 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.ltr.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Galadhrim Bow
@@ -30,10 +30,9 @@ val GaladhrimBow = card("Galadhrim Bow") {
 
     // ETB: attach to target creature you control, untap that creature
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("creature you control", Targets.CreatureYouControl)
-        effect = Effects.AttachEquipment(creature)
-            .then(Effects.Untap(creature))
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.AttachEquipment(creature) then Effects.Untap(creature)
     }
 
     // Equipped creature gets +1/+2

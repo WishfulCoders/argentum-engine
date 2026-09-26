@@ -21,17 +21,15 @@ class SpellSelectionRemainderTest : ScenarioTestBase() {
         manaCost = "{0}"
         typeLine = "Sorcery"
         spell {
-            effect = Effects.Composite(
-                GatherCardsEffect(CardSource.FromZone(Zone.HAND), "hand"),
+            effect = GatherCardsEffect(CardSource.FromZone(Zone.HAND), "hand") then
                 SelectFromCollectionEffect(
                     from = "hand",
                     selection = SelectionMode.ChooseSpell,
                     filter = GameObjectFilter.Nonland,
                     storeSelected = "selected",
                     storeRemainder = "rest"
-                ),
+                ) then
                 MoveCollectionEffect("rest", CardDestination.ToZone(Zone.EXILE))
-            )
         }
     }
 

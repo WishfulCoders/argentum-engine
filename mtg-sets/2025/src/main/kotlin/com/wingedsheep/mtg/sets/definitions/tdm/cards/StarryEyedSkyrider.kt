@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Starry-Eyed Skyrider — Tarkir: Dragonstorm #25
@@ -38,8 +37,8 @@ val StarryEyedSkyrider = card("Starry-Eyed Skyrider") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val creature = target("another creature you control", TargetCreature(filter = TargetFilter.OtherCreatureYouControl))
+        trigger = Triggers.self.attacks()
+        val creature = target(TargetFilter.OtherCreatureYouControl)
         effect = Effects.GrantKeyword(Keyword.FLYING, creature)
     }
 

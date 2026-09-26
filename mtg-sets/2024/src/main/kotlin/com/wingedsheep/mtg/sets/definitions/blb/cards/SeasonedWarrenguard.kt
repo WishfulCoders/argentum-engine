@@ -29,7 +29,7 @@ val SeasonedWarrenguard = card("Seasoned Warrenguard") {
     oracleText = "Whenever this creature attacks while you control a token, this creature gets +2/+0 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         // "attacks WHILE you control a token" — checked only when the trigger fires
         // (attack declaration). Per the printed ruling, losing the token before the
         // ability resolves must not stop the pump, so there is no resolution-time check.

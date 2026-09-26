@@ -39,27 +39,26 @@ val Doomsday = card("Doomsday") {
         "chosen cards on top of your library in any order. You lose half your life, rounded up."
 
     spell {
-        effect = Effects.Composite(
-            Effects.Pipeline {
-                val pool = gather(
-                    CardSource.FromMultipleZones(
-                        zones = listOf(Zone.LIBRARY, Zone.GRAVEYARD),
-                        player = Player.You
-                    )
-                )
-                val split = chooseExactlySplit(
-                    count = 5,
-                    from = pool,
-                    prompt = "Choose five cards to put on top of your library",
-                    selectedLabel = "Put on top of library",
-                    remainderLabel = "Exile"
-                )
-                exile(split.remainder)
-                toLibraryTop(split.selected, order = CardOrder.ControllerChooses)
-                run(EmitLibrarySearchedEventEffect)
-            },
+        effect = Effects.Pipeline {
+            val pool = gather(
+                CardSource.FromMultipleZones(
+                    zones = listOf(Zone.LIBRARY, Zone.GRAVEYARD),
+                    player = Player.You
+                ),
+                search = true
+            )
+            val split = chooseExactlySplit(
+                count = 5,
+                from = pool,
+                prompt = "Choose five cards to put on top of your library",
+                selectedLabel = "Put on top of library",
+                remainderLabel = "Exile"
+            )
+            exile(split.remainder)
+            toLibraryTop(split.selected, order = CardOrder.ControllerChooses)
+            run(EmitLibrarySearchedEventEffect)
+        } then
             Effects.LoseHalfLife(roundUp = true)
-        )
     }
 
     metadata {

@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.mkm.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -11,7 +10,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Due Diligence — Murders at Karlov Manor #14
@@ -45,20 +44,12 @@ val DueDiligence = card("Due Diligence") {
         "+2/+2 and gains vigilance until end of turn.\n" +
         "Enchanted creature gets +2/+2 and has vigilance."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val other = target(
-            "target creature you control other than enchanted creature",
-            TargetCreature(
-                filter = TargetFilter(GameObjectFilter.Creature.youControl().notAttachedToBySource())
-            )
-        )
-        effect = Effects.Composite(
-            Effects.ModifyStats(2, 2, other),
-            Effects.GrantKeyword(Keyword.VIGILANCE, other)
-        )
+        trigger = Triggers.self.enters()
+        val other = target(TargetFilter(GameObjectFilter.Creature.youControl().notAttachedToBySource()))
+        effect = Effects.ModifyStats(2, 2, other) then Effects.GrantKeyword(Keyword.VIGILANCE, other)
         description = "When this Aura enters, target creature you control other than enchanted " +
             "creature gets +2/+2 and gains vigilance until end of turn."
     }

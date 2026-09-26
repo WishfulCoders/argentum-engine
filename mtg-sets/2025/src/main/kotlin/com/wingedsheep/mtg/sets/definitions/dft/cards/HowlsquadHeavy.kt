@@ -18,6 +18,7 @@ import com.wingedsheep.sdk.scripting.effects.CREATED_TOKENS
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Howlsquad Heavy — Aetherdrift #134
@@ -55,17 +56,15 @@ val HowlsquadHeavy = card("Howlsquad Heavy") {
     }
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                power = 1,
-                toughness = 1,
-                colors = setOf(Color.RED),
-                creatureTypes = setOf("Goblin"),
-                imageUri = "https://cards.scryfall.io/normal/front/7/0/7072dea6-0d99-47fa-a83d-c8607e6a4bbd.jpg?1783907679",
-            ),
-            Effects.MarkMustAttackThisTurn(EffectTarget.PipelineTarget(CREATED_TOKENS, 0)),
-        )
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        effect = Effects.CreateToken(
+            power = 1,
+            toughness = 1,
+            colors = setOf(Color.RED),
+            creatureTypes = setOf("Goblin"),
+            imageUri = "https://cards.scryfall.io/normal/front/7/0/7072dea6-0d99-47fa-a83d-c8607e6a4bbd.jpg?1783907679",
+        ) then
+            Effects.MarkMustAttackThisTurn(EffectTarget.PipelineTarget(CREATED_TOKENS, 0))
     }
 
     maxSpeed {

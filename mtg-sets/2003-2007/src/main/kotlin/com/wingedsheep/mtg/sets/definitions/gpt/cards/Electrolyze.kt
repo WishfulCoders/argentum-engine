@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.gpt.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DividedDamageEffect
 import com.wingedsheep.sdk.scripting.targets.AnyTarget
 
 /**
@@ -21,14 +20,12 @@ val Electrolyze = card("Electrolyze") {
 
     spell {
         target = AnyTarget(count = 2, minCount = 1)
-        effect = Effects.Composite(
-            DividedDamageEffect(
-                totalDamage = 2,
-                minTargets = 1,
-                maxTargets = 2
-            ),
+        effect = Effects.DividedDamage(
+            total = 2,
+            minTargets = 1,
+            maxTargets = 2
+        ) then
             Effects.DrawCards(1)
-        )
     }
 
     metadata {

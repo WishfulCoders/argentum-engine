@@ -4,11 +4,11 @@
 
 package com.wingedsheep.mtg.sets.definitions.ulg.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -25,7 +25,7 @@ val BeastOfBurden = card("Beast of Burden") {
     oracleText = "Beast of Burden's power and toughness are each equal to the number of creatures on the battlefield."
     power = 0
     toughness = 0
-    dynamicStats(DynamicAmount.AggregateBattlefield(Player.Each, GameObjectFilter.Creature))
+    dynamicStats(DynamicAmounts.allCreatures())
     metadata {
         rarity = Rarity.RARE
         collectorNumber = "122"

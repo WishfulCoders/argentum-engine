@@ -4,11 +4,8 @@ import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CantBeRegeneratedEffect
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -25,22 +22,13 @@ val CruelRevival = card("Cruel Revival") {
     oracleText = "Destroy target non-Zombie creature. It can't be regenerated.\nReturn up to one target Zombie card from your graveyard to your hand."
 
     spell {
-        val creature = target(
-            "non-Zombie creature",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.notSubtype(Subtype("Zombie"))))
-        )
+        val creature = target(TargetFilter(GameObjectFilter.Creature.notSubtype(Subtype("Zombie"))))
         val zombieCard = target(
-            "Zombie card in your graveyard",
-            TargetObject(
-                optional = true,
-                filter = TargetFilter(
-                    GameObjectFilter.Any.withSubtype("Zombie").ownedByYou(),
-                    zone = Zone.GRAVEYARD
-                )
-            )
+            TargetFilter(GameObjectFilter.Any.withSubtype("Zombie").ownedByYou(), zone = Zone.GRAVEYARD),
+            optional = true,
         )
 
-        effect = CantBeRegeneratedEffect(creature) then
+        effect = Effects.CantBeRegenerated(creature) then
                 Effects.Move(creature, Zone.GRAVEYARD, byDestruction = true) then
                 Effects.Move(zombieCard, Zone.HAND)
     }

@@ -7,8 +7,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Seafloor Oracle
@@ -30,12 +29,7 @@ val SeafloorOracle = card("Seafloor Oracle") {
     oracleText = "Whenever a Merfolk you control deals combat damage to a player, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            damageType = DamageType.Combat,
-            recipient = RecipientFilter.AnyPlayer,
-            sourceFilter = GameObjectFilter.Permanent.withSubtype(Subtype.MERFOLK).youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Permanent.withSubtype(Subtype.MERFOLK).youControl()).dealsCombatDamage(Recipient.AnyPlayer)
         effect = Effects.DrawCards(1)
         description = "Whenever a Merfolk you control deals combat damage to a player, draw a card."
     }

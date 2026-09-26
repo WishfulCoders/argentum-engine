@@ -1,13 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.dsl.DynamicAmounts
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.ChoiceType
 import com.wingedsheep.sdk.scripting.EntersWithChoice
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
@@ -30,8 +28,8 @@ val RiptideReplicator = card("Riptide Replicator") {
     replacementEffect(EntersWithChoice(ChoiceType.COLOR))
     replacementEffect(EntersWithChoice(ChoiceType.CREATURE_TYPE))
     replacementEffect(EntersWithDynamicCounters(
-        counterType = CounterTypeFilter.Named(Counters.CHARGE),
-        count = DynamicAmount.XValue
+        counterType = CounterType.CHARGE,
+        count = DynamicAmounts.xValue()
     ))
 
     activatedAbility {
@@ -40,8 +38,8 @@ val RiptideReplicator = card("Riptide Replicator") {
             Costs.Tap
         )
         effect = Effects.CreateTokenOfChosenColorAndType(
-            dynamicPower = DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.CHARGE)),
-            dynamicToughness = DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.CHARGE))
+            dynamicPower = DynamicAmounts.countersOnSelf(CounterType.CHARGE),
+            dynamicToughness = DynamicAmounts.countersOnSelf(CounterType.CHARGE)
         )
     }
 

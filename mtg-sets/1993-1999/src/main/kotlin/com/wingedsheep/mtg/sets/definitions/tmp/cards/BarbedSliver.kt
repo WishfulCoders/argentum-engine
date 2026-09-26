@@ -31,7 +31,7 @@ val BarbedSliver = card("Barbed Sliver") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Mana("{2}"),
                 effect = Effects.ModifyStats(1, 0, EffectTarget.Self)
             ),

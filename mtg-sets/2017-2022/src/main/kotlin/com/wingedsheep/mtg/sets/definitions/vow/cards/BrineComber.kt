@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.disturb
@@ -13,6 +12,10 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.RedirectZoneChange
 import com.wingedsheep.sdk.scripting.TriggerBinding
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Brine Comber // Brinebound Gift (Innistrad: Crimson Vow #233 — the card's earliest printing)
@@ -33,7 +36,7 @@ import com.wingedsheep.sdk.scripting.TriggerBinding
  * abilities, the house shape for an or-joined trigger (Crow of Dark Tidings' enters/dies) — and
  * here it is forced, because the back face's two halves don't even share a binding: the Aura's own
  * ETB is SELF-bound while "enchanted creature becomes the target" is
- * [TriggerBinding.ATTACHED]-bound. Both target halves use `Triggers.BecomesTargetOfAuraSpell`,
+ * [TriggerBinding.ATTACHED]-bound. Both target halves use `Triggers.<subject>.becomesTarget(of = Aura, spellsOnly = true)`,
  * which reads the *targeting* spell through `BecomesTargetEvent.sourceFilter`.
  *
  * An Aura spell chooses its target as it is cast (CR 303.4a), so neither half fires for the Aura
@@ -63,12 +66,12 @@ private val BrineComberFront = card("Brine Comber") {
         "Disturb {W}{U} (You may cast this card from your graveyard transformed for its disturb cost.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = SpiritTokenWithFlying
     }
 
     triggeredAbility {
-        trigger = Triggers.BecomesTargetOfAuraSpell()
+        trigger = Triggers.self.becomesTarget(of = GameObjectFilter.Enchantment.withSubtype(Subtype.AURA), spellsOnly = true)
         effect = SpiritTokenWithFlying
     }
 
@@ -92,15 +95,15 @@ private val BrineboundGift = card("Brinebound Gift") {
         "create a 1/1 white Spirit creature token with flying.\n" +
         "If this Aura would be put into a graveyard from anywhere, exile it instead."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = SpiritTokenWithFlying
     }
 
     triggeredAbility {
-        trigger = Triggers.BecomesTargetOfAuraSpell(binding = TriggerBinding.ATTACHED)
+        trigger = Triggers.attached.becomesTarget(of = GameObjectFilter.Enchantment.withSubtype(Subtype.AURA), spellsOnly = true)
         effect = SpiritTokenWithFlying
     }
 

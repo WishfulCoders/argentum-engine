@@ -6,9 +6,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.OnEnterRunEffect
+import com.wingedsheep.sdk.scripting.OnEnterRun
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddManaEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -21,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * One of Lorwyn's five "tribal reveal" duals. Same two atoms as Shadows over Innistrad's
  * shadowlands (see Game Trail):
- *  - [OnEnterRunEffect] — the generic "as ~ enters, run [effect]" replacement wrapper.
+ *  - [OnEnterRun] — the generic "as ~ enters, run [effect]" replacement wrapper.
  *  - [Effects.MayRevealCardFromHand] — an optional reveal whose `otherwise` rider fires when the
  *    player declines or holds no eligible card; here it taps the land.
  *
@@ -37,7 +36,7 @@ val GiltLeafPalace = card("Gilt-Leaf Palace") {
         "If you don't, this land enters tapped.\n{T}: Add {B} or {G}."
 
     replacementEffect(
-        OnEnterRunEffect(
+        OnEnterRun(
             Effects.MayRevealCardFromHand(
                 filter = GameObjectFilter.Any.withSubtype("Elf"),
                 otherwise = Effects.Tap(EffectTarget.Self),
@@ -47,14 +46,14 @@ val GiltLeafPalace = card("Gilt-Leaf Palace") {
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddManaEffect(Color.BLACK)
+        effect = Effects.AddMana(Color.BLACK)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddManaEffect(Color.GREEN)
+        effect = Effects.AddMana(Color.GREEN)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

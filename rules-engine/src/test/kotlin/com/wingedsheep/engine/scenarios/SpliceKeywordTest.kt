@@ -6,6 +6,7 @@ import com.wingedsheep.engine.core.LifeChangedEvent
 import com.wingedsheep.engine.core.PaymentStrategy
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.engine.state.components.player.ManaPoolComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.state.components.stack.SpellOnStackComponent
 import com.wingedsheep.engine.support.GameTestDriver
@@ -28,6 +29,7 @@ import io.kotest.matchers.ints.shouldBeLessThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Splice onto [quality] (CR 702.47, Champions of Kamigawa).
@@ -59,7 +61,7 @@ class SpliceKeywordTest : FunSpec({
         colorIdentity = "R"
         typeLine = "Instant — Arcane"
         spell {
-            val t = target("bolt", Targets.Player)
+            val t = target(Targets.Player)
             effect = Effects.DealDamage(1, t)
         }
     }
@@ -78,7 +80,7 @@ class SpliceKeywordTest : FunSpec({
         colorIdentity = "R"
         typeLine = "Instant"
         spell {
-            val t = target("bolt", Targets.Player)
+            val t = target(Targets.Player)
             effect = Effects.DealDamage(1, t)
         }
     }
@@ -92,7 +94,7 @@ class SpliceKeywordTest : FunSpec({
         typeLine = "Instant — Arcane"
         splice("{1}{R}")
         spell {
-            val t = target("ray", Targets.Creature)
+            val t = target(TargetFilter.Creature)
             effect = Effects.DealDamage(2, t)
         }
     }
@@ -157,6 +159,8 @@ class SpliceKeywordTest : FunSpec({
         driver.submit(
             spliceCast(player, bolt, listOf(gain), listOf(ChosenTarget.Player(opponent)))
         ).error shouldBe null
+        // The splice cost is charged, not just checked: both mana are spent.
+        driver.state.getEntity(player)?.get<ManaPoolComponent>()?.red shouldBe 0
         driver.bothPass()
 
         // Both halves happened: the bolt's damage and the spliced life gain.

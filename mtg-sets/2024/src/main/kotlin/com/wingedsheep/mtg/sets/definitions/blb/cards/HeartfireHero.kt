@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -28,13 +28,13 @@ val HeartfireHero = card("Heartfire Hero") {
 
     // Valiant — put a +1/+1 counter on it
     triggeredAbility {
-        trigger = Triggers.Valiant
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.self.becomesTarget(byYou = true, firstTimeEachTurn = true)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     // When this creature dies, deal damage equal to its power to each opponent
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.DealDamage(
             DynamicAmounts.sourcePower(),
             EffectTarget.PlayerRef(Player.EachOpponent)

@@ -70,7 +70,7 @@ class SamutTheDrivingForceScenarioTest : ScenarioTestBase() {
                 }
                 game.state = SpeedService.set(game.state, game.player1Id, Speed.MAX, "test").first
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Harmonize"),
                     game.player1Id,
@@ -167,7 +167,7 @@ class SamutTheDrivingForceScenarioTest : ScenarioTestBase() {
     }
 
     private fun genericCostOf(game: TestGame, cardName: String, playerId: EntityId): Int =
-        CostCalculator(cardRegistry).calculateEffectiveCost(
+        CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
             game.state,
             cardRegistry.requireCard(cardName),
             playerId,

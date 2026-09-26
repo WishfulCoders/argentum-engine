@@ -5,14 +5,15 @@
 package com.wingedsheep.mtg.sets.definitions.apc.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.minus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -32,22 +33,16 @@ val KavuMauler = card("Kavu Mauler") {
     toughness = 4
     keywords(Keyword.TRAMPLE)
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ModifyStats(
-            DynamicAmount.Subtract(
-                DynamicAmount.AggregateBattlefield(
-                    Player.You,
-                    GameObjectFilter.Creature.withSubtype("Kavu").attacking()
-                ),
-                DynamicAmount.Fixed(1)
-            ),
-            DynamicAmount.Subtract(
-                DynamicAmount.AggregateBattlefield(
-                    Player.You,
-                    GameObjectFilter.Creature.withSubtype("Kavu").attacking()
-                ),
-                DynamicAmount.Fixed(1)
-            ),
+            DynamicAmounts.battlefield(
+                Player.You,
+                GameObjectFilter.Creature.withSubtype("Kavu").attacking()
+            ).count() - 1,
+            DynamicAmounts.battlefield(
+                Player.You,
+                GameObjectFilter.Creature.withSubtype("Kavu").attacking()
+            ).count() - 1,
             EffectTarget.Self
         )
     }

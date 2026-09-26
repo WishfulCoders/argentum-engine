@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.iko.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Fully Grown
@@ -23,11 +23,8 @@ val FullyGrown = card("Fully Grown") {
     oracleText = "Target creature gets +3/+3 until end of turn. Put a trample counter on it."
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(3, 3, t),
-            Effects.AddCounters(Counters.TRAMPLE, 1, t)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(3, 3, t) then Effects.AddCounters(CounterType.TRAMPLE, 1, t)
     }
 
     metadata {

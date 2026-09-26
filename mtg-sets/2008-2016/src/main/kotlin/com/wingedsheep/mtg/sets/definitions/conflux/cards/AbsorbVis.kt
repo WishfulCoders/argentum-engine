@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Absorb Vis
@@ -30,11 +30,8 @@ val AbsorbVis = card("Absorb Vis") {
         "card, reveal it, put it into your hand, then shuffle.)"
 
     spell {
-        val t = target("target", TargetPlayer())
-        effect = Effects.Composite(
-            Effects.LoseLife(4, t),
-            Effects.GainLife(4)
-        )
+        val t = target(Targets.Player)
+        effect = Effects.LoseLife(4, t) then Effects.GainLife(4)
     }
 
     keywordAbility(KeywordAbility.basicLandcycling("{1}{B}"))

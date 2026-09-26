@@ -6,19 +6,10 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.costs.CostAtom
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.RevealHandEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Collective Brutality — Eldritch Moon #85.
@@ -48,42 +39,29 @@ val CollectiveBrutality = card("Collective Brutality") {
             additionalCostPerExtraMode = CostAtom.Discard(1),
         ) {
             mode("Target opponent reveals their hand. You choose an instant or sorcery card from it. That player discards that card.") {
-                val opponent = target("reveal opponent", TargetOpponent())
-                effect = Effects.Composite(
-                    listOf(
-                        RevealHandEffect(opponent),
-                        GatherCardsEffect(
-                            source = CardSource.FromZone(Zone.HAND, Player.ContextPlayer(0)),
-                            storeAs = "opponentHand"
-                        ),
-                        SelectFromCollectionEffect(
-                            from = "opponentHand",
-                            selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                            chooser = Chooser.Controller,
-                            filter = GameObjectFilter.InstantOrSorcery,
-                            storeSelected = "toDiscard",
-                            prompt = "Choose an instant or sorcery card to discard",
-                            alwaysPrompt = true,
-                            showAllCards = true
-                        ),
-                        MoveCollectionEffect(
-                            from = "toDiscard",
-                            destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
-                            moveType = MoveType.Discard
-                        )
+                val opponent = target(Targets.Opponent)
+                effect = Effects.Pipeline {
+                    run(Effects.RevealHand(opponent))
+                    val opponentHand = gather(CardSource.FromZone(Zone.HAND, opponent.asPlayer))
+                    val toDiscard = chooseExactly(
+                        1,
+                        from = opponentHand,
+                        chooser = Chooser.Controller,
+                        filter = GameObjectFilter.InstantOrSorcery,
+                        prompt = "Choose an instant or sorcery card to discard",
+                        alwaysPrompt = true,
+                        showAllCards = true
                     )
-                )
+                    discard(toDiscard, opponent.asPlayer)
+                }
             }
             mode("Target creature gets -2/-2 until end of turn.") {
-                val creature = target("weakened creature", TargetCreature())
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.ModifyStats(-2, -2, creature)
             }
             mode("Target opponent loses 2 life and you gain 2 life.") {
-                val opponent = target("drained opponent", TargetOpponent())
-                effect = Effects.Composite(
-                    Effects.LoseLife(2, opponent),
-                    Effects.GainLife(2),
-                )
+                val opponent = target(Targets.Opponent)
+                effect = Effects.LoseLife(2, opponent) then Effects.GainLife(2)
             }
         }
     }

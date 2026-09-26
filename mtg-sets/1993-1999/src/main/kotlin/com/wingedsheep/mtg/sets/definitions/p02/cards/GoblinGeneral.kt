@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Creature — Goblin Warrior
  *
  * "Goblin creatures you control" is the group iteration of [Effects.ForEachInGroup] — the pump is
- * written once against [EffectTarget.Self], the current iteration entity, exactly as
+ * written once against [EffectTarget.IterationEntity], the current iteration entity, exactly as
  * Rally the Troops writes its untap.
  */
 val GoblinGeneral = card("Goblin General") {
@@ -27,10 +27,10 @@ val GoblinGeneral = card("Goblin General") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withSubtype(Subtype.GOBLIN).youControl()),
-            Effects.ModifyStats(1, 1, EffectTarget.Self)
+            Effects.ModifyStats(1, 1, EffectTarget.IterationEntity)
         )
     }
 

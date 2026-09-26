@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.avr.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sheltering Word
@@ -28,11 +28,9 @@ val ShelteringWord = card("Sheltering Word") {
         "opponents control.)"
 
     spell {
-        val creature = target("target", Targets.CreatureYouControl)
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.HEXPROOF, creature),
-            Effects.GainLife(DynamicAmounts.targetToughness())
-        )
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.GrantKeyword(Keyword.HEXPROOF, creature) then
+            Effects.GainLife(DynamicAmounts.toughnessOf(creature))
     }
 
     metadata {

@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MustBeBlockedEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -30,10 +29,8 @@ val JoragaInvocation = card("Joraga Invocation") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.Composite(
-                Effects.ModifyStats(3, 3, EffectTarget.Self),
-                MustBeBlockedEffect(EffectTarget.Self, allCreatures = false),
-            ),
+            Effects.ModifyStats(3, 3, EffectTarget.IterationEntity) then
+                Effects.MustBeBlocked(EffectTarget.IterationEntity, allCreatures = false),
         )
     }
 

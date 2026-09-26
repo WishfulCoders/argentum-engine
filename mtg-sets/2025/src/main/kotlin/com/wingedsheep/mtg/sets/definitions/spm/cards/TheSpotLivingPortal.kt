@@ -50,31 +50,19 @@ val TheSpotLivingPortal = card("The Spot, Living Portal") {
         "exiled cards to their owners' hands."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val permanent = target(
-            "up to one target nonland permanent",
-            TargetObject(optional = true, filter = TargetFilter.NonlandPermanent),
-        )
-        val graveyardCard = target(
-            "up to one target nonland permanent card from a graveyard",
-            TargetObject(
-                optional = true,
-                filter = TargetFilter(GameObjectFilter.NonlandPermanent, zone = Zone.GRAVEYARD),
-            ),
-        )
-        effect = Effects.Composite(
-            Effects.ExileUntilLeaves(permanent),
-            Effects.ExileUntilLeaves(graveyardCard),
-        )
+        trigger = Triggers.self.enters()
+        val permanent = target(TargetFilter.NonlandPermanent, optional = true)
+        val graveyardCard = target(TargetFilter(GameObjectFilter.NonlandPermanent, zone = Zone.GRAVEYARD), optional = true)
+        effect = Effects.ExileUntilLeaves(permanent) then Effects.ExileUntilLeaves(graveyardCard)
         description = "When The Spot enters, exile up to one target nonland permanent and up to " +
             "one target nonland permanent card from a graveyard."
     }
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.IfYouDo(
             action = Effects.PutOnBottomOfLibrary(EffectTarget.Self),
-            ifYouDo = Effects.ReturnLinkedExileToHand(),
+            then = Effects.ReturnLinkedExileToHand(),
         )
         description = "When The Spot dies, put him on the bottom of his owner's library. If you " +
             "do, return the exiled cards to their owners' hands."

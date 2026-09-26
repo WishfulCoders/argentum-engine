@@ -1,11 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Growth Curve
@@ -26,11 +25,9 @@ val GrowthCurve = card("Growth Curve") {
         "+1/+1 counters on that creature."
 
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.youControl()))
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, t),
-            Effects.DoubleCounters(Counters.PLUS_ONE_PLUS_ONE, t)
-        )
+        val t = target(TargetFilter.Creature.youControl())
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, t) then
+            Effects.DoubleCounters(CounterType.PLUS_ONE_PLUS_ONE, t)
     }
 
     metadata {

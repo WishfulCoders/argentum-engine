@@ -6,9 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * The Sackville-Bagginses — The Hobbit #83
@@ -20,11 +18,11 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  * Whenever you sacrifice a token, target opponent loses 1 life.
  *
  * The "you may sacrifice another creature or artifact. If you do, …" clause is the Swarm Culler /
- * Comet Crawler shell — a declared permanent under a [MayEffect], so the "if you do" rider is bound to
+ * Comet Crawler shell — a declared permanent under a [Effects.May], so the "if you do" rider is bound to
  * a sacrifice that is guaranteed to happen once the controller accepts. With no other creature or
  * artifact on the battlefield there is nothing to declare and the trigger simply does nothing.
  *
- * The second ability is a per-permanent sacrifice trigger ([Triggers.YouSacrificeA]), so sacrificing
+ * The second ability is a per-permanent sacrifice trigger (`Triggers.you.sacrifices(filter)`), so sacrificing
  * three tokens at once fires it three times (CR 603.2c) rather than once — and it fires for *any*
  * token, including the Treasure this card just made and the Sackville-Bagginses themselves if they
  * happen to be a token copy.
@@ -40,16 +38,13 @@ val TheSackvilleBagginses = card("The Sackville-Bagginses") {
         "Whenever you sacrifice a token, target opponent loses 1 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val sacrificed = target(
-            "another creature or artifact",
-            TargetPermanent(
-                filter = TargetFilter(
+            TargetFilter(
                     GameObjectFilter.Creature.youControl().or(GameObjectFilter.Artifact.youControl())
-                ).other()
-            )
+                ).other(),
         )
-        effect = MayEffect(
+        effect = Effects.May(
             Effects.SacrificeTarget(sacrificed) then
                 Effects.DrawCards(1) then
                 Effects.CreateTreasure()
@@ -59,8 +54,8 @@ val TheSackvilleBagginses = card("The Sackville-Bagginses") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YouSacrificeA(GameObjectFilter.Any.token())
-        val opponent = target("target opponent", Targets.Opponent)
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Any.token())
+        val opponent = target(Targets.Opponent)
         effect = Effects.LoseLife(1, opponent)
         description = "Whenever you sacrifice a token, target opponent loses 1 life."
     }

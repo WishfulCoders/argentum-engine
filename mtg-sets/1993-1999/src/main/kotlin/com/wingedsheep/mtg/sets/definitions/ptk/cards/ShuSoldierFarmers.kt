@@ -21,7 +21,7 @@ val ShuSoldierFarmers = card("Shu Soldier-Farmers") {
     oracleText = "When this creature enters, you gain 4 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(4)
     }
 

@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Kelsinko Ranger
@@ -29,7 +30,7 @@ val KelsinkoRanger = card("Kelsinko Ranger") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{W}")
-        val t = target("target", Targets.CreatureWithColor(Color.GREEN))
+        val t = target(TargetFilter.Creature.withColor(Color.GREEN))
         effect = Effects.GrantKeyword(Keyword.FIRST_STRIKE, t)
     }
 

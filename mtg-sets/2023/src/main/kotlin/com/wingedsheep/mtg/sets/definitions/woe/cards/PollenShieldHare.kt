@@ -3,12 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.woe.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Pollen-Shield Hare // Hare Raising
@@ -51,15 +51,13 @@ val PollenShieldHare = card("Pollen-Shield Hare") {
             "turn, where X is the number of creatures you control. " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            val t = target("target", Targets.CreatureYouControl)
-            effect = Effects.Composite(
-                Effects.GrantKeyword(Keyword.VIGILANCE, t),
+            val t = target(TargetFilter.CreatureYouControl)
+            effect = Effects.GrantKeyword(Keyword.VIGILANCE, t) then
                 Effects.ModifyStats(
                     DynamicAmounts.creaturesYouControl(),
                     DynamicAmounts.creaturesYouControl(),
                     t
                 )
-            )
         }
     }
 

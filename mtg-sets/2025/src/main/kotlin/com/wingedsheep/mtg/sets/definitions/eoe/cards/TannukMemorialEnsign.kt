@@ -5,10 +5,10 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.IncrementAbilityResolutionCountEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Tannuk, Memorial Ensign
@@ -27,14 +27,12 @@ val TannukMemorialEnsign = card("Tannuk, Memorial Ensign") {
     oracleText = "Landfall — Whenever a land you control enters, Tannuk deals 1 damage to each opponent. If this is the second time this ability has resolved this turn, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
-        effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent))
-            .then(IncrementAbilityResolutionCountEffect)
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.SourceAbilityResolvedNTimes(2),
-                    effect = Effects.DrawCards(1)
-                )
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
+        effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent)) then
+            IncrementAbilityResolutionCountEffect then
+            Effects.If(
+                condition = Conditions.SourceAbilityResolvedNTimes(2),
+                then = Effects.DrawCards(1)
             )
         description = "Landfall — Whenever a land you control enters, Tannuk deals 1 damage to each opponent. If this is the second time this ability has resolved this turn, draw a card."
     }

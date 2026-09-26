@@ -1,8 +1,8 @@
 package com.wingedsheep.mtg.sets.definitions.drk.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.RedirectNextDamageEffect
 import com.wingedsheep.sdk.scripting.effects.RedirectScope
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -33,7 +33,7 @@ val BloodOfTheMartyr = card("Blood of the Martyr") {
         "damage dealt to you instead."
 
     spell {
-        effect = RedirectNextDamageEffect(
+        effect = Effects.RedirectNextDamage(
             protectedTargets = emptyList(),
             redirectTo = EffectTarget.Controller,
             scope = RedirectScope.CONTINUOUS,

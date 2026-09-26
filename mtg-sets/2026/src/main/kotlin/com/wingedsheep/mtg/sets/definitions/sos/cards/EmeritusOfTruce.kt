@@ -8,8 +8,8 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Emeritus of Truce // Swords to Plowshares — Secrets of Strixhaven #13
@@ -53,8 +53,8 @@ val EmeritusOfTruce = card("Emeritus of Truce") {
     // When this creature enters, target player creates a 1/1 W/B Inkling with flying.
     // Then if an opponent controls more creatures than you, it becomes prepared.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val recipient = target("target player", Targets.Player)
+        trigger = Triggers.self.enters()
+        val recipient = target(Targets.Player)
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
@@ -63,9 +63,9 @@ val EmeritusOfTruce = card("Emeritus of Truce") {
             keywords = setOf(Keyword.FLYING),
             controller = recipient,
             imageUri = "https://cards.scryfall.io/display/front/b/a/bab52920-9d67-4cd4-9015-6e645ff9764f.webp?1782723480"
-        ) then ConditionalEffect(
+        ) then Effects.If(
             condition = Conditions.OpponentControlsMoreCreatures,
-            effect = Effects.BecomePrepared(EffectTarget.Self),
+            then = Effects.BecomePrepared(EffectTarget.Self),
         )
     }
 
@@ -77,7 +77,7 @@ val EmeritusOfTruce = card("Emeritus of Truce") {
         typeLine = "Instant"
         oracleText = "Exile target creature. Its controller gains life equal to its power."
         spell {
-            val creature = target("target creature", Targets.Creature)
+            val creature = target(TargetFilter.Creature)
             effect = Effects.GainLife(
                 com.wingedsheep.sdk.dsl.DynamicAmounts.targetPower(0),
                 EffectTarget.TargetController,

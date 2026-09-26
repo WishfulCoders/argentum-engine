@@ -3,6 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.bro.cards
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Tomakul Honor Guard
@@ -21,7 +22,7 @@ val TomakulHonorGuard = card("Tomakul Honor Guard") {
 
     // Ward {2} (CR 702.21a). The bare `Keyword.WARD` marker is derived from this ability by the
     // builder, so it is not restated here.
-    keywordAbility(KeywordAbility.ward("{2}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
 
     metadata {
         rarity = Rarity.COMMON

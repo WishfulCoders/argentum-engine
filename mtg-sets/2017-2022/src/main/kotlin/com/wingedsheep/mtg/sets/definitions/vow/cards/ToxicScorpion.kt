@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Toxic Scorpion
@@ -25,8 +24,8 @@ val ToxicScorpion = card("Toxic Scorpion") {
     toughness = 1
     keywords(Keyword.DEATHTOUCH)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetCreature(filter = TargetFilter.OtherCreatureYouControl))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.OtherCreatureYouControl)
         effect = Effects.GrantKeyword(Keyword.DEATHTOUCH, t)
     }
     metadata {

@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Shower of Arrows
@@ -43,8 +42,8 @@ val ShowerOfArrows = card("Shower of Arrows") {
                 )
             )
         )
-        val permanent = target("target artifact, enchantment, or creature with flying", TargetObject(filter = targetFilter))
-        effect = Effects.Destroy(permanent).then(Patterns.Library.scry(1))
+        val permanent = target(targetFilter)
+        effect = Effects.Destroy(permanent) then Patterns.Library.scry(1)
     }
 
     metadata {

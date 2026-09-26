@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Lys Alana Huntmaster
@@ -27,7 +28,7 @@ val LysAlanaHuntmaster = card("Lys Alana Huntmaster") {
     oracleText = "Whenever you cast an Elf spell, you may create a 1/1 green Elf Warrior creature token."
 
     triggeredAbility {
-        trigger = Triggers.YouCastSubtype(Subtype.ELF)
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withSubtype(Subtype.ELF))
         optional = true
         effect = Effects.CreateToken(
             power = 1,

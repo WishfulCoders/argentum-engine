@@ -6,9 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Urza's Rage
@@ -32,11 +29,11 @@ val UrzasRage = card("Urza's Rage") {
     keywordAbility(KeywordAbility.kicker("{8}{R}"))
 
     spell {
-        val t = target("any target", Targets.Any)
-        effect = ConditionalEffect(
+        val t = target(Targets.Any)
+        effect = Effects.If(
             condition = WasKicked,
-            effect = DealDamageEffect(10, t, cantBePrevented = true),
-            elseEffect = Effects.DealDamage(3, t),
+            then = Effects.DealDamage(10, t, cantBePrevented = true),
+            otherwise = Effects.DealDamage(3, t),
         )
     }
 

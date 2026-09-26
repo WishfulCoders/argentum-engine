@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Beast Hunt
@@ -31,7 +30,7 @@ val BeastHunt = card("Beast Hunt") {
 
     spell {
         effect = Patterns.Library.revealTopPutAllMatchingToHand(
-            count = DynamicAmount.Fixed(3),
+            count = 3,
             filter = GameObjectFilter.Creature,
             restDestination = CardDestination.ToZone(Zone.GRAVEYARD),
             restOrder = CardOrder.Preserve,

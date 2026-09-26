@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Powerstone Shard
@@ -24,10 +24,10 @@ val PowerstoneShard = card("Powerstone Shard") {
     activatedAbility {
         cost = Costs.Tap
         effect = Effects.AddColorlessMana(
-            DynamicAmount.AggregateBattlefield(
-                player = Player.You,
-                filter = GameObjectFilter.Artifact.named("Powerstone Shard")
-            )
+            DynamicAmounts.battlefield(
+                Player.You,
+                GameObjectFilter.Artifact.named("Powerstone Shard")
+            ).count()
         )
         manaAbility = true
         timing = TimingRule.ManaAbility

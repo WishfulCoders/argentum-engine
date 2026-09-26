@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Fountain of Renewal
@@ -13,7 +14,7 @@ import com.wingedsheep.sdk.model.Rarity
  * At the beginning of your upkeep, you gain 1 life.
  * {3}, Sacrifice this artifact: Draw a card.
  *
- * [Triggers.YourUpkeep] is the printed "at the beginning of your upkeep" — a `StepEvent` on
+ * `Triggers.you.beginningOf(Step.UPKEEP)` is the printed "at the beginning of your upkeep" — a `StepEvent` on
  * `Step.UPKEEP` for `Player.You`. The second line is a plain activated ability whose cost is
  * {3} plus [Costs.SacrificeSelf].
  */
@@ -25,7 +26,7 @@ val FountainOfRenewal = card("Fountain of Renewal") {
         "{3}, Sacrifice this artifact: Draw a card."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.GainLife(1)
         description = "At the beginning of your upkeep, you gain 1 life."
     }

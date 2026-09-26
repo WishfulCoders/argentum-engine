@@ -24,7 +24,7 @@ import io.kotest.matchers.shouldBe
  * it" is the card.
  *
  * The last test runs the entry many times over and insists on seeing both faces — that is what
- * catches a branch that silently never fires (an `OnEnterRunEffect` dropped on some entry path, or
+ * catches a branch that silently never fires (an `OnEnterRun` dropped on some entry path, or
  * a `lostEffect` that never runs), which a single-outcome test cannot.
  */
 class MoltenSentryScenarioTest : ScenarioTestBase() {

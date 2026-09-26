@@ -37,17 +37,15 @@ class CollectionNonEmptyCriterionScenarioTest : ScenarioTestBase() {
         oracleText = "Exile up to one card from your graveyard. If you do, draw a card. Otherwise, you lose 1 life."
         spell {
             effect = Effects.IfYouDo(
-                action = Effects.Composite(
-                    GatherCardsEffect(CardSource.FromZone(Zone.GRAVEYARD), storeAs = "gathered"),
+                action = GatherCardsEffect(CardSource.FromZone(Zone.GRAVEYARD), storeAs = "gathered") then
                     SelectFromCollectionEffect(
                         from = "gathered",
                         selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
                         storeSelected = "exiled",
-                    ),
+                    ) then
                     MoveCollectionEffect(from = "exiled", destination = CardDestination.ToZone(Zone.EXILE)),
-                ),
-                ifYouDo = Effects.DrawCards(1),
-                ifYouDont = LoseLifeEffect(DynamicAmount.Fixed(1), EffectTarget.Controller),
+                then = Effects.DrawCards(1),
+                otherwise = LoseLifeEffect(DynamicAmount.Fixed(1), EffectTarget.Controller),
                 successCriterion = SuccessCriterion.CollectionNonEmpty("exiled"),
             )
         }

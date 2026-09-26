@@ -12,12 +12,14 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Koh, the Face Stealer — {4}{B}{B} Legendary Creature — Shapeshifter Spirit (TLA #107).
@@ -56,7 +58,7 @@ class KohTheFaceStealerScenarioTest : FunSpec({
         toughness = 2
         oracleText = "Whenever this creature attacks, you gain 3 life."
         triggeredAbility {
-            trigger = Triggers.Attacks
+            trigger = Triggers.self.attacks()
             effect = Effects.GainLife(3)
         }
     }
@@ -67,7 +69,7 @@ class KohTheFaceStealerScenarioTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Destroy target creature."
         spell {
-            val creature = target("target creature", Targets.Creature)
+            val creature = target(TargetFilter.Creature)
             effect = Effects.Destroy(creature)
         }
     }
@@ -106,7 +108,7 @@ class KohTheFaceStealerScenarioTest : FunSpec({
         val koh = driver.putCardInHand(me, "Koh, the Face Stealer")
         driver.giveColorlessMana(me, 4)
         driver.giveMana(me, Color.BLACK, 2)
-        driver.castSpell(me, koh).isSuccess shouldBe true
+        driver.castSpell(me, koh).outcome shouldBe Outcome.Done
         driver.bothPass() // resolve Koh → ETB goes on the stack and prompts a target
 
         driver.submitTargetSelection(me, listOf(beast))
@@ -120,7 +122,7 @@ class KohTheFaceStealerScenarioTest : FunSpec({
 
         // Before choosing, Koh does NOT have the beast's activated ability.
         driver.submit(ActivateAbility(playerId = me, sourceId = koh, abilityId = beastGainLifeAbilityId))
-            .isSuccess shouldBe false
+            .outcome shouldNotBe Outcome.Done
 
         // "Pay 1 life: Choose a creature card exiled with Koh."
         val lifeBeforeChoose = driver.getLifeTotal(me)
@@ -130,7 +132,7 @@ class KohTheFaceStealerScenarioTest : FunSpec({
         // Now Koh has "{T}: You gain 2 life".
         val lifeBefore = driver.getLifeTotal(me)
         driver.submit(ActivateAbility(playerId = me, sourceId = koh, abilityId = beastGainLifeAbilityId))
-            .isSuccess shouldBe true
+            .outcome shouldBe Outcome.Done
         driver.bothPass()
         driver.getLifeTotal(me) shouldBe lifeBefore + 2
     }
@@ -147,7 +149,7 @@ class KohTheFaceStealerScenarioTest : FunSpec({
         val koh = driver.putCardInHand(me, "Koh, the Face Stealer")
         driver.giveColorlessMana(me, 4)
         driver.giveMana(me, Color.BLACK, 2)
-        driver.castSpell(me, koh).isSuccess shouldBe true
+        driver.castSpell(me, koh).outcome shouldBe Outcome.Done
         driver.bothPass()
         driver.submitTargetSelection(me, listOf(raider))
         driver.bothPass()
@@ -185,7 +187,7 @@ class KohTheFaceStealerScenarioTest : FunSpec({
         val bolt = driver.putCardInHand(me, "Koh Test Doom")
         driver.giveColorlessMana(me, 1)
         driver.giveMana(me, Color.BLACK, 1)
-        driver.castSpell(me, bolt, listOf(beast)).isSuccess shouldBe true
+        driver.castSpell(me, bolt, listOf(beast)).outcome shouldBe Outcome.Done
 
         // Resolve the removal and answer Koh's "you may exile it" with yes.
         var guard = 0
@@ -207,7 +209,7 @@ class KohTheFaceStealerScenarioTest : FunSpec({
         driver.chooseExiled(me, koh, beast)
         val lifeBefore = driver.getLifeTotal(me)
         driver.submit(ActivateAbility(playerId = me, sourceId = koh, abilityId = beastGainLifeAbilityId))
-            .isSuccess shouldBe true
+            .outcome shouldBe Outcome.Done
         driver.bothPass()
         driver.getLifeTotal(me) shouldBe lifeBefore + 2
     }

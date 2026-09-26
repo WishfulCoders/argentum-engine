@@ -1,17 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
+import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Telling Time — Ravnica: City of Guilds #69
@@ -39,40 +32,24 @@ val TellingTime = card("Telling Time") {
         "hand, one on top of your library, and one on the bottom of your library."
 
     spell {
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(3)),
-                storeAs = "looked"
-            ),
-            SelectFromCollectionEffect(
-                from = "looked",
-                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                storeSelected = "toHand",
-                storeRemainder = "notTaken",
+        effect = Effects.Pipeline {
+            val looked = gather(CardSource.TopOfLibrary(3))
+            val (toHandCards, notTaken) = chooseExactlySplit(
+                1,
+                from = looked,
                 selectedLabel = "Put into your hand",
                 remainderLabel = "Keep in your library"
-            ),
-            MoveCollectionEffect(
-                from = "toHand",
-                destination = CardDestination.ToZone(Zone.HAND)
-            ),
-            SelectFromCollectionEffect(
-                from = "notTaken",
-                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                storeSelected = "toTop",
-                storeRemainder = "toBottom",
+            )
+            toHand(toHandCards)
+            val (toTop, toBottom) = chooseExactlySplit(
+                1,
+                from = notTaken,
                 selectedLabel = "Put on top of your library",
                 remainderLabel = "Put on the bottom of your library"
-            ),
-            MoveCollectionEffect(
-                from = "toTop",
-                destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Top)
-            ),
-            MoveCollectionEffect(
-                from = "toBottom",
-                destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom)
             )
-        )
+            toLibraryTop(toTop, order = CardOrder.Preserve)
+            toLibraryBottom(toBottom, order = CardOrder.Preserve)
+        }
     }
 
     metadata {

@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GrantCastCreaturesFromGraveyardWithForageEffect
 
 /**
  * Osteomancer Adept
@@ -40,7 +40,7 @@ val OsteomancerAdept = card("Osteomancer Adept") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = GrantCastCreaturesFromGraveyardWithForageEffect()
+        effect = Effects.GrantCastCreaturesFromGraveyardWithForage()
         description = "{T}: Until end of turn, cast creatures from graveyard by foraging (finality counter)"
     }
 

@@ -12,7 +12,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Avengers Assemble! — Marvel Super Heroes #6 (mythic)
@@ -26,7 +26,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Implementation notes:
  * - The anthem is a Layer 7c [ModifyStats] over a [GroupFilter] of Heroes you control. No
  *   `excludeSelf` is needed — the enchantment isn't a Hero.
- * - The draw is [Triggers.EachEndStep] (each player's end step, not just yours) with an
+ * - The draw is `Triggers.anyPlayer.beginningOf(Step.END)` (each player's end step, not just yours) with an
  *   intervening-if (CR 603.4): the condition is checked both when the trigger would fire and
  *   again on resolution, which is what "if …" before the effect means.
  * - Both halves are **turn-history** reads, not battlefield-existence checks. That distinction is
@@ -62,7 +62,7 @@ val AvengersAssemble = card("Avengers Assemble!") {
     }
 
     triggeredAbility {
-        trigger = Triggers.EachEndStep
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
         interveningIf = Conditions.Any(
             Conditions.YouAttackedWithCreaturesThisTurn(
                 filter = GameObjectFilter.Creature.withSubtype(Subtype.HERO),
@@ -71,7 +71,7 @@ val AvengersAssemble = card("Avengers Assemble!") {
             Conditions.CompareAmounts(
                 DynamicAmounts.subtypeEnteredUnderControlThisTurn(Subtype.HERO),
                 ComparisonOperator.GTE,
-                DynamicAmount.Fixed(1),
+                1,
             ),
         )
         effect = Effects.DrawCards(1)

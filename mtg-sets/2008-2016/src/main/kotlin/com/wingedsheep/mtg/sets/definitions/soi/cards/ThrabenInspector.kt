@@ -25,7 +25,7 @@ val ThrabenInspector = card("Thraben Inspector") {
     power = 1
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Investigate()
     }
     metadata {

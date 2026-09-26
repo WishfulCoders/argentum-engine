@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Broken Wings
@@ -26,14 +25,11 @@ val BrokenWings = card("Broken Wings") {
 
     spell {
         val target = target(
-            "target artifact, enchantment, or creature with flying",
-            TargetPermanent(
-                filter = TargetFilter(
-                    GameObjectFilter.Artifact or
-                        GameObjectFilter.Enchantment or
-                        GameObjectFilter.Creature.withKeyword(Keyword.FLYING)
-                )
-            )
+            TargetFilter(
+                GameObjectFilter.Artifact or
+                    GameObjectFilter.Enchantment or
+                    GameObjectFilter.Creature.withKeyword(Keyword.FLYING)
+            ),
         )
         effect = Effects.Destroy(target)
     }

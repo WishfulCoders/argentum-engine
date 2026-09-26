@@ -2,6 +2,7 @@ package com.wingedsheep.engine.mechanics.sba.permanent
 
 import com.wingedsheep.engine.core.ExecutionResult
 import com.wingedsheep.engine.core.GameEvent
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.mechanics.battle.Battles
 import com.wingedsheep.engine.mechanics.sba.SbaOrder
 import com.wingedsheep.engine.mechanics.sba.SbaZoneMovementHelper
@@ -30,7 +31,7 @@ import com.wingedsheep.engine.state.components.identity.CardComponent
  * distinction is gated on [Battles.isSiege] rather than left to be discovered by the first non-Siege
  * battle that carries a triggered ability.
  */
-class BattleDefenseCheck : StateBasedActionCheck {
+class BattleDefenseCheck(private val zones: ZoneTransitionService) : StateBasedActionCheck {
     override val name = "704.5v/w Battle Defense"
     override val order = SbaOrder.BATTLE_DEFENSE
 
@@ -55,18 +56,17 @@ class BattleDefenseCheck : StateBasedActionCheck {
             if (Battles.isSiege(newState, entityId)) {
                 if (isSourceOfPendingTriggeredAbility(newState, entityId, pendingTriggerSources)) continue
 
-                // A Siege whose last defense counter was just removed by damage has *triggered* but
-                // has not reached the stack yet — combat damage runs this check before the turn's
-                // trigger-detection pass. Consume the marker and leave the battle alone for exactly
-                // this pass; if the defeat trigger never appears (countered, or the permanent stopped
-                // being a Siege) the next check finds no marker and bins it.
-                if (container.has<DefeatTriggerArmedComponent>()) {
-                    newState = newState.updateEntity(entityId) { c -> c.without<DefeatTriggerArmedComponent>() }
-                    continue
-                }
+                // A Siege whose last defense counter was just removed by combat damage has
+                // *triggered* but its trigger hasn't been detected yet — the combat damage step runs
+                // this check before the Settler's detection pass. The marker holds it until that pass
+                // has queued the trigger; the Settler then clears it (Battles.disarmDefeatTriggers),
+                // so from there on the queued trigger itself is the reprieve. The marker is only read
+                // here, never consumed: an SBA pass that loops again because something else also
+                // happened (a blocker dying in the same damage step) must not lose it.
+                if (container.has<DefeatTriggerArmedComponent>()) continue
             }
 
-            val result = SbaZoneMovementHelper.putPermanentInGraveyard(newState, entityId, cardComponent)
+            val result = SbaZoneMovementHelper.putPermanentInGraveyard(zones, newState, entityId, cardComponent)
             newState = result.newState
             events.addAll(result.events)
         }

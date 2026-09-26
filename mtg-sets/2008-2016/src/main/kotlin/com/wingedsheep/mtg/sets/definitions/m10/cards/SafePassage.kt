@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.m10.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Safe Passage
@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * - A wider Fog: not combat-only and not source-restricted, so burn spells and ability damage are
  *   blanked for the rest of the turn too.
- * - [Effects.PreventAllDamageToYouAndGroup] is one recipient-group shield covering both halves —
+ * - [Effects.PreventDamage] with `toGroup` + `alsoToYou` is one recipient-group shield covering both halves —
  *   a player is not a permanent, so the "you and" rides along as
  *   [com.wingedsheep.sdk.scripting.effects.PreventDamageEffect.recipientGroupIncludesController]
  *   rather than splitting into a second effect (Eerie Interference is the same shape, narrowed to
@@ -29,7 +29,7 @@ val SafePassage = card("Safe Passage") {
     oracleText = "Prevent all damage that would be dealt to you and creatures you control this turn."
 
     spell {
-        effect = Effects.PreventAllDamageToYouAndGroup(Filters.Group.creaturesYouControl)
+        effect = Effects.PreventDamage(toGroup = GameObjectFilter.Creature.youControl(), alsoToYou = true)
     }
 
     metadata {

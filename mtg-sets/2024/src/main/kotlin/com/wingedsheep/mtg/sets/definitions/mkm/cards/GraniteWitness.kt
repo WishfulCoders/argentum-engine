@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Granite Witness — Murders at Karlov Manor #206
@@ -22,7 +20,7 @@ import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
  * would-be blocker before blocks, or to untap one of yours after it attacked. Vigilance on the
  * face-up side makes the second line free.
  *
- * "You may tap or untap target creature" is the [SewerVeillanceCam] idiom — a [MayEffect] wrapping
+ * "You may tap or untap target creature" is the [SewerVeillanceCam] idiom — a [Effects.May] wrapping
  * a two-[Mode] [ModalEffect] over the single declared target, with `countsAsModalSpell = false` so
  * the tap/untap choice isn't mistaken for a modal *spell*. The target is chosen when the trigger
  * goes on the stack; the tap-or-untap choice is made on resolution, so an opponent who taps the
@@ -30,7 +28,7 @@ import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
  *
  * The trigger is a real triggered ability, not a replacement — it uses the stack and can be
  * responded to, unlike the flip itself (a special action, CR 701.34a). It fires only on *this*
- * creature turning face up ([Triggers.TurnedFaceUp] is SELF-bound), and never on the card entering
+ * creature turning face up (`Triggers.self.turnedFaceUp()` is SELF-bound), and never on the card entering
  * face up: turning face up is not entering (CR 707.9a).
  */
 val GraniteWitness = card("Granite Witness") {
@@ -49,13 +47,13 @@ val GraniteWitness = card("Granite Witness") {
     disguise = "{W/U}{W/U}"
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        val creature = target("target creature", Targets.Creature)
-        effect = MayEffect(
-            ModalEffect(
+        trigger = Triggers.self.turnedFaceUp()
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.May(
+            Effects.Modal(
                 modes = listOf(
-                    Mode.noTarget(TapUntapEffect(creature, tap = true), "Tap that creature"),
-                    Mode.noTarget(TapUntapEffect(creature, tap = false), "Untap that creature")
+                    Mode.noTarget(Effects.Tap(creature), "Tap that creature"),
+                    Mode.noTarget(Effects.Untap(creature), "Untap that creature")
                 ),
                 chooseCount = 1,
                 countsAsModalSpell = false

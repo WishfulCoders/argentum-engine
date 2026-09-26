@@ -5,11 +5,10 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * How to Start a Riot
@@ -28,15 +27,13 @@ val HowToStartARiot = card("How to Start a Riot") {
         "Creatures target player controls get +2/+0 until end of turn."
 
     spell {
-        val creature = target("target creature", TargetCreature())
-        val player = target("target player", TargetPlayer())
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.MENACE, creature),
+        val creature = target(TargetFilter.Creature)
+        val player = target(Targets.Player)
+        effect = Effects.GrantKeyword(Keyword.MENACE, creature) then
             Effects.ForEachInGroup(
                 filter = GroupFilter(GameObjectFilter.Creature.targetPlayerControls(player)),
-                effect = ModifyStatsEffect(2, 0, EffectTarget.Self)
+                effect = Effects.ModifyStats(2, 0, EffectTarget.IterationEntity)
             )
-        )
     }
 
     metadata {

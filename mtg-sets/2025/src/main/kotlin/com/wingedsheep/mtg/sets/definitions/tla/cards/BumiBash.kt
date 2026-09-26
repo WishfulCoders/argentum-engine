@@ -3,14 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.tla.cards
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Bumi Bash
@@ -36,25 +33,20 @@ val BumiBash = card("Bumi Bash") {
 
     spell {
         effect = ModalEffect.chooseOne(
-            Mode(
+            mode("Bumi Bash deals damage equal to the number of lands you control to target creature") {
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.DealDamage(
                     DynamicAmounts.landsYouControl(),
-                    EffectTarget.ContextTarget(0),
-                ),
-                targetRequirements = listOf(TargetCreature()),
-                description = "Bumi Bash deals damage equal to the number of lands you control to target creature",
-            ),
-            Mode(
-                effect = Effects.Destroy(EffectTarget.ContextTarget(0)),
-                targetRequirements = listOf(
-                    TargetObject(
-                        filter = TargetFilter(GameObjectFilter.Creature and GameObjectFilter.Land)
-                            .or(TargetFilter.NonbasicLand),
-                        id = "target land creature or nonbasic land",
-                    ),
-                ),
-                description = "Destroy target land creature or nonbasic land",
-            ),
+                    creature,
+                )
+            },
+            mode("Destroy target land creature or nonbasic land") {
+                val nonbasicLand = target(
+                    TargetFilter(GameObjectFilter.Creature and GameObjectFilter.Land)
+                        .or(TargetFilter.NonbasicLand),
+                )
+                effect = Effects.Destroy(nonbasicLand)
+            },
         )
     }
 

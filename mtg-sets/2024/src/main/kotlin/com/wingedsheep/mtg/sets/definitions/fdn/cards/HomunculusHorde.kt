@@ -13,7 +13,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * Whenever you draw your second card each turn, create a token that's a copy of this creature.
  *
- * The draw trigger uses [Triggers.NthCardDrawn] (n = 2), the shared "your Nth card each turn"
+ * The draw trigger uses `Triggers.<player>.drawsNth(n)` (n = 2), the shared "your Nth card each turn"
  * detector that fires exactly once per turn when your second card is drawn. The payoff is a copy
  * of this permanent via [Effects.CreateTokenCopyOfSelf]. The token copies the printed
  * characteristics (including this ability), so it can snowball if it too draws a second card.
@@ -27,7 +27,7 @@ val HomunculusHorde = card("Homunculus Horde") {
     oracleText = "Whenever you draw your second card each turn, create a token that's a copy of this creature."
 
     triggeredAbility {
-        trigger = Triggers.NthCardDrawn(2)
+        trigger = Triggers.you.drawsNth(2)
         effect = Effects.CreateTokenCopyOfSelf()
         description = "Whenever you draw your second card each turn, create a token that's a copy of this creature."
     }

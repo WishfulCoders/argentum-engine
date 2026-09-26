@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.atq.cards
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Tawnos's Coffin
@@ -45,18 +45,18 @@ val TawnossCoffin = card("Tawnos's Coffin") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap)
-        val creature = target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ExileWithAurasNotingCounters(creature)
         description = "{3}, {T}: Exile target creature and all Auras attached to it, noting its counters."
     }
 
     // "When this artifact leaves the battlefield or becomes untapped, return that exiled card …"
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnNotedExileTappedWithAuras()
     }
     triggeredAbility {
-        trigger = Triggers.BecomesUntapped
+        trigger = Triggers.self.becomesUntapped()
         effect = Effects.ReturnNotedExileTappedWithAuras()
     }
 

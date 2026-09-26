@@ -4,16 +4,12 @@
 
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -28,13 +24,11 @@ val CostOfBrilliance = card("Cost of Brilliance") {
     typeLine = "Sorcery"
     oracleText = "Target player draws two cards and loses 2 life. Put a +1/+1 counter on up to one target creature."
     spell {
-        val t1 = target("t1", TargetPlayer())
-        val t2 = target("t2", TargetCreature(filter = TargetFilter.Creature, optional = true))
-        effect = Effects.Composite(
-            DrawCardsEffect(2, t1),
-            LoseLifeEffect(2, t1),
-            AddCountersEffect(counterType = Counters.PLUS_ONE_PLUS_ONE, count = 1, target = t2)
-        )
+        val t1 = target(Targets.Player)
+        val t2 = target(TargetFilter.Creature, optional = true)
+        effect = Effects.DrawCards(2, t1) then
+            Effects.LoseLife(2, t1) then
+            Effects.AddCounters(counterType = CounterType.PLUS_ONE_PLUS_ONE, count = 1, target = t2)
     }
     metadata {
         rarity = Rarity.COMMON

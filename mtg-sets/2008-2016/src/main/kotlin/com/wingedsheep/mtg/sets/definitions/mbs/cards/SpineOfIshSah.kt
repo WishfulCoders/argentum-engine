@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.mbs.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Spine of Ish Sah
@@ -22,13 +22,13 @@ val SpineOfIshSah = card("Spine of Ish Sah") {
         "When this artifact is put into a graveyard from the battlefield, return it to its owner's hand."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val permanent = target("permanent", Targets.Permanent)
+        trigger = Triggers.self.enters()
+        val permanent = target(TargetFilter.Permanent)
         effect = Effects.Destroy(permanent)
     }
 
     triggeredAbility {
-        trigger = Triggers.PutIntoGraveyardFromBattlefield
+        trigger = Triggers.self.dies()
         effect = Effects.ReturnToHand(EffectTarget.Self)
     }
 

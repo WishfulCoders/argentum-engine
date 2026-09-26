@@ -11,8 +11,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -36,23 +34,15 @@ val WispdrinkerVampire = card("Wispdrinker Vampire") {
     toughness = 4
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.powerAtMost(2).youControl(),
-            binding = TriggerBinding.OTHER
-        )
-        effect = Effects.Composite(
-            Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)),
-            GainLifeEffect(1)
-        )
+        trigger = Triggers.another(GameObjectFilter.Creature.powerAtMost(2).youControl()).enters()
+        effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(1)
     }
     activatedAbility {
         cost = Costs.Mana("{5}{W}{B}")
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.powerAtMost(2).youControl()),
-            Effects.Composite(
-                Effects.GrantKeyword(Keyword.DEATHTOUCH, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self)
-            )
+            Effects.GrantKeyword(Keyword.DEATHTOUCH, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.IterationEntity)
         )
     }
     metadata {

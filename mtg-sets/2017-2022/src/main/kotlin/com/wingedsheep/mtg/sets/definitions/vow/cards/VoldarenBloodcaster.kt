@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 import com.wingedsheep.sdk.core.CardType
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -12,11 +11,9 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.core.Step
 
 private val bloodFilter = GameObjectFilter.Artifact.withSubtype("Blood")
 
@@ -33,23 +30,16 @@ private val VoldarenBloodcasterFront = card("Voldaren Bloodcaster") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.youControl().nontoken(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl().nontoken()).dies()
         effect = Effects.CreateBlood()
     }
 
     // A Blood token entering under your control is necessarily one you just created: tokens cannot
     // move onto the battlefield from another zone. This therefore matches the printed trigger.
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = bloodFilter.youControl().token(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(bloodFilter.youControl().token()).enters()
         interveningIf = Conditions.YouControlAtLeast(5, bloodFilter)
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
     }
 
     metadata {
@@ -73,14 +63,8 @@ private val BloodbatSummoner = card("Bloodbat Summoner") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        val blood = target(
-            "up to one target Blood token you control",
-            TargetPermanent(
-                optional = true,
-                filter = TargetFilter(bloodFilter.youControl()),
-            ),
-        )
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        val blood = target(TargetFilter(bloodFilter.youControl()), optional = true)
         effect = Effects.BecomeCreature(
             target = blood,
             power = 2,

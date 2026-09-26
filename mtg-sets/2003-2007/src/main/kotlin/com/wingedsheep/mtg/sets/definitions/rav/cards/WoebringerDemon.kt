@@ -2,17 +2,16 @@ package com.wingedsheep.mtg.sets.definitions.rav.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.Gate
-import com.wingedsheep.sdk.scripting.effects.GatedEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Woebringer Demon
@@ -46,24 +45,20 @@ val WoebringerDemon = card("Woebringer Demon") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EachUpkeep
-        effect = Effects.Composite(
-            Effects.Sacrifice(
-                filter = GameObjectFilter.Creature,
-                count = 1,
-                target = EffectTarget.PlayerRef(Player.TriggeringPlayer)
-            ),
-            GatedEffect(
-                gate = Gate.WhenCondition(
-                    Conditions.CompareAmounts(
-                        DynamicAmount.PermanentsSacrificedThisWay,
+        trigger = Triggers.anyPlayer.beginningOf(Step.UPKEEP)
+        effect = Effects.Sacrifice(
+            filter = GameObjectFilter.Creature,
+            count = 1,
+            target = EffectTarget.PlayerRef(Player.TriggeringPlayer)
+        ) then
+            Effects.If(
+                condition = Conditions.CompareAmounts(
+                        DynamicAmounts.permanentsSacrificedThisWay(),
                         ComparisonOperator.EQ,
-                        DynamicAmount.Fixed(0)
-                    )
-                ),
+                        0
+                    ),
                 then = Effects.SacrificeTarget(EffectTarget.Self)
             )
-        )
     }
 
     metadata {

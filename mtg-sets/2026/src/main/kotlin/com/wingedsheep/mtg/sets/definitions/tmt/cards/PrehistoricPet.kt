@@ -2,13 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.CantBeBlockedBy
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Prehistoric Pet
@@ -32,12 +32,12 @@ val PrehistoricPet = card("Prehistoric Pet") {
     // this creature's own power.
     staticAbility {
         ability = CantBeBlockedBy(
-            GameObjectFilter.Creature.powerGreaterThanEntity(EntityReference.Source)
+            GameObjectFilter.Creature.powerGreaterThanEntity(EffectTarget.Self)
         )
     }
 
     activatedAbility {
-        val creature = target("another target creature you control", Targets.OtherCreatureYouControl)
+        val creature = target(TargetFilter.OtherCreatureYouControl)
         cost = Costs.Composite(Costs.Mana("{1}{W}"), Costs.Tap)
         effect = Effects.ReturnToHand(creature)
         restrictions = listOf(ActivationRestriction.OnlyDuringYourTurn)

@@ -30,7 +30,7 @@ val MarduDevotee = card("Mardu Devotee") {
         "{1}: Add {R}, {W}, or {B}. Activate only once each turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.scry(2)
     }
 

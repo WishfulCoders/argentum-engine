@@ -6,14 +6,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.TapUntapCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 val RentIsDue = card("Rent Is Due") {
     manaCost = "{W}"
@@ -22,28 +17,26 @@ val RentIsDue = card("Rent Is Due") {
     oracleText = "At the beginning of your end step, you may tap two untapped creatures and/or Treasures you control. If you do, draw a card. Otherwise, sacrifice this enchantment."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
-        val tapCost = Effects.Composite(listOf(
-            GatherCardsEffect(
-                source = CardSource.ControlledPermanents(
+        trigger = Triggers.you.beginningOf(Step.END)
+        val tapCost = Effects.Pipeline {
+            val rentTargets = gather(
+                CardSource.ControlledPermanents(
                     player = Player.You,
                     filter = (GameObjectFilter.Creature or GameObjectFilter.Artifact.withSubtype("Treasure")).untapped()
-                ),
-                storeAs = "rentTargets"
-            ),
-            SelectFromCollectionEffect(
-                from = "rentTargets",
-                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(2)),
-                storeSelected = "toTap",
+                )
+            )
+            val toTap = chooseExactly(
+                2,
+                from = rentTargets,
                 prompt = "Tap two untapped creatures and/or Treasures you control",
                 useTargetingUI = true
-            ),
-            TapUntapCollectionEffect("toTap", tap = true)
-        ))
-        effect = OptionalCostEffect(
+            )
+            run(Effects.TapCollection(toTap, tap = true))
+        }
+        effect = Effects.MayPay(
             cost = tapCost,
-            ifPaid = Effects.DrawCards(1),
-            ifNotPaid = SacrificeSelfEffect,
+            then = Effects.DrawCards(1),
+            otherwise = SacrificeSelfEffect,
             descriptionOverride = "You may tap two untapped creatures and/or Treasures you control. If you do, draw a card. Otherwise, sacrifice this enchantment."
         )
     }

@@ -22,18 +22,14 @@ val QuarrelsEnd = card("Quarrel's End") {
     additionalCost(Costs.additional.DiscardCards())
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                Effects.DrawCards(2),
-                Effects.CreateToken(
-                    power = 1,
-                    toughness = 1,
-                    colors = setOf(Color.WHITE),
-                    creatureTypes = setOf("Human", "Soldier"),
-                    imageUri = "https://cards.scryfall.io/normal/front/a/6/a6181330-7521-4ec6-be6c-b35487c2d2d4.jpg?1699974464"
-                )
+        effect = Effects.DrawCards(2) then
+            Effects.CreateToken(
+                power = 1,
+                toughness = 1,
+                colors = setOf(Color.WHITE),
+                creatureTypes = setOf("Human", "Soldier"),
+                imageUri = "https://cards.scryfall.io/normal/front/a/6/a6181330-7521-4ec6-be6c-b35487c2d2d4.jpg?1699974464"
             )
-        )
     }
 
     metadata {

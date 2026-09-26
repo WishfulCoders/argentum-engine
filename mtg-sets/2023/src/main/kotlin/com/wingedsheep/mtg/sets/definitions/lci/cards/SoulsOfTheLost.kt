@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Souls of the Lost — {1}{B}
@@ -38,7 +38,7 @@ val SoulsOfTheLost = card("Souls of the Lost") {
         "in your graveyard and its toughness is equal to that number plus 1."
 
     dynamicStats(
-        DynamicAmount.Count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Permanent),
+        DynamicAmounts.count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Permanent),
         toughnessOffset = 1
     )
 

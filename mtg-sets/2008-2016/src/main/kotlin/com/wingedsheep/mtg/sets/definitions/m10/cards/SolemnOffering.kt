@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.m10.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Solemn Offering
@@ -21,9 +21,8 @@ val SolemnOffering = card("Solemn Offering") {
     oracleText = "Destroy target artifact or enchantment. You gain 4 life."
 
     spell {
-        val t = target("target artifact or enchantment", Targets.ArtifactOrEnchantment)
-        effect = Effects.Destroy(t)
-            .then(Effects.GainLife(4))
+        val t = target(TargetFilter.ArtifactOrEnchantment)
+        effect = Effects.Destroy(t) then Effects.GainLife(4)
     }
 
     metadata {

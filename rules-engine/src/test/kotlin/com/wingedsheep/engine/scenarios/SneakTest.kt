@@ -1,8 +1,8 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.AlternativeCostType
 import com.wingedsheep.engine.core.CastSpell
-import com.wingedsheep.engine.handlers.ConditionEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.legalactions.LegalActionEnumerator
 import com.wingedsheep.engine.mechanics.SneakWindow
@@ -34,6 +34,7 @@ import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Tests for the Sneak [cost] keyword (CR 702.190, Teenage Mutant Ninja Turtles).
@@ -90,10 +91,10 @@ class SneakTest : FunSpec({
         attackerCreature: EntityId
     ) {
         passPriorityUntil(Step.DECLARE_ATTACKERS)
-        declareAttackers(attacker, listOf(attackerCreature), defender).isSuccess shouldBe true
+        declareAttackers(attacker, listOf(attackerCreature), defender).outcome shouldBe Outcome.Done
         passPriorityUntil(Step.DECLARE_BLOCKERS)
         // Defender declares no blockers, leaving the attacker unblocked (CR 509.1h).
-        declareBlockers(defender, emptyMap()).isSuccess shouldBe true
+        declareBlockers(defender, emptyMap()).outcome shouldBe Outcome.Done
         // Hand priority to the active player so they can cast during this step (CR 509.1).
         var guard = 0
         while (state.priorityPlayerId != null && state.priorityPlayerId != attacker &&
@@ -128,7 +129,7 @@ class SneakTest : FunSpec({
             )
         )
         io.kotest.assertions.withClue("error=${castResult.error} pendingDecision=${castResult.pendingDecision}") {
-            castResult.isSuccess shouldBe true
+            castResult.outcome shouldBe Outcome.Done
         }
         while (driver.state.stack.isNotEmpty()) driver.bothPass()
 
@@ -149,7 +150,7 @@ class SneakTest : FunSpec({
             ?.get<CastChoicesComponent>()
             ?.chosen
             ?.containsKey(ChoiceSlot.SNEAK) shouldBe true
-        ConditionEvaluator().evaluate(
+        PredicateEvaluator(cardRegistry = null).conditions.evaluate(
             driver.state,
             SneakCostWasPaid,
             EffectContext(sourceId = ninjaPerm, controllerId = attacker)
@@ -177,7 +178,7 @@ class SneakTest : FunSpec({
                 additionalCostPayment = AdditionalCostPayment(bouncedPermanents = listOf(brawler)),
                 paymentStrategy = PaymentStrategy.FromPool
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         while (driver.state.stack.isNotEmpty()) driver.bothPass()
 
         // The 3/3 Ninja entered attacking and the bounced Brawler no longer deals damage:
@@ -245,14 +246,14 @@ class SneakTest : FunSpec({
         driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
         // Pay the full {4}{G}. mana added here — unspent mana empties as each step/phase ends (CR 500.5)
         driver.giveMana(attacker, Color.GREEN, 5)
-        driver.castSpell(attacker, ninja).isSuccess shouldBe true
+        driver.castSpell(attacker, ninja).outcome shouldBe Outcome.Done
         while (driver.state.stack.isNotEmpty()) driver.bothPass()
 
         val ninjaPerm = driver.findPermanent(attacker, "Sneaky Ninja")
         ninjaPerm.shouldNotBeNull()
         driver.state.getEntity(ninjaPerm)?.has<TappedComponent>() shouldBe false
         driver.state.getEntity(ninjaPerm)?.get<AttackingComponent>() shouldBe null
-        ConditionEvaluator().evaluate(
+        PredicateEvaluator(cardRegistry = null).conditions.evaluate(
             driver.state,
             SneakCostWasPaid,
             EffectContext(sourceId = ninjaPerm, controllerId = attacker)
@@ -271,9 +272,9 @@ class SneakTest : FunSpec({
         val ninja = driver.putCardInHand(attacker, "Sneaky Ninja")
 
         driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        driver.declareAttackers(attacker, listOf(brawler), defender).isSuccess shouldBe true
+        driver.declareAttackers(attacker, listOf(brawler), defender).outcome shouldBe Outcome.Done
         driver.passPriorityUntil(Step.DECLARE_BLOCKERS)
-        driver.declareBlockers(defender, mapOf(blocker to listOf(brawler))).isSuccess shouldBe true
+        driver.declareBlockers(defender, mapOf(blocker to listOf(brawler))).outcome shouldBe Outcome.Done
         var guard = 0
         while (driver.state.priorityPlayerId != null && driver.state.priorityPlayerId != attacker &&
             driver.state.step == Step.DECLARE_BLOCKERS && guard++ < 4
@@ -313,9 +314,9 @@ class SneakTest : FunSpec({
         val ninja = driver.putCardInHand(defender, "Sneaky Ninja")
 
         driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        driver.declareAttackers(attacker, listOf(brawler), defender).isSuccess shouldBe true
+        driver.declareAttackers(attacker, listOf(brawler), defender).outcome shouldBe Outcome.Done
         driver.passPriorityUntil(Step.DECLARE_BLOCKERS)
-        driver.declareBlockers(defender, emptyMap()).isSuccess shouldBe true
+        driver.declareBlockers(defender, emptyMap()).outcome shouldBe Outcome.Done
         var guard = 0
         while (driver.state.priorityPlayerId != null && driver.state.priorityPlayerId != defender &&
             driver.state.step == Step.DECLARE_BLOCKERS && guard++ < 4
@@ -357,9 +358,9 @@ class SneakTest : FunSpec({
         val ninja = driver.putCardInHand(attacker, "Sneaky Ninja")
 
         driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        driver.declareAttackers(attacker, mapOf(brawler to walker)).isSuccess shouldBe true
+        driver.declareAttackers(attacker, mapOf(brawler to walker)).outcome shouldBe Outcome.Done
         driver.passPriorityUntil(Step.DECLARE_BLOCKERS)
-        driver.declareBlockers(defender, emptyMap()).isSuccess shouldBe true
+        driver.declareBlockers(defender, emptyMap()).outcome shouldBe Outcome.Done
         var guard = 0
         while (driver.state.priorityPlayerId != null && driver.state.priorityPlayerId != attacker &&
             driver.state.step == Step.DECLARE_BLOCKERS && guard++ < 4
@@ -377,7 +378,7 @@ class SneakTest : FunSpec({
                 additionalCostPayment = AdditionalCostPayment(bouncedPermanents = listOf(brawler)),
                 paymentStrategy = PaymentStrategy.FromPool
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
 
         // The planeswalker leaves the battlefield while the sneak spell is still on the stack, so
         // the carried defender is no longer a legal attack target by the time the spell resolves.

@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Coati Scavenger — {2}{G}
@@ -36,17 +35,9 @@ val CoatiScavenger = card("Coati Scavenger") {
     oracleText = "Descend 4 — When this creature enters, if there are four or more permanent cards in your graveyard, return target permanent card from your graveyard to your hand."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.CardsInGraveyardMatchingAtLeast(4, GameObjectFilter.Permanent)
-        val card = target(
-            "target permanent card from your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter.Permanent.ownedByYou(),
-                    zone = Zone.GRAVEYARD,
-                ),
-            ),
-        )
+        val card = target(TargetFilter(baseFilter = GameObjectFilter.Permanent.ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.ReturnToHand(card)
     }
 

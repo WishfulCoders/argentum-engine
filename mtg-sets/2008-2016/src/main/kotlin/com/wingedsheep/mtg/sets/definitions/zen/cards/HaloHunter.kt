@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Halo Hunter
@@ -31,8 +30,8 @@ val HaloHunter = card("Halo Hunter") {
     keywords(Keyword.INTIMIDATE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val angel = target("Angel", TargetPermanent(filter = TargetFilter.Permanent.withSubtype("Angel")))
+        trigger = Triggers.self.enters()
+        val angel = target(TargetFilter.Permanent.withSubtype("Angel"))
         effect = Effects.Destroy(angel)
     }
 

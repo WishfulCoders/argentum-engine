@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -19,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * so the trigger restriction is [Conditions.IsNotYourTurn], the same reading Glen Elendra
  * Pranksters uses. The "may" is one decision for the whole ability, not one per opponent
  * (ruling 2007-10-01), which is exactly what wrapping the single `EachOpponent` life loss in a
- * [MayEffect] gives.
+ * [Effects.May] gives.
  *
  * Note: "Tribal" was errata'd to "Kindred" in 2024.
  */
@@ -30,9 +29,9 @@ val FaerieTauntings = card("Faerie Tauntings") {
     oracleText = "Whenever you cast a spell during an opponent's turn, you may have each opponent lose 1 life."
 
     triggeredAbility {
-        trigger = Triggers.YouCastSpell
+        trigger = Triggers.you.casts()
         triggerRestriction = Conditions.IsNotYourTurn
-        effect = MayEffect(Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)))
+        effect = Effects.May(Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)))
         description = "Whenever you cast a spell during an opponent's turn, you may have each opponent lose 1 life."
     }
 

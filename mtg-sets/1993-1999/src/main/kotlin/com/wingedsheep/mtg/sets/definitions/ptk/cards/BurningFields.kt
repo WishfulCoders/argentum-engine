@@ -22,7 +22,7 @@ val BurningFields = card("Burning Fields") {
     oracleText = "Burning Fields deals 5 damage to target opponent or planeswalker."
 
     spell {
-        val victim = target("target", Targets.OpponentOrPlaneswalker)
+        val victim = target(Targets.OpponentOrPlaneswalker)
         effect = Effects.DealDamage(5, victim)
     }
 

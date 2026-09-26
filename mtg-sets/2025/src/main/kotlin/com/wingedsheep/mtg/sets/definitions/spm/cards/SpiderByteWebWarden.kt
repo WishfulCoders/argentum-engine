@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Spider-Byte, Web Warden
@@ -22,8 +21,8 @@ val SpiderByteWebWarden = card("Spider-Byte, Web Warden") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetPermanent(optional = true, filter = TargetFilter.NonlandPermanent))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.NonlandPermanent, optional = true)
         effect = Effects.Move(t, Zone.HAND)
     }
     metadata {

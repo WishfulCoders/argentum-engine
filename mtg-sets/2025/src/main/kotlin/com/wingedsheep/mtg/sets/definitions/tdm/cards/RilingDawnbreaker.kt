@@ -7,7 +7,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Riling Dawnbreaker // Signaling Roar — Tarkir: Dragonstorm #21
@@ -36,11 +36,8 @@ val RilingDawnbreaker = card("Riling Dawnbreaker") {
     keywords(Keyword.FLYING, Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        val t = target(
-            "another target creature you control",
-            TargetCreature(filter = TargetFilter.OtherCreatureYouControl)
-        )
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        val t = target(TargetFilter.OtherCreatureYouControl)
         effect = Effects.ModifyStats(1, 0, t)
         description = "At the beginning of combat on your turn, another target creature you control " +
             "gets +1/+0 until end of turn."

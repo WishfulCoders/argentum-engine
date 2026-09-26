@@ -13,7 +13,6 @@ import com.wingedsheep.mtg.sets.MtgSetCatalog
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
@@ -24,6 +23,7 @@ import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 class AIPlayerTest : FunSpec({
 
@@ -391,7 +391,7 @@ class AIPlayerTest : FunSpec({
             toughness = 1
             activatedAbility {
                 cost = Costs.Tap
-                val t = target("target creature", Targets.Creature)
+                val t = target(TargetFilter.Creature)
                 effect = Effects.DealDamage(2, t)
             }
         }
@@ -428,7 +428,7 @@ class AIPlayerTest : FunSpec({
         (chosen as ActivateAbility).targets.shouldNotBeEmpty()
 
         // The decisive anti-loop guarantee: the AI's chosen action is actually legal.
-        driver.submit(chosen).isSuccess shouldBe true
+        driver.submit(chosen).outcome shouldBe Outcome.Done
     }
 
     // Regression: given two "target creature can't block" abilities and two opponent blockers,
@@ -447,7 +447,7 @@ class AIPlayerTest : FunSpec({
             toughness = 1
             activatedAbility {
                 cost = Costs.Tap
-                val t = target("target creature", Targets.Creature)
+                val t = target(TargetFilter.Creature)
                 effect = Effects.CantBlock(t)
             }
         }
@@ -515,7 +515,7 @@ class AIPlayerTest : FunSpec({
             manaCost = "{1}{W}"
             typeLine = "Instant"
             spell {
-                target("target spell", Targets.Spell)
+                target(TargetFilter.SpellOnStack)
                 effect = Effects.ReturnSpellToOwnersHand() then Effects.DrawCards(1)
             }
         }
@@ -540,7 +540,7 @@ class AIPlayerTest : FunSpec({
         val creatureCard = driver.putCardInHand(opp, "Test Ogre Mage")
         driver.giveMana(opp, com.wingedsheep.sdk.core.Color.RED, 1)
         driver.giveColorlessMana(opp, 2)
-        driver.castSpell(opp, creatureCard).isSuccess shouldBe true
+        driver.castSpell(opp, creatureCard).outcome shouldBe Outcome.Done
         driver.passPriority(opp)
         driver.state.stack.shouldNotBeEmpty()
 
@@ -574,7 +574,7 @@ class AIPlayerTest : FunSpec({
         targets.single().shouldBeInstanceOf<ChosenTarget.Spell>()
 
         // The decisive anti-loop guarantee: the chosen action is actually legal and accepted.
-        driver.submit(chosen).isSuccess shouldBe true
+        driver.submit(chosen).outcome shouldBe Outcome.Done
     }
 
     // Guard against over-correction: a no-target spell and an "up to one target" spell must
@@ -590,7 +590,7 @@ class AIPlayerTest : FunSpec({
             manaCost = "{R}"
             typeLine = "Sorcery"
             spell {
-                val t = target("up to one target creature", Targets.UpToCreatures(1))
+                val t = target(TargetFilter.Creature, optional = true)
                 effect = Effects.DealDamage(2, t)
             }
         }

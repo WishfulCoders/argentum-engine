@@ -1,13 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
+import com.wingedsheep.sdk.dsl.CollectionSlot
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateTokenCopyOfTargetEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.IterationSpace
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -23,15 +21,15 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Implementation notes:
  * - Ability 1 is the opponent-scoped batched ETB trigger
- *   ([Triggers.OneOrMoreOpponentPermanentsEnter] on [GameObjectFilter.Token]). The batch exposes its
+ *   (`Triggers.oneOrMore(filter.opponentControls()).enter()` on [GameObjectFilter.Token]). The batch exposes its
  *   matching tokens to the payoff as the pipeline collection `IterationSpace.TRIGGER_CAPTURED_COLLECTION`,
  *   so [ForEachInCollectionEffect] iterates them and [CreateTokenCopyOfTargetEffect] (target
- *   [EffectTarget.Self], `tapped = true`) makes one tapped copy of each. `oncePerTurn = true` gives
+ *   [EffectTarget.IterationEntity], `tapped = true`) makes one tapped copy of each. `oncePerTurn = true` gives
  *   "This ability triggers only once each turn" (CR 603.3 / engine-tracked once-per-turn). Per the
  *   official rulings, the copies use each original token's copiable characteristics and enter tapped;
  *   the copy executor reads each token at resolution, so any that left the battlefield meanwhile
  *   simply no-op.
- * - Ability 2 is the you-scoped batched ETB trigger ([Triggers.OneOrMorePermanentsEnter] on
+ * - Ability 2 is the you-scoped batched ETB trigger (`Triggers.oneOrMore(filter).enter()` on
  *   [GameObjectFilter.Token], which defaults to "you control"); it drains each opponent for 1 and
  *   gains you 1, firing once per batch with no per-turn limit.
  */
@@ -48,21 +46,18 @@ val KambalProfiteeringMayor = card("Kambal, Profiteering Mayor") {
     // Whenever one or more tokens your opponents control enter, for each of them, create a tapped
     // copy. Triggers only once each turn.
     triggeredAbility {
-        trigger = Triggers.OneOrMoreOpponentPermanentsEnter(GameObjectFilter.Token)
+        trigger = Triggers.oneOrMore(GameObjectFilter.Token.opponentControls()).enter()
         oncePerTurn = true
-        effect = ForEachInCollectionEffect(
-            collection = IterationSpace.TRIGGER_CAPTURED_COLLECTION,
-            effect = CreateTokenCopyOfTargetEffect(target = EffectTarget.Self, tapped = true)
+        effect = Effects.ForEachInCollection(
+            collection = CollectionSlot.TriggerCaptured,
+            effect = Effects.CreateTokenCopyOfTarget(target = EffectTarget.IterationEntity, tapped = true)
         )
     }
 
     // Whenever one or more tokens you control enter, each opponent loses 1 life and you gain 1 life.
     triggeredAbility {
-        trigger = Triggers.OneOrMorePermanentsEnter(GameObjectFilter.Token)
-        effect = Effects.Composite(
-            Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)),
-            Effects.GainLife(1)
-        )
+        trigger = Triggers.oneOrMore(GameObjectFilter.Token).enter()
+        effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(1)
     }
 
     metadata {

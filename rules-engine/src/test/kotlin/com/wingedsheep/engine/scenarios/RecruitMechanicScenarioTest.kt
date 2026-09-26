@@ -34,7 +34,7 @@ class RecruitMechanicScenarioTest : ScenarioTestBase() {
         oracleText = "When this creature enters, recruit."
 
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             effect = Patterns.Mechanic.recruit()
         }
     }

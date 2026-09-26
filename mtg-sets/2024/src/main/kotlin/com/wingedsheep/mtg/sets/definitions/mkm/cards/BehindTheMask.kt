@@ -5,9 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.collectEvidence
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Behind the Mask — Murders at Karlov Manor #39
@@ -30,19 +28,16 @@ val BehindTheMask = card("Behind the Mask") {
     collectEvidence(6)
 
     spell {
-        val permanent = target(
-            "target artifact or creature",
-            TargetPermanent(filter = TargetFilter.CreatureOrArtifact),
-        )
-        effect = ConditionalEffect(
+        val permanent = target(TargetFilter.CreatureOrArtifact)
+        effect = Effects.If(
             condition = Conditions.WasEvidenceCollected,
-            effect = Effects.BecomeCreature(
+            then = Effects.BecomeCreature(
                 target = permanent,
                 power = 1,
                 toughness = 1,
                 addTypes = setOf("ARTIFACT"),
             ),
-            elseEffect = Effects.BecomeCreature(
+            otherwise = Effects.BecomeCreature(
                 target = permanent,
                 power = 4,
                 toughness = 3,

@@ -11,12 +11,9 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.DoubleDamage
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.events.SourceFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Mjölnir, Hammer of Thor — Marvel Super Heroes #146
@@ -30,7 +27,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * Implementation notes:
  *
  * - **"Double all damage equipped creature would deal"** is a [DoubleDamage] replacement scoped to
- *   [SourceFilter.EquippedCreature] — damage dealt *by* the permanent this Equipment is attached
+ *   `GameObjectFilter.Any.attachedToBySource()` — damage dealt *by* the permanent this Equipment is attached
  *   to, combat or otherwise, to any recipient. The engine's shared damage-source matcher resolves
  *   it from the host's attachment, so it follows the Equipment when it moves.
  * - **"Equip worthy {1}"** is an "Equip [quality]" variant (CR 702.6c): the ability may target
@@ -57,18 +54,15 @@ val MjolnirHammerOfThor = card("Mjölnir, Hammer of Thor") {
 
     // When Mjölnir enters, it deals 4 damage to up to one target creature.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target(
-            "up to one target creature",
-            TargetCreature(optional = true, filter = TargetFilter.Creature)
-        )
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature, optional = true)
         effect = Effects.DealDamage(4, creature)
     }
 
     // Double all damage equipped creature would deal.
     replacementEffect(
         DoubleDamage(
-            appliesTo = EventPattern.DamageEvent(source = SourceFilter.EquippedCreature)
+            appliesTo = EventPattern.DamageEvent(source = GameObjectFilter.Any.attachedToBySource())
         )
     )
 
@@ -90,7 +84,7 @@ val MjolnirHammerOfThor = card("Mjölnir, Hammer of Thor") {
         cost = Costs.Composite(Costs.Mana("{2}{R}"), Costs.DiscardSelf)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature),
-            DealDamageEffect(2, EffectTarget.Self)
+            Effects.DealDamage(2, EffectTarget.IterationEntity)
         )
         activateFromZone = Zone.HAND
     }

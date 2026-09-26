@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -31,8 +30,8 @@ val AvenFogbringer = card("Aven Fogbringer") {
     toughness = 1
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetPermanent(filter = TargetFilter.Land))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Land)
         effect = Effects.Move(t, Zone.HAND)
     }
     metadata {

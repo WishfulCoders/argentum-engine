@@ -31,7 +31,7 @@ val SelflessSpirit = card("Selfless Spirit") {
         cost = Costs.SacrificeSelf
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self)
+            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.IterationEntity)
         )
     }
 

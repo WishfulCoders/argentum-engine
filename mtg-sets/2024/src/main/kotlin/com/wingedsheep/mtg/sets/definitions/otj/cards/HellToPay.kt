@@ -1,13 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Hell to Pay {X}{R}
@@ -18,7 +16,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  *
  * Composed from existing atoms: [Effects.DealXDamage] deals X to the target and marks the
  * damage, then [Effects.CreateTreasure] reads the post-damage excess via
- * `EntityProperty(EntityReference.Target(0), ExcessMarkedDamage)` — `max(0, marked − toughness)`
+ * `EntityProperty(EffectTarget.ContextTarget(0), ExcessMarkedDamage)` — `max(0, marked − toughness)`
  * (CR 120.4a). CompositeEffect resolves its steps sequentially with no interleaved SBA pass, so
  * the marked damage in scope at the second step is exactly the X this spell just dealt. No
  * bespoke "excess damage" executor — this mirrors Orbital Plunge's excess gate, but reads the
@@ -32,17 +30,12 @@ val HellToPay = card("Hell to Pay") {
         "Treasure tokens equal to the amount of excess damage dealt to that creature this way."
 
     spell {
-        val creature = target("creature", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.DealXDamage(creature),
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.DealXDamage(creature) then
             Effects.CreateTreasure(
-                count = DynamicAmount.EntityProperty(
-                    EntityReference.Target(0),
-                    EntityNumericProperty.ExcessMarkedDamage
-                ),
+                count = DynamicAmounts.propertyOf(creature, EntityNumericProperty.ExcessMarkedDamage),
                 tapped = true
             )
-        )
     }
 
     metadata {

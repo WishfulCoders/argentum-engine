@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Samite Archer
@@ -25,14 +25,14 @@ val SamiteArcher = card("Samite Archer") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", AnyTarget())
+        val t = target(Targets.Any)
         effect = Effects.PreventNextDamage(1, t)
         description = "{T}: Prevent the next 1 damage that would be dealt to any target this turn."
     }
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", AnyTarget())
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
         description = "{T}: This creature deals 1 damage to any target."
     }

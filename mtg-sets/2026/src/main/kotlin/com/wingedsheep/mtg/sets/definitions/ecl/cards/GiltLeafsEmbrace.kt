@@ -2,12 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Gilt-Leaf's Embrace
@@ -30,12 +31,12 @@ val GiltLeafsEmbrace = card("Gilt-Leaf's Embrace") {
 
     keywords(Keyword.FLASH)
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.EnchantedCreature)
-            .then(Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.EnchantedCreature))
+        trigger = Triggers.self.enters()
+        effect = Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.EnchantedCreature) then
+            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.EnchantedCreature)
     }
 
     staticAbility {

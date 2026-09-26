@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.tokens
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
@@ -12,11 +13,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.model.CardDefinition.Companion.doubleFacedPermanent
 import com.wingedsheep.sdk.scripting.CanOnlyBlockCreaturesWith
 import com.wingedsheep.sdk.scripting.effects.BecomeCreatureEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -30,6 +29,8 @@ import com.wingedsheep.sdk.scripting.effects.WardCost
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Predefined token CardDefinitions.
@@ -95,8 +96,8 @@ object PredefinedTokens {
         typeLine = "Artifact"
 
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
-            val anyTarget = target("any target", Targets.Any)
+            trigger = Triggers.self.enters()
+            val anyTarget = target(Targets.Any)
             effect = Effects.DealDamage(2, anyTarget, damageSource = EffectTarget.Self)
             description = "When this token enters, it deals 2 damage to any target."
         }
@@ -191,10 +192,7 @@ object PredefinedTokens {
                 Costs.Mana("{2}"),
                 Costs.SacrificeSelf
             )
-            effect = Effects.Composite(
-                Effects.Scry(1),
-                Effects.DrawCards(1)
-            )
+            effect = Effects.Scry(1) then Effects.DrawCards(1)
         }
 
         metadata {
@@ -343,14 +341,14 @@ object PredefinedTokens {
         typeLine = "Enchantment — Aura Role"
         oracleText = "Enchant creature\nEnchanted creature gets +1/+1 and has \"Whenever this creature attacks, scry 1.\""
 
-        auraTarget = Targets.Creature
+        auraTarget = TargetObject(filter = TargetFilter.Creature)
 
         staticAbility {
             ability = ModifyStats(+1, +1, Filters.EnchantedCreature)
         }
 
         triggeredAbility {
-            trigger = Triggers.attacks(binding = TriggerBinding.ATTACHED)
+            trigger = Triggers.attached.attacks()
             effect = Patterns.Library.scry(1)
         }
 
@@ -371,7 +369,7 @@ object PredefinedTokens {
         typeLine = "Enchantment — Aura Role"
         oracleText = "Enchant creature\nEnchanted creature gets +1/+1 and has trample."
 
-        auraTarget = Targets.Creature
+        auraTarget = TargetObject(filter = TargetFilter.Creature)
 
         staticAbility {
             ability = ModifyStats(+1, +1, Filters.EnchantedCreature)
@@ -396,7 +394,7 @@ object PredefinedTokens {
         typeLine = "Enchantment — Aura Role"
         oracleText = "Enchant creature\nEnchanted creature gets +1/+1 and has ward {1}."
 
-        auraTarget = Targets.Creature
+        auraTarget = TargetObject(filter = TargetFilter.Creature)
 
         staticAbility {
             ability = ModifyStats(+1, +1, Filters.EnchantedCreature)
@@ -420,7 +418,7 @@ object PredefinedTokens {
         typeLine = "Enchantment — Aura Role"
         oracleText = "Enchant creature\nEnchanted creature has base power and toughness 1/1."
 
-        auraTarget = Targets.Creature
+        auraTarget = TargetObject(filter = TargetFilter.Creature)
 
         staticAbility {
             ability = SetBasePowerToughnessStatic(1, 1)
@@ -444,7 +442,7 @@ object PredefinedTokens {
         oracleText = "Enchant creature\nEnchanted creature gets +1/+1.\n" +
             "When this Role is put into a graveyard, each opponent loses 1 life."
 
-        auraTarget = Targets.Creature
+        auraTarget = TargetObject(filter = TargetFilter.Creature)
 
         staticAbility {
             ability = ModifyStats(+1, +1, Filters.EnchantedCreature)
@@ -453,7 +451,7 @@ object PredefinedTokens {
         // The Role leaving the battlefield for the graveyard — destroyed, sacrificed, replaced by
         // another Role, or falling off as its creature leaves — drains each opponent for 1.
         triggeredAbility {
-            trigger = Triggers.PutIntoGraveyardFromBattlefield
+            trigger = Triggers.self.dies()
             effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent))
         }
 
@@ -474,17 +472,17 @@ object PredefinedTokens {
         oracleText = "Enchant creature\nEnchanted creature has \"Whenever this creature attacks, " +
             "if its toughness is 3 or less, put a +1/+1 counter on it.\""
 
-        auraTarget = Targets.Creature
+        auraTarget = TargetObject(filter = TargetFilter.Creature)
 
         // The granted ability is modeled as an ATTACHED-bound trigger on the Role watching its
         // enchanted creature attack; the intervening-if re-checks the toughness at resolution (CR 603.4).
         triggeredAbility {
-            trigger = Triggers.attacks(binding = TriggerBinding.ATTACHED)
+            trigger = Triggers.attached.attacks()
             interveningIf = Conditions.EntityMatches(
                 EffectTarget.EnchantedCreature,
                 GameObjectFilter.Creature.toughnessAtMost(3)
             )
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.EnchantedCreature)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.EnchantedCreature)
         }
 
         metadata {
@@ -549,7 +547,7 @@ object PredefinedTokens {
         typeLine = "Artifact — Map"
 
         activatedAbility {
-            val creature = target("target creature you control", Targets.CreatureYouControl)
+            val creature = target(TargetFilter.CreatureYouControl)
             cost = Costs.Composite(
                 Costs.Mana("{1}"),
                 Costs.Tap,
@@ -623,9 +621,9 @@ object PredefinedTokens {
         typeLine = "Artifact"
 
         triggeredAbility {
-            trigger = Triggers.LeavesBattlefield
-            target = Targets.Any
-            effect = Effects.DealDamage(2, EffectTarget.ContextTarget(0))
+            val anyTarget = target(Targets.Any)
+            trigger = Triggers.self.leaves()
+            effect = Effects.DealDamage(2, anyTarget)
             description = "When this token leaves the battlefield, it deals 2 damage to any target."
         }
 
@@ -646,13 +644,13 @@ object PredefinedTokens {
         typeLine = "Artifact — Mutagen"
 
         activatedAbility {
-            val creature = target("target creature", Targets.Creature)
+            val creature = target(TargetFilter.Creature)
             cost = Costs.Composite(
                 Costs.Mana("{1}"),
                 Costs.Tap,
                 Costs.SacrificeSelf
             )
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creature)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature)
             timing = TimingRule.SorcerySpeed
         }
 
@@ -748,7 +746,7 @@ object PredefinedTokens {
         keywords(Keyword.FLYING)
 
         triggeredAbility {
-            trigger = Triggers.Attacks
+            trigger = Triggers.self.attacks()
             effect = Patterns.Library.surveil(1)
             description = "Whenever Redwing attacks, surveil 1."
         }
@@ -792,8 +790,8 @@ object PredefinedTokens {
         oracleText = "Landfall — Whenever a land you control enters, put a +1/+1 counter on Zabu."
 
         triggeredAbility {
-            trigger = Triggers.LandYouControlEnters
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+            trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
             description = "Landfall — Whenever a land you control enters, put a +1/+1 counter on Zabu."
         }
 
@@ -818,8 +816,8 @@ object PredefinedTokens {
         oracleText = "Whenever this token attacks, you may mill a card."
 
         triggeredAbility {
-            trigger = Triggers.attacks()
-            effect = MayEffect(Patterns.Library.mill(1))
+            trigger = Triggers.self.attacks()
+            effect = Effects.May(Patterns.Library.mill(1))
             description = "Whenever this token attacks, you may mill a card."
         }
 
@@ -846,8 +844,8 @@ object PredefinedTokens {
         keywords(Keyword.FLYING, Keyword.TRAMPLE)
 
         triggeredAbility {
-            trigger = Triggers.attacks()
-            val land = target("target land", Targets.Land)
+            trigger = Triggers.self.attacks()
+            val land = target(TargetFilter.Land)
             effect = Effects.Destroy(land)
             description = "Whenever Galactus attacks, destroy target land."
         }
@@ -922,7 +920,7 @@ object PredefinedTokens {
         toughness = 1
 
         triggeredAbility {
-            trigger = Triggers.Dies
+            trigger = Triggers.self.dies()
             effect = Effects.GainLife(1)
             description = "When this creature dies, you gain 1 life."
         }
@@ -930,6 +928,104 @@ object PredefinedTokens {
         metadata {
             imageUri = "https://cards.scryfall.io/normal/front/d/0/d0ddbe3e-4a66-494d-9304-7471232549bf.jpg?1783927190"
             artist = "Ilse Gort"
+        }
+    }
+
+    /**
+     * Jace — the blue Jace planeswalker token created by empower Jace (CR 701.71a, Reality
+     * Fracture). Not legendary, and it enters with 0 loyalty: CR 701.71a creates it "with 0
+     * loyalty" and the same keyword action then puts N loyalty counters on it, so the recipe
+     * ([com.wingedsheep.sdk.dsl.MechanicPatterns.empowerJace]) never leaves it at zero between
+     * state-based-action checks unless N is 0.
+     *
+     * Registered so its loyalty abilities resolve through the CardRegistry by the token's
+     * `cardDefinitionId`, and so the client can render its loyalty menu from [oracleText].
+     */
+    val Jace = card("Jace") {
+        typeLine = "Planeswalker — Jace"
+        colorIdentity = "U"
+        startingLoyalty = 0
+        oracleText = "−1: Surveil 1.\n−3: Draw a card."
+
+        loyaltyAbility(-1) {
+            effect = Patterns.Library.surveil(1)
+        }
+
+        loyaltyAbility(-3) {
+            effect = Effects.DrawCards(1)
+        }
+
+        metadata {
+            imageUri = "https://cards.scryfall.io/normal/front/8/d/8d1e424f-6407-4f8c-bed2-eaf148237c81.jpg?1789738324"
+            artist = "Manuel Castañón"
+        }
+    }
+
+    /**
+     * Heartwood — the red and green artifact token of Reality Fracture:
+     * "{T}: Add {R} or {G}." Its colors come from its color indicator (CR 204), carried as
+     * [colorIdentity], the same way the blue [Jace] token's are.
+     */
+    val Heartwood = card("Heartwood") {
+        typeLine = "Artifact — Heartwood"
+        colorIdentity = "RG"
+        oracleText = "{T}: Add {R} or {G}."
+
+        activatedAbility {
+            cost = Costs.Tap
+            effect = Effects.AddMana(Color.RED)
+            manaAbility = true
+        }
+
+        activatedAbility {
+            cost = Costs.Tap
+            effect = Effects.AddMana(Color.GREEN)
+            manaAbility = true
+        }
+
+        metadata {
+            imageUri = "https://cards.scryfall.io/normal/front/e/b/eb4bf635-04d7-4994-9f70-4ff573a767e7.jpg?1789966278"
+            artist = "Tianxing Xu"
+        }
+    }
+
+    /**
+     * Lotus — the colorless artifact token of Reality Fracture (Kwia Vigorbloom):
+     * "{T}, Sacrifice this token: Add three mana of any one color." A token Black Lotus; it has
+     * no subtype, only the name.
+     */
+    val Lotus = card("Lotus") {
+        typeLine = "Artifact"
+        oracleText = "{T}, Sacrifice this token: Add three mana of any one color."
+
+        activatedAbility {
+            cost = Costs.Composite(Costs.Tap, Costs.SacrificeSelf)
+            effect = Effects.AddAnyColorMana(3)
+            manaAbility = true
+        }
+
+        metadata {
+            imageUri = "https://cards.scryfall.io/normal/front/c/5/c59b7223-00a9-4c0d-896d-1cd463860c40.jpg?1789734772"
+            artist = "Alex V. Ngo"
+        }
+    }
+
+    /**
+     * Forest Tentacle — the 3/3 green land creature token of Reality Fracture (Verdant Kraken).
+     * Its "{T}: Add {G}." is the intrinsic mana ability of the Forest land type (CR 305.6), which
+     * the engine derives from the subtype, so the definition declares no ability of its own. Being
+     * a creature, it can't tap for mana until it has been under its controller's control since
+     * their most recent turn began (CR 302.6).
+     */
+    val ForestTentacle = card("Forest Tentacle") {
+        typeLine = "Land Creature — Forest Tentacle"
+        colorIdentity = "G"
+        power = 3
+        toughness = 3
+        oracleText = "{T}: Add {G}."
+
+        metadata {
+            imageUri = "https://cards.scryfall.io/normal/front/f/c/fc924972-5014-45d1-9676-6a76d862b205.jpg"
         }
     }
 
@@ -972,6 +1068,10 @@ object PredefinedTokens {
         Moloid,
         Galactus,
         SturdyShield,
-        Axe
+        Axe,
+        Jace,
+        Heartwood,
+        Lotus,
+        ForestTentacle
     )
 }

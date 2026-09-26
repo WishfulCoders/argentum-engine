@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Goblin Smuggler
@@ -37,7 +36,7 @@ val GoblinSmuggler = card("Goblin Smuggler") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.powerAtMost(2).other()))
+        val t = target(TargetFilter.Creature.powerAtMost(2).other())
         effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, t)
         description = "Another target creature with power 2 or less can't be blocked this turn."
     }

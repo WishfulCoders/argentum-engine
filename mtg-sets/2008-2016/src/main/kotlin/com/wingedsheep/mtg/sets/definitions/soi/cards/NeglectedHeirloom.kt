@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.soi.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -29,8 +28,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Implementation:
  *  - Both faces are plain Equipment: [ModifyStats] and [GrantKeyword] default to
  *    `GroupFilter.attachedCreature()`, and `equipAbility(...)` wires the equip cost per face.
- *  - "When **equipped creature** transforms" is `Triggers.transforms(binding =
- *    `[TriggerBinding.ATTACHED]`)` — the Equipment watches the permanent it's attached to, the same
+ *  - "When **equipped creature** transforms" is `Triggers.<subject>.transforms(intoBackFace)` — the Equipment watches the permanent it's attached to, the same
  *    binding behind "whenever equipped creature deals combat damage" (Goldvein Pick) and "becomes
  *    untapped" (Fishing Pole). A [TransformEffect] flips the permanent in place, so the Equipment is
  *    still attached when the event fires. The trigger takes no direction filter: it fires on a flip
@@ -53,8 +51,8 @@ private val NeglectedHeirloomFront = card("Neglected Heirloom") {
     }
 
     triggeredAbility {
-        trigger = Triggers.transforms(binding = TriggerBinding.ATTACHED)
-        effect = TransformEffect(EffectTarget.Self)
+        trigger = Triggers.attached.transforms()
+        effect = Effects.Transform(EffectTarget.Self)
         description = "Transform this Equipment."
     }
 

@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Titania, Rugged Rumbler — Marvel Super Heroes #235 (uncommon)
@@ -16,12 +17,10 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
  * - the **cast** side is [Costs.additional.DiscardOrPay] → `AdditionalCost.OrPay`, where the mana
  *   leg folds into the spell's own mana cost at cast time (CR 601.2f), so the enumerator offers a
  *   discard cast and a `{2}`-more cast and the pay path is always available (Pumpkin Bombardment);
- * - the **ward** side is [KeywordAbility.wardDiscardOrPay] → `WardCost.Choice`, a standalone
- *   payment made as the ward trigger resolves (CR 702.21a), so there is no spell cost to fold into
+ * - the **ward** side is [WardCost.Choice] over `Discard` and `Mana("{2}")`, a standalone payment made as the ward trigger resolves (CR 702.21a), so there is no spell cost to fold into
  *   and the mana leg is just another option in the disjunction.
  *
- * The two facades are named to match on purpose: it is one printed wording rendered on each rail,
- * not two inventions. On both sides an opponent with an empty hand is simply offered the pay path
+ * It is one printed wording rendered on each rail, not two inventions. On both sides an opponent with an empty hand is simply offered the pay path
  * only, and declining everything counters their spell.
  */
 val TitaniaRuggedRumbler = card("Titania, Rugged Rumbler") {
@@ -38,7 +37,7 @@ val TitaniaRuggedRumbler = card("Titania, Rugged Rumbler") {
         Costs.additional.DiscardOrPay(alternativeManaCost = "{2}")
     )
 
-    keywordAbility(KeywordAbility.wardDiscardOrPay("{2}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Choice(listOf(WardCost.Discard(), WardCost.Mana("{2}")))))
 
     metadata {
         rarity = Rarity.UNCOMMON

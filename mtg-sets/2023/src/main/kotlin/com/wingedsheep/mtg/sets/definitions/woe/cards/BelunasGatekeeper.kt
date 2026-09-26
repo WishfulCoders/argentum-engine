@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Beluna's Gatekeeper // Entry Denied
@@ -32,10 +31,7 @@ val BelunasGatekeeper = card("Beluna's Gatekeeper") {
         oracleText = "Return target creature you don't control with mana value 3 or less to its owner's hand. " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            val t = target(
-                "target",
-                TargetCreature(filter = TargetFilter.Creature.opponentControls().manaValueAtMost(3))
-            )
+            val t = target(TargetFilter.Creature.opponentControls().manaValueAtMost(3))
             effect = Effects.ReturnToHand(t)
         }
     }

@@ -2,13 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantAttack
 import com.wingedsheep.sdk.scripting.CantBlock
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Sigarda's Imprisonment
@@ -32,7 +33,7 @@ val SigardasImprisonment = card("Sigarda's Imprisonment") {
         "{4}{W}: Exile enchanted creature. Create a Blood token. (It's an artifact with \"{1}, " +
         "{T}, Discard a card, Sacrifice this token: Draw a card.\")"
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = CantAttack(filter = GroupFilter.attachedCreature())
@@ -44,10 +45,7 @@ val SigardasImprisonment = card("Sigarda's Imprisonment") {
 
     activatedAbility {
         cost = Costs.Mana("{4}{W}")
-        effect = Effects.Composite(
-            Effects.Exile(EffectTarget.EnchantedCreature),
-            Effects.CreateBlood(1),
-        )
+        effect = Effects.Exile(EffectTarget.EnchantedCreature) then Effects.CreateBlood(1)
         description = "{4}{W}: Exile enchanted creature. Create a Blood token."
     }
 

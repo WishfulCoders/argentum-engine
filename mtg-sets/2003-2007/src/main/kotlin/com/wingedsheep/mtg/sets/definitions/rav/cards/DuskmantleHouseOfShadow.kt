@@ -30,7 +30,7 @@ val DuskmantleHouseOfShadow = card("Duskmantle, House of Shadow") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{U}{B}"), Costs.Tap)
-        val p = target("target player", Targets.Player)
+        val p = target(Targets.Player)
         effect = Patterns.Library.mill(1, p)
     }
 

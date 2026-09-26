@@ -27,11 +27,9 @@ val TrevasAttendant = card("Treva's Attendant") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeSelf)
-        effect = Effects.Composite(
-            Effects.AddMana(Color.GREEN),
-            Effects.AddMana(Color.WHITE),
+        effect = Effects.AddMana(Color.GREEN) then
+            Effects.AddMana(Color.WHITE) then
             Effects.AddMana(Color.BLUE)
-        )
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

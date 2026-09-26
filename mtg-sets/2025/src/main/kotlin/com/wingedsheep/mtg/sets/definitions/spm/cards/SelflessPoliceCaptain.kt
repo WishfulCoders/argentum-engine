@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.spm.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Selfless Police Captain
@@ -34,15 +33,15 @@ val SelflessPoliceCaptain = card("Selfless Police Captain") {
         "When this creature leaves the battlefield, put its +1/+1 counters on target creature you control."
 
     replacementEffect(EntersWithCounters(
-        counterType = CounterTypeFilter.PlusOnePlusOne,
+        counterType = CounterType.PLUS_ONE_PLUS_ONE,
         count = 1,
         selfOnly = true
     ))
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
-        target = Targets.CreatureYouControl
-        effect = Effects.MoveAllLastKnownCounters(EffectTarget.ContextTarget(0))
+        val creatureYouControl = target(TargetFilter.CreatureYouControl)
+        trigger = Triggers.self.leaves()
+        effect = Effects.MoveAllLastKnownCounters(creatureYouControl)
         description = "When this creature leaves the battlefield, put its +1/+1 counters on target creature you control."
     }
 

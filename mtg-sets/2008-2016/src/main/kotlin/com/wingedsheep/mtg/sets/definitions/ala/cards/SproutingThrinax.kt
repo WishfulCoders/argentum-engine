@@ -13,7 +13,7 @@ import com.wingedsheep.sdk.model.Rarity
  * 3/3
  * When this creature dies, create three 1/1 green Saproling creature tokens.
  *
- * A plain [Triggers.Dies] (battlefield → graveyard, SELF binding) over a single
+ * A plain `Triggers.self.dies()` (battlefield → graveyard, SELF binding) over a single
  * [Effects.CreateToken] with `count = 3`; the three tokens are identical, so one effect with a
  * count is the whole ability — no composition needed.
  */
@@ -26,7 +26,7 @@ val SproutingThrinax = card("Sprouting Thrinax") {
     oracleText = "When this creature dies, create three 1/1 green Saproling creature tokens."
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

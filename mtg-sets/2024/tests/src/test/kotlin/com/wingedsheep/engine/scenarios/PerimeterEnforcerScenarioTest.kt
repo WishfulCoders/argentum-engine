@@ -23,7 +23,7 @@ import io.kotest.matchers.shouldBe
  * Perimeter Enforcer (MKM #31) — "Whenever another Detective you control enters and whenever a
  * Detective you control is turned face up, this creature gets +1/+1 until end of turn."
  *
- * The card is the reason `Triggers.CreatureTurnedFaceUp` grew a `filter` parameter: before this
+ * The card is the reason `Triggers.<player>.permanentTurnedFaceUp(filter)` grew a `filter` parameter: before this
  * there was no way to say "a **Detective** you control is turned face up", only "a creature". These
  * tests pin both halves of the ability and, more importantly, the two things a filter can get wrong
  * — matching creatures it shouldn't, and (because a face-down permanent is a nameless, subtypeless

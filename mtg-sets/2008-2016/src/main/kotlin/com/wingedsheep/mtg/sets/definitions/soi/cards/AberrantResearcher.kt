@@ -9,9 +9,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Aberrant Researcher // Perfected Form (Shadows over Innistrad #49)
@@ -49,14 +48,12 @@ private val AberrantResearcherFront = card("Aberrant Researcher") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.Composite(
-            Patterns.Library.mill(1),
-            ConditionalEffect(
-                condition = Conditions.CollectionContainsMatch("milled", GameObjectFilter.InstantOrSorcery),
-                effect = TransformEffect(EffectTarget.Self),
-            ),
-        )
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Patterns.Library.mill(1) then
+            Effects.If(
+                condition = Conditions.CollectionContainsMatch(Patterns.Library.milled, GameObjectFilter.InstantOrSorcery),
+                then = Effects.Transform(EffectTarget.Self),
+            )
         description = "At the beginning of your upkeep, mill a card. If an instant or sorcery card " +
             "was milled this way, transform this creature."
     }

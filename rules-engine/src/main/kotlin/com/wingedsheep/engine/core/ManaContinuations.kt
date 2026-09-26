@@ -3,6 +3,7 @@ package com.wingedsheep.engine.core
 import com.wingedsheep.engine.event.PendingTrigger
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -355,14 +356,14 @@ data class CounterUnlessCollectEvidenceContinuation(
  *
  * @property payingPlayerId The spell's controller who must decide whether to pay
  * @property spellEntityId The spell/ability that will be countered if they don't pay
- * @property counterType The `Counters.*` symbol placed on the payer (e.g. `Counters.POISON`)
+ * @property counterType The kind placed on the payer (e.g. `CounterType.POISON`)
  * @property amount How many counters the payer gets
  */
 @Serializable
 data class CounterUnlessPlayerCountersContinuation(
     val payingPlayerId: EntityId,
     val spellEntityId: EntityId,
-    val counterType: String,
+    val counterType: CounterType,
     val amount: Int,
     val controllerId: EntityId? = null,
     /** See [CounterUnlessPaysManaSelectionContinuation.remainingWardParts]. */

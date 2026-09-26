@@ -34,7 +34,7 @@ val SilkWebWeaver = card("Silk, Web Weaver") {
     webSlinging("{1}{G}{W}")
 
     triggeredAbility {
-        trigger = Triggers.YouCastCreature
+        trigger = Triggers.you.casts(GameObjectFilter.Creature)
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
@@ -49,10 +49,8 @@ val SilkWebWeaver = card("Silk, Web Weaver") {
         cost = Costs.Mana("{3}{G}{W}")
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.Composite(
-                Effects.ModifyStats(2, 2, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.VIGILANCE, EffectTarget.Self)
-            )
+            Effects.ModifyStats(2, 2, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.VIGILANCE, EffectTarget.IterationEntity)
         )
         description = "Creatures you control get +2/+2 and gain vigilance until end of turn."
     }

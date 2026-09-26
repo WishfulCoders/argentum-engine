@@ -27,7 +27,7 @@ val HobgoblinMantledMarauder = card("Hobgoblin, Mantled Marauder") {
     keywords(Keyword.FLYING, Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.YouDiscard
+        trigger = Triggers.you.discards()
         effect = Effects.ModifyStats(2, 0, EffectTarget.Self)
         description = "Whenever you discard a card, Hobgoblin gets +2/+0 until end of turn."
     }

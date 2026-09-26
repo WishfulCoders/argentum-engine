@@ -10,6 +10,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.SelectionRestriction
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Rip, Spawn Hunter — Duskmourn: House of Horror #228
@@ -21,7 +22,7 @@ import com.wingedsheep.sdk.scripting.effects.SelectionRestriction
  * library in a random order.
  *
  * "Survival" is the DSK ability word — mechanically an intervening-"if" postcombat-main trigger
- * gated on the source being tapped (`Triggers.YourPostcombatMain` + `Conditions.SourceIsTapped`),
+ * gated on the source being tapped (`Triggers.you.beginningOf(Step.POSTCOMBAT_MAIN)` + `Conditions.SourceIsTapped`),
  * exactly like the other DSK Survival creatures.
  *
  * The payoff is a pure Gather → Select → Move pipeline over existing atoms:
@@ -48,7 +49,7 @@ val RipSpawnHunter = card("Rip, Spawn Hunter") {
         "Put the rest on the bottom of your library in a random order."
 
     triggeredAbility {
-        trigger = Triggers.YourPostcombatMain
+        trigger = Triggers.you.beginningOf(Step.POSTCOMBAT_MAIN)
         interveningIf = Conditions.SourceIsTapped
         effect = Effects.Pipeline {
             val revealed = gather(

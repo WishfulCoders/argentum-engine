@@ -6,14 +6,13 @@ import com.wingedsheep.mtg.sets.definitions.otj.cards.ErietteTheBeguiler
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import io.kotest.assertions.withClue
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Scenario tests for Eriette, the Beguiler (OTJ rare Human Warlock), {1}{W}{U}{B}, 4/4.
@@ -36,7 +35,7 @@ class ErietteTheBeguilerScenarioTest : ScenarioTestBase() {
         colorIdentity = "W"
         typeLine = "Enchantment — Aura"
         oracleText = "Enchant creature"
-        auraTarget = Targets.Creature
+        auraTarget = TargetObject(filter = TargetFilter.Creature)
         metadata { rarity = Rarity.COMMON; collectorNumber = "1" }
     }
 
@@ -46,7 +45,7 @@ class ErietteTheBeguilerScenarioTest : ScenarioTestBase() {
         colorIdentity = "W"
         typeLine = "Enchantment — Aura"
         oracleText = "Enchant creature"
-        auraTarget = Targets.Creature
+        auraTarget = TargetObject(filter = TargetFilter.Creature)
         metadata { rarity = Rarity.COMMON; collectorNumber = "2" }
     }
 
@@ -57,7 +56,7 @@ class ErietteTheBeguilerScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Destroy target enchantment."
         spell {
-            val t = target("target enchantment", TargetPermanent(filter = TargetFilter.Enchantment))
+            val t = target(TargetFilter.Enchantment)
             effect = Effects.Destroy(t)
         }
         metadata { rarity = Rarity.COMMON; collectorNumber = "3" }

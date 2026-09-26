@@ -11,6 +11,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Stay Hidden, Stay Silent — Duskmourn: House of Horror #74
@@ -24,7 +26,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Modeled as:
  *  - `auraTarget = Targets.Creature` (Enchant creature).
- *  - ETB trigger ([Triggers.EntersBattlefield], SELF binding) taps the enchanted creature
+ *  - ETB trigger (`Triggers.self.enters()`, SELF binding) taps the enchanted creature
  *    ([Effects.Tap] on [EffectTarget.EnchantedCreature]).
  *  - "doesn't untap" is the [AbilityFlag.DOESNT_UNTAP] keyword granted to the enchanted creature
  *    via an unfiltered aura static (same shape as Frozen Solid). The untap step reads the flag.
@@ -42,10 +44,10 @@ val StayHiddenStaySilent = card("Stay Hidden, Stay Silent") {
         "{4}{U}{U}: Shuffle enchanted creature into its owner's library, then manifest dread. " +
         "Activate only as a sorcery."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Tap(EffectTarget.EnchantedCreature)
         description = "When this Aura enters, tap enchanted creature."
     }
@@ -57,12 +59,8 @@ val StayHiddenStaySilent = card("Stay Hidden, Stay Silent") {
     activatedAbility {
         cost = Costs.Mana("{4}{U}{U}")
         timing = TimingRule.SorcerySpeed
-        effect = Effects.Composite(
-            listOf(
-                Effects.ShuffleIntoLibrary(EffectTarget.EnchantedCreature),
-                Patterns.Library.manifestDread()
-            )
-        )
+        effect = Effects.ShuffleIntoLibrary(EffectTarget.EnchantedCreature) then
+            Patterns.Library.manifestDread()
         description = "{4}{U}{U}: Shuffle enchanted creature into its owner's library, then " +
             "manifest dread. Activate only as a sorcery."
     }

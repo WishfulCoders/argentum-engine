@@ -8,16 +8,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.CardDestination
+import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Errand-Rider of Gondor
@@ -37,35 +30,22 @@ val ErrandRiderOfGondor = card("Errand-Rider of Gondor") {
     oracleText = "When this creature enters, draw a card. Then if you don't control a legendary creature, put a card from your hand on the bottom of your library."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            listOf(
-                Effects.DrawCards(1),
-                ConditionalEffect(
-                    condition = Conditions.Not(
-                        Exists(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature.legendary())
-                    ),
-                    effect = Effects.Composite(
-                        listOf(
-                            GatherCardsEffect(
-                                source = CardSource.FromZone(Zone.HAND, Player.You),
-                                storeAs = "handCards"
-                            ),
-                            SelectFromCollectionEffect(
-                                from = "handCards",
-                                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                                storeSelected = "chosen",
-                                prompt = "Put a card from your hand on the bottom of your library"
-                            ),
-                            MoveCollectionEffect(
-                                from = "chosen",
-                                destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom)
-                            )
-                        )
+        trigger = Triggers.self.enters()
+        effect = Effects.DrawCards(1) then
+            Effects.If(
+                condition = Conditions.Not(
+                    Exists(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature.legendary())
+                ),
+                then = Effects.Pipeline {
+                    val handCards = gather(CardSource.FromZone(Zone.HAND, Player.You))
+                    val chosen = chooseExactly(
+                        1,
+                        from = handCards,
+                        prompt = "Put a card from your hand on the bottom of your library"
                     )
-                )
+                    toLibraryBottom(chosen, order = CardOrder.Preserve)
+                }
             )
-        )
     }
 
     metadata {

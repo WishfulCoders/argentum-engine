@@ -3,10 +3,8 @@ package com.wingedsheep.mtg.sets.definitions.sos.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Vibrant Outburst
@@ -20,12 +18,9 @@ val VibrantOutburst = card("Vibrant Outburst") {
     typeLine = "Instant"
     oracleText = "Vibrant Outburst deals 3 damage to any target. Tap up to one target creature."
     spell {
-        val t1 = target("t1", AnyTarget())
-        val t2 = target("t2", TargetCreature(optional = true, filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            DealDamageEffect(3, t1),
-            Effects.Tap(t2)
-        )
+        val t1 = target(Targets.Any)
+        val t2 = target(TargetFilter.Creature, optional = true)
+        effect = Effects.DealDamage(3, t1) then Effects.Tap(t2)
     }
     metadata {
         rarity = Rarity.UNCOMMON

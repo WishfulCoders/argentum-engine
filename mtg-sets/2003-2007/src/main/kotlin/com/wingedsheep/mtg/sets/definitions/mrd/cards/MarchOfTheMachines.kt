@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -7,8 +8,7 @@ import com.wingedsheep.sdk.scripting.GrantCardType
 import com.wingedsheep.sdk.scripting.SetBasePowerToughnessDynamicStatic
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * March of the Machines — Mirrodin #42
@@ -23,7 +23,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  *    them artifact creatures, and any other card types (an artifact land, an artifact enchantment)
  *    are kept.
  *  - Layer 7b (POWER_TOUGHNESS, SET_VALUES): [SetBasePowerToughnessDynamicStatic] fed each
- *    permanent's own mana value ([EntityReference.AffectedEntity] → [EntityNumericProperty.ManaValue]).
+ *    permanent's own mana value ([EffectTarget.AffectedEntity] → [EntityNumericProperty.ManaValue]).
  *
  * The `Artifact.notCreature()` filter is locked in at effect-collection time — it is not an
  * IsCreature-keyed filter the projector re-resolves after Layer 4 — so the same set is animated in
@@ -43,10 +43,7 @@ val MarchOfTheMachines = card("March of the Machines") {
         "equal to its mana value. (Equipment that's a creature can't equip a creature.)"
 
     val noncreatureArtifacts = GroupFilter(GameObjectFilter.Artifact.notCreature())
-    val manaValue: DynamicAmount = DynamicAmount.EntityProperty(
-        entity = EntityReference.AffectedEntity,
-        numericProperty = EntityNumericProperty.ManaValue
-    )
+    val manaValue: DynamicAmount = DynamicAmounts.manaValueOf(EffectTarget.AffectedEntity)
 
     staticAbility { ability = GrantCardType(cardType = "CREATURE", filter = noncreatureArtifacts) }
     staticAbility {

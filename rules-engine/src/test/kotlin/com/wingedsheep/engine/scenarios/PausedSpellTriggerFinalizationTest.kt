@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.effects.Gate
@@ -19,6 +18,7 @@ import com.wingedsheep.sdk.scripting.effects.GatedEffect
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.serialization.json.Json
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 class PausedSpellTriggerFinalizationTest : FunSpec({
     for (targeted in listOf(false, true)) {
@@ -27,22 +27,21 @@ class PausedSpellTriggerFinalizationTest : FunSpec({
                 val witness = card("Finalization Draw Witness") {
                     manaCost = "{0}"; typeLine = "Enchantment"
                     triggeredAbility {
-                        trigger = Triggers.YouDraw
-                        if (targeted) target("target spell", Targets.Spell)
+                        trigger = Triggers.you.draws()
+                        if (targeted) target(TargetFilter.SpellOnStack)
                         effect = if (targeted) Effects.CounterSpell() else Effects.GainLife(1)
                     }
                 }
                 val opposingWitness = card("Finalization Opposing Draw Witness") {
                     manaCost = "{0}"; typeLine = "Enchantment"
-                    triggeredAbility { trigger = Triggers.OpponentDraws; effect = Effects.GainLife(1) }
+                    triggeredAbility { trigger = Triggers.anOpponent.draws(); effect = Effects.GainLife(1) }
                 }
                 val spell = card("Finalization Paused Draw") {
                     manaCost = "{0}"; typeLine = "Sorcery"
                     spell {
-                        val choices = GatedEffect(Gate.MayDecide("Draw?"), Effects.Composite(
-                            Effects.DrawCards(1),
-                            GatedEffect(Gate.MayDecide("Gain life?"), Effects.GainLife(2))))
-                        effect = if (initialDraw) Effects.Composite(Effects.DrawCards(1), choices) else choices
+                        val choices = GatedEffect(Gate.MayDecide("Draw?"), Effects.DrawCards(1) then
+                            GatedEffect(Gate.MayDecide("Gain life?"), Effects.GainLife(2)))
+                        effect = if (initialDraw) (Effects.DrawCards(1) then choices) else choices
                     }
                 }
                 val d = GameTestDriver().apply {

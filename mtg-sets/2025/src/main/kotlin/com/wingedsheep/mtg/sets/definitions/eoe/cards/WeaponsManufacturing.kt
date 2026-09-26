@@ -1,13 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Weapons Manufacturing
@@ -25,13 +22,7 @@ val WeaponsManufacturing = card("Weapons Manufacturing") {
         "named Munitions with \"When this token leaves the battlefield, it deals 2 damage to any target.\""
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Artifact.youControl().nontoken(),
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Artifact.youControl().nontoken()).enters()
         effect = Effects.CreateMunitionsToken()
         description = "Whenever a nontoken artifact you control enters, create a Munitions token."
     }

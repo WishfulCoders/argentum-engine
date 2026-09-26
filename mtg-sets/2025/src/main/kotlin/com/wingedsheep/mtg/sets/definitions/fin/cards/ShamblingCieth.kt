@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -34,11 +33,11 @@ val ShamblingCieth = card("Shambling Cie'th") {
     replacementEffect(EntersTapped())
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(spellFilter = GameObjectFilter.Noncreature)
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
         triggerZone = Zone.GRAVEYARD
-        effect = MayPayManaEffect(
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{B}"),
-            effect = Effects.ReturnToHandFromGraveyard(EffectTarget.Self),
+            then = Effects.ReturnToHandFromGraveyard(EffectTarget.Self),
         )
     }
 

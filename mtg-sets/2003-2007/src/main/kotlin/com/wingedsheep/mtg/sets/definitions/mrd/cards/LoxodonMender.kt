@@ -1,10 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Loxodon Mender — Mirrodin #12
@@ -29,8 +30,8 @@ val LoxodonMender = card("Loxodon Mender") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{W}"), Costs.Tap)
-        val artifact = target("target artifact", Targets.Artifact)
-        effect = RegenerateEffect(artifact)
+        val artifact = target(TargetFilter.Artifact)
+        effect = Effects.Regenerate(artifact)
         description = "{W}, {T}: Regenerate target artifact."
     }
 

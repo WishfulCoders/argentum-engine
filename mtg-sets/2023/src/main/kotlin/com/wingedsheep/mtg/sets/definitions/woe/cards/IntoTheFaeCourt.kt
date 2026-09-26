@@ -20,10 +20,7 @@ val IntoTheFaeCourt = card("Into the Fae Court") {
         "\"This token can block only creatures with flying.\""
 
     spell {
-        effect = Effects.Composite(
-            Effects.DrawCards(3),
-            woeFaerieToken()
-        )
+        effect = Effects.DrawCards(3) then woeFaerieToken()
     }
 
     metadata {

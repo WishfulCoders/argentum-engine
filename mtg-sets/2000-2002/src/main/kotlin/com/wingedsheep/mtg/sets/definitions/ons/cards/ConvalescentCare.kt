@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Convalescent Care
@@ -20,7 +20,7 @@ val ConvalescentCare = card("Convalescent Care") {
     oracleText = "At the beginning of your upkeep, if you have 5 or less life, you gain 3 life and draw a card."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         interveningIf = Conditions.LifeAtMost(5)
         effect = Effects.GainLife(3) then Effects.DrawCards(1)
     }

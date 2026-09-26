@@ -14,7 +14,7 @@ import io.kotest.matchers.shouldBe
  *   Whenever you commit a crime, you may pay {1}. If you do, look at the top two cards of your
  *   library. Put one of them into your hand and the other into your graveyard.
  *
- * Composed from `MayPayManaEffect` + `Patterns.Library.lookAtTopAndKeep(2, 1)` — verify the
+ * Composed from `Effects.MayPay` + `Patterns.Library.lookAtTopAndKeep(2, 1)` — verify the
  * crime trigger, the {1} payment, and the keep-one / graveyard-the-other split.
  */
 class MarchesaDealerOfDeathScenarioTest : ScenarioTestBase() {

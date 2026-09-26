@@ -46,7 +46,7 @@ private val BallistaWatcherFront = card("Ballista Watcher") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{R}"), Costs.Tap)
-        val anyTarget = target("any target", Targets.Any)
+        val anyTarget = target(Targets.Any)
         effect = Effects.DealDamage(1, anyTarget, damageSource = EffectTarget.Self)
         description = "This creature deals 1 damage to any target."
     }
@@ -73,11 +73,9 @@ private val BallistaWielder = card("Ballista Wielder") {
 
     activatedAbility {
         cost = Costs.Mana("{2}{R}")
-        val anyTarget = target("any target", Targets.Any)
-        effect = Effects.Composite(
-            Effects.DealDamage(1, anyTarget, damageSource = EffectTarget.Self),
-            Effects.CantBlock(anyTarget),
-        )
+        val anyTarget = target(Targets.Any)
+        effect = Effects.DealDamage(1, anyTarget, damageSource = EffectTarget.Self) then
+            Effects.CantBlock(anyTarget)
         description = "This creature deals 1 damage to any target. A creature dealt damage this way " +
             "can't block this turn."
     }

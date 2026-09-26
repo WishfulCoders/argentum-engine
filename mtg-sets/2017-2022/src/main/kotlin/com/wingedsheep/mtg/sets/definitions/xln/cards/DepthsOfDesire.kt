@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.xln.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Depths of Desire
@@ -20,7 +20,7 @@ val DepthsOfDesire = card("Depths of Desire") {
         "(It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")"
 
     spell {
-        val victim = target("target", Targets.Creature)
+        val victim = target(TargetFilter.Creature)
         effect = Effects.ReturnToHand(victim) then Effects.CreateTreasure()
     }
 

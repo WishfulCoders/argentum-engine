@@ -6,10 +6,11 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalOnCollectionEffect
+import com.wingedsheep.sdk.scripting.effects.CardDestination
+import com.wingedsheep.sdk.scripting.effects.CardSource
+import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Patterns
 
 /**
  * Dermoplasm
@@ -34,13 +35,15 @@ val Dermoplasm = card("Dermoplasm") {
     morph = "{2}{U}{U}"
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        effect = Patterns.Hand.putFromHand(
-            filter = GameObjectFilter.Creature.withMorph()
-        ) then ConditionalOnCollectionEffect(
-            collection = "putting",
-            ifNotEmpty = Effects.Move(EffectTarget.Self, Zone.HAND)
-        )
+        trigger = Triggers.self.turnedFaceUp()
+        effect = Effects.Pipeline {
+            val candidates = gather(CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Creature.withMorph()))
+            val putting = chooseUpTo(1, from = candidates)
+            move(putting, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You))
+            ifNotEmpty(putting) {
+                run(Effects.Move(EffectTarget.Self, Zone.HAND))
+            }
+        }
     }
 
     metadata {

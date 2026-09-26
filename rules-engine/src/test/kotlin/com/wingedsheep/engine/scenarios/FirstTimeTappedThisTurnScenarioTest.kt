@@ -17,9 +17,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.withClue
 import io.kotest.matchers.nulls.shouldBeNull
@@ -74,7 +72,7 @@ class FirstTimeTappedThisTurnScenarioTest : ScenarioTestBase() {
      * same path a card's filter would take.
      */
     private fun TestGame.matchesFilter(entityId: EntityId, filter: GameObjectFilter): Boolean =
-        PredicateEvaluator().matches(
+        services.predicateEvaluator.matches(
             state,
             state.projectedState,
             entityId,
@@ -88,7 +86,7 @@ class FirstTimeTappedThisTurnScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Tap target creature."
         spell {
-            val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+            val t = target(TargetFilter.Creature)
             effect = Effects.Tap(t)
         }
     }
@@ -99,7 +97,7 @@ class FirstTimeTappedThisTurnScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Untap target creature."
         spell {
-            val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+            val t = target(TargetFilter.Creature)
             effect = Effects.Untap(t)
         }
     }
@@ -117,11 +115,7 @@ class FirstTimeTappedThisTurnScenarioTest : ScenarioTestBase() {
         oracleText = "Whenever a creature you control becomes tapped for the first time this turn, " +
             "draw a card."
         triggeredAbility {
-            trigger = Triggers.becomesTapped(
-                binding = TriggerBinding.ANY,
-                filter = GameObjectFilter.Creature.youControl(),
-                firstTimeEachTurn = true,
-            )
+            trigger = Triggers.a(GameObjectFilter.Creature.youControl()).becomesTapped(firstTimeEachTurn = true)
             effect = Effects.DrawCards(1)
         }
     }
@@ -136,10 +130,7 @@ class FirstTimeTappedThisTurnScenarioTest : ScenarioTestBase() {
         oracleText = "Whenever a creature you control becomes tapped, draw a card. " +
             "This ability triggers only once each turn."
         triggeredAbility {
-            trigger = Triggers.becomesTapped(
-                binding = TriggerBinding.ANY,
-                filter = GameObjectFilter.Creature.youControl(),
-            )
+            trigger = Triggers.a(GameObjectFilter.Creature.youControl()).becomesTapped()
             oncePerTurn = true
             effect = Effects.DrawCards(1)
         }

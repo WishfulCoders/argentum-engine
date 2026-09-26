@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
@@ -9,6 +10,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * End-to-end land auto-tap for monocolored hybrid ("twobrid") costs. The {2/B} pip can be paid
@@ -43,7 +45,7 @@ class MonocolorHybridManaSolverTest : FunSpec({
         driver.putPermanentOnBattlefield(player, "Forest")
         driver.putPermanentOnBattlefield(player, "Island")
 
-        ManaSolver(driver.cardRegistry)
+        ManaSolver(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .canPay(driver.state, player, ManaCost.parse("{2/B}{2/G}{2/U}")) shouldBe true
     }
 
@@ -55,7 +57,7 @@ class MonocolorHybridManaSolverTest : FunSpec({
 
         repeat(6) { driver.putPermanentOnBattlefield(player, "Mountain") }
 
-        ManaSolver(driver.cardRegistry)
+        ManaSolver(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .canPay(driver.state, player, ManaCost.parse("{2/B}{2/G}{2/U}")) shouldBe true
     }
 
@@ -67,7 +69,7 @@ class MonocolorHybridManaSolverTest : FunSpec({
 
         repeat(5) { driver.putPermanentOnBattlefield(player, "Mountain") }
 
-        ManaSolver(driver.cardRegistry)
+        ManaSolver(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .canPay(driver.state, player, ManaCost.parse("{2/B}{2/G}{2/U}")) shouldBe false
     }
 
@@ -83,7 +85,7 @@ class MonocolorHybridManaSolverTest : FunSpec({
         val watcher = driver.putCardInHand(player, "Twobrid Watcher")
 
         val result = driver.castSpell(player, watcher)
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         driver.bothPass() // resolve
 
         driver.findPermanent(player, "Twobrid Watcher") shouldBe watcher

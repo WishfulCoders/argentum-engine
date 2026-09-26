@@ -29,7 +29,7 @@ val RayFilletManRay = card("Ray Fillet, Man Ray") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateMutagenToken()
         description = "When Ray Fillet enters, create a Mutagen token."
     }

@@ -82,29 +82,29 @@ class UpkeepTriggerScopeTest : StringSpec({
     fun render(playersScope: String, playerArg: String?) =
         Emitter.renderCard(upkeepCard(playersScope, playerArg), null, effects, keywords)
 
-    "the SinglePlayer/You scope maps to Triggers.YourUpkeep" {
+    "the SinglePlayer/You scope maps to Triggers.you.beginningOf(Step.UPKEEP)" {
         val r = render("SinglePlayer", "You")
         r.complete shouldBe true
-        r.text shouldContain "trigger = Triggers.YourUpkeep"
+        r.text shouldContain "trigger = Triggers.you.beginningOf(Step.UPKEEP)"
     }
 
-    "the AnyPlayer scope maps to Triggers.EachUpkeep" {
+    "the AnyPlayer scope maps to Triggers.anyPlayer.beginningOf(Step.UPKEEP)" {
         val r = render("AnyPlayer", null)
         r.complete shouldBe true
-        r.text shouldContain "trigger = Triggers.EachUpkeep"
+        r.text shouldContain "trigger = Triggers.anyPlayer.beginningOf(Step.UPKEEP)"
     }
 
-    "the Opponent scope maps to Triggers.EachOpponentUpkeep" {
+    "the Opponent scope maps to Triggers.anOpponent.beginningOf(Step.UPKEEP)" {
         val r = render("Opponent", null)
         r.complete shouldBe true
-        r.text shouldContain "trigger = Triggers.EachOpponentUpkeep"
+        r.text shouldContain "trigger = Triggers.anOpponent.beginningOf(Step.UPKEEP)"
     }
 
     "the host-relative HostController scope declines to a scaffold, not a named scope" {
         val r = render("SinglePlayer", "HostController")
         r.complete shouldBe false
-        r.text shouldNotContain "Triggers.YourUpkeep"
-        r.text shouldNotContain "Triggers.EachUpkeep"
-        r.text shouldNotContain "Triggers.EachOpponentUpkeep"
+        r.text shouldNotContain "Triggers.you.beginningOf(Step.UPKEEP)"
+        r.text shouldNotContain "Triggers.anyPlayer.beginningOf(Step.UPKEEP)"
+        r.text shouldNotContain "Triggers.anOpponent.beginningOf(Step.UPKEEP)"
     }
 })

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -9,12 +9,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 val FlitterwingNuisance = card("Flitterwing Nuisance") {
     manaCost = "{U}"
@@ -30,7 +26,7 @@ val FlitterwingNuisance = card("Flitterwing Nuisance") {
     keywords(Keyword.FLYING)
 
     replacementEffect(EntersWithCounters(
-        counterType = CounterTypeFilter.MinusOneMinusOne,
+        counterType = CounterType.MINUS_ONE_MINUS_ONE,
         count = 1,
         selfOnly = true
     ))
@@ -38,15 +34,10 @@ val FlitterwingNuisance = card("Flitterwing Nuisance") {
     activatedAbility {
         cost = Costs.Composite(
             Costs.Mana("{2}{U}"),
-            Costs.RemoveCounterFromSelf(Counters.MINUS_ONE_MINUS_ONE)
+            Costs.RemoveCounterFromSelf(CounterType.MINUS_ONE_MINUS_ONE)
         )
-        effect = CreateDelayedTriggerEffect(
-            trigger = Triggers.dealsDamage(
-                damageType = DamageType.Combat,
-                recipient = RecipientFilter.AnyPlayer,
-                sourceFilter = GameObjectFilter.Creature.youControl(),
-                binding = TriggerBinding.ANY,
-            ),
+        effect = Effects.CreateDelayedTrigger(
+            trigger = Triggers.a(GameObjectFilter.Creature.youControl()).dealsCombatDamage(Recipient.AnyPlayer),
             effect = Effects.DrawCards(1),
             expiry = DelayedTriggerExpiry.EndOfTurn
         )

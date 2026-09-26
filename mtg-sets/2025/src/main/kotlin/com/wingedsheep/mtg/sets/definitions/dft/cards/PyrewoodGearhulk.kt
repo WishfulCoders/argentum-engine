@@ -31,18 +31,14 @@ val PyrewoodGearhulk = card("Pyrewood Gearhulk") {
     toughness = 7
     keywords(Keyword.VIGILANCE, Keyword.MENACE)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(
-                GroupFilter(GameObjectFilter.Creature.youControl(), excludeSelf = true),
-                Effects.Composite(
-                    Effects.ModifyStats(2, 2, EffectTarget.Self),
-                    Effects.GrantKeyword(Keyword.VIGILANCE, EffectTarget.Self),
-                    Effects.GrantKeyword(Keyword.MENACE, EffectTarget.Self)
-                )
-            ),
+        trigger = Triggers.self.enters()
+        effect = Effects.ForEachInGroup(
+            GroupFilter(GameObjectFilter.Creature.youControl(), excludeSelf = true),
+            Effects.ModifyStats(2, 2, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.VIGILANCE, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.MENACE, EffectTarget.IterationEntity)
+        ) then
             Effects.DamageCantBePreventedThisTurn()
-        )
     }
     metadata {
         rarity = Rarity.MYTHIC

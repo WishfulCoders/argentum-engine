@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
 /**
@@ -41,8 +40,8 @@ val LeafCrownedVisionary = card("Leaf-Crowned Visionary") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YouCastSubtype(Subtype("Elf"))
-        effect = MayPayManaEffect(ManaCost.parse("{G}"), Effects.DrawCards(1))
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withSubtype(Subtype("Elf")))
+        effect = Effects.MayPay(ManaCost.parse("{G}"), Effects.DrawCards(1))
     }
 
     metadata {

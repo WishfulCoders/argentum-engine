@@ -86,9 +86,9 @@ class LifeAndExpendTest : StringSpec({
 
     "the life-change triggers and the gift payoff are the specs the SDK publishes" {
         ability("Whenever you gain life, each opponent loses 1 life.").trigger shouldBe
-            SdkTriggers.YouGainLife.event
-        ability("Whenever you lose life, draw a card.").trigger shouldBe SdkTriggers.YouLoseLife.event
-        ability("Whenever you give a gift, draw a card.").trigger shouldBe SdkTriggers.YouGiveAGift.event
+            SdkTriggers.you.gainsLife().event
+        ability("Whenever you lose life, draw a card.").trigger shouldBe SdkTriggers.you.losesLife().event
+        ability("Whenever you give a gift, draw a card.").trigger shouldBe SdkTriggers.you.givesAGift().event
         listOf(
             "Whenever you gain life, each opponent loses 1 life.",
             "Whenever you lose life, draw a card.",
@@ -136,12 +136,8 @@ class LifeAndExpendTest : StringSpec({
     // it is a different printed sentence.
     "each opponent loses life is a recipient the model names, not one it targets" {
         fragment("When ~ enters, each opponent loses 2 life and you gain 2 life.")
-            .script.triggeredAbilities.single().effect shouldBe Effects.Composite(
-            listOf(
-                Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent)),
-                Effects.GainLife(2, EffectTarget.Controller),
-            )
-        )
+            .script.triggeredAbilities.single().effect shouldBe (Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent)) then
+                Effects.GainLife(2, EffectTarget.Controller))
         // Glidedive Duo prints the clauses joined by "and", which [Steps.tailsOf] reads as an
         // alternate and prints back as the canonical sequence: a `CompositeEffect` has no room for
         // the conjunction, so one of the two spellings has to be the one that prints.

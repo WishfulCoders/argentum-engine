@@ -6,13 +6,11 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Hawkeye, Master Marksman — Marvel Super Heroes #130
@@ -28,7 +26,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPlayer
  * Modeling notes:
  *  - "Trick Arrows" is a flavor ability word (CR 207.2c) with no rules meaning; it lives in the
  *    oracle text and the ability's description only.
- *  - The whole ability is one [Triggers.BecomesTapped] trigger — cause-agnostic, so tapping him to
+ *  - The whole ability is one `Triggers.self.becomesTapped()` trigger — cause-agnostic, so tapping him to
  *    attack, to crew, to pay a teamwork cost, or an opponent's Twiddle all trigger it. First strike
  *    plus a tap payoff is deliberate: attacking is the usual way to turn it on, and vigilance would
  *    turn it *off*.
@@ -69,27 +67,22 @@ val HawkeyeMasterMarksman = card("Hawkeye, Master Marksman") {
     // Trick Arrows — Whenever Hawkeye becomes tapped, you may pay {1} up to three times.
     // When you do, choose up to that many —
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
-        effect = ReflexiveTriggerEffect(
+        trigger = Triggers.self.becomesTapped()
+        effect = Effects.ReflexiveTrigger(
             action = Effects.PayRepeatedly("{1}", upTo = 3),
             optional = true,
-            reflexiveEffect = ModalEffect(
+            reflexiveEffect = Effects.Modal(
                 modes = listOf(
-                    Mode.withTarget(
-                        effect = Effects.CantBlock(EffectTarget.ContextTarget(0)),
-                        target = TargetCreature(),
-                        description = "Net — Target creature can't block this turn."
-                    ),
-                    Mode.withTarget(
-                        effect = Effects.DealDamage(2, EffectTarget.ContextTarget(0)),
-                        target = TargetPlayer(),
-                        description = "Explosive — Hawkeye deals 2 damage to target player."
-                    ),
+                    mode("Net — Target creature can't block this turn.") {
+                        val creature = target(TargetFilter.Creature)
+                        effect = Effects.CantBlock(creature)
+                    },
+                    mode("Explosive — Hawkeye deals 2 damage to target player.") {
+                        val player = target(Targets.Player)
+                        effect = Effects.DealDamage(2, player)
+                    },
                     Mode.noTarget(
-                        effect = Effects.Composite(
-                            Patterns.Hand.discardCards(1),
-                            Effects.DrawCards(1)
-                        ),
+                        effect = Patterns.Hand.discardCards(1) then Effects.DrawCards(1),
                         description = "Boomerang — Discard a card, then draw a card."
                     )
                 ),

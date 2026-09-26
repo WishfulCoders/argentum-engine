@@ -1,15 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Desperate Measures — Tarkir: Dragonstorm #78
@@ -19,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * turn, draw two cards.
  *
  * Modeled as the +1/-1 stat change plus a watched-entity delayed triggered ability
- * (`Triggers.Dies` scoped to the target via `watchedTarget`, expiring at end of turn).
+ * (`Triggers.self.dies()` scoped to the target via `watchedTarget`, expiring at end of turn).
  * This mirrors the Long River Lurker / Commando Raid "whenever that creature ... this
  * turn" pattern. The "under your control" clause is honored for the normal path (the
  * creature dies while you control it); the rare control-change-then-dies case is the
@@ -33,16 +29,14 @@ val DesperateMeasures = card("Desperate Measures") {
     oracleText = "Target creature gets +1/-1 until end of turn. When it dies under your control this turn, draw two cards."
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = Effects.Composite(listOf(
-            ModifyStatsEffect(1, -1, t),
-            CreateDelayedTriggerEffect(
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(1, -1, t) then
+            Effects.CreateDelayedTrigger(
                 effect = Effects.DrawCards(2),
-                trigger = Triggers.Dies,
+                trigger = Triggers.self.dies(),
                 watchedTarget = t,
                 expiry = DelayedTriggerExpiry.EndOfTurn
             )
-        ))
     }
 
     metadata {

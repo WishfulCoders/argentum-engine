@@ -13,7 +13,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * 2/2
  * Whenever this creature blocks, it gets +0/+2 until end of turn.
  *
- * [Triggers.Blocks] is the SELF-bound "this creature blocks" event, so the pump aims at
+ * `Triggers.self.blocks()` is the SELF-bound "this creature blocks" event, so the pump aims at
  * [EffectTarget.Self] — Shu Defender in white.
  */
 val TownSentry = card("Town Sentry") {
@@ -25,7 +25,7 @@ val TownSentry = card("Town Sentry") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         effect = Effects.ModifyStats(0, 2, EffectTarget.Self)
     }
 

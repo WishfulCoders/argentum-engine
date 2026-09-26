@@ -14,6 +14,7 @@ import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Tests for All-Out Assault (Tarkir: Dragonstorm) and, through it, the one-shot
@@ -24,7 +25,7 @@ import io.kotest.matchers.shouldBe
  * your main phase, there is an additional combat phase after this phase followed by an
  * additional main phase. When you next attack this turn, untap each creature you control."
  *
- * The delayed trigger is modeled with `CreateDelayedTriggerEffect(trigger = Triggers.YouAttack,
+ * The delayed trigger is modeled with `CreateDelayedTriggerEffect(trigger = Triggers.you.attacks(),
  * fireOnce = true)`: it fires the first time you declare attackers this turn, then removes
  * itself — so a later attack the same turn (here, the bonus combat) won't untap again.
  */
@@ -79,7 +80,7 @@ class AllOutAssaultTest : FunSpec({
         // Exactly one event-based, one-shot delayed trigger ("when you next attack this turn").
         val delayed = driver.state.delayedTriggers
         delayed.size shouldBe 1
-        delayed.first().trigger shouldBe com.wingedsheep.sdk.dsl.Triggers.YouAttack
+        delayed.first().trigger shouldBe Triggers.you.attacks()
         delayed.first().fireOnce shouldBe true
     }
 

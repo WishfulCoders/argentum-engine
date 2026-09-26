@@ -4,6 +4,7 @@
 
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CostModification
@@ -11,7 +12,6 @@ import com.wingedsheep.sdk.scripting.CostReductionSource
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -35,7 +35,7 @@ val TravelTheOverworld = card("Travel the Overworld") {
         )
     }
     spell {
-        effect = DrawCardsEffect(4)
+        effect = Effects.DrawCards(4)
     }
     metadata {
         rarity = Rarity.UNCOMMON

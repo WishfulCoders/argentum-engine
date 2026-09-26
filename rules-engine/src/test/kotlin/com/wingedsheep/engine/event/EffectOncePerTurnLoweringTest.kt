@@ -4,7 +4,6 @@ import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.scripting.AbilityId
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.withClue
@@ -75,19 +74,19 @@ class EffectOncePerTurnLoweringTest : DescribeSpec({
 
     describe("the guard itself") {
 
-        val payoff = MayEffect(Effects.DrawCards(1))
+        val payoff = Effects.May(Effects.DrawCards(1))
 
         it("accepts a consent gate at the top of the effect") {
             TriggerProcessor.consentGateIsMisplaced(payoff) shouldBe false
         }
 
         it("accepts one at the tail of a composite — the Planetarium 'do X, then you may Y' shape") {
-            val tail = Effects.Composite(Effects.GainLife(1), payoff)
+            val tail = Effects.GainLife(1) then payoff
             TriggerProcessor.consentGateIsMisplaced(tail) shouldBe false
         }
 
         it("rejects one buried mid-composite, where the budget would sit outside it") {
-            val buried = Effects.Composite(payoff, Effects.GainLife(1))
+            val buried = payoff then Effects.GainLife(1)
             TriggerProcessor.consentGateIsMisplaced(buried) shouldBe true
         }
 
@@ -96,7 +95,7 @@ class EffectOncePerTurnLoweringTest : DescribeSpec({
         }
 
         it("makes the lowering throw with an actionable message rather than mis-placing the gate") {
-            val buried = Effects.Composite(payoff, Effects.GainLife(1))
+            val buried = payoff then Effects.GainLife(1)
             val failure = shouldThrow<IllegalArgumentException> {
                 TriggerProcessor.loweredEffectBudget(buried, AbilityId("test"))
             }

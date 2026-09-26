@@ -26,7 +26,7 @@ val AkkiRockspeaker = card("Akki Rockspeaker") {
     power = 1
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.AddMana(Color.RED)
     }
     metadata {

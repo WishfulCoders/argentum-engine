@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.mbs.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.targets.AnyTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Red Sun's Zenith — Mirrodin Besieged #74 (canonical / earliest real printing, 2011)
@@ -39,16 +39,16 @@ val RedSunsZenith = card("Red Sun's Zenith") {
         "way would die this turn, exile it instead. Shuffle Red Sun's Zenith into its owner's library."
 
     spell {
-        val t = target("any target", AnyTarget())
-        effect = ConditionalEffect(
+        val t = target(Targets.Any)
+        effect = Effects.If(
             // CR 120.8 — X = 0 deals no damage, so nothing was "dealt damage this way".
             condition = Conditions.CompareAmounts(
-                DynamicAmount.XValue,
+                DynamicAmounts.xValue(),
                 ComparisonOperator.GT,
-                DynamicAmount.Fixed(0),
+                0,
             ),
-            effect = Effects.MarkExileOnDeath(t),
-        ) then Effects.DealDamage(DynamicAmount.XValue, t)
+            then = Effects.MarkExileOnDeath(t),
+        ) then Effects.DealDamage(DynamicAmounts.xValue(), t)
         selfShuffleIntoLibrary()
     }
 

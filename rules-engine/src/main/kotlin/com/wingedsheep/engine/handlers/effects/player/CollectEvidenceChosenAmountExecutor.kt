@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.player
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.suspendForDecision
 import com.wingedsheep.engine.core.ChooseEvidenceAmountContinuation
 import com.wingedsheep.engine.core.ChooseNumberDecision
@@ -38,7 +39,9 @@ import kotlin.reflect.KClass
  *
  * An empty graveyard skips the prompt entirely — X can only be 0 — and stores 0.
  */
-class CollectEvidenceChosenAmountExecutor : EffectExecutor<CollectEvidenceChosenAmountEffect> {
+class CollectEvidenceChosenAmountExecutor(
+    private val predicateEvaluator: PredicateEvaluator
+) : EffectExecutor<CollectEvidenceChosenAmountEffect> {
 
     override val effectType: KClass<CollectEvidenceChosenAmountEffect> =
         CollectEvidenceChosenAmountEffect::class
@@ -58,7 +61,7 @@ class CollectEvidenceChosenAmountExecutor : EffectExecutor<CollectEvidenceChosen
             ?.let { state.getEntity(it)?.get<CardComponent>()?.name }
             ?: "Collect evidence"
 
-        val maxAmount = CollectEvidenceResolver.candidates(state, playerId).totalManaValue
+        val maxAmount = CollectEvidenceResolver.candidates(state, playerId, predicateEvaluator = predicateEvaluator).totalManaValue
         if (maxAmount <= 0) {
             // Nothing to choose between: X can only be 0, which exiles nothing. Still a
             // collection, so hand 0 downstream rather than failing.

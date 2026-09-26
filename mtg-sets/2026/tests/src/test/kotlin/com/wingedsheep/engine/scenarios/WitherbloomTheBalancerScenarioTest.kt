@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.mana.CostCalculator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.support.GameTestDriver
@@ -51,7 +52,7 @@ class WitherbloomTheBalancerScenarioTest : FunSpec({
 
     test("Witherbloom's own affinity reduces its generic cost by the number of creatures you control") {
         val reg = registry()
-        val calc = CostCalculator(reg)
+        val calc = CostCalculator(reg, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val d = driver()
         d.initMirrorMatch(deck = Deck.of("Forest" to 20), startingLife = 20)
         val me = d.activePlayer!!
@@ -69,7 +70,7 @@ class WitherbloomTheBalancerScenarioTest : FunSpec({
 
     test("instant you cast gets affinity for creatures, but a vanilla creature you cast does not") {
         val reg = registry()
-        val calc = CostCalculator(reg)
+        val calc = CostCalculator(reg, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val d = driver()
         d.initMirrorMatch(deck = Deck.of("Forest" to 20), startingLife = 20)
         val me = d.activePlayer!!

@@ -3,11 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.rav.cards
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Stasis Cell
@@ -38,16 +38,16 @@ val StasisCell = card("Stasis Cell") {
         "Enchanted creature doesn't untap during its controller's untap step.\n" +
         "{3}{U}: Attach this Aura to target creature."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = GrantKeyword(AbilityFlag.DOESNT_UNTAP.name)
     }
 
     activatedAbility {
+        val creature = target(TargetFilter.Creature)
         cost = Costs.Mana("{3}{U}")
-        target = Targets.Creature
-        effect = Effects.AttachEquipment(EffectTarget.ContextTarget(0))
+        effect = Effects.AttachEquipment(creature)
         description = "{3}{U}: Attach this Aura to target creature."
     }
 

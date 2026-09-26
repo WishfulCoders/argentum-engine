@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.bro.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Bushwhack
@@ -38,12 +36,8 @@ val Bushwhack = card("Bushwhack") {
                 )
             }
             mode("Target creature you control fights target creature you don't control") {
-                val yourCreature = target("creature you control", TargetCreature(
-                    filter = TargetFilter(GameObjectFilter.Creature.youControl())
-                ))
-                val theirCreature = target("creature you don't control", TargetCreature(
-                    filter = TargetFilter(GameObjectFilter.Creature.opponentControls())
-                ))
+                val yourCreature = target(TargetFilter(GameObjectFilter.Creature.youControl()))
+                val theirCreature = target(TargetFilter(GameObjectFilter.Creature.opponentControls()))
                 effect = Effects.Fight(yourCreature, theirCreature)
             }
         }

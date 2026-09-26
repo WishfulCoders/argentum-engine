@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.m20.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever you gain life, put a +1/+1 counter on this creature.
  * As long as you have 25 or more life, this creature has double strike.
  *
- * The grow trigger uses [Triggers.YouGainLife] (fires once per life-gain event) placing a
+ * The grow trigger uses `Triggers.you.gainsLife()` (fires once per life-gain event) placing a
  * single +1/+1 counter on the source. The double-strike buff is a conditional [staticAbility]
  * gated on [Conditions.LifeAtLeast] (25) granting [Keyword.DOUBLE_STRIKE] to the source; it is
  * projected through the layer system so it turns on and off as the controller's life crosses 25.
@@ -38,8 +38,8 @@ val TwinbladePaladin = card("Twinblade Paladin") {
         "(It deals both first-strike and regular combat damage.)"
 
     triggeredAbility {
-        trigger = Triggers.YouGainLife
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.gainsLife()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Whenever you gain life, put a +1/+1 counter on this creature."
     }
 

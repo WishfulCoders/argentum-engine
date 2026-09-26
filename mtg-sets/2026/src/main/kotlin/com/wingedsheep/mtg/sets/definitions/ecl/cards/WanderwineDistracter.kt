@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 val WanderwineDistracter = card("Wanderwine Distracter") {
     manaCost = "{3}{U}"
@@ -15,8 +15,8 @@ val WanderwineDistracter = card("Wanderwine Distracter") {
     oracleText = "Whenever this creature becomes tapped, target creature an opponent controls gets -3/-0 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
-        val victim = target("creature", Targets.CreatureOpponentControls)
+        trigger = Triggers.self.becomesTapped()
+        val victim = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.ModifyStats(-3, 0, victim)
     }
 

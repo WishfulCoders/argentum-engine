@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CREATED_TOKENS
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Applied Geometry
@@ -39,24 +38,15 @@ val AppliedGeometry = card("Applied Geometry") {
         "it's a 0/0 Fractal creature in addition to its other types. Put six +1/+1 counters on it."
 
     spell {
-        val copyTarget = target(
-            "target non-Aura permanent you control",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.Permanent.youControl().notSubtype(Subtype("Aura")),
-                ),
-            ),
-        )
-        effect = Effects.Composite(
-            Effects.CreateTokenCopyOfTarget(
-                target = copyTarget,
-                overridePower = 0,
-                overrideToughness = 0,
-                addCardTypes = setOf("CREATURE"),
-                addedSubtypes = setOf(Subtype.FRACTAL),
-            ),
-            Effects.AddCountersToCollection(CREATED_TOKENS, Counters.PLUS_ONE_PLUS_ONE, 6),
-        )
+        val copyTarget = target(TargetFilter(GameObjectFilter.Permanent.youControl().notSubtype(Subtype("Aura"))))
+        effect = Effects.CreateTokenCopyOfTarget(
+            target = copyTarget,
+            overridePower = 0,
+            overrideToughness = 0,
+            addCardTypes = setOf("CREATURE"),
+            addedSubtypes = setOf(Subtype.FRACTAL),
+        ) then
+            Effects.AddCountersToCollection(CREATED_TOKENS, CounterType.PLUS_ONE_PLUS_ONE, 6)
     }
 
     metadata {

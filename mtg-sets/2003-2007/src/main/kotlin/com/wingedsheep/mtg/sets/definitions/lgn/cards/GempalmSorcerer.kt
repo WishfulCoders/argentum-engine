@@ -27,7 +27,7 @@ val GempalmSorcerer = card("Gempalm Sorcerer") {
     keywordAbility(KeywordAbility.cycling("{2}{U}"))
 
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
+        trigger = Triggers.self.isCycled()
         effect = Patterns.Group.grantKeywordToAll(Keyword.FLYING, GroupFilter.allCreaturesWithSubtype("Wizard"))
     }
 

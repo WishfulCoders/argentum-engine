@@ -1,22 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.drk.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.minus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Mind Bomb
@@ -44,33 +38,22 @@ val MindBomb = card("Mind Bomb") {
         "player equal to 3 minus the number of cards they discarded this way."
 
     spell {
-        effect = ForEachPlayerEffect(
+        effect = Effects.ForEachPlayer(
             players = Player.Each,
-            effects = listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Any),
-                    storeAs = "mindBombCandidates",
-                ),
-                SelectFromCollectionEffect(
-                    from = "mindBombCandidates",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(3)),
+            Effects.Pipeline {
+                val mindBombCandidates = gather(CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Any))
+                val mindBombDiscarded = chooseUpTo(
+                    3,
+                    from = mindBombCandidates,
                     chooser = Chooser.Controller,
-                    storeSelected = "mindBombDiscarded",
-                    prompt = "Discard up to three cards?",
-                ),
-                MoveCollectionEffect(
-                    from = "mindBombDiscarded",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.You),
-                    moveType = MoveType.Discard,
-                ),
-                Effects.DealDamage(
-                    DynamicAmount.Subtract(
-                        DynamicAmount.Fixed(3),
-                        DynamicAmount.DistinctEntitiesInCollections(listOf("mindBombDiscarded")),
-                    ),
+                    prompt = "Discard up to three cards?"
+                )
+                discard(mindBombDiscarded)
+                run(Effects.DealDamage(
+                    3 - DynamicAmounts.distinctEntitiesIn(mindBombDiscarded),
                     EffectTarget.PlayerRef(Player.You),
-                ),
-            ),
+                ))
+            },
         )
     }
 

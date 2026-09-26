@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Exclude
@@ -19,7 +19,7 @@ val Exclude = card("Exclude") {
     oracleText = "Counter target creature spell.\nDraw a card."
 
     spell {
-        target = Targets.CreatureSpell
+        val creatureSpell = target(TargetFilter.CreatureSpellOnStack)
         effect = Effects.CounterSpell() then Effects.DrawCards(1)
     }
 

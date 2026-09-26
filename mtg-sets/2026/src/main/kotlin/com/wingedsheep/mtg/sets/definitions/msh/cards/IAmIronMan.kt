@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * I Am Iron Man — Marvel Super Heroes #58
@@ -32,10 +31,7 @@ val IAmIronMan = card("I Am Iron Man") {
         "with base power and toughness 4/4 and gains flying.\nDraw a card."
 
     spell {
-        val t = target(
-            "target artifact or creature",
-            TargetPermanent(filter = TargetFilter.CreatureOrArtifact)
-        )
+        val t = target(TargetFilter.CreatureOrArtifact)
         effect = Effects.BecomeCreature(
             target = t,
             power = 4,

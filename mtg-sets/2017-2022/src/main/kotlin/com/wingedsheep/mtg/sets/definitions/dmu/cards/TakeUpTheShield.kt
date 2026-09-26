@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.dmu.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Take Up the Shield
@@ -26,10 +26,10 @@ val TakeUpTheShield = card("Take Up the Shield") {
         "(Damage and effects that say \"destroy\" don't destroy it.)"
 
     spell {
-        val t = target("target creature", TargetCreature())
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, t)
-            .then(Effects.GrantKeyword(Keyword.LIFELINK, t))
-            .then(Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t))
+        val t = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, t) then
+            Effects.GrantKeyword(Keyword.LIFELINK, t) then
+            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t)
     }
 
     metadata {

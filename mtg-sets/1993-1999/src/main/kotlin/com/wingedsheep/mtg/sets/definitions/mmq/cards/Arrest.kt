@@ -1,6 +1,5 @@
 package com.wingedsheep.mtg.sets.definitions.mmq.cards
 
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantAttack
@@ -8,6 +7,8 @@ import com.wingedsheep.sdk.scripting.CantBlock
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.PreventActivatedAbilities
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Arrest
@@ -33,7 +34,7 @@ val Arrest = card("Arrest") {
     oracleText = "Enchant creature\n" +
         "Enchanted creature can't attack or block, and its activated abilities can't be activated."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = CantAttack(filter = GroupFilter.attachedCreature())

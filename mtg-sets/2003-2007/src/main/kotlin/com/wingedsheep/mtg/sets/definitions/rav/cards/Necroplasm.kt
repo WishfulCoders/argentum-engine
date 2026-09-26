@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -8,10 +9,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Necroplasm
@@ -28,7 +26,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  *
  * The destroy filter reads the counter count off the source at resolution
  * (`manaValueEqualsDynamic` over an [EntityNumericProperty.CounterCount] on
- * [EntityReference.Source]) rather than baking a number in — the whole point of the card is that
+ * [EffectTarget.Self]) rather than baking a number in — the whole point of the card is that
  * the number moves. Necroplasm's own mana value is 3, so a third counter includes it in its own
  * sweep; nothing special is needed for that, it simply matches its own filter.
  *
@@ -47,21 +45,18 @@ val Necroplasm = card("Necroplasm") {
 
     // "At the beginning of your upkeep, put a +1/+1 counter on this creature."
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "At the beginning of your upkeep, put a +1/+1 counter on this creature."
     }
 
     // "At the beginning of your end step, destroy each creature with mana value equal to the
     //  number of +1/+1 counters on this creature."
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         effect = Effects.DestroyAll(
             GameObjectFilter.Creature.manaValueEqualsDynamic(
-                DynamicAmount.EntityProperty(
-                    EntityReference.Source,
-                    EntityNumericProperty.CounterCount(CounterTypeFilter.PlusOnePlusOne)
-                )
+                DynamicAmounts.countersOnSelf(CounterType.PLUS_ONE_PLUS_ONE)
             )
         )
         description = "At the beginning of your end step, destroy each creature with mana value " +

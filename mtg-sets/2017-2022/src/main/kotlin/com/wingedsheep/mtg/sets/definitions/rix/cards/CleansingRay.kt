@@ -2,12 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.rix.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Cleansing Ray
@@ -33,18 +31,11 @@ val CleansingRay = card("Cleansing Ray") {
     spell {
         modal {
             mode("Destroy target Vampire") {
-                val vampire = target(
-                    "target Vampire",
-                    TargetPermanent(
-                        filter = TargetFilter(
-                            GameObjectFilter.Permanent.withSubtype(Subtype.VAMPIRE)
-                        )
-                    )
-                )
+                val vampire = target(TargetFilter(GameObjectFilter.Permanent.withSubtype(Subtype.VAMPIRE)))
                 effect = Effects.Destroy(vampire)
             }
             mode("Destroy target enchantment") {
-                val enchantment = target("target enchantment", Targets.Enchantment)
+                val enchantment = target(TargetFilter.Enchantment)
                 effect = Effects.Destroy(enchantment)
             }
         }

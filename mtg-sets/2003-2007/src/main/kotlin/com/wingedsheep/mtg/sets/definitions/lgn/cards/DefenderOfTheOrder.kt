@@ -23,7 +23,7 @@ val DefenderOfTheOrder = card("Defender of the Order") {
     oracleText = "Morph {W}{W} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)\nWhen this creature is turned face up, creatures you control get +0/+2 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
+        trigger = Triggers.self.turnedFaceUp()
         effect = Patterns.Group.modifyStatsForAll(0, 2, GroupFilter.AllCreaturesYouControl)
     }
 

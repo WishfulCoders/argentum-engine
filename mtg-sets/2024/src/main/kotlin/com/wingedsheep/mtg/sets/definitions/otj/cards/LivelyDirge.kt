@@ -8,16 +8,10 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.SelectionRestriction
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Lively Dirge
@@ -51,7 +45,7 @@ val LivelyDirge = card("Lively Dirge") {
         "graveyard to the battlefield."
 
     spell {
-        effect = ModalEffect(
+        effect = Effects.Modal(
             modes = listOf(
                 // + {1} — Search your library for a card, put it into your graveyard, then shuffle.
                 Mode(
@@ -68,30 +62,23 @@ val LivelyDirge = card("Lively Dirge") {
                 // + {2} — Return up to two creature cards with total MV 4 or less from your
                 //         graveyard to the battlefield.
                 Mode(
-                    effect = Effects.Composite(
-                        listOf(
-                            GatherCardsEffect(
-                                source = CardSource.FromZone(
-                                    zone = Zone.GRAVEYARD,
-                                    player = Player.You,
-                                    filter = GameObjectFilter.Creature
-                                ),
-                                storeAs = "dirgeGraveyardCreatures"
-                            ),
-                            SelectFromCollectionEffect(
-                                from = "dirgeGraveyardCreatures",
-                                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(2)),
-                                restrictions = listOf(SelectionRestriction.TotalManaValueAtMost(4)),
-                                storeSelected = "dirgeChosen",
-                                prompt = "Choose up to two creature cards with total mana value 4 or less",
-                                selectedLabel = "Return to the battlefield"
-                            ),
-                            MoveCollectionEffect(
-                                from = "dirgeChosen",
-                                destination = CardDestination.ToZone(Zone.BATTLEFIELD, Player.You)
+                    effect = Effects.Pipeline {
+                        val dirgeGraveyardCreatures = gather(
+                            CardSource.FromZone(
+                                zone = Zone.GRAVEYARD,
+                                player = Player.You,
+                                filter = GameObjectFilter.Creature
                             )
                         )
-                    ),
+                        val dirgeChosen = chooseUpTo(
+                            2,
+                            from = dirgeGraveyardCreatures,
+                            restrictions = listOf(SelectionRestriction.TotalManaValueAtMost(4)),
+                            prompt = "Choose up to two creature cards with total mana value 4 or less",
+                            selectedLabel = "Return to the battlefield"
+                        )
+                        move(dirgeChosen, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You))
+                    },
                     description = "+ {2} — Return up to two creature cards with total mana value " +
                         "4 or less from your graveyard to the battlefield.",
                     additionalManaCost = "{2}"

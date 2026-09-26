@@ -3,15 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Knightfisher
@@ -34,21 +31,15 @@ val Knightfisher = card("Knightfisher") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter(
+        trigger = Triggers.another(GameObjectFilter(
                     cardPredicates = listOf(
                         CardPredicate.IsPermanent,
                         CardPredicate.HasSubtype(Subtype("Bird")),
                         CardPredicate.IsNontoken
                     ),
                     controllerPredicate = com.wingedsheep.sdk.scripting.predicates.ControllerPredicate.ControlledByYou
-                ),
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.OTHER
-        )
-        effect = CreateTokenEffect(
+                )).enters()
+        effect = Effects.CreateToken(
             count = 1,
             power = 1,
             toughness = 1,

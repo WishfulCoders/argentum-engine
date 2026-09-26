@@ -11,13 +11,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Random Encounter
@@ -54,36 +48,25 @@ val RandomEncounter = card("Random Encounter") {
         "Then exile it.)"
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                ShuffleLibraryEffect(),
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(4)),
-                    storeAs = "milled"
-                ),
-                MoveCollectionEffect(
-                    from = "milled",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD)
-                ),
-                MoveCollectionEffect(
-                    from = "milled",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD),
-                    filter = GameObjectFilter.Creature,
-                    markEnteredViaSourceAbility = true,
-                    storeMovedAs = "reanimated"
-                ),
-                ForEachInCollectionEffect(
-                    collection = "reanimated",
-                    effect = Effects.Composite(
-                        Effects.GrantKeyword(Keyword.HASTE, EffectTarget.Self, Duration.Permanent),
-                        CreateDelayedTriggerEffect(
-                            step = Step.END,
-                            effect = Effects.Move(EffectTarget.Self, Zone.HAND)
-                        )
-                    )
-                )
+        effect = Effects.Pipeline {
+            run(Effects.ShuffleLibrary())
+            val milled = gather(CardSource.TopOfLibrary(4))
+            toGraveyard(milled)
+            val reanimated = moveTracked(
+                milled,
+                CardDestination.ToZone(Zone.BATTLEFIELD),
+                filter = GameObjectFilter.Creature,
+                markEnteredViaSourceAbility = true
             )
-        )
+            run(Effects.ForEachInCollection(
+                collection = reanimated,
+                effect = Effects.GrantKeyword(Keyword.HASTE, EffectTarget.IterationEntity, Duration.Permanent) then
+                    Effects.CreateDelayedTrigger(
+                        step = Step.END,
+                        effect = Effects.Move(EffectTarget.IterationEntity, Zone.HAND)
+                    )
+            ))
+        }
     }
 
     keywordAbility(KeywordAbility.flashback("{6}{R}{R}"))

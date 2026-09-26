@@ -9,8 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
 
@@ -35,24 +33,18 @@ val WorldShaper = card("World Shaper") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         optional = true
         effect = Patterns.Library.mill(3)
         description = "Whenever this creature attacks, you may mill three cards."
     }
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Land),
-                storeAs = "graveyard_lands",
-            ),
-            MoveCollectionEffect(
-                from = "graveyard_lands",
-                destination = CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped),
-            ),
-        )
+        trigger = Triggers.self.dies()
+        effect = Effects.Pipeline {
+            val graveyardLands = gather(CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Land))
+            move(graveyardLands, CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped))
+        }
         description = "When this creature dies, return all land cards from your graveyard to " +
             "the battlefield tapped."
     }

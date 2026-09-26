@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Restoration Seminar
@@ -39,15 +38,7 @@ val RestorationSeminar = card("Restoration Seminar") {
         "your first main phases.)"
 
     spell {
-        val returnTarget = target(
-            "target nonland permanent card from your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.NonlandPermanent.ownedByYou(),
-                    zone = Zone.GRAVEYARD
-                )
-            )
-        )
+        val returnTarget = target(TargetFilter(GameObjectFilter.NonlandPermanent.ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.Move(returnTarget, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)
         paradigm()
     }

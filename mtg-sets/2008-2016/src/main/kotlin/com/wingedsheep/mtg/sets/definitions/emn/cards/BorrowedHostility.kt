@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /** Borrowed Hostility — Eldritch Moon #121. */
 val BorrowedHostility = card("Borrowed Hostility") {
@@ -19,11 +19,11 @@ val BorrowedHostility = card("Borrowed Hostility") {
     spell {
         modal(chooseCount = 2, minChooseCount = 1, additionalManaCostPerExtraMode = "{3}") {
             mode("Target creature gets +3/+0 until end of turn.") {
-                val creature = target("power target", TargetCreature())
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.ModifyStats(3, 0, creature)
             }
             mode("Target creature gains first strike until end of turn.") {
-                val creature = target("first strike target", TargetCreature())
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature)
             }
         }

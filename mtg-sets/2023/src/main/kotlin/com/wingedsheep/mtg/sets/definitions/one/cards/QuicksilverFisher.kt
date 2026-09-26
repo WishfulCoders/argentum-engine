@@ -27,7 +27,7 @@ val QuicksilverFisher = card("Quicksilver Fisher") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Hand.loot()
     }
 

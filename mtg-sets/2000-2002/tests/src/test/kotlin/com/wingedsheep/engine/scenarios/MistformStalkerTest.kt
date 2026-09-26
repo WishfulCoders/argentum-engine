@@ -54,8 +54,8 @@ class MistformStalkerTest : FunSpec({
             ActivatedAbility(
                 id = pumpAbilityId,
                 cost = Costs.Mana(ManaCost.parse("{2}{U}{U}")),
-                effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
-                    .then(Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self))
+                effect = Effects.ModifyStats(2, 2, EffectTarget.Self) then
+                    Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
             )
         )
     )

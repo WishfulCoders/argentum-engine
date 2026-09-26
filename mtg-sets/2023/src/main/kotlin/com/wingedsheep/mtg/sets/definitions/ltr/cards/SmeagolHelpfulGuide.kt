@@ -9,11 +9,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.GatherUntilMatchEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Sméagol, Helpful Guide
@@ -44,44 +42,37 @@ val SmeagolHelpfulGuide = card("Sméagol, Helpful Guide") {
         "your control and the rest into their graveyard."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.ControlledCreatureDiedThisTurn
         effect = Effects.TheRingTemptsYou()
     }
 
     triggeredAbility {
-        trigger = Triggers.RingTemptsYou
-        target("target opponent", Targets.Opponent)
-        effect = Effects.Composite(
-            listOf(
-                GatherUntilMatchEffect(
-                    player = Player.TargetOpponent,
-                    filter = GameObjectFilter.Land,
-                    storeMatch = "revealedLand",
-                    storeRevealed = "allRevealed"
+        trigger = Triggers.you.isTemptedByTheRing()
+        target(Targets.Opponent)
+        effect = Effects.Pipeline {
+            val (_, allRevealed) = gatherUntilMatch(GameObjectFilter.Land, player = Player.TargetOpponent)
+            reveal(allRevealed)
+            // The land enters under your control, tapped.
+            move(
+                allRevealed,
+                CardDestination.ToZone(
+                    Zone.BATTLEFIELD,
+                    player = Player.You,
+                    placement = ZonePlacement.Tapped
                 ),
-                RevealCollectionEffect(from = "allRevealed"),
-                // The land enters under your control, tapped.
-                MoveCollectionEffect(
-                    from = "allRevealed",
-                    filter = GameObjectFilter.Land,
-                    destination = CardDestination.ToZone(
-                        Zone.BATTLEFIELD,
-                        player = Player.You,
-                        placement = ZonePlacement.Tapped
-                    )
-                ),
-                // The rest go into the opponent's graveyard (they own them).
-                MoveCollectionEffect(
-                    from = "allRevealed",
-                    filter = GameObjectFilter.Nonland,
-                    destination = CardDestination.ToZone(
-                        Zone.GRAVEYARD,
-                        player = Player.TargetOpponent
-                    )
-                )
+                filter = GameObjectFilter.Land
             )
-        )
+            // The rest go into the opponent's graveyard (they own them).
+            move(
+                allRevealed,
+                CardDestination.ToZone(
+                    Zone.GRAVEYARD,
+                    player = Player.TargetOpponent
+                ),
+                filter = GameObjectFilter.Nonland
+            )
+        }
     }
 
     metadata {

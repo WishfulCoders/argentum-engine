@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Two riders, two different mechanisms, and they are not interchangeable:
  *
  * - **"one or more cards"** is CR 603.2c batch wording, so the trigger is
- *   [Triggers.YouDiscardOneOrMore] rather than the per-card `YouDiscard`. A discard of three cards
+ *   `Triggers.you.discards(batch = true)` rather than the per-card `YouDiscard`. A discard of three cards
  *   is one event and makes one Zombie, not three. Sequential discards inside one resolution
  *   ("discard a card, then discard a card") are separate events and would fire separately — which
  *   is exactly what the second rider is there to stop.
@@ -34,7 +34,7 @@ val DyingToServe = card("Dying to Serve") {
         "creature token. This ability triggers only once each turn."
 
     triggeredAbility {
-        trigger = Triggers.YouDiscardOneOrMore
+        trigger = Triggers.you.discards(batch = true)
         effect = Effects.CreateToken(
             power = 2,
             toughness = 2,

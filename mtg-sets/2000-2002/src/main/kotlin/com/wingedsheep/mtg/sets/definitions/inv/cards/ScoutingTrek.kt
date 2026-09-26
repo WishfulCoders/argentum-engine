@@ -4,15 +4,8 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
+import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -30,26 +23,16 @@ val ScoutingTrek = card("Scouting Trek") {
     oracleText = "Search your library for any number of basic land cards, reveal those cards, then shuffle and put them on top."
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.LIBRARY, filter = Filters.BasicLand),
-                    storeAs = "searchable"
-                ),
-                SelectFromCollectionEffect(
-                    from = "searchable",
-                    selection = SelectionMode.ChooseAnyNumber,
-                    storeSelected = "found",
-                    prompt = "Search your library for any number of basic land cards"
-                ),
-                RevealCollectionEffect(from = "found"),
-                ShuffleLibraryEffect(),
-                MoveCollectionEffect(
-                    from = "found",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Top)
-                )
+        effect = Effects.Pipeline {
+            val searchable = gather(CardSource.FromZone(Zone.LIBRARY, filter = Filters.BasicLand), search = true)
+            val found = chooseAnyNumber(
+                from = searchable,
+                prompt = "Search your library for any number of basic land cards"
             )
-        )
+            reveal(found)
+            run(Effects.ShuffleLibrary())
+            toLibraryTop(found, order = CardOrder.Preserve)
+        }
     }
 
     metadata {

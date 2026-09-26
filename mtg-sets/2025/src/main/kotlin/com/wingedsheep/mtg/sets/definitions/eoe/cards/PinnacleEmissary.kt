@@ -3,11 +3,8 @@ package com.wingedsheep.mtg.sets.definitions.eoe.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.SpellCastEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Pinnacle Emissary
@@ -27,10 +24,7 @@ val PinnacleEmissary = card("Pinnacle Emissary") {
         "Warp {U/R} (You may cast this card from your hand for its warp cost. Exile this creature at the beginning of the next end step, then you may cast it from exile on a later turn.)"
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = SpellCastEvent(spellFilter = GameObjectFilter.Artifact, player = Player.You),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.Artifact)
         effect = Effects.CreateDroneToken()
         description = "Whenever you cast an artifact spell, create a 1/1 colorless Drone artifact creature token with flying and \"This token can block only creatures with flying.\""
     }

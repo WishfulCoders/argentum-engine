@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantProtectionFromLinkedExiledCardTypes
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Mirror Golem — Mirrodin #208
@@ -42,9 +42,9 @@ val MirrorGolem = card("Mirror Golem") {
 
     // "Imprint — When this creature enters, you may exile target card from a graveyard."
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
-        val exiled = target("target card from a graveyard", Targets.CardInGraveyard)
+        val exiled = target(TargetFilter.CardInGraveyard)
         effect = Effects.ExileLinkedToSource(exiled)
         description = "Imprint — When this creature enters, you may exile target card from a graveyard."
     }

@@ -2,10 +2,10 @@ package com.wingedsheep.sdk.scripting
 
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.scripting.effects.CastFromCollectionWithoutPayingCostEffect
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
 import com.wingedsheep.sdk.scripting.effects.CopyCardIntoCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -52,7 +52,7 @@ object Paradigm {
         trigger = EventPattern.StepEvent(Step.PRECOMBAT_MAIN, Player.You),
         binding = TriggerBinding.SELF,
         activeZones = setOf(Zone.EXILE),
-        effect = MayEffect(
+        effect = Effects.May(
             CompositeEffect(
                 listOf(
                     CopyCardIntoCollectionEffect(source = EffectTarget.Self, storeAs = COPY_COLLECTION),

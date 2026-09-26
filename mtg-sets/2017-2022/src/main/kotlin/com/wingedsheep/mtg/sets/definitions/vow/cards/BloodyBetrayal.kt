@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Bloody Betrayal
@@ -24,13 +24,11 @@ val BloodyBetrayal = card("Bloody Betrayal") {
         "a card, Sacrifice this token: Draw a card.\")"
 
     spell {
-        val t = target("target creature", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.GainControl(t, Duration.EndOfTurn),
-            Effects.Untap(t),
-            Effects.GrantKeyword(Keyword.HASTE, t),
-            Effects.CreateBlood(1),
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.GainControl(t, Duration.EndOfTurn) then
+            Effects.Untap(t) then
+            Effects.GrantKeyword(Keyword.HASTE, t) then
+            Effects.CreateBlood(1)
     }
 
     metadata {

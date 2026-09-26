@@ -1,15 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CostGating
 import com.wingedsheep.sdk.scripting.CostModification
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Melek, Reforged Researcher — Murders at Karlov Manor #430
@@ -31,10 +32,7 @@ val MelekReforgedResearcher = card("Melek, Reforged Researcher") {
         "The first instant or sorcery spell you cast each turn costs {3} less to cast."
 
     dynamicStats(
-        DynamicAmount.Multiply(
-            DynamicAmount.Count(Player.You, Zone.GRAVEYARD, Filters.Unified.instantOrSorcery),
-            2,
-        ),
+        DynamicAmounts.count(Player.You, Zone.GRAVEYARD, Filters.Unified.instantOrSorcery) * 2,
     )
 
     staticAbility {

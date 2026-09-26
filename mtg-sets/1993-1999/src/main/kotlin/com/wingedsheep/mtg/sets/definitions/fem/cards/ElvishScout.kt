@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Elvish Scout
@@ -30,14 +29,8 @@ val ElvishScout = card("Elvish Scout") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{G}"), Costs.Tap)
-        val t = target(
-            "target attacking creature you control",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.attacking().youControl()))
-        )
-        effect = Effects.Composite(
-            Effects.Untap(t),
-            Effects.PreventCombatDamageToAndBy(t)
-        )
+        val t = target(TargetFilter(GameObjectFilter.Creature.attacking().youControl()))
+        effect = Effects.Untap(t) then Effects.PreventCombatDamageToAndBy(t)
     }
 
     metadata {

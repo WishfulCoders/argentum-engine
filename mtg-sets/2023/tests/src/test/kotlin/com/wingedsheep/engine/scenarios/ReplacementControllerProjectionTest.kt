@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.PreventDamage
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import io.kotest.core.spec.style.FunSpec
 
 /**
@@ -27,12 +27,12 @@ import io.kotest.core.spec.style.FunSpec
  * a replacement-effect permanent and assert the filter retargets to the thief. They cover the
  * two distinct comparison shapes:
  *  - `Player.You` / `Player.EachOpponent` against the losing player (`ModifyLifeLoss` — Bloodletter)
- *  - `RecipientFilter.You` against the damaged player (`PreventDamage`)
+ *  - `Recipient.You` against the damaged player (`PreventDamage`)
  */
 class ReplacementControllerProjectionTest : FunSpec({
 
     // 0/4 wall whose only ability is "prevent all damage that would be dealt to you" —
-    // a `PreventDamage` keyed to `RecipientFilter.You`, i.e. to the host's controller.
+    // a `PreventDamage` keyed to `Recipient.You`, i.e. to the host's controller.
     val aegisSentinel = CardDefinition.creature(
         name = "Aegis Sentinel",
         manaCost = ManaCost.parse("{2}{W}"),
@@ -41,7 +41,7 @@ class ReplacementControllerProjectionTest : FunSpec({
         toughness = 4,
         oracleText = "Prevent all damage that would be dealt to you.",
         script = CardScript.withReplacementEffects(
-            PreventDamage(appliesTo = EventPattern.DamageEvent(recipient = RecipientFilter.You)),
+            PreventDamage(appliesTo = EventPattern.DamageEvent(recipient = Recipient.You)),
         ),
     )
 

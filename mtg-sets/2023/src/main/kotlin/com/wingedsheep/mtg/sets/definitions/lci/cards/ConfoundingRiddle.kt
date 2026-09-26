@@ -4,13 +4,11 @@
 
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.ManaCost
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CounterCondition
-import com.wingedsheep.sdk.scripting.effects.CounterEffect
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 
 /**
@@ -34,8 +32,8 @@ val ConfoundingRiddle = card("Confounding Riddle") {
                 effect = Patterns.Library.lookAtTopAndKeep(count = 4, keepCount = 1)
             }
             mode("Counter target spell unless its controller pays {4}") {
-                val t = target("target", TargetSpell())
-                effect = CounterEffect(condition = CounterCondition.UnlessPaysMana(ManaCost.parse("{4}")))
+                val t = target(TargetFilter.SpellOnStack)
+                effect = Effects.CounterUnlessPays("{4}")
             }
         }
     }

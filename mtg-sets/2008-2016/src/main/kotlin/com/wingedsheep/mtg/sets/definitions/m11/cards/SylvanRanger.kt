@@ -24,7 +24,7 @@ val SylvanRanger = card("Sylvan Ranger") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         effect = Patterns.Library.searchLibrary(
             filter = Filters.BasicLand,

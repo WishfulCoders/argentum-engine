@@ -1,11 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.neo.cards
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Explosive Entry — Kamigawa: Neon Dynasty #139 (canonical printing)
@@ -24,12 +23,9 @@ val ExplosiveEntry = card("Explosive Entry") {
     oracleText = "Destroy up to one target artifact. Put a +1/+1 counter on up to one target creature."
 
     spell {
-        val artifact = target(
-            "artifact to destroy",
-            TargetObject(optional = true, filter = TargetFilter.Artifact),
-        )
-        val creature = target("creature to grow", TargetCreature(optional = true))
-        effect = Effects.Destroy(artifact) then Effects.AddCounters("+1/+1", 1, creature)
+        val artifact = target(TargetFilter.Artifact, optional = true)
+        val creature = target(TargetFilter.Creature, optional = true)
+        effect = Effects.Destroy(artifact) then Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature)
     }
 
     metadata {

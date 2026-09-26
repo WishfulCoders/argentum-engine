@@ -1,23 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
 import com.wingedsheep.sdk.core.Step
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedTriggeredAbility
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.TapUntapCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Teferi, Hero of Dominaria
@@ -38,48 +30,34 @@ val TeferiHeroOfDominaria = card("Teferi, Hero of Dominaria") {
 
     // +1: Draw a card. At the beginning of the next end step, untap up to two lands.
     loyaltyAbility(+1) {
-        effect = Effects.Composite(
-            listOf(
-                Effects.DrawCards(1),
-                CreateDelayedTriggerEffect(
-                    step = Step.END,
-                    effect = Effects.Composite(
-                        listOf(
-                            GatherCardsEffect(
-                                source = CardSource.ControlledPermanents(Player.You, GameObjectFilter.Land),
-                                storeAs = "lands"
-                            ),
-                            SelectFromCollectionEffect(
-                                from = "lands",
-                                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(2)),
-                                storeSelected = "toUntap"
-                            ),
-                            TapUntapCollectionEffect(
-                                collectionName = "toUntap",
-                                tap = false
-                            )
-                        )
-                    )
-                )
+        effect = Effects.DrawCards(1) then
+            Effects.CreateDelayedTrigger(
+                step = Step.END,
+                effect = Effects.Pipeline {
+                    val lands = gather(CardSource.ControlledPermanents(Player.You, GameObjectFilter.Land))
+                    val toUntap = chooseUpTo(2, from = lands)
+                    run(Effects.TapCollection(
+                        collection = toUntap,
+                        tap = false
+                    ))
+                }
             )
-        )
     }
 
     // −3: Put target nonland permanent into its owner's library third from the top.
     loyaltyAbility(-3) {
-        val nonland = target("nonland", Targets.NonlandPermanent)
+        val nonland = target(TargetFilter.NonlandPermanent)
         effect = Effects.PutIntoLibraryNthFromTop(nonland, positionFromTop = 2)
     }
 
     // −8: You get an emblem with "Whenever you draw a card, exile target permanent an opponent controls."
     loyaltyAbility(-8) {
         effect = Effects.CreateGlobalTriggeredAbility(
-            ability = TriggeredAbility.create(
-                trigger = Triggers.YouDraw.event,
-                binding = Triggers.YouDraw.binding,
-                effect = Effects.Exile(EffectTarget.ContextTarget(0)),
-                targetRequirement = Targets.PermanentOpponentControls
-            ),
+            ability = grantedTriggeredAbility {
+                trigger = Triggers.you.draws()
+                val permanentOpponentControls = target(TargetFilter.PermanentOpponentControls)
+                effect = Effects.Exile(permanentOpponentControls)
+            },
             descriptionOverride = "Whenever you draw a card, exile target permanent an opponent controls."
         )
     }

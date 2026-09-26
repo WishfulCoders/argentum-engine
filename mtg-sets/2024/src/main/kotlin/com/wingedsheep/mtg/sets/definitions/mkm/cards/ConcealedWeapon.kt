@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Concealed Weapon — Murders at Karlov Manor #117
@@ -26,7 +26,7 @@ import com.wingedsheep.sdk.scripting.ModifyStats
  *
  * The flip is a two-for-one: {3} gets a surprise 2/2 blocker down, then {2}{R} turns it into a real
  * Equipment *and* attaches it for free. That attachment is a genuine triggered ability
- * ([Triggers.TurnedFaceUp]) rather than a `disguiseFaceUpEffect` replacement, because the oracle text
+ * (`Triggers.self.turnedFaceUp()`) rather than a `disguiseFaceUpEffect` replacement, because the oracle text
  * says "When", and it matters here: it uses the stack, it targets, and per the official ruling it is
  * *not* an equip activation — no mana, and none of equip's sorcery-speed timing restriction. So the
  * Equipment can arrive attached mid-combat.
@@ -54,9 +54,9 @@ val ConcealedWeapon = card("Concealed Weapon") {
     disguise = "{2}{R}"
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        target = Targets.CreatureYouControl
-        effect = Effects.AttachEquipment()
+        val creatureYouControl = target(TargetFilter.CreatureYouControl)
+        trigger = Triggers.self.turnedFaceUp()
+        effect = Effects.AttachEquipment(target = creatureYouControl)
         description = "When this Equipment is turned face up, attach it to target creature you control."
     }
 

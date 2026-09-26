@@ -1,5 +1,6 @@
 package com.wingedsheep.gameserver.ai.benchmark
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.ai.engine.AIPlayer
 import com.wingedsheep.ai.engine.advisor.modules.BloomburrowAdvisorModule
 import com.wingedsheep.ai.engine.advisor.modules.OnslaughtAdvisorModule
@@ -232,8 +233,8 @@ private fun playGame(
     val processor = ActionProcessor(registry)
     val initializer = GameInitializer(registry)
     val enumerator = LegalActionEnumerator.create(registry)
-    val stateTransformer = ClientStateTransformer(registry)
-    val enricher = LegalActionEnricher(ManaSolver(registry), registry)
+    val stateTransformer = ClientStateTransformer(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
+    val enricher = LegalActionEnricher(ManaSolver(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)), registry)
 
     val initResult = initializer.initializeGame(
         GameConfig(

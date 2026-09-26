@@ -4,11 +4,10 @@
 
 package com.wingedsheep.mtg.sets.definitions.kld.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -27,12 +26,12 @@ val FiligreeFamiliar = card("Filigree Familiar") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = GainLifeEffect(2)
+        trigger = Triggers.self.enters()
+        effect = Effects.GainLife(2)
     }
     triggeredAbility {
-        trigger = Triggers.Dies
-        effect = DrawCardsEffect(1)
+        trigger = Triggers.self.dies()
+        effect = Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.UNCOMMON

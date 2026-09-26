@@ -1,6 +1,5 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -8,7 +7,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.*
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Crackling Doom
@@ -25,31 +23,19 @@ val CracklingDoom = card("Crackling Doom") {
 
     spell {
         effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.EachOpponent)) then
-                ForEachPlayerEffect(
+                Effects.ForEachPlayer(
                     players = Player.EachOpponent,
-                    effects = listOf(
-                        GatherCardsEffect(
-                            source = CardSource.ControlledPermanents(Player.You, GameObjectFilter.Creature),
-                            storeAs = "creatures"
-                        ),
-                        FilterCollectionEffect(
-                            from = "creatures",
-                            filter = CollectionFilter.GreatestPower,
-                            storeMatching = "greatest"
-                        ),
-                        SelectFromCollectionEffect(
-                            from = "greatest",
-                            selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
+                    Effects.Pipeline {
+                        val creatures = gather(CardSource.ControlledPermanents(Player.You, GameObjectFilter.Creature))
+                        val greatest = filter(creatures, CollectionFilter.GreatestPower)
+                        val toSacrifice = chooseExactly(
+                            1,
+                            from = greatest,
                             chooser = Chooser.Controller,
-                            storeSelected = "toSacrifice",
                             prompt = "Choose a creature to sacrifice"
-                        ),
-                        MoveCollectionEffect(
-                            from = "toSacrifice",
-                            destination = CardDestination.ToZone(Zone.GRAVEYARD),
-                            moveType = MoveType.Sacrifice
                         )
-                    )
+                        sacrifice(toSacrifice)
+                    }
                 )
     }
 

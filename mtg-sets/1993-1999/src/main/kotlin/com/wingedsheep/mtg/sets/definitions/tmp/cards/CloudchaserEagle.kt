@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.tmp.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Cloudchaser Eagle
@@ -27,8 +27,8 @@ val CloudchaserEagle = card("Cloudchaser Eagle") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val victim = target("target", Targets.Enchantment)
+        trigger = Triggers.self.enters()
+        val victim = target(TargetFilter.Enchantment)
         effect = Effects.Destroy(victim)
     }
 

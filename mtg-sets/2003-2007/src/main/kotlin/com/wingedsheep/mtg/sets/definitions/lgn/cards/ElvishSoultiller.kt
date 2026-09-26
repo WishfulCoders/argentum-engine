@@ -8,10 +8,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.ChooseCreatureTypeEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.dsl.Effects
@@ -33,26 +29,15 @@ val ElvishSoultiller = card("Elvish Soultiller") {
     oracleText = "When Elvish Soultiller dies, choose a creature type. Shuffle all creature cards of that type from your graveyard into your library."
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        effect = Effects.Composite(
-            listOf(
-                ChooseCreatureTypeEffect,
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Creature),
-                    storeAs = "graveyardCreatures"
-                ),
-                SelectFromCollectionEffect(
-                    from = "graveyardCreatures",
-                    selection = SelectionMode.All,
-                    matchChosenCreatureType = true,
-                    storeSelected = "chosen"
-                ),
-                MoveCollectionEffect(
-                    from = "chosen",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Shuffled)
-                )
+        trigger = Triggers.self.dies()
+        effect = Effects.Pipeline {
+            run(ChooseCreatureTypeEffect)
+            val graveyardCreatures = gather(
+                CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Creature)
             )
-        )
+            val chosen = selectAll(from = graveyardCreatures, matchChosenCreatureType = true)
+            move(chosen, CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Shuffled))
+        }
     }
 
     metadata {

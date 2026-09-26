@@ -1,15 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.isd.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Elder Cathar
@@ -30,14 +29,12 @@ val ElderCathar = card("Elder Cathar") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val creature = target("target creature you control", Targets.CreatureYouControl)
-        effect = ConditionalEffect(
-            condition = Conditions.TargetMatchesFilter(
-                GameObjectFilter.Creature.withSubtype(Subtype.HUMAN),
-            ),
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, creature),
-            elseEffect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creature),
+        trigger = Triggers.self.dies()
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.If(
+            condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.withSubtype(Subtype.HUMAN), creature),
+            then = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, creature),
+            otherwise = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature),
         )
     }
 

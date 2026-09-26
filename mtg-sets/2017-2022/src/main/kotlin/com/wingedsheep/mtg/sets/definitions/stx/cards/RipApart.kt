@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Rip Apart — Strixhaven: School of Mages #225 (canonical printing)
@@ -29,11 +30,11 @@ val RipApart = card("Rip Apart") {
     spell {
         modal {
             mode("Rip Apart deals 3 damage to target creature or planeswalker") {
-                val victim = target("target creature or planeswalker", Targets.CreatureOrPlaneswalker)
+                val victim = target(Targets.CreatureOrPlaneswalker)
                 effect = Effects.DealDamage(3, victim)
             }
             mode("Destroy target artifact or enchantment") {
-                val permanent = target("target artifact or enchantment", Targets.ArtifactOrEnchantment)
+                val permanent = target(TargetFilter.ArtifactOrEnchantment)
                 effect = Effects.Destroy(permanent)
             }
         }

@@ -5,7 +5,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Lifecrafter's Bestiary
@@ -15,7 +16,7 @@ import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
  * At the beginning of your upkeep, scry 1.
  * Whenever you cast a creature spell, you may pay {G}. If you do, draw a card.
  *
- * The second ability is a plain "you may pay … if you do" gate ([MayPayManaEffect]), not a
+ * The second ability is a plain "you may pay … if you do" gate ([Effects.MayPay]), not a
  * reflexive trigger — nothing is targeted, so the payment and the draw happen in one resolution.
  */
 val LifecraftersBestiary = card("Lifecrafter's Bestiary") {
@@ -26,13 +27,13 @@ val LifecraftersBestiary = card("Lifecrafter's Bestiary") {
         "Whenever you cast a creature spell, you may pay {G}. If you do, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.Scry(1)
     }
 
     triggeredAbility {
-        trigger = Triggers.YouCastCreature
-        effect = MayPayManaEffect(ManaCost.parse("{G}"), Effects.DrawCards(1))
+        trigger = Triggers.you.casts(GameObjectFilter.Creature)
+        effect = Effects.MayPay(ManaCost.parse("{G}"), Effects.DrawCards(1))
     }
 
     metadata {

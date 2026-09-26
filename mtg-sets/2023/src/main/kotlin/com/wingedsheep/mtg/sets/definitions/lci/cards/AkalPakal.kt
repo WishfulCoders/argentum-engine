@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Akal Pakal, First Among Equals
@@ -28,7 +29,7 @@ val AkalPakal = card("Akal Pakal, First Among Equals") {
     oracleText = "At the beginning of each player's end step, if an artifact entered the battlefield under your control this turn, look at the top two cards of your library. Put one of them into your hand and the other into your graveyard."
 
     triggeredAbility {
-        trigger = Triggers.EachEndStep
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
         interveningIf = Conditions.ArtifactEnteredBattlefieldThisTurn
         effect = Patterns.Library.lookAtTopAndKeep(count = 2, keepCount = 1)
     }

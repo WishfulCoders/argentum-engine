@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.Duration
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Slimy Kavu
@@ -28,7 +28,7 @@ val SlimyKavu = card("Slimy Kavu") {
     oracleText = "{T}: Target land becomes a Swamp until end of turn."
 
     activatedAbility {
-        val land = target("target land", Targets.Land)
+        val land = target(TargetFilter.Land)
         cost = AbilityCost.Tap
         effect = Effects.SetLandType(
             landType = "Swamp",

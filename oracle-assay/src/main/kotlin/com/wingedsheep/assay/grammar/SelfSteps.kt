@@ -5,6 +5,7 @@ import com.wingedsheep.assay.syntax.alternate
 import com.wingedsheep.assay.syntax.bind
 import com.wingedsheep.assay.syntax.phrase
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.ManaCost
@@ -23,7 +24,6 @@ import com.wingedsheep.sdk.scripting.effects.BecomeCreatureEffect
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
 import com.wingedsheep.sdk.scripting.effects.Gate
 import com.wingedsheep.sdk.scripting.effects.GatedEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 import com.wingedsheep.sdk.scripting.effects.RemoveKeywordEffect
@@ -168,7 +168,7 @@ object SelfSteps {
         subject: Phrase<Unit>,
         tag: String,
     ): List<Phrase<CardScript>> {
-        fun scriptFor(kind: String, count: Int) =
+        fun scriptFor(kind: CounterType, count: Int) =
             CardScript(spellEffect = Effects.AddCounters(kind, count, target))
         fun rule(template: String, name: String, quantity: Phrase<*>?) =
             phrase(template, name = name) {
@@ -189,7 +189,7 @@ object SelfSteps {
         // Oracle's spellings, over the SDK's dynamic counter effect — and no bare-"X" row, for the
         // reason [Amounts.namesX] gives: this clause is one [Triggers] lifts, and the announced X is
         // silently zero anywhere it lands but a spell.
-        fun dynamicScriptFor(kind: String, amount: DynamicAmount) =
+        fun dynamicScriptFor(kind: CounterType, amount: DynamicAmount) =
             CardScript(spellEffect = Effects.AddDynamicCounters(kind, amount, target))
         val defined = phrase<CardScript>(
             "put X {kind} counters on {self}${Amounts.WHERE_X}",
@@ -348,7 +348,7 @@ object SelfSteps {
      * English contracts the two into the causative "you may **have** ~ **become** …" rather than
      * repeating them. That is [Steps.mayCountedStep]'s contraction, one family over: both spellings
      * are generated from one call site so the pair cannot drift, and the model is the same
-     * `MayEffect` either way.
+     * `Effects.May` either way.
      */
     private fun selfAnimate(
         target: EffectTarget,
@@ -375,7 +375,7 @@ object SelfSteps {
                 colors = colour?.let { setOf(it.name) },
                 duration = Duration.EndOfTurn,
             )
-            return CardScript(spellEffect = if (may) MayEffect(animate) else animate)
+            return CardScript(spellEffect = if (may) Effects.May(animate) else animate)
         }
 
         val noun = "a {p}/{t} " +

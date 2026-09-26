@@ -26,7 +26,7 @@ val SarulfsPackmate = card("Sarulf's Packmate") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1)
     }
 

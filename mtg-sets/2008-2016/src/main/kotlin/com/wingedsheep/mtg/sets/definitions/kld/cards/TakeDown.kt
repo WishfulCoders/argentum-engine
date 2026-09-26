@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Take Down
@@ -33,7 +32,7 @@ val TakeDown = card("Take Down") {
     spell {
         modal {
             mode("Take Down deals 4 damage to target creature with flying") {
-                val t = target("target", TargetCreature(filter = TargetFilter.Creature.withKeyword(Keyword.FLYING)))
+                val t = target(TargetFilter.Creature.withKeyword(Keyword.FLYING))
                 effect = Effects.DealDamage(4, t)
             }
             mode("Take Down deals 1 damage to each creature with flying") {

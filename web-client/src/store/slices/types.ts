@@ -317,6 +317,8 @@ export interface XSelectionState {
   selectedX: number
   /** When true, this is a repeat count selector (not X cost) */
   isRepeatCount?: boolean
+  /** When true, this picks the optional extra mana paid for entry counters (Chorus of the Conclave) */
+  isAdditionalManaForCounters?: boolean
 }
 
 /**
@@ -753,6 +755,8 @@ export interface DrawAnimation {
   cardId: EntityId
   cardName: string | null
   imageUri: string | null
+  /** The drawing player — picks *which* opponent's library and hand the card flies between. */
+  playerId: EntityId
   isOpponent: boolean
   startTime: number
 }
@@ -825,6 +829,8 @@ export type PipelinePhase =
   | { type: 'modalModes' }
   | { type: 'counterDistribution' }
   | { type: 'xSelection' }
+  /** "You may pay any amount of mana" as an additional cost (Chorus of the Conclave). */
+  | { type: 'additionalManaForCounters' }
   | { type: 'delve' }
   | { type: 'convoke' }
   | { type: 'tapForGeneric' }
@@ -856,6 +862,7 @@ export type PhaseResult =
       distributedCounterRemovals: ReadonlyArray<{ entityId: EntityId; counterType: string; count: number }>
     }
   | { type: 'xSelection'; xValue: number; isRepeatCount?: boolean }
+  | { type: 'additionalManaForCounters'; amount: number }
   | { type: 'delve'; delvedCards: EntityId[]; modifiedManaCost: string }
   | { type: 'convoke'; convokedCreatures: Record<string, { color: string | null }> }
   | { type: 'tapForGeneric'; tapForGenericPermanents: EntityId[] }
@@ -952,7 +959,7 @@ export type GameStore = {
   submitDistributeDecision: (decisionId: string, distribution: Record<EntityId, number>) => void
   submitDamageAssignmentDecision: (decisionId: string, assignments: Record<EntityId, number>) => void
   submitCombatResolutionDecision: (decisionId: string, edges: ReadonlyArray<{ edgeId: string; amount: number }>) => void
-  submitColorDecision: (decisionId: string, color: string) => void
+  submitColorDecision: (decisionId: string, color: string, colors?: readonly string[]) => void
   submitManaSourcesDecision: (
     decisionId: string,
     selectedSources: readonly EntityId[],
@@ -1090,6 +1097,7 @@ export type GameStore = {
   followAction: boolean
   overviewMode: boolean
   collapsedSeats: readonly EntityId[]
+  expandedStackCardIds: ReadonlySet<EntityId>
   eliminatedSpectating: boolean
   eliminatedBottomSeatId: EntityId | null
   spectatorBottomSeatId: EntityId | null
@@ -1101,6 +1109,7 @@ export type GameStore = {
   toggleFollowAction: () => void
   toggleOverviewMode: () => void
   toggleSeatCollapsed: (playerId: EntityId) => void
+  setStackExpanded: (cardIds: readonly EntityId[], expanded: boolean) => void
   enterEliminatedSpectate: () => void
   setEliminatedBottomSeat: (playerId: EntityId | null) => void
   followViewTo: (playerId: EntityId) => void

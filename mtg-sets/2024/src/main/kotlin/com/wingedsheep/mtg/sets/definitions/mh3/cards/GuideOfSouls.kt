@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.mh3.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Guide of Souls
@@ -43,23 +42,24 @@ val GuideOfSouls = card("Guide of Souls") {
         "in addition to its other types."
 
     triggeredAbility {
-        trigger = Triggers.OtherCreatureEnters
-        effect = Effects.GainLife(1).then(Effects.GetEnergy(1))
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
+        effect = Effects.GainLife(1) then Effects.GetEnergy(1)
     }
 
     triggeredAbility {
-        trigger = Triggers.YouAttack
-        effect = ReflexiveTriggerEffect(
-            action = Effects.PayFixedCounters(Counters.ENERGY, 3),
+        trigger = Triggers.you.attacks()
+        effect = Effects.ReflexiveTrigger(
+            action = Effects.PayFixedCounters(CounterType.ENERGY, 3),
             optional = true,
-            reflexiveEffect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.ContextTarget(0))
-                .then(Effects.AddCounters(Counters.FLYING, 1, EffectTarget.ContextTarget(0)))
-                .then(Effects.AddCreatureType("Angel", EffectTarget.ContextTarget(0))),
-            reflexiveTargetRequirements = listOf(Targets.AttackingCreature),
             descriptionOverride = "You may pay {E}{E}{E}. When you do, put two +1/+1 counters " +
                 "and a flying counter on target attacking creature. It becomes an Angel in " +
                 "addition to its other types."
-        )
+        ) {
+            val attackingCreature = target(TargetFilter.AttackingCreature)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, attackingCreature) then
+                Effects.AddCounters(CounterType.FLYING, 1, attackingCreature) then
+                Effects.AddCreatureType("Angel", attackingCreature)
+        }
     }
 
     metadata {

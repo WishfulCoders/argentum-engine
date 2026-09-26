@@ -30,7 +30,7 @@ import com.wingedsheep.sdk.scripting.TriggeredAbility
  */
 class StateTriggerPoller(
     private val cardRegistry: CardRegistry,
-    private val conditionEvaluator: ConditionEvaluator = ConditionEvaluator()
+    private val conditionEvaluator: ConditionEvaluator
 ) {
 
     /**

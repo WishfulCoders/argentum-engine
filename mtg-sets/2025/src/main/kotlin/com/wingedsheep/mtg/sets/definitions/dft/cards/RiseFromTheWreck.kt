@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /** Rise from the Wreck — Aetherdrift #178. */
 val RiseFromTheWreck = card("Rise from the Wreck") {
@@ -20,46 +19,29 @@ val RiseFromTheWreck = card("Rise from the Wreck") {
         "graveyard to your hand."
 
     spell {
-        val creature = target(
-            "creature card",
-            TargetObject(optional = true, filter = TargetFilter.CreatureInYourGraveyard),
-        )
+        val creature = target(TargetFilter.CreatureInYourGraveyard, optional = true)
         val mount = target(
-            "Mount card",
-            TargetObject(
-                optional = true,
-                filter = TargetFilter(
-                    GameObjectFilter.Any.withSubtype(Subtype("Mount")).ownedByYou(),
-                    zone = Zone.GRAVEYARD,
-                ),
+            TargetFilter(
+                GameObjectFilter.Any.withSubtype(Subtype("Mount")).ownedByYou(),
+                zone = Zone.GRAVEYARD,
             ),
+            optional = true,
         )
         val vehicle = target(
-            "Vehicle card",
-            TargetObject(
-                optional = true,
-                filter = TargetFilter(
-                    GameObjectFilter.Any.withSubtype(Subtype.VEHICLE).ownedByYou(),
-                    zone = Zone.GRAVEYARD,
-                ),
+            TargetFilter(
+                GameObjectFilter.Any.withSubtype(Subtype.VEHICLE).ownedByYou(),
+                zone = Zone.GRAVEYARD,
             ),
+            optional = true,
         )
         val noAbilities = target(
-            "creature card with no abilities",
-            TargetObject(
-                optional = true,
-                filter = TargetFilter(
-                    Filters.CreatureWithNoAbilities.ownedByYou(),
-                    zone = Zone.GRAVEYARD,
-                ),
-            ),
+            TargetFilter(Filters.CreatureWithNoAbilities.ownedByYou(), zone = Zone.GRAVEYARD),
+            optional = true,
         )
-        effect = Effects.Composite(
-            Effects.ReturnToHand(creature),
-            Effects.ReturnToHand(mount),
-            Effects.ReturnToHand(vehicle),
-            Effects.ReturnToHand(noAbilities),
-        )
+        effect = Effects.ReturnToHand(creature) then
+            Effects.ReturnToHand(mount) then
+            Effects.ReturnToHand(vehicle) then
+            Effects.ReturnToHand(noAbilities)
     }
     metadata {
         rarity = Rarity.UNCOMMON

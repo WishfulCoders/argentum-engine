@@ -15,7 +15,7 @@ import io.kotest.matchers.shouldBe
  * "Survival — At the beginning of your second main phase, if Kona is tapped, you may put a
  *  permanent card from your hand onto the battlefield."
  *
- * Modeled as a [Triggers.YourPostcombatMain] intervening-if (SourceIsTapped) over
+ * Modeled as a `Triggers.you.beginningOf(Step.POSTCOMBAT_MAIN)` intervening-if (SourceIsTapped) over
  * [Patterns.Hand.putFromHand] with the Permanent filter; the "you may" is the up-to-one selection.
  */
 class KonaRescueBeastieScenarioTest : ScenarioTestBase() {

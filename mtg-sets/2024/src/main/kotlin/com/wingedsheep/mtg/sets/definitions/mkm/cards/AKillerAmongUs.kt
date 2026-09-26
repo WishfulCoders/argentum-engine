@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
@@ -10,10 +10,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * A Killer Among Us — Murders at Karlov Manor #167
@@ -64,16 +61,15 @@ val AKillerAmongUs = card("A Killer Among Us") {
         "deathtouch until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                power = 1,
-                toughness = 1,
-                colors = setOf(Color.WHITE),
-                creatureTypes = setOf("Human"),
-                name = "Human",
-                imageUri = "https://cards.scryfall.io/normal/front/d/7/d7cd1de1-9657-4262-be11-8279b3408e54.jpg?1783912610"
-            ),
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateToken(
+            power = 1,
+            toughness = 1,
+            colors = setOf(Color.WHITE),
+            creatureTypes = setOf("Human"),
+            name = "Human",
+            imageUri = "https://cards.scryfall.io/normal/front/d/7/d7cd1de1-9657-4262-be11-8279b3408e54.jpg?1783912610"
+        ) then
             Effects.CreateToken(
                 power = 1,
                 toughness = 1,
@@ -81,7 +77,7 @@ val AKillerAmongUs = card("A Killer Among Us") {
                 creatureTypes = setOf("Merfolk"),
                 name = "Merfolk",
                 imageUri = "https://cards.scryfall.io/normal/front/c/6/c63ce61b-480a-4da6-80f6-63e096902ae6.jpg?1783912609"
-            ),
+            ) then
             Effects.CreateToken(
                 power = 1,
                 toughness = 1,
@@ -89,33 +85,25 @@ val AKillerAmongUs = card("A Killer Among Us") {
                 creatureTypes = setOf("Goblin"),
                 name = "Goblin",
                 imageUri = "https://cards.scryfall.io/normal/front/c/d/cd6cd0d3-7973-49e6-9c1c-6f516a5d5fe5.jpg?1783912608"
-            ),
+            ) then
             // "Then" — the choice happens after the tokens exist, so the player picks knowing the
             // board. The three types are the only options; the note is secret to the chooser.
             Effects.SecretlyChooseCreatureType(
                 options = listOf("Human", "Merfolk", "Goblin"),
                 prompt = "Secretly choose Human, Merfolk, or Goblin"
             )
-        )
         description = "When this enchantment enters, create a 1/1 white Human creature token, a " +
             "1/1 blue Merfolk creature token, and a 1/1 red Goblin creature token. Then secretly " +
             "choose Human, Merfolk, or Goblin."
     }
 
     activatedAbility {
+        val creature = target(TargetFilter(GameObjectFilter.Creature.attacking().token()))
         cost = Costs.Composite(Costs.SacrificeSelf, Costs.RevealNotedCreatureType)
-        target = TargetCreature(
-            filter = TargetFilter(GameObjectFilter.Creature.attacking().token()),
-            id = "target attacking creature token"
-        )
-        effect = ConditionalEffect(
-            condition = Conditions.TargetMatchesFilter(
-                GameObjectFilter.Creature.withSubtypeFromVariable("chosenCreatureType")
-            ),
-            effect = Effects.Composite(
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 3, EffectTarget.ContextTarget(0)),
-                Effects.GrantKeyword(Keyword.DEATHTOUCH, EffectTarget.ContextTarget(0))
-            )
+        effect = Effects.If(
+            condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.withSubtypeFromVariable("chosenCreatureType"), creature),
+            then = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 3, creature) then
+                Effects.GrantKeyword(Keyword.DEATHTOUCH, creature)
         )
         description = "Sacrifice this enchantment, Reveal the creature type you chose: If target " +
             "attacking creature token is the chosen type, put three +1/+1 counters on it and it " +

@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Woodwraith Corrupter
@@ -46,10 +45,7 @@ val WoodwraithCorrupter = card("Woodwraith Corrupter") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{B}{G}"), Costs.Tap)
-        val forest = target(
-            "target Forest",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Land.withSubtype(Subtype.FOREST)))
-        )
+        val forest = target(TargetFilter(GameObjectFilter.Land.withSubtype(Subtype.FOREST)))
         effect = Effects.BecomeCreature(
             target = forest,
             power = 4,

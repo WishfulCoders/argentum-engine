@@ -9,14 +9,9 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.BecomeCreatureEffect
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GrantTriggeredAbilityEffect
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Great Hall of the Biblioplex
@@ -59,27 +54,24 @@ val GreatHallOfTheBiblioplex = card("Great Hall of the Biblioplex") {
 
     activatedAbility {
         cost = Costs.Mana("{5}")
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.Not(Conditions.SourceMatches(GameObjectFilter.Creature)),
-            effect = Effects.Composite(
-                BecomeCreatureEffect(
-                    target = EffectTarget.Self,
-                    power = DynamicAmount.Fixed(2),
-                    toughness = DynamicAmount.Fixed(4),
-                    creatureTypes = setOf("Wizard"),
-                    duration = Duration.Permanent,
-                ),
-                GrantTriggeredAbilityEffect(
+            then = Effects.BecomeCreature(
+                target = EffectTarget.Self,
+                power = 2,
+                toughness = 4,
+                creatureTypes = setOf("Wizard"),
+                duration = Duration.Permanent,
+            ) then
+                Effects.GrantTriggeredAbility(
                     ability = TriggeredAbility.create(
-                        trigger = Triggers.YouCastInstantOrSorcery.event,
-                        binding = TriggerBinding.SELF,
+                        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery),
                         effect = Effects.ModifyStats(power = 1, toughness = 0, target = EffectTarget.Self),
                         descriptionOverride = "Whenever you cast an instant or sorcery spell, this creature gets +1/+0 until end of turn.",
                     ),
                     target = EffectTarget.Self,
                     duration = Duration.Permanent,
                 ),
-            ),
         )
     }
 

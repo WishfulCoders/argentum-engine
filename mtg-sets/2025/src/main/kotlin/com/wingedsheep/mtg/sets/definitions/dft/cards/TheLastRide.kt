@@ -1,13 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.unaryMinus
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * The Last Ride
@@ -31,8 +32,8 @@ val TheLastRide = card("The Last Ride") {
 
     staticAbility {
         // -X/-X where X is your life total, applied to this Vehicle itself.
-        val negLife = DynamicAmount.Multiply(DynamicAmount.YourLifeTotal, -1)
-        ability = GrantDynamicStatsEffect(
+        val negLife = -DynamicAmounts.yourLifeTotal()
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
             powerBonus = negLife,
             toughnessBonus = negLife

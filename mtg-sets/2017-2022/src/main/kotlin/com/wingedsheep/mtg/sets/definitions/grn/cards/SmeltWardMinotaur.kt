@@ -1,10 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.grn.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Smelt-Ward Minotaur
@@ -22,8 +23,8 @@ val SmeltWardMinotaur = card("Smelt-Ward Minotaur") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.YouCastInstantOrSorcery
-        val creature = target("target", Targets.CreatureOpponentControls)
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
+        val creature = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.CantBlock(creature)
     }
 

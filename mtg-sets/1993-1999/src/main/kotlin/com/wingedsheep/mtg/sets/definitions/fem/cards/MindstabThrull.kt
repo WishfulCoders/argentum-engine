@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -30,12 +29,9 @@ val MindstabThrull = card("Mindstab Thrull") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.AttacksAndIsntBlocked
-        effect = MayEffect(
-            Effects.Composite(
-                SacrificeSelfEffect,
-                Effects.Discard(3, EffectTarget.PlayerRef(Player.DefendingPlayer))
-            ),
+        trigger = Triggers.self.attacksAndIsntBlocked()
+        effect = Effects.May(
+            SacrificeSelfEffect then Effects.Discard(3, EffectTarget.PlayerRef(Player.DefendingPlayer)),
             descriptionOverride = "sacrifice this creature. If you do, defending player discards three cards",
         )
         description = "Whenever this creature attacks and isn't blocked, you may sacrifice it. If you do, defending player discards three cards."

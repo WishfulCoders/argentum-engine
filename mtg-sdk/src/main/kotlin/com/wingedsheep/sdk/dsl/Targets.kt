@@ -1,226 +1,48 @@
 package com.wingedsheep.sdk.dsl
 
-import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.scripting.targets.AnyTarget
 import com.wingedsheep.sdk.scripting.targets.TargetChooser
-import com.wingedsheep.sdk.scripting.targets.TargetOther
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.targets.TargetCreatureOrPlaneswalker
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.scripting.targets.TargetCreatureOrPlayer
 import com.wingedsheep.sdk.scripting.targets.TargetOpponent
 import com.wingedsheep.sdk.scripting.targets.TargetOpponentOrPlaneswalker
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetOther
 import com.wingedsheep.sdk.scripting.targets.TargetPermanentOrPlayer
 import com.wingedsheep.sdk.scripting.targets.TargetPlayer
 import com.wingedsheep.sdk.scripting.targets.TargetPlayerOrPlaneswalker
 import com.wingedsheep.sdk.scripting.targets.TargetRequirement
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
 
 /**
- * Facade object providing convenient access to TargetRequirement types.
+ * The target shapes that are **not** a single game object: players, "any target", and the mixed
+ * "X or Y" shapes that span players and permanents.
  *
- * Usage:
  * ```kotlin
- * Targets.Creature
- * Targets.Any
- * Targets.Player
+ * val player = target(Targets.Player)
+ * val t = target(Targets.Any)
  * ```
+ *
+ * An object target — a permanent, a card in a graveyard, a spell or ability on the stack — has no
+ * preset here: it is declared by its filter, `target(TargetFilter.Creature.youControl())`, so every
+ * refinement composes instead of needing a name of its own (see [TargetDeclarations]).
  */
 object Targets {
 
     // =========================================================================
-    // Player Targeting
+    // Players
     // =========================================================================
 
-    /**
-     * Target any player.
-     */
+    /** Target player. */
     val Player: TargetRequirement = TargetPlayer()
 
-    /**
-     * Target opponent.
-     */
+    /** Target opponent. */
     val Opponent: TargetRequirement = TargetOpponent()
 
-    /**
-     * All players (for symmetric effects).
-     */
-    val AllPlayers: TargetRequirement = TargetPlayer()  // Engine handles "each player"
-
     // =========================================================================
-    // Creature Targeting
+    // Any target
     // =========================================================================
 
-    /**
-     * Target creature.
-     */
-    val Creature: TargetRequirement = TargetCreature()
-
-    /**
-     * Target creature you control.
-     */
-    val CreatureYouControl: TargetRequirement = TargetCreature(filter = TargetFilter.CreatureYouControl)
-
-    /**
-     * Another target creature you control (excludes the source).
-     */
-    val OtherCreatureYouControl: TargetRequirement =
-        TargetCreature(filter = TargetFilter.OtherCreatureYouControl)
-
-    /**
-     * Target creature an opponent controls.
-     */
-    val CreatureOpponentControls: TargetRequirement = TargetCreature(filter = TargetFilter.CreatureOpponentControls)
-
-    /**
-     * Target attacking creature.
-     */
-    val AttackingCreature: TargetRequirement = TargetCreature(filter = TargetFilter.AttackingCreature)
-
-    /**
-     * Target blocking creature.
-     */
-    val BlockingCreature: TargetRequirement = TargetCreature(filter = TargetFilter.BlockingCreature)
-
-    /**
-     * Target tapped creature.
-     */
-    val TappedCreature: TargetRequirement = TargetCreature(filter = TargetFilter.TappedCreature)
-
-    /**
-     * Target face-down creature you control.
-     */
-    val FaceDownCreatureYouControl: TargetRequirement =
-        TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.faceDown().youControl()))
-
-    /**
-     * Target creature with a specific keyword.
-     */
-    fun CreatureWithKeyword(keyword: Keyword): TargetRequirement =
-        TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.withKeyword(keyword)))
-
-    /**
-     * Target creature with a specific color.
-     */
-    fun CreatureWithColor(color: Color): TargetRequirement =
-        TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.withColor(color)))
-
-    /**
-     * Target creature with power at most N.
-     */
-    fun CreatureWithPowerAtMost(maxPower: Int): TargetRequirement =
-        TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.powerAtMost(maxPower)))
-
-    /**
-     * Target up to N creatures.
-     */
-    fun UpToCreatures(count: Int): TargetRequirement =
-        TargetCreature(count = count, optional = true)
-
-    /**
-     * Target non-outlaw creature — i.e. a creature without any of Assassin,
-     * Mercenary, Pirate, Rogue, or Warlock subtypes (Outlaws of Thunder Junction).
-     */
-    val NonOutlawCreature: TargetRequirement =
-        TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.notAnyOfSubtypes(Subtype.OUTLAW_TYPES)))
-
-    // =========================================================================
-    // Permanent Targeting
-    // =========================================================================
-
-    /**
-     * Target permanent.
-     */
-    val Permanent: TargetRequirement = TargetPermanent()
-
-    /**
-     * Target nonland permanent.
-     */
-    val NonlandPermanent: TargetRequirement = TargetPermanent(filter = TargetFilter.NonlandPermanent)
-
-    /**
-     * Another target nonland permanent (excludes the source).
-     * Braided Net's "Tap another target nonland permanent."
-     */
-    val OtherNonlandPermanent: TargetRequirement = TargetPermanent(filter = TargetFilter.OtherNonlandPermanent)
-
-    /**
-     * Target artifact.
-     */
-    val Artifact: TargetRequirement = TargetPermanent(filter = TargetFilter.Artifact)
-
-    /**
-     * Target enchantment.
-     */
-    val Enchantment: TargetRequirement = TargetPermanent(filter = TargetFilter.Enchantment)
-
-    /**
-     * Target creature or enchantment.
-     */
-    val CreatureOrEnchantment: TargetRequirement = TargetPermanent(filter = TargetFilter.CreatureOrEnchantment)
-
-    /**
-     * Target artifact or enchantment.
-     */
-    val ArtifactOrEnchantment: TargetRequirement = TargetPermanent(filter = TargetFilter.ArtifactOrEnchantment)
-
-    /**
-     * Target creature or artifact.
-     */
-    val CreatureOrArtifact: TargetRequirement = TargetPermanent(filter = TargetFilter.CreatureOrArtifact)
-
-    /**
-     * Target artifact or land.
-     */
-    val ArtifactOrLand: TargetRequirement = TargetPermanent(filter = TargetFilter.ArtifactOrLand)
-
-    /**
-     * Target artifact, enchantment, or land (Creeping Mold).
-     */
-    val ArtifactEnchantmentOrLand: TargetRequirement =
-        TargetPermanent(filter = TargetFilter.ArtifactEnchantmentOrLand)
-
-    /**
-     * Target land.
-     */
-    val Land: TargetRequirement = TargetPermanent(filter = TargetFilter.Land)
-
-    /**
-     * Target permanent you control — "target permanent you control gains protection …"
-     * (Razor Barrier). The mirror of [PermanentOpponentControls].
-     */
-    val PermanentYouControl: TargetRequirement = TargetPermanent(filter = TargetFilter.PermanentYouControl)
-
-    /**
-     * Target permanent an opponent controls.
-     */
-    val PermanentOpponentControls: TargetRequirement = TargetPermanent(filter = TargetFilter.PermanentOpponentControls)
-
-    /**
-     * Target **token** you control — any token permanent, not just a creature token. "Target token
-     * you control becomes a copy of it" (Kaya, Spirits' Justice) is deliberately wide enough to
-     * turn a Clue or a Treasure into a creature.
-     */
-    val TokenYouControl: TargetRequirement = TargetPermanent(filter = TargetFilter.TokenYouControl)
-
-    /**
-     * Target planeswalker (any player's) — "destroy target planeswalker" (Graf Reaver).
-     */
-    val Planeswalker: TargetRequirement = TargetPermanent(filter = TargetFilter.Planeswalker)
-
-    // =========================================================================
-    // Combined Targeting
-    // =========================================================================
-
-    /**
-     * Any target (creature, player, planeswalker, or battle).
-     */
+    /** Any target (creature, player, planeswalker, or battle). */
     val Any: TargetRequirement = AnyTarget()
 
     /** Any damageable target satisfying [filter], including player candidates. */
@@ -230,7 +52,7 @@ object Targets {
      * "Any target of an opponent's choice" — a real target of your spell/ability that an
      * opponent selects (Cuombajj Witches). Announced and resolved like any target, with
      * legality (hexproof/protection) measured relative to you, the controller. List it after
-     * the controller-chosen targets in a script. See [com.wingedsheep.sdk.scripting.targets.TargetChooser].
+     * the controller-chosen targets in a script. See [TargetChooser].
      */
     val AnyChosenByOpponent: TargetRequirement = AnyTarget(chooser = TargetChooser.Opponent)
 
@@ -241,9 +63,11 @@ object Targets {
     val AnyOtherThanEnchantedCreature: TargetRequirement =
         TargetOther(AnyTarget(), excludeAttachedCreature = true)
 
-    /**
-     * Target creature or player.
-     */
+    // =========================================================================
+    // Mixed shapes
+    // =========================================================================
+
+    /** Target creature or player. */
     val CreatureOrPlayer: TargetRequirement = TargetCreatureOrPlayer()
 
     /**
@@ -253,295 +77,12 @@ object Targets {
      */
     val PermanentOrPlayer: TargetRequirement = TargetPermanentOrPlayer()
 
-    /**
-     * Target creature or planeswalker.
-     */
+    /** Target creature or planeswalker. */
     val CreatureOrPlaneswalker: TargetRequirement = TargetCreatureOrPlaneswalker()
 
-    /**
-     * Target player or planeswalker.
-     */
+    /** Target player or planeswalker. */
     val PlayerOrPlaneswalker: TargetRequirement = TargetPlayerOrPlaneswalker()
 
-    /**
-     * Target opponent or planeswalker.
-     */
+    /** Target opponent or planeswalker. */
     val OpponentOrPlaneswalker: TargetRequirement = TargetOpponentOrPlaneswalker()
-
-    // =========================================================================
-    // Graveyard Targeting
-    // =========================================================================
-
-    /**
-     * Target card in a graveyard.
-     */
-    val CardInGraveyard: TargetRequirement = TargetObject(filter = TargetFilter.CardInGraveyard)
-
-    /**
-     * Target creature card in a graveyard (any player's graveyard).
-     */
-    val CreatureCardInGraveyard: TargetRequirement =
-        TargetObject(filter = TargetFilter.CreatureInGraveyard)
-
-    /**
-     * Target creature card in YOUR graveyard.
-     * Used for cards like Breath of Life, Zombify, etc.
-     */
-    val CreatureCardInYourGraveyard: TargetRequirement =
-        TargetObject(filter = TargetFilter.CreatureInYourGraveyard)
-
-    /**
-     * Target instant or sorcery card in a graveyard.
-     */
-    val InstantOrSorceryInGraveyard: TargetRequirement =
-        TargetObject(filter = TargetFilter.InstantOrSorceryInGraveyard)
-
-    /**
-     * Target instant or sorcery card in YOUR graveyard — "return target instant or sorcery card
-     * from your graveyard to your hand" (Repository Skaab).
-     */
-    val InstantOrSorceryInYourGraveyard: TargetRequirement =
-        TargetObject(filter = TargetFilter.InstantOrSorceryInYourGraveyard)
-
-    // =========================================================================
-    // Spell Targeting
-    // =========================================================================
-
-    /**
-     * Target spell.
-     */
-    val Spell: TargetRequirement = TargetSpell()
-
-    /**
-     * Target creature spell.
-     */
-    val CreatureSpell: TargetRequirement = TargetSpell(filter = TargetFilter.CreatureSpellOnStack)
-
-    /**
-     * Target noncreature spell.
-     */
-    val NoncreatureSpell: TargetRequirement = TargetSpell(filter = TargetFilter.NoncreatureSpellOnStack)
-
-    /**
-     * Target creature or sorcery spell.
-     */
-    val CreatureOrSorcerySpell: TargetRequirement = TargetSpell(filter = TargetFilter.CreatureOrSorcerySpellOnStack)
-
-    /**
-     * Target instant or sorcery spell.
-     */
-    val InstantOrSorcerySpell: TargetRequirement = TargetSpell(filter = TargetFilter.InstantOrSorcerySpellOnStack)
-
-    /**
-     * Any number of target instant and/or sorcery spells (e.g., Display of Power).
-     */
-    val AnyNumberOfInstantOrSorcerySpells: TargetRequirement =
-        TargetSpell(filter = TargetFilter.InstantOrSorcerySpellOnStack, unlimited = true)
-
-    /**
-     * Target instant or sorcery spell you control.
-     */
-    val InstantOrSorcerySpellYouControl: TargetRequirement = TargetSpell(filter = TargetFilter.InstantOrSorcerySpellOnStack.youControl())
-
-    /**
-     * Target creature spell you control (e.g. Choreographed Sparks' "Copy target creature
-     * spell you control").
-     */
-    val CreatureSpellYouControl: TargetRequirement = TargetSpell(filter = TargetFilter.CreatureSpellOnStack.youControl())
-
-    /**
-     * Target spell you control, of any type (e.g. Slick Imitator's "Copy target spell you
-     * control"). The unrestricted sibling of [InstantOrSorcerySpellYouControl] and
-     * [CreatureSpellYouControl].
-     */
-    val SpellYouControl: TargetRequirement = TargetSpell(filter = TargetFilter.SpellOnStack.youControl())
-
-    /**
-     * Target spell you don't control.
-     * In multiplayer this matches any spell controlled by an opponent.
-     */
-    val SpellYouDontControl: TargetRequirement = TargetSpell(filter = TargetFilter.SpellOnStack.opponentControls())
-
-    /**
-     * Target spell with mana value exactly N.
-     */
-    fun SpellWithManaValue(manaValue: Int): TargetRequirement =
-        TargetSpell(filter = TargetFilter.SpellOnStack.manaValue(manaValue))
-
-    /**
-     * Target spell with mana value N or less.
-     */
-    fun SpellWithManaValueAtMost(manaValue: Int): TargetRequirement =
-        TargetSpell(filter = TargetFilter.SpellOnStack.manaValueAtMost(manaValue))
-
-    /**
-     * Target spell with mana value N or greater.
-     */
-    fun SpellWithManaValueAtLeast(manaValue: Int): TargetRequirement =
-        TargetSpell(filter = TargetFilter.SpellOnStack.manaValueAtLeast(manaValue))
-
-    /**
-     * Target activated or triggered ability on the stack.
-     */
-    val ActivatedOrTriggeredAbility: TargetRequirement = TargetObject(
-        filter = TargetFilter.ActivatedOrTriggeredAbilityOnStack
-    )
-
-    /**
-     * Target activated ability on the stack (not triggered abilities; mana abilities can't be targeted).
-     */
-    val ActivatedAbility: TargetRequirement = TargetObject(
-        filter = TargetFilter.ActivatedAbilityOnStack
-    )
-
-    /**
-     * Target an instant spell, sorcery spell, activated ability, or triggered ability on the stack
-     * — the "copy target instant/sorcery spell, activated ability, or triggered ability" clause
-     * (Return the Favor). Pair with [com.wingedsheep.sdk.dsl.Effects.CopyTargetSpellOrAbility].
-     */
-    val InstantSorcerySpellOrAbility: TargetRequirement = TargetObject(
-        filter = TargetFilter.InstantSorcerySpellOrAbilityOnStack
-    )
-
-    /**
-     * Target an instant spell, sorcery spell, or triggered ability on the stack — the Spider-Sense
-     * counter clause. Narrower than [InstantSorcerySpellOrAbility] (activated abilities excluded).
-     * Pair with [com.wingedsheep.sdk.dsl.Effects.CounterSpellOrAbility].
-     */
-    val InstantSorceryOrTriggeredAbility: TargetRequirement = TargetObject(
-        filter = TargetFilter.InstantSorcerySpellOrTriggeredAbilityOnStack
-    )
-
-    /**
-     * Target triggered ability you control on the stack.
-     */
-    val TriggeredAbilityYouControl: TargetRequirement = TargetObject(
-        filter = TargetFilter.TriggeredAbilityOnStack.youControl()
-    )
-
-    /**
-     * Target activated or triggered ability you control on the stack (mana abilities never use the
-     * stack, so they're excluded automatically). The "copy target activated or triggered ability
-     * you control" clause — Gogo, Master of Mimicry. Pair with
-     * [com.wingedsheep.sdk.dsl.Effects.CopyTargetSpellOrAbility].
-     */
-    val ActivatedOrTriggeredAbilityYouControl: TargetRequirement = TargetObject(
-        filter = TargetFilter.ActivatedOrTriggeredAbilityOnStack.youControl()
-    )
-
-    /**
-     * Target activated or triggered ability you control on the stack **from a source matching
-     * [sourceFilter]** — the "from a creature source" (Echo, Perceptive Prodigy) / "from an
-     * artifact source" (Scientist Supreme of A.I.M.) narrowing of
-     * [ActivatedOrTriggeredAbilityYouControl].
-     *
-     * The restriction is on the ability's source per CR 113.7, not on the ability object itself
-     * (which has no characteristics of its own), and is matched with last known information when
-     * the source has already left the battlefield — a dead creature's dies trigger is still "from a
-     * creature source". See [com.wingedsheep.sdk.scripting.predicates.CardPredicate.AbilitySourceMatches].
-     * Pair with [com.wingedsheep.sdk.dsl.Effects.CopyTargetSpellOrAbility].
-     */
-    fun ActivatedOrTriggeredAbilityYouControlFrom(sourceFilter: GameObjectFilter): TargetRequirement =
-        TargetObject(
-            filter = TargetFilter.ActivatedOrTriggeredAbilityOnStack
-                .youControl()
-                .abilitySourceMatches(sourceFilter)
-        )
-
-    /**
-     * Target spell or ability with a single target.
-     * The single-target restriction is enforced at resolution time by the executor.
-     */
-    val SpellOrAbilityWithSingleTarget: TargetRequirement = TargetObject(
-        filter = TargetFilter.SpellOrAbilityOnStack
-    )
-
-    /**
-     * Target spell, activated ability, or triggered ability on the stack — "counter target spell,
-     * activated ability, or triggered ability" (Overcharged Amalgam). Any object in the stack zone
-     * qualifies; mana abilities never use the stack, so they're excluded automatically. Pair with
-     * [com.wingedsheep.sdk.dsl.Effects.CounterSpellOrAbility].
-     */
-    val SpellOrAbility: TargetRequirement = TargetObject(
-        filter = TargetFilter.SpellOrAbilityOnStack
-    )
-
-    // =========================================================================
-    // Unified Target Filters (NEW - composable predicate-based targeting)
-    // =========================================================================
-
-    /**
-     * Unified target filter namespace providing composable, predicate-based targeting.
-     *
-     * These filters use the new unified filter architecture. They can be used
-     * for effect targeting where you need to specify what kind of objects an
-     * effect should target.
-     *
-     * Usage:
-     * ```kotlin
-     * // Simple creature target
-     * Targets.Unified.creature
-     *
-     * // Tapped creature target
-     * Targets.Unified.tappedCreature
-     *
-     * // Custom: black creature with power 2 or less
-     * Targets.Unified.creature { withColor(Color.BLACK).powerAtMost(2) }
-     *
-     * // Card in graveyard
-     * Targets.Unified.creatureInGraveyard
-     * ```
-     */
-    object Unified {
-        // Battlefield creature targets
-        val creature: TargetFilter = TargetFilter.Creature
-        val creatureYouControl: TargetFilter = TargetFilter.CreatureYouControl
-        val creatureOpponentControls: TargetFilter = TargetFilter.CreatureOpponentControls
-        val otherCreature: TargetFilter = TargetFilter.OtherCreature
-        val otherCreatureYouControl: TargetFilter = TargetFilter.OtherCreatureYouControl
-        val tappedCreature: TargetFilter = TargetFilter.TappedCreature
-        val untappedCreature: TargetFilter = TargetFilter.UntappedCreature
-        val attackingCreature: TargetFilter = TargetFilter.AttackingCreature
-        val blockingCreature: TargetFilter = TargetFilter.BlockingCreature
-        val attackingOrBlockingCreature: TargetFilter = TargetFilter.AttackingOrBlockingCreature
-
-        // Battlefield permanent targets
-        val permanent: TargetFilter = TargetFilter.Permanent
-        val permanentYouControl: TargetFilter = TargetFilter.PermanentYouControl
-        val nonlandPermanent: TargetFilter = TargetFilter.NonlandPermanent
-        val nonlandPermanentOpponentControls: TargetFilter = TargetFilter.NonlandPermanentOpponentControls
-        val artifact: TargetFilter = TargetFilter.Artifact
-        val enchantment: TargetFilter = TargetFilter.Enchantment
-        val land: TargetFilter = TargetFilter.Land
-        val planeswalker: TargetFilter = TargetFilter.Planeswalker
-
-        // Graveyard targets
-        val cardInGraveyard: TargetFilter = TargetFilter.CardInGraveyard
-        val creatureInGraveyard: TargetFilter = TargetFilter.CreatureInGraveyard
-        val instantOrSorceryInGraveyard: TargetFilter = TargetFilter.InstantOrSorceryInGraveyard
-
-        // Stack targets
-        val spell: TargetFilter = TargetFilter.SpellOnStack
-        val creatureSpell: TargetFilter = TargetFilter.CreatureSpellOnStack
-        val noncreatureSpell: TargetFilter = TargetFilter.NoncreatureSpellOnStack
-        val instantOrSorcerySpell: TargetFilter = TargetFilter.InstantOrSorcerySpellOnStack
-
-        // Builder for custom creature filters
-        fun creature(builder: GameObjectFilter.() -> GameObjectFilter): TargetFilter =
-            TargetFilter(GameObjectFilter.Creature.builder())
-
-        // Builder for custom permanent filters
-        fun permanent(builder: GameObjectFilter.() -> GameObjectFilter): TargetFilter =
-            TargetFilter(GameObjectFilter.Permanent.builder())
-
-        // Target in specific zone
-        fun inGraveyard(builder: GameObjectFilter.() -> GameObjectFilter = { this }): TargetFilter =
-            TargetFilter(GameObjectFilter.Any.builder(), zone = Zone.GRAVEYARD)
-
-        fun onStack(builder: GameObjectFilter.() -> GameObjectFilter = { this }): TargetFilter =
-            TargetFilter(GameObjectFilter.Any.builder(), zone = Zone.STACK)
-
-        fun inExile(builder: GameObjectFilter.() -> GameObjectFilter = { this }): TargetFilter =
-            TargetFilter(GameObjectFilter.Any.builder(), zone = Zone.EXILE)
-    }
 }

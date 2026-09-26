@@ -21,7 +21,7 @@ val SpireBarrage = card("Spire Barrage") {
     oracleText = "Spire Barrage deals damage to any target equal to the number of Mountains you control."
 
     spell {
-        val anyTarget = target("any target", Targets.Any)
+        val anyTarget = target(Targets.Any)
         effect = Effects.DealDamage(
             DynamicAmounts.battlefield(Player.You, GameObjectFilter.Land.withSubtype("Mountain")).count(),
             anyTarget,

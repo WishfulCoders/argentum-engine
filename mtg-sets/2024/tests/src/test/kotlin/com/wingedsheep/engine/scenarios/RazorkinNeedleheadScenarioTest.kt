@@ -17,7 +17,7 @@ import io.kotest.matchers.shouldBe
  * - The first-strike clause is a conditionally-active static ability
  *   (`GrantKeyword(FIRST_STRIKE, source())` gated on `Conditions.IsYourTurn`): present on your
  *   turn, absent on the opponent's.
- * - The draw-punisher is `Triggers.OpponentDraws` → `DealDamage(1, TriggeringPlayer, source = Self)`.
+ * - The draw-punisher is `Triggers.anOpponent.draws()` → `DealDamage(1, TriggeringPlayer, source = Self)`.
  *   The plain OpponentDraws variant has no draw-step exemption, so the opponent's turn-based
  *   for-turn draw fires it.
  */

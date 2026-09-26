@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.core.CardType
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.EffectChoice
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Razor Barrier — Mirrodin #17
@@ -32,7 +32,7 @@ val RazorBarrier = card("Razor Barrier") {
         "of your choice until end of turn."
 
     spell {
-        val permanent = target("target permanent you control", Targets.PermanentYouControl)
+        val permanent = target(TargetFilter.PermanentYouControl)
         effect = Effects.ChooseAction(
             listOf(
                 EffectChoice(

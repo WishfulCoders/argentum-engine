@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Costs
 
 /**
@@ -34,17 +33,11 @@ val PyrrhicStrike = card("Pyrrhic Strike") {
     spell {
         modal(chooseCount = 2, minChooseCount = 1, chooseAllIfBlightPaid = true) {
             mode("Destroy target artifact or enchantment") {
-                val artifactOrEnchantment = target(
-                    "artifact or enchantment",
-                    TargetObject(filter = TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Enchantment))
-                )
+                val artifactOrEnchantment = target(TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Enchantment))
                 effect = Effects.Destroy(artifactOrEnchantment)
             }
             mode("Destroy target creature with mana value 3 or greater") {
-                val creature = target(
-                    "creature with mana value 3 or greater",
-                    TargetObject(filter = TargetFilter(GameObjectFilter.Creature.manaValueAtLeast(3)))
-                )
+                val creature = target(TargetFilter(GameObjectFilter.Creature.manaValueAtLeast(3)))
                 effect = Effects.Destroy(creature)
             }
         }

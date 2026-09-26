@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -28,16 +27,16 @@ val WitheringCurse = card("Withering Curse") {
     typeLine = "Sorcery"
     oracleText = "All creatures get -2/-2 until end of turn.\nInfusion — If you gained life this turn, destroy all creatures instead."
     spell {
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.YouGainedLifeThisTurn,
-            effect = Effects.ForEachInGroup(
+            then = Effects.ForEachInGroup(
                 GroupFilter(GameObjectFilter.Creature),
-                Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true),
+                Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true),
                 noRegenerate = false
             ),
-            elseEffect = Effects.ForEachInGroup(
+            otherwise = Effects.ForEachInGroup(
                 GroupFilter(GameObjectFilter.Creature),
-                Effects.ModifyStats(-2, -2, EffectTarget.Self)
+                Effects.ModifyStats(-2, -2, EffectTarget.IterationEntity)
             )
         )
     }

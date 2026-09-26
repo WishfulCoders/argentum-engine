@@ -1,15 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardLayout
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Grand Entryway // Elegant Rotunda (DSK 15) — split-layout Room (CR 709.5).
@@ -23,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * Cast each half separately; the cast face enters unlocked, the other locked. Pay the locked
  * face's printed mana cost as a sorcery-speed special action to unlock it (CR 709.5e).
  *
- * Both halves are "when you unlock this door" triggers ([Triggers.OnDoorUnlocked], CR 709.5h).
+ * Both halves are "when you unlock this door" triggers (`Triggers.self.doorUnlocked()`, CR 709.5h).
  * Grand Entryway makes the same 1/1 white Glimmer enchantment-creature token as Tunnel Surveyor
  * ([Effects.CreateToken] with `enchantmentToken = true`). Elegant Rotunda reuses the Byrke /
  * Weftblade "each of up to two target creatures" shape — an optional `count = 2` [TargetCreature]
@@ -39,7 +38,7 @@ val GrandEntrywayElegantRotunda = card("Grand Entryway // Elegant Rotunda") {
         oracleText = "When you unlock this door, create a 1/1 white Glimmer enchantment creature token."
 
         triggeredAbility {
-            trigger = Triggers.OnDoorUnlocked
+            trigger = Triggers.self.doorUnlocked()
             effect = Effects.CreateToken(
                 power = 1,
                 toughness = 1,
@@ -57,10 +56,10 @@ val GrandEntrywayElegantRotunda = card("Grand Entryway // Elegant Rotunda") {
         oracleText = "When you unlock this door, put a +1/+1 counter on each of up to two target creatures."
 
         triggeredAbility {
-            trigger = Triggers.OnDoorUnlocked
-            target("up to two target creatures", TargetCreature(count = 2, optional = true))
-            effect = ForEachTargetEffect(
-                listOf(Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0)))
+            trigger = Triggers.self.doorUnlocked()
+            targets(TargetFilter.Creature, count = 2, optional = true)
+            effect = Effects.ForEachTarget(
+                Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0))
             )
             description = "When you unlock this door, put a +1/+1 counter on each of up to two target creatures."
         }

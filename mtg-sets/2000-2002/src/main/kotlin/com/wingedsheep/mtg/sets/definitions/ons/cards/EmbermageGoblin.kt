@@ -1,15 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
-import com.wingedsheep.sdk.scripting.effects.MayEffect
+
 /**
  * Embermage Goblin
  * {3}{R}
@@ -29,8 +29,8 @@ val EmbermageGoblin = card("Embermage Goblin") {
     oracleText = "When Embermage Goblin enters the battlefield, you may search your library for a card named Embermage Goblin, reveal it, and put it into your hand. If you do, shuffle your library.\n{T}: Embermage Goblin deals 1 damage to any target."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.May(
             Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.Any.named("Embermage Goblin"),
                 count = 1,
@@ -43,8 +43,8 @@ val EmbermageGoblin = card("Embermage Goblin") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", Targets.Any)
-        effect = DealDamageEffect(1, t)
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(1, t)
     }
 
     metadata {

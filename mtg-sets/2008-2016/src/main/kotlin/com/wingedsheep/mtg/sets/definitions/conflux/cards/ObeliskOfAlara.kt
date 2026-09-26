@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Obelisk of Alara
@@ -46,27 +47,24 @@ val ObeliskOfAlara = card("Obelisk of Alara") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{U}"), Costs.Tap)
-        effect = Effects.Composite(
-            Effects.DrawCards(1),
-            Patterns.Hand.discardCards(1)
-        )
+        effect = Effects.DrawCards(1) then Patterns.Hand.discardCards(1)
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{B}"), Costs.Tap)
-        val victim = target("target", Targets.Creature)
+        val victim = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(-2, -2, victim)
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{R}"), Costs.Tap)
-        val victim = target("target", Targets.PlayerOrPlaneswalker)
+        val victim = target(Targets.PlayerOrPlaneswalker)
         effect = Effects.DealDamage(3, victim)
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{G}"), Costs.Tap)
-        val beneficiary = target("target", Targets.Creature)
+        val beneficiary = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(4, 4, beneficiary)
     }
 

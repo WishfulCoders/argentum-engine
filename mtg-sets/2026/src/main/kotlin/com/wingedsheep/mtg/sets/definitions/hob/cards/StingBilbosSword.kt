@@ -1,7 +1,8 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -10,9 +11,8 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Sting, Bilbo's Sword
@@ -25,7 +25,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Equip {3}
  *
  * The hone counters carry the whole payoff: CR 122.1j gives the equipped creature +1/+0 per hone
- * counter on the Equipment, so Sting needs no `ModifyStats` of its own — see [Counters.HONE]. That
+ * counter on the Equipment, so Sting needs no `ModifyStats` of its own — see [CounterType.HONE]. That
  * also means the counters are *sticky*: they are counted when the ETB resolves and stay at that
  * number afterwards, so a later board wipe on the opponent's side doesn't shrink Sting.
  *
@@ -51,17 +51,14 @@ val StingBilbosSword = card("Sting, Bilbo's Sword") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target("target opponent", TargetOpponent())
-        val creature = target(
-            "up to one target creature you control",
-            TargetCreature(optional = true, filter = TargetFilter.CreatureYouControl),
-        )
+        trigger = Triggers.self.enters()
+        target(Targets.Opponent)
+        val creature = target(TargetFilter.CreatureYouControl, optional = true)
         effect = Effects.AddDynamicCounters(
-            Counters.HONE,
-            DynamicAmount.AggregateBattlefield(Player.TargetOpponent, GameObjectFilter.Creature),
+            CounterType.HONE,
+            DynamicAmounts.battlefield(Player.TargetOpponent, GameObjectFilter.Creature).count(),
             EffectTarget.Self,
-        ).then(Effects.AttachEquipment(creature))
+        ) then Effects.AttachEquipment(creature)
         description = "When Sting enters, put a hone counter on Sting for each creature target " +
             "opponent controls. Attach Sting to up to one target creature you control."
     }

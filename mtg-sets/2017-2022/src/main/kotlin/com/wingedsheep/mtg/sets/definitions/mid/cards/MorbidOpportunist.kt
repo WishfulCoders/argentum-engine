@@ -3,10 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.mid.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.TriggerSpec
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Morbid Opportunist
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.TriggerSpec
  * A batched death trigger (CR 603.3b): it fires at most once per death batch regardless of how many
  * creatures died, and `oncePerTurn` caps it to a single draw per turn. The batch is scoped to every
  * player's creatures (`anyController`) and excludes the source's own death (`excludeSelf`) to honor
- * the "one or more *other* creatures" wording — this is the [Triggers.OneOrMoreCreaturesDie] shape
+ * the "one or more *other* creatures" wording — this is the `Triggers.oneOrMore(filter.anyController()).die()` shape
  * with `excludeSelf` set, which the facade doesn't yet expose, so the [TriggerSpec] is built inline.
  */
 val MorbidOpportunist = card("Morbid Opportunist") {
@@ -30,13 +29,7 @@ val MorbidOpportunist = card("Morbid Opportunist") {
     oracleText = "Whenever one or more other creatures die, draw a card. This ability triggers only once each turn."
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = EventPattern.CreaturesYouControlDiedEvent(
-                filter = GameObjectFilter.Creature.anyController(),
-                excludeSelf = true
-            ),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.oneOrMoreOther(GameObjectFilter.Creature.anyController()).die()
         oncePerTurn = true
         effect = Effects.DrawCards(1)
     }

@@ -10,8 +10,6 @@ import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.ControllerPredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetChooser
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Confusion in the Ranks — Mirrodin #87 (canonical printing)
@@ -33,7 +31,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  *   larger one: with Confusion out, a permanent entering under player A can be swapped with one
  *   under B or C, and never with another of A's own.
  * - "Shares a card type with it" is the new [com.wingedsheep.sdk.scripting.predicates.CardPredicate]
- *   `SharesCardTypeWith` over [EntityReference.Triggering]. Both sides read projected types, so an
+ *   `SharesCardTypeWith` over [EffectTarget.TriggeringEntity]. Both sides read projected types, so an
  *   animated artifact land that enters can be swapped for a creature. Card types only — two
  *   *legendary* permanents don't share a card type by being legendary.
  * - **It triggers on itself.** Confusion in the Ranks is an enchantment, so its own arrival meets
@@ -56,26 +54,20 @@ val ConfusionInTheRanks = card("Confusion in the Ranks") {
         "control of those permanents."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.ArtifactCreatureOrEnchantment,
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.ArtifactCreatureOrEnchantment).enters()
         val swapped = target(
-            "permanent another player controls that shares a card type with it",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.Permanent
-                        .withControllerPredicate(
-                            ControllerPredicate.Not(
-                                ControllerPredicate.ControlledByReferencedPlayer(
-                                    EffectTarget.ControllerOfTriggeringEntity
-                                )
+            TargetFilter(
+                GameObjectFilter.Permanent
+                    .withControllerPredicate(
+                        ControllerPredicate.Not(
+                            ControllerPredicate.ControlledByReferencedPlayer(
+                                EffectTarget.ControllerOfTriggeringEntity
                             )
                         )
-                        .sharingCardTypeWith(EntityReference.Triggering)
-                ),
-                chooser = TargetChooser.ControllerOfTriggeringEntity
-            )
+                    )
+                    .sharingCardTypeWith(EffectTarget.TriggeringEntity)
+            ),
+            chooser = TargetChooser.ControllerOfTriggeringEntity,
         )
         effect = Effects.ExchangeControl(EffectTarget.TriggeringEntity, swapped)
         description = "Whenever an artifact, creature, or enchantment enters, its controller " +

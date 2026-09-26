@@ -5,10 +5,10 @@
 package com.wingedsheep.mtg.sets.definitions.apc.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -24,7 +24,7 @@ val OvergrownEstate = card("Overgrown Estate") {
     oracleText = "Sacrifice a land: You gain 3 life."
     activatedAbility {
         cost = Costs.Sacrifice(GameObjectFilter.Land)
-        effect = GainLifeEffect(3)
+        effect = Effects.GainLife(3)
     }
     metadata {
         rarity = Rarity.RARE

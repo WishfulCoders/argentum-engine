@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.divRoundedUp
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Chainer's Torment
@@ -27,20 +28,14 @@ val ChainersTorment = card("Chainer's Torment") {
         "III — Create an X/X black Nightmare Horror creature token, where X is half your life total, " +
         "rounded up. It deals X damage to you."
 
-    val halfLifeRoundedUp = DynamicAmount.Divide(
-        numerator = DynamicAmount.YourLifeTotal,
-        denominator = DynamicAmount.Fixed(2),
-        roundUp = true
-    )
+    val halfLifeRoundedUp = DynamicAmounts.yourLifeTotal() divRoundedUp 2
 
     sagaChapter(1) {
-        effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.EachOpponent))
-            .then(Effects.GainLife(2))
+        effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(2)
     }
 
     sagaChapter(2) {
-        effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.EachOpponent))
-            .then(Effects.GainLife(2))
+        effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(2)
     }
 
     sagaChapter(3) {
@@ -49,9 +44,7 @@ val ChainersTorment = card("Chainer's Torment") {
             dynamicToughness = halfLifeRoundedUp,
             colors = setOf(Color.BLACK),
             creatureTypes = setOf("Nightmare", "Horror")
-        ).then(
-            Effects.DealDamage(halfLifeRoundedUp, EffectTarget.Controller)
-        )
+        ) then Effects.DealDamage(halfLifeRoundedUp, EffectTarget.Controller)
     }
 
     metadata {

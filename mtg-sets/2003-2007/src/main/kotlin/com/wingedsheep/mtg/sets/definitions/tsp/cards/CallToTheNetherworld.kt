@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.madness
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Call to the Netherworld
@@ -35,13 +34,10 @@ val CallToTheNetherworld = card("Call to the Netherworld") {
 
     spell {
         val t = target(
-            "target",
-            TargetObject(
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter.Creature.withColor(Color.BLACK).ownedByYou(),
-                    zone = Zone.GRAVEYARD
-                )
-            )
+            TargetFilter(
+                baseFilter = GameObjectFilter.Creature.withColor(Color.BLACK).ownedByYou(),
+                zone = Zone.GRAVEYARD
+            ),
         )
         effect = Effects.ReturnToHand(t)
     }

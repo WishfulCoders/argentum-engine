@@ -28,7 +28,7 @@ val SolkanarTheSwampKing = card("Sol'kanar the Swamp King") {
 
     keywords(Keyword.SWAMPWALK)
     triggeredAbility {
-        trigger = Triggers.anyPlayerCasts(GameObjectFilter.Any.withColor(Color.BLACK))
+        trigger = Triggers.anyPlayer.casts(GameObjectFilter.Any.withColor(Color.BLACK))
         effect = Effects.GainLife(1)
     }
 

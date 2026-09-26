@@ -7,7 +7,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -22,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * and Helm of Kaldra in Darksteel).
  *
  * The trigger is [TriggerBinding.ATTACHED] over `DamageType.Any` — *any* damage, not just combat, so
- * it fires on a Viridian Longbow ping as readily as on a block. `RecipientFilter.AnyCreature` narrows
+ * it fires on a Viridian Longbow ping as readily as on a block. `Recipient.AnyCreature` narrows
  * it to damage dealt to creatures, and [EffectTarget.TriggeringEntity] is the *damaged* creature: a
  * damage trigger stamps the recipient as the triggering entity, which is what "exile that creature"
  * refers to. The printed reminder "(Exile it only if it's still on the battlefield)" needs no wiring —
@@ -42,11 +42,7 @@ val SwordOfKaldra = card("Sword of Kaldra") {
     }
 
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            damageType = DamageType.Any,
-            recipient = RecipientFilter.AnyCreature,
-            binding = TriggerBinding.ATTACHED,
-        )
+        trigger = Triggers.attached.dealsDamage(Recipient.AnyCreature)
         effect = Effects.Exile(EffectTarget.TriggeringEntity)
     }
 

@@ -33,7 +33,7 @@ val BridledBighorn = card("Bridled Bighorn") {
     keywordAbility(KeywordAbility.saddle(2))
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         triggerRestriction = Conditions.SourceIsSaddled
         effect = Effects.CreateToken(
             power = 1,

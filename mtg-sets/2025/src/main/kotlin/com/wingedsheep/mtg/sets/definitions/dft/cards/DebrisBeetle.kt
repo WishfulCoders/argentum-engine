@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -33,11 +32,8 @@ val DebrisBeetle = card("Debris Beetle") {
     toughness = 6
     keywords(Keyword.TRAMPLE)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Effects.LoseLife(3, EffectTarget.PlayerRef(Player.EachOpponent)),
-            GainLifeEffect(3)
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.LoseLife(3, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(3)
     }
     keywordAbility(KeywordAbility.crew(2))
     metadata {

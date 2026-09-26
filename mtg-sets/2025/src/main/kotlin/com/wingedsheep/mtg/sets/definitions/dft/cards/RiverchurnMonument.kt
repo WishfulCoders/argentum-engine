@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.dft.cards
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetPlayer
@@ -34,11 +34,9 @@ val RiverchurnMonument = card("Riverchurn Monument") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
-        target("any number of target players", TargetPlayer(unlimited = true))
-        effect = ForEachTargetEffect(
-            listOf(
-                Patterns.Library.mill(2, EffectTarget.PlayerRef(Player.ContextPlayer(0)))
-            )
+        target(TargetPlayer(unlimited = true))
+        effect = Effects.ForEachTarget(
+            Patterns.Library.mill(2, EffectTarget.PlayerRef(Player.ContextPlayer(0)))
         )
         description = "{1}, {T}: Any number of target players each mill two cards."
     }
@@ -46,13 +44,11 @@ val RiverchurnMonument = card("Riverchurn Monument") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{U}{U}"), Costs.Tap)
         isExhaust = true
-        target("any number of target players", TargetPlayer(unlimited = true))
-        effect = ForEachTargetEffect(
-            listOf(
-                Patterns.Library.mill(
-                    DynamicAmounts.zone(Player.ContextPlayer(0), Zone.GRAVEYARD).count(),
-                    EffectTarget.PlayerRef(Player.ContextPlayer(0))
-                )
+        target(TargetPlayer(unlimited = true))
+        effect = Effects.ForEachTarget(
+            Patterns.Library.mill(
+                DynamicAmounts.zone(Player.ContextPlayer(0), Zone.GRAVEYARD).count(),
+                EffectTarget.PlayerRef(Player.ContextPlayer(0))
             )
         )
         description = "Exhaust — {2}{U}{U}, {T}: Any number of target players each mill cards " +

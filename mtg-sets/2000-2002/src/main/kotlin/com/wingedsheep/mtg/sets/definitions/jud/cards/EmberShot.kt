@@ -7,9 +7,7 @@ package com.wingedsheep.mtg.sets.definitions.jud.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -25,11 +23,8 @@ val EmberShot = card("Ember Shot") {
     typeLine = "Instant"
     oracleText = "Ember Shot deals 3 damage to any target.\nDraw a card."
     spell {
-        val t = target("target", AnyTarget())
-        effect = Effects.Composite(
-            DealDamageEffect(3, t),
-            DrawCardsEffect(1)
-        )
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(3, t) then Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.COMMON

@@ -8,10 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.champion
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Boggart Mob
@@ -42,13 +39,8 @@ val BoggartMob = card("Boggart Mob") {
     champion(Subtype.GOBLIN)
 
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            damageType = DamageType.Combat,
-            recipient = RecipientFilter.AnyPlayer,
-            sourceFilter = GameObjectFilter.Permanent.withSubtype(Subtype.GOBLIN).youControl(),
-            binding = TriggerBinding.ANY
-        )
-        effect = MayEffect(
+        trigger = Triggers.a(GameObjectFilter.Permanent.withSubtype(Subtype.GOBLIN).youControl()).dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.May(
             Effects.CreateToken(
                 power = 1,
                 toughness = 1,

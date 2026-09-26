@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.fem.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AdditionalManaOnSourceTap
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GrantStaticAbilityEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -33,7 +33,7 @@ val HighTide = card("High Tide") {
     oracleText = "Until end of turn, whenever a player taps an Island for mana, that player adds an additional {U}."
 
     spell {
-        effect = GrantStaticAbilityEffect(
+        effect = Effects.GrantStaticAbility(
             ability = AdditionalManaOnSourceTap(
                 sourceFilter = GameObjectFilter.Land.withSubtype(Subtype.ISLAND),
                 color = Color.BLUE,

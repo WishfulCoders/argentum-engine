@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.GrantTriggeredAbilityEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -59,10 +58,9 @@ val DownInTheValley = card("Down in the Valley") {
     }
 
     sagaChapter(2) {
-        effect = GrantTriggeredAbilityEffect(
+        effect = Effects.GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.LandYouControlEnters.event,
-                binding = Triggers.LandYouControlEnters.binding,
+                trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters(),
                 effect = Effects.CreateToken(
                     power = 1,
                     toughness = 1,

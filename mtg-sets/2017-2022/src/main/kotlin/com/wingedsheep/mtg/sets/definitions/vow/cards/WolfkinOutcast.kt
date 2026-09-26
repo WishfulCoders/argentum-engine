@@ -1,7 +1,5 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
-import com.wingedsheep.sdk.core.Subtype
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -32,7 +30,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * when you control any Wolf *or* Werewolf (`GameObjectFilter.Any.withAnySubtype("Wolf", "Werewolf")`).
  *
  * The back's death payoff is the Archghoul of Thraben rail — "this creature **or another** [subtype] you
- * control dies" is [Triggers.leavesBattlefield] to the graveyard, filtered to a Wolf-or-Werewolf you
+ * control dies" is `Triggers.<subject>.leaves(to, excludeTo, excludeSacrifice)` to the graveyard, filtered to a Wolf-or-Werewolf you
  * control, with [TriggerBinding.ANY] so the source counts itself. Per the werewolf-set rulings, a
  * simultaneous death of Wedding Crasher plus another Wolf/Werewolf triggers once per dying permanent (the
  * per-event `ZoneChangeEvent`, not a batch), so a two-Wolf wipe draws two cards.
@@ -84,11 +82,7 @@ private val WeddingCrasher = card("Wedding Crasher") {
         "Nightbound (If a player casts at least two spells during their own turn, it becomes day next turn.)"
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = WOLF_OR_WEREWOLF,
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(WOLF_OR_WEREWOLF).dies()
         effect = Effects.DrawCards(1, EffectTarget.Controller)
         description = "Draw a card."
     }

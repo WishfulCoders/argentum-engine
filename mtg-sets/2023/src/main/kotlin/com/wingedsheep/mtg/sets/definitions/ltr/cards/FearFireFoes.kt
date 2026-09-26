@@ -1,14 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Fear, Fire, Foes!
@@ -33,16 +33,14 @@ val FearFireFoes = card("Fear, Fire, Foes!") {
     oracleText = "Damage can't be prevented this turn. Fear, Fire, Foes! deals X damage to target creature and 1 damage to each other creature with the same controller."
 
     spell {
-        target("target creature", Targets.Creature)
-        effect = Effects.DamageCantBePreventedThisTurn()
-            .then(Effects.DealDamage(DynamicAmount.XValue, EffectTarget.ContextTarget(0)))
-            .then(
-                Patterns.Group.dealDamageToAll(
-                    1,
-                    GroupFilter(
-                        GameObjectFilter.Creature.targetPlayerControls(EffectTarget.TargetController)
-                    ).otherThanTarget()
-                )
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.DamageCantBePreventedThisTurn() then
+            Effects.DealDamage(DynamicAmounts.xValue(), creature) then
+            Patterns.Group.dealDamageToAll(
+                1,
+                GroupFilter(
+                    GameObjectFilter.Creature.targetPlayerControls(EffectTarget.TargetController)
+                ).otherThanTarget()
             )
     }
 

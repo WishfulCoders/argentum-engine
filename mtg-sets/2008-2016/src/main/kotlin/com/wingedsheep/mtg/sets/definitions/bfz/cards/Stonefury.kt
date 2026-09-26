@@ -4,14 +4,12 @@
 
 package com.wingedsheep.mtg.sets.definitions.bfz.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -26,8 +24,8 @@ val Stonefury = card("Stonefury") {
     typeLine = "Instant"
     oracleText = "Stonefury deals damage to target creature equal to the number of lands you control."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = DealDamageEffect(DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land), t)
+        val t = target(TargetFilter.Creature)
+        effect = Effects.DealDamage(DynamicAmounts.landsYouControl(), t)
     }
     metadata {
         rarity = Rarity.COMMON

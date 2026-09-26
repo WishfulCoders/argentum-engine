@@ -13,10 +13,11 @@ import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Spider-Slayer, Hatred Honed (SPM) — "Whenever Spider-Slayer deals damage to a Spider, destroy
- * that creature." Pins the `RecipientFilter.Matching` deals-damage trigger now wired in
+ * that creature." Pins the `Recipient.Object` deals-damage trigger now wired in
  * `TriggerMatcher.matchesDealsDamageTrigger` (the same shape as East-Mark Cavalier / Mauhur).
  *
  * The blocker is a 1/3 so it survives the 2 combat damage on its own — proving it is the *trigger*
@@ -99,7 +100,7 @@ class SpiderSlayerHatredHonedScenarioTest : FunSpec({
 
         driver.submit(
             ActivateAbility(playerId = you, sourceId = slayer, abilityId = slayerActivatedAbilityId),
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
         resolveStack(driver)
 

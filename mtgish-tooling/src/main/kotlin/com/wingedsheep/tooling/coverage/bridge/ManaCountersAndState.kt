@@ -131,7 +131,7 @@ internal fun BridgeBuilder.manaCountersAndState() {
     effect("UnpreparePermanent", "Unprepare", "a prepared permanent becomes unprepared (Biblioplex Tomekeeper)")
     // "Reveal target face-down permanent" (Hauntwoods Shrieker) — make the hidden card public (CR
     // 708.2). Informational only; the follow-up "if it's a creature card, you may turn it face up"
-    // composes a TargetIsCreatureCard gate + MayEffect(TurnFaceUp).
+    // composes a TargetIsCreatureCard gate + Effects.May(TurnFaceUp).
     effect("RevealFaceDownPermanent", "RevealFaceDownPermanent", "reveal a face-down permanent (Hauntwoods Shrieker)")
     // "turn it face up" — the free, no-cost flip of a revealed creature card (Hauntwoods Shrieker),
     // distinct from paying a morph/manifest turn-up cost. Maps to the TurnFaceUp effect.
@@ -183,7 +183,7 @@ internal fun BridgeBuilder.manaCountersAndState() {
     // unmapped so they keep blocking until their scoping/rendering is verified.
     composed("EntersTapped", "enters tapped (EntersTapped replacement)")
     // "enters with a +1/+1 counter" or a keyword counter (e.g. a lifelink counter, Dust Animus) ->
-    // EntersWithCounters (default PlusOnePlusOne, or a Named CounterTypeFilter for keyword counters).
+    // EntersWithCounters (default +1/+1, or the keyword counter's CounterType).
     composed("EntersWithACounter", "enters with one counter — +1/+1 or a keyword counter (EntersWithCounters replacement)")
     // "enters with N +1/+1 counters" — a fixed count renders EntersWithCounters(count = N), a dynamic
     // count (Stag Beetle) renders EntersWithDynamicCounters.

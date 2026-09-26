@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.mom.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Referee Squad
@@ -37,12 +36,9 @@ val RefereeSquad = card("Referee Squad") {
     keywords(Keyword.CONVOKE, Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val victim = target(
-            "target creature an opponent controls",
-            TargetCreature(filter = TargetFilter.Creature.opponentControls())
-        )
-        effect = Effects.Tap(victim) then Effects.AddCounters(Counters.STUN, 1, victim)
+        trigger = Triggers.self.enters()
+        val victim = target(TargetFilter.Creature.opponentControls())
+        effect = Effects.Tap(victim) then Effects.AddCounters(CounterType.STUN, 1, victim)
     }
 
     metadata {

@@ -27,7 +27,7 @@ val CommanderGrevenIlVec = card("Commander Greven il-Vec") {
     keywords(Keyword.FEAR)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.SacrificeOwn(GameObjectFilter.Creature)
     }
 

@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ths.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Fade into Antiquity
@@ -19,7 +19,7 @@ val FadeIntoAntiquity = card("Fade into Antiquity") {
     oracleText = "Exile target artifact or enchantment."
 
     spell {
-        val permanent = target("artifact or enchantment", Targets.ArtifactOrEnchantment)
+        val permanent = target(TargetFilter.ArtifactOrEnchantment)
         effect = Effects.Exile(permanent)
     }
 

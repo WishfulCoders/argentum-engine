@@ -7,15 +7,10 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Tinybones, the Pickpocket
@@ -28,7 +23,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  * card from that player's graveyard, and mana of any type can be spent to cast that spell.
  *
  * Implementation:
- * - The combat-damage trigger (binding SELF, `RecipientFilter.AnyPlayer`) puts the ability on
+ * - The combat-damage trigger (binding SELF, `Recipient.AnyPlayer`) puts the ability on
  *   the stack, choosing a target nonland permanent card in an opponent's graveyard. Tinybones can
  *   only deal combat damage to an opponent, so "that player" is the (sole) opponent whose graveyard
  *   is scanned — modelled as a graveyard [TargetFilter] scoped to `ownedByOpponent()`.
@@ -56,33 +51,16 @@ val TinybonesThePickpocket = card("Tinybones, the Pickpocket") {
     keywords(Keyword.DEATHTOUCH)
 
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            damageType = DamageType.Combat,
-            recipient = RecipientFilter.AnyPlayer,
-            binding = TriggerBinding.SELF,
-        )
-        target(
-            "target nonland permanent card from that player's graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.NonlandPermanent.ownedByOpponent(),
-                    zone = Zone.GRAVEYARD,
-                )
-            )
-        )
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.ChosenTargets,
-                    storeAs = "stolenCard",
-                ),
-                GrantMayPlayFromExileEffect(
-                    from = "stolenCard",
-                    expiry = MayPlayExpiry.EndOfTurn,
-                    withAnyManaType = true,
-                ),
-            )
-        )
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        target(TargetFilter(GameObjectFilter.NonlandPermanent.ownedByOpponent(), zone = Zone.GRAVEYARD))
+        effect = Effects.Pipeline {
+            val stolenCard = gather(CardSource.ChosenTargets)
+            run(Effects.GrantMayPlayFromExile(
+                from = stolenCard,
+                expiry = MayPlayExpiry.EndOfTurn,
+                withAnyManaType = true,
+            ))
+        }
     }
 
     metadata {

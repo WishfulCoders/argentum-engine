@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.arb.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.namedFromVariable
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Maelstrom Pulse
@@ -28,13 +28,12 @@ val MaelstromPulse = card("Maelstrom Pulse") {
     oracleText = "Destroy target nonland permanent and all other permanents with the same name as that permanent."
 
     spell {
-        target("target nonland permanent", Targets.NonlandPermanent)
+        target(TargetFilter.NonlandPermanent)
         effect = Effects.Pipeline {
-            val chosen = gather(CardSource.ChosenTargets, name = "target")
-            val chosenName = storeCardName(chosen, name = "name")
+            val chosen = gather(CardSource.ChosenTargets)
+            val chosenName = storeCardName(chosen)
             val sameNamed = gather(
-                GameObjectFilter.Any.namedFromVariable(chosenName),
-                name = "sameNamed"
+                GameObjectFilter.Any.namedFromVariable(chosenName)
             )
             destroy(sameNamed)
         }

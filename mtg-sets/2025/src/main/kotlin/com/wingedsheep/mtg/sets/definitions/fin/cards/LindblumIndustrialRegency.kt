@@ -9,10 +9,9 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Lindblum, Industrial Regency // Mage Siege
@@ -52,7 +51,7 @@ val LindblumIndustrialRegency = card("Lindblum, Industrial Regency") {
             "spell, this token deals 1 damage to each opponent.\" " +
             "(Then exile this card. You may play the land later from exile.)"
         spell {
-            effect = CreateTokenEffect(
+            effect = Effects.CreateToken(
                 power = 0,
                 toughness = 1,
                 colors = setOf(Color.BLACK),
@@ -60,9 +59,8 @@ val LindblumIndustrialRegency = card("Lindblum, Industrial Regency") {
                 imageUri = "https://cards.scryfall.io/normal/front/1/8/187fe54c-7d0c-4225-9d46-3affbead897d.jpg?1782725378",
                 triggeredAbilities = listOf(
                     TriggeredAbility.create(
-                        trigger = Triggers.YouCastNoncreature.event,
-                        binding = Triggers.YouCastNoncreature.binding,
-                        effect = DealDamageEffect(1, EffectTarget.PlayerRef(Player.EachOpponent))
+                        trigger = Triggers.you.casts(GameObjectFilter.Noncreature),
+                        effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent))
                     )
                 )
             )

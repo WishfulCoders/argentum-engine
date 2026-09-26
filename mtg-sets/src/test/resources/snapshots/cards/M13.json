@@ -7,7 +7,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Ajani, Caller of the Pride:1",
                 "cost": {
                     "type": "CostLoyalty",
                     "change": 1
@@ -17,7 +17,7 @@
                     "space": "IterationSpace.Targets",
                     "body": {
                         "type": "AddCounters",
-                        "counterType": "+1/+1",
+                        "counterType": "PLUS_ONE_PLUS_ONE",
                         "count": 1,
                         "target": {
                             "type": "ContextTarget",
@@ -32,14 +32,14 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "up to one target creature"
+                        "id": "t0"
                     }
                 ],
                 "timing": "SorcerySpeed",
                 "isPlaneswalkerAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Ajani, Caller of the Pride:2",
                 "cost": {
                     "type": "CostLoyalty",
                     "change": -3
@@ -52,7 +52,7 @@
                             "keyword": "FLYING",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target creature"
+                                "name": "t1"
                             }
                         },
                         {
@@ -60,7 +60,7 @@
                             "keyword": "DOUBLE_STRIKE",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target creature"
+                                "name": "t1"
                             }
                         }
                     ]
@@ -71,14 +71,14 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target creature"
+                        "id": "t1"
                     }
                 ],
                 "timing": "SorcerySpeed",
                 "isPlaneswalkerAbility": true
             },
             {
-                "id": "ability_3",
+                "id": "Ajani, Caller of the Pride:3",
                 "cost": {
                     "type": "CostLoyalty",
                     "change": -8
@@ -139,7 +139,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Bloodhunter Bat:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -152,12 +152,12 @@
                     },
                     "from": {
                         "type": "BoundVariable",
-                        "name": "target player"
+                        "name": "t0"
                     }
                 },
                 "targetRequirement": {
                     "type": "TargetPlayer",
-                    "id": "target player"
+                    "id": "t0"
                 },
                 "descriptionOverride": "When this creature enters, target player loses 2 life and you gain 2 life."
             }
@@ -260,7 +260,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Dragon Hatchling:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -311,7 +311,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Griffin Protector:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "creature ctrl:you",
@@ -363,7 +363,7 @@
             },
             "target": {
                 "type": "BoundVariable",
-                "name": "target creature"
+                "name": "t0"
             }
         },
         "targetRequirements": [
@@ -372,7 +372,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "target creature"
+                "id": "t0"
             }
         ]
     },
@@ -400,7 +400,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Krenko, Mob Boss:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "CreateToken",
@@ -480,7 +480,7 @@
             "type": "MoveToZone",
             "target": {
                 "type": "BoundVariable",
-                "name": "target"
+                "name": "t0"
             },
             "destination": "Graveyard",
             "byDestruction": true
@@ -491,7 +491,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -515,7 +515,8 @@
         "staticAbilities": [
             {
                 "type": "MayCastWithoutPayingManaCost",
-                "controllerOnly": true
+                "controllerOnly": true,
+                "fromHandOnly": true
             }
         ]
     },
@@ -558,7 +559,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Rummaging Goblin:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -611,13 +612,13 @@
             },
             "target": {
                 "type": "BoundVariable",
-                "name": "target"
+                "name": "t0"
             }
         },
         "targetRequirements": [
             {
                 "type": "AnyTarget",
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -676,7 +677,7 @@
             },
             "target": {
                 "type": "BoundVariable",
-                "name": "target creature"
+                "name": "t0"
             }
         },
         "targetRequirements": [
@@ -685,7 +686,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "target creature"
+                "id": "t0"
             }
         ]
     },
@@ -751,7 +752,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Talrand, Sky Summoner:1",
                 "trigger": {
                     "type": "SpellCastEvent",
                     "spellFilter": {
@@ -810,7 +811,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Thragtusk:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -824,7 +825,7 @@
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Thragtusk:2",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield"
@@ -864,7 +865,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Trading Post:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -892,7 +893,7 @@
                 "descriptionOverride": "{1}, {T}, Discard a card: You gain 4 life."
             },
             {
-                "id": "ability_2",
+                "id": "Trading Post:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -927,7 +928,7 @@
                 "descriptionOverride": "{1}, {T}, Pay 1 life: Create a 0/1 white Goat creature token."
             },
             {
-                "id": "ability_3",
+                "id": "Trading Post:3",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -952,7 +953,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target artifact card from your graveyard"
+                        "name": "t0"
                     },
                     "destination": "Hand"
                 },
@@ -963,13 +964,13 @@
                             "baseFilter": "artifact own:you",
                             "zone": "Graveyard"
                         },
-                        "id": "target artifact card from your graveyard"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{1}, {T}, Sacrifice a creature: Return target artifact card from your graveyard to your hand."
             },
             {
-                "id": "ability_4",
+                "id": "Trading Post:4",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -1023,7 +1024,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Watercourser:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -1102,7 +1103,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Yeva's Forcemage:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -1119,7 +1120,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 "targetRequirement": {
@@ -1127,7 +1128,7 @@
                     "filter": {
                         "baseFilter": "creature"
                     },
-                    "id": "target creature"
+                    "id": "t0"
                 }
             }
         ]

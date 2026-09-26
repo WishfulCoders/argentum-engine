@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -34,13 +33,13 @@ val Slagstorm = card("Slagstorm") {
             mode("Slagstorm deals 3 damage to each creature") {
                 effect = Effects.ForEachInGroup(
                     GroupFilter(GameObjectFilter.Creature),
-                    DealDamageEffect(3, EffectTarget.Self)
+                    Effects.DealDamage(3, EffectTarget.IterationEntity)
                 )
             }
             mode("Slagstorm deals 3 damage to each player") {
                 effect = Effects.ForEachPlayer(
                     Player.Each,
-                    listOf(DealDamageEffect(3, EffectTarget.Controller))
+                    listOf(Effects.DealDamage(3, EffectTarget.Controller))
                 )
             }
         }

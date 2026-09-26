@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.life
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.DamageUtils
@@ -15,7 +16,9 @@ import kotlin.reflect.KClass
  * Executor for OwnerGainsLifeEffect.
  * "Its owner gains X life" - gives life to the owner of the targeted permanent.
  */
-class OwnerGainsLifeExecutor : EffectExecutor<OwnerGainsLifeEffect> {
+class OwnerGainsLifeExecutor(
+    private val predicateEvaluator: PredicateEvaluator
+) : EffectExecutor<OwnerGainsLifeEffect> {
 
     override val effectType: KClass<OwnerGainsLifeEffect> = OwnerGainsLifeEffect::class
 
@@ -45,7 +48,7 @@ class OwnerGainsLifeExecutor : EffectExecutor<OwnerGainsLifeEffect> {
         }
 
         // PreventLifeGain / ModifyLifeGain replacements are applied by the shared primitive.
-        val (newState, event) = DamageUtils.gainLife(state, ownerId, effect.amount)
+        val (newState, event) = DamageUtils.gainLife(state, ownerId, effect.amount, predicateEvaluator = predicateEvaluator)
         return EffectResult.success(newState, listOfNotNull(event))
     }
 }

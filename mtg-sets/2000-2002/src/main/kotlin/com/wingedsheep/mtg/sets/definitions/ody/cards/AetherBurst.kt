@@ -8,10 +8,8 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -26,8 +24,8 @@ val AetherBurst = card("Aether Burst") {
     typeLine = "Instant"
     oracleText = "Return up to X target creatures to their owners' hands, where X is one plus the number of cards named Aether Burst in all graveyards as you cast this spell."
     spell {
-        val t = target("target", TargetCreature(optional = true, count = 1, filter = TargetFilter.Creature))
-        effect = ForEachTargetEffect(listOf(Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND)))
+        val t = target(TargetFilter.Creature, optional = true)
+        effect = Effects.ForEachTarget(Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND))
     }
     metadata {
         rarity = Rarity.COMMON

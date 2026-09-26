@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.znr.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -55,7 +55,7 @@ val GnarlidColony = card("Gnarlid Colony") {
         ability = GrantKeyword(
             Keyword.TRAMPLE,
             filter = GroupFilter(
-                GameObjectFilter.Creature.youControl().withCounter(Counters.PLUS_ONE_PLUS_ONE),
+                GameObjectFilter.Creature.youControl().withCounter(CounterType.PLUS_ONE_PLUS_ONE),
             ),
         )
     }

@@ -9,8 +9,6 @@ import com.wingedsheep.sdk.dsl.gift
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GiftKind
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Scrapshooter {1}{G}{G}
@@ -42,10 +40,10 @@ val Scrapshooter = card("Scrapshooter") {
     gift(GiftKind.CARD)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        val target = target(TargetFilter.ArtifactOrEnchantment.opponentControls())
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.GiftWasPromised
-        target = TargetObject(filter = TargetFilter.ArtifactOrEnchantment.opponentControls())
-        effect = Effects.Destroy(EffectTarget.ContextTarget(0))
+        effect = Effects.Destroy(target)
     }
 
     metadata {

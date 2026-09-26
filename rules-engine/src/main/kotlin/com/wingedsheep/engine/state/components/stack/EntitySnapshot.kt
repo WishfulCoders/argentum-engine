@@ -1,6 +1,5 @@
 package com.wingedsheep.engine.state.components.stack
 
-import com.wingedsheep.engine.handlers.effects.permanent.counters.counterTypeToString
 import com.wingedsheep.engine.mechanics.layers.ProjectedState
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
@@ -8,6 +7,7 @@ import com.wingedsheep.engine.state.components.battlefield.DamageSourceLki
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.TokenComponent
 import com.wingedsheep.sdk.core.CardType
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.TypeLine
 import com.wingedsheep.sdk.model.EntityId
@@ -28,15 +28,15 @@ interface EntityView {
     val toughness: Int?
     val controllerId: EntityId?
 
-    /** Counter-type-string → count (e.g. "+1/+1", "-1/-1", "loyalty"). Matches the counter wire format. */
-    val counters: Map<String, Int>
+    /** Count of each counter kind the entity carries. */
+    val counters: Map<CounterType, Int>
     val keywords: Set<String>
     val subtypes: Set<String>
     val supertypes: Set<String>
     val lostAllAbilities: Boolean
 
-    val plusOnePlusOneCounters: Int get() = counters["+1/+1"] ?: 0
-    val minusOneMinusOneCounters: Int get() = counters["-1/-1"] ?: 0
+    val plusOnePlusOneCounters: Int get() = counters[CounterType.PLUS_ONE_PLUS_ONE] ?: 0
+    val minusOneMinusOneCounters: Int get() = counters[CounterType.MINUS_ONE_MINUS_ONE] ?: 0
     val totalCounters: Int get() = counters.values.sum()
 }
 
@@ -53,7 +53,7 @@ class LiveEntityView(
     override val power: Int? get() = projected.getPower(entityId)
     override val toughness: Int? get() = projected.getToughness(entityId)
     override val controllerId: EntityId? get() = projected.getController(entityId)
-    override val counters: Map<String, Int> get() = countersOf(state, entityId)
+    override val counters: Map<CounterType, Int> get() = countersOf(state, entityId)
     override val keywords: Set<String> get() = projected.getKeywords(entityId)
     override val subtypes: Set<String> get() = projected.getSubtypes(entityId)
     override val supertypes: Set<String> get() = projected.getSupertypes(entityId)
@@ -90,7 +90,7 @@ data class EntitySnapshot(
      * card needs control-at-zone-leave fidelity.
      */
     override val controllerId: EntityId? = null,
-    override val counters: Map<String, Int> = emptyMap(),
+    override val counters: Map<CounterType, Int> = emptyMap(),
     override val keywords: Set<String> = emptySet(),
     override val lostAllAbilities: Boolean = false,
     /** Identity of this battlefield visit, retained after the entity changes zones. */
@@ -223,12 +223,9 @@ data class EntitySnapshot(
     }
 }
 
-/** Counter-type-string → count for [entityId], in the counter wire format. */
-private fun countersOf(state: GameState, entityId: EntityId): Map<String, Int> =
-    state.getEntity(entityId)?.get<CountersComponent>()
-        ?.counters?.filterValues { it > 0 }
-        ?.mapKeys { (type, _) -> counterTypeToString(type) }
-        ?: emptyMap()
+/** The non-zero counters on [entityId]. */
+private fun countersOf(state: GameState, entityId: EntityId): Map<CounterType, Int> =
+    state.getEntity(entityId)?.get<CountersComponent>()?.counters?.filterValues { it > 0 } ?: emptyMap()
 
 /**
  * Capture frozen [EntitySnapshot]s (projected P/T, subtypes, supertypes, controller) for a list of
@@ -271,6 +268,20 @@ fun captureEntitySnapshots(
         name = container?.get<CardComponent>()?.name,
     )
 }
+
+/**
+ * One permanent's last-known information, complete enough for
+ * [com.wingedsheep.engine.handlers.PredicateEvaluator.matchesSnapshot]: the state-aware
+ * [captureEntitySnapshots] (token-ness, name) plus the projected type line, keywords and
+ * card-definition id that call's invariant asks for. Take it *before* the event that may remove the
+ * permanent — a self-sacrifice cost, the damage that kills it — while the projection still has it.
+ */
+fun captureLastKnown(state: GameState, entityId: EntityId): EntitySnapshot =
+    captureEntitySnapshots(listOf(entityId), state).single().copy(
+        typeLine = projectedTypeLine(state, entityId),
+        keywords = state.projectedState.getKeywords(entityId),
+        cardDefinitionId = state.getEntity(entityId)?.get<CardComponent>()?.cardDefinitionId,
+    )
 
 /**
  * The permanent's **projected** type line: its printed types overlaid with whatever continuous

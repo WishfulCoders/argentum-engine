@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Urgent Necropsy
@@ -46,22 +45,10 @@ val UrgentNecropsy = card("Urgent Necropsy") {
     additionalCost(Costs.additional.CollectEvidenceForTargetsTotalManaValue)
 
     spell {
-        target(
-            "up to one target artifact",
-            TargetObject(optional = true, filter = TargetFilter.Artifact),
-        )
-        target(
-            "up to one target creature",
-            TargetObject(optional = true, filter = TargetFilter.Creature),
-        )
-        target(
-            "up to one target enchantment",
-            TargetObject(optional = true, filter = TargetFilter.Enchantment),
-        )
-        target(
-            "up to one target planeswalker",
-            TargetObject(optional = true, filter = TargetFilter.Planeswalker),
-        )
+        target(TargetFilter.Artifact, optional = true)
+        target(TargetFilter.Creature, optional = true)
+        target(TargetFilter.Enchantment, optional = true)
+        target(TargetFilter.Planeswalker, optional = true)
         effect = Effects.Pipeline {
             val chosen = gather(CardSource.ChosenTargets)
             destroy(chosen)

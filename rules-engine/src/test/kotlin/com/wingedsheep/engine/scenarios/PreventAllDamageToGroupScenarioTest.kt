@@ -11,14 +11,13 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
-import com.wingedsheep.sdk.scripting.effects.PreventionScope
-import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 
 /**
- * Recipient-group damage prevention — [Effects.PreventAllDamageToGroup] /
+ * Recipient-group damage prevention — [Effects.PreventDamage] `toGroup` /
  * [com.wingedsheep.sdk.scripting.effects.PreventDamageEffect.recipientGroup].
  *
  * Pins the rules of "prevent all damage that would be dealt to creatures you control this turn":
@@ -39,7 +38,7 @@ class PreventAllDamageToGroupScenarioTest : FunSpec({
     val aegis = card("Test Aegis") {
         manaCost = "{W}"
         typeLine = "Instant"
-        spell { effect = Effects.PreventAllDamageToGroup(GroupFilter.AllCreaturesYouControl) }
+        spell { effect = Effects.PreventDamage(toGroup = GameObjectFilter.Creature.youControl()) }
     }
 
     // Combat-only variant of the same shield.
@@ -47,10 +46,7 @@ class PreventAllDamageToGroupScenarioTest : FunSpec({
         manaCost = "{W}"
         typeLine = "Instant"
         spell {
-            effect = Effects.PreventAllDamageToGroup(
-                GroupFilter.AllCreaturesYouControl,
-                scope = PreventionScope.CombatOnly,
-            )
+            effect = Effects.PreventDamage(toGroup = GameObjectFilter.Creature.youControl(), combatOnly = true)
         }
     }
 

@@ -7,7 +7,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Amulet of Kroog:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -24,8 +24,8 @@
                 "effect": {
                     "type": "PreventDamageShield",
                     "target": {
-                        "type": "ContextTarget",
-                        "index": 0
+                        "type": "BoundVariable",
+                        "name": "t0"
                     },
                     "amount": {
                         "type": "Fixed",
@@ -35,7 +35,7 @@
                 "targetRequirements": [
                     {
                         "type": "AnyTarget",
-                        "id": "any target"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{2}, {T}: Prevent the next 1 damage that would be dealt to any target this turn."
@@ -65,7 +65,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Argivian Archaeologist:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -83,7 +83,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target artifact card from your graveyard"
+                        "name": "t0"
                     },
                     "destination": "Hand"
                 },
@@ -94,7 +94,7 @@
                             "baseFilter": "artifact own:you",
                             "zone": "Graveyard"
                         },
-                        "id": "target artifact card from your graveyard"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{W}{W}, {T}: Return target artifact card from your graveyard to your hand."
@@ -127,13 +127,13 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Argivian Blacksmith:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "PreventDamageShield",
                     "target": {
-                        "type": "ContextTarget",
-                        "index": 0
+                        "type": "BoundVariable",
+                        "name": "t0"
                     },
                     "amount": {
                         "type": "Fixed",
@@ -146,7 +146,7 @@
                         "filter": {
                             "baseFilter": "artifact creature"
                         },
-                        "id": "target artifact creature"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{T}: Prevent the next 2 damage that would be dealt to target artifact creature this turn."
@@ -192,10 +192,19 @@
                 "type": "PreventDamage",
                 "appliesTo": {
                     "type": "DamageEvent",
-                    "recipient": "RecipientSelf",
+                    "recipient": {
+                        "type": "RecipientObject",
+                        "filter": {
+                            "statePredicates": [
+                                "IsSource"
+                            ]
+                        }
+                    },
                     "source": {
-                        "type": "SourceMatching",
-                        "filter": "artifact creature"
+                        "cardPredicates": [
+                            "IsArtifact",
+                            "IsCreature"
+                        ]
                     }
                 }
             }
@@ -229,10 +238,18 @@
                 "type": "PreventDamage",
                 "appliesTo": {
                     "type": "DamageEvent",
-                    "recipient": "RecipientSelf",
+                    "recipient": {
+                        "type": "RecipientObject",
+                        "filter": {
+                            "statePredicates": [
+                                "IsSource"
+                            ]
+                        }
+                    },
                     "source": {
-                        "type": "SourceMatching",
-                        "filter": "artifact"
+                        "cardPredicates": [
+                            "IsArtifact"
+                        ]
                     }
                 }
             }
@@ -259,7 +276,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Armageddon Clock:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP"
@@ -267,14 +284,14 @@
                 "binding": "ANY",
                 "effect": {
                     "type": "AddCounters",
-                    "counterType": "doom",
+                    "counterType": "DOOM",
                     "count": 1,
                     "target": "Self"
                 },
                 "descriptionOverride": "At the beginning of your upkeep, put a doom counter on this artifact."
             },
             {
-                "id": "ability_2",
+                "id": "Armageddon Clock:2",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "DRAW"
@@ -284,13 +301,10 @@
                     "type": "DealDamage",
                     "amount": {
                         "type": "EntityProperty",
-                        "entity": "Source",
+                        "entity": "Self",
                         "numericProperty": {
                             "type": "CounterCount",
-                            "counterType": {
-                                "type": "Named",
-                                "name": "doom"
-                            }
+                            "counterType": "DOOM"
                         }
                     },
                     "target": {
@@ -303,7 +317,7 @@
         ],
         "activatedAbilities": [
             {
-                "id": "ability_3",
+                "id": "Armageddon Clock:3",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -313,7 +327,7 @@
                 },
                 "effect": {
                     "type": "RemoveCounters",
-                    "counterType": "doom",
+                    "counterType": "DOOM",
                     "count": 1,
                     "target": "Self"
                 },
@@ -353,7 +367,7 @@
                     "baseFilter": "artifact",
                     "zone": "Stack"
                 },
-                "id": "artifact spell"
+                "id": "t0"
             }
         ]
     },
@@ -378,7 +392,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Artifact Possession:1",
                 "trigger": "TapEvent",
                 "binding": "ATTACHED",
                 "effect": {
@@ -391,7 +405,7 @@
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Artifact Possession:2",
                 "trigger": {
                     "type": "AbilityActivatedEvent",
                     "player": "Each",
@@ -458,10 +472,18 @@
                 "type": "PreventDamage",
                 "appliesTo": {
                     "type": "DamageEvent",
-                    "recipient": "RecipientEnchantedCreature",
+                    "recipient": {
+                        "type": "RecipientObject",
+                        "filter": {
+                            "statePredicates": [
+                                "IsAttachedToBySource"
+                            ]
+                        }
+                    },
                     "source": {
-                        "type": "SourceMatching",
-                        "filter": "artifact"
+                        "cardPredicates": [
+                            "IsArtifact"
+                        ]
                     }
                 }
             }
@@ -493,7 +515,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Ashnod's Altar:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -536,7 +558,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Ashnod's Battle Gear:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -562,7 +584,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature you control"
+                        "name": "t0"
                     },
                     "duration": {
                         "type": "WhileSourceTapped",
@@ -575,7 +597,7 @@
                         "filter": {
                             "baseFilter": "creature ctrl:you"
                         },
-                        "id": "target creature you control"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{2}, {T}: Target creature you control gets +2/-2 for as long as this artifact remains tapped."
@@ -602,7 +624,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Ashnod's Transmogrant:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -615,11 +637,11 @@
                     "effects": [
                         {
                             "type": "AddCounters",
-                            "counterType": "+1/+1",
+                            "counterType": "PLUS_ONE_PLUS_ONE",
                             "count": 1,
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target nonartifact creature"
+                                "name": "t0"
                             }
                         },
                         {
@@ -627,7 +649,7 @@
                             "cardType": "ARTIFACT",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target nonartifact creature"
+                                "name": "t0"
                             }
                         }
                     ]
@@ -638,7 +660,7 @@
                         "filter": {
                             "baseFilter": "creature nonartifact"
                         },
-                        "id": "target nonartifact creature"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{T}, Sacrifice this artifact: Put a +1/+1 counter on target nonartifact creature. That creature becomes an artifact in addition to its other types."
@@ -669,7 +691,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Atog:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -717,7 +739,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Battering Ram:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "BEGIN_COMBAT"
@@ -732,7 +754,7 @@
                 "descriptionOverride": "At the beginning of combat on your turn, this creature gains banding until end of combat."
             },
             {
-                "id": "ability_2",
+                "id": "Battering Ram:2",
                 "trigger": {
                     "type": "BecomesBlockedEvent",
                     "filter": "creature Wall"
@@ -770,7 +792,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Candelabra of Tawnos:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -802,6 +824,7 @@
                         "filter": {
                             "baseFilter": "land"
                         },
+                        "id": "t0",
                         "dynamicMaxCount": "XValue"
                     }
                 ],
@@ -829,7 +852,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Circle of Protection: Artifacts:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -840,8 +863,12 @@
                 "effect": {
                     "type": "PreventDamageShield",
                     "sourceFilter": {
-                        "type": "ChosenSourceMatching",
-                        "filter": "artifact"
+                        "type": "PreventFromChosen",
+                        "eligible": {
+                            "cardPredicates": [
+                                "IsArtifact"
+                            ]
+                        }
                     },
                     "nextInstanceOnly": true
                 },
@@ -874,7 +901,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Citanul Druid:1",
                 "trigger": {
                     "type": "SpellCastEvent",
                     "spellFilter": {
@@ -887,7 +914,7 @@
                 "binding": "ANY",
                 "effect": {
                     "type": "AddCounters",
-                    "counterType": "+1/+1",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
                     "count": 1,
                     "target": "Self"
                 }
@@ -920,7 +947,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Clay Statue:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -961,7 +988,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Clockwork Avian:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "END_COMBAT",
@@ -970,7 +997,7 @@
                 "binding": "ANY",
                 "effect": {
                     "type": "RemoveCounters",
-                    "counterType": "+1/+0",
+                    "counterType": "PLUS_ONE_PLUS_ZERO",
                     "count": 1,
                     "target": "Self"
                 },
@@ -1002,7 +1029,7 @@
         ],
         "activatedAbilities": [
             {
-                "id": "ability_2",
+                "id": "Clockwork Avian:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -1018,7 +1045,7 @@
                 },
                 "effect": {
                     "type": "AddDynamicCounters",
-                    "counterType": "+1/+0",
+                    "counterType": "PLUS_ONE_PLUS_ZERO",
                     "amount": {
                         "type": "IfPositive",
                         "amount": {
@@ -1032,10 +1059,10 @@
                                 },
                                 "right": {
                                     "type": "EntityProperty",
-                                    "entity": "Source",
+                                    "entity": "Self",
                                     "numericProperty": {
                                         "type": "CounterCount",
-                                        "counterType": "PlusOnePlusZero"
+                                        "counterType": "PLUS_ONE_PLUS_ZERO"
                                     }
                                 }
                             }
@@ -1056,7 +1083,7 @@
         "replacementEffects": [
             {
                 "type": "EntersWithCounters",
-                "counterType": "PlusOnePlusZero",
+                "counterType": "PLUS_ONE_PLUS_ZERO",
                 "count": 4,
                 "selfOnly": true
             }
@@ -1091,7 +1118,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Colossus of Sardia:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -1140,7 +1167,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Coral Helm:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -1172,7 +1199,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -1181,7 +1208,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target creature"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{3}, Discard a card at random: Target creature gets +2/+2 until end of turn."
@@ -1212,7 +1239,10 @@
                     "type": "GainLife",
                     "amount": {
                         "type": "EntityProperty",
-                        "entity": "Target",
+                        "entity": {
+                            "type": "BoundVariable",
+                            "name": "t0"
+                        },
                         "numericProperty": "ManaValue"
                     },
                     "target": "TargetController"
@@ -1224,14 +1254,14 @@
                             "type": "CantBeRegenerated",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target artifact"
+                                "name": "t0"
                             }
                         },
                         {
                             "type": "MoveToZone",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target artifact"
+                                "name": "t0"
                             },
                             "destination": "Graveyard",
                             "byDestruction": true
@@ -1246,7 +1276,7 @@
                 "filter": {
                     "baseFilter": "artifact"
                 },
-                "id": "target artifact"
+                "id": "t0"
             }
         ]
     },
@@ -1347,14 +1377,14 @@
                             "type": "CantBeRegenerated",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "artifact with mana value X"
+                                "name": "t0"
                             }
                         },
                         {
                             "type": "MoveToZone",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "artifact with mana value X"
+                                "name": "t0"
                             },
                             "destination": "Graveyard",
                             "byDestruction": true
@@ -1374,7 +1404,7 @@
                         ]
                     }
                 },
-                "id": "artifact with mana value X"
+                "id": "t0"
             }
         ]
     },
@@ -1403,11 +1433,11 @@
                 {
                     "type": "GatherCards",
                     "source": "ChosenTargets",
-                    "storeAs": "drafna_cards"
+                    "storeAs": "gathered0"
                 },
                 {
                     "type": "MoveCollection",
-                    "from": "drafna_cards",
+                    "from": "gathered0",
                     "destination": {
                         "type": "ToZone",
                         "zone": "Library",
@@ -1421,7 +1451,7 @@
         "targetRequirements": [
             {
                 "type": "TargetPlayer",
-                "id": "target player"
+                "id": "t0"
             },
             {
                 "type": "TargetObject",
@@ -1430,7 +1460,7 @@
                     "baseFilter": "artifact own:target-player",
                     "zone": "Graveyard"
                 },
-                "id": "any number of target artifact cards from that player's graveyard"
+                "id": "t1"
             }
         ]
     },
@@ -1459,7 +1489,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Dragon Engine:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -1505,7 +1535,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Dwarven Weaponsmith:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -1521,11 +1551,11 @@
                 },
                 "effect": {
                     "type": "AddCounters",
-                    "counterType": "+1/+1",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
                     "count": 1,
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -1534,7 +1564,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target creature"
+                        "id": "t0"
                     }
                 ],
                 "restrictions": [
@@ -1575,7 +1605,7 @@
             {
                 "type": "GrantTriggeredAbility",
                 "ability": {
-                    "id": "ability_1",
+                    "id": "Energy Flux:1",
                     "trigger": {
                         "type": "StepEvent",
                         "step": "UPKEEP"
@@ -1623,7 +1653,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Feldon's Cane:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -1716,7 +1746,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Gate to Phyrexia:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -1728,7 +1758,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target artifact"
+                        "name": "t0"
                     },
                     "destination": "Graveyard",
                     "byDestruction": true
@@ -1739,7 +1769,7 @@
                         "filter": {
                             "baseFilter": "artifact"
                         },
-                        "id": "target artifact"
+                        "id": "t0"
                     }
                 ],
                 "restrictions": [
@@ -1784,7 +1814,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Goblin Artisans:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "FlipCoin",
@@ -1816,7 +1846,7 @@
                             },
                             "zone": "Stack"
                         },
-                        "id": "target artifact spell you control"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{T}: Flip a coin. If you win the flip, draw a card. If you lose the flip, counter target artifact spell you control that isn't the target of an ability from another creature named Goblin Artisans."
@@ -1844,7 +1874,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Golgothian Sylex:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -1917,7 +1947,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Grapeshot Catapult:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "DealDamage",
@@ -1927,7 +1957,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature with flying"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -1936,7 +1966,7 @@
                         "filter": {
                             "baseFilter": "creature kw:flying"
                         },
-                        "id": "target creature with flying"
+                        "id": "t0"
                     }
                 ]
             }
@@ -1961,7 +1991,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Haunting Wind:1",
                 "trigger": {
                     "type": "TapEvent",
                     "filter": "artifact"
@@ -1977,7 +2007,7 @@
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Haunting Wind:2",
                 "trigger": {
                     "type": "AbilityActivatedEvent",
                     "player": "Each",
@@ -2040,7 +2070,7 @@
         "targetRequirements": [
             {
                 "type": "TargetPlayer",
-                "id": "target player"
+                "id": "t0"
             }
         ]
     },
@@ -2066,7 +2096,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Ivory Tower:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP"
@@ -2114,7 +2144,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Jalum Tome:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -2206,10 +2236,14 @@
                 "redirectTo": "Self",
                 "appliesTo": {
                     "type": "DamageEvent",
-                    "recipient": "You",
+                    "recipient": {
+                        "type": "RecipientPlayer",
+                        "player": "You"
+                    },
                     "source": {
-                        "type": "SourceMatching",
-                        "filter": "artifact"
+                        "cardPredicates": [
+                            "IsArtifact"
+                        ]
                     }
                 },
                 "condition": {
@@ -2270,7 +2304,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Millstone:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -2296,8 +2330,8 @@
                                     "amount": 2
                                 },
                                 "player": {
-                                    "type": "ContextPlayer",
-                                    "index": 0
+                                    "type": "BoundVariable",
+                                    "name": "t0"
                                 },
                                 "isMill": true
                             },
@@ -2310,8 +2344,8 @@
                                 "type": "ToZone",
                                 "zone": "Graveyard",
                                 "player": {
-                                    "type": "ContextPlayer",
-                                    "index": 0
+                                    "type": "BoundVariable",
+                                    "name": "t0"
                                 }
                             }
                         }
@@ -2320,7 +2354,7 @@
                 "targetRequirements": [
                     {
                         "type": "TargetPlayer",
-                        "id": "target player"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{2}, {T}: Target player mills two cards."
@@ -2347,7 +2381,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Mishra's Factory:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddColorlessMana",
@@ -2360,7 +2394,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Mishra's Factory:2",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -2388,7 +2422,7 @@
                 "descriptionOverride": "{1}: This land becomes a 2/2 Assembly-Worker artifact creature until end of turn. It's still a land."
             },
             {
-                "id": "ability_3",
+                "id": "Mishra's Factory:3",
                 "cost": "CostTap",
                 "effect": {
                     "type": "ModifyStats",
@@ -2402,7 +2436,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target Assembly-Worker creature"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -2411,7 +2445,7 @@
                         "filter": {
                             "baseFilter": "creature Assembly-Worker"
                         },
-                        "id": "target Assembly-Worker creature"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{T}: Target Assembly-Worker creature gets +1/+1 until end of turn."
@@ -2444,7 +2478,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Mishra's War Machine:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP"
@@ -2500,7 +2534,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Mishra's Workshop:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddColorlessMana",
@@ -2539,7 +2573,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Obelisk of Undoing:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -2557,7 +2591,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target permanent you both own and control"
+                        "name": "t0"
                     },
                     "destination": "Hand"
                 },
@@ -2578,7 +2612,7 @@
                                 }
                             }
                         },
-                        "id": "target permanent you both own and control"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{6}, {T}: Return target permanent you both own and control to your hand."
@@ -2609,7 +2643,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Onulet:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield",
@@ -2649,7 +2683,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Orcish Mechanics:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -2671,13 +2705,13 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "any target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
                     {
                         "type": "AnyTarget",
-                        "id": "any target"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{T}, Sacrifice an artifact: This creature deals 2 damage to any target."
@@ -2734,7 +2768,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Phyrexian Gremlins:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "Composite",
@@ -2743,7 +2777,7 @@
                             "type": "TapUntap",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target artifact"
+                                "name": "t0"
                             }
                         },
                         {
@@ -2751,7 +2785,7 @@
                             "keyword": "DOESNT_UNTAP",
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target artifact"
+                                "name": "t0"
                             },
                             "duration": {
                                 "type": "WhileSourceTapped",
@@ -2766,7 +2800,7 @@
                         "filter": {
                             "baseFilter": "artifact"
                         },
-                        "id": "target artifact"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{T}: Tap target artifact. It doesn't untap during its controller's untap step for as long as this creature remains tapped."
@@ -2833,7 +2867,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Powerleech:1",
                 "trigger": {
                     "type": "TapEvent",
                     "filter": "artifact ctrl:opponent"
@@ -2848,7 +2882,7 @@
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Powerleech:2",
                 "trigger": {
                     "type": "AbilityActivatedEvent",
                     "player": "EachOpponent",
@@ -2892,7 +2926,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Priest of Yawgmoth:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -2911,7 +2945,7 @@
                     "color": "BLACK",
                     "amount": {
                         "type": "EntityProperty",
-                        "entity": "Sacrificed",
+                        "entity": "SacrificedAsCost",
                         "numericProperty": "ManaValue"
                     }
                 },
@@ -3074,7 +3108,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Rakalite:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -3088,8 +3122,8 @@
                         {
                             "type": "PreventDamageShield",
                             "target": {
-                                "type": "ContextTarget",
-                                "index": 0
+                                "type": "BoundVariable",
+                                "name": "t0"
                             },
                             "amount": {
                                 "type": "Fixed",
@@ -3110,7 +3144,7 @@
                 "targetRequirements": [
                     {
                         "type": "AnyTarget",
-                        "id": "any target"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{2}: Prevent the next 1 damage that would be dealt to any target this turn. Return this artifact to its owner's hand at the beginning of the next end step."
@@ -3139,7 +3173,7 @@
             "type": "MoveToZone",
             "target": {
                 "type": "BoundVariable",
-                "name": "target artifact card from your graveyard"
+                "name": "t0"
             },
             "destination": "Hand"
         },
@@ -3150,7 +3184,7 @@
                     "baseFilter": "artifact own:you",
                     "zone": "Graveyard"
                 },
-                "id": "target artifact card from your graveyard"
+                "id": "t0"
             }
         ]
     },
@@ -3206,7 +3240,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Rocket Launcher:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -3225,7 +3259,7 @@
                             },
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "any target"
+                                "name": "t0"
                             }
                         },
                         {
@@ -3243,7 +3277,7 @@
                 "targetRequirements": [
                     {
                         "type": "AnyTarget",
-                        "id": "any target"
+                        "id": "t0"
                     }
                 ],
                 "restrictions": [
@@ -3277,7 +3311,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Sage of Lat-Nam:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -3325,7 +3359,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Shapeshifter:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP"
@@ -3433,7 +3467,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Staff of Zegon:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -3459,7 +3493,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -3468,7 +3502,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target creature"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{3}, {T}: Target creature gets -2/-0 until end of turn."
@@ -3494,7 +3528,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Strip Mine:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddColorlessMana",
@@ -3507,7 +3541,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Strip Mine:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -3519,7 +3553,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target land"
+                        "name": "t0"
                     },
                     "destination": "Graveyard",
                     "byDestruction": true
@@ -3530,7 +3564,7 @@
                         "filter": {
                             "baseFilter": "land"
                         },
-                        "id": "target land"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{T}, Sacrifice this land: Destroy target land."
@@ -3561,7 +3595,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Su-Chi:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield",
@@ -3598,7 +3632,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Tablet of Epityr:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "artifact ctrl:you",
@@ -3648,7 +3682,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Tawnos's Coffin:2",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield"
@@ -3656,14 +3690,14 @@
                 "effect": "ReturnNotedExileTappedWithAuras"
             },
             {
-                "id": "ability_2",
+                "id": "Tawnos's Coffin:3",
                 "trigger": "UntapEvent",
                 "effect": "ReturnNotedExileTappedWithAuras"
             }
         ],
         "activatedAbilities": [
             {
-                "id": "ability_3",
+                "id": "Tawnos's Coffin:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -3681,7 +3715,7 @@
                     "type": "ExileWithAurasNotingCounters",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -3690,7 +3724,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target creature"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{3}, {T}: Exile target creature and all Auras attached to it, noting its counters."
@@ -3716,7 +3750,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Tawnos's Wand:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -3735,7 +3769,7 @@
                     "keyword": "CANT_BE_BLOCKED",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature with power 2 or less"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -3744,7 +3778,7 @@
                         "filter": {
                             "baseFilter": "creature pow<=2"
                         },
-                        "id": "target creature with power 2 or less"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{2}, {T}: Target creature with power 2 or less can't be blocked this turn."
@@ -3773,7 +3807,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Tawnos's Weaponry:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -3799,7 +3833,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     },
                     "duration": {
                         "type": "WhileSourceTapped",
@@ -3812,7 +3846,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target creature"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{2}, {T}: Target creature gets +1/+1 for as long as this artifact remains tapped."
@@ -3846,7 +3880,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Tetravus:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP"
@@ -3885,7 +3919,7 @@
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Tetravus:2",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP"
@@ -3907,18 +3941,18 @@
                                         ]
                                     }
                                 },
-                                "storeAs": "tetraviteTokens"
+                                "storeAs": "gathered0"
                             },
                             {
                                 "type": "SelectFromCollection",
-                                "from": "tetraviteTokens",
+                                "from": "gathered0",
                                 "selection": "ChooseAnyNumber",
-                                "storeSelected": "exiledTokens",
+                                "storeSelected": "selected1",
                                 "prompt": "Exile any number of Tetravite tokens created with this creature"
                             },
                             {
                                 "type": "MoveCollection",
-                                "from": "exiledTokens",
+                                "from": "selected1",
                                 "destination": {
                                     "type": "ToZone",
                                     "zone": "Exile"
@@ -3926,10 +3960,10 @@
                             },
                             {
                                 "type": "AddDynamicCounters",
-                                "counterType": "+1/+1",
+                                "counterType": "PLUS_ONE_PLUS_ONE",
                                 "amount": {
                                     "type": "VariableReference",
-                                    "variableName": "exiledTokens_count"
+                                    "variableName": "selected1_count"
                                 },
                                 "target": "Self"
                             }
@@ -3965,7 +3999,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "The Rack:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP",
@@ -4021,7 +4055,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Titania's Song:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield"
@@ -4134,11 +4168,11 @@
                         "type": "BattlefieldMatching",
                         "filter": "artifact ctrl:you"
                     },
-                    "storeAs": "sacrificeable"
+                    "storeAs": "gathered0"
                 },
                 {
                     "type": "SelectFromCollection",
-                    "from": "sacrificeable",
+                    "from": "gathered0",
                     "selection": {
                         "type": "ChooseExactly",
                         "count": {
@@ -4146,12 +4180,12 @@
                             "amount": 1
                         }
                     },
-                    "storeSelected": "sacrificed",
+                    "storeSelected": "selected1",
                     "prompt": "Sacrifice an artifact"
                 },
                 {
                     "type": "MoveCollection",
-                    "from": "sacrificed",
+                    "from": "selected1",
                     "destination": {
                         "type": "ToZone",
                         "zone": "Graveyard"
@@ -4164,7 +4198,7 @@
                         "type": "Gate.WhenCondition",
                         "condition": {
                             "type": "CollectionContainsMatch",
-                            "collection": "sacrificed"
+                            "collection": "selected1"
                         }
                     },
                     "then": {
@@ -4177,11 +4211,12 @@
                                     "zone": "Library",
                                     "filter": "artifact"
                                 },
-                                "storeAs": "searchable"
+                                "storeAs": "gathered3",
+                                "search": true
                             },
                             {
                                 "type": "SelectFromCollection",
-                                "from": "searchable",
+                                "from": "gathered3",
                                 "selection": {
                                     "type": "ChooseUpTo",
                                     "count": {
@@ -4189,7 +4224,7 @@
                                         "amount": 1
                                     }
                                 },
-                                "storeSelected": "found",
+                                "storeSelected": "selected4",
                                 "prompt": "Search your library for an artifact card"
                             },
                             {
@@ -4200,22 +4235,27 @@
                                         "type": "Compare",
                                         "left": {
                                             "type": "StoredCardManaValue",
-                                            "collectionName": "found"
+                                            "collectionName": "selected4"
                                         },
                                         "operator": "LTE",
                                         "right": {
                                             "type": "StoredCardManaValue",
-                                            "collectionName": "sacrificed"
+                                            "collectionName": "selected1"
                                         }
                                     }
                                 },
                                 "then": {
-                                    "type": "MoveCollection",
-                                    "from": "found",
-                                    "destination": {
-                                        "type": "ToZone",
-                                        "zone": "Battlefield"
-                                    }
+                                    "type": "Composite",
+                                    "effects": [
+                                        {
+                                            "type": "MoveCollection",
+                                            "from": "selected4",
+                                            "destination": {
+                                                "type": "ToZone",
+                                                "zone": "Battlefield"
+                                            }
+                                        }
+                                    ]
                                 },
                                 "otherwise": {
                                     "type": "Gated",
@@ -4227,30 +4267,40 @@
                                                 "type": "Subtract",
                                                 "left": {
                                                     "type": "StoredCardManaValue",
-                                                    "collectionName": "found"
+                                                    "collectionName": "selected4"
                                                 },
                                                 "right": {
                                                     "type": "StoredCardManaValue",
-                                                    "collectionName": "sacrificed"
+                                                    "collectionName": "selected1"
                                                 }
                                             }
                                         }
                                     },
                                     "then": {
-                                        "type": "MoveCollection",
-                                        "from": "found",
-                                        "destination": {
-                                            "type": "ToZone",
-                                            "zone": "Battlefield"
-                                        }
+                                        "type": "Composite",
+                                        "effects": [
+                                            {
+                                                "type": "MoveCollection",
+                                                "from": "selected4",
+                                                "destination": {
+                                                    "type": "ToZone",
+                                                    "zone": "Battlefield"
+                                                }
+                                            }
+                                        ]
                                     },
                                     "otherwise": {
-                                        "type": "MoveCollection",
-                                        "from": "found",
-                                        "destination": {
-                                            "type": "ToZone",
-                                            "zone": "Graveyard"
-                                        }
+                                        "type": "Composite",
+                                        "effects": [
+                                            {
+                                                "type": "MoveCollection",
+                                                "from": "selected4",
+                                                "destination": {
+                                                    "type": "ToZone",
+                                                    "zone": "Graveyard"
+                                                }
+                                            }
+                                        ]
                                     }
                                 }
                             }
@@ -4286,12 +4336,12 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Triskelion:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
                         "type": "AtomRemoveCounters",
-                        "counterType": "+1/+1",
+                        "counterType": "PLUS_ONE_PLUS_ONE",
                         "self": true
                     }
                 },
@@ -4303,13 +4353,13 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "any target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
                     {
                         "type": "AnyTarget",
-                        "id": "any target"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "Remove a +1/+1 counter from this creature: It deals 1 damage to any target."
@@ -4347,7 +4397,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Urza's Avenger:1",
                 "cost": "CostFree",
                 "effect": {
                     "type": "Modal",
@@ -4479,7 +4529,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Urza's Chalice:1",
                 "trigger": {
                     "type": "SpellCastEvent",
                     "spellFilter": {
@@ -4530,7 +4580,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Urza's Mine:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "Gated",
@@ -4594,7 +4644,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Urza's Miter:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "artifact ctrl:you",
@@ -4642,7 +4692,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Urza's Power Plant:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "Gated",
@@ -4706,7 +4756,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Urza's Tower:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "Gated",
@@ -4828,13 +4878,13 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Xenic Poltergeist:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "BecomeCreature",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target noncreature artifact"
+                        "name": "t0"
                     },
                     "power": {
                         "type": "Fixed",
@@ -4873,7 +4923,7 @@
                                 ]
                             }
                         },
-                        "id": "target noncreature artifact"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{T}: Until your next upkeep, target noncreature artifact becomes an artifact creature with power and toughness each equal to its mana value."
@@ -4909,7 +4959,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Yawgmoth Demon:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP"

@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Bramblecrush
@@ -21,7 +20,7 @@ val Bramblecrush = card("Bramblecrush") {
     oracleText = "Destroy target noncreature permanent."
 
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter.NoncreaturePermanent))
+        val t = target(TargetFilter.NoncreaturePermanent)
         effect = Effects.Destroy(t)
     }
 

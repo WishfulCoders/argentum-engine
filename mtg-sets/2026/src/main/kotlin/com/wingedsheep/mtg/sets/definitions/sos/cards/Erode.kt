@@ -9,16 +9,9 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Erode
@@ -28,7 +21,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * card, put it onto the battlefield tapped, then shuffle.
  *
  * A Path-to-Exile-shaped compensation effect. The destroy resolves first, then the destroyed
- * permanent's controller — not Erode's controller — gets the optional search, so the [MayEffect]
+ * permanent's controller — not Erode's controller — gets the optional search, so the [Effects.May]
  * gate is delegated to [EffectTarget.TargetController] and the whole search pipeline is scoped to
  * [Player.ControllerOf] (library to gather from, battlefield to put the land onto tapped, and the
  * library to shuffle). "Its controller" is resolved from the targeted permanent at resolution;
@@ -43,38 +36,31 @@ val Erode = card("Erode") {
         "for a basic land card, put it onto the battlefield tapped, then shuffle."
 
     spell {
-        val permanent = target("target creature or planeswalker", Targets.CreatureOrPlaneswalker)
-        effect = Effects.Destroy(permanent) then MayEffect(
-            effect = Effects.Composite(
-                listOf(
-                    GatherCardsEffect(
-                        source = CardSource.FromZone(
-                            zone = Zone.LIBRARY,
-                            player = Player.ControllerOf("target"),
-                            filter = GameObjectFilter.BasicLand,
-                        ),
-                        storeAs = "searchable",
+        val permanent = target(Targets.CreatureOrPlaneswalker)
+        effect = Effects.Destroy(permanent) then Effects.May(
+            effect = Effects.Pipeline {
+                val searchable = gather(
+                    CardSource.FromZone(
+                        zone = Zone.LIBRARY,
+                        player = Player.ControllerOf("target"),
+                        filter = GameObjectFilter.BasicLand,
                     ),
-                    SelectFromCollectionEffect(
-                        from = "searchable",
-                        selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                        // "Its controller may search their library" — the destroyed permanent's
-                        // controller picks the land, not Erode's controller. Without this the
-                        // caster makes the choice and sees the opponent's entire library order.
-                        chooser = Chooser.ControllerOfTarget,
-                        storeSelected = "found",
-                    ),
-                    MoveCollectionEffect(
-                        from = "found",
-                        destination = CardDestination.ToZone(
-                            zone = Zone.BATTLEFIELD,
-                            player = Player.ControllerOf("target"),
-                            placement = ZonePlacement.Tapped,
-                        ),
-                    ),
-                    ShuffleLibraryEffect(target = EffectTarget.TargetController),
-                ),
-            ),
+                    search = true
+                )
+                // "Its controller may search their library" — the destroyed permanent's
+                // controller picks the land, not Erode's controller. Without this the
+                // caster makes the choice and sees the opponent's entire library order.
+                val found = chooseUpTo(1, from = searchable, chooser = Chooser.ControllerOfTarget)
+                move(
+                    found,
+                    CardDestination.ToZone(
+                        zone = Zone.BATTLEFIELD,
+                        player = Player.ControllerOf("target"),
+                        placement = ZonePlacement.Tapped,
+                    )
+                )
+                run(Effects.ShuffleLibrary(target = EffectTarget.TargetController))
+            },
             decisionMaker = EffectTarget.TargetController,
         )
     }

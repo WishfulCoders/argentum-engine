@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Pharika's Mender
@@ -32,16 +31,8 @@ val PharikasMender = card("Pharika's Mender") {
     oracleText = "When this creature enters, you may return target creature or enchantment card from your graveyard to your hand."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val recovered = target(
-            "creature or enchantment card in your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.CreatureOrEnchantment.ownedByYou(),
-                    zone = Zone.GRAVEYARD
-                )
-            )
-        )
+        trigger = Triggers.self.enters()
+        val recovered = target(TargetFilter(GameObjectFilter.CreatureOrEnchantment.ownedByYou(), zone = Zone.GRAVEYARD))
         optional = true
         effect = Effects.ReturnToHand(recovered)
     }

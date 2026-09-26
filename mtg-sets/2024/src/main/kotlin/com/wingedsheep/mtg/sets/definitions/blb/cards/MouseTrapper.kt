@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Mouse Trapper
@@ -29,8 +29,8 @@ val MouseTrapper = card("Mouse Trapper") {
 
     // Valiant: first time targeted by your spell/ability each turn → tap opponent's creature
     triggeredAbility {
-        trigger = Triggers.Valiant
-        val t = target("creature an opponent controls", Targets.CreatureOpponentControls)
+        trigger = Triggers.self.becomesTarget(byYou = true, firstTimeEachTurn = true)
+        val t = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.Tap(t)
     }
 

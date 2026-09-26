@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Dust Bowl
@@ -39,7 +38,7 @@ val DustBowl = card("Dust Bowl") {
             Costs.Tap,
             Costs.Sacrifice(GameObjectFilter.Land)
         )
-        val land = target("target", TargetPermanent(filter = TargetFilter.NonbasicLand))
+        val land = target(TargetFilter.NonbasicLand)
         effect = Effects.Destroy(land)
     }
 

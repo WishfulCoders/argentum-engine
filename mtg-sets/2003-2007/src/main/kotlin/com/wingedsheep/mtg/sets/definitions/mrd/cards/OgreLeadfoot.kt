@@ -13,14 +13,14 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Whenever this creature becomes blocked by an artifact creature, destroy that creature.
  *
- * Modelled with the *filtered* SELF-binding [Triggers.becomesBlocked] shape (the same one
+ * Modelled with the *filtered* SELF-binding `Triggers.<subject>.becomesBlocked()` shape (the same one
  * flanking is built on): the filter constrains the **blocker**, and the detector fires the
  * ability once per matching blocker with `triggeringEntityId` set to that blocker. So a gang
  * block by three artifact creatures destroys all three, one trigger each, and
  * [EffectTarget.TriggeringEntity] resolves to the right one every time.
  *
- * The unfiltered [Triggers.BecomesBlocked] would be wrong here — it fires exactly once no matter
- * how many creatures block — and [Triggers.BlocksOrBecomesBlockedBy] would over-trigger, since
+ * The unfiltered `Triggers.self.becomesBlocked()` would be wrong here — it fires exactly once no matter
+ * how many creatures block — and `Triggers.<subject>.blocksOrBecomesBlocked(by, oncePerCombat)` would over-trigger, since
  * the printed text covers only the blocked direction, not the Leadfoot blocking something.
  *
  * "Destroy that creature" is a plain [Effects.Destroy] with no regeneration clause, so an
@@ -35,7 +35,7 @@ val OgreLeadfoot = card("Ogre Leadfoot") {
     oracleText = "Whenever this creature becomes blocked by an artifact creature, destroy that creature."
 
     triggeredAbility {
-        trigger = Triggers.becomesBlocked(filter = GameObjectFilter.ArtifactCreature)
+        trigger = Triggers.self.matching(GameObjectFilter.ArtifactCreature).becomesBlocked()
         effect = Effects.Destroy(EffectTarget.TriggeringEntity)
         description = "Whenever this creature becomes blocked by an artifact creature, destroy that creature."
     }

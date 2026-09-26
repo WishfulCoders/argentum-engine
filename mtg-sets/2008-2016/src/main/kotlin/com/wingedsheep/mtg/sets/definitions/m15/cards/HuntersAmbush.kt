@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
 /**
  * Hunter's Ambush
@@ -13,7 +12,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  * Instant
  * Prevent all combat damage that would be dealt by nongreen creatures this turn.
  *
- * A source-side shield ([Effects.PreventCombatDamageFrom]) — the group is re-evaluated against
+ * A source-side shield ([Effects.PreventCombatDamageFrom]) — the filter is re-evaluated against
  * projected state as each damage instance would be dealt, so a creature that becomes green
  * mid-turn deals its damage normally.
  */
@@ -24,9 +23,7 @@ val HuntersAmbush = card("Hunter's Ambush") {
     oracleText = "Prevent all combat damage that would be dealt by nongreen creatures this turn."
 
     spell {
-        effect = Effects.PreventCombatDamageFrom(
-            GroupFilter(GameObjectFilter.Creature.notColor(Color.GREEN))
-        )
+        effect = Effects.PreventCombatDamageFrom(GameObjectFilter.Creature.notColor(Color.GREEN))
     }
 
     metadata {

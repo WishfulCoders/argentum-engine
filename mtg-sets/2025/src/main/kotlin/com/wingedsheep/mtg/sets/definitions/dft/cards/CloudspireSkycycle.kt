@@ -38,7 +38,7 @@ val CloudspireSkycycle = card("Cloudspire Skycycle") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         target = TargetObject(
             count = 2,
             minCount = 1,

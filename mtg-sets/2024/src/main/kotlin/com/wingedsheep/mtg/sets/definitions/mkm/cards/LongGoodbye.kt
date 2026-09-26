@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Long Goodbye — Murders at Karlov Manor #92
@@ -29,12 +28,7 @@ val LongGoodbye = card("Long Goodbye") {
     cantBeCountered = true
 
     spell {
-        val t = target(
-            "target creature or planeswalker with mana value 3 or less",
-            TargetPermanent(
-                filter = TargetFilter(GameObjectFilter.CreatureOrPlaneswalker.manaValueAtMost(3))
-            )
-        )
+        val t = target(TargetFilter(GameObjectFilter.CreatureOrPlaneswalker.manaValueAtMost(3)))
         effect = Effects.Destroy(t)
     }
 

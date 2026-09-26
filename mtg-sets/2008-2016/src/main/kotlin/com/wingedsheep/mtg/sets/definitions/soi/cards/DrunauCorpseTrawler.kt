@@ -13,7 +13,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -32,7 +31,7 @@ val DrunauCorpseTrawler = card("Drunau Corpse Trawler") {
     power = 1
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 2,
             toughness = 2,
@@ -42,7 +41,7 @@ val DrunauCorpseTrawler = card("Drunau Corpse Trawler") {
     }
     activatedAbility {
         cost = Costs.Mana("{2}{B}")
-        val t = target("target", TargetCreature(filter = TargetFilter(GameObjectFilter.Permanent.withSubtype("Zombie"))))
+        val t = target(TargetFilter(GameObjectFilter.Permanent.withSubtype("Zombie")))
         effect = Effects.GrantKeyword(Keyword.DEATHTOUCH, t)
     }
     metadata {

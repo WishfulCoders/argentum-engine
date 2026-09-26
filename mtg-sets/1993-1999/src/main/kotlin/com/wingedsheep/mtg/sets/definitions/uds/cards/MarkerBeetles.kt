@@ -9,9 +9,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -30,13 +28,13 @@ val MarkerBeetles = card("Marker Beetles") {
     power = 2
     toughness = 3
     triggeredAbility {
-        trigger = Triggers.Dies
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+        trigger = Triggers.self.dies()
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(1, 1, t)
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.SacrificeSelf)
-        effect = DrawCardsEffect(1)
+        effect = Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.COMMON

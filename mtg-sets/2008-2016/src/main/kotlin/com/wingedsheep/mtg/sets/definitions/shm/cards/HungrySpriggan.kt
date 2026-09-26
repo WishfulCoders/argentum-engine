@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * - The pump is a *triggered* ability, not a static: it goes on the stack when attackers are
  *   declared and can be responded to, and it only fires when this creature itself attacks
- *   ([Triggers.Attacks] is the SELF-bound attack trigger).
+ *   (`Triggers.self.attacks()` is the SELF-bound attack trigger).
  * - [EffectTarget.Self] rather than a target — "it" is the source, so nothing is targeted and the
  *   bonus still applies if the Spriggan is later removed from combat.
  * - `Effects.ModifyStats` defaults to `Duration.EndOfTurn`, which is exactly "until end of turn".
@@ -34,7 +34,7 @@ val HungrySpriggan = card("Hungry Spriggan") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ModifyStats(3, 3, EffectTarget.Self)
     }
 

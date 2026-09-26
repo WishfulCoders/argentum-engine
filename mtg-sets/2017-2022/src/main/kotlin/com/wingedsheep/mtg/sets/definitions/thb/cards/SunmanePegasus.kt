@@ -35,10 +35,8 @@ val SunmanePegasus = card("Sunmane Pegasus") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{W}")
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.VIGILANCE, EffectTarget.Self),
-            Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self),
-        )
+        effect = Effects.GrantKeyword(Keyword.VIGILANCE, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self)
     }
 
     metadata {

@@ -1,14 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Starving Revenant (LCI #123) — {2}{B}{B} Creature — Spirit Horror (rare), 4/4.
@@ -34,7 +35,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * The ETB draws feed the card's own descend trigger below: each drawn card that resolves while
  * eight-or-more permanent cards sit in the graveyard puts a drain on the stack.
  *
- * Descend 8 (draw drain) — a "whenever you draw a card" ([Triggers.YouDraw], fires once per card
+ * Descend 8 (draw drain) — a "whenever you draw a card" (`Triggers.you.draws()`, fires once per card
  * drawn) triggered ability gated by an intervening-if ([TriggeredAbilityBuilder.interveningIf]
  * = [Conditions.CardsInGraveyardMatchingAtLeast] (8, [GameObjectFilter.Permanent])). Per CR 603.4
  * the condition is checked both when the ability would trigger and again on resolution, so it does
@@ -55,31 +56,22 @@ val StarvingRevenant = card("Starving Revenant") {
 
     // ETB: surveil 2, then for each card kept on top, draw one and lose 3 life.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            listOf(
-                Effects.Surveil(2),
-                Effects.DrawCards(DynamicAmount.DistinctEntitiesInCollections(listOf("toTop"))),
-                Effects.LoseLife(
-                    DynamicAmount.Multiply(DynamicAmount.DistinctEntitiesInCollections(listOf("toTop")), 3),
-                    EffectTarget.Controller
-                )
+        trigger = Triggers.self.enters()
+        effect = Effects.Surveil(2) then
+            Effects.DrawCards(DynamicAmounts.distinctEntitiesIn("toTop")) then
+            Effects.LoseLife(
+                DynamicAmounts.distinctEntitiesIn("toTop") * 3,
+                EffectTarget.Controller
             )
-        )
     }
 
     // Descend 8: whenever you draw a card, if eight or more permanent cards are in your graveyard,
     // target opponent loses 1 life and you gain 1 life.
     triggeredAbility {
-        trigger = Triggers.YouDraw
+        trigger = Triggers.you.draws()
         interveningIf = Conditions.CardsInGraveyardMatchingAtLeast(8, GameObjectFilter.Permanent)
-        val opponent = target("target opponent", Targets.Opponent)
-        effect = Effects.Composite(
-            listOf(
-                Effects.LoseLife(1, opponent),
-                Effects.GainLife(1)
-            )
-        )
+        val opponent = target(Targets.Opponent)
+        effect = Effects.LoseLife(1, opponent) then Effects.GainLife(1)
     }
 
     metadata {

@@ -1,18 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.spm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
@@ -44,25 +43,24 @@ val DailyBugleReporters = card("Daily Bugle Reporters") {
         "from your graveyard to your hand."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseOne(
             Mode.withTarget(
-                effect = ForEachTargetEffect(
-                    listOf(Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0)))
+                effect = Effects.ForEachTarget(
+                    Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0))
                 ),
-                target = TargetCreature(count = 2, optional = true),
+                target = TargetObject(filter = TargetFilter.Creature, count = 2, optional = true),
                 description = "Puff Piece — Put a +1/+1 counter on each of up to two target creatures."
             ),
-            Mode.withTarget(
-                effect = Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND),
-                target = TargetObject(
-                    filter = TargetFilter(
+            mode("Investigative Journalism — Return target creature card with mana value 2 or less from your graveyard to your hand.") {
+                val creature = target(
+                    TargetFilter(
                         GameObjectFilter.Creature.ownedByYou().manaValueAtMost(2),
                         zone = Zone.GRAVEYARD
-                    )
-                ),
-                description = "Investigative Journalism — Return target creature card with mana value 2 or less from your graveyard to your hand."
-            )
+                    ),
+                )
+                effect = Effects.Move(creature, Zone.HAND)
+            }
         )
         description = "When this creature enters, choose one — Puff Piece — Put a +1/+1 counter on each of up to two target creatures. • Investigative Journalism — Return target creature card with mana value 2 or less from your graveyard to your hand."
     }

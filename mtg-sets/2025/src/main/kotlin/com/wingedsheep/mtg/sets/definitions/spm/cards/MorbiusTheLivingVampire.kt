@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Morbius the Living Vampire
@@ -30,8 +29,8 @@ val MorbiusTheLivingVampire = card("Morbius the Living Vampire") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{U}{B}"), Costs.ExileSelf)
         effect = Patterns.Library.lookAtTopAndKeep(
-            count = DynamicAmount.Fixed(3),
-            keepCount = DynamicAmount.Fixed(1),
+            count = 3,
+            keepCount = 1,
             keepDestination = CardDestination.ToZone(Zone.HAND),
             restDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
             restOrder = CardOrder.ControllerChooses

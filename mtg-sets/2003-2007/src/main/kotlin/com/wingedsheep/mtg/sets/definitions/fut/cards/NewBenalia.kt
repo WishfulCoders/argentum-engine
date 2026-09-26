@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.TimingRule
  * {T}: Add {W}.
  *
  * The enters-tapped utility land the Theros "Temple" cycle later reprinted wholesale: an
- * [EntersTapped] replacement effect for the printed first line, a [Triggers.EntersBattlefield]
+ * [EntersTapped] replacement effect for the printed first line, a `Triggers.self.enters()`
  * trigger carrying [Patterns.Library].scry(1), and one [Effects.AddMana] ability on [Costs.Tap]
  * (`manaAbility = true` with [TimingRule.ManaAbility], so it resolves without using the stack).
  * Scry is a compact SDK macro rather than a hand-rolled look-and-reorder pipeline, so the reminder
@@ -38,7 +38,7 @@ val NewBenalia = card("New Benalia") {
     replacementEffect(EntersTapped())
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.scry(1)
     }
 

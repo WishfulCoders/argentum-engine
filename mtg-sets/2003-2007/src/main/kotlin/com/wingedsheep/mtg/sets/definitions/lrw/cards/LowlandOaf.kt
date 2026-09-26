@@ -8,9 +8,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Lowland Oaf
@@ -45,18 +43,13 @@ val LowlandOaf = card("Lowland Oaf") {
 
     activatedAbility {
         cost = Costs.Tap
-        val goblin = target(
-            "target Goblin creature you control",
-            TargetCreature(filter = TargetFilter.Creature.withSubtype(Subtype.GOBLIN).youControl())
-        )
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 0, goblin),
-            Effects.GrantKeyword(Keyword.FLYING, goblin, Duration.EndOfTurn),
-            CreateDelayedTriggerEffect(
+        val goblin = target(TargetFilter.Creature.withSubtype(Subtype.GOBLIN).youControl())
+        effect = Effects.ModifyStats(1, 0, goblin) then
+            Effects.GrantKeyword(Keyword.FLYING, goblin, Duration.EndOfTurn) then
+            Effects.CreateDelayedTrigger(
                 step = Step.END,
                 effect = Effects.SacrificeTarget(goblin)
             )
-        )
         description = "Target Goblin creature you control gets +1/+0 and gains flying until end of " +
             "turn. Sacrifice that creature at the beginning of the next end step."
     }

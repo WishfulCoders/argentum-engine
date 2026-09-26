@@ -7,16 +7,14 @@ import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.mtg.sets.definitions.tla.cards.EarthKingdomGeneral
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.CounterType
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.EntersWithCounters
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Tests for Earth Kingdom General's second ability:
@@ -37,8 +35,8 @@ class EarthKingdomGeneralTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Put two +1/+1 counters on target creature you control."
         spell {
-            val target = target("target creature you control", Targets.CreatureYouControl)
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, target)
+            val target = target(TargetFilter.CreatureYouControl)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, target)
         }
     }
 
@@ -52,7 +50,7 @@ class EarthKingdomGeneralTest : FunSpec({
         oracleText = "Counter Bearer enters with two +1/+1 counters on it."
         replacementEffect(
             EntersWithCounters(
-                counterType = CounterTypeFilter.PlusOnePlusOne,
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
                 count = 2,
                 selfOnly = true
             )

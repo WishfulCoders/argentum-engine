@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Alesha's Legacy
@@ -20,11 +20,9 @@ val AleshasLegacy = card("Alesha's Legacy") {
         "(Damage and effects that say \"destroy\" don't destroy it.)"
 
     spell {
-        val target = target("target creature you control", Targets.CreatureYouControl)
-        effect = Effects.Composite(listOf(
-            Effects.GrantKeyword(Keyword.DEATHTOUCH, target),
-            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, target),
-        ))
+        val target = target(TargetFilter.CreatureYouControl)
+        effect = Effects.GrantKeyword(Keyword.DEATHTOUCH, target) then
+            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, target)
     }
 
     metadata {

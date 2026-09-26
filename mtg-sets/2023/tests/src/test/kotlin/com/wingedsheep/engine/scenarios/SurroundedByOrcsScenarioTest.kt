@@ -16,7 +16,7 @@ import io.kotest.matchers.shouldBe
  *
  * "then" (vs. Foray of Orcs' "When you do") means amass and mill resolve as a single
  * sequenced effect on a cast-time target. The mill amount reads the freshly-amassed
- * Army's projected power, exercising `EntityReference.AmassedArmy` through a
+ * Army's projected power, exercising `EffectTarget.AmassedArmy` through a
  * `CompositeEffect` of `[Amass, Mill]`.
  */
 class SurroundedByOrcsScenarioTest : ScenarioTestBase() {

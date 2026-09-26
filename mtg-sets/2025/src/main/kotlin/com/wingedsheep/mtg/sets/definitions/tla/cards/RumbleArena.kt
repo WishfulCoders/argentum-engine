@@ -29,7 +29,7 @@ val RumbleArena = card("Rumble Arena") {
     oracleText = "Vigilance\nWhen this land enters, scry 1. (Look at the top card of your library. You may put it on the bottom.)\n{T}: Add {C}.\n{1}, {T}: Add one mana of any color."
     keywords(Keyword.VIGILANCE)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.scry(1)
     }
     activatedAbility {

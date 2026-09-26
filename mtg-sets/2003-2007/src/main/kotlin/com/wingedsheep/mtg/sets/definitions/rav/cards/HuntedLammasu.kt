@@ -34,8 +34,8 @@ val HuntedLammasu = card("Hunted Lammasu") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val opponent = target("target opponent", Targets.Opponent)
+        trigger = Triggers.self.enters()
+        val opponent = target(Targets.Opponent)
         effect = Effects.CreateToken(
             power = 4,
             toughness = 4,

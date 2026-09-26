@@ -26,7 +26,7 @@ val Nausea = card("Nausea") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature),
-            Effects.ModifyStats(-1, -1, EffectTarget.Self)
+            Effects.ModifyStats(-1, -1, EffectTarget.IterationEntity)
         )
     }
     metadata {

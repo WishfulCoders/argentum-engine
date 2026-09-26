@@ -6,8 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Crushing Canopy
@@ -29,11 +27,11 @@ val CrushingCanopy = card("Crushing Canopy") {
     spell {
         modal(chooseCount = 1) {
             mode("Destroy target creature with flying") {
-                val t = target("target", TargetCreature(filter = TargetFilter.Creature.withKeyword(Keyword.FLYING)))
+                val t = target(TargetFilter.Creature.withKeyword(Keyword.FLYING))
                 effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
             }
             mode("Destroy target enchantment") {
-                val t = target("target", TargetObject(filter = TargetFilter.Enchantment))
+                val t = target(TargetFilter.Enchantment)
                 effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
             }
         }

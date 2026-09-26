@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.TurnPart
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.events.SourceFilter
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
@@ -93,6 +92,27 @@ data class SkipNextDrawStepEffect(
     override val description: String = when (target) {
         EffectTarget.Controller -> "You skip your next draw step"
         else -> "${target.description.replaceFirstChar { it.uppercase() }} skips their next draw step"
+    }
+}
+
+/**
+ * The player skips their entire next untap step — Shisato, Whispering Hunter's "that player skips
+ * their next untap step".
+ *
+ * Wider than [SkipUntapEffect], which only keeps creatures and/or lands tapped *during* an untap
+ * step that still happens: a skipped step is proceeded past as though it didn't exist (CR 500.11),
+ * so nothing phases in or out, no permanent of any type untaps, and "until your next untap step"
+ * effects wait for the first untap step that isn't skipped (CR 614.10a). Two of these on the same
+ * player skip the next two untap steps.
+ */
+@SerialName("SkipNextUntapStep")
+@Serializable
+data class SkipNextUntapStepEffect(
+    val target: EffectTarget = EffectTarget.PlayerRef(Player.TargetPlayer)
+) : Effect {
+    override val description: String = when (target) {
+        EffectTarget.Controller -> "You skip your next untap step"
+        else -> "${target.description.replaceFirstChar { it.uppercase() }} skips their next untap step"
     }
 }
 
@@ -280,13 +300,13 @@ data class TakeExtraTurnEffect(
 }
 
 /**
- * End the turn (CR 720). Used for Time Stop, Sundial of the Infinite, Discontinuity, and
+ * End the turn (CR 724.1). Used for Time Stop, Sundial of the Infinite, Discontinuity, and
  * Final Fantasy's Ultima ("Destroy all artifacts and creatures. End the turn.").
  *
- * When this resolves, in order (CR 720.1):
+ * When this resolves, in order (CR 724.1):
  *  - every spell and ability on the stack is exiled, **including the source of this effect**;
  *  - triggered abilities that would have gone on the stack from the events so far (e.g. the dies
- *    triggers from a preceding board wipe) are discarded, never put on the stack (CR 720.1c);
+ *    triggers from a preceding board wipe) are discarded, never put on the stack (CR 724.1a);
  *  - creatures and players are removed from combat;
  *  - the game skips straight to the cleanup step — the active player discards down to their
  *    maximum hand size, marked damage wears off, and "this turn" / "until end of turn" effects end;
@@ -437,6 +457,25 @@ data class HijackNextTurnEffect(
 }
 
 /**
+ * "You choose which creatures attack this turn. You choose which creatures block this turn and how
+ * those creatures block." (Master Warcraft.)
+ *
+ * For the rest of the turn the ability's controller makes every attack declaration and every block
+ * declaration, for every player, in every combat phase. Only the *declarations* move — unlike
+ * [HijackNextTurnEffect] (Mindslaver), no other decision, no priority and no hidden information
+ * changes hands. The chosen attackers and blockers must still be legal under the normal rules for
+ * the players who control them (ruling), and they stay those players' creatures.
+ *
+ * If two such effects apply in one turn, the one created last wins.
+ */
+@SerialName("ControlCombatDeclarationsThisTurn")
+@Serializable
+data object ControlCombatDeclarationsThisTurnEffect : Effect {
+    override val description: String =
+        "You choose which creatures attack this turn. You choose which creatures block this turn and how those creatures block"
+}
+
+/**
  * The future window during which a [HijackNextTurnEffect] hands input authority for the
  * affected player to the ability's controller.
  *
@@ -466,6 +505,29 @@ data class CantCastSpellsEffect(
     val duration: Duration = Duration.EndOfTurn
 ) : Effect {
     override val description: String = "${target.description.replaceFirstChar { it.uppercase() }} can't cast spells ${duration.description}"
+}
+
+/**
+ * The [target] player(s) can't search libraries for the specified [duration] — "Players can't
+ * search libraries this turn" (Shadow of Doubt).
+ *
+ * Enforced where a search happens: a [GatherCardsEffect] marked `search = true` whose searching
+ * player (the effect's controller) carries the restriction finds no library cards, and the
+ * search's [EmitLibrarySearchedEventEffect] tail emits nothing because no search took place.
+ * The rest of the instruction still runs — a "search …, then shuffle" still shuffles (the card's
+ * second ruling). Looking at or revealing the top of a library is not a search and is untouched.
+ *
+ * @param target The player(s) who can't search — `PlayerRef(Player.Each)` for "players".
+ * @param duration How long the restriction lasts (default: this turn).
+ */
+@SerialName("CantSearchLibraries")
+@Serializable
+data class CantSearchLibrariesEffect(
+    val target: EffectTarget,
+    val duration: Duration = Duration.EndOfTurn
+) : Effect {
+    override val description: String =
+        "${target.description.replaceFirstChar { it.uppercase() }} can't search libraries ${duration.description}"
 }
 
 /**
@@ -537,6 +599,49 @@ data class CantActivateLoyaltyAbilitiesEffect(
     val duration: Duration = Duration.EndOfTurn
 ) : Effect {
     override val description: String = "${target.description.replaceFirstChar { it.uppercase() }} can't activate planeswalkers' loyalty abilities ${duration.description}"
+}
+
+/**
+ * [target] may activate loyalty abilities of planeswalkers matching [planeswalkerFilter] on any
+ * player's turn, any time they could cast an instant, for [duration] — the permissive mirror of
+ * [CantActivateLoyaltyAbilitiesEffect].
+ *
+ * CR 606.3 lets a player activate a loyalty ability only any time they could cast a sorcery, and
+ * only if none of that permanent's loyalty abilities has been activated that turn. This lifts the
+ * first half alone: the once-per-turn limit still applies. Jace's Machinations: "Until end of turn,
+ * you may activate loyalty abilities of Jace planeswalkers you control on any player's turn any
+ * time you could cast an instant." — `planeswalkerFilter =
+ * GameObjectFilter.Planeswalker.withSubtype("Jace").youControl()`.
+ *
+ * A resolution-time one-shot that records a turn-scoped grant on the player, so it outlives the
+ * instant that made it. [planeswalkerFilter] is matched against the ability's source when the
+ * ability is offered and activated, on projected state, so a permanent that becomes a Jace later in
+ * the turn is covered.
+ */
+@SerialName("GrantInstantSpeedLoyaltyAbilities")
+@Serializable
+data class GrantInstantSpeedLoyaltyAbilitiesEffect(
+    val target: EffectTarget = EffectTarget.Controller,
+    val planeswalkerFilter: GameObjectFilter = GameObjectFilter.Planeswalker,
+    val duration: Duration = Duration.EndOfTurn
+) : Effect {
+    override val description: String = buildString {
+        if (duration != Duration.Permanent) {
+            append(duration.description.replaceFirstChar { it.uppercase() })
+            append(", ")
+            append(target.description)
+        } else {
+            append(target.description.replaceFirstChar { it.uppercase() })
+        }
+        append(" may activate loyalty abilities of ")
+        append(planeswalkerFilter.description)
+        append("s on any player's turn any time you could cast an instant")
+    }
+
+    override fun applyTextReplacement(replacer: TextReplacer): Effect {
+        val newFilter = planeswalkerFilter.applyTextReplacement(replacer)
+        return if (newFilter !== planeswalkerFilter) copy(planeswalkerFilter = newFilter) else this
+    }
 }
 
 /**
@@ -628,7 +733,7 @@ data class GrantCastCreaturesFromGraveyardWithForageEffect(
  * would deal damage to a permanent or player this turn, it deals that much damage plus 2 instead."
  *
  * @param bonusAmount The flat damage bonus to add
- * @param sourceFilter Filter for which sources get the bonus (e.g., SourceFilter.HasColor(Color.RED))
+ * @param sourceFilter Filter for which sources get the bonus (e.g., GameObjectFilter.Any.withColor(Color.RED))
  * @param target The player who gets the damage bonus (default: controller)
  * @param duration How long the bonus lasts (default: EndOfTurn)
  */
@@ -636,7 +741,7 @@ data class GrantCastCreaturesFromGraveyardWithForageEffect(
 @Serializable
 data class GrantDamageBonusEffect(
     val bonusAmount: Int,
-    val sourceFilter: SourceFilter = SourceFilter.Any,
+    val sourceFilter: GameObjectFilter = GameObjectFilter.Any,
     val target: EffectTarget = EffectTarget.Controller,
     val duration: Duration = Duration.EndOfTurn
 ) : Effect {
@@ -778,7 +883,7 @@ data class GrantSpellsCantBeCounteredEffect(
  * chosen earlier in a pipeline (via [ChooseCreatureTypeEffect]). When the executor resolves, it
  * captures the chosen type so the emblem can re-evaluate the filter against future battlefield state.
  *
- * Composes with `Effects.Composite(ChooseCreatureTypeEffect, CreatePermanentEmblem(...))`.
+ * Composes with `ChooseCreatureTypeEffect then CreatePermanentEmblem(...)`.
  *
  * An emblem whose text affects its **controller** rather than a group of permanents ("You may cast
  * spells from your hand without paying their mana costs" — Tamiyo, Field Researcher's −7) carries
@@ -1030,7 +1135,7 @@ data class ChooseNumberThenEffect(
  * — it writes the same [com.wingedsheep.sdk.scripting.ChoiceSlot.CHOSEN_NUMBER] slot *before* the
  * permanent is on the battlefield (CR 614.1c), so the CDA never reads a default while the permanent
  * briefly sits at its printed P/T. Wrapping this effect in an
- * [com.wingedsheep.sdk.scripting.OnEnterRunEffect] also works but runs *after* placement, so avoid
+ * [com.wingedsheep.sdk.scripting.OnEnterRun] also works but runs *after* placement, so avoid
  * it when the entry choice feeds a P/T-defining CDA.
  *
  * Shapeshifter: "As this enters and at the beginning of your upkeep, choose a number between 0

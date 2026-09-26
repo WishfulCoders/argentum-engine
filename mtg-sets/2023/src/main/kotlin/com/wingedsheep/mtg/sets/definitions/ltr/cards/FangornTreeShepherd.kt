@@ -6,11 +6,11 @@ import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Fangorn, Tree Shepherd
@@ -42,17 +42,12 @@ val FangornTreeShepherd = card("Fangorn, Tree Shepherd") {
 
     // Whenever one or more Treefolk you control attack, add twice that much {G}.
     triggeredAbility {
-        trigger = Triggers.YouAttackWithFilter(
-            GameObjectFilter.Creature.youControl().withSubtype("Treefolk")
-        )
+        trigger = Triggers.you.attacks(GameObjectFilter.Creature.youControl().withSubtype("Treefolk"))
         effect = Effects.AddDynamicMana(
-            amount = DynamicAmount.Multiply(
-                DynamicAmounts.battlefield(
-                    com.wingedsheep.sdk.scripting.references.Player.You,
-                    GameObjectFilter.Creature.attacking().withSubtype("Treefolk")
-                ).count(),
-                2
-            ),
+            amount = DynamicAmounts.battlefield(
+                com.wingedsheep.sdk.scripting.references.Player.You,
+                GameObjectFilter.Creature.attacking().withSubtype("Treefolk")
+            ).count() * 2,
             allowedColors = setOf(Color.GREEN)
         )
     }

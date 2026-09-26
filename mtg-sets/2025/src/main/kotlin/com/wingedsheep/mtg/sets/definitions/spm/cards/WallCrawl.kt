@@ -3,6 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.spm.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -12,7 +13,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Wall Crawl
@@ -41,23 +41,21 @@ val WallCrawl = card("Wall Crawl") {
         "Spiders you control get +1/+1 and can't be blocked by creatures with defender."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                power = 2,
-                toughness = 1,
-                colors = setOf(Color.GREEN),
-                creatureTypes = setOf("Spider"),
-                keywords = setOf(Keyword.REACH),
-                imageUri = "https://cards.scryfall.io/normal/front/4/a/4a40f6e1-3545-4503-af3e-f0acfb735e3a.jpg?1757379309"
-            ),
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateToken(
+            power = 2,
+            toughness = 1,
+            colors = setOf(Color.GREEN),
+            creatureTypes = setOf("Spider"),
+            keywords = setOf(Keyword.REACH),
+            imageUri = "https://cards.scryfall.io/normal/front/4/a/4a40f6e1-3545-4503-af3e-f0acfb735e3a.jpg?1757379309"
+        ) then
             Effects.GainLife(
-                DynamicAmount.AggregateBattlefield(
+                DynamicAmounts.battlefield(
                     Player.You,
                     GameObjectFilter.Creature.withSubtype("Spider")
-                )
+                ).count()
             )
-        )
     }
 
     // "Spiders you control get +1/+1" — Layer 7c anthem over the Spider group.

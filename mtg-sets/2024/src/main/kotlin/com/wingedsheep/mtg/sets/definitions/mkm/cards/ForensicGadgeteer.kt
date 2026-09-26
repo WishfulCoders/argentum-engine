@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -7,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ReduceActivatedAbilityCost
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Forensic Gadgeteer — Murders at Karlov Manor #57
@@ -42,7 +42,7 @@ val ForensicGadgeteer = card("Forensic Gadgeteer") {
         "reduce the mana in that cost to less than one mana."
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(spellFilter = GameObjectFilter.Artifact)
+        trigger = Triggers.you.casts(GameObjectFilter.Artifact)
         effect = Effects.Investigate()
         description = "Whenever you cast an artifact spell, investigate."
     }
@@ -50,7 +50,7 @@ val ForensicGadgeteer = card("Forensic Gadgeteer") {
     staticAbility {
         ability = ReduceActivatedAbilityCost(
             filter = GroupFilter(GameObjectFilter.Artifact.youControl()),
-            amount = DynamicAmount.Fixed(1),
+            amount = DynamicAmounts.fixed(1),
             manaFloor = 1
         )
     }

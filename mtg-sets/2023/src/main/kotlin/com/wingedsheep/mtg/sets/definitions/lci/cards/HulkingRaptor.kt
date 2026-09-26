@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.WardCost
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Hulking Raptor — The Lost Caverns of Ixalan #191
@@ -18,7 +19,7 @@ import com.wingedsheep.sdk.scripting.effects.WardCost
  * Ward {2}: `KeywordAbility.Ward(WardCost.Mana("{2}"))` — triggers whenever an opponent
  * targets this creature; they must pay {2} or the spell/ability is countered.
  *
- * First-main mana: `Triggers.FirstMainPhase` fires at the start of the controller's
+ * First-main mana: `Triggers.you.beginningOf(Step.PRECOMBAT_MAIN)` fires at the start of the controller's
  * precombat main phase; `Effects.AddMana(Color.GREEN, 2)` adds two unrestricted {G} to
  * the controller's mana pool.
  */
@@ -35,7 +36,7 @@ val HulkingRaptor = card("Hulking Raptor") {
 
     // At the beginning of your first main phase, add {G}{G}.
     triggeredAbility {
-        trigger = Triggers.FirstMainPhase
+        trigger = Triggers.you.beginningOf(Step.PRECOMBAT_MAIN)
         effect = Effects.AddMana(Color.GREEN, 2)
     }
 

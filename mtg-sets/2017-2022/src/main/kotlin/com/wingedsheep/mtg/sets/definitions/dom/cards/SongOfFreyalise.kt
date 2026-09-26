@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
@@ -9,11 +9,7 @@ import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.GrantActivatedAbilityToGroupEffect
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -38,9 +34,9 @@ val SongOfFreyalise = card("Song of Freyalise") {
 
     val creaturesYouControl = GroupFilter.AllCreaturesYouControl
 
-    val manaAbility = GrantActivatedAbilityToGroupEffect(
+    val manaAbility = Effects.GrantActivatedAbilityToGroup(
         ability = ActivatedAbility(
-            id = AbilityId.generate(),
+            id = AbilityId.next(),
             cost = AbilityCost.Tap,
             effect = Effects.AddAnyColorMana(1),
             isManaAbility = true,
@@ -59,20 +55,16 @@ val SongOfFreyalise = card("Song of Freyalise") {
     }
 
     sagaChapter(3) {
-        effect = Effects.Composite(listOf(
+        effect = Effects.ForEachInGroup(
+            filter = creaturesYouControl,
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity)
+        ) then
             Effects.ForEachInGroup(
                 filter = creaturesYouControl,
-                effect = AddCountersEffect(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
-            ),
-            Effects.ForEachInGroup(
-                filter = creaturesYouControl,
-                effect = Effects.Composite(listOf(
-                    GrantKeywordEffect(Keyword.VIGILANCE.name, EffectTarget.Self, Duration.EndOfTurn),
-                    GrantKeywordEffect(Keyword.TRAMPLE.name, EffectTarget.Self, Duration.EndOfTurn),
-                    GrantKeywordEffect(Keyword.INDESTRUCTIBLE.name, EffectTarget.Self, Duration.EndOfTurn)
-                ))
+                effect = Effects.GrantKeyword(Keyword.VIGILANCE, EffectTarget.IterationEntity, Duration.EndOfTurn) then
+                    Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.IterationEntity, Duration.EndOfTurn) then
+                    Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.IterationEntity, Duration.EndOfTurn)
             )
-        ))
     }
 
     metadata {

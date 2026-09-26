@@ -6,6 +6,19 @@ import { getCardImageUrl, getScryfallFallbackUrl } from '@/utils/cardImages.ts'
 const ANIMATION_DURATION = 500 // ms
 
 /**
+ * The element, unless it is laid out entirely outside the viewport — a shared-strip table keeps
+ * the boards it has slid away from mounted, so a zone can exist without being on screen.
+ */
+function visibleOrNull(el: Element | null): Element | null {
+  if (!el) return null
+  const rect = el.getBoundingClientRect()
+  if (rect.width === 0 && rect.height === 0) return null
+  const offScreen =
+    rect.right <= 0 || rect.bottom <= 0 || rect.left >= window.innerWidth || rect.top >= window.innerHeight
+  return offScreen ? null : el
+}
+
+/**
  * Single animated card draw.
  */
 function DrawAnimationCard({
@@ -55,12 +68,17 @@ function DrawAnimationCard({
 
   // Get positions from DOM elements if available
   const getPositions = () => {
-    // Find the library element (deck pile)
-    const librarySelector = isOpponent ? '[data-zone="opponent-library"]' : '[data-zone="player-library"]'
-    const handSelector = isOpponent ? '[data-zone="opponent-hand"]' : '[data-zone="hand"]'
+    // Zones are matched on their owner, not just their kind: a multiplayer table renders one
+    // `opponent-library` / `opponent-hand` per opponent, and the first in the DOM is seat one's.
+    // An opponent whose board is off-screen has no zones to find — fly to their player anchor
+    // (life orb, name plate or rail chip; exactly one per player) instead.
+    const owner = `[data-zone-owner="${animation.playerId}"]`
+    const librarySelector = isOpponent ? `[data-zone="opponent-library"]${owner}` : '[data-zone="player-library"]'
+    const handSelector = isOpponent ? `[data-zone="opponent-hand"]${owner}` : '[data-zone="hand"]'
+    const playerAnchor = isOpponent ? document.querySelector(`[data-player-id="${animation.playerId}"]`) : null
 
-    const libraryEl = document.querySelector(librarySelector)
-    const handEl = document.querySelector(handSelector)
+    const libraryEl = visibleOrNull(document.querySelector(librarySelector)) ?? playerAnchor
+    const handEl = visibleOrNull(document.querySelector(handSelector)) ?? playerAnchor
 
     let startX = isOpponent ? window.innerWidth - 80 : window.innerWidth - 80
     let startY = isOpponent ? 100 : window.innerHeight - 100

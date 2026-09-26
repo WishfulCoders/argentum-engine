@@ -1,20 +1,19 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Dormant Grove // Gnarled Grovestrider (Innistrad: Crimson Vow)
@@ -30,7 +29,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *   Other creatures you control have vigilance.
  *
  * The "Then if that creature …" clause is a resolution-time recheck of the *same* target, not a
- * second condition on the ability, so it is a [ConditionalEffect] gated on
+ * second condition on the ability, so it is a [Effects.If] gated on
  * [Conditions.TargetMatchesFilter] against target slot 0 — the handle returned by `target(…)`
  * cannot itself carry a condition (a `target()` handle inside a `Condition` silently evaluates
  * false). The toughness is read off projected state, so the +1/+1 counter this ability just placed
@@ -50,14 +49,11 @@ private val DormantGroveFront = card("Dormant Grove") {
         "you control. Then if that creature has toughness 6 or greater, transform this enchantment."
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        val creature = target("target creature you control", Targets.CreatureYouControl)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creature) then ConditionalEffect(
-            condition = Conditions.TargetMatchesFilter(
-                GameObjectFilter.Creature.toughnessAtLeast(6),
-                targetIndex = 0
-            ),
-            effect = TransformEffect(EffectTarget.Self)
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature) then Effects.If(
+            condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.toughnessAtLeast(6), creature),
+            then = Effects.Transform(EffectTarget.Self)
         )
         description = "At the beginning of combat on your turn, put a +1/+1 counter on target " +
             "creature you control. Then if that creature has toughness 6 or greater, transform " +

@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Rootwater Diver
@@ -24,10 +23,7 @@ val RootwaterDiver = card("Rootwater Diver") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.SacrificeSelf)
-        val artifact = target(
-            "target artifact card from your graveyard",
-            TargetObject(filter = TargetFilter.ArtifactInYourGraveyard)
-        )
+        val artifact = target(TargetFilter.ArtifactInYourGraveyard)
         effect = Effects.ReturnToHand(artifact)
         description = "{T}, Sacrifice this creature: Return target artifact card from your graveyard to your hand."
     }

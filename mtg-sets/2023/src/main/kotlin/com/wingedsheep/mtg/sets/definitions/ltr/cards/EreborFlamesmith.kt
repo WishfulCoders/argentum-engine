@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Erebor Flamesmith
@@ -24,7 +25,7 @@ val EreborFlamesmith = card("Erebor Flamesmith") {
     oracleText = "Whenever you cast an instant or sorcery spell, this creature deals 1 damage to each opponent."
 
     triggeredAbility {
-        trigger = Triggers.YouCastInstantOrSorcery
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
         effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent))
     }
 

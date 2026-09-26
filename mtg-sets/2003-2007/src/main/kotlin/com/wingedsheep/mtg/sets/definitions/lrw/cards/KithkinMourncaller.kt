@@ -1,6 +1,5 @@
 package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -31,11 +30,7 @@ val KithkinMourncaller = card("Kithkin Mourncaller") {
     oracleText = "Whenever an attacking Kithkin or Elf is put into your graveyard from the battlefield, you may draw a card."
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Permanent.withAnySubtype("Kithkin", "Elf").attacking().ownedByYou(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Permanent.withAnySubtype("Kithkin", "Elf").attacking().ownedByYou()).dies()
         optional = true
         effect = Effects.DrawCards(1)
         description = "you may draw a card."

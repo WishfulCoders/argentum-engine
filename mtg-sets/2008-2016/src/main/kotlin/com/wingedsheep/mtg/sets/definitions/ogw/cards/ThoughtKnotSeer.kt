@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.model.Rarity
  *  - The ETB is `Patterns.Hand.revealHandAndExileChosen(target = opponent)` — the exact
  *    "reveal hand → choose a nonland → exile it" shape already used by Cruelclaw's Heist / Soul
  *    Search (Thoughtseize with exile instead of discard).
- *  - The LTB is a self `Triggers.LeavesBattlefield` (Goblin Firebug's shape) with its own target
+ *  - The LTB is a self `Triggers.self.leaves()` (Goblin Firebug's shape) with its own target
  *    opponent, drawing them a card as the "give it back" cost.
  *  - Canonical printing lives here (Oath of the Gatewatch, its earliest real-expansion printing
  *    per Scryfall — it was never printed in Battle for Zendikar).
@@ -37,16 +37,16 @@ val ThoughtKnotSeer = card("Thought-Knot Seer") {
         "When this creature leaves the battlefield, target opponent draws a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val opponent = target("target opponent", Targets.Opponent)
+        trigger = Triggers.self.enters()
+        val opponent = target(Targets.Opponent)
         effect = Patterns.Hand.revealHandAndExileChosen(target = opponent)
         description = "When this creature enters, target opponent reveals their hand. You " +
             "choose a nonland card from it and exile that card."
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
-        val opponent = target("target opponent", Targets.Opponent)
+        trigger = Triggers.self.leaves()
+        val opponent = target(Targets.Opponent)
         effect = Effects.DrawCards(1, opponent)
         description = "When this creature leaves the battlefield, target opponent draws a card."
     }

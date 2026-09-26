@@ -6,6 +6,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Lightning Talons
@@ -27,7 +29,7 @@ val LightningTalons = card("Lightning Talons") {
     oracleText = "Enchant creature\n" +
         "Enchanted creature gets +3/+0 and has first strike. (It deals combat damage before creatures without first strike.)"
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = ModifyStats(3, 0)

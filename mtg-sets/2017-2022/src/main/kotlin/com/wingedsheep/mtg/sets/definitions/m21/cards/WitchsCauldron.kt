@@ -24,8 +24,7 @@ val WitchsCauldron = card("Witch's Cauldron") {
             Costs.Tap,
             Costs.Sacrifice(GameObjectFilter.Creature)
         )
-        effect = Effects.GainLife(1)
-            .then(Effects.DrawCards(1))
+        effect = Effects.GainLife(1) then Effects.DrawCards(1)
     }
 
     metadata {

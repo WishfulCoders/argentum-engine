@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever you cast a black spell, this creature gains fear until end of turn. (It can't be blocked
  * except by artifact creatures and/or black creatures.)
  *
- * - Both triggers are `Triggers.youCastSpell(spellFilter = GameObjectFilter.Any.withColor(...))`:
+ * - Both triggers are `Triggers.you.casts(GameObjectFilter.Any.withColor(...))`:
  *   "a blue spell" covers every card type, so the filter stays `Any`.
  * - A spell that is both blue and black triggers both abilities — correct for the Duo cycle.
  * - Fear is granted with the plain `Effects.GrantKeyword` facade (as Shriek of Dread does); the
@@ -35,13 +35,13 @@ val GravelgillDuo = card("Gravelgill Duo") {
 
     // Whenever you cast a blue spell, this creature gets +1/+1 until end of turn.
     triggeredAbility {
-        trigger = Triggers.youCastSpell(spellFilter = GameObjectFilter.Any.withColor(Color.BLUE))
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withColor(Color.BLUE))
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }
 
     // Whenever you cast a black spell, this creature gains fear until end of turn.
     triggeredAbility {
-        trigger = Triggers.youCastSpell(spellFilter = GameObjectFilter.Any.withColor(Color.BLACK))
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withColor(Color.BLACK))
         effect = Effects.GrantKeyword(Keyword.FEAR, EffectTarget.Self)
     }
 

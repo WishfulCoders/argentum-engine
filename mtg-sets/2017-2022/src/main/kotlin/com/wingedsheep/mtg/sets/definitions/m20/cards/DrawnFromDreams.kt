@@ -1,18 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.m20.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Drawn from Dreams
@@ -33,29 +25,17 @@ val DrawnFromDreams = card("Drawn from Dreams") {
         "and the rest on the bottom of your library in a random order."
 
     spell {
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(7)),
-                storeAs = "looked"
-            ),
-            SelectFromCollectionEffect(
-                from = "looked",
-                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(2)),
-                storeSelected = "kept",
-                storeRemainder = "rest",
+        effect = Effects.Pipeline {
+            val looked = gather(CardSource.TopOfLibrary(7))
+            val (kept, rest) = chooseExactlySplit(
+                2,
+                from = looked,
                 selectedLabel = "Put in hand",
                 remainderLabel = "Put on bottom"
-            ),
-            MoveCollectionEffect(
-                from = "kept",
-                destination = CardDestination.ToZone(Zone.HAND)
-            ),
-            MoveCollectionEffect(
-                from = "rest",
-                destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
-                order = CardOrder.Random
             )
-        )
+            toHand(kept)
+            toLibraryBottom(rest, order = CardOrder.Random)
+        }
     }
 
     metadata {

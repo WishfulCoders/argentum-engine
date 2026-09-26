@@ -22,7 +22,7 @@ val SacredPrey = card("Sacred Prey") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
+        trigger = Triggers.self.becomesBlocked()
         effect = Effects.GainLife(1)
     }
 

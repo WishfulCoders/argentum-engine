@@ -18,7 +18,7 @@ import io.kotest.matchers.shouldBe
  *
  * The load-bearing part is "the amassed Army": the attach step is not a target, it reads the
  * Army the Amass step just chose out of the resolution pipeline
- * (`EntityReference.AmassedArmy.STORAGE_KEY`). Covered both when Amass has to create the Army
+ * (`EffectTarget.AmassedArmy.STORAGE_KEY`). Covered both when Amass has to create the Army
  * from nothing and when a pre-existing Army is grown instead.
  */
 class GoblinPlateMailScenarioTest : ScenarioTestBase() {

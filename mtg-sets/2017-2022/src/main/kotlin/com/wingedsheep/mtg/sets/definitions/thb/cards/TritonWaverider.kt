@@ -31,10 +31,7 @@ val TritonWaverider = card("Triton Waverider") {
     oracleText = "Constellation — Whenever an enchantment you control enters, this creature gains flying until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Enchantment.youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Enchantment.youControl()).enters()
         effect = Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
         description = "Constellation — Whenever an enchantment you control enters, this creature gains flying until end of turn."
     }

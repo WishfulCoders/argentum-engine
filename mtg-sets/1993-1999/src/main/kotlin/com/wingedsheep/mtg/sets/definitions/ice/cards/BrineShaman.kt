@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Brine Shaman
@@ -32,13 +33,13 @@ val BrineShaman = card("Brine Shaman") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.Sacrifice(GameObjectFilter.Creature))
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(2, 2, t)
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{U}{U}"), Costs.Sacrifice(GameObjectFilter.Creature))
-        target("target", Targets.CreatureSpell)
+        target(TargetFilter.CreatureSpellOnStack)
         effect = Effects.CounterSpell()
     }
 

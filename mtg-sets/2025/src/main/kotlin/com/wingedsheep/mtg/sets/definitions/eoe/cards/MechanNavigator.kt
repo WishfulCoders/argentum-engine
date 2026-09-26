@@ -21,7 +21,7 @@ val MechanNavigator = card("Mechan Navigator") {
 
     // Whenever this creature becomes tapped, draw a card, then discard a card
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
+        trigger = Triggers.self.becomesTapped()
         effect = Patterns.Hand.loot(draw = 1, discard = 1)
     }
 

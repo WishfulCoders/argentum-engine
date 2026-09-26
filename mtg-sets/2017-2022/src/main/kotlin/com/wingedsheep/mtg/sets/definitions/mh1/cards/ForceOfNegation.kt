@@ -11,6 +11,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CostZone
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.SelfAlternativeCost
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Force of Negation
@@ -50,7 +51,7 @@ val ForceOfNegation = card("Force of Negation") {
     )
 
     spell {
-        target = Targets.NoncreatureSpell
+        val noncreatureSpell = target(TargetFilter.NoncreatureSpellOnStack)
         effect = Effects.CounterSpellToExile()
     }
 

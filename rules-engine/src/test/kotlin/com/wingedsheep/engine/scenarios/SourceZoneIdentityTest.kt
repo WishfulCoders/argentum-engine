@@ -1,11 +1,11 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.SelectCardsDecision
 import com.wingedsheep.engine.core.YesNoDecision
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.ObjectReferenceEnvironment
-import com.wingedsheep.engine.handlers.effects.EffectExecutorRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.identity.TokenComponent
@@ -24,11 +24,13 @@ import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.effects.Gate
 import com.wingedsheep.sdk.scripting.effects.GatedEffect
+import com.wingedsheep.sdk.scripting.effects.PreventionSourceFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.serialization.json.Json
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 class SourceZoneIdentityTest : FunSpec({
     val returning = card("Identity Returning Faerie") {
@@ -37,7 +39,7 @@ class SourceZoneIdentityTest : FunSpec({
         power = 1
         toughness = 1
         triggeredAbility {
-            trigger = Triggers.Dies
+            trigger = Triggers.self.dies()
             effect = Patterns.Mechanic.clash(Effects.ReturnToHandFromGraveyard(EffectTarget.Self))
         }
     }
@@ -92,11 +94,9 @@ class SourceZoneIdentityTest : FunSpec({
             val ref = d.state.objectRef(source)!!
             val context = EffectContext(sourceId = source, controllerId = d.player1,
                 objectReferences = ObjectReferenceEnvironment(captured = true, origin = ref, source = ref, resolutionKey = "identity-inline-resolution"))
-            val effect = Effects.Composite(
-                Effects.Exile(EffectTarget.Self),
-                GatedEffect(Gate.MayDecide("Continue?"), Effects.ReturnToHand(EffectTarget.Self)),
-            )
-            val result = EffectExecutorRegistry(cardRegistry = d.cardRegistry).execute(d.state, effect, context)
+            val effect = Effects.Exile(EffectTarget.Self) then
+                GatedEffect(Gate.MayDecide("Continue?"), Effects.ReturnToHand(EffectTarget.Self))
+            val result = d.services.effectExecutorRegistry.execute(d.state, effect, context)
             result.error shouldBe null
             d.replaceState(result.state)
             d.pendingDecision.shouldBeInstanceOf<YesNoDecision>()
@@ -145,16 +145,16 @@ class SourceZoneIdentityTest : FunSpec({
         val source = d.putCreatureOnBattlefield(d.player1, "Grizzly Bears")
         val ref = d.state.objectRef(source)!!
         val context = EffectContext(sourceId = null, controllerId = d.player2,
-            triggeringEntityId = source, triggeringPlayerId = d.player1, triggerLastKnownPower = 7,
+            triggeringEntityId = source, triggeringPlayerId = d.player1, triggerContext = com.wingedsheep.engine.event.TriggerContext(lastKnownPower = 7),
             objectReferences = ObjectReferenceEnvironment(captured = true, triggering = ref))
         move(d, source, Zone.BATTLEFIELD, Zone.EXILE)
         val current = context.withCurrentObjectReferences(d.state)
         current.resolveTarget(EffectTarget.TriggeringEntity, d.state) shouldBe null
         current.resolveTarget(EffectTarget.ControllerOfTriggeringEntity, d.state) shouldBe d.player1
-        com.wingedsheep.engine.handlers.DynamicAmountEvaluator().evaluate(d.state, DynamicAmounts.triggeringPower(), current) shouldBe 7
+        PredicateEvaluator(cardRegistry = null).amounts.evaluate(d.state, DynamicAmounts.triggeringPower(), current) shouldBe 7
         for (cardSource in listOf(com.wingedsheep.sdk.scripting.effects.CardSource.Self,
             com.wingedsheep.sdk.scripting.effects.CardSource.TriggeringEntity)) {
-            val gathered = EffectExecutorRegistry(cardRegistry = d.cardRegistry).execute(d.state,
+            val gathered = d.services.effectExecutorRegistry.execute(d.state,
                 com.wingedsheep.sdk.scripting.effects.GatherCardsEffect(cardSource, "stale"),
                 current.copy(sourceId = source, objectReferences = current.objectReferences.copy(source = ref)))
             gathered.updatedCollections?.get("stale") shouldBe emptyList()
@@ -188,7 +188,7 @@ class SourceZoneIdentityTest : FunSpec({
         val d = driver()
         val entrant = card("Identity Entering Spirit") {
             manaCost = "{U}"; typeLine = "Creature — Spirit"; power = 1; toughness = 1
-            triggeredAbility { trigger = Triggers.EntersBattlefield; effect = Effects.ReturnToHand(EffectTarget.Self) }
+            triggeredAbility { trigger = Triggers.self.enters(); effect = Effects.ReturnToHand(EffectTarget.Self) }
         }
         d.registerCards(listOf(entrant))
         val source = d.putCardInHand(d.player1, entrant.name)
@@ -211,17 +211,17 @@ class SourceZoneIdentityTest : FunSpec({
         val d = driver()
         val observer = card("Identity Death Observer") {
             manaCost = "{B}"; typeLine = "Creature — Spirit"; power = 1; toughness = 1
-            triggeredAbility { trigger = Triggers.AnyCreatureDies; effect = Effects.GainLife(1) }
+            triggeredAbility { trigger = Triggers.a(GameObjectFilter.Creature).dies(); effect = Effects.GainLife(1) }
         }
         d.registerCards(listOf(observer))
         val source = d.putCreatureOnBattlefield(d.player1, observer.name)
         val other = d.putCreatureOnBattlefield(d.player1, "Grizzly Bears")
         val origin = d.state.objectRef(source)
-        val result = EffectExecutorRegistry(cardRegistry = d.cardRegistry).execute(d.state,
+        val result = d.services.effectExecutorRegistry.execute(d.state,
             Effects.DestroyAll(com.wingedsheep.sdk.dsl.Filters.Creature),
             EffectContext(sourceId = null, controllerId = d.player1))
         result.error shouldBe null
-        val triggers = com.wingedsheep.engine.event.TriggerDetector(d.cardRegistry)
+        val triggers = com.wingedsheep.engine.event.TriggerDetector(d.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null), conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
             .detectTriggers(result.state, result.events)
         val observed = triggers.single { it.sourceId == source && it.triggerContext.triggeringEntityId == other }
         observed.objectReferences.origin shouldBe origin
@@ -247,7 +247,7 @@ class SourceZoneIdentityTest : FunSpec({
                 "life-bid" -> com.wingedsheep.sdk.scripting.effects.OpenLifeBidEffect(onWin = bounce)
                 else -> GatedEffect(Gate.MayDecide("Return?"), bounce)
             }
-            val result = EffectExecutorRegistry(cardRegistry = d.cardRegistry).execute(d.state, effect, context)
+            val result = d.services.effectExecutorRegistry.execute(d.state, effect, context)
             result.error shouldBe null
             d.replaceState(result.state)
             move(d, source, Zone.BATTLEFIELD, Zone.EXILE)
@@ -282,7 +282,7 @@ class SourceZoneIdentityTest : FunSpec({
         val d = driver()
         val source = d.putCreatureOnBattlefield(d.player1, "Grizzly Bears")
         val ref = d.state.objectRef(source)!!
-        val result = EffectExecutorRegistry(cardRegistry = d.cardRegistry).execute(d.state,
+        val result = d.services.effectExecutorRegistry.execute(d.state,
             Effects.ChooseNumberForSource(minValue = 0, maxValue = 7),
             EffectContext(sourceId = source, controllerId = d.player1,
                 objectReferences = ObjectReferenceEnvironment(captured = true, origin = ref, source = ref)))
@@ -299,12 +299,11 @@ class SourceZoneIdentityTest : FunSpec({
         val d = driver()
         val source = d.putCreatureOnBattlefield(d.player1, "Grizzly Bears")
         val ref = d.state.objectRef(source)!!
-        val result = EffectExecutorRegistry(cardRegistry = d.cardRegistry).execute(d.state,
-            Effects.Composite(
-                com.wingedsheep.sdk.scripting.effects.AnyPlayerMayPayEffect(
-                    cost = Costs.pay.Sacrifice(com.wingedsheep.sdk.dsl.Filters.Creature),
-                    consequence = GatedEffect(Gate.MayDecide("Draw?"), Effects.DrawCards(1))),
-                Effects.ReturnToHandFromGraveyard(EffectTarget.Self)),
+        val result = d.services.effectExecutorRegistry.execute(d.state,
+            com.wingedsheep.sdk.scripting.effects.AnyPlayerMayPayEffect(
+                cost = Costs.pay.Sacrifice(com.wingedsheep.sdk.dsl.Filters.Creature),
+                consequence = GatedEffect(Gate.MayDecide("Draw?"), Effects.DrawCards(1))) then
+                Effects.ReturnToHandFromGraveyard(EffectTarget.Self),
             EffectContext(sourceId = source, controllerId = d.player1,
                 objectReferences = ObjectReferenceEnvironment(captured = true, origin = ref, source = ref,
                     resolutionKey = "identity-sacrifice-consequence")))
@@ -328,7 +327,7 @@ class SourceZoneIdentityTest : FunSpec({
         d.registerCards(listOf(dredger))
         val source = d.putCreatureOnBattlefield(d.player1, dredger.name)
         move(d, source, Zone.BATTLEFIELD, Zone.GRAVEYARD)
-        val result = EffectExecutorRegistry(cardRegistry = d.cardRegistry).execute(d.state,
+        val result = d.services.effectExecutorRegistry.execute(d.state,
             Effects.DrawCards(1), EffectContext(sourceId = null, controllerId = d.player1))
         result.error shouldBe null
         d.replaceState(result.state)
@@ -346,7 +345,7 @@ class SourceZoneIdentityTest : FunSpec({
             val d = driver()
             val source = d.putCreatureOnBattlefield(d.player1, "Grizzly Bears")
             val original = d.state.objectRef(source)!!
-            val result = EffectExecutorRegistry(cardRegistry = d.cardRegistry).execute(d.state,
+            val result = d.services.effectExecutorRegistry.execute(d.state,
                 com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect(
                     step = Step.END, effect = Effects.ReturnToHand(EffectTarget.Self)),
                 EffectContext(sourceId = source, controllerId = d.player1,
@@ -370,10 +369,9 @@ class SourceZoneIdentityTest : FunSpec({
             val aura = card("Identity Returning Aura") {
                 manaCost = "{U}"; typeLine = "Enchantment — Aura"
                 triggeredAbility {
-                    trigger = Triggers.leavesBattlefield(to = Zone.GRAVEYARD,
-                        binding = com.wingedsheep.sdk.scripting.TriggerBinding.ATTACHED)
-                    effect = Effects.Composite(Effects.ReturnToHandFromGraveyard(EffectTarget.Self),
-                        Effects.ReturnToHandFromGraveyard(EffectTarget.TriggeringEntity))
+                    trigger = Triggers.attached.dies()
+                    effect = Effects.ReturnToHandFromGraveyard(EffectTarget.Self) then
+                        Effects.ReturnToHandFromGraveyard(EffectTarget.TriggeringEntity)
                 }
             }
             val sweep = card("Identity Sweep") {
@@ -409,7 +407,16 @@ class SourceZoneIdentityTest : FunSpec({
         val d = driver()
         val reflection = card("Identity Reflected Spell") {
             manaCost = "{W}"; typeLine = "Instant"
-            spell { effect = Effects.ReflectNextDamageFromChosenSourceToController() }
+            spell {
+                effect = Effects.PreventDamage(
+                    sources = PreventionSourceFilter.Chosen(),
+                    stillDealt = true,
+                    onPrevented = Effects.DealDamage(
+                        amount = DynamicAmounts.preventedDamage(),
+                        target = EffectTarget.ControllerOfTriggeringEntity
+                    )
+                )
+            }
         }
         d.registerCards(listOf(reflection))
         val bolt = d.putCardInHand(d.player2, "Lightning Bolt")
@@ -430,7 +437,7 @@ class SourceZoneIdentityTest : FunSpec({
         val trigger = d.state.getEntity(d.state.stack.last())!!
             .get<com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent>()!!
         trigger.objectReferences.triggering shouldBe stackSpell
-        trigger.triggeringPlayerId shouldBe d.player1
+        trigger.triggerContext?.triggeringPlayerId shouldBe d.player1
         EffectContext(sourceId = trigger.sourceId, controllerId = d.player2, triggeringEntityId = bolt,
             objectReferences = trigger.objectReferences).resolveTarget(EffectTarget.TriggeringEntity, d.state) shouldBe null
         (bolt in d.state.getZone(ZoneKey(d.player2, Zone.GRAVEYARD))) shouldBe true
@@ -446,11 +453,10 @@ class SourceZoneIdentityTest : FunSpec({
             val subject = card("Identity Reflexive Spirit") {
                 manaCost = "{U}"; typeLine = "Creature — Spirit"; power = 1; toughness = 1
                 triggeredAbility {
-                    trigger = Triggers.EntersBattlefield
+                    trigger = Triggers.self.enters()
                     effect = com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect(
-                        action = if (pauseAction) Effects.Composite(
-                            GatedEffect(Gate.MayDecide("Draw?"), Effects.DrawCards(1)), Effects.SacrificeTarget(EffectTarget.Self)
-                        ) else Effects.SacrificeTarget(EffectTarget.Self),
+                        action = if (pauseAction) (GatedEffect(Gate.MayDecide("Draw?"), Effects.DrawCards(1)) then
+                            Effects.SacrificeTarget(EffectTarget.Self)) else Effects.SacrificeTarget(EffectTarget.Self),
                         optional = false,
                         reflexiveEffect = Effects.ReturnToHandFromGraveyard(EffectTarget.Self)
                     )

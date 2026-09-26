@@ -1,20 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.BudgetModalEffect
 import com.wingedsheep.sdk.scripting.effects.BudgetMode
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.SelectTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Season of the Burrow
@@ -37,7 +32,7 @@ val SeasonOfTheBurrow = card("Season of the Burrow") {
         "{P}{P}{P} — Return target permanent card with mana value 3 or less from your graveyard to the battlefield with an indestructible counter on it."
 
     spell {
-        effect = BudgetModalEffect(
+        effect = Effects.BudgetModal(
             budget = 5,
             modes = listOf(
                 // {P} — Create a 1/1 white Rabbit creature token
@@ -55,36 +50,32 @@ val SeasonOfTheBurrow = card("Season of the Burrow") {
                 // {P}{P} — Exile target nonland permanent. Its controller draws a card.
                 BudgetMode(
                     cost = 2,
-                    effect = SelectTargetEffect(
-                        requirement = TargetObject(
-                            filter = TargetFilter.NonlandPermanent,
-                            id = "target nonland permanent to exile"
-                        ),
-                        storeAs = "exileTarget"
-                    )
-                        .then(Effects.Exile(EffectTarget.PipelineTarget("exileTarget")))
-                        .then(DrawCardsEffect(
-                            count = DynamicAmount.Fixed(1),
-                            target = EffectTarget.ControllerOfPipelineTarget("exileTarget")
-                        )),
+                    effect = Effects.Pipeline {
+                        val exileTarget = selectTarget(
+                            TargetObject(filter = TargetFilter.NonlandPermanent, id = "target nonland permanent to exile")
+                        )
+                        run(Effects.Exile(exileTarget.asTarget))
+                        run(Effects.DrawCards(count = 1, target = exileTarget.controllerOf()))
+                    },
                     description = "Exile target nonland permanent. Its controller draws a card"
                 ),
                 // {P}{P}{P} — Return target permanent card with MV 3 or less from your graveyard
                 //             to the battlefield with an indestructible counter on it
                 BudgetMode(
                     cost = 3,
-                    effect = SelectTargetEffect(
-                        requirement = TargetObject(
-                            filter = TargetFilter(
-                                GameObjectFilter.Permanent.manaValueAtMost(3).ownedByYou(),
-                                zone = Zone.GRAVEYARD
-                            ),
-                            id = "target permanent card with mana value 3 or less in your graveyard"
-                        ),
-                        storeAs = "returnTarget"
-                    )
-                        .then(Effects.PutOntoBattlefield(EffectTarget.PipelineTarget("returnTarget")))
-                        .then(Effects.AddCounters(Counters.INDESTRUCTIBLE, 1, EffectTarget.PipelineTarget("returnTarget"))),
+                    effect = Effects.Pipeline {
+                        val returnTarget = selectTarget(
+                            TargetObject(
+                                filter = TargetFilter(
+                                    GameObjectFilter.Permanent.manaValueAtMost(3).ownedByYou(),
+                                    zone = Zone.GRAVEYARD
+                                ),
+                                id = "target permanent card with mana value 3 or less in your graveyard"
+                            )
+                        )
+                        run(Effects.PutOntoBattlefield(returnTarget.asTarget))
+                        run(Effects.AddCounters(CounterType.INDESTRUCTIBLE, 1, returnTarget.asTarget))
+                    },
                     description = "Return target permanent card with mana value 3 or less from your graveyard to the battlefield with an indestructible counter on it"
                 )
             )

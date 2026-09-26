@@ -1,20 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.SelectTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Bolg of the North — The Hobbit #148
@@ -38,7 +32,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  *    (counters and pumps included), and the reflexive reads it back as a
  *    [DynamicAmount.VariableReference]. Reading `Power` off the card in the graveyard instead
  *    would silently drop every +1/+1 counter and Layer 7 bonus it had.
- *  - The excess-damage amass is the Orbital Plunge / Hell to Pay pair: [ConditionalEffect] gated on
+ *  - The excess-damage amass is the Orbital Plunge / Hell to Pay pair: [Effects.If] gated on
  *    [Conditions.IfTargetTookExcessDamage] for the "if excess damage was dealt" clause, and
  *    [EntityNumericProperty.ExcessMarkedDamage] for the amount. Both read the target's post-damage
  *    marked damage in the same composite, which has no interleaved SBA pass — so the only marked
@@ -59,48 +53,35 @@ val BolgOfTheNorth = card("Bolg of the North") {
         "black Goblin Army creature token first.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ReflexiveTriggerEffect(
-            action = Effects.Composite(
-                listOf(
-                    SelectTargetEffect(
-                        requirement = TargetObject(filter = TargetFilter.CreatureYouControl.other()),
-                        storeAs = "bolgSacrifice",
-                    ),
-                    Effects.StoreNumber(
-                        "bolgSacrificedPower",
-                        DynamicAmount.EntityProperty(
-                            EntityReference.FromCostStorage("bolgSacrifice"),
-                            EntityNumericProperty.Power,
-                        ),
-                    ),
-                    Effects.SacrificeTarget(EffectTarget.PipelineTarget("bolgSacrifice")),
-                ),
-            ),
+        trigger = Triggers.self.enters()
+        effect = Effects.ReflexiveTrigger(
+            action = Effects.Pipeline {
+                val toSacrifice = selectTarget(TargetObject(filter = TargetFilter.CreatureYouControl.other()))
+                // Named: the reflexive trigger below reads it once this pipeline has finished.
+                storeNumber(
+                    DynamicAmounts.powerOf(toSacrifice.asTarget),
+                    name = "bolgSacrificedPower"
+                )
+                run(Effects.SacrificeTarget(toSacrifice.asTarget))
+            },
             optional = true,
-            reflexiveEffect = Effects.Composite(
-                Effects.DealDamage(
-                    DynamicAmount.VariableReference("bolgSacrificedPower"),
-                    EffectTarget.ContextTarget(0),
-                ),
-                ConditionalEffect(
-                    condition = Conditions.IfTargetTookExcessDamage(),
-                    effect = Effects.Amass(
-                        DynamicAmount.EntityProperty(
-                            EntityReference.Target(0),
-                            EntityNumericProperty.ExcessMarkedDamage,
-                        ),
-                        "Goblin",
-                    ),
-                ),
-            ),
-            reflexiveTargetRequirements = listOf(
-                TargetCreature(filter = TargetFilter.Creature.other()),
-            ),
             descriptionOverride = "You may sacrifice another creature. When you do, Bolg deals " +
                 "damage equal to that creature's power to another target creature. If excess " +
                 "damage was dealt this way, amass Goblins X, where X is that excess damage.",
-        )
+        ) {
+            val creature = target(TargetFilter.Creature.other())
+            effect = Effects.DealDamage(
+                DynamicAmounts.storedNumber("bolgSacrificedPower"),
+                creature,
+            ) then
+                Effects.If(
+                    condition = Conditions.IfTargetTookExcessDamage(),
+                    then = Effects.Amass(
+                        DynamicAmounts.propertyOf(creature, EntityNumericProperty.ExcessMarkedDamage),
+                        "Goblin",
+                    ),
+                )
+        }
         description = "When Bolg enters, you may sacrifice another creature. When you do, Bolg " +
             "deals damage equal to that creature's power to another target creature. If excess " +
             "damage was dealt this way, amass Goblins X, where X is that excess damage."

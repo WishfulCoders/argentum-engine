@@ -350,7 +350,7 @@ object Costs {
             name = "remove a counter from this permanent",
         ) {
             slot("kind", Primitives.singularCounterKind)
-            build { atomOf(SdkCosts.RemoveCounterFromSelf(it.text("kind"))) }
+            build { atomOf(SdkCosts.RemoveCounterFromSelf(it.value("kind"))) }
             match { atom ->
                 val remove = atom as? CostAtom.RemoveCounters ?: return@match null
                 val kind = remove.counterType ?: return@match null
@@ -365,7 +365,7 @@ object Costs {
         ) {
             slot("n", Cardinals.word)
             slot("kind", Primitives.counterKind)
-            build { atomOf(SdkCosts.RemoveCounterFromSelf(it.text("kind"), it.int("n"))) }
+            build { atomOf(SdkCosts.RemoveCounterFromSelf(it.value("kind"), it.int("n"))) }
             match { atom ->
                 val remove = atom as? CostAtom.RemoveCounters ?: return@match null
                 val kind = remove.counterType ?: return@match null
@@ -405,7 +405,7 @@ object Costs {
                 name = "remove a chosen number of counters from this permanent",
             )
             slot("kind", Primitives.counterKind)
-            build { atomOf(SdkCosts.RemoveXCounters(counterType = it.text("kind"), self = true)) }
+            build { atomOf(SdkCosts.RemoveXCounters(counterType = it.value("kind"), self = true)) }
             match { atom ->
                 val remove = atom as? CostAtom.RemoveCounters ?: return@match null
                 val kind = remove.counterType ?: return@match null

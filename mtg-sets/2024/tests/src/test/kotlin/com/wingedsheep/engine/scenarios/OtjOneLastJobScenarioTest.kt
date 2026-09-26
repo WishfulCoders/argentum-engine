@@ -12,14 +12,16 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.engine.core.Outcome
+import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * One Last Job — {2}{W} Sorcery, Spree.
@@ -39,7 +41,7 @@ class OtjOneLastJobScenarioTest : FunSpec({
         manaCost = "{W}"
         typeLine = "Enchantment — Aura"
         oracleText = "Enchant creature\nEnchanted creature gets +2/+2."
-        auraTarget = Targets.Creature
+        auraTarget = TargetObject(filter = TargetFilter.Creature)
         staticAbility { ability = ModifyStats(2, 2) }
     }
 
@@ -86,7 +88,7 @@ class OtjOneLastJobScenarioTest : FunSpec({
                 modeTargetsOrdered = listOf(listOf(ChosenTarget.Card(courser, me, Zone.GRAVEYARD))),
                 paymentStrategy = PaymentStrategy.FromPool
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         driver.findPermanent(me, "Centaur Courser") shouldBe courser
@@ -113,7 +115,7 @@ class OtjOneLastJobScenarioTest : FunSpec({
                 modeTargetsOrdered = listOf(listOf(ChosenTarget.Card(mount, me, Zone.GRAVEYARD))),
                 paymentStrategy = PaymentStrategy.FromPool
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         driver.findPermanent(me, "Test Mustang") shouldBe mount
@@ -140,7 +142,7 @@ class OtjOneLastJobScenarioTest : FunSpec({
                 modeTargetsOrdered = listOf(listOf(ChosenTarget.Card(equip, me, Zone.GRAVEYARD))),
                 paymentStrategy = PaymentStrategy.FromPool
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         // The mode pauses for the controller to choose the host creature.
@@ -177,7 +179,7 @@ class OtjOneLastJobScenarioTest : FunSpec({
                 modeTargetsOrdered = listOf(listOf(ChosenTarget.Card(aura, me, Zone.GRAVEYARD))),
                 paymentStrategy = PaymentStrategy.FromPool
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         driver.isPaused shouldBe true
@@ -206,6 +208,6 @@ class OtjOneLastJobScenarioTest : FunSpec({
                 chosenModes = emptyList(),
                 paymentStrategy = PaymentStrategy.FromPool
             )
-        ).isSuccess shouldBe false
+        ).outcome shouldNotBe Outcome.Done
     }
 })

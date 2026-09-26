@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 
 /**
  * Embersmith — Scars of Mirrodin #87
@@ -15,7 +14,7 @@ import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
  *
  * Whenever you cast an artifact spell, you may pay {1}. If you do, this creature deals 1 damage to any target.
  *
- * The Lightning Rift shape: an optional mana payment gating the payoff. [MayPayManaEffect] lowers
+ * The Lightning Rift shape: an optional mana payment gating the payoff. [Effects.MayPay] lowers
  * to a `GatedEffect` over `Gate.MayPay`, which the engine recognizes as the flat optional-mana
  * form — the controller taps for the {1} at resolution and only then chooses the target.
  */
@@ -28,11 +27,11 @@ val Embersmith = card("Embersmith") {
     oracleText = "Whenever you cast an artifact spell, you may pay {1}. If you do, this creature deals 1 damage to any target."
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(GameObjectFilter.Artifact)
-        val t = target("target", Targets.Any)
-        effect = MayPayManaEffect(
+        trigger = Triggers.you.casts(GameObjectFilter.Artifact)
+        val t = target(Targets.Any)
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{1}"),
-            effect = Effects.DealDamage(1, t)
+            then = Effects.DealDamage(1, t)
         )
     }
 

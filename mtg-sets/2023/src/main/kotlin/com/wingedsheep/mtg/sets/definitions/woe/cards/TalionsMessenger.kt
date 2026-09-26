@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
@@ -8,10 +8,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Talion's Messenger
@@ -23,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  * Whenever you attack with one or more Faeries, draw a card, then discard a card. When you discard
  * a card this way, put a +1/+1 counter on target Faerie you control.
  *
- * [Triggers.YouAttackWithFilter] fires once per declare-attackers step, not once per attacker —
+ * `Triggers.you.attacks(with)` fires once per declare-attackers step, not once per attacker —
  * "one or more Faeries" is a batch, so attacking with three Faeries loots once. The Messenger
  * itself is a Faerie and satisfies its own trigger when it attacks.
  *
@@ -52,24 +50,19 @@ val TalionsMessenger = card("Talion's Messenger") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YouAttackWithFilter(GameObjectFilter.Any.withSubtype("Faerie"))
-        effect = Effects.Composite(
-            Effects.DrawCards(1, EffectTarget.Controller),
-            ReflexiveTriggerEffect(
+        trigger = Triggers.you.attacks(GameObjectFilter.Any.withSubtype("Faerie"))
+        effect = Effects.DrawCards(1, EffectTarget.Controller) then
+            Effects.ReflexiveTrigger(
                 action = Patterns.Hand.discardCards(1),
                 optional = false,
-                reflexiveEffect = Effects.AddCounters(
-                    Counters.PLUS_ONE_PLUS_ONE,
+            ) {
+                val permanent = target(TargetFilter.Permanent.withSubtype("Faerie").youControl())
+                effect = Effects.AddCounters(
+                    CounterType.PLUS_ONE_PLUS_ONE,
                     1,
-                    EffectTarget.ContextTarget(0),
-                ),
-                reflexiveTargetRequirements = listOf(
-                    TargetPermanent(
-                        filter = TargetFilter.Permanent.withSubtype("Faerie").youControl()
-                    )
-                ),
-            ),
-        )
+                    permanent,
+                )
+            }
         description = "Whenever you attack with one or more Faeries, draw a card, then discard a " +
             "card. When you discard a card this way, put a +1/+1 counter on target Faerie you control."
     }

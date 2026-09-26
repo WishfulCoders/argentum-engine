@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.references.Player
 
 /**
  * The Queen of Dale
@@ -17,7 +16,7 @@ import com.wingedsheep.sdk.scripting.references.Player
  *
  * The ordinal is per-kind — an opponent who leads with two creature spells and then a noncreature
  * one still hands you a recruit, because the count runs over that opponent's *noncreature* casts
- * only. That's the `spellFilter` on [Triggers.NthSpellCast], counted off the caster's cast history,
+ * only. That's the `spellFilter` on `Triggers.<player>.castsNth(n, spell)`, counted off the caster's cast history,
  * so it counts casts rather than resolutions: a countered noncreature spell still burns the
  * opponent's window for the turn.
  *
@@ -35,11 +34,7 @@ val TheQueenOfDale = card("The Queen of Dale") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.NthSpellCast(
-            n = 1,
-            player = Player.EachOpponent,
-            spellFilter = GameObjectFilter.Noncreature
-        )
+        trigger = Triggers.anOpponent.castsNth(1, GameObjectFilter.Noncreature)
         effect = Patterns.Mechanic.recruit()
     }
 

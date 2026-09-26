@@ -22,7 +22,7 @@ val TestamentBearer = card("Testament Bearer") {
     oracleText = "When this creature dies, look at the top three cards of your library. Put one of them into your hand and the rest into your graveyard."
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Patterns.Library.lookAtTopAndKeep(
             count = 3,
             keepCount = 1

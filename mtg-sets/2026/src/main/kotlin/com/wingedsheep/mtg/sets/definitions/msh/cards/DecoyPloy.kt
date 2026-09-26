@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Decoy Ploy
@@ -37,17 +36,11 @@ val DecoyPloy = card("Decoy Ploy") {
     spell {
         modal(chooseCount = 2, minChooseCount = 1) {
             mode("Return target Villain card from your graveyard to your hand") {
-                val villain = target(
-                    "target Villain card in your graveyard",
-                    TargetObject(filter = TargetFilter.CardInGraveyard.withSubtype(Subtype.VILLAIN).ownedByYou())
-                )
+                val villain = target(TargetFilter.CardInGraveyard.withSubtype(Subtype.VILLAIN).ownedByYou())
                 effect = Effects.ReturnToHand(villain)
             }
             mode("Return target Hero card from your graveyard to your hand") {
-                val hero = target(
-                    "target Hero card in your graveyard",
-                    TargetObject(filter = TargetFilter.CardInGraveyard.withSubtype(Subtype.HERO).ownedByYou())
-                )
+                val hero = target(TargetFilter.CardInGraveyard.withSubtype(Subtype.HERO).ownedByYou())
                 effect = Effects.ReturnToHand(hero)
             }
         }

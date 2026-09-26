@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -24,11 +23,8 @@ val AngelicBlessing = card("Angelic Blessing") {
     typeLine = "Sorcery"
     oracleText = "Target creature gets +3/+3 and gains flying until end of turn. (It can't be blocked except by creatures with flying or reach.)"
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.ModifyStats(3, 3, t),
-            Effects.GrantKeyword(Keyword.FLYING, t)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(3, 3, t) then Effects.GrantKeyword(Keyword.FLYING, t)
     }
     metadata {
         rarity = Rarity.COMMON

@@ -16,7 +16,7 @@ import io.kotest.matchers.shouldBe
  *
  * Second ability: "Whenever one or more land cards are put into your graveyard from your library,
  * put them onto the battlefield tapped." This exercises the new
- * [com.wingedsheep.sdk.dsl.Triggers.LandsPutIntoGraveyardFromLibrary] batching trigger plus its
+ * `Triggers.oneOrMore(GameObjectFilter.Land).putIntoYourGraveyard(fromLibrary = true)` batching trigger plus its
  * `IterationSpace.TRIGGER_CAPTURED_COLLECTION` → `MoveCollectionEffect(... Tapped)` payoff.
  *
  * We drive a real library→graveyard mill with Hedge Shredder on the battlefield and assert that

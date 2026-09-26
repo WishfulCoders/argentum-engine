@@ -1,8 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
@@ -33,14 +32,14 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * block. All three share the same [Conditions.OpponentControls] gate, so they wink in and out
  * together as planeswalkers come and go — a condition, not a one-shot grant.
  *
- * The death payoff is [Triggers.leavesBattlefield] scoped to `Artifact.youControl()` with
+ * The death payoff is `Triggers.<subject>.leaves(to, excludeTo, excludeSacrifice)` scoped to `Artifact.youControl()` with
  * [TriggerBinding.OTHER] for "another" — Syr Ginger is itself an artifact, so without the OTHER
  * binding sacrificing it to its own last ability would grow it on the way out. Any artifact you
  * control counts, whether it died in combat, was sacrificed, or was destroyed; Food tokens
  * eaten by their own ability are the intended engine.
  *
  * The sacrifice ability reads [DynamicAmounts.sourcePower], which is `LIVE_THEN_LKI` for
- * [com.wingedsheep.sdk.scripting.values.EntityReference.Source]: the sacrifice is a *cost*, so
+ * [com.wingedsheep.sdk.scripting.targets.EffectTarget.Self]: the sacrifice is a *cost*, so
  * Syr Ginger is already in the graveyard when the ability resolves and the read falls through to
  * the snapshot captured at cost-payment time. That is exactly the printed ruling — "use its power
  * from when it was last on the battlefield" — so counters accumulated by the middle ability, and
@@ -74,15 +73,9 @@ val SyrGingerTheMealEnder = card("Syr Ginger, the Meal Ender") {
     }
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.OTHER,
-        )
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
-            Patterns.Library.scry(1),
-        )
+        trigger = Triggers.another(GameObjectFilter.Artifact.youControl()).dies()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self) then
+            Patterns.Library.scry(1)
         description = "Whenever another artifact you control is put into a graveyard from the " +
             "battlefield, put a +1/+1 counter on Syr Ginger and scry 1."
     }

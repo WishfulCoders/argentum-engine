@@ -27,7 +27,7 @@ val MagmaticSinkhole = card("Magmatic Sinkhole") {
     keywords(Keyword.DELVE)
 
     spell {
-        val t = target("target", Targets.CreatureOrPlaneswalker)
+        val t = target(Targets.CreatureOrPlaneswalker)
         effect = Effects.DealDamage(5, t)
     }
 

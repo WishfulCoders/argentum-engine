@@ -11,10 +11,10 @@ import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * The Earth Crystal
@@ -50,15 +50,15 @@ val TheEarthCrystal = card("The Earth Crystal") {
         DoubleCounterPlacement(
             placedByYou = false,
             appliesTo = EventPattern.CounterPlacementEvent(
-                counterType = CounterTypeFilter.PlusOnePlusOne,
-                recipient = RecipientFilter.Matching(GameObjectFilter.Creature.youControl())
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
+                recipient = Recipient.Object(GameObjectFilter.Creature.youControl())
             )
         )
     )
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{4}{G}{G}"), Costs.Tap)
-        target = TargetCreature(count = 2, minCount = 1, filter = TargetFilter.CreatureYouControl)
+        target = TargetObject(filter = TargetFilter.CreatureYouControl, count = 2, minCount = 1)
         effect = Effects.DistributeCountersAmongTargets(totalCounters = 2)
     }
 

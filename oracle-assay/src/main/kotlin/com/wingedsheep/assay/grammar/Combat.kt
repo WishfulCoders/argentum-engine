@@ -24,7 +24,7 @@ import com.wingedsheep.sdk.scripting.effects.TauntEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Clauses that change how a combat goes — the spell-side siblings of the combat statics in
@@ -264,7 +264,7 @@ object Combat {
         fun scriptFor(filter: GameObjectFilter) = CardScript(
             spellEffect = ForEachTargetEffect(listOf(Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND))),
             targetRequirements = listOf(
-                TargetCreature(count = 2, minCount = 1, filter = TargetFilter(filter), id = Targets.SLOT)
+                TargetObject(count = 2, minCount = 1, filter = TargetFilter(filter), id = Targets.SLOT)
             ),
         )
         phrase(
@@ -355,7 +355,7 @@ object Combat {
         fun scriptFor(total: Int, filter: GameObjectFilter) = CardScript(
             spellEffect = DividedDamageEffect(totalDamage = total, minTargets = 1, maxTargets = 3),
             targetRequirements = listOf(
-                TargetCreature(count = 3, minCount = 1, filter = TargetFilter(filter), id = Targets.SLOT)
+                TargetObject(count = 3, minCount = 1, filter = TargetFilter(filter), id = Targets.SLOT)
             ),
         )
         phrase(

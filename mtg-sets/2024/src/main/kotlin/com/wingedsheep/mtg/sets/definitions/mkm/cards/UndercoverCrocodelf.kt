@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Undercover Crocodelf — Murders at Karlov Manor #239
@@ -33,7 +34,7 @@ val UndercoverCrocodelf = card("Undercover Crocodelf") {
     disguise = "{3}{G/U}{G/U}"
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         effect = Effects.Investigate()
         description = "Whenever this creature deals combat damage to a player, investigate."
     }

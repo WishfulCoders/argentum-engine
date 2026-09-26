@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Mishra's Self-Replicator
@@ -24,10 +24,10 @@ val MishrasSelfReplicator = card("Mishra's Self-Replicator") {
     oracleText = "Whenever you cast a historic spell, you may pay {1}. If you do, create a token that's a copy of Mishra's Self-Replicator. (Artifacts, legendaries, and Sagas are historic.)"
 
     triggeredAbility {
-        trigger = Triggers.YouCastHistoric
-        effect = MayPayManaEffect(
+        trigger = Triggers.you.casts(GameObjectFilter.Historic)
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{1}"),
-            effect = Effects.CreateTokenCopyOfSelf()
+            then = Effects.CreateTokenCopyOfSelf()
         )
     }
 

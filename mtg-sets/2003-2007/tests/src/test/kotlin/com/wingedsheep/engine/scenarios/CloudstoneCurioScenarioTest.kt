@@ -17,7 +17,7 @@ import io.kotest.matchers.shouldNotBe
  * "Whenever a nonartifact permanent you control enters, you may return another permanent you
  *  control that shares a permanent type with it to its owner's hand."
  *
- * The bounce is a battlefield pick over `sharingCardTypeWith(Triggering)` with the entering
+ * The bounce is a battlefield pick over `sharingCardTypeWith(TriggeringEntity)` with the entering
  * permanent excluded, so the cases are: a creature entering offers the other creature and not
  * the enchantment; the entering creature itself is never on offer; "you may" is declinable; and
  * an enchantment entering with only creatures around asks nothing at all.

@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Pirate's Cutlass
@@ -26,11 +25,8 @@ val PiratesCutlass = card("Pirate's Cutlass") {
         "Equip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val pirate = target(
-            "target Pirate you control",
-            TargetCreature(filter = TargetFilter.CreatureYouControl.withSubtype(Subtype.PIRATE))
-        )
+        trigger = Triggers.self.enters()
+        val pirate = target(TargetFilter.CreatureYouControl.withSubtype(Subtype.PIRATE))
         effect = Effects.AttachEquipment(pirate)
     }
 

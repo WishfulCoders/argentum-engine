@@ -1,16 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Dirge of Dread
@@ -29,16 +27,16 @@ val DirgeOfDread = card("Dirge of Dread") {
     spell {
         effect = Effects.ForEachInGroup(
             filter = GroupFilter.AllCreatures,
-            effect = GrantKeywordEffect(Keyword.FEAR, EffectTarget.Self)
+            effect = Effects.GrantKeyword(Keyword.FEAR, EffectTarget.IterationEntity)
         )
     }
 
     keywordAbility(KeywordAbility.cycling("{1}{B}"))
 
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
-        val t = target("target", Targets.Creature)
-        effect = MayEffect(GrantKeywordEffect(Keyword.FEAR, t))
+        trigger = Triggers.self.isCycled()
+        val t = target(TargetFilter.Creature)
+        effect = Effects.May(Effects.GrantKeyword(Keyword.FEAR, t))
     }
 
     metadata {

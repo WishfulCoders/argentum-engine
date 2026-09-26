@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AttackTax
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Baird, Steward of Argive
@@ -26,7 +26,7 @@ val BairdStewardOfArgive = card("Baird, Steward of Argive") {
     keywords(Keyword.VIGILANCE)
 
     staticAbility {
-        ability = AttackTax(amountPerAttacker = DynamicAmount.Fixed(1))
+        ability = AttackTax(amountPerAttacker = DynamicAmounts.fixed(1), coversPlaneswalkers = true)
     }
 
     metadata {

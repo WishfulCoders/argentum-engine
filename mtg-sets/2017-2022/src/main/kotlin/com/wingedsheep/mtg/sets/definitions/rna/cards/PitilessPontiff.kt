@@ -26,10 +26,8 @@ val PitilessPontiff = card("Pitiless Pontiff") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeAnother(GameObjectFilter.Creature))
-        effect = Effects.Composite(listOf(
-            Effects.GrantKeyword(Keyword.DEATHTOUCH, EffectTarget.Self),
+        effect = Effects.GrantKeyword(Keyword.DEATHTOUCH, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self)
-        ))
     }
 
     metadata {

@@ -1,6 +1,5 @@
 package com.wingedsheep.engine.legalactions.utils
 
-import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.PredicateEvaluator
@@ -41,10 +40,10 @@ class TargetEnumerationUtils(
         return when (requirement) {
             is TargetPlayer -> state.turnOrder.filter { state.hasEntity(it) && !playerHasShroud(state, it) &&
                 !playerHasHexproofAgainst(state, it, playerId) && !playerHasProtectionFrom(state, it, sourceId, playerId) &&
-                PlayerTargetRestriction.isSatisfied(state, requirement.restriction, it, playerId, sourceId) }
+                PlayerTargetRestriction.isSatisfied(state, requirement.restriction, it, playerId, sourceId, predicateEvaluator = predicateEvaluator) }
             is TargetOpponent -> state.turnOrder.filter { it != playerId && state.hasEntity(it) && !playerHasShroud(state, it) &&
                 !playerHasHexproof(state, it) && !playerHasProtectionFrom(state, it, sourceId, playerId) &&
-                PlayerTargetRestriction.isSatisfied(state, requirement.restriction, it, playerId, sourceId) }
+                PlayerTargetRestriction.isSatisfied(state, requirement.restriction, it, playerId, sourceId, predicateEvaluator = predicateEvaluator) }
             is AnyTarget -> {
                 val projected = state.projectedState
                 val permanents = findValidPermanentTargets(state, playerId, TargetFilter(GameObjectFilter.Any), sourceId)
@@ -104,7 +103,7 @@ class TargetEnumerationUtils(
                         val entityController = container.get<ControllerComponent>()?.playerId
                         if (projected.hasKeyword(entityId, Keyword.HEXPROOF) &&
                             entityController != playerId &&
-                            !HexproofSuppression.isSuppressedForCaster(state, projected, entityId, playerId)
+                            !HexproofSuppression.isSuppressedForCaster(state, projected, entityId, playerId, predicateEvaluator = predicateEvaluator)
                         ) return@filter false
                         if (projected.hasKeyword(entityId, Keyword.SHROUD)) return@filter false
                         predicateEvaluator.matches(state, projected, entityId, permanentFilter, context)
@@ -151,7 +150,7 @@ class TargetEnumerationUtils(
             if (filter.excludeSelf && entityId == sourceId) return@filter false
             val entityController = state.getEntity(entityId)?.get<ControllerComponent>()?.playerId
             if (projected.hasKeyword(entityId, Keyword.HEXPROOF) && entityController != playerId &&
-                !HexproofSuppression.isSuppressedForCaster(state, projected, entityId, playerId)
+                !HexproofSuppression.isSuppressedForCaster(state, projected, entityId, playerId, predicateEvaluator = predicateEvaluator)
             ) return@filter false
             if (entityController != playerId && sourceId != null &&
                 hasHexproofFromSource(state, entityId, sourceId)
@@ -286,6 +285,23 @@ class TargetEnumerationUtils(
         }
     }
 
+    /**
+     * [buildTargetInfos] for a spell being cast: its target requirements are read through the
+     * text-changing effects in force (CR 613.1c) — a spell exists from CR 601.2a, before its targets
+     * are chosen in 601.2c, so "target nonblack creature" under Swirl the Mists naming blue offers
+     * nonblue creatures.
+     */
+    fun buildSpellTargetInfos(
+        state: GameState,
+        playerId: EntityId,
+        targetReqs: List<TargetRequirement>,
+        cardId: EntityId
+    ): List<TargetInfo> {
+        val text = com.wingedsheep.engine.state.components.identity.TextChanges.forSpell(state, cardId)
+        val effective = if (text == null) targetReqs else targetReqs.map { it.applyTextReplacement(text) }
+        return buildTargetInfos(state, playerId, effective, cardId)
+    }
+
     fun buildTargetInfos(
         state: GameState,
         playerId: EntityId,
@@ -347,7 +363,7 @@ class TargetEnumerationUtils(
                 sourceId = sourceId,
                 controllerId = playerId,
             )
-            DynamicAmountEvaluator().evaluate(state, dyn, context).coerceAtLeast(0)
+            predicateEvaluator.amounts.evaluate(state, dyn, context).coerceAtLeast(0)
         } catch (_: Exception) {
             null
         }
@@ -432,10 +448,10 @@ class TargetEnumerationUtils(
     // Player protection checks
 
     fun playerHasShroud(state: GameState, playerId: EntityId): Boolean =
-        ControllerShroud.appliesTo(state, playerId)
+        ControllerShroud.appliesTo(state, playerId, predicateEvaluator = predicateEvaluator)
 
     fun playerHasHexproof(state: GameState, playerId: EntityId): Boolean =
-        ControllerHexproof.appliesTo(state, playerId)
+        ControllerHexproof.appliesTo(state, playerId, predicateEvaluator = predicateEvaluator)
 
     fun playerHasHexproofAgainst(state: GameState, playerId: EntityId, controllerId: EntityId): Boolean {
         return playerId != controllerId && playerHasHexproof(state, playerId)
@@ -449,7 +465,7 @@ class TargetEnumerationUtils(
      */
     fun playerHasProtectionFrom(state: GameState, playerId: EntityId, sourceId: EntityId?, casterId: EntityId): Boolean =
         com.wingedsheep.engine.mechanics.targeting.PlayerProtectionRules
-            .isProtectedFromSource(state, playerId, sourceId, casterId)
+            .isProtectedFromSource(state, playerId, sourceId, casterId, predicateEvaluator = predicateEvaluator)
 
     companion object {
         /**

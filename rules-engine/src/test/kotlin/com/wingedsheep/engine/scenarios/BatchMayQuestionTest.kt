@@ -13,11 +13,12 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Tests for feature B — batched may-question (backlog/stack-collapse-and-batch-decisions.md §B).
@@ -41,9 +42,9 @@ class BatchMayQuestionTest : FunSpec({
         oracleText = "Whenever another creature you control enters the battlefield, you may have " +
             "Batch Pinger deal 1 damage to any target."
         triggeredAbility {
-            trigger = Triggers.OtherCreatureEnters
-            val t = target("target", Targets.Any)
-            effect = MayEffect(Effects.DealDamage(1, t))
+            trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
+            val t = target(Targets.Any)
+            effect = Effects.May(Effects.DealDamage(1, t))
         }
     }
 
@@ -67,7 +68,7 @@ class BatchMayQuestionTest : FunSpec({
 
         driver.giveColorlessMana(player, 1)
         val bear = driver.putCardInHand(player, "Batch Bear")
-        driver.castSpell(player, bear).isSuccess shouldBe true
+        driver.castSpell(player, bear).outcome shouldBe Outcome.Done
         driver.bothPass() // resolve the bear; it enters and every Batch Pinger triggers
         return Triple(driver, player, opponent)
     }

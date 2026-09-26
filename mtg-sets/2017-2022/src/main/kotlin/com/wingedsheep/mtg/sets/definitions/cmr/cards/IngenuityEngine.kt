@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -30,7 +29,7 @@ val IngenuityEngine = card("Ingenuity Engine") {
     keywords(Keyword.CASCADE)
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap, Costs.Sacrifice(GameObjectFilter.Artifact))
-        val t = target("target", TargetPermanent(filter = TargetFilter.Artifact.youControl()))
+        val t = target(TargetFilter.Artifact.youControl())
         effect = Effects.Move(t, Zone.HAND)
     }
     metadata {

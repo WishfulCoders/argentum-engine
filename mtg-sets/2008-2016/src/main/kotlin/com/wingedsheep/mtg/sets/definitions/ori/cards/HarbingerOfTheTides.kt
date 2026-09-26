@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -31,9 +30,9 @@ val HarbingerOfTheTides = card("Harbinger of the Tides") {
     toughness = 2
     keywordAbility(KeywordAbility.flashKicker("{2}"))
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.tapped().opponentControls()))
+        val t = target(TargetFilter.Creature.tapped().opponentControls())
         effect = Effects.Move(t, Zone.HAND)
     }
     metadata {

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -74,12 +74,11 @@ val GollumRiddleMaster = card("Gollum, Riddle Master") {
 
     val riddle = ModalEffect.chooseOneNotYetChosen(
         Mode.noTarget(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
             "Put a +1/+1 counter on Gollum",
         ),
         Mode.noTarget(
-            Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent))
-                .then(Effects.GainLife(2)),
+            Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(2),
             "Each opponent loses 2 life and you gain 2 life",
         ),
         Mode.noTarget(
@@ -89,7 +88,7 @@ val GollumRiddleMaster = card("Gollum, Riddle Master") {
     )
 
     triggeredAbility {
-        trigger = Triggers.opponentCasts(GameObjectFilter.Any.manaValueIsOdd())
+        trigger = Triggers.anOpponent.casts(GameObjectFilter.Any.manaValueIsOdd())
         triggerRestriction = SourceChosenModeIs("odd")
         effect = riddle
         description = "Whenever an opponent casts a spell with an odd mana value, choose one that " +
@@ -97,7 +96,7 @@ val GollumRiddleMaster = card("Gollum, Riddle Master") {
     }
 
     triggeredAbility {
-        trigger = Triggers.opponentCasts(GameObjectFilter.Any.manaValueIsEven())
+        trigger = Triggers.anOpponent.casts(GameObjectFilter.Any.manaValueIsEven())
         triggerRestriction = SourceChosenModeIs("even")
         effect = riddle
         description = "Whenever an opponent casts a spell with an even mana value, choose one " +

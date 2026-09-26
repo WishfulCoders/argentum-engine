@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.m20.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Ironroot Warlord
@@ -25,7 +25,7 @@ val IronrootWarlord = card("Ironroot Warlord") {
     oracleText = "Ironroot Warlord's power is equal to the number of creatures you control.\n{3}{G}{W}: Create a 1/1 white Soldier creature token."
     toughness = 5
 
-    dynamicPower(DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Creature))
+    dynamicPower(DynamicAmounts.creaturesYouControl())
 
     activatedAbility {
         cost = Costs.Mana("{3}{G}{W}")

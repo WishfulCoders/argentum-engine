@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *   "creatures this permanent damaged this turn" on the damaging source, and already had the
  *   `sourceFilter == null` reading of it; what it ignored was the *binding*. `TriggerBinding.ATTACHED`
  *   now means "the damaging source is the permanent this is attached to", so
- *   [Triggers.CreatureDealtDamageByAttachedDies] needed no new event and no new tracker — only the
+ *   `Triggers.attached.damagedCreatureDies()` needed no new event and no new tracker — only the
  *   detector reading the tracker off the attachment target.
  * - The attachment is resolved when the creature *dies*, which is what the card's own ruling requires:
  *   the Scythe must be equipped at that moment, but it need not have been equipped when the damage was
@@ -55,14 +55,12 @@ val ScytheOfTheWretched = card("Scythe of the Wretched") {
     // "Whenever a creature dealt damage by equipped creature this turn dies, return that card to the
     // battlefield under your control. Attach this Equipment to that creature."
     triggeredAbility {
-        trigger = Triggers.CreatureDealtDamageByAttachedDies
-        effect = Effects.Composite(
-            Effects.PutOntoBattlefieldFromGraveyard(
-                target = EffectTarget.TriggeringEntity,
-                underYourControl = true
-            ),
+        trigger = Triggers.attached.damagedCreatureDies()
+        effect = Effects.PutOntoBattlefieldFromGraveyard(
+            target = EffectTarget.TriggeringEntity,
+            underYourControl = true
+        ) then
             Effects.AttachEquipment(EffectTarget.TriggeringEntity)
-        )
         description = "Whenever a creature dealt damage by equipped creature this turn dies, return " +
             "that card to the battlefield under your control. Attach this Equipment to that creature."
     }

@@ -25,7 +25,7 @@ import io.kotest.matchers.shouldNotBe
  */
 class TheBalrogDurinsBaneScenarioTest : ScenarioTestBase() {
 
-    private val calculator = CostCalculator(cardRegistry)
+    private val calculator = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator)
     private val balrog get() = cardRegistry.requireCard("The Balrog, Durin's Bane")
 
     init {

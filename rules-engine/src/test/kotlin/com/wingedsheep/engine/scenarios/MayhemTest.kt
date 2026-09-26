@@ -1,10 +1,10 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.AlternativeCostType
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.PaymentStrategy
 import com.wingedsheep.engine.core.SelectCardsDecision
-import com.wingedsheep.engine.handlers.ConditionEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.legalactions.LegalActionEnumerator
 import com.wingedsheep.engine.state.components.battlefield.CastChoicesComponent
@@ -20,7 +20,6 @@ import com.wingedsheep.sdk.dsl.mayhem
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.ChoiceSlot
 import com.wingedsheep.sdk.scripting.conditions.MayhemCostWasPaid
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
@@ -28,6 +27,7 @@ import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Tests for the Mayhem [cost] keyword (CR 702.187, Marvel's Spider-Man).
@@ -69,10 +69,10 @@ class MayhemTest : FunSpec({
         manaCost = "{2}{R}"
         typeLine = "Sorcery"
         spell {
-            effect = ConditionalEffect(
+            effect = Effects.If(
                 condition = Conditions.MayhemCostWasPaid,
-                effect = Effects.GainLife(5),
-                elseEffect = Effects.GainLife(2)
+                then = Effects.GainLife(5),
+                otherwise = Effects.GainLife(2)
             )
         }
         mayhem("{R}")
@@ -146,7 +146,7 @@ class MayhemTest : FunSpec({
             )
         )
         io.kotest.assertions.withClue("error=${result.error} pending=${result.pendingDecision}") {
-            result.isSuccess shouldBe true
+            result.outcome shouldBe Outcome.Done
         }
         while (driver.state.stack.isNotEmpty()) driver.bothPass()
 
@@ -157,7 +157,7 @@ class MayhemTest : FunSpec({
 
         // Durable mayhem-paid flag + condition.
         driver.state.getEntity(perm)?.get<CastChoicesComponent>()?.chosen?.containsKey(ChoiceSlot.MAYHEM_CAST) shouldBe true
-        ConditionEvaluator().evaluate(
+        PredicateEvaluator(cardRegistry = null).conditions.evaluate(
             driver.state,
             MayhemCostWasPaid,
             EffectContext(sourceId = perm, controllerId = player)
@@ -184,7 +184,7 @@ class MayhemTest : FunSpec({
                 paymentStrategy = PaymentStrategy.FromPool
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         while (driver.state.stack.isNotEmpty()) driver.bothPass()
 
         // Mayhem branch ran (gain 5, not 2).
@@ -211,7 +211,7 @@ class MayhemTest : FunSpec({
                 useAlternativeCost = true, alternativeCostType = AlternativeCostType.MAYHEM,
                 paymentStrategy = PaymentStrategy.FromPool
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         while (driver.state.stack.isNotEmpty()) driver.bothPass()
 
         // It's back in the graveyard, but is a new object (CR 400.7) that you did NOT discard —
@@ -237,7 +237,7 @@ class MayhemTest : FunSpec({
         val result = driver.submit(
             CastSpell(playerId = player, cardId = bolt, paymentStrategy = PaymentStrategy.FromPool)
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         while (driver.state.stack.isNotEmpty()) driver.bothPass()
 
         driver.getLifeTotal(player) shouldBe lifeBefore + 2
@@ -276,7 +276,7 @@ class MayhemTest : FunSpec({
         val cast = driver.submit(
             CastSpell(playerId = player, cardId = outlet, paymentStrategy = PaymentStrategy.FromPool)
         )
-        cast.isSuccess shouldBe true
+        cast.outcome shouldBe Outcome.Done
         var guard = 0
         while (guard++ < 20 && (driver.state.stack.isNotEmpty() || driver.pendingDecision != null)) {
             val pending = driver.pendingDecision

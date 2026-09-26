@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.events.AttackPredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -23,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Modeling notes:
  *  - The set's established "attacks alone" shape (Agent 13, Agents of S.H.I.E.L.D., Hydra
- *    Infiltration): an ANY-bound [Triggers.attacks] filtered to creatures you control with
+ *    Infiltration): an ANY-bound `Triggers.<subject>.attacks(requires)` filtered to creatures you control with
  *    [AttackPredicate.Alone]. Black Widow herself qualifies when she is the lone attacker, and
  *    so does any other creature you control attacking on its own — she does not have to attack.
  *  - "It" is the lone attacker ([EffectTarget.TriggeringEntity]), not Black Widow, so both
@@ -44,11 +43,7 @@ val BlackWidowDoubleAgent = card("Black Widow, Double Agent") {
     keywords(Keyword.DEATHTOUCH)
 
     triggeredAbility {
-        trigger = Triggers.attacks(
-            filter = GameObjectFilter.Creature.youControl(),
-            requires = setOf(AttackPredicate.Alone),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).attacks(setOf(AttackPredicate.Alone))
         effect = Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.TriggeringEntity) then
             Effects.GrantKeyword(Keyword.MENACE, EffectTarget.TriggeringEntity)
         description = "Whenever a creature you control attacks alone, it gains first strike and " +

@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -26,7 +26,7 @@ val Ahriman = card("Ahriman") {
     keywords(Keyword.FLYING, Keyword.DEATHTOUCH)
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.SacrificeAnother(GameObjectFilter.CreatureOrArtifact))
-        effect = DrawCardsEffect(1)
+        effect = Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.COMMON

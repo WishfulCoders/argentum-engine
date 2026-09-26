@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * The Eldest Reborn
@@ -42,8 +41,7 @@ val TheEldestReborn = card("The Eldest Reborn") {
 
     sagaChapter(3) {
         val graveyardTarget = target(
-            "creature or planeswalker",
-            TargetObject(filter = TargetFilter(GameObjectFilter.CreatureOrPlaneswalker, zone = com.wingedsheep.sdk.core.Zone.GRAVEYARD))
+            TargetFilter(GameObjectFilter.CreatureOrPlaneswalker, zone = com.wingedsheep.sdk.core.Zone.GRAVEYARD),
         )
         effect = Effects.PutOntoBattlefieldUnderYourControl(graveyardTarget)
     }

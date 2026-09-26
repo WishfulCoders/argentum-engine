@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Item Shopkeep
@@ -28,11 +27,8 @@ val ItemShopkeep = card("Item Shopkeep") {
         "(It can't be blocked except by two or more creatures.)"
 
     triggeredAbility {
-        trigger = Triggers.YouAttack
-        val attacker = target(
-            "attacking equipped creature",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.attacking().equipped()))
-        )
+        trigger = Triggers.you.attacks()
+        val attacker = target(TargetFilter(GameObjectFilter.Creature.attacking().equipped()))
         effect = Effects.GrantKeyword(Keyword.MENACE, attacker)
     }
 

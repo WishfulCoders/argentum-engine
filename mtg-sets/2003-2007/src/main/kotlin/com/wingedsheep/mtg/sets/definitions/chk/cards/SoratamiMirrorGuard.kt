@@ -4,10 +4,10 @@ import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Soratami Mirror-Guard
@@ -39,7 +39,7 @@ val SoratamiMirrorGuard = card("Soratami Mirror-Guard") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.ReturnToHand(GameObjectFilter.Land))
-        val t = target("target", Targets.CreatureWithPowerAtMost(2))
+        val t = target(TargetFilter.Creature.powerAtMost(2))
         effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, t)
     }
 

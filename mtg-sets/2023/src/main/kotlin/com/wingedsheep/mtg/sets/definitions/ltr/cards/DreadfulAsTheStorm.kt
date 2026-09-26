@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Dreadful as the Storm
@@ -24,9 +24,9 @@ val DreadfulAsTheStorm = card("Dreadful as the Storm") {
     oracleText = "Target creature has base power and toughness 5/5 until end of turn. The Ring tempts you."
 
     spell {
-        val creature = target("creature", Targets.Creature)
-        effect = Effects.SetBasePowerAndToughness(5, 5, creature, Duration.EndOfTurn)
-            .then(Effects.TheRingTemptsYou())
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.SetBasePowerAndToughness(5, 5, creature, Duration.EndOfTurn) then
+            Effects.TheRingTemptsYou()
     }
 
     metadata {

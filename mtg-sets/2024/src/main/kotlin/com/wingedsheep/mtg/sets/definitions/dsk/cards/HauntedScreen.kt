@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
@@ -73,16 +73,14 @@ val HauntedScreen = card("Haunted Screen") {
 
     activatedAbility {
         cost = Costs.Mana("{7}")
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 7, EffectTarget.Self),
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 7, EffectTarget.Self) then
             Effects.BecomeCreature(
                 target = EffectTarget.Self,
                 power = 0,
                 toughness = 0,
                 creatureTypes = setOf("Spirit"),
                 duration = Duration.Permanent,
-            ),
-        )
+            )
         restrictions = listOf(ActivationRestriction.Once)
         description = "{7}: Put seven +1/+1 counters on this artifact. It becomes a 0/0 Spirit " +
             "creature in addition to its other types. Activate only once."

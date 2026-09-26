@@ -24,8 +24,6 @@ import com.wingedsheep.sdk.scripting.values.ManaColorSet
  */
 object ManaColorSetResolver {
 
-    private val predicateEvaluator = PredicateEvaluator()
-
     /**
      * Resolve [colorSet] given the current game state. Returns the set of colors the
      * controller may pick from; an empty result means no mana is produced.
@@ -44,15 +42,19 @@ object ManaColorSetResolver {
         sourceId: EntityId?,
         controllerId: EntityId,
         cardRegistry: CardRegistry,
+        predicateEvaluator: PredicateEvaluator
     ): Set<Color> = when (colorSet) {
         is ManaColorSet.AnyColor -> Color.entries.toSet()
         is ManaColorSet.Specific -> colorSet.colors
         is ManaColorSet.CommanderIdentity -> commanderIdentity(state, controllerId, cardRegistry)
-        is ManaColorSet.AmongPermanents -> amongPermanents(colorSet, state, projected, controllerId)
-        is ManaColorSet.AmongCardsInGraveyard -> amongCardsInGraveyard(colorSet, state, projected, controllerId)
+        is ManaColorSet.AmongPermanents -> amongPermanents(colorSet, state, projected, controllerId, predicateEvaluator = predicateEvaluator)
+        is ManaColorSet.AmongCardsInGraveyard -> amongCardsInGraveyard(colorSet, state, projected, controllerId, predicateEvaluator = predicateEvaluator)
         is ManaColorSet.LandsCouldProduce -> landsCouldProduce(colorSet, state, projected, controllerId, cardRegistry)
         is ManaColorSet.SourceChosenColor -> sourceChosenColor(state, sourceId)
         is ManaColorSet.AmongLinkedExiledCards -> amongLinkedExiledCards(state, sourceId)
+        is ManaColorSet.Union -> colorSet.members.flatMapTo(mutableSetOf()) { member ->
+            resolve(member, state, projected, sourceId, controllerId, cardRegistry, predicateEvaluator)
+        }
     }
 
     /**
@@ -85,6 +87,7 @@ object ManaColorSetResolver {
         state: GameState,
         projected: ProjectedState,
         controllerId: EntityId,
+        predicateEvaluator: PredicateEvaluator
     ): Set<Color> {
         val predCtx = PredicateContext(controllerId = controllerId)
         val colors = mutableSetOf<Color>()
@@ -102,6 +105,7 @@ object ManaColorSetResolver {
         state: GameState,
         projected: ProjectedState,
         controllerId: EntityId,
+        predicateEvaluator: PredicateEvaluator
     ): Set<Color> {
         val predCtx = PredicateContext(controllerId = controllerId)
         val colors = mutableSetOf<Color>()

@@ -14,7 +14,7 @@ import io.kotest.matchers.shouldBe
  *  turn if that opponent controls no other creatures."
  *
  * The intervening "if that opponent controls no other creatures" is a **resolution-time**
- * check, modeled as a `ConditionalEffect` gating the -2/-2 on
+ * check, modeled as a `Effects.If` gating the -2/-2 on
  * `AggregateBattlefield(Player.ControllerOf("target creature"), Creature) == 1` — i.e. the
  * target's controller controls exactly one creature (the target itself). These tests pin
  * both branches, and in doing so exercise the `DynamicAmountEvaluator` `ControllerOf`

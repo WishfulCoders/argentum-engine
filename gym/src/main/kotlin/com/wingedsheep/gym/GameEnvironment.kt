@@ -421,7 +421,7 @@ class GameEnvironment private constructor(
         ): GameEnvironment {
             val services = EngineServices(cardRegistry)
             val processor = ActionProcessor(services, computeUndo = false)
-            val enumerator = LegalActionEnumerator.create(cardRegistry)
+            val enumerator = services.legalActionEnumerator
             val simulator = GameSimulator(cardRegistry, processor, enumerator)
             return GameEnvironment(cardRegistry, processor, enumerator, evaluator, simulator)
         }

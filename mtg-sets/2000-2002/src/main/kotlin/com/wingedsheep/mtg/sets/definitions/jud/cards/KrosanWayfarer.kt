@@ -5,12 +5,11 @@
 package com.wingedsheep.mtg.sets.definitions.jud.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-
 
 /**
  * Krosan Wayfarer
@@ -28,7 +27,7 @@ val KrosanWayfarer = card("Krosan Wayfarer") {
     toughness = 1
     activatedAbility {
         cost = Costs.SacrificeSelf
-        effect = MayEffect(Patterns.Hand.putFromHand(filter = GameObjectFilter.Land))
+        effect = Effects.May(Patterns.Hand.putFromHand(filter = GameObjectFilter.Land))
     }
     metadata {
         rarity = Rarity.COMMON

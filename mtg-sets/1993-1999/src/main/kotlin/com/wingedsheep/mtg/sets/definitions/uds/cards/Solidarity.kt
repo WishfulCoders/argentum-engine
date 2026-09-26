@@ -26,7 +26,7 @@ val Solidarity = card("Solidarity") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(0, 5, EffectTarget.Self)
+            Effects.ModifyStats(0, 5, EffectTarget.IterationEntity)
         )
     }
     metadata {

@@ -6,6 +6,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Battle Plan — Modern Horizons 2 #114
@@ -14,7 +16,7 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
  * At the beginning of combat on your turn, target creature you control gets +2/+0 until end of turn.
  * Basic landcycling {1}{R} ({1}{R}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)
  *
- * [Triggers.BeginCombat] is the "at the beginning of combat on your turn" step trigger — a
+ * `Triggers.you.beginningOf(Step.BEGIN_COMBAT)` is the "at the beginning of combat on your turn" step trigger — a
  * `StepEvent(BEGIN_COMBAT, Player.You)` — so the enchantment fires only in its controller's combat
  * phase, once per turn. The target is chosen when the ability goes on the stack (CR 603.3d), so
  * `Targets.CreatureYouControl` is the target requirement rather than a filter read at resolution.
@@ -31,8 +33,8 @@ val BattlePlan = card("Battle Plan") {
         "Basic landcycling {1}{R} ({1}{R}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)"
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        val t = target("target creature you control", Targets.CreatureYouControl)
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        val t = target(TargetFilter.CreatureYouControl)
         effect = Effects.ModifyStats(2, 0, t)
     }
 

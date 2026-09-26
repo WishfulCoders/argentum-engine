@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.m15.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Flesh to Dust
@@ -18,7 +18,7 @@ val FleshToDust = card("Flesh to Dust") {
     oracleText = "Destroy target creature. It can't be regenerated."
 
     spell {
-        val t = target("target creature", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.Destroy(t, noRegenerate = true)
     }
 

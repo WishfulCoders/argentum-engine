@@ -30,8 +30,8 @@ val HearthbornBattler = card("Hearthborn Battler") {
     keywords(Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.NthSpellCast(2)
-        val opponent = target("opponent", Targets.Opponent)
+        trigger = Triggers.anyPlayer.castsNth(2)
+        val opponent = target(Targets.Opponent)
         effect = Effects.DealDamage(2, opponent)
     }
 

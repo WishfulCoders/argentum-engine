@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CostGating
@@ -13,6 +12,7 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Chill of the Grave
@@ -45,16 +45,14 @@ val ChillOfTheGrave = card("Chill of the Grave") {
     }
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.Tap(creature)
-            .then(
-                Effects.GrantKeyword(
-                    AbilityFlag.DOESNT_UNTAP,
-                    creature,
-                    Duration.UntilAfterAffectedControllersNextUntap
-                )
-            )
-            .then(Effects.DrawCards(1))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.Tap(creature) then
+            Effects.GrantKeyword(
+                AbilityFlag.DOESNT_UNTAP,
+                creature,
+                Duration.UntilAfterAffectedControllersNextUntap
+            ) then
+            Effects.DrawCards(1)
     }
 
     metadata {

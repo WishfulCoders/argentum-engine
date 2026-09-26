@@ -12,11 +12,9 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 private val createHuntmasterWolf = Effects.CreateToken(
     power = 2,
@@ -26,10 +24,7 @@ private val createHuntmasterWolf = Effects.CreateToken(
     imageUri = "https://cards.scryfall.io/normal/front/8/9/89b89a55-3ea2-4186-b946-06831bc16169.jpg?1783907965",
 )
 
-private val huntmasterFrontTrigger = Effects.Composite(
-    createHuntmasterWolf,
-    Effects.GainLife(2),
-)
+private val huntmasterFrontTrigger = createHuntmasterWolf then Effects.GainLife(2)
 
 private val HuntmasterOfTheFellsFront = card("Huntmaster of the Fells") {
     manaCost = "{2}{R}{G}"
@@ -41,21 +36,21 @@ private val HuntmasterOfTheFellsFront = card("Huntmaster of the Fells") {
         "At the beginning of each upkeep, if no spells were cast last turn, transform this creature."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = huntmasterFrontTrigger
     }
     triggeredAbility {
-        trigger = Triggers.TransformsToFront
+        trigger = Triggers.self.transforms(false)
         effect = huntmasterFrontTrigger
     }
     triggeredAbility {
-        trigger = Triggers.EachUpkeep
+        trigger = Triggers.anyPlayer.beginningOf(Step.UPKEEP)
         interveningIf = Conditions.CompareAmounts(
             DynamicAmounts.spellsCastLastTurn(),
             ComparisonOperator.EQ,
-            DynamicAmount.Fixed(0),
+            0,
         )
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
     }
 
     metadata {
@@ -79,30 +74,27 @@ private val RavagerOfTheFells = card("Ravager of the Fells") {
 
     keywords(Keyword.TRAMPLE)
     triggeredAbility {
-        trigger = Triggers.TransformsToBack
-        val playerOrPlaneswalker = target("target opponent or planeswalker", Targets.OpponentOrPlaneswalker)
+        trigger = Triggers.self.transforms(true)
+        val playerOrPlaneswalker = target(Targets.OpponentOrPlaneswalker)
+        // "That player or that planeswalker's controller": the first branch reads a player
+        // target, the second the controller of a planeswalker target (as on Chandra Nalaar).
         val creature = target(
-            "target creature that player controls",
-            TargetCreature(
-                optional = true,
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.targetPlayerControls(playerOrPlaneswalker),
-                ),
+            TargetFilter(
+                GameObjectFilter.Creature.targetPlayerControls(playerOrPlaneswalker) or
+                    GameObjectFilter.Creature.targetPlayerControls(EffectTarget.TargetController),
             ),
+            optional = true,
         )
-        effect = Effects.Composite(
-            Effects.DealDamage(2, playerOrPlaneswalker),
-            Effects.DealDamage(2, creature),
-        )
+        effect = Effects.DealDamage(2, playerOrPlaneswalker) then Effects.DealDamage(2, creature)
     }
     triggeredAbility {
-        trigger = Triggers.EachUpkeep
+        trigger = Triggers.anyPlayer.beginningOf(Step.UPKEEP)
         interveningIf = Conditions.CompareAmounts(
             DynamicAmounts.spellsCastLastTurn(),
             ComparisonOperator.GTE,
-            DynamicAmount.Fixed(2),
+            2,
         )
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
     }
 
     metadata {

@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -31,20 +29,15 @@ val VirulentSilencer = card("Virulent Silencer") {
         "(A player with ten or more poison counters loses the game.)"
 
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            damageType = DamageType.Combat,
-            recipient = RecipientFilter.AnyPlayer,
-            sourceFilter = GameObjectFilter(
+        trigger = Triggers.a(GameObjectFilter(
                 cardPredicates = listOf(
                     CardPredicate.IsCreature,
                     CardPredicate.IsArtifact,
                     CardPredicate.IsNontoken,
                 ),
-            ).youControl(),
-            binding = TriggerBinding.ANY,
-        )
+            ).youControl()).dealsCombatDamage(Recipient.AnyPlayer)
         effect = Effects.AddCounters(
-            counterType = Counters.POISON,
+            counterType = CounterType.POISON,
             count = 2,
             target = EffectTarget.PlayerRef(Player.TriggeringPlayer),
         )

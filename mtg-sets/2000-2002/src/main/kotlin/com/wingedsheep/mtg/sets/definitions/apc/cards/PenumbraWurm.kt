@@ -29,7 +29,7 @@ val PenumbraWurm = card("Penumbra Wurm") {
     toughness = 6
     keywords(Keyword.TRAMPLE)
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateToken(
             power = 6,
             toughness = 6,

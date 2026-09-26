@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
@@ -13,8 +13,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Case of the Filched Falcon — Murders at Karlov Manor #44
@@ -51,26 +49,24 @@ val CaseOfTheFilchedFalcon = card("Case of the Filched Falcon") {
         "artifact. It becomes a 0/0 Bird creature with flying in addition to its other types."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Investigate()
     }
 
     toSolve(Conditions.YouControlAtLeast(3, GameObjectFilter.Artifact))
 
     solvedActivatedAbility {
+        val permanent = target(TargetFilter(GameObjectFilter.Artifact.notCreature()))
         cost = Costs.Composite(Costs.Mana("{2}{U}"), Costs.SacrificeSelf)
-        target = TargetPermanent(filter = TargetFilter(GameObjectFilter.Artifact.notCreature()))
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 4, EffectTarget.ContextTarget(0)),
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 4, permanent) then
             Effects.BecomeCreature(
-                target = EffectTarget.ContextTarget(0),
+                target = permanent,
                 power = 0,
                 toughness = 0,
                 keywords = setOf(Keyword.FLYING),
                 creatureTypes = setOf("Bird"),
                 duration = Duration.Permanent
             )
-        )
         description = "Put four +1/+1 counters on target noncreature artifact. It becomes a 0/0 " +
             "Bird creature with flying in addition to its other types."
     }

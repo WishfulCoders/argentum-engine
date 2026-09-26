@@ -29,7 +29,7 @@ val RangerOfEos = card("Ranger of Eos") {
     oracleText = "When this creature enters, you may search your library for up to two creature cards with mana value 1 or less, reveal them, put them into your hand, then shuffle."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Creature.manaValueAtMost(1),

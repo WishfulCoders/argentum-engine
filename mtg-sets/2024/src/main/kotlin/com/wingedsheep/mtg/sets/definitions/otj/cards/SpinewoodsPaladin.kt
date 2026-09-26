@@ -31,7 +31,7 @@ val SpinewoodsPaladin = card("Spinewoods Paladin") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(3)
         description = "you gain 3 life."
     }

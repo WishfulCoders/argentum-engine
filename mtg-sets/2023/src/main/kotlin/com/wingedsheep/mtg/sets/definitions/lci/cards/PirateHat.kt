@@ -22,7 +22,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
  * Implementation notes:
  * - The +1/+1 pump is a [ModifyStats] static ability scoped to [Filters.EquippedCreature].
  * - The attack-triggered loot (draw a card, then discard a card) is granted to the equipped
- *   creature via [GrantTriggeredAbility] with [Triggers.attacks()] (SELF binding) so the ability
+ *   creature via [GrantTriggeredAbility] with `Triggers.self.attacks()` (SELF binding) so the ability
  *   lives on the creature and fires when that creature attacks. The loot resolves for that
  *   creature's controller via [Patterns.Hand.loot] (draw uses [EffectTarget.Controller]).
  * - "Equip Pirate {1}" is a variant equip keyword ("{1}: Attach to target Pirate creature you
@@ -47,8 +47,7 @@ val PirateHat = card("Pirate Hat") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.attacks().event,
-                binding = Triggers.attacks().binding,
+                trigger = Triggers.self.attacks(),
                 effect = Patterns.Hand.loot()
             ),
             filter = Filters.EquippedCreature

@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -13,11 +14,7 @@ import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.AddManaEffect
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Dalkovan Encampment — Tarkir: Dragonstorm #253
@@ -30,7 +27,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *
  * Modeled as a check-land ([EntersTapped] with an Exists-Swamp-or-Mountain unless condition,
  * mirroring Isolated Chapel) plus a {T}: Add {W} mana ability. The {2}{W},{T} ability installs
- * a [CreateDelayedTriggerEffect] on [Triggers.YouAttack] that lasts the rest of the turn
+ * a [CreateDelayedTriggerEffect] on `Triggers.you.attacks()` that lasts the rest of the turn
  * (default EndOfTurn expiry, fireOnce = false) — so each time you declare attackers this turn it
  * creates two tapped-and-attacking 1/1 red Warrior tokens that are sacrificed at the next end
  * step. The token shape and end-step sacrifice match the Mobilize wiring (CardBuilder.mobilize).
@@ -52,17 +49,17 @@ val DalkovanEncampment = card("Dalkovan Encampment") {
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddManaEffect(Color.WHITE)
+        effect = Effects.AddMana(Color.WHITE)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{W}"), Costs.Tap)
-        effect = CreateDelayedTriggerEffect(
-            trigger = Triggers.YouAttack,
-            effect = CreateTokenEffect(
-                count = DynamicAmount.Fixed(2),
+        effect = Effects.CreateDelayedTrigger(
+            trigger = Triggers.you.attacks(),
+            effect = Effects.CreateToken(
+                count = 2,
                 power = 1,
                 toughness = 1,
                 colors = setOf(Color.RED),

@@ -1,7 +1,7 @@
 package com.wingedsheep.assay.corpus
 
 import com.wingedsheep.sdk.model.CardDefinition
-import com.wingedsheep.sdk.serialization.CardLoader
+import com.wingedsheep.sdk.tooling.CardLoader
 import java.io.File
 
 /**

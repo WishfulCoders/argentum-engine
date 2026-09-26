@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Blaster Mage
@@ -28,7 +27,7 @@ val BlasterMage = card("Blaster Mage") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{R}"), Costs.Tap, Costs.DiscardCard)
-        val t = target("target", TargetPermanent(filter = TargetFilter(GameObjectFilter.Permanent.withSubtype("Wall"))))
+        val t = target(TargetFilter(GameObjectFilter.Permanent.withSubtype("Wall")))
         effect = Effects.Destroy(t)
     }
 

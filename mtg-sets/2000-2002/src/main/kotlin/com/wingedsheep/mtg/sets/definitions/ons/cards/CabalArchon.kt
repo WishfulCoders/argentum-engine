@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Cabal Archon
@@ -29,9 +28,8 @@ val CabalArchon = card("Cabal Archon") {
             Costs.Mana("{B}"),
             Costs.Sacrifice(GameObjectFilter.Permanent.withSubtype("Cleric"))
         )
-        val t = target("target", TargetPlayer())
-        effect = LoseLifeEffect(2, t) then
-                GainLifeEffect(2, EffectTarget.Controller)
+        val t = target(Targets.Player)
+        effect = Effects.LoseLife(2, t) then Effects.GainLife(2, EffectTarget.Controller)
     }
 
     metadata {

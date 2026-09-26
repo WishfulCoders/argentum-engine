@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Living Lectern
@@ -42,11 +41,8 @@ val LivingLectern = card("Living Lectern") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeSelf)
         timing = TimingRule.SorcerySpeed
-        val host = target(
-            "up to one other target creature you control",
-            TargetCreature(optional = true, filter = TargetFilter.OtherCreatureYouControl),
-        )
-        effect = Effects.DrawCards(1).then(Effects.CreateRoleToken("Sorcerer Role", host))
+        val host = target(TargetFilter.OtherCreatureYouControl, optional = true)
+        effect = Effects.DrawCards(1) then Effects.CreateRoleToken("Sorcerer Role", host)
         description = "Draw a card. Create a Sorcerer Role token attached to up to one other " +
             "target creature you control."
     }

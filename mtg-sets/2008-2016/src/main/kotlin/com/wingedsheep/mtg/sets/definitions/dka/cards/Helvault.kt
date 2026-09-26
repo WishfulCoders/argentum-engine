@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.dka.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Helvault
@@ -32,18 +32,18 @@ val Helvault = card("Helvault") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
-        val t = target("target", Targets.CreatureYouControl)
+        val t = target(TargetFilter.CreatureYouControl)
         effect = Effects.ExileUntilLeaves(t)
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{7}"), Costs.Tap)
-        val t = target("target", Targets.CreatureOpponentControls)
+        val t = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.ExileUntilLeaves(t)
     }
 
     triggeredAbility {
-        trigger = Triggers.PutIntoGraveyardFromBattlefield
+        trigger = Triggers.self.dies()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 

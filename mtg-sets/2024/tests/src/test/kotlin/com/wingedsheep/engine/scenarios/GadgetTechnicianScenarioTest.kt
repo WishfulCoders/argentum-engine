@@ -24,7 +24,7 @@ import io.kotest.matchers.shouldBe
  *  creature token with flying."
  *
  * The whole point of the test is that both halves of the disjunctive trigger fire — the shape a
- * naive `Triggers.EntersBattlefield` would silently half-implement, since a card cast face down and
+ * naive `Triggers.self.enters()` would silently half-implement, since a card cast face down and
  * flipped never enters again (CR 701.34) and would produce no Thopter at all.
  *
  * The third test pins the other direction: a *face-down* Gadget Technician has no abilities

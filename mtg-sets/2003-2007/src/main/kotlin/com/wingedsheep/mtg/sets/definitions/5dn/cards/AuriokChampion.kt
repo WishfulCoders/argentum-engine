@@ -5,14 +5,13 @@
 package com.wingedsheep.mtg.sets.definitions.`5dn`.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.ProtectionScope
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -33,9 +32,9 @@ val AuriokChampion = card("Auriok Champion") {
     keywordAbility(KeywordAbility.Protection(ProtectionScope.Color(Color.BLACK)))
     keywordAbility(KeywordAbility.Protection(ProtectionScope.Color(Color.RED)))
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(filter = GameObjectFilter.Creature, binding = TriggerBinding.OTHER)
+        trigger = Triggers.another(GameObjectFilter.Creature).enters()
         optional = true
-        effect = GainLifeEffect(1)
+        effect = Effects.GainLife(1)
     }
     metadata {
         rarity = Rarity.RARE

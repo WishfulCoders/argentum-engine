@@ -3,26 +3,20 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
 import com.wingedsheep.sdk.scripting.effects.ReturnFace
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.SelectionRestriction
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Joshua, Phoenix's Dominant // Phoenix, Warden of Fire — Final Fantasy #229
@@ -47,10 +41,11 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * transform loop follows Dion, Bahamut's Dominant — an [Effects.ExileAndReturnTransformed]
  * on the front's sorcery-speed activated ability and again (with [ReturnFace.FRONT]) at the
  * eikon's final chapter. Note the Saga has no "Sacrifice after III" clause: chapter III
- * flips it back to the front face rather than sacrificing it. Flames of Rebirth is the
- * Michelangelo's Technique idiom — gather creature cards from the graveyard, choose any
- * number capped at total mana value 6 ([SelectionRestriction.TotalManaValueAtMost]), and move
- * the chosen ones to the battlefield; unchosen cards stay in the graveyard. Rising Flames'
+ * flips it back to the front face rather than sacrificing it. Flames of Rebirth
+ * targets: the chapter ability chooses any number of creature cards in your graveyard as it
+ * goes on the stack (CR 603.3d), their summed mana value capped at 6 by
+ * [TargetObject.totalManaValueAtMost], and returns whichever are still there on resolution.
+ * Rising Flames'
  * damage feeds the back face's lifelink automatically.
  */
 private val PhoenixWardenOfFire = card("Phoenix, Warden of Fire") {
@@ -81,32 +76,16 @@ private val PhoenixWardenOfFire = card("Phoenix, Warden of Fire") {
     // value 6 or less from your graveyard to the battlefield. Exile Phoenix, then return it
     // to the battlefield (front face up).
     sagaChapter(3) {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        Zone.GRAVEYARD,
-                        Player.You,
-                        GameObjectFilter.Creature,
-                    ),
-                    storeAs = "graveyardCreatures",
-                ),
-                SelectFromCollectionEffect(
-                    from = "graveyardCreatures",
-                    selection = SelectionMode.ChooseAnyNumber,
-                    restrictions = listOf(SelectionRestriction.TotalManaValueAtMost(6)),
-                    storeSelected = "toBattlefield",
-                    prompt = "Return any number of creature cards with total mana value 6 or " +
-                        "less to the battlefield",
-                    selectedLabel = "Return to the battlefield",
-                ),
-                MoveCollectionEffect(
-                    from = "toBattlefield",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD, Player.You),
-                ),
-                Effects.ExileAndReturnTransformed(EffectTarget.Self, ReturnFace.FRONT),
-            ),
+        targets(
+            TargetFilter.CreatureInYourGraveyard,
+            unlimited = true,
+            totalManaValueAtMost = DynamicAmounts.fixed(6),
         )
+        effect = Effects.Pipeline {
+            val toBattlefield = gather(CardSource.ChosenTargets)
+            move(toBattlefield, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You))
+            run(Effects.ExileAndReturnTransformed(EffectTarget.Self, ReturnFace.FRONT))
+        }
     }
 
     metadata {
@@ -129,27 +108,13 @@ private val JoshuaPhoenixsDominantFront = card("Joshua, Phoenix's Dominant") {
 
     // When Joshua enters, discard up to two cards, then draw that many cards.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.HAND, Player.You),
-                    storeAs = "hand",
-                ),
-                SelectFromCollectionEffect(
-                    from = "hand",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(2)),
-                    storeSelected = "discarded",
-                    prompt = "Discard up to two cards",
-                ),
-                MoveCollectionEffect(
-                    from = "discarded",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.You),
-                    moveType = MoveType.Discard,
-                ),
-                DrawCardsEffect(DynamicAmount.VariableReference("discarded_count")),
-            ),
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val hand = gather(CardSource.FromZone(Zone.HAND, Player.You))
+            val discarded = chooseUpTo(2, from = hand, prompt = "Discard up to two cards")
+            discard(discarded)
+            run(Effects.DrawCards(discarded.count))
+        }
         description = "When Joshua enters, discard up to two cards, then draw that many cards."
     }
 

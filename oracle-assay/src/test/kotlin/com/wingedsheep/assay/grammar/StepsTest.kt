@@ -7,9 +7,7 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
 import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
@@ -18,7 +16,7 @@ import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
 import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.scripting.targets.TargetRequirement
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -338,12 +336,8 @@ class StepsTest : StringSpec({
                 script = CardScript(
                     spellEffect = ForEachTargetEffect(
                         listOf(
-                            Effects.Composite(
-                                listOf(
-                                    Effects.ModifyStats(1, 1, EffectTarget.ContextTarget(0)),
-                                    Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.ContextTarget(0)),
-                                )
-                            )
+                            Effects.ModifyStats(1, 1, EffectTarget.ContextTarget(0)) then
+                                Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.ContextTarget(0))
                         )
                     ),
                     targetRequirements = listOf(Targets.several(2, GameObjectFilter.Creature, optional = true)),
@@ -430,7 +424,7 @@ class StepsTest : StringSpec({
             script = CardScript(
                 spellEffect = Effects.Destroy(Targets.bound()),
                 targetRequirements = listOf(
-                    TargetPermanent(
+                    TargetObject(
                         filter = TargetFilter(GameObjectFilter.Creature, excludeSelf = true),
                         id = Targets.SLOT,
                     )
@@ -442,7 +436,7 @@ class StepsTest : StringSpec({
     }
 
     // The mass effects: one iteration over a GroupFilter with the per-member effect written against
-    // EffectTarget.Self. Four printed shapes for one model, which is why the templates are
+    // EffectTarget.IterationEntity. Four printed shapes for one model, which is why the templates are
     // enumerated and the group filter is Filters slotted whole.
     "a group effect is one iteration over a filter" {
         fragment("Creatures you control get +1/+1 until end of turn.") shouldBe CardFragment(
@@ -451,7 +445,7 @@ class StepsTest : StringSpec({
                     com.wingedsheep.sdk.scripting.filters.unified.GroupFilter(
                         GameObjectFilter.Creature.youControl()
                     ),
-                    Effects.ModifyStats(1, 1, com.wingedsheep.sdk.scripting.targets.EffectTarget.Self),
+                    Effects.ModifyStats(1, 1, com.wingedsheep.sdk.scripting.targets.EffectTarget.IterationEntity),
                 )
             )
         )
@@ -659,7 +653,7 @@ class StepsTest : StringSpec({
             script = CardScript(
                 spellEffect = Effects.CounterSpell(),
                 targetRequirements = listOf(
-                    TargetSpell(filter = TargetFilter.SorcerySpellOnStack, id = Targets.SLOT),
+                    TargetObject(filter = TargetFilter.SorcerySpellOnStack, id = Targets.SLOT),
                 ),
             )
         )
@@ -686,12 +680,12 @@ class StepsTest : StringSpec({
     }
 
     // The causative moves the subject inside "have" and drops the verb's agreement, and the model
-    // gains a `MayEffect` — which is why it is a parameter on the row and not an `alsoSpelled`.
+    // gains a `Effects.May` — which is why it is a parameter on the row and not an `alsoSpelled`.
     "the causative sacrifice prints its own sentence rather than the composed may" {
         fragment("You may have target opponent sacrifice a creature of their choice.") shouldBe
             CardFragment(
                 script = CardScript(
-                    spellEffect = MayEffect(
+                    spellEffect = Effects.May(
                         Effects.Sacrifice(GameObjectFilter.Creature, 1, Targets.bound()),
                     ),
                     targetRequirements = listOf(Targets.opponent()),

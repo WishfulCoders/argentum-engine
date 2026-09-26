@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.blc.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Decimate {2}{R}{G}
@@ -20,16 +20,14 @@ val Decimate = card("Decimate") {
         "(You can't cast this spell unless you have legal choices for all its targets.)"
 
     spell {
-        val artifact = target("target artifact", Targets.Artifact)
-        val creature = target("target creature", Targets.Creature)
-        val enchantment = target("target enchantment", Targets.Enchantment)
-        val land = target("target land", Targets.Land)
-        effect = Effects.Composite(
-            Effects.Destroy(artifact),
-            Effects.Destroy(creature),
-            Effects.Destroy(enchantment),
+        val artifact = target(TargetFilter.Artifact)
+        val creature = target(TargetFilter.Creature)
+        val enchantment = target(TargetFilter.Enchantment)
+        val land = target(TargetFilter.Land)
+        effect = Effects.Destroy(artifact) then
+            Effects.Destroy(creature) then
+            Effects.Destroy(enchantment) then
             Effects.Destroy(land)
-        )
     }
 
     metadata {

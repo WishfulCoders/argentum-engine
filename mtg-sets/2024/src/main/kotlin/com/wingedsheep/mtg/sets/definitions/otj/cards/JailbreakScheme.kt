@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.AbilityFlag
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Jailbreak Scheme {U}
@@ -32,25 +30,19 @@ val JailbreakScheme = card("Jailbreak Scheme") {
         "+ {2} — Target artifact or creature's owner puts it on their choice of the top or bottom of their library."
 
     spell {
-        effect = ModalEffect(
+        effect = Effects.Modal(
             modes = listOf(
-                Mode(
-                    effect = Effects.Composite(
-                        listOf(
-                            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0)),
-                            Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, EffectTarget.ContextTarget(0))
-                        )
-                    ),
-                    targetRequirements = listOf(Targets.Creature),
-                    description = "+ {3} — Put a +1/+1 counter on target creature. It can't be blocked this turn.",
+                mode("+ {3} — Put a +1/+1 counter on target creature. It can't be blocked this turn.") {
+                    val creature = target(TargetFilter.Creature)
                     additionalManaCost = "{3}"
-                ),
-                Mode(
-                    effect = Effects.PutOnTopOrBottomOfLibrary(EffectTarget.ContextTarget(0)),
-                    targetRequirements = listOf(Targets.CreatureOrArtifact),
-                    description = "+ {2} — Target artifact or creature's owner puts it on their choice of the top or bottom of their library.",
+                    effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature) then
+                        Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, creature)
+                },
+                mode("+ {2} — Target artifact or creature's owner puts it on their choice of the top or bottom of their library.") {
+                    val creatureOrArtifact = target(TargetFilter.CreatureOrArtifact)
                     additionalManaCost = "{2}"
-                )
+                    effect = Effects.PutOnTopOrBottomOfLibrary(creatureOrArtifact)
+                }
             ),
             chooseCount = 2,
             minChooseCount = 1

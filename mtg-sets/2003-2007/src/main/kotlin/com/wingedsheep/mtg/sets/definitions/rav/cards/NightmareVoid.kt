@@ -20,11 +20,11 @@ val NightmareVoid = card("Nightmare Void") {
     keywordAbility(KeywordAbility.dredge(2))
 
     spell {
-        target("player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Effects.Pipeline {
-            val hand = gather(CardSource.FromZone(Zone.HAND, Player.ContextPlayer(0)), revealed = true)
+            val hand = gather(CardSource.FromZone(Zone.HAND, player.asPlayer), revealed = true)
             val discarded = chooseExactly(1, hand, prompt = "Choose a card for that player to discard")
-            move(discarded, CardDestination.ToZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
+            move(discarded, CardDestination.ToZone(Zone.GRAVEYARD, player.asPlayer),
                 moveType = MoveType.Discard)
         }
     }

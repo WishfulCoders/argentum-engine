@@ -14,6 +14,7 @@ import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Krovod Haunch (MKM #21) — {W} Artifact — Food Equipment.
@@ -27,8 +28,8 @@ import io.kotest.matchers.shouldBe
  * The shape worth pinning is that the two halves *chain*: the sacrifice ability's own cost puts
  * the Haunch into the graveyard from the battlefield, which is exactly what the second ability
  * triggers on — so cashing it in for life also offers the Dogs. The trigger is
- * [com.wingedsheep.sdk.dsl.Triggers.Dies] (battlefield → graveyard, SELF binding) rather than
- * anything sacrifice-specific, and the optional {1}{W} is a resolution-time `MayPayManaEffect`
+ * `Triggers.self.dies()` (battlefield → graveyard, SELF binding) rather than
+ * anything sacrifice-specific, and the optional {1}{W} is a resolution-time `Effects.MayPay`
  * (CR 603.12 style "you may pay … if you do"), not an additional cost — so declining still leaves
  * the life gain intact, and the Haunch already sitting in the graveyard when the trigger resolves
  * is harmless.
@@ -63,7 +64,7 @@ class KrovodHaunchScenarioTest : FunSpec({
                 abilityId = equipAbilityId,
                 targets = listOf(ChosenTarget.Permanent(courser))
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         d.bothPass()
         d.state.getEntity(haunch)?.get<AttachedToComponent>()?.targetId shouldBe courser
 
@@ -84,7 +85,7 @@ class KrovodHaunchScenarioTest : FunSpec({
 
         d.submit(
             ActivateAbility(playerId = p1, sourceId = haunch, abilityId = sacAbilityId)
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
 
         var guard = 0
         while (guard++ < 12) {
@@ -114,7 +115,7 @@ class KrovodHaunchScenarioTest : FunSpec({
 
         d.submit(
             ActivateAbility(playerId = p1, sourceId = haunch, abilityId = sacAbilityId)
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
 
         var guard = 0
         while (guard++ < 12) {

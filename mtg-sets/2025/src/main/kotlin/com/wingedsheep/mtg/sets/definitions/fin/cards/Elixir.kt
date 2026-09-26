@@ -10,12 +10,9 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Elixir
@@ -40,19 +37,11 @@ val Elixir = card("Elixir") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{5}"), Costs.Tap, Costs.ExileSelf)
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Nonland),
-                    storeAs = "shuffled"
-                ),
-                MoveCollectionEffect(
-                    from = "shuffled",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, Player.You, ZonePlacement.Shuffled)
-                ),
-                Effects.GainLife(DynamicAmount.VariableReference("shuffled_count"), EffectTarget.Controller)
-            )
-        )
+        effect = Effects.Pipeline {
+            val shuffled = gather(CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Nonland))
+            move(shuffled, CardDestination.ToZone(Zone.LIBRARY, Player.You, ZonePlacement.Shuffled))
+            run(Effects.GainLife(shuffled.count, EffectTarget.Controller))
+        }
         description = "{5}, {T}, Exile this artifact: Shuffle all nonland cards from your graveyard into your library. You gain life equal to the number of cards shuffled into your library this way."
     }
 

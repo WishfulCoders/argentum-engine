@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Start from Scratch — Strixhaven: School of Mages #114 (canonical printing)
@@ -28,11 +29,11 @@ val StartFromScratch = card("Start from Scratch") {
     spell {
         modal {
             mode("Start from Scratch deals 1 damage to any target") {
-                val victim = target("target", Targets.Any)
+                val victim = target(Targets.Any)
                 effect = Effects.DealDamage(1, victim)
             }
             mode("Destroy target artifact") {
-                val artifact = target("target", Targets.Artifact)
+                val artifact = target(TargetFilter.Artifact)
                 effect = Effects.Destroy(artifact)
             }
         }

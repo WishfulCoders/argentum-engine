@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBeBlockedBy
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Cheeky House-Mouse // Squeak By
@@ -34,14 +34,12 @@ val CheekyHouseMouse = card("Cheeky House-Mouse") {
         oracleText = "Target creature you control gets +1/+1 until end of turn. It can't be blocked by " +
             "creatures with power 3 or greater this turn. (Then exile this card. You may cast the creature later from exile.)"
         spell {
-            val t = target("target", Targets.CreatureYouControl)
-            effect = Effects.Composite(
-                Effects.ModifyStats(1, 1, t),
+            val t = target(TargetFilter.CreatureYouControl)
+            effect = Effects.ModifyStats(1, 1, t) then
                 Effects.GrantStaticAbility(
                     CantBeBlockedBy(GameObjectFilter.Creature.powerAtLeast(3)),
                     t
                 )
-            )
         }
     }
 

@@ -37,7 +37,7 @@ val KykarWindsFury = card("Kykar, Wind's Fury") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

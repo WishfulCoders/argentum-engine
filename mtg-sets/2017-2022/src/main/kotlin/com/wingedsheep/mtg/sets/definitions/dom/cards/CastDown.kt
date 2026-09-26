@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -20,7 +19,7 @@ val CastDown = card("Cast Down") {
     oracleText = "Destroy target nonlegendary creature."
 
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.NonlegendaryCreature))
+        val t = target(TargetFilter.NonlegendaryCreature)
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
 

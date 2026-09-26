@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Mind into Matter — Secrets of Strixhaven #202
@@ -29,7 +29,7 @@ val MindIntoMatter = card("Mind into Matter") {
         "your hand onto the battlefield tapped."
 
     spell {
-        effect = Effects.DrawCards(DynamicAmount.XValue) then Patterns.Hand.putFromHand(
+        effect = Effects.DrawCards(DynamicAmounts.xValue()) then Patterns.Hand.putFromHand(
             filter = GameObjectFilter.Permanent.manaValueAtMostX(),
             count = 1,
             entersTapped = true

@@ -16,7 +16,7 @@ import io.kotest.matchers.shouldBe
  * flying-granter.
  *
  * "Whenever this creature attacks, you may pay {1}{W}. If you do, target attacking creature without
- * flying gains flying until end of turn." Modelled as [MayPayManaEffect] (the "you may pay … if you
+ * flying gains flying until end of turn." Modelled as [Effects.MayPay] (the "you may pay … if you
  * do" reflexive, CR 603.12): after the attack trigger resolves the engine offers the optional
  * payment first (yes/no + mana sources), then — only if paid — the "gains flying" effect targets a
  * grounded attacker. The target filter is `AttackingCreature.withoutKeyword(FLYING)`, so only a

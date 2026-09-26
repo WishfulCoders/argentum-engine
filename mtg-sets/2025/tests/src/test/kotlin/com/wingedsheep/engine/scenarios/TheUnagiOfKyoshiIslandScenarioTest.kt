@@ -17,6 +17,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Tests for The Unagi of Kyoshi Island ({3}{U}{U}, Legendary Creature — Serpent, 5/5):
@@ -25,7 +26,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  *    controller pays {4}. They may tap their untapped artifacts and creatures to help, each
  *    paying {1} — the ward mana payment routes through the shared waterbend tap-to-help path.
  *  - "Whenever an opponent draws their second card each turn, you draw two cards."
- *    (the [com.wingedsheep.sdk.dsl.Triggers.NthCardDrawn] facade scoped to each opponent).
+ *    (the `Triggers.<player>.drawsNth(n)` facade scoped to each opponent).
  */
 class TheUnagiOfKyoshiIslandScenarioTest : FunSpec({
 
@@ -63,7 +64,7 @@ class TheUnagiOfKyoshiIslandScenarioTest : FunSpec({
         // artifacts/creatures to waterbend-tap, so the executor counters immediately.
         driver.giveMana(caster, Color.RED, 1)
         val bolt = driver.putCardInHand(caster, "Lightning Bolt")
-        driver.castSpell(caster, bolt, listOf(unagi)).isSuccess shouldBe true
+        driver.castSpell(caster, bolt, listOf(unagi)).outcome shouldBe Outcome.Done
 
         // Resolve the ward trigger — caster can't pay, so it counters straight away.
         driver.bothPass()

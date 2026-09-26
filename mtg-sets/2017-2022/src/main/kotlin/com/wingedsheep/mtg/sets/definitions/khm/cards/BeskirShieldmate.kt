@@ -13,7 +13,7 @@ import com.wingedsheep.sdk.model.Rarity
  * 2/1
  * When this creature dies, create a 1/1 white Human Warrior creature token.
  *
- * A plain dies trigger. [Triggers.Dies] already fires from the graveyard, so the token is created
+ * A plain dies trigger. `Triggers.self.dies()` already fires from the graveyard, so the token is created
  * after the Shieldmate has left the battlefield.
  */
 val BeskirShieldmate = card("Beskir Shieldmate") {
@@ -25,7 +25,7 @@ val BeskirShieldmate = card("Beskir Shieldmate") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

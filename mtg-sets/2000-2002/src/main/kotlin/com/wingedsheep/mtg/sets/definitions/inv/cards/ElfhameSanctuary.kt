@@ -6,8 +6,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Elfhame Sanctuary
@@ -29,12 +29,12 @@ val ElfhameSanctuary = card("Elfhame Sanctuary") {
         "reveal that card, put it into your hand, then shuffle. If you do, you skip your draw step this turn."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         // The search is itself optional ("you may search ... for a basic land card") — the
-        // controller declines by choosing zero cards. IfYouDoEffect gates the draw-step skip on
+        // controller declines by choosing zero cards. Effects.IfYouDo gates the draw-step skip on
         // the search actually putting a card into hand (SuccessCriterion.Auto detects the terminal
         // move into HAND), matching the "If you do, you skip your draw step this turn" clause.
-        effect = IfYouDoEffect(
+        effect = Effects.IfYouDo(
             action = Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.BasicLand,
                 count = 1,
@@ -42,7 +42,7 @@ val ElfhameSanctuary = card("Elfhame Sanctuary") {
                 reveal = true,
                 shuffleAfter = true
             ),
-            ifYouDo = Effects.SkipNextDrawStep()
+            then = Effects.SkipNextDrawStep()
         )
     }
 

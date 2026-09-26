@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.bargain
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Diminisher Witch
@@ -43,9 +43,9 @@ val DiminisherWitch = card("Diminisher Witch") {
     bargain()
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.WasBargained
-        val cursed = target("target creature an opponent controls", Targets.CreatureOpponentControls)
+        val cursed = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.CreateRoleToken("Cursed Role", cursed)
         description = "When this creature enters, if it was bargained, create a Cursed Role token " +
             "attached to target creature an opponent controls."

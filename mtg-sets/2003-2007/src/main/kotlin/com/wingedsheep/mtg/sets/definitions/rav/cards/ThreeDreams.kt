@@ -5,17 +5,10 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.EmitLibrarySearchedEventEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.SelectionRestriction
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Three Dreams — Ravnica: City of Guilds #32
@@ -37,31 +30,26 @@ val ThreeDreams = card("Three Dreams") {
         "put them into your hand, then shuffle."
 
     spell {
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.FromZone(
+        effect = Effects.Pipeline {
+            val searchable = gather(
+                CardSource.FromZone(
                     Zone.LIBRARY,
                     Player.You,
                     GameObjectFilter.Enchantment.withSubtype("Aura")
                 ),
-                storeAs = "searchable"
-            ),
-            SelectFromCollectionEffect(
-                from = "searchable",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(3)),
-                storeSelected = "found",
+                search = true
+            )
+            val found = chooseUpTo(
+                3,
+                from = searchable,
                 restrictions = listOf(SelectionRestriction.OnePerCardName),
                 prompt = "Search for up to three Aura cards with different names"
-            ),
-            MoveCollectionEffect(
-                from = "found",
-                destination = CardDestination.ToZone(Zone.HAND),
-                revealed = true
-            ),
-            ShuffleLibraryEffect(),
+            )
+            toHand(found, revealed = true)
+            run(Effects.ShuffleLibrary())
             // CR 701.23 — the search happened whether or not anything was found.
-            EmitLibrarySearchedEventEffect
-        )
+            run(EmitLibrarySearchedEventEffect)
+        }
     }
 
     metadata {

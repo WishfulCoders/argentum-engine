@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.kld.cards
 
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Failed Inspection
@@ -24,12 +24,10 @@ val FailedInspection = card("Failed Inspection") {
     oracleText = "Counter target spell. Draw a card, then discard a card."
 
     spell {
-        target("target", Targets.Spell)
-        effect = Effects.Composite(
-            Effects.CounterSpell(),
-            Effects.DrawCards(1),
-            Patterns.Hand.discardCards(1),
-        )
+        target(TargetFilter.SpellOnStack)
+        effect = Effects.CounterSpell() then
+            Effects.DrawCards(1) then
+            Patterns.Hand.discardCards(1)
     }
 
     metadata {

@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.rtr.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Voidwielder
@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * Canonical printing: Return to Ravnica, the card's earliest real printing.
  *
- * Batterhorn's shape in blue: `optional = true` lowers to one `MayEffect` consent gate, asked at
+ * Batterhorn's shape in blue: `optional = true` lowers to one `Effects.May` consent gate, asked at
  * resolution after the target was locked in on announcement.
  */
 val Voidwielder = card("Voidwielder") {
@@ -28,9 +28,9 @@ val Voidwielder = card("Voidwielder") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
-        val t = target("target creature", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.ReturnToHand(t)
     }
 

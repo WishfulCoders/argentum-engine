@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Bring Low
@@ -23,15 +22,15 @@ val BringLow = card("Bring Low") {
     oracleText = "Bring Low deals 3 damage to target creature. If that creature has a +1/+1 counter on it, Bring Low deals 5 damage to it instead."
 
     spell {
+        val creature = target(TargetFilter.Creature)
         effect = Effects.DealDamage(
-            amount = DynamicAmount.Conditional(
-                condition = Conditions.TargetHasCounter(CounterTypeFilter.PlusOnePlusOne),
-                ifTrue = DynamicAmount.Fixed(5),
-                ifFalse = DynamicAmount.Fixed(3)
+            amount = DynamicAmounts.conditional(
+                condition = Conditions.TargetHasCounter(CounterType.PLUS_ONE_PLUS_ONE, creature),
+                ifTrue = 5,
+                ifFalse = 3
             ),
-            target = EffectTarget.ContextTarget(0)
+            target = creature
         )
-        target = Targets.Creature
     }
 
     metadata {

@@ -54,7 +54,7 @@
                         "type": "MoveToZone",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target blue permanent"
+                            "name": "t0"
                         },
                         "destination": "Graveyard",
                         "byDestruction": true
@@ -65,7 +65,7 @@
                             "filter": {
                                 "baseFilter": "permanent blue"
                             },
-                            "id": "target blue permanent"
+                            "id": "t0"
                         }
                     ],
                     "description": "Destroy target blue permanent"
@@ -75,7 +75,7 @@
                         "type": "MoveToZone",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target Island"
+                            "name": "t1"
                         },
                         "destination": "Hand"
                     },
@@ -85,7 +85,7 @@
                             "filter": {
                                 "baseFilter": "land Island"
                             },
-                            "id": "target Island"
+                            "id": "t1"
                         }
                     ],
                     "description": "Return target Island to its owner's hand"
@@ -116,7 +116,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Adun Oakenshield:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -134,7 +134,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature card from your graveyard"
+                        "name": "t0"
                     },
                     "destination": "Hand"
                 },
@@ -145,7 +145,7 @@
                             "baseFilter": "creature own:you",
                             "zone": "Graveyard"
                         },
-                        "id": "target creature card from your graveyard"
+                        "id": "t0"
                     }
                 ]
             }
@@ -188,7 +188,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Aerathi Berserker:1",
                 "trigger": "BecomesBlockedEvent",
                 "effect": {
                     "type": "ModifyStats",
@@ -198,7 +198,7 @@
                             "type": "Subtract",
                             "left": {
                                 "type": "EntityProperty",
-                                "entity": "Triggering",
+                                "entity": "TriggeringEntity",
                                 "numericProperty": "BlockerCount"
                             },
                             "right": {
@@ -214,7 +214,7 @@
                             "type": "Subtract",
                             "left": {
                                 "type": "EntityProperty",
-                                "entity": "Triggering",
+                                "entity": "TriggeringEntity",
                                 "numericProperty": "BlockerCount"
                             },
                             "right": {
@@ -250,7 +250,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Al-abara's Carpet:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -266,21 +266,20 @@
                 },
                 "effect": {
                     "type": "PreventDamageShield",
+                    "recipientGroupIncludesController": true,
                     "sourceFilter": {
-                        "type": "FromGroup",
+                        "type": "PreventFromMatching",
                         "filter": {
-                            "baseFilter": {
-                                "cardPredicates": [
-                                    "IsCreature",
-                                    {
-                                        "type": "NotKeyword",
-                                        "keyword": "FLYING"
-                                    }
-                                ],
-                                "statePredicates": [
-                                    "IsAttacking"
-                                ]
-                            }
+                            "cardPredicates": [
+                                "IsCreature",
+                                {
+                                    "type": "NotKeyword",
+                                    "keyword": "FLYING"
+                                }
+                            ],
+                            "statePredicates": [
+                                "IsAttacking"
+                            ]
                         }
                     }
                 }
@@ -412,7 +411,7 @@
             "type": "MoveToZone",
             "target": {
                 "type": "BoundVariable",
-                "name": "target"
+                "name": "t0"
             },
             "destination": "Hand"
         },
@@ -422,7 +421,7 @@
                 "filter": {
                     "baseFilter": "permanent"
                 },
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -450,7 +449,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Carrion Ants:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -533,7 +532,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Chromium:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP"
@@ -552,7 +551,7 @@
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Chromium:2",
                 "trigger": "BecomesBlockedEvent",
                 "effect": {
                     "type": "ModifyStats",
@@ -562,7 +561,7 @@
                             "type": "Subtract",
                             "left": {
                                 "type": "EntityProperty",
-                                "entity": "Triggering",
+                                "entity": "TriggeringEntity",
                                 "numericProperty": "BlockerCount"
                             },
                             "right": {
@@ -578,7 +577,7 @@
                             "type": "Subtract",
                             "left": {
                                 "type": "EntityProperty",
-                                "entity": "Triggering",
+                                "entity": "TriggeringEntity",
                                 "numericProperty": "BlockerCount"
                             },
                             "right": {
@@ -700,7 +699,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Craw Giant:1",
                 "trigger": "BecomesBlockedEvent",
                 "effect": {
                     "type": "ModifyStats",
@@ -710,7 +709,7 @@
                             "type": "Subtract",
                             "left": {
                                 "type": "EntityProperty",
-                                "entity": "Triggering",
+                                "entity": "TriggeringEntity",
                                 "numericProperty": "BlockerCount"
                             },
                             "right": {
@@ -726,7 +725,7 @@
                             "type": "Subtract",
                             "left": {
                                 "type": "EntityProperty",
-                                "entity": "Triggering",
+                                "entity": "TriggeringEntity",
                                 "numericProperty": "BlockerCount"
                             },
                             "right": {
@@ -789,7 +788,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Crimson Manticore:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -811,7 +810,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target attacking or blocking creature"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -833,7 +832,7 @@
                                 ]
                             }
                         },
-                        "id": "target attacking or blocking creature"
+                        "id": "t0"
                     }
                 ]
             }
@@ -884,7 +883,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Cyclopean Mummy:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield",
@@ -922,7 +921,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "D'Avenant Archer:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "DealDamage",
@@ -932,7 +931,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target attacking or blocking creature"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -954,7 +953,7 @@
                                 ]
                             }
                         },
-                        "id": "target attacking or blocking creature"
+                        "id": "t0"
                     }
                 ]
             }
@@ -1124,7 +1123,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Emerald Dragonfly:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -1199,7 +1198,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Fallen Angel:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -1249,7 +1248,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Fire Sprites:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -1298,7 +1297,7 @@
                     "baseFilter": "instant",
                     "zone": "Stack"
                 },
-                "id": "target instant spell"
+                "id": "t0"
             }
         ]
     },
@@ -1328,7 +1327,7 @@
                         "type": "MoveToZone",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target red permanent"
+                            "name": "t0"
                         },
                         "destination": "Graveyard",
                         "byDestruction": true
@@ -1339,7 +1338,7 @@
                             "filter": {
                                 "baseFilter": "permanent red"
                             },
-                            "id": "target red permanent"
+                            "id": "t0"
                         }
                     ],
                     "description": "Destroy target red permanent"
@@ -1349,7 +1348,7 @@
                         "type": "MoveToZone",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target Mountain"
+                            "name": "t1"
                         },
                         "destination": "Hand"
                     },
@@ -1359,7 +1358,7 @@
                             "filter": {
                                 "baseFilter": "land Mountain"
                             },
-                            "id": "target Mountain"
+                            "id": "t1"
                         }
                     ],
                     "description": "Return target Mountain to its owner's hand"
@@ -1401,7 +1400,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Frost Giant:1",
                 "trigger": "BecomesBlockedEvent",
                 "effect": {
                     "type": "ModifyStats",
@@ -1411,7 +1410,7 @@
                             "type": "Subtract",
                             "left": {
                                 "type": "EntityProperty",
-                                "entity": "Triggering",
+                                "entity": "TriggeringEntity",
                                 "numericProperty": "BlockerCount"
                             },
                             "right": {
@@ -1427,7 +1426,7 @@
                             "type": "Subtract",
                             "left": {
                                 "type": "EntityProperty",
-                                "entity": "Triggering",
+                                "entity": "TriggeringEntity",
                                 "numericProperty": "BlockerCount"
                             },
                             "right": {
@@ -1467,7 +1466,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Ghosts of the Damned:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "ModifyStats",
@@ -1481,7 +1480,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -1490,7 +1489,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target creature"
+                        "id": "t0"
                     }
                 ]
             }
@@ -1548,7 +1547,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Greed:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -1635,7 +1634,7 @@
                     "type": "Fixed",
                     "amount": 0
                 },
-                "target": "Self"
+                "target": "IterationEntity"
             }
         }
     },
@@ -1663,7 +1662,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Hell's Caretaker:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -1681,7 +1680,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature card from your graveyard"
+                        "name": "t0"
                     },
                     "destination": "Battlefield",
                     "fromZone": "Graveyard"
@@ -1693,7 +1692,7 @@
                             "baseFilter": "creature own:you",
                             "zone": "Graveyard"
                         },
-                        "id": "target creature card from your graveyard"
+                        "id": "t0"
                     }
                 ],
                 "restrictions": [
@@ -1754,7 +1753,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Horn of Deafening:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -1772,7 +1771,7 @@
                     "type": "PreventDamageShield",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     },
                     "scope": "CombatOnly",
                     "direction": "FromTarget"
@@ -1783,7 +1782,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target creature"
+                        "id": "t0"
                     }
                 ]
             }
@@ -1832,7 +1831,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Horror of Horrors:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -1844,7 +1843,7 @@
                     "type": "Regenerate",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target black creature"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -1853,7 +1852,7 @@
                         "filter": {
                             "baseFilter": "creature black"
                         },
-                        "id": "target black creature"
+                        "id": "t0"
                     }
                 ]
             }
@@ -1894,7 +1893,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Hunding Gjornersen:1",
                 "trigger": "BecomesBlockedEvent",
                 "effect": {
                     "type": "ModifyStats",
@@ -1904,7 +1903,7 @@
                             "type": "Subtract",
                             "left": {
                                 "type": "EntityProperty",
-                                "entity": "Triggering",
+                                "entity": "TriggeringEntity",
                                 "numericProperty": "BlockerCount"
                             },
                             "right": {
@@ -1920,7 +1919,7 @@
                             "type": "Subtract",
                             "left": {
                                 "type": "EntityProperty",
-                                "entity": "Triggering",
+                                "entity": "TriggeringEntity",
                                 "numericProperty": "BlockerCount"
                             },
                             "right": {
@@ -1990,7 +1989,7 @@
             "type": "PreventDamageShield",
             "target": {
                 "type": "BoundVariable",
-                "name": "target creature"
+                "name": "t0"
             }
         },
         "targetRequirements": [
@@ -1999,7 +1998,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "target creature"
+                "id": "t0"
             }
         ]
     },
@@ -2171,13 +2170,13 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Kei Takahashi:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "PreventDamageShield",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     },
                     "amount": {
                         "type": "Fixed",
@@ -2190,7 +2189,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target creature"
+                        "id": "t0"
                     }
                 ]
             }
@@ -2224,7 +2223,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Killer Bees:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -2364,7 +2363,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Lady Caleria:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "DealDamage",
@@ -2374,7 +2373,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target attacking or blocking creature"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -2396,7 +2395,7 @@
                                 ]
                             }
                         },
-                        "id": "target attacking or blocking creature"
+                        "id": "t0"
                     }
                 ]
             }
@@ -2427,7 +2426,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Lady Evangela:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -2445,7 +2444,7 @@
                     "type": "PreventDamageShield",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     },
                     "scope": "CombatOnly",
                     "direction": "FromTarget"
@@ -2456,7 +2455,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target creature"
+                        "id": "t0"
                     }
                 ]
             }
@@ -2545,7 +2544,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Marhault Elsdragon:1",
                 "trigger": "BecomesBlockedEvent",
                 "effect": {
                     "type": "ModifyStats",
@@ -2555,7 +2554,7 @@
                             "type": "Subtract",
                             "left": {
                                 "type": "EntityProperty",
-                                "entity": "Triggering",
+                                "entity": "TriggeringEntity",
                                 "numericProperty": "BlockerCount"
                             },
                             "right": {
@@ -2571,7 +2570,7 @@
                             "type": "Subtract",
                             "left": {
                                 "type": "EntityProperty",
-                                "entity": "Triggering",
+                                "entity": "TriggeringEntity",
                                 "numericProperty": "BlockerCount"
                             },
                             "right": {
@@ -2612,7 +2611,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Mold Demon:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -2714,7 +2713,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Palladia-Mors:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP"
@@ -2760,7 +2759,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Pavel Maliki:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -2812,7 +2811,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Pixie Queen:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -2831,7 +2830,7 @@
                     "keyword": "FLYING",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -2840,7 +2839,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target creature"
+                        "id": "t0"
                     }
                 ]
             }
@@ -2901,7 +2900,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Pradesh Gypsies:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -2927,7 +2926,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -2936,7 +2935,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target creature"
+                        "id": "t0"
                     }
                 ]
             }
@@ -2966,7 +2965,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Princess Lucrezia:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -3022,7 +3021,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Ragnar:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -3040,7 +3039,7 @@
                     "type": "Regenerate",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -3049,7 +3048,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target creature"
+                        "id": "t0"
                     }
                 ]
             }
@@ -3104,13 +3103,13 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Relic Barrier:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "TapUntap",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -3119,7 +3118,7 @@
                         "filter": {
                             "baseFilter": "artifact"
                         },
-                        "id": "target"
+                        "id": "t0"
                     }
                 ]
             }
@@ -3149,7 +3148,7 @@
                     "baseFilter": "creature",
                     "zone": "Stack"
                 },
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -3202,7 +3201,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Riven Turnbull:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -3276,7 +3275,7 @@
                     "type": "Fixed",
                     "amount": 2
                 },
-                "target": "Self"
+                "target": "IterationEntity"
             }
         }
     },
@@ -3351,7 +3350,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Sol'kanar the Swamp King:1",
                 "trigger": {
                     "type": "SpellCastEvent",
                     "spellFilter": {
@@ -3401,13 +3400,13 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Spinal Villain:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target blue creature"
+                        "name": "t0"
                     },
                     "destination": "Graveyard",
                     "byDestruction": true
@@ -3418,7 +3417,7 @@
                         "filter": {
                             "baseFilter": "creature blue"
                         },
-                        "id": "target blue creature"
+                        "id": "t0"
                     }
                 ]
             }
@@ -3449,7 +3448,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Sunastian Falconer:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddColorlessMana",
@@ -3488,7 +3487,7 @@
             "keyword": "CANT_BE_BLOCKED",
             "target": {
                 "type": "BoundVariable",
-                "name": "target creature"
+                "name": "t0"
             }
         },
         "targetRequirements": [
@@ -3497,7 +3496,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "target creature"
+                "id": "t0"
             }
         ],
         "castRestrictions": [
@@ -3601,7 +3600,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Tor Wauki:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "DealDamage",
@@ -3611,7 +3610,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target attacking or blocking creature"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -3633,7 +3632,7 @@
                                 ]
                             }
                         },
-                        "id": "target attacking or blocking creature"
+                        "id": "t0"
                     }
                 ]
             }
@@ -3689,7 +3688,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Tuknir Deathlock:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -3715,7 +3714,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target creature"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -3724,7 +3723,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target creature"
+                        "id": "t0"
                     }
                 ]
             }
@@ -3783,7 +3782,8 @@
                         "zone": "Library",
                         "filter": "basicland"
                     },
-                    "storeAs": "searchable"
+                    "storeAs": "searchable",
+                    "search": true
                 },
                 {
                     "type": "SelectFromCollection",
@@ -3837,7 +3837,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Vaevictis Asmadi:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP"
@@ -3858,7 +3858,7 @@
         ],
         "activatedAbilities": [
             {
-                "id": "ability_2",
+                "id": "Vaevictis Asmadi:2",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -3880,7 +3880,7 @@
                 }
             },
             {
-                "id": "ability_3",
+                "id": "Vaevictis Asmadi:3",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -3902,7 +3902,7 @@
                 }
             },
             {
-                "id": "ability_4",
+                "id": "Vaevictis Asmadi:4",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -3954,7 +3954,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Vampire Bats:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -4007,7 +4007,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Walking Dead:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -4131,7 +4131,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Wall of Opposition:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -4244,7 +4244,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Wolverine Pack:1",
                 "trigger": "BecomesBlockedEvent",
                 "effect": {
                     "type": "ModifyStats",
@@ -4254,7 +4254,7 @@
                             "type": "Subtract",
                             "left": {
                                 "type": "EntityProperty",
-                                "entity": "Triggering",
+                                "entity": "TriggeringEntity",
                                 "numericProperty": "BlockerCount"
                             },
                             "right": {
@@ -4270,7 +4270,7 @@
                             "type": "Subtract",
                             "left": {
                                 "type": "EntityProperty",
-                                "entity": "Triggering",
+                                "entity": "TriggeringEntity",
                                 "numericProperty": "BlockerCount"
                             },
                             "right": {
@@ -4312,7 +4312,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Xira Arien:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -4334,13 +4334,13 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target player"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
                     {
                         "type": "TargetPlayer",
-                        "id": "target player"
+                        "id": "t0"
                     }
                 ]
             }

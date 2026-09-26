@@ -31,12 +31,12 @@ val BurningSunCavalry = card("Burning Sun Cavalry") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         triggerRestriction = Conditions.YouControl(GameObjectFilter.Creature.withSubtype(Subtype.DINOSAUR))
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         triggerRestriction = Conditions.YouControl(GameObjectFilter.Creature.withSubtype(Subtype.DINOSAUR))
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }

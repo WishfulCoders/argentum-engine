@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
@@ -22,7 +20,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  * • Creatures you control get +1/+1 until end of turn.
  *
  * Modeling notes:
- *  - "Another nontoken Hero you control" is an OTHER-bound [Triggers.entersBattlefield] over
+ *  - "Another nontoken Hero you control" is an OTHER-bound `Triggers.a(filter).enters()` over
  *    `Permanent.withSubtype(HERO).youControl().nontoken()`. The OTHER binding supplies the
  *    "another", so Black Panther entering never triggers himself; the `nontoken()` clause means
  *    the Soldier / Hero tokens this deck makes don't feed him. **`Permanent`, not `Creature`**: a
@@ -47,11 +45,8 @@ val BlackPantherVanguard = card("Black Panther, Vanguard") {
         "• Creatures you control get +1/+1 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Permanent.withSubtype(Subtype.HERO).youControl().nontoken(),
-            binding = TriggerBinding.OTHER,
-        )
-        effect = ModalEffect(
+        trigger = Triggers.another(GameObjectFilter.Permanent.withSubtype(Subtype.HERO).youControl().nontoken()).enters()
+        effect = Effects.Modal(
             modes = listOf(
                 Mode.noTarget(
                     Effects.CreateToken(

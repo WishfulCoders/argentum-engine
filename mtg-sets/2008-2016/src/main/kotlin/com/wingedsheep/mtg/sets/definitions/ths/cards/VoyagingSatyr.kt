@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.ths.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Voyaging Satyr
@@ -24,7 +24,7 @@ val VoyagingSatyr = card("Voyaging Satyr") {
 
     activatedAbility {
         cost = Costs.Tap
-        val land = target("target", Targets.Land)
+        val land = target(TargetFilter.Land)
         effect = Effects.Untap(land)
     }
 

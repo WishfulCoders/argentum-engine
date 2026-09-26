@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * The Boulder, Ready to Rumble
@@ -21,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  * land. Put X +1/+1 counters on it. When it dies or is exiled, return it to the battlefield
  * tapped.)
  *
- * The attack trigger ([Triggers.Attacks]) targets a land you control and runs the set's
+ * The attack trigger (`Triggers.self.attacks()`) targets a land you control and runs the set's
  * [Effects.Earthbend] over a dynamic amount: the count of creatures you control with power 4 or
  * greater ([DynamicAmounts.battlefield] + `powerAtLeast(4)`, `.count()`). The Boulder itself
  * (a 4/4) counts toward X while attacking.
@@ -38,8 +37,8 @@ val TheBoulderReadyToRumble = card("The Boulder, Ready to Rumble") {
         "return it to the battlefield tapped.)"
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val land = target("target land you control", TargetObject(filter = TargetFilter.Land.youControl()))
+        trigger = Triggers.self.attacks()
+        val land = target(TargetFilter.Land.youControl())
         effect = Effects.Earthbend(
             DynamicAmounts.battlefield(Player.You, GameObjectFilter.Creature.powerAtLeast(4)).count(),
             land,

@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Gravpack Monoist
@@ -25,8 +25,8 @@ val GravpackMonoist = card("Gravpack Monoist") {
 
     // When this creature dies, create a tapped 2/2 colorless Robot artifact creature token
     triggeredAbility {
-        trigger = Triggers.Dies
-        effect = CreateTokenEffect(
+        trigger = Triggers.self.dies()
+        effect = Effects.CreateToken(
             name = "Robot",
             power = 2,
             toughness = 2,

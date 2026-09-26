@@ -1,17 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.jmp.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Trusty Retriever
@@ -32,22 +32,18 @@ val TrustyRetriever = card("Trusty Retriever") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseOne(
             Mode.noTarget(
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
+                Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
                 "Put a +1/+1 counter on this creature",
             ),
-            Mode.withTarget(
-                Effects.ReturnToHand(EffectTarget.ContextTarget(0)),
-                TargetObject(
-                    filter = TargetFilter(
-                        GameObjectFilter.ArtifactOrEnchantment.ownedByYou(),
-                        zone = Zone.GRAVEYARD,
-                    )
-                ),
-                "Return target artifact or enchantment card from your graveyard to your hand",
-            ),
+            mode("Return target artifact or enchantment card from your graveyard to your hand") {
+                val artifactOrEnchantment = target(
+                    TargetFilter(GameObjectFilter.ArtifactOrEnchantment.ownedByYou(), zone = Zone.GRAVEYARD),
+                )
+                effect = Effects.ReturnToHand(artifactOrEnchantment)
+            },
         )
         description = "When this creature enters, choose one — Put a +1/+1 counter on this creature; " +
             "or return target artifact or enchantment card from your graveyard to your hand."

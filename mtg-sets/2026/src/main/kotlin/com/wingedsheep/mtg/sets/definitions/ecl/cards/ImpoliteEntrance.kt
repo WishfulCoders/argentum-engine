@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Impolite Entrance
@@ -21,10 +21,10 @@ val ImpoliteEntrance = card("Impolite Entrance") {
     oracleText = "Target creature gains trample and haste until end of turn.\nDraw a card."
 
     spell {
-        val creature = target("creature", Targets.Creature)
-        effect = Effects.GrantKeyword(Keyword.TRAMPLE, creature)
-            .then(Effects.GrantKeyword(Keyword.HASTE, creature))
-            .then(Effects.DrawCards(1))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.GrantKeyword(Keyword.TRAMPLE, creature) then
+            Effects.GrantKeyword(Keyword.HASTE, creature) then
+            Effects.DrawCards(1)
     }
 
     metadata {

@@ -2,10 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.CardType
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -13,15 +14,10 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.values.ManaColorSet
 
 /**
@@ -57,9 +53,9 @@ private val TheLordMasterOfHell = card("The Lord Master of Hell") {
     // Starfall — Whenever The Lord Master of Hell attacks, it deals X damage to each opponent,
     // where X is the number of noncreature, nonland cards in your graveyard.
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.DealDamage(
-            amount = DynamicAmount.Count(
+            amount = DynamicAmounts.count(
                 Player.You,
                 Zone.GRAVEYARD,
                 GameObjectFilter.Noncreature and GameObjectFilter.Nonland,
@@ -107,20 +103,18 @@ private val TheEmperorOfPalameciaFront = card("The Emperor of Palamecia") {
     // +1/+1 counter on The Emperor of Palamecia. Then if it has three or more +1/+1 counters
     // on it, transform it.
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
-        effect = ConditionalEffect(
-            condition = Compare(
-                DynamicAmount.ContextProperty(ContextPropertyKey.MANA_SPENT_ON_TRIGGERING_SPELL),
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
+        effect = Effects.If(
+            condition = Conditions.CompareAmounts(
+                DynamicAmounts.manaSpentOnTriggeringSpell(),
                 ComparisonOperator.GTE,
-                DynamicAmount.Fixed(4),
+                4,
             ),
-            effect = Effects.Composite(
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
-                ConditionalEffect(
-                    condition = Conditions.SourceCounterCountAtLeast(Counters.PLUS_ONE_PLUS_ONE, 3),
-                    effect = TransformEffect(EffectTarget.Self),
+            then = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self) then
+                Effects.If(
+                    condition = Conditions.SourceCounterCountAtLeast(CounterType.PLUS_ONE_PLUS_ONE, 3),
+                    then = Effects.Transform(EffectTarget.Self),
                 ),
-            ),
         )
     }
 

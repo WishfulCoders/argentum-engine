@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -30,7 +29,7 @@ val SylvanSafekeeper = card("Sylvan Safekeeper") {
     toughness = 1
     activatedAbility {
         cost = Costs.Sacrifice(GameObjectFilter.Land)
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.youControl()))
+        val t = target(TargetFilter.Creature.youControl())
         effect = Effects.GrantKeyword(Keyword.SHROUD, t)
     }
     metadata {

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.permanent.counters
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.CountersAddedEvent
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.handlers.EffectContext
@@ -28,7 +29,9 @@ import kotlin.reflect.KClass
  * snapshotted before any placement, so counters added by this very effect are never
  * re-doubled.
  */
-class DoubleCountersExecutor : EffectExecutor<DoubleCountersEffect> {
+class DoubleCountersExecutor(
+    private val predicateEvaluator: PredicateEvaluator
+) : EffectExecutor<DoubleCountersEffect> {
 
     override val effectType: KClass<DoubleCountersEffect> = DoubleCountersEffect::class
 
@@ -50,9 +53,8 @@ class DoubleCountersExecutor : EffectExecutor<DoubleCountersEffect> {
         val toDouble = if (namedType == null) {
             counters.counters.filterValues { it > 0 }.toList()
         } else {
-            val type = resolveCounterType(namedType)
-            val existing = counters.getCount(type)
-            if (existing > 0) listOf(type to existing) else emptyList()
+            val existing = counters.getCount(namedType)
+            if (existing > 0) listOf(namedType to existing) else emptyList()
         }
         if (toDouble.isEmpty()) {
             return EffectResult.success(state, emptyList())
@@ -68,7 +70,8 @@ class DoubleCountersExecutor : EffectExecutor<DoubleCountersEffect> {
         for ((counterType, existing) in toDouble) {
             // Doubling places `existing` additional counters; honor placement replacements.
             val added = ReplacementEffectUtils.applyCounterPlacementModifiers(
-                newState, targetId, counterType, existing, placerId = context.controllerId
+                newState, targetId, counterType, existing, placerId = context.controllerId,
+                predicateEvaluator = predicateEvaluator
             )
             if (added <= 0) continue
 
@@ -78,7 +81,7 @@ class DoubleCountersExecutor : EffectExecutor<DoubleCountersEffect> {
             }
             events.add(
                 CountersAddedEvent(
-                    targetId, counterTypeToString(counterType), added, entityName,
+                    targetId, counterType, added, entityName,
                     firstThisTurn, placedBy = context.controllerId
                 )
             )
@@ -86,7 +89,7 @@ class DoubleCountersExecutor : EffectExecutor<DoubleCountersEffect> {
             // kinds landed: doubling +1/+1 counters must satisfy "you've put one or more +1/+1
             // counters on it this turn" (Kid Loki), which a kind-less mark could not.
             newState = DamageUtils.markCounterPlacedOnCreature(
-                newState, context.controllerId, targetId, counterTypeToString(counterType)
+                newState, context.controllerId, targetId, counterType
             )
             firstThisTurn = false
         }

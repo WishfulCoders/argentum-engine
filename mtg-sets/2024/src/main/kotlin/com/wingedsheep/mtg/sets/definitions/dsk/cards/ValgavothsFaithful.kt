@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -30,7 +29,7 @@ val ValgavothsFaithful = card("Valgavoth's Faithful") {
     toughness = 1
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}{B}"), Costs.SacrificeSelf)
-        val t = target("target", TargetObject(filter = TargetFilter.CreatureInYourGraveyard))
+        val t = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.Move(t, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)
         timing = TimingRule.SorcerySpeed
     }

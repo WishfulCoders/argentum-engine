@@ -1,17 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Redcap Gutter-Dweller
@@ -27,7 +26,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * You may play that card this turn.
  *
  * Implementation notes:
- * - The upkeep trigger is an [OptionalCostEffect]: the sacrifice is the optional
+ * - The upkeep trigger is an [Effects.MayPay]: the sacrifice is the optional
  *   cost (`excludeSource` enforces "another"), and paying it runs the counter +
  *   impulse rewards. Per the 2024-11-08 ruling, if Redcap leaves the battlefield
  *   before the trigger resolves, the sacrifice and impulse still happen — the
@@ -50,24 +49,22 @@ val RedcapGutterDweller = card("Redcap Gutter-Dweller") {
 
     // When this creature enters, create two 1/1 black Rat tokens with "This token can't block."
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = woeRatToken(count = DynamicAmount.Fixed(2))
+        trigger = Triggers.self.enters()
+        effect = woeRatToken(count = DynamicAmounts.fixed(2))
     }
 
     // At the beginning of your upkeep, you may sacrifice another creature. If you do,
     // put a +1/+1 counter on this creature and impulse the top card of your library.
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = OptionalCostEffect(
-            cost = SacrificeEffect(
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.MayPay(
+            cost = Effects.SacrificeOwn(
                 filter = GameObjectFilter.Creature,
                 count = 1,
                 excludeSource = true,
             ),
-            ifPaid = Effects.Composite(listOf(
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
-                Patterns.Exile.impulse(count = 1, storeAs = "redcapImpulseExiled"),
-            )),
+            then = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self) then
+                Patterns.Exile.impulse(count = 1),
         )
     }
 

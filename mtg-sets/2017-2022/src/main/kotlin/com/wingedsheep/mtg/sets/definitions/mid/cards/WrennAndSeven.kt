@@ -12,10 +12,6 @@ import com.wingedsheep.sdk.scripting.SetBasePowerToughnessDynamicStatic
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
@@ -81,60 +77,43 @@ val WrennAndSeven = card("Wrenn and Seven") {
     // +1: Reveal the top four cards of your library. Put all land cards revealed this way into
     //     your hand and the rest into your graveyard.
     loyaltyAbility(+1) {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(4)),
-                    storeAs = "revealed",
-                    revealed = true
-                ),
-                MoveCollectionEffect(
-                    from = "revealed",
-                    filter = GameObjectFilter.Land,
-                    destination = CardDestination.ToZone(Zone.HAND, Player.You)
-                ),
-                MoveCollectionEffect(
-                    from = "revealed",
-                    filter = GameObjectFilter.Nonland,
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.You)
-                )
-            ),
+        effect = Effects.Pipeline(
             descriptionOverride = "Reveal the top four cards of your library. Put all land cards " +
                 "revealed this way into your hand and the rest into your graveyard."
-        )
+        ) {
+            val revealed = gather(CardSource.TopOfLibrary(4), revealed = true)
+            move(revealed, CardDestination.ToZone(Zone.HAND, Player.You), filter = GameObjectFilter.Land)
+            move(revealed, CardDestination.ToZone(Zone.GRAVEYARD, Player.You), filter = GameObjectFilter.Nonland)
+        }
     }
 
     // 0: Put any number of land cards from your hand onto the battlefield tapped.
     loyaltyAbility(0) {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        zone = Zone.HAND,
-                        player = Player.You,
-                        filter = GameObjectFilter.Land
-                    ),
-                    storeAs = "lands_in_hand"
-                ),
-                SelectFromCollectionEffect(
-                    from = "lands_in_hand",
-                    selection = SelectionMode.ChooseAnyNumber,
-                    chooser = Chooser.Controller,
-                    storeSelected = "chosen_lands",
-                    prompt = "Choose any number of land cards to put onto the battlefield tapped."
-                ),
-                MoveCollectionEffect(
-                    from = "chosen_lands",
-                    destination = CardDestination.ToZone(
-                        Zone.BATTLEFIELD,
-                        Player.You,
-                        ZonePlacement.Tapped
-                    )
-                )
-            ),
+        effect = Effects.Pipeline(
             descriptionOverride = "Put any number of land cards from your hand onto the " +
                 "battlefield tapped."
-        )
+        ) {
+            val landsInHand = gather(
+                CardSource.FromZone(
+                    zone = Zone.HAND,
+                    player = Player.You,
+                    filter = GameObjectFilter.Land
+                )
+            )
+            val chosenLands = chooseAnyNumber(
+                from = landsInHand,
+                chooser = Chooser.Controller,
+                prompt = "Choose any number of land cards to put onto the battlefield tapped."
+            )
+            move(
+                chosenLands,
+                CardDestination.ToZone(
+                    Zone.BATTLEFIELD,
+                    Player.You,
+                    ZonePlacement.Tapped
+                )
+            )
+        }
     }
 
     // −3: Create a green Treefolk creature token with reach and "This token's power and toughness
@@ -160,25 +139,20 @@ val WrennAndSeven = card("Wrenn and Seven") {
     // −8: Return all permanent cards from your graveyard to your hand. You get an emblem with
     //     "You have no maximum hand size."
     loyaltyAbility(-8) {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        zone = Zone.GRAVEYARD,
-                        player = Player.You,
-                        filter = GameObjectFilter.Permanent
-                    ),
-                    storeAs = "permanents_in_graveyard"
-                ),
-                MoveCollectionEffect(
-                    from = "permanents_in_graveyard",
-                    destination = CardDestination.ToZone(Zone.HAND, Player.You)
-                ),
-                Effects.RemoveMaximumHandSize()
-            ),
+        effect = Effects.Pipeline(
             descriptionOverride = "Return all permanent cards from your graveyard to your hand. " +
                 "You get an emblem with \"You have no maximum hand size.\""
-        )
+        ) {
+            val permanentsInGraveyard = gather(
+                CardSource.FromZone(
+                    zone = Zone.GRAVEYARD,
+                    player = Player.You,
+                    filter = GameObjectFilter.Permanent
+                )
+            )
+            toHand(permanentsInGraveyard)
+            run(Effects.RemoveMaximumHandSize())
+        }
     }
 
     metadata {

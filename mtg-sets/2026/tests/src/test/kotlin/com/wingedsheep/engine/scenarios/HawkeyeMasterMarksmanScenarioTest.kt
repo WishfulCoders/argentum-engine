@@ -15,11 +15,12 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Scenario tests for Hawkeye, Master Marksman (Marvel Super Heroes #130).
@@ -44,7 +45,7 @@ class HawkeyeMasterMarksmanScenarioTest : ScenarioTestBase() {
         manaCost = "{0}"
         typeLine = "Instant"
         spell {
-            target = TargetCreature()
+            target = TargetObject(filter = TargetFilter.Creature)
             effect = Effects.Tap(EffectTarget.ContextTarget(0))
         }
     }

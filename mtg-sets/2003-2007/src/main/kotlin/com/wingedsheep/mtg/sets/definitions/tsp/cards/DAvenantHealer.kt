@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * D'Avenant Healer
@@ -32,16 +31,13 @@ val DAvenantHealer = card("D'Avenant Healer") {
 
     activatedAbility {
         cost = Costs.Tap
-        val victim = target(
-            "target",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.attackingOrBlocking())),
-        )
+        val victim = target(TargetFilter(GameObjectFilter.Creature.attackingOrBlocking()))
         effect = Effects.DealDamage(1, victim)
     }
 
     activatedAbility {
         cost = Costs.Tap
-        val shielded = target("target", Targets.Any)
+        val shielded = target(Targets.Any)
         effect = Effects.PreventNextDamage(1, shielded)
     }
 

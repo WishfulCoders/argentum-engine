@@ -5,8 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -16,7 +14,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever a creature you control becomes blocked, you may return it to its owner's hand.
  *
  * The trigger watches every creature its controller controls, so it is
- * [Triggers.becomesBlocked] with an ANY binding — the enchantment itself is never the blocked
+ * `Triggers.<subject>.becomesBlocked()` with an ANY binding — the enchantment itself is never the blocked
  * creature. "It" is the creature that became blocked, i.e. [EffectTarget.TriggeringEntity].
  */
 val CunningEvasion = card("Cunning Evasion") {
@@ -26,11 +24,8 @@ val CunningEvasion = card("Cunning Evasion") {
     oracleText = "Whenever a creature you control becomes blocked, you may return it to its owner's hand."
 
     triggeredAbility {
-        trigger = Triggers.becomesBlocked(
-            filter = GameObjectFilter.Creature.youControl(),
-            binding = TriggerBinding.ANY
-        )
-        effect = MayEffect(Effects.ReturnToHand(EffectTarget.TriggeringEntity))
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).becomesBlocked()
+        effect = Effects.May(Effects.ReturnToHand(EffectTarget.TriggeringEntity))
         description = "Whenever a creature you control becomes blocked, you may return it to its owner's hand."
     }
 

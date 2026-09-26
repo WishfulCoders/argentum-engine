@@ -10,6 +10,7 @@ import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.CardScript
+import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.ChoiceSlot
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -46,6 +47,7 @@ class RoamingThroneScenarioTest : ScenarioTestBase() {
         oracleText = "Whenever a creature dies, you gain 2 life.",
         script = CardScript.creature(
             TriggeredAbility.create(
+                id = AbilityId("RoamingThroneScenarioTest_1"),
                 trigger = EventPattern.ZoneChangeEvent(
                     filter = GameObjectFilter.Creature,
                     from = Zone.BATTLEFIELD,

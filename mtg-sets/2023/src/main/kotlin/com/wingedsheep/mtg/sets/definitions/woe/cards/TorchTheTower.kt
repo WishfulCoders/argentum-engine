@@ -5,9 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.bargain
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.MarkExileOnDeathEffect
-import com.wingedsheep.sdk.scripting.targets.TargetCreatureOrPlaneswalker
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Torch the Tower
@@ -23,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreatureOrPlaneswalker
  * on the stack, so the payoff is gated on [Conditions.WasBargained] at resolution.
  *
  * "Instead" here swaps the whole damage clause, so this is a true either/or branch
- * ([ConditionalEffect] with an `elseEffect`) rather than a base effect plus a rider — the bargained
+ * ([Effects.If] with an `elseEffect`) rather than a base effect plus a rider — the bargained
  * branch deals 3, not 2 + 1, which matters for damage-replacement effects that scale off the amount.
  * The scry rides along on the bargained branch only.
  *
@@ -44,18 +42,13 @@ val TorchTheTower = card("Torch the Tower") {
     bargain()
 
     spell {
-        val permanent = target("target creature or planeswalker", TargetCreatureOrPlaneswalker())
-        effect = Effects.Composite(
-            ConditionalEffect(
-                condition = Conditions.WasBargained,
-                effect = Effects.Composite(
-                    Effects.DealDamage(3, permanent),
-                    Effects.Scry(1),
-                ),
-                elseEffect = Effects.DealDamage(2, permanent),
-            ),
-            MarkExileOnDeathEffect(permanent),
-        )
+        val permanent = target(Targets.CreatureOrPlaneswalker)
+        effect = Effects.If(
+            condition = Conditions.WasBargained,
+            then = Effects.DealDamage(3, permanent) then Effects.Scry(1),
+            otherwise = Effects.DealDamage(2, permanent),
+        ) then
+            Effects.MarkExileOnDeath(permanent)
     }
 
     metadata {

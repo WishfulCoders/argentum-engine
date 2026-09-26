@@ -6,7 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Loot, the Pathfinder
@@ -50,7 +50,7 @@ val LootThePathfinder = card("Loot, the Pathfinder") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{R}"), Costs.Tap)
         isExhaust = true
-        val t = target("target", AnyTarget())
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(3, t)
     }
     metadata {

@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.sos.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Choreographed Sparks
@@ -37,11 +37,11 @@ val ChoreographedSparks = card("Choreographed Sparks") {
     spell {
         modal(chooseCount = 2, minChooseCount = 1) {
             mode("Copy target instant or sorcery spell you control. You may choose new targets for the copy") {
-                val spell = target("target instant or sorcery spell you control", Targets.InstantOrSorcerySpellYouControl)
+                val spell = target(TargetFilter.InstantOrSorcerySpellOnStack.youControl())
                 effect = Effects.CopyTargetSpell(target = spell)
             }
             mode("Copy target creature spell you control. The copy gains haste and \"At the beginning of the end step, sacrifice this token.\"") {
-                val spell = target("target creature spell you control", Targets.CreatureSpellYouControl)
+                val spell = target(TargetFilter.CreatureSpellOnStack.youControl())
                 effect = Effects.CopyTargetSpell(
                     target = spell,
                     addedTokenKeywords = setOf(Keyword.HASTE),

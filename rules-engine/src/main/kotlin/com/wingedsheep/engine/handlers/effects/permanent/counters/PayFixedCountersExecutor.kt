@@ -31,11 +31,11 @@ class PayFixedCountersExecutor : EffectExecutor<PayFixedCountersEffect> {
         val playerId = TargetResolutionUtils.resolvePlayerRef(effect.player, context, state)
             ?: return EffectResult.error(state, "PayFixedCounters: could not resolve paying player")
 
-        val counterType = resolveCounterType(effect.counterType)
+        val counterType = effect.counterType
         val current = state.getEntity(playerId)?.get<CountersComponent>() ?: CountersComponent()
         val count = current.getCount(counterType)
         if (count < effect.amount) {
-            return EffectResult.error(state, "Not enough ${effect.counterType} counters to pay ${effect.amount}")
+            return EffectResult.error(state, "Not enough ${effect.counterType.printed} counters to pay ${effect.amount}")
         }
 
         val newState = state.updateEntity(playerId) { container ->

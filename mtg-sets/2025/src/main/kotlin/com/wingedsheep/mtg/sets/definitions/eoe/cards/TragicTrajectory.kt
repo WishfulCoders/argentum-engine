@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Tragic Trajectory
@@ -24,19 +23,19 @@ val TragicTrajectory = card("Tragic Trajectory") {
     oracleText = "Target creature gets -2/-2 until end of turn.\nVoid — That creature gets -10/-10 until end of turn instead if a nonland permanent left the battlefield this turn or a spell was warped this turn."
 
     spell {
-        target = Targets.Creature
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(
-            power = DynamicAmount.Conditional(
+            power = DynamicAmounts.conditional(
                 condition = Conditions.Void,
-                ifTrue = DynamicAmount.Fixed(-10),
-                ifFalse = DynamicAmount.Fixed(-2)
+                ifTrue = -10,
+                ifFalse = -2
             ),
-            toughness = DynamicAmount.Conditional(
+            toughness = DynamicAmounts.conditional(
                 condition = Conditions.Void,
-                ifTrue = DynamicAmount.Fixed(-10),
-                ifFalse = DynamicAmount.Fixed(-2)
+                ifTrue = -10,
+                ifFalse = -2
             ),
-            target = EffectTarget.ContextTarget(0)
+            target = creature
         )
     }
 

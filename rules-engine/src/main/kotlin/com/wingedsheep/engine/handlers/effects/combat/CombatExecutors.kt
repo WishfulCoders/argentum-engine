@@ -8,15 +8,15 @@ import com.wingedsheep.engine.handlers.effects.ExecutorModule
  * Module providing all combat-related effect executors.
  */
 class CombatExecutors(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator(),
-    private val cardRegistry: com.wingedsheep.engine.registry.CardRegistry,
+    private val amountEvaluator: DynamicAmountEvaluator,
+    private val cardRegistry: com.wingedsheep.engine.registry.CardRegistry
 ) : ExecutorModule {
     override fun executors(): List<EffectExecutor<*>> = listOf(
         MustBeBlockedExecutor(),
         ProvokeExecutor(),
         ForceBlockExecutor(),
         PreventDamageExecutor(amountEvaluator),
-        GrantCantBeBlockedExceptByColorExecutor(),
+        GrantCantBeBlockedExceptByColorExecutor(predicateEvaluator = amountEvaluator.predicates),
         GrantCantBeBlockedExceptByExecutor(),
         ReflectCombatDamageExecutor(),
         TauntExecutor(),
@@ -25,7 +25,7 @@ class CombatExecutors(
         CantAttackExecutor(),
         CantBlockExecutor(),
         RemoveFromCombatExecutor(),
-        SwapBlockingAssignmentsExecutor(cardRegistry),
+        SwapBlockingAssignmentsExecutor(cardRegistry, predicateEvaluator = amountEvaluator.predicates),
         OpponentGuessesTopCardKindExecutor(),
         PlayerGuessesConditionExecutor(),
         MarkMustAttackThisTurnExecutor(),

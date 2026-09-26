@@ -5,10 +5,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Sea Drake
@@ -36,10 +34,10 @@ val SeaDrake = card("Sea Drake") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target("target", TargetPermanent(count = 2, filter = TargetFilter.Land.youControl()))
-        effect = ForEachTargetEffect(
-            listOf(Effects.ReturnToHand(EffectTarget.ContextTarget(0)))
+        trigger = Triggers.self.enters()
+        targets(TargetFilter.Land.youControl(), count = 2)
+        effect = Effects.ForEachTarget(
+            Effects.ReturnToHand(EffectTarget.ContextTarget(0))
         )
     }
 

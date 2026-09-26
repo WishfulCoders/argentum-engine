@@ -35,8 +35,7 @@ fun CardBuilder.mobilize(n: Int) {
     val article = if (n == 1) "a" else "$n"
     triggeredAbilities.add(
         TriggeredAbility.create(
-            trigger = Triggers.Attacks.event,
-            binding = Triggers.Attacks.binding,
+            trigger = Triggers.self.attacks(),
             effect = CreateTokenEffect(
                 count = DynamicAmount.Fixed(n),
                 power = 1,
@@ -73,8 +72,7 @@ fun CardBuilder.mobilize(amount: DynamicAmount, amountDescription: String, label
     keywordAbilityList.add(KeywordAbility.mobilizeVariable(label))
     triggeredAbilities.add(
         TriggeredAbility.create(
-            trigger = Triggers.Attacks.event,
-            binding = Triggers.Attacks.binding,
+            trigger = Triggers.self.attacks(),
             effect = CreateTokenEffect(
                 count = amount,
                 power = 1,

@@ -25,10 +25,10 @@ val BlindingFog = card("Blinding Fog") {
         "abilities your opponents control.)"
 
     spell {
-        effect = Effects.PreventAllDamageToGroup(GroupFilter(GameObjectFilter.Creature)) then
+        effect = Effects.PreventDamage(toGroup = GameObjectFilter.Creature) then
             Effects.ForEachInGroup(
                 GroupFilter(GameObjectFilter.Creature.youControl()),
-                Effects.GrantKeyword(Keyword.HEXPROOF, EffectTarget.Self)
+                Effects.GrantKeyword(Keyword.HEXPROOF, EffectTarget.IterationEntity)
             )
     }
 

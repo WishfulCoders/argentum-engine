@@ -9,6 +9,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Ghostly Keybearer — Duskmourn: House of Horror #61
@@ -39,15 +40,10 @@ val GhostlyKeybearer = card("Ghostly Keybearer") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         val room = target(
-            "room",
-            TargetObject(
-                optional = true,
-                filter = TargetFilter(
-                    GameObjectFilter.Any.withSubtype(Subtype.ROOM).youControl()
-                ).hasLockedDoor()
-            )
+            TargetFilter(GameObjectFilter.Any.withSubtype(Subtype.ROOM).youControl()).hasLockedDoor(),
+            optional = true,
         )
         effect = Effects.UnlockDoor(room)
     }

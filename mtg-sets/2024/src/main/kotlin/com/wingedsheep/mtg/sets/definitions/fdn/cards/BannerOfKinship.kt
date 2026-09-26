@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fdn.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -8,11 +8,9 @@ import com.wingedsheep.sdk.scripting.ChoiceType
 import com.wingedsheep.sdk.scripting.EntersWithChoice
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Banner of Kinship
@@ -30,7 +28,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *
  * The counter total is a *snapshot* taken on entry (CR 614.1c) — later creatures of the chosen type
  * do not add counters. The anthem, by contrast, is a live static ability sized by
- * [Counters.FELLOWSHIP] currently on the Banner, so removing counters shrinks it.
+ * [CounterType.FELLOWSHIP] currently on the Banner, so removing counters shrinks it.
  */
 val BannerOfKinship = card("Banner of Kinship") {
     manaCost = "{5}"
@@ -44,17 +42,17 @@ val BannerOfKinship = card("Banner of Kinship") {
 
     replacementEffect(
         EntersWithDynamicCounters(
-            counterType = CounterTypeFilter.Named(Counters.FELLOWSHIP),
-            count = DynamicAmount.AggregateBattlefield(
+            counterType = CounterType.FELLOWSHIP,
+            count = DynamicAmounts.battlefield(
                 Player.You,
                 GameObjectFilter.Creature.withChosenSubtype()
-            )
+            ).count()
         )
     )
 
     staticAbility {
-        val fellowship = DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.FELLOWSHIP))
-        ability = GrantDynamicStatsEffect(
+        val fellowship = DynamicAmounts.countersOnSelf(CounterType.FELLOWSHIP)
+        ability = GrantDynamicStats(
             filter = GroupFilter.ChosenSubtypeCreatures().youControl(),
             powerBonus = fellowship,
             toughnessBonus = fellowship

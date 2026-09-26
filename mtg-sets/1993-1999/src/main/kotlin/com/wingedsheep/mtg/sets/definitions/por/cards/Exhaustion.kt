@@ -4,10 +4,10 @@
 
 package com.wingedsheep.mtg.sets.definitions.por.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.SkipUntapEffect
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -22,8 +22,8 @@ val Exhaustion = card("Exhaustion") {
     typeLine = "Sorcery"
     oracleText = "Creatures and lands target opponent controls don't untap during their next untap step."
     spell {
-        val t = target("target", TargetOpponent())
-        effect = SkipUntapEffect(t)
+        val t = target(Targets.Opponent)
+        effect = Effects.SkipUntap(t)
     }
     metadata {
         rarity = Rarity.RARE

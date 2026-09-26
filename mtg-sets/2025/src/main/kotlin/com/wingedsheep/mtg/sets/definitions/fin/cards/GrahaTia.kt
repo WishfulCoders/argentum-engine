@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  * Implementation notes:
  *  - "The Allagan Eye" is an ability word (flavor only, no rules meaning); kept in the oracle
  *    text / description for display but carries no mechanics.
- *  - Modeled as the batched death trigger [Triggers.OneOrMoreCreaturesYouControlDie] over
+ *  - Modeled as the batched death trigger `Triggers.oneOrMore(filter).die()` over
  *    [GameObjectFilter.CreatureOrArtifact] with `excludeSelf = true` (the "other" wording).
  *    The batch fires at most once per simultaneous death event (CR 603.3b), so a board wipe
  *    that kills several of your creatures/artifacts draws one card, not one per permanent.
@@ -39,10 +39,7 @@ val GrahaTia = card("G'raha Tia") {
     keywords(Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.OneOrMoreCreaturesYouControlDie(
-            filter = GameObjectFilter.CreatureOrArtifact,
-            excludeSelf = true,
-        )
+        trigger = Triggers.oneOrMoreOther(GameObjectFilter.CreatureOrArtifact).die()
         oncePerTurn = true
         effect = Effects.DrawCards(1)
         description = "The Allagan Eye — Whenever one or more other creatures and/or artifacts " +

@@ -6,11 +6,10 @@ import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.IncrementAbilityResolutionCountEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Soulbright Seeker
@@ -43,14 +42,12 @@ val SoulbrightSeeker = card("Soulbright Seeker") {
 
     activatedAbility {
         cost = Costs.Mana("{R}")
-        val creature = target("creature you control", Targets.CreatureYouControl)
-        effect = Effects.GrantKeyword(Keyword.TRAMPLE, creature)
-            .then(IncrementAbilityResolutionCountEffect)
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.SourceAbilityResolvedNTimes(3),
-                    effect = Effects.AddMana(Color.RED, amount = 4)
-                )
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.GrantKeyword(Keyword.TRAMPLE, creature) then
+            IncrementAbilityResolutionCountEffect then
+            Effects.If(
+                condition = Conditions.SourceAbilityResolvedNTimes(3),
+                then = Effects.AddMana(Color.RED, amount = 4)
             )
     }
 

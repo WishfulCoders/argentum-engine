@@ -4,8 +4,7 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Riverguard's Reflexes
@@ -21,14 +20,10 @@ val RiverguardsReflexes = card("Riverguard's Reflexes") {
     oracleText = "Target creature gets +2/+2 and gains first strike until end of turn. Untap it."
 
     spell {
-        val creature = target("creature", TargetCreature())
-        effect = Effects.Composite(
-            listOf(
-                Effects.ModifyStats(2, 2, creature),
-                Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature),
-                Effects.Untap(EffectTarget.ContextTarget(0))
-            )
-        )
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 2, creature) then
+            Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature) then
+            Effects.Untap(creature)
     }
 
     metadata {

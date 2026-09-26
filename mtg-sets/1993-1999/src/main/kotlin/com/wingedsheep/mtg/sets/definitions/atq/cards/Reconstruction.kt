@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Reconstruction
@@ -19,10 +18,7 @@ val Reconstruction = card("Reconstruction") {
     oracleText = "Return target artifact card from your graveyard to your hand."
 
     spell {
-        val artifact = target(
-            "target artifact card from your graveyard",
-            TargetObject(filter = TargetFilter.ArtifactInYourGraveyard)
-        )
+        val artifact = target(TargetFilter.ArtifactInYourGraveyard)
         effect = Effects.ReturnToHand(artifact)
     }
 

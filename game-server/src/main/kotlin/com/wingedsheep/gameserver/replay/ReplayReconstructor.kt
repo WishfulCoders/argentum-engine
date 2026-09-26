@@ -1,5 +1,6 @@
 package com.wingedsheep.gameserver.replay
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActionProcessor
 import com.wingedsheep.engine.core.EngineServices
 import com.wingedsheep.engine.core.GameAction
@@ -176,7 +177,7 @@ private class ReplayEngine(
 ) {
     private val actionProcessor = ActionProcessor(EngineServices(cardRegistry, printingRegistry, tokenArtRegistry))
     private val gameInitializer = GameInitializer(cardRegistry, printingRegistry)
-    val spectatorStateBuilder = SpectatorStateBuilder(cardRegistry, ClientStateTransformer(cardRegistry))
+    val spectatorStateBuilder = SpectatorStateBuilder(cardRegistry, ClientStateTransformer(cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)))
 
     fun initialState(replay: CompactReplay): GameState {
         val setup = replay.setup

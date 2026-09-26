@@ -3,12 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.eoe.cards
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.TriggerBinding
 /**
  * Atomic Microsizer
  * {U}
@@ -30,17 +28,12 @@ val AtomicMicrosizer = card("Atomic Microsizer") {
 
     // Triggered ability: Whenever equipped creature attacks...
     triggeredAbility {
-        trigger = Triggers.attacks(binding = TriggerBinding.ATTACHED)
-        val target = target(
-            "up to one target creature", 
-            com.wingedsheep.sdk.scripting.targets.TargetObject(optional = true, filter = com.wingedsheep.sdk.scripting.filters.unified.TargetFilter.Creature)
-        )
-        effect = Effects.Composite(listOf(
-            // Can't be blocked this turn
-            Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, target),
+        trigger = Triggers.attached.attacks()
+        val target = target(com.wingedsheep.sdk.scripting.filters.unified.TargetFilter.Creature, optional = true)
+        // Can't be blocked this turn
+        effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, target) then
             // Has base power and toughness 1/1 until end of turn
             Effects.SetBasePowerAndToughness(1, 1, target, com.wingedsheep.sdk.scripting.Duration.EndOfTurn)
-        ))
     }
 
     // Equip ability

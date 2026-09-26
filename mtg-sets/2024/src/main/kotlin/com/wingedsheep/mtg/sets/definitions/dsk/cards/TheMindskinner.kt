@@ -6,8 +6,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ReplaceDamageWithMill
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
-import com.wingedsheep.sdk.scripting.events.SourceFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * The Mindskinner (DSK 66)
@@ -39,8 +38,8 @@ val TheMindskinner = card("The Mindskinner") {
     replacementEffect(
         ReplaceDamageWithMill(
             appliesTo = EventPattern.DamageEvent(
-                recipient = RecipientFilter.Opponent,
-                source = SourceFilter.Matching(GameObjectFilter.Any.youControl()),
+                recipient = Recipient.Opponent,
+                source = GameObjectFilter.Any.youControl(),
             )
         )
     )

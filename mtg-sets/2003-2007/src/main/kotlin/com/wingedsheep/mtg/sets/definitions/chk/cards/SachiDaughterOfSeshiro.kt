@@ -44,7 +44,7 @@ val SachiDaughterOfSeshiro = card("Sachi, Daughter of Seshiro") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Tap,
                 effect = Effects.AddMana(Color.GREEN, 2),
                 isManaAbility = true,

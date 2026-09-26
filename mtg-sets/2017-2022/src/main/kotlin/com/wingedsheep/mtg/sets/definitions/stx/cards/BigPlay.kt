@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.stx.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Big Play — Strixhaven: School of Mages #122 (canonical printing)
@@ -26,14 +26,10 @@ val BigPlay = card("Big Play") {
         "Target creature gets +2/+2 and gains reach until end of turn. Put a +1/+1 counter on it. (A creature with reach can block creatures with flying.)"
 
     spell {
-        val creature = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.Composite(
-                Effects.ModifyStats(2, 2, creature),
-                Effects.GrantKeyword(Keyword.REACH, creature)
-            ),
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creature)
-        )
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 2, creature) then
+            Effects.GrantKeyword(Keyword.REACH, creature) then
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature)
     }
 
     metadata {

@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Thornado — Modern Horizons #184
@@ -37,7 +38,7 @@ val Thornado = card("Thornado") {
     keywordAbility(KeywordAbility.cycling("{1}{G}"))
 
     spell {
-        val flier = target("target creature with flying", Targets.CreatureWithKeyword(Keyword.FLYING))
+        val flier = target(TargetFilter.Creature.withKeyword(Keyword.FLYING))
         effect = Effects.Destroy(flier)
     }
 

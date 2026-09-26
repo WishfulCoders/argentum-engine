@@ -6,10 +6,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Oath of the Grey Host
@@ -31,19 +29,18 @@ val OathOfTheGreyHost = card("Oath of the Grey Host") {
         "III — Create three tapped 1/1 white Spirit creature tokens with flying."
 
     sagaChapter(1) {
-        val opponent = target("target opponent", Targets.Opponent)
-        effect = Effects.CreateFood()
-            .then(Effects.CreateFood(controller = opponent))
+        val opponent = target(Targets.Opponent)
+        effect = Effects.CreateFood() then Effects.CreateFood(controller = opponent)
     }
 
     sagaChapter(2) {
-        effect = Effects.LoseLife(3, EffectTarget.PlayerRef(Player.EachOpponent))
-            .then(Effects.CreateTreasure())
+        effect = Effects.LoseLife(3, EffectTarget.PlayerRef(Player.EachOpponent)) then
+            Effects.CreateTreasure()
     }
 
     sagaChapter(3) {
-        effect = CreateTokenEffect(
-            count = DynamicAmount.Fixed(3),
+        effect = Effects.CreateToken(
+            count = 3,
             power = 1,
             toughness = 1,
             colors = setOf(Color.WHITE),

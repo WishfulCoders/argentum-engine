@@ -5,20 +5,18 @@
 package com.wingedsheep.mtg.sets.definitions.fdn.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.core.Step
 
 
 /**
@@ -35,21 +33,20 @@ val SylvanScavenging = card("Sylvan Scavenging") {
     typeLine = "Enchantment"
     oracleText = "At the beginning of your end step, choose one —\n• Put a +1/+1 counter on target creature you control.\n• Create a 3/3 green Raccoon creature token if you control a creature with power 4 or greater."
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         effect = ModalEffect.chooseOne(
-            Mode.withTarget(
-                AddCountersEffect(
-                    counterType = Counters.PLUS_ONE_PLUS_ONE,
+            mode("Put a +1/+1 counter on target creature you control") {
+                val creature = target(TargetFilter.Creature.youControl())
+                effect = Effects.AddCounters(
+                    counterType = CounterType.PLUS_ONE_PLUS_ONE,
                     count = 1,
-                    target = EffectTarget.ContextTarget(0)
-                ),
-                TargetCreature(filter = TargetFilter.Creature.youControl()),
-                "Put a +1/+1 counter on target creature you control"
-            ),
+                    target = creature
+                )
+            },
             Mode.noTarget(
-                ConditionalEffect(
+                Effects.If(
                     condition = Conditions.YouControl(GameObjectFilter.Creature.powerAtLeast(4)),
-                    effect = Effects.CreateToken(
+                    then = Effects.CreateToken(
                         power = 3,
                         toughness = 3,
                         colors = setOf(Color.GREEN),

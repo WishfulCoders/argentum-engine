@@ -6,7 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Captivating Unicorn
@@ -30,11 +30,8 @@ val CaptivatingUnicorn = card("Captivating Unicorn") {
     oracleText = "Constellation — Whenever an enchantment you control enters, tap target creature an opponent controls."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Enchantment.youControl(),
-            binding = TriggerBinding.ANY,
-        )
-        val creature = target("creature", Targets.CreatureOpponentControls)
+        trigger = Triggers.a(GameObjectFilter.Enchantment.youControl()).enters()
+        val creature = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.Tap(creature)
         description = "Constellation — Whenever an enchantment you control enters, tap target creature an opponent controls."
     }

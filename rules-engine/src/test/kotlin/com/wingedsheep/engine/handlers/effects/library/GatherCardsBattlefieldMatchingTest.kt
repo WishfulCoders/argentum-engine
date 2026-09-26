@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.library
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.mechanics.layers.ActiveFloatingEffect
 import com.wingedsheep.engine.mechanics.layers.FloatingEffectData
@@ -27,10 +28,11 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 class GatherCardsBattlefieldMatchingTest : FunSpec({
 
-    val executor = GatherCardsExecutor()
+    val executor = GatherCardsExecutor(predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
     val playerId = EntityId.generate()
     val opponentId = EntityId.generate()
@@ -91,7 +93,7 @@ class GatherCardsBattlefieldMatchingTest : FunSpec({
 
         val result = executor.execute(state, gatherEffect(), context(playerId))
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         result.updatedCollections["gathered"]!!.shouldContainExactlyInAnyOrder(creatureId1, creatureId2)
     }
 
@@ -106,7 +108,7 @@ class GatherCardsBattlefieldMatchingTest : FunSpec({
         val filter = GameObjectFilter.Creature
         val result = executor.execute(state, gatherEffect(filter), context(playerId))
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         result.updatedCollections["gathered"]!!.shouldContainExactlyInAnyOrder(creatureId1)
     }
 
@@ -121,7 +123,7 @@ class GatherCardsBattlefieldMatchingTest : FunSpec({
         val filter = GameObjectFilter.Creature.withSubtype(Subtype.GOBLIN)
         val result = executor.execute(state, gatherEffect(filter), context(playerId))
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         result.updatedCollections["gathered"]!!.shouldContainExactlyInAnyOrder(creatureId1)
     }
 
@@ -134,7 +136,7 @@ class GatherCardsBattlefieldMatchingTest : FunSpec({
 
         val result = executor.execute(state, gatherEffect(), context(playerId))
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         result.updatedCollections["gathered"]!!.shouldContainExactlyInAnyOrder(creatureId1, creatureId2, creatureId3)
     }
 
@@ -146,7 +148,7 @@ class GatherCardsBattlefieldMatchingTest : FunSpec({
 
         val result = executor.execute(state, gatherEffect(player = Player.You), context(playerId))
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         result.updatedCollections["gathered"]!!.shouldContainExactlyInAnyOrder(creatureId1)
     }
 
@@ -159,7 +161,7 @@ class GatherCardsBattlefieldMatchingTest : FunSpec({
         val filter = GameObjectFilter.Creature
         val result = executor.execute(state, gatherEffect(filter), context(playerId))
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         result.updatedCollections["gathered"]!!.shouldBeEmpty()
     }
 
@@ -170,7 +172,7 @@ class GatherCardsBattlefieldMatchingTest : FunSpec({
 
         val result = executor.execute(state, gatherEffect(), context(playerId))
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         result.updatedCollections["gathered"]!!.shouldBeEmpty()
     }
 
@@ -202,7 +204,7 @@ class GatherCardsBattlefieldMatchingTest : FunSpec({
         val filter = GameObjectFilter.Creature
         val result = executor.execute(state, gatherEffect(filter), context(playerId))
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         result.updatedCollections["gathered"]!!.shouldContainExactlyInAnyOrder(creatureId1, creatureId2)
     }
 })

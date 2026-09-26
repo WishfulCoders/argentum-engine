@@ -6,11 +6,10 @@ package com.wingedsheep.mtg.sets.definitions.`5dn`.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -29,8 +28,8 @@ val ViridianScout = card("Viridian Scout") {
     toughness = 2
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{G}"), Costs.SacrificeSelf)
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.withKeyword(Keyword.FLYING)))
-        effect = DealDamageEffect(2, t)
+        val t = target(TargetFilter.Creature.withKeyword(Keyword.FLYING))
+        effect = Effects.DealDamage(2, t)
     }
     metadata {
         rarity = Rarity.COMMON

@@ -17,6 +17,8 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Treasure tokens ("{T}, Sacrifice this artifact: Add one mana of any color") can be
@@ -31,7 +33,7 @@ class WardPaidWithTreasureTest : FunSpec({
         typeLine = "Creature — Bear"
         power = 2
         toughness = 2
-        keywordAbility(KeywordAbility.ward("{2}"))
+        keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
     }
 
     fun createDriver(): GameTestDriver {
@@ -103,7 +105,7 @@ class WardPaidWithTreasureTest : FunSpec({
                 autoPay = false
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         repeat(4) { if (driver.state.priorityPlayerId != null) driver.bothPass() }
 

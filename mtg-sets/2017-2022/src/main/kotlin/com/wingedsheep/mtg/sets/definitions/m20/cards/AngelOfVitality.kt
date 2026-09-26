@@ -1,17 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.m20.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.ModifyLifeGain
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Angel of Vitality (M20 #4)
@@ -48,10 +48,10 @@ val AngelOfVitality = card("Angel of Vitality") {
                 toughnessBonus = 2,
                 filter = GroupFilter.source()
             ),
-            condition = Compare(
-                left = DynamicAmount.LifeTotal(Player.You),
+            condition = Conditions.CompareAmounts(
+                left = DynamicAmounts.lifeTotal(Player.You),
                 operator = ComparisonOperator.GTE,
-                right = DynamicAmount.Fixed(25)
+                right = 25
             )
         )
     }

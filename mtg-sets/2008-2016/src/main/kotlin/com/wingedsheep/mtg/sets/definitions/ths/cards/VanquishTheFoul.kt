@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Vanquish the Foul
@@ -21,11 +20,8 @@ val VanquishTheFoul = card("Vanquish the Foul") {
     oracleText = "Destroy target creature with power 4 or greater. Scry 1. (Look at the top card of your library. You may put that card on the bottom.)"
 
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.powerAtLeast(4)))
-        effect = Effects.Composite(
-            Effects.Move(t, Zone.GRAVEYARD, byDestruction = true),
-            Effects.Scry(1)
-        )
+        val t = target(TargetFilter.Creature.powerAtLeast(4))
+        effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true) then Effects.Scry(1)
     }
 
     metadata {

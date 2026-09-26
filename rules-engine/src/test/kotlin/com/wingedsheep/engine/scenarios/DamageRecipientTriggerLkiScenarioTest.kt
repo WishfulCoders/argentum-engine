@@ -4,21 +4,20 @@ import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Regression for the recipient-based damage-trigger last-known-information gap: a creature that
  * dies to the same combat-damage event has its `ControllerComponent` stripped (it's in the
  * graveyard) by the time triggers are detected — combat-damage state-based actions run before
- * trigger detection. Before the fix, `RecipientFilter.CreatureOpponentControls` /
+ * trigger detection. Before the fix, `Recipient.CreatureOpponentControls` /
  * `CreatureYouControl` resolved the recipient's controller from *live* state, so a trigger
  * watching "a creature an opponent controls / you control is dealt combat damage" silently
  * missed the killing blow. The fix captures the recipient's controller + creature-ness at
@@ -35,22 +34,14 @@ class DamageRecipientTriggerLkiScenarioTest : FunSpec({
     val OpponentCreatureWatcher = card("Opp Creature Watcher") {
         manaCost = "{0}"; typeLine = "Creature — Spirit"; power = 0; toughness = 8
         triggeredAbility {
-            trigger = Triggers.dealsDamage(
-                damageType = DamageType.Combat,
-                recipient = RecipientFilter.CreatureOpponentControls,
-                binding = TriggerBinding.ANY,
-            )
+            trigger = Triggers.a().dealsCombatDamage(Recipient.CreatureOpponentControls)
             effect = Effects.DrawCards(1)
         }
     }
     val YourCreatureWatcher = card("Your Creature Watcher") {
         manaCost = "{0}"; typeLine = "Creature — Spirit"; power = 0; toughness = 8
         triggeredAbility {
-            trigger = Triggers.dealsDamage(
-                damageType = DamageType.Combat,
-                recipient = RecipientFilter.CreatureYouControl,
-                binding = TriggerBinding.ANY,
-            )
+            trigger = Triggers.a().dealsCombatDamage(Recipient.CreatureYouControl)
             effect = Effects.DrawCards(1)
         }
     }
@@ -58,11 +49,7 @@ class DamageRecipientTriggerLkiScenarioTest : FunSpec({
     val OpponentCreatureWatcherNoncombat = card("Opp Creature Watcher NC") {
         manaCost = "{0}"; typeLine = "Creature — Spirit"; power = 0; toughness = 8
         triggeredAbility {
-            trigger = Triggers.dealsDamage(
-                damageType = DamageType.NonCombat,
-                recipient = RecipientFilter.CreatureOpponentControls,
-                binding = TriggerBinding.ANY,
-            )
+            trigger = Triggers.a().dealsDamage(Recipient.CreatureOpponentControls, damageType = DamageType.NonCombat)
             effect = Effects.DrawCards(1)
         }
     }
@@ -78,7 +65,7 @@ class DamageRecipientTriggerLkiScenarioTest : FunSpec({
     val Bolt = card("LKI Bolt") {
         manaCost = "{0}"; typeLine = "Sorcery"; oracleText = "Deal 5 damage to target creature."
         spell {
-            val c = target("target creature", Targets.Creature)
+            val c = target(TargetFilter.Creature)
             effect = Effects.DealDamage(5, c)
         }
     }

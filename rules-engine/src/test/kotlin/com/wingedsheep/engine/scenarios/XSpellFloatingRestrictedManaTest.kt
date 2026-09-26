@@ -3,8 +3,6 @@ package com.wingedsheep.engine.scenarios
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.PaymentStrategy
-import com.wingedsheep.engine.handlers.ConditionEvaluator
-import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.legalactions.utils.CastPermissionUtils
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
@@ -74,7 +72,7 @@ class XSpellFloatingRestrictedManaTest : ScenarioTestBase() {
 
     /** Activate the Lute-granted "{T}: Add two mana of any one color" ability on a land. */
     private fun activateGrantedLandAbility(game: TestGame, landId: EntityId, color: Color) {
-        val utils = CastPermissionUtils(cardRegistry, PredicateEvaluator(), ConditionEvaluator())
+        val utils = CastPermissionUtils(cardRegistry, services.predicateEvaluator, services.conditionEvaluator)
         val grants = utils.getStaticGrantedAbilitiesWithGranter(landId, game.state)
         grants.size shouldBe 1
         game.execute(

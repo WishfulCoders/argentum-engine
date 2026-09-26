@@ -2,12 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.dft.cards
 
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Grim Javelineer
@@ -18,10 +17,10 @@ import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
  * Whenever you attack, target attacking creature gets +1/+0 until end of turn. When that creature
  * dies this turn, surveil 1.
  *
- * [Triggers.YouAttack] fires once per combat in which you attacked with at least one creature, and
+ * `Triggers.you.attacks()` fires once per combat in which you attacked with at least one creature, and
  * the pumped creature is chosen as a target when the ability goes on the stack (so it must still be
  * an attacking creature then). The "when that creature dies this turn" rider is a watched-entity
- * delayed triggered ability ([Triggers.Dies] scoped to the target via `watchedTarget`, expiring at
+ * delayed triggered ability (`Triggers.self.dies()` scoped to the target via `watchedTarget`, expiring at
  * end of turn) — the Desperate Measures / Long River Lurker shape. Because the delayed trigger is
  * scoped by entity id, it fires on that specific game object dying; a creature that leaves and
  * returns is a new object (CR 400.7) and no longer watched.
@@ -37,19 +36,15 @@ val GrimJavelineer = card("Grim Javelineer") {
         "that card into your graveyard.)"
 
     triggeredAbility {
-        trigger = Triggers.YouAttack
-        val attacker = target("target attacking creature", Targets.AttackingCreature)
-        effect = Effects.Composite(
-            listOf(
-                Effects.ModifyStats(1, 0, attacker),
-                CreateDelayedTriggerEffect(
-                    effect = Patterns.Library.surveil(1),
-                    trigger = Triggers.Dies,
-                    watchedTarget = attacker,
-                    expiry = DelayedTriggerExpiry.EndOfTurn
-                )
+        trigger = Triggers.you.attacks()
+        val attacker = target(TargetFilter.AttackingCreature)
+        effect = Effects.ModifyStats(1, 0, attacker) then
+            Effects.CreateDelayedTrigger(
+                effect = Patterns.Library.surveil(1),
+                trigger = Triggers.self.dies(),
+                watchedTarget = attacker,
+                expiry = DelayedTriggerExpiry.EndOfTurn
             )
-        )
         description = "Whenever you attack, target attacking creature gets +1/+0 until end of turn. " +
             "When that creature dies this turn, surveil 1."
     }

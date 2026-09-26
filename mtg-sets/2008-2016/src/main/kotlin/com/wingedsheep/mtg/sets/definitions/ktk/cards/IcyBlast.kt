@@ -2,19 +2,17 @@ package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Icy Blast
@@ -33,18 +31,18 @@ val IcyBlast = card("Icy Blast") {
     spell {
         // "Tap X target creatures" — the chosen X clamps the number of targets via
         // dynamicMaxCount (Builder's Bane / Distorting Wake pattern), so no magic count.
-        target = TargetCreature(optional = true, dynamicMaxCount = DynamicAmount.XValue)
-        effect = Effects.TapEachTarget()
-            .then(ConditionalEffect(
+        target = TargetObject(filter = TargetFilter.Creature, optional = true, dynamicMaxCount = DynamicAmounts.xValue())
+        effect = Effects.TapEachTarget() then
+            Effects.If(
                 condition = Exists(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature.powerAtLeast(4)),
-                effect = ForEachTargetEffect(listOf(
-                    GrantKeywordEffect(
-                        AbilityFlag.DOESNT_UNTAP.name,
-                        EffectTarget.ContextTarget(0),
-                        Duration.UntilAfterAffectedControllersNextUntap
-                    )
-                ))
-            ))
+                then = Effects.ForEachTarget(
+                Effects.GrantKeyword(
+                    AbilityFlag.DOESNT_UNTAP,
+                    EffectTarget.ContextTarget(0),
+                    Duration.UntilAfterAffectedControllersNextUntap
+                )
+            )
+            )
     }
 
     metadata {

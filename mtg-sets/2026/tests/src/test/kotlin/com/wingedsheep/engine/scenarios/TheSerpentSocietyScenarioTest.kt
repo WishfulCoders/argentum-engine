@@ -13,7 +13,6 @@ import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
@@ -25,6 +24,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * The Serpent Society (MSH #226) — deathtouch, "Ward—Get five poison counters", and "Whenever
@@ -59,7 +59,7 @@ class TheSerpentSocietyScenarioTest : FunSpec({
         manaCost = "{R}"
         typeLine = "Instant"
         spell {
-            val victim = target("target creature", Targets.Creature)
+            val victim = target(TargetFilter.Creature)
             effect = Effects.DealDamage(3, victim)
         }
     }
@@ -70,7 +70,7 @@ class TheSerpentSocietyScenarioTest : FunSpec({
         manaCost = "{R}"
         typeLine = "Instant"
         spell {
-            val victim = target("target creature", Targets.Creature)
+            val victim = target(TargetFilter.Creature)
             effect = Effects.DealDamage(5, victim)
         }
     }
@@ -81,7 +81,7 @@ class TheSerpentSocietyScenarioTest : FunSpec({
         manaCost = "{R}"
         typeLine = "Instant"
         spell {
-            val recipient = target("target creature", Targets.Creature)
+            val recipient = target(TargetFilter.Creature)
             effect = Effects.GrantKeyword(Keyword.DEATHTOUCH, recipient)
         }
     }

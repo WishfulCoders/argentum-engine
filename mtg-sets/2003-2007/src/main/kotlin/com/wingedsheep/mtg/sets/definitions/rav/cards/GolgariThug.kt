@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 val GolgariThug = card("Golgari Thug") {
     manaCost = "{1}{B}"
@@ -18,8 +18,8 @@ val GolgariThug = card("Golgari Thug") {
     keywordAbility(KeywordAbility.dredge(4))
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val creature = target("creature", Targets.CreatureCardInYourGraveyard)
+        trigger = Triggers.self.dies()
+        val creature = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.PutOnTopOfLibrary(creature)
     }
 

@@ -2,13 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardLayout
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AdditionalSourceTriggers
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Mirror Room // Fractured Realm (DSK 67) — split-layout Room (CR 709.5).
@@ -39,8 +39,8 @@ val MirrorRoomFracturedRealm = card("Mirror Room // Fractured Realm") {
             "you control, except it's a Reflection in addition to its other creature types."
 
         triggeredAbility {
-            trigger = Triggers.OnDoorUnlocked
-            val creature = target("target creature you control", Targets.CreatureYouControl)
+            trigger = Triggers.self.doorUnlocked()
+            val creature = target(TargetFilter.CreatureYouControl)
             effect = Effects.CreateTokenCopyOfTarget(
                 target = creature,
                 addedSubtypes = setOf(Subtype("Reflection"))

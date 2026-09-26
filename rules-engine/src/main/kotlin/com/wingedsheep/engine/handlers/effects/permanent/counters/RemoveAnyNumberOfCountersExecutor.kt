@@ -28,7 +28,7 @@ import kotlin.reflect.KClass
  * continuation resumer that carries it on after each answer.
  */
 class RemoveAnyNumberOfCountersExecutor(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<RemoveAnyNumberOfCountersEffect> {
 
     override val effectType: KClass<RemoveAnyNumberOfCountersEffect> = RemoveAnyNumberOfCountersEffect::class
@@ -50,7 +50,7 @@ class RemoveAnyNumberOfCountersExecutor(
         val counters = targetEntity.get<CountersComponent>() ?: return EffectResult.success(state, emptyList())
         val present = counters.counters.entries
             .filter { it.value > 0 }
-            .map { counterTypeToString(it.key) }
+            .map { it.key }
 
         if (present.isEmpty()) return EffectResult.success(state, emptyList())
 

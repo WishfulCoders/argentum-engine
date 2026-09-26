@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.akh.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Enigma Drake
@@ -33,7 +33,7 @@ val EnigmaDrake = card("Enigma Drake") {
     oracleText = "Flying\nEnigma Drake's power is equal to the number of instant and sorcery cards in your graveyard."
 
     dynamicPower(
-        DynamicAmount.Count(Player.You, Zone.GRAVEYARD, GameObjectFilter.InstantOrSorcery)
+        DynamicAmounts.count(Player.You, Zone.GRAVEYARD, GameObjectFilter.InstantOrSorcery)
     )
 
     keywords(Keyword.FLYING)

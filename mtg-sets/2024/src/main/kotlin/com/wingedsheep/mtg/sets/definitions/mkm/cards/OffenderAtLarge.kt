@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Offender at Large — Murders at Karlov Manor #138
@@ -42,8 +42,8 @@ val OffenderAtLarge = card("Offender at Large") {
     disguise = "{4}{R}"
 
     triggeredAbility {
-        trigger = Triggers.or(Triggers.EntersBattlefield, Triggers.TurnedFaceUp)
-        val creature = target("up to one target creature", TargetCreature(optional = true))
+        trigger = Triggers.or(Triggers.self.enters(), Triggers.self.turnedFaceUp())
+        val creature = target(TargetFilter.Creature, optional = true)
         effect = Effects.ModifyStats(2, 0, creature)
         description = "When this creature enters or is turned face up, up to one target creature " +
             "gets +2/+0 until end of turn."

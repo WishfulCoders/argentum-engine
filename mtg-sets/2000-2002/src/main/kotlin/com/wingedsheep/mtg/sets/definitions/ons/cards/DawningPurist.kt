@@ -4,11 +4,10 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Dawning Purist
@@ -32,14 +31,9 @@ val DawningPurist = card("Dawning Purist") {
     oracleText = "Whenever Dawning Purist deals combat damage to a player, you may destroy target enchantment that player controls.\nMorph {1}{W}"
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        val t = target(
-            "target",
-            TargetPermanent(
-                filter = TargetFilter(GameObjectFilter.Enchantment.controlledByTriggeringPlayer())
-            )
-        )
-        effect = MayEffect(Effects.Move(t, Zone.GRAVEYARD, byDestruction = true))
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        val t = target(TargetFilter(GameObjectFilter.Enchantment.controlledByTriggeringPlayer()))
+        effect = Effects.May(Effects.Move(t, Zone.GRAVEYARD, byDestruction = true))
     }
 
     morph = "{1}{W}"

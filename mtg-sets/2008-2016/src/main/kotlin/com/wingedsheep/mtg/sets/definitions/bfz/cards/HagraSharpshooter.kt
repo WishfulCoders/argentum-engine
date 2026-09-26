@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.bfz.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Hagra Sharpshooter
@@ -23,7 +23,7 @@ val HagraSharpshooter = card("Hagra Sharpshooter") {
 
     activatedAbility {
         cost = Costs.Mana("{4}{B}")
-        val creature = target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(-1, -1, creature)
     }
 

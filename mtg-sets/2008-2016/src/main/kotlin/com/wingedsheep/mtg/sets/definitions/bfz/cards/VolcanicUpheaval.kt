@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.bfz.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Volcanic Upheaval
@@ -18,7 +18,7 @@ val VolcanicUpheaval = card("Volcanic Upheaval") {
     oracleText = "Destroy target land."
 
     spell {
-        val land = target("target land", Targets.Land)
+        val land = target(TargetFilter.Land)
         effect = Effects.Destroy(land)
     }
 

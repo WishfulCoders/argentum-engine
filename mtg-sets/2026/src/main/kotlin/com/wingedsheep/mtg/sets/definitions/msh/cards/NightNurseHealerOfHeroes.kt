@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Night Nurse, Healer of Heroes — Marvel Super Heroes #26
@@ -43,15 +42,12 @@ val NightNurseHealerOfHeroes = card("Night Nurse, Healer of Heroes") {
     keywords(Keyword.FLASH, Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val rescued = target(
-            "permanent card in your graveyard that was put there this turn",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.Permanent.ownedByYou().putIntoGraveyardThisTurn(),
-                    zone = Zone.GRAVEYARD,
-                )
-            )
+            TargetFilter(
+                GameObjectFilter.Permanent.ownedByYou().putIntoGraveyardThisTurn(),
+                zone = Zone.GRAVEYARD,
+            ),
         )
         effect = Effects.Move(rescued, Zone.HAND)
         description = "When Night Nurse enters, choose target permanent card in your graveyard " +

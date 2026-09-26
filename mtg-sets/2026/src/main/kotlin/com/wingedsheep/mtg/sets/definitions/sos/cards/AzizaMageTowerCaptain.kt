@@ -6,14 +6,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.TapUntapCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Aziza, Mage Tower Captain — Secrets of Strixhaven #174
@@ -23,7 +17,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * control. If you do, copy that spell. You may choose new targets for the copy.
  *
  * "you may tap three untapped creatures you control. If you do, [copy]" is an
- * [OptionalCostEffect] whose payable cost is the Gather → Select-exactly-3 → Tap pipeline (same
+ * [Effects.MayPay] whose payable cost is the Gather → Select-exactly-3 → Tap pipeline (same
  * idiom as Rent Is Due): the player may decline, and the cost only "pays" if three untapped
  * creatures they control are tapped — otherwise nothing happens. When paid, the triggering spell
  * ([EffectTarget.TriggeringEntity]) is copied via [Effects.CopyTargetSpell], which by default lets
@@ -40,29 +34,25 @@ val AzizaMageTowerCaptain = card("Aziza, Mage Tower Captain") {
         "creatures you control. If you do, copy that spell. You may choose new targets for the copy."
 
     triggeredAbility {
-        trigger = Triggers.YouCastInstantOrSorcery
-        val tapCost = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.ControlledPermanents(
-                        player = Player.You,
-                        filter = GameObjectFilter.Creature.untapped(),
-                    ),
-                    storeAs = "azizaTapPool",
-                ),
-                SelectFromCollectionEffect(
-                    from = "azizaTapPool",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(3)),
-                    storeSelected = "azizaToTap",
-                    prompt = "Tap three untapped creatures you control",
-                    useTargetingUI = true,
-                ),
-                TapUntapCollectionEffect("azizaToTap", tap = true),
-            ),
-        )
-        effect = OptionalCostEffect(
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
+        val tapCost = Effects.Pipeline {
+            val azizaTapPool = gather(
+                CardSource.ControlledPermanents(
+                    player = Player.You,
+                    filter = GameObjectFilter.Creature.untapped(),
+                )
+            )
+            val azizaToTap = chooseExactly(
+                3,
+                from = azizaTapPool,
+                prompt = "Tap three untapped creatures you control",
+                useTargetingUI = true
+            )
+            run(Effects.TapCollection(azizaToTap, tap = true))
+        }
+        effect = Effects.MayPay(
             cost = tapCost,
-            ifPaid = Effects.CopyTargetSpell(target = EffectTarget.TriggeringEntity),
+            then = Effects.CopyTargetSpell(target = EffectTarget.TriggeringEntity),
             descriptionOverride = "You may tap three untapped creatures you control. If you do, " +
                 "copy that spell. You may choose new targets for the copy.",
         )

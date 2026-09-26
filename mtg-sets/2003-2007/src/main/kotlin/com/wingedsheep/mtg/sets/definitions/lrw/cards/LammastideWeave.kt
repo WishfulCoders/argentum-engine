@@ -1,14 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.namedFromVariable
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
@@ -42,24 +42,18 @@ val LammastideWeave = card("Lammastide Weave") {
         "Draw a card."
 
     spell {
-        target("target player", Targets.Player)
-        effect = Effects.Composite(
-            listOf(
-                Effects.ChooseCardName(
-                    storeAs = "weaveChosenName",
-                    prompt = "Choose a card name",
+        val player = target(Targets.Player)
+        effect = Effects.Pipeline {
+            val weaveChosenName = chooseCardName(prompt = "Choose a card name")
+            run(Patterns.Library.mill(1, player))
+            run(Effects.If(
+                condition = Conditions.CollectionContainsMatch(Patterns.Library.milled,
+                    GameObjectFilter.Any.namedFromVariable(weaveChosenName),
                 ),
-                Patterns.Library.mill(1, EffectTarget.ContextTarget(0)),
-                ConditionalEffect(
-                    condition = Conditions.CollectionContainsMatch(
-                        "milled",
-                        GameObjectFilter.Any.namedFromVariable("weaveChosenName"),
-                    ),
-                    effect = Effects.GainLife(DynamicAmount.ManaValueSumOfCollection("milled")),
-                ),
-                Effects.DrawCards(1),
-            )
-        )
+                then = Effects.GainLife(DynamicAmounts.manaValueSumOf(Patterns.Library.milled)),
+            ))
+            run(Effects.DrawCards(1))
+        }
     }
 
     metadata {

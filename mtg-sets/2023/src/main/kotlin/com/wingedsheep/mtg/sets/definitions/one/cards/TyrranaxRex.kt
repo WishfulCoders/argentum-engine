@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Tyrranax Rex
@@ -32,7 +33,7 @@ val TyrranaxRex = card("Tyrranax Rex") {
     cantBeCountered = true
 
     keywords(Keyword.TRAMPLE, Keyword.HASTE)
-    keywordAbility(KeywordAbility.ward("{4}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{4}")))
     keywordAbility(KeywordAbility.Numeric(Keyword.TOXIC, 4))
 
     metadata {

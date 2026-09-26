@@ -31,7 +31,7 @@ val AimScientists = card("A.I.M. Scientists") {
         "reveal it, put it into your hand, then shuffle.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Connive()
     }
 

@@ -25,7 +25,7 @@ val SeaGateOracle = card("Sea Gate Oracle") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.lookAtTopAndKeep(
             count = 2,
             keepCount = 1,

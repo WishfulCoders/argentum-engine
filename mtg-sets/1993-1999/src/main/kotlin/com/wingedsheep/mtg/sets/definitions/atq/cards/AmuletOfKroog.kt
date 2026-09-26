@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Amulet of Kroog
@@ -21,8 +20,8 @@ val AmuletOfKroog = card("Amulet of Kroog") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        val t = target("any target", Targets.Any)
-        effect = Effects.PreventNextDamage(1, EffectTarget.ContextTarget(0))
+        val t = target(Targets.Any)
+        effect = Effects.PreventNextDamage(1, t)
         description = "{2}, {T}: Prevent the next 1 damage that would be dealt to any target this turn."
     }
 

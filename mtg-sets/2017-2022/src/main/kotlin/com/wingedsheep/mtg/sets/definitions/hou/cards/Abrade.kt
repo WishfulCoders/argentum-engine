@@ -8,10 +8,7 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -30,11 +27,11 @@ val Abrade = card("Abrade") {
     spell {
         modal(chooseCount = 1) {
             mode("Abrade deals 3 damage to target creature") {
-                val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-                effect = DealDamageEffect(3, t)
+                val t = target(TargetFilter.Creature)
+                effect = Effects.DealDamage(3, t)
             }
             mode("Destroy target artifact") {
-                val t = target("target", TargetPermanent(filter = TargetFilter.Artifact))
+                val t = target(TargetFilter.Artifact)
                 effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
             }
         }

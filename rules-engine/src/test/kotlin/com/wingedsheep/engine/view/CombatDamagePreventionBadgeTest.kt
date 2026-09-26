@@ -1,15 +1,17 @@
 package com.wingedsheep.engine.view
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.effects.PreventionSourceFilter
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -42,7 +44,10 @@ class CombatDamagePreventionBadgeTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Prevent all damage that would be dealt to you this turn by attacking creatures."
         spell {
-            effect = Effects.PreventDamageFromAttackingCreatures()
+            effect = Effects.PreventDamage(
+                alsoToYou = true,
+                sources = PreventionSourceFilter.Matching(GameObjectFilter.Creature.attacking())
+            )
         }
     }
 
@@ -53,7 +58,7 @@ class CombatDamagePreventionBadgeTest : FunSpec({
         oracleText = "Prevent all combat damage non-Soldier creatures would deal this turn."
         spell {
             effect = Effects.PreventCombatDamageFrom(
-                source = Filters.Group.creatures { notSubtype(Subtype("Soldier")) }
+                source = GameObjectFilter.Creature.notSubtype(Subtype("Soldier"))
             )
         }
     }
@@ -67,7 +72,7 @@ class CombatDamagePreventionBadgeTest : FunSpec({
     }
 
     fun badges(driver: GameTestDriver, playerId: EntityId): List<String> =
-        ClientStateTransformer(cardRegistry = driver.cardRegistry)
+        ClientStateTransformer(cardRegistry = driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .transform(driver.state, viewingPlayerId = playerId)
             .players.single { it.playerId == playerId }
             .activeEffects.map { it.effectId }
@@ -115,9 +120,9 @@ class CombatDamagePreventionBadgeTest : FunSpec({
 
         resolve(driver, player, "Test Deep Wood", Color.GREEN)
 
-        badges(driver, player).contains("prevent_damage_from_attackers") shouldBe true
+        badges(driver, player).any { it.startsWith("prevent_damage_to_controller_") } shouldBe true
         withClue("the opponent is not the protected player") {
-            badges(driver, opponent).contains("prevent_damage_from_attackers") shouldBe false
+            badges(driver, opponent).any { it.startsWith("prevent_damage_to_controller_") } shouldBe false
         }
     }
 
@@ -127,7 +132,7 @@ class CombatDamagePreventionBadgeTest : FunSpec({
 
         resolve(driver, player, "Test Strategist's Order", Color.WHITE)
 
-        val descriptions = ClientStateTransformer(cardRegistry = driver.cardRegistry)
+        val descriptions = ClientStateTransformer(cardRegistry = driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .transform(driver.state, viewingPlayerId = player)
             .players.single { it.playerId == player }
             .activeEffects

@@ -9,7 +9,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Bloodbond March — Ravnica: City of Guilds #192
@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * Modelling notes:
  * - The trigger is ANY-bound on every player's creature spells, so the spell on the stack is the
  *   triggering entity and "the same name as that spell" is
- *   `sharingNameWith(EntityReference.Triggering)` — the filter Spellweaver Helix reads against
+ *   `sharingNameWith(EffectTarget.TriggeringEntity)` — the filter Spellweaver Helix reads against
  *   its imprint pile, here read against every graveyard at once via `Player.Each`.
  * - The spell itself is on the stack, not in a graveyard, so it is never among the gathered
  *   cards; the trigger resolves before the spell does, which is why the freshly cast creature
@@ -38,13 +38,13 @@ val BloodbondMarch = card("Bloodbond March") {
         "the same name as that spell from their graveyard to the battlefield."
 
     triggeredAbility {
-        trigger = Triggers.anyPlayerCasts(spellFilter = GameObjectFilter.Creature)
+        trigger = Triggers.anyPlayer.casts(GameObjectFilter.Creature)
         effect = Effects.Pipeline {
             val sameName = gather(
                 CardSource.FromZone(
                     zone = Zone.GRAVEYARD,
                     player = Player.Each,
-                    filter = GameObjectFilter.Any.sharingNameWith(EntityReference.Triggering)
+                    filter = GameObjectFilter.Any.sharingNameWith(EffectTarget.TriggeringEntity)
                 )
             )
             move(sameName, CardDestination.ToZone(Zone.BATTLEFIELD), underOwnersControl = true)

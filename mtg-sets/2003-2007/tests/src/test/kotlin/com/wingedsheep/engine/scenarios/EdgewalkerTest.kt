@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.mana.CostCalculator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.support.GameTestDriver
@@ -72,7 +73,7 @@ class EdgewalkerTest : FunSpec({
         registry.register(Edgewalker)
         registry.register(TestWBCleric)
 
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val driver = createDriver()
         driver.initMirrorMatch(
             deck = Deck.of("Plains" to 10, "Swamp" to 10),
@@ -97,7 +98,7 @@ class EdgewalkerTest : FunSpec({
         registry.register(Edgewalker)
         registry.register(TestWCleric)
 
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val driver = createDriver()
         driver.initMirrorMatch(
             deck = Deck.of("Plains" to 10, "Swamp" to 10),
@@ -120,7 +121,7 @@ class EdgewalkerTest : FunSpec({
         registry.register(TestCards.all)
         registry.register(Edgewalker)
 
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val driver = createDriver()
         driver.initMirrorMatch(
             deck = Deck.of("Plains" to 10, "Swamp" to 10),
@@ -145,7 +146,7 @@ class EdgewalkerTest : FunSpec({
         registry.register(TestCards.all)
         registry.register(Edgewalker)
 
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val driver = createDriver()
         driver.initMirrorMatch(
             deck = Deck.of("Plains" to 10, "Swamp" to 10, "Forest" to 10),
@@ -169,7 +170,7 @@ class EdgewalkerTest : FunSpec({
         registry.register(Edgewalker)
         registry.register(TestWBCleric)
 
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val driver = createDriver()
         driver.initMirrorMatch(
             deck = Deck.of("Plains" to 10, "Swamp" to 10),
@@ -195,7 +196,7 @@ class EdgewalkerTest : FunSpec({
         registry.register(TestCards.all)
         registry.register(Edgewalker)
 
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val driver = createDriver()
         driver.initMirrorMatch(
             deck = Deck.of("Plains" to 10, "Swamp" to 10),

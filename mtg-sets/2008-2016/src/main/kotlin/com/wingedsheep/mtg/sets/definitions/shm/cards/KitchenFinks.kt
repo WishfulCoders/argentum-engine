@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * - Persist is engine-live: [Keyword.PERSIST] is read by the death-trigger detector, so the keyword
  *   alone carries the return. The ETB gain-life rides back with the body, which is the card's point.
- * - The ETB is a plain untargeted [Triggers.EntersBattlefield] + [Effects.GainLife], matching Assay's
+ * - The ETB is a plain untargeted `Triggers.self.enters()` + [Effects.GainLife], matching Assay's
  *   `ZoneChangeEvent -> Battlefield` / `GainLife(Fixed 2)` reading.
  */
 val KitchenFinks = card("Kitchen Finks") {
@@ -33,7 +33,7 @@ val KitchenFinks = card("Kitchen Finks") {
     keywords(Keyword.PERSIST)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(2)
         description = "When this creature enters, you gain 2 life."
     }

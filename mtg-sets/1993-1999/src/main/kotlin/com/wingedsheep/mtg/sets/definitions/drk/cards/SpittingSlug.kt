@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -28,7 +27,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Two pieces of vocabulary this needed:
  *  - The printed trigger has **no partner clause** ("blocks or becomes blocked"), so it is a single
- *    trigger however many creatures the Slug ends up paired with — `Triggers.BlocksOrBecomesBlocked`,
+ *    trigger however many creatures the Slug ends up paired with — `Triggers.self.blocksOrBecomesBlocked()`,
  *    which sets the once-per-combat firing mode — CR 509.3a/509.3c, "blocks" and "becomes blocked"
  *    each trigger only once per combat. `BlocksOrBecomesBlockedBy(filter)` (Corrosive Ooze, the
  *    509.3b/509.3d wordings) keeps firing per partner; here that would ask for {1}{G} once per
@@ -48,22 +47,18 @@ val SpittingSlug = card("Spitting Slug") {
         "blocking or blocked by this creature gains first strike until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.BlocksOrBecomesBlocked()
-        effect = Effects.Composite(
-            // Runs whether or not the cost is paid; the unpaid branch below hands first strike to
-            // the partners instead, so the Slug never keeps it for free.
-            Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.Self),
-            PayOrSufferEffect(
+        trigger = Triggers.self.blocksOrBecomesBlocked()
+        // Runs whether or not the cost is paid; the unpaid branch below hands first strike to
+        // the partners instead, so the Slug never keeps it for free.
+        effect = Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.Self) then
+            Effects.PayOrSuffer(
                 cost = Costs.pay.Mana("{1}{G}"),
-                suffer = Effects.Composite(
-                    Effects.RemoveKeyword(Keyword.FIRST_STRIKE, EffectTarget.Self),
+                suffer = Effects.RemoveKeyword(Keyword.FIRST_STRIKE, EffectTarget.Self) then
                     Patterns.Group.grantKeywordToAll(
                         Keyword.FIRST_STRIKE,
                         GroupFilter(GameObjectFilter.Creature.blockingOrBlockedBySource())
                     ),
-                ),
-            ),
-        )
+            )
         description = "Whenever this creature blocks or becomes blocked, you may pay {1}{G}. If " +
             "you do, this creature gains first strike until end of turn. Otherwise, each " +
             "creature blocking or blocked by this creature gains first strike until end of turn."

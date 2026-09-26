@@ -6,8 +6,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.core.Step
 /**
  * Goblin Pyromancer
  * {3}{R}
@@ -25,18 +25,18 @@ val GoblinPyromancer = card("Goblin Pyromancer") {
     oracleText = "When Goblin Pyromancer enters the battlefield, Goblin creatures get +3/+0 until end of turn.\nAt the beginning of the end step, destroy all Goblins."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ForEachInGroup(
             filter = GroupFilter.allCreaturesWithSubtype("Goblin"),
-            effect = ModifyStatsEffect(3, 0, EffectTarget.Self)
+            effect = Effects.ModifyStats(3, 0, EffectTarget.IterationEntity)
         )
     }
 
     triggeredAbility {
-        trigger = Triggers.EachEndStep
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
         effect = Effects.ForEachInGroup(
-            filter = GroupFilter.allCreaturesWithSubtype("Goblin"),
-            effect = Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true)
+            filter = GroupFilter.allPermanentsWithSubtype("Goblin"),
+            effect = Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true)
         )
     }
 

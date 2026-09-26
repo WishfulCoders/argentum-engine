@@ -12,6 +12,7 @@ import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.ProtectionScope
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Phase 1's whole grammar: keyword abilities, and nothing else.
@@ -300,7 +301,7 @@ object Keywords {
 
     private val wardMana: Phrase<KeywordAbility> = phrase("ward {cost}", name = "ward <cost>") {
         slot("cost", Primitives.manaCost)
-        build { KeywordAbility.ward(it.value<ManaCost>("cost").toString()) }
+        build { KeywordAbility.Ward(WardCost.Mana(it.value<ManaCost>("cost").toString())) }
         match { ability ->
             wardManaCost(ability)?.let { bind("cost" to it) }
         }
@@ -309,7 +310,7 @@ object Keywords {
     /** "Ward—Pay 2 life." — the em-dash forms are full sentences and carry a terminal period. */
     private val wardLife: Phrase<KeywordAbility> = phrase("ward—Pay {n} life.", name = "ward—pay life") {
         slot("n", Primitives.cardinal)
-        build { KeywordAbility.wardLife(it.int("n")) }
+        build { KeywordAbility.Ward(WardCost.Life(it.int("n"))) }
         match { ability ->
             (ability as? KeywordAbility.Ward)?.cost
                 ?.let { it as? com.wingedsheep.sdk.scripting.effects.WardCost.Life }

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.legalactions.LegalActionEnumerator
 import com.wingedsheep.engine.mechanics.layers.addFloatingEffect
@@ -42,7 +43,7 @@ class WildvinePummelerTest : FunSpec({
 
     test("no colored permanents - no cost reduction") {
         val (driver, registry) = createDriverAndRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         driver.initMirrorMatch(
             deck = Deck.of("Forest" to 20),
@@ -61,7 +62,7 @@ class WildvinePummelerTest : FunSpec({
 
     test("one colored permanent - reduces by 1") {
         val (driver, registry) = createDriverAndRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         driver.initMirrorMatch(
             deck = Deck.of("Forest" to 20),
@@ -82,7 +83,7 @@ class WildvinePummelerTest : FunSpec({
 
     test("multiple permanents of same color - only counts once") {
         val (driver, registry) = createDriverAndRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         driver.initMirrorMatch(
             deck = Deck.of("Forest" to 20),
@@ -104,7 +105,7 @@ class WildvinePummelerTest : FunSpec({
 
     test("three different colors - reduces by 3") {
         val (driver, registry) = createDriverAndRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         driver.initMirrorMatch(
             deck = Deck.of("Forest" to 20),
@@ -127,7 +128,7 @@ class WildvinePummelerTest : FunSpec({
 
     test("five colors - reduces by 5") {
         val (driver, registry) = createDriverAndRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         driver.initMirrorMatch(
             deck = Deck.of("Forest" to 20),
@@ -152,7 +153,7 @@ class WildvinePummelerTest : FunSpec({
 
     test("opponent's colored permanents do not count") {
         val (driver, registry) = createDriverAndRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         driver.initMirrorMatch(
             deck = Deck.of("Forest" to 20),
@@ -179,7 +180,7 @@ class WildvinePummelerTest : FunSpec({
         // base CardComponent.colors it will miss the granted color and Vivid won't
         // discount Wildvine Pummeler. Projected colors must drive the count.
         val (driver, registry) = createDriverAndRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         driver.initMirrorMatch(
             deck = Deck.of("Forest" to 20),
@@ -222,7 +223,7 @@ class WildvinePummelerTest : FunSpec({
 
     test("colorless permanents do not contribute to color count") {
         val (driver, registry) = createDriverAndRegistry()
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         driver.initMirrorMatch(
             deck = Deck.of("Forest" to 20),

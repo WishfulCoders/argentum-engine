@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.effects.PreventionDirection
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /** Awe Strike — Mirrodin #6. */
 val AweStrike = card("Awe Strike") {
@@ -16,9 +16,11 @@ val AweStrike = card("Awe Strike") {
         "You gain life equal to the damage prevented this way."
 
     spell {
-        target = Targets.Creature
-        effect = Effects.PreventNextDamageDealtBy(
-            target = EffectTarget.ContextTarget(0),
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.PreventDamage(
+            target = creature,
+            direction = PreventionDirection.FromTarget,
+            nextInstanceOnly = true,
             onPrevented = Effects.GainLife(DynamicAmounts.preventedDamage())
         )
     }

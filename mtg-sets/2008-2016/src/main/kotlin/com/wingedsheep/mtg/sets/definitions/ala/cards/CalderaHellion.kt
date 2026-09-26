@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDevour
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -24,9 +23,9 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * keyword the rest of the engine reads), while the [EntersWithDevour] replacement effect is what
  * actually offers the sacrifice and stamps the +1/+1 counters as the creature enters — its defaults
  * are the plain creature filter and the unnamed variant, exactly the printed "devour 1". The sweep
- * clause is a plain [Triggers.EntersBattlefield] over
+ * clause is a plain `Triggers.self.enters()` over
  * [Effects.ForEachInGroup] of every creature — including the Hellion itself, which is why it usually
- * eats its own devour counters — with [DealDamageEffect] bound to [EffectTarget.Self], the
+ * eats its own devour counters — with [DealDamageEffect] bound to [EffectTarget.IterationEntity], the
  * per-iteration member.
  */
 val CalderaHellion = card("Caldera Hellion") {
@@ -44,10 +43,10 @@ val CalderaHellion = card("Caldera Hellion") {
     replacementEffect(EntersWithDevour(multiplier = 1))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature),
-            DealDamageEffect(3, EffectTarget.Self)
+            Effects.DealDamage(3, EffectTarget.IterationEntity)
         )
     }
 

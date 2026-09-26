@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.replacement.PendingGameEvent
 import com.wingedsheep.engine.replacement.ReplacementEffectProcessor
 import com.wingedsheep.engine.state.ZoneKey
@@ -54,7 +55,7 @@ class ReplacementFollowsProjectedControllerTest : FunSpec({
             (driver.state.activePlayerId == thief) shouldBe true
         }
 
-        val processor = ReplacementEffectProcessor()
+        val processor = ReplacementEffectProcessor(conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
 
         // Quantum Riddler is gated on CardsInHandAtMost(1), and the gate is evaluated against
         // the drawing player — so both hands have to be empty for either direction to be

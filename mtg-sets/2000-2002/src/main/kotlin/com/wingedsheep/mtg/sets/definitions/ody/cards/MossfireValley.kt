@@ -24,7 +24,7 @@ val MossfireValley = card("Mossfire Valley") {
             Costs.Mana(ManaCost.parse("{1}")),
             AbilityCost.Tap,
         ))
-        effect = Effects.AddMana(Color.RED).then(Effects.AddMana(Color.GREEN))
+        effect = Effects.AddMana(Color.RED) then Effects.AddMana(Color.GREEN)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

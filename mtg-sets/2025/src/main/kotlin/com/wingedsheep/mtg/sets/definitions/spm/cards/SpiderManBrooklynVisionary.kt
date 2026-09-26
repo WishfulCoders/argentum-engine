@@ -30,7 +30,7 @@ val SpiderManBrooklynVisionary = card("Spider-Man, Brooklyn Visionary") {
     webSlinging("{2}{G}")
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.BasicLand,
             destination = SearchDestination.BATTLEFIELD,

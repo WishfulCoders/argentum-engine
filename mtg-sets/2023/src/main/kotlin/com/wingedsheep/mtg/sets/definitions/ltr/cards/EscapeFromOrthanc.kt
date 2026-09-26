@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Escape from Orthanc
@@ -20,10 +20,10 @@ val EscapeFromOrthanc = card("Escape from Orthanc") {
     oracleText = "Target creature gets +1/+3 and gains flying until end of turn. Untap it."
 
     spell {
-        val creature = target("creature", Targets.Creature)
-        effect = Effects.ModifyStats(1, 3, creature)
-            .then(Effects.GrantKeyword(Keyword.FLYING, creature))
-            .then(Effects.Untap(creature))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(1, 3, creature) then
+            Effects.GrantKeyword(Keyword.FLYING, creature) then
+            Effects.Untap(creature)
     }
 
     metadata {

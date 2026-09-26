@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Expose to Daylight — Ravnica Allegiance #8
@@ -19,11 +20,8 @@ val ExposeToDaylight = card("Expose to Daylight") {
     oracleText = "Destroy target artifact or enchantment. Scry 1."
 
     spell {
-        val permanent = target("target", Targets.ArtifactOrEnchantment)
-        effect = Effects.Composite(listOf(
-            Effects.Destroy(permanent),
-            Effects.Scry(1)
-        ))
+        val permanent = target(TargetFilter.ArtifactOrEnchantment)
+        effect = Effects.Destroy(permanent) then Effects.Scry(1)
     }
 
     metadata {

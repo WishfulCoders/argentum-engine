@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ReplaceTokenCreationWithAttachedCopy
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Moonlit Meditation
@@ -22,7 +22,7 @@ val MoonlitMeditation = card("Moonlit Meditation") {
         "The first time you would create one or more tokens each turn, you may instead " +
         "create that many tokens that are copies of enchanted permanent."
 
-    auraTarget = TargetPermanent(filter = TargetFilter.CreatureOrArtifact.youControl())
+    auraTarget = TargetObject(filter = TargetFilter.CreatureOrArtifact.youControl())
 
     replacementEffect(
         ReplaceTokenCreationWithAttachedCopy(

@@ -8,17 +8,12 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Dance of Many
@@ -53,46 +48,38 @@ val DanceOfMany = card("Dance of Many") {
         "upkeep, sacrifice this enchantment unless you pay {U}{U}."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.nontoken()))
+        val creature = target(TargetFilter(GameObjectFilter.Creature.nontoken()))
+        trigger = Triggers.self.enters()
         effect = Effects.CreateTokenCopyOfTarget(
-            target = EffectTarget.ContextTarget(0),
+            target = creature,
             stampCreator = true,
         )
         description = "When this enchantment enters, create a token that's a copy of target nontoken creature."
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.BattlefieldMatching(
+        trigger = Triggers.self.leaves()
+        effect = Effects.Pipeline {
+            val danceToken = gather(
+                CardSource.BattlefieldMatching(
                     filter = GameObjectFilter.Any.createdBySource(),
                     player = Player.Each,
-                ),
-                storeAs = "danceToken",
-            ),
-            MoveCollectionEffect(
-                from = "danceToken",
-                destination = CardDestination.ToZone(Zone.EXILE),
-                moveType = MoveType.Default,
-            ),
-        )
+                )
+            )
+            move(danceToken, CardDestination.ToZone(Zone.EXILE), moveType = MoveType.Default)
+        }
         description = "When this enchantment leaves the battlefield, exile the token."
     }
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Any.createdBySource(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Any.createdBySource()).leaves()
         effect = SacrificeSelfEffect
         description = "When the token leaves the battlefield, sacrifice this enchantment."
     }
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = PayOrSufferEffect(
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.PayOrSuffer(
             cost = Costs.pay.Mana("{U}{U}"),
             suffer = SacrificeSelfEffect,
         )

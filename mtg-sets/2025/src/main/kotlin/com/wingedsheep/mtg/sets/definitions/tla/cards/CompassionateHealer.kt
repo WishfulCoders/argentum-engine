@@ -23,11 +23,8 @@ val CompassionateHealer = card("Compassionate Healer") {
         "(Look at the top card of your library. You may put it on the bottom.)"
 
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
-        effect = Effects.Composite(
-            Effects.GainLife(1),
-            Effects.Scry(1),
-        )
+        trigger = Triggers.self.becomesTapped()
+        effect = Effects.GainLife(1) then Effects.Scry(1)
     }
 
     metadata {

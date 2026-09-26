@@ -6,11 +6,9 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * The Spot's Portal
@@ -30,14 +28,12 @@ val TheSpotsPortal = card("The Spot's Portal") {
         "You lose 2 life unless you control a Villain."
 
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Move(t, Zone.LIBRARY, ZonePlacement.Bottom).then(
-            ConditionalEffect(
-                condition = Conditions.Not(
-                    Conditions.YouControl(GameObjectFilter.Creature.withSubtype("Villain"))
-                ),
-                effect = Effects.LoseLife(2, EffectTarget.Controller),
-            )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.Move(t, Zone.LIBRARY, ZonePlacement.Bottom) then Effects.If(
+            condition = Conditions.Not(
+                Conditions.YouControl(GameObjectFilter.Creature.withSubtype("Villain"))
+            ),
+            then = Effects.LoseLife(2, EffectTarget.Controller),
         )
     }
 

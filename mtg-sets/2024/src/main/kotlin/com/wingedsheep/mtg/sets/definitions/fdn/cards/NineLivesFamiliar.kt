@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fdn.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
@@ -8,16 +8,13 @@ import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.minus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
-private val revivalCounters = CounterTypeFilter.Named(Counters.REVIVAL)
+private val revivalCounters = CounterType.REVIVAL
 
 /**
  * Nine-Lives Familiar
@@ -62,25 +59,20 @@ val NineLivesFamiliar = card("Nine-Lives Familiar") {
     )
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        interveningIf = Compare(
+        trigger = Triggers.self.dies()
+        interveningIf = Conditions.CompareAmounts(
             DynamicAmounts.lastKnownSourceCounters(revivalCounters),
             ComparisonOperator.GTE,
-            DynamicAmount.Fixed(1)
+            1
         )
-        effect = CreateDelayedTriggerEffect(
+        effect = Effects.CreateDelayedTrigger(
             step = Step.END,
-            effect = Effects.Composite(
-                Effects.Move(EffectTarget.Self, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD),
+            effect = Effects.Move(EffectTarget.Self, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD) then
                 Effects.AddDynamicCounters(
-                    counterType = Counters.REVIVAL,
-                    amount = DynamicAmount.Subtract(
-                        DynamicAmounts.lastKnownSourceCounters(revivalCounters),
-                        DynamicAmount.Fixed(1)
-                    ),
+                    counterType = CounterType.REVIVAL,
+                    amount = DynamicAmounts.lastKnownSourceCounters(revivalCounters) - 1,
                     target = EffectTarget.Self
                 )
-            )
         )
     }
 

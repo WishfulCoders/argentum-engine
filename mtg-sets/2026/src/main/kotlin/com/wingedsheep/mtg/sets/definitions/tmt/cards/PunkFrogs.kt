@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Punk Frogs
@@ -22,7 +23,7 @@ val PunkFrogs = card("Punk Frogs") {
     toughness = 5
 
     keywords(Keyword.WARD)
-    keywordAbility(KeywordAbility.ward("{3}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{3}")))
 
     metadata {
         rarity = Rarity.COMMON

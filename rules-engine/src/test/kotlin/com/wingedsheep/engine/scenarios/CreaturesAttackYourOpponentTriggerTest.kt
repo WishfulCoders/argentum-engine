@@ -19,7 +19,7 @@ class CreaturesAttackYourOpponentTriggerTest : FunSpec({
     val watcher = card("Test Attack Watcher") {
         manaCost = "{2}"; typeLine = "Creature — Spirit"; power = 0; toughness = 3
         triggeredAbility {
-            trigger = Triggers.CreaturesAttackYourOpponent
+            trigger = Triggers.anOpponent.isAttacked()
             effect = Effects.GainLife(3)
         }
     }

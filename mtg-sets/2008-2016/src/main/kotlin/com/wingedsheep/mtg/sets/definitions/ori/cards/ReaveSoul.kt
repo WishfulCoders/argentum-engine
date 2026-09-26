@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ori.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Reave Soul
@@ -18,7 +18,7 @@ val ReaveSoul = card("Reave Soul") {
     oracleText = "Destroy target creature with power 3 or less."
 
     spell {
-        val creature = target("target creature with power 3 or less", Targets.CreatureWithPowerAtMost(3))
+        val creature = target(TargetFilter.Creature.powerAtMost(3))
         effect = Effects.Destroy(creature)
     }
 

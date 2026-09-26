@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.state.components.battlefield.SolvedComponent
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
@@ -25,7 +26,7 @@ import io.kotest.matchers.shouldBe
 
 /**
  * The client's "how close is this?" badge on a permanent whose triggered ability has an
- * intervening-if (`ClientStateTransformer.buildTriggerConditionBadges`).
+ * intervening-if (`ConditionBadgeProjector.triggerConditionBadges`).
  *
  * A Case is the motivating shape: its "to solve" line is the printed criterion ANDed with "and this
  * Case is not solved" (CR 719.3a), so the condition the engine holds is a composite and the badge
@@ -82,7 +83,7 @@ class TriggerConditionProgressBadgeTest : FunSpec({
         oracleText = "At the beginning of your end step, if you control a creature and you have 25 " +
             "or more life, you gain 1 life."
         triggeredAbility {
-            trigger = Triggers.YourEndStep
+            trigger = Triggers.you.beginningOf(Step.END)
             interveningIf = Conditions.All(
                 Conditions.YouControlAtLeast(1, GameObjectFilter.Creature),
                 Conditions.LifeAtLeast(25)
@@ -111,7 +112,7 @@ class TriggerConditionProgressBadgeTest : FunSpec({
 
     /** The progress badges the first player's client would render on [id]. */
     fun GameTestDriver.progressBadges(id: EntityId): List<ClientCardEffect> =
-        ClientStateTransformer(cardRegistry)
+        ClientStateTransformer(cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .transform(state, player1)
             .cards.getValue(id)
             .activeEffects

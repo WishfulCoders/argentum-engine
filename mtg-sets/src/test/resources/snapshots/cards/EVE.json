@@ -14,7 +14,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Archon of Justice:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield",
@@ -24,7 +24,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target permanent"
+                        "name": "t0"
                     },
                     "destination": "Exile"
                 },
@@ -33,7 +33,7 @@
                     "filter": {
                         "baseFilter": "permanent"
                     },
-                    "id": "target permanent"
+                    "id": "t0"
                 }
             }
         ]
@@ -88,7 +88,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Scarecrone:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -118,7 +118,7 @@
                 "descriptionOverride": "{1}, Sacrifice a Scarecrow: Draw a card."
             },
             {
-                "id": "ability_2",
+                "id": "Scarecrone:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -136,7 +136,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target artifact creature card in your graveyard"
+                        "name": "t0"
                     },
                     "destination": "Battlefield",
                     "fromZone": "Graveyard"
@@ -148,7 +148,7 @@
                             "baseFilter": "artifact creature own:you",
                             "zone": "Graveyard"
                         },
-                        "id": "target artifact creature card in your graveyard"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{4}, {T}: Return target artifact creature card from your graveyard to the battlefield."
@@ -178,7 +178,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Wickerbough Elder:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -193,7 +193,7 @@
                             "type": "CostAtomWrapper",
                             "atom": {
                                 "type": "AtomRemoveCounters",
-                                "counterType": "-1/-1",
+                                "counterType": "MINUS_ONE_MINUS_ONE",
                                 "self": true
                             }
                         }
@@ -202,8 +202,8 @@
                 "effect": {
                     "type": "MoveToZone",
                     "target": {
-                        "type": "ContextTarget",
-                        "index": 0
+                        "type": "BoundVariable",
+                        "name": "t0"
                     },
                     "destination": "Graveyard",
                     "byDestruction": true
@@ -213,7 +213,8 @@
                         "type": "TargetObject",
                         "filter": {
                             "baseFilter": "artifact|enchantment"
-                        }
+                        },
+                        "id": "t0"
                     }
                 ]
             }
@@ -221,7 +222,7 @@
         "replacementEffects": [
             {
                 "type": "EntersWithCounters",
-                "counterType": "MinusOneMinusOne",
+                "counterType": "MINUS_ONE_MINUS_ONE",
                 "count": 1,
                 "selfOnly": true
             }

@@ -2,13 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Lunar Rejection
@@ -40,18 +38,13 @@ val LunarRejection = card("Lunar Rejection") {
     spell {
         // Printed (brackets present): return target Wolf or Werewolf creature, then draw a card.
         val wolfOrWerewolf = target(
-            "Wolf or Werewolf creature",
-            TargetCreature(
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.withAnyOfSubtypes(listOf(Subtype.WOLF, Subtype.WEREWOLF)),
-                ),
-            ),
+            TargetFilter(GameObjectFilter.Creature.withAnyOfSubtypes(listOf(Subtype.WOLF, Subtype.WEREWOLF))),
         )
-        effect = Effects.ReturnToHand(wolfOrWerewolf).then(Effects.DrawCards(1))
+        effect = Effects.ReturnToHand(wolfOrWerewolf) then Effects.DrawCards(1)
 
         // Cleaved (brackets removed): return target creature, then draw a card.
-        val anyCreature = cleaveTarget("creature", Targets.Creature)
-        cleaveEffect = Effects.ReturnToHand(anyCreature).then(Effects.DrawCards(1))
+        val anyCreature = cleaveTarget(TargetFilter.Creature)
+        cleaveEffect = Effects.ReturnToHand(anyCreature) then Effects.DrawCards(1)
     }
 
     metadata {

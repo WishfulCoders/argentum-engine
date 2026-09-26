@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Thunderbolt
@@ -33,14 +32,11 @@ val Thunderbolt = card("Thunderbolt") {
     spell {
         modal {
             mode("Thunderbolt deals 3 damage to target player or planeswalker") {
-                val t = target("target", Targets.PlayerOrPlaneswalker)
+                val t = target(Targets.PlayerOrPlaneswalker)
                 effect = Effects.DealDamage(3, t)
             }
             mode("Thunderbolt deals 4 damage to target creature with flying") {
-                val flier = target(
-                    "target",
-                    TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.withKeyword(Keyword.FLYING)))
-                )
+                val flier = target(TargetFilter(GameObjectFilter.Creature.withKeyword(Keyword.FLYING)))
                 effect = Effects.DealDamage(4, flier)
             }
         }

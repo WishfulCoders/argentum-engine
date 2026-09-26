@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Nath of the Gilt-Leaf
@@ -21,7 +22,7 @@ import com.wingedsheep.sdk.model.Rarity
  * resolves. The random discard is [Patterns.Hand.discardRandom] aimed at the chosen opponent —
  * Hypnotic Specter's shape.
  *
- * The token trigger is [Triggers.AnyOpponentDiscards], which fires once per discarded card, so
+ * The token trigger is `Triggers.anOpponent.discards()`, which fires once per discarded card, so
  * an opponent discarding three cards offers three tokens. It fires off Nath's own upkeep discard
  * too, which is the card's point.
  */
@@ -36,15 +37,15 @@ val NathOfTheGiltLeaf = card("Nath of the Gilt-Leaf") {
         "Whenever an opponent discards a card, you may create a 1/1 green Elf Warrior creature token."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         optional = true
-        val opponent = target("target opponent", Targets.Opponent)
+        val opponent = target(Targets.Opponent)
         effect = Patterns.Hand.discardRandom(1, opponent)
         description = "you may have target opponent discard a card at random."
     }
 
     triggeredAbility {
-        trigger = Triggers.AnyOpponentDiscards
+        trigger = Triggers.anOpponent.discards()
         optional = true
         effect = Effects.CreateToken(
             power = 1,

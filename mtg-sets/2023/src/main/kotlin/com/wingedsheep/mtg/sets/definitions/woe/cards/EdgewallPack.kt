@@ -29,7 +29,7 @@ val EdgewallPack = card("Edgewall Pack") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = woeRatToken()
     }
 

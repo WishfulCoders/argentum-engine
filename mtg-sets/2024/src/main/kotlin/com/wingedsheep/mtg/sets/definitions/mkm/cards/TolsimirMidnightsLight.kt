@@ -5,13 +5,12 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Tolsimir, Midnight's Light — Murders at Karlov Manor #236
@@ -45,7 +44,7 @@ val TolsimirMidnightsLight = card("Tolsimir, Midnight's Light") {
     keywords(Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 5,
             toughness = 5,
@@ -59,12 +58,9 @@ val TolsimirMidnightsLight = card("Tolsimir, Midnight's Light") {
     }
 
     triggeredAbility {
-        trigger = Triggers.attacks(
-            filter = GameObjectFilter.Creature.withSubtype(Subtype.WOLF).youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.withSubtype(Subtype.WOLF).youControl()).attacks()
         interveningIf = Conditions.SourceAttackedThisCombat
-        val blocker = target("creature an opponent controls", Targets.CreatureOpponentControls)
+        val blocker = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.ForceBlock(blocker, attacker = EffectTarget.TriggeringEntity)
     }
 

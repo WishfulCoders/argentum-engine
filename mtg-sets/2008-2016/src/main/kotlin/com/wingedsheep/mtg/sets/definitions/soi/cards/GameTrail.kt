@@ -6,9 +6,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.OnEnterRunEffect
+import com.wingedsheep.sdk.scripting.OnEnterRun
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddManaEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -20,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * {T}: Add {R} or {G}.
  *
  * Composed from two atoms:
- *  - [OnEnterRunEffect] — generic "as ~ enters, run [effect]" replacement wrapper.
+ *  - [OnEnterRun] — generic "as ~ enters, run [effect]" replacement wrapper.
  *  - [Effects.MayRevealCardFromHand] — atomic optional reveal with an `otherwise`
  *    rider that fires when the player declines or has no eligible card. Here the
  *    rider taps the land, expressing "if you don't, this land enters tapped."
@@ -36,7 +35,7 @@ val GameTrail = card("Game Trail") {
         "If you don't, this land enters tapped.\n{T}: Add {R} or {G}."
 
     replacementEffect(
-        OnEnterRunEffect(
+        OnEnterRun(
             Effects.MayRevealCardFromHand(
                 filter = GameObjectFilter.Land.withAnySubtype("Mountain", "Forest"),
                 otherwise = Effects.Tap(EffectTarget.Self),
@@ -46,14 +45,14 @@ val GameTrail = card("Game Trail") {
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddManaEffect(Color.RED)
+        effect = Effects.AddMana(Color.RED)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddManaEffect(Color.GREEN)
+        effect = Effects.AddMana(Color.GREEN)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

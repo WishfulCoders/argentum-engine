@@ -5,8 +5,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Merfolk Cave-Diver
@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever a creature you control explores, this creature gets +1/+0 until end of turn and can't
  * be blocked this turn.
  *
- * Uses the [Triggers.WheneverCreatureYouControlExplores] battlefield trigger (CR 701.44). The
+ * Uses the `Triggers.a(GameObjectFilter.Creature.youControl()).explores()` battlefield trigger (CR 701.44). The
  * payoff pumps and evades the source itself ([EffectTarget.Self]) until end of turn (both
  * [Effects.ModifyStats] and [GrantKeywordEffect] default to [com.wingedsheep.sdk.scripting.Duration.EndOfTurn]).
  */
@@ -31,11 +31,9 @@ val MerfolkCaveDiver = card("Merfolk Cave-Diver") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.WheneverCreatureYouControlExplores
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 0, EffectTarget.Self),
-            GrantKeywordEffect(AbilityFlag.CANT_BE_BLOCKED.name, EffectTarget.Self)
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).explores()
+        effect = Effects.ModifyStats(1, 0, EffectTarget.Self) then
+            Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, EffectTarget.Self)
     }
 
     metadata {

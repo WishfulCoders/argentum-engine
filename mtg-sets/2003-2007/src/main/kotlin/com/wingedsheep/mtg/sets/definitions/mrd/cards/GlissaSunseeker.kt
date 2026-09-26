@@ -1,19 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Glissa Sunseeker — Mirrodin #120
@@ -35,18 +31,15 @@ val GlissaSunseeker = card("Glissa Sunseeker") {
     keywords(Keyword.FIRST_STRIKE)
 
     activatedAbility {
+        val artifact = target(TargetFilter.Artifact)
         cost = Costs.Tap
-        target = Targets.Artifact
-        effect = ConditionalEffect(
-            condition = Compare(
-                left = DynamicAmount.EntityProperty(
-                    EntityReference.Target(0),
-                    EntityNumericProperty.ManaValue,
-                ),
+        effect = Effects.If(
+            condition = Conditions.CompareAmounts(
+                left = DynamicAmounts.manaValueOf(artifact),
                 operator = ComparisonOperator.EQ,
-                right = DynamicAmount.UnspentMana(Player.You),
+                right = DynamicAmounts.unspentMana(Player.You),
             ),
-            effect = Effects.Destroy(EffectTarget.ContextTarget(0)),
+            then = Effects.Destroy(artifact),
         )
     }
 

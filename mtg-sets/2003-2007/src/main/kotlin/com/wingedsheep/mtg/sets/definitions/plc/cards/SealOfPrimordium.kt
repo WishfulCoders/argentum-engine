@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.plc.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Seal of Primordium
@@ -23,7 +23,7 @@ val SealOfPrimordium = card("Seal of Primordium") {
 
     activatedAbility {
         cost = Costs.SacrificeSelf
-        val t = target("target", Targets.ArtifactOrEnchantment)
+        val t = target(TargetFilter.ArtifactOrEnchantment)
         effect = Effects.Destroy(t)
         description = "Sacrifice this enchantment: Destroy target artifact or enchantment."
     }

@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Juniper Order Druid
@@ -27,7 +28,7 @@ val JuniperOrderDruid = card("Juniper Order Druid") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", Targets.Land)
+        val t = target(TargetFilter.Land)
         effect = Effects.Untap(t)
     }
 

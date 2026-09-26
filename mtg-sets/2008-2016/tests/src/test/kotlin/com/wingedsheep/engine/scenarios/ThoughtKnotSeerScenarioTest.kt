@@ -21,7 +21,7 @@ import io.kotest.matchers.shouldNotBe
  *  When this creature leaves the battlefield, target opponent draws a card."
  *
  * The ETB is `Patterns.Hand.revealHandAndExileChosen` (Cruelclaw's Heist / Skullcap Snail shape);
- * the LTB is a self `Triggers.LeavesBattlefield` (Goblin Firebug shape) targeting an opponent.
+ * the LTB is a self `Triggers.self.leaves()` (Goblin Firebug shape) targeting an opponent.
  */
 class ThoughtKnotSeerScenarioTest : FunSpec({
 

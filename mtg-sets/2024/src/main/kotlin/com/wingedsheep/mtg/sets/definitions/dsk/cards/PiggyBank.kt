@@ -25,7 +25,7 @@ val PiggyBank = card("Piggy Bank") {
     power = 3
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateTreasure()
     }
     metadata {

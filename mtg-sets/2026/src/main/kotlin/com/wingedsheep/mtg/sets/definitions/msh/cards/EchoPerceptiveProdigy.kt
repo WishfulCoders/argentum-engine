@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Echo, Perceptive Prodigy — Marvel Super Heroes #51 (uncommon)
@@ -45,8 +46,7 @@ val EchoPerceptiveProdigy = card("Echo, Perceptive Prodigy") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
         val ability = target(
-            "activated or triggered ability you control from a creature source",
-            Targets.ActivatedOrTriggeredAbilityYouControlFrom(GameObjectFilter.Creature)
+            TargetFilter.ActivatedOrTriggeredAbilityOnStack.youControl().abilitySourceMatches(GameObjectFilter.Creature),
         )
         effect = Effects.CopyTargetSpellOrAbility(ability)
         holdPriority = true

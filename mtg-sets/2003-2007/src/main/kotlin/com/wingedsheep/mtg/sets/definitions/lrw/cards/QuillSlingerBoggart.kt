@@ -16,10 +16,10 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  * Whenever a player casts a Kithkin spell, you may have target player lose 1 life.
  *
  * "A player" is every player, the Boggart's controller included, so this is
- * [Triggers.anyPlayerCasts] — the same shape as Bog-Strider Ash and Elvish Handservant. The spell
+ * `Triggers.anyPlayer.casts(spell, requires)` — the same shape as Bog-Strider Ash and Elvish Handservant. The spell
  * filter is [GameObjectFilter.Any] rather than `.Creature`: a Kithkin spell is any spell with the
  * subtype, and Lorwyn prints Kindred noncreature ones (Militia's Pride is a Kithkin enchantment
- * spell). The "you may" is `optional = true`, which the builder lowers to a MayEffect; the yes/no
+ * spell). The "you may" is `optional = true`, which the builder lowers to a Effects.May; the yes/no
  * is asked as the ability goes on the stack, before targets are chosen, so declining never forces
  * a pointless target.
  */
@@ -32,9 +32,9 @@ val QuillSlingerBoggart = card("Quill-Slinger Boggart") {
     oracleText = "Whenever a player casts a Kithkin spell, you may have target player lose 1 life."
 
     triggeredAbility {
-        trigger = Triggers.anyPlayerCasts(GameObjectFilter.Any.withSubtype(Subtype.KITHKIN))
+        trigger = Triggers.anyPlayer.casts(GameObjectFilter.Any.withSubtype(Subtype.KITHKIN))
         optional = true
-        val p = target("target player", Targets.Player)
+        val p = target(Targets.Player)
         effect = Effects.LoseLife(1, p)
         description = "Whenever a player casts a Kithkin spell, you may have target player lose 1 life."
     }

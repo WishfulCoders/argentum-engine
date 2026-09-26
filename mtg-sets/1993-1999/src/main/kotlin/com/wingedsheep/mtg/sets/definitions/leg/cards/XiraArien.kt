@@ -27,7 +27,7 @@ val XiraArien = card("Xira Arien") {
     keywords(Keyword.FLYING)
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{B}{R}{G}"), Costs.Tap)
-        val player = target("target player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Effects.DrawCards(1, player)
     }
 

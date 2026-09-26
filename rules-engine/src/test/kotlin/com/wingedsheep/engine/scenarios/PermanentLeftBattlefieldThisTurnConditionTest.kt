@@ -1,6 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.handlers.ConditionEvaluator
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
@@ -46,7 +46,7 @@ class PermanentLeftBattlefieldThisTurnConditionTest : FunSpec({
             targets = emptyList(),
             xValue = 0
         )
-        return ConditionEvaluator().evaluate(state, PermanentLeftBattlefieldThisTurn(Player.You), context)
+        return PredicateEvaluator(cardRegistry = null).conditions.evaluate(state, PermanentLeftBattlefieldThisTurn(Player.You), context)
     }
 
     test("false at start of game for both players") {
@@ -86,7 +86,7 @@ class PermanentLeftBattlefieldThisTurnConditionTest : FunSpec({
         val land = driver.putLandOnBattlefield(player, "Forest")
         driver.state.nonlandPermanentLeftBattlefieldThisTurn shouldBe false
 
-        val result = com.wingedsheep.engine.handlers.effects.ZoneTransitionService.moveToZone(
+        val result = driver.zones.moveToZone(
             state = driver.state,
             entityId = land,
             destinationZone = Zone.GRAVEYARD

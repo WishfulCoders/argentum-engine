@@ -8,7 +8,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.encodeToJsonElement
 
 /**
- * Serial names of the [DynamicAmount] / [EntityReference] /
+ * Serial names of the [DynamicAmount] / [com.wingedsheep.sdk.scripting.targets.EffectTarget] /
  * [com.wingedsheep.sdk.scripting.references.Player] shapes whose value lives in the resolution-time
  * `EffectContext` — the chosen targets, the announced X, the triggering object, the things
  * sacrificed or tapped to pay a cost, the resolution pipeline's stored collections.
@@ -22,7 +22,7 @@ import kotlinx.serialization.json.encodeToJsonElement
  * affected entity, or global game state, all of which the projector does carry.
  *
  * Kept as a deny list rather than an allow list because the projector-safe set is open-ended (every
- * `Count`/`AggregateBattlefield`/`EntityProperty(Source | AffectedEntity)` shape works); the
+ * `Count`/`AggregateBattlefield`/`EntityProperty(Self | AffectedEntity)` shape works); the
  * *traversal* is what has to be exhaustive, and encoding to JSON makes it so — no nesting site can
  * be missed the way a hand-written `when` over the composite amounts could.
  *
@@ -40,11 +40,12 @@ private val CONTEXT_SCOPED_SERIAL_NAMES: Set<String> = setOf(
     "XValue", "CastX", "CastChoice", "ContextProperty", "VariableReference", "StoredCardManaValue",
     "DistinctEntitiesInCollections", "DistinctCardTypesInCollections", "ManaValueSumOfCollection",
     "TotalManaSpent", "ManaSpentOnX", "PermanentsSacrificedThisWay",
-    "TotalPowerSacrificedThisWay", "StationCharge",
+    "TotalPowerSacrificedThisWay", "CountersRemovedAsCost", "StationCharge",
     "LastKnownSourceCounters", "LastKnownDamageDealtToSource",
-    // EntityReference
-    "Target", "Triggering", "Sacrificed", "TappedAsCost", "FromCostStorage", "AmassedArmy",
-    "IterationEntity",
+    // EffectTarget
+    "ContextTarget", "BoundVariable", "TriggeringEntity", "AttachedToTriggeringPermanent",
+    "SacrificedAsCost", "TappedAsCost", "DiscardedAsCost", "PipelineTarget", "AmassedArmy",
+    "IterationEntity", "GrantingSource",
     // Player
     "TargetPlayer", "TargetOpponent", "ContextPlayer", "TriggeringPlayer", "ControllerOf", "OwnerOf",
 )

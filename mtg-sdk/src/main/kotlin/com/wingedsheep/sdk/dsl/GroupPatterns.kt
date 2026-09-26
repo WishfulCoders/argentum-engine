@@ -28,7 +28,6 @@ import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Effect patterns for bulk operations on filtered groups of permanents:
@@ -40,13 +39,13 @@ object GroupPatterns {
     fun untapGroup(filter: GroupFilter = GroupFilter.AllCreatures): ForEachEffect =
         ForEachInGroupEffect(
             filter = filter,
-            effect = TapUntapEffect(EffectTarget.Self, tap = false)
+            effect = TapUntapEffect(EffectTarget.IterationEntity, tap = false)
         )
 
     fun tapAll(filter: GroupFilter): ForEachEffect =
         ForEachInGroupEffect(
             filter = filter,
-            effect = TapUntapEffect(EffectTarget.Self, tap = true)
+            effect = TapUntapEffect(EffectTarget.IterationEntity, tap = true)
         )
 
     fun returnAllToHand(filter: GroupFilter): CompositeEffect = CompositeEffect(listOf(
@@ -66,7 +65,7 @@ object GroupPatterns {
     fun destroyAll(filter: GroupFilter, noRegenerate: Boolean = false): ForEachEffect =
         ForEachInGroupEffect(
             filter = filter,
-            effect = MoveToZoneEffect(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true),
+            effect = MoveToZoneEffect(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true),
             noRegenerate = noRegenerate
         )
 
@@ -189,7 +188,7 @@ object GroupPatterns {
     ): ForEachEffect =
         ForEachInGroupEffect(
             filter = filter,
-            effect = GrantKeywordEffect(keyword.name, EffectTarget.Self, duration)
+            effect = GrantKeywordEffect(keyword.name, EffectTarget.IterationEntity, duration)
         )
 
     /**
@@ -216,8 +215,8 @@ object GroupPatterns {
             filter = filter,
             effect = CompositeEffect(
                 listOf(
-                    ModifyStatsEffect(power, toughness, EffectTarget.Self, duration),
-                    GrantKeywordEffect(keyword.name, EffectTarget.Self, duration)
+                    ModifyStatsEffect(power, toughness, EffectTarget.IterationEntity, duration),
+                    GrantKeywordEffect(keyword.name, EffectTarget.IterationEntity, duration)
                 )
             )
         )
@@ -229,7 +228,7 @@ object GroupPatterns {
     ): ForEachEffect =
         ForEachInGroupEffect(
             filter = filter,
-            effect = RemoveKeywordEffect(keyword.name, EffectTarget.Self, duration)
+            effect = RemoveKeywordEffect(keyword.name, EffectTarget.IterationEntity, duration)
         )
 
     fun modifyStatsForAll(
@@ -240,7 +239,7 @@ object GroupPatterns {
     ): ForEachEffect =
         ForEachInGroupEffect(
             filter = filter,
-            effect = ModifyStatsEffect(power, toughness, EffectTarget.Self, duration)
+            effect = ModifyStatsEffect(power, toughness, EffectTarget.IterationEntity, duration)
         )
 
     fun modifyStatsForAll(
@@ -251,7 +250,7 @@ object GroupPatterns {
     ): ForEachEffect =
         ForEachInGroupEffect(
             filter = filter,
-            effect = ModifyStatsEffect(power, toughness, EffectTarget.Self, duration)
+            effect = ModifyStatsEffect(power, toughness, EffectTarget.IterationEntity, duration)
         )
 
     /**
@@ -259,7 +258,7 @@ object GroupPatterns {
      *
      * Each affected creature gets +X/+Y where X is its power and Y its toughness *as the
      * effect begins to apply* — read per-entity from projected state via
-     * [EntityReference.IterationEntity]. Because it resolves to a fixed +X/+Y modification,
+     * [EffectTarget.IterationEntity]. Because it resolves to a fixed +X/+Y modification,
      * the bonus is locked in when the effect resolves (it does not re-double as P/T later
      * changes), and negative power doubles correctly (a -2/3 creature gets -2/+0). This
      * applies as a power/toughness *modification* in layer 7 (the +N/+N sublayer), not a
@@ -273,8 +272,8 @@ object GroupPatterns {
         duration: Duration = Duration.EndOfTurn
     ): ForEachEffect =
         modifyStatsForAll(
-            power = DynamicAmount.EntityProperty(EntityReference.IterationEntity, EntityNumericProperty.Power),
-            toughness = DynamicAmount.EntityProperty(EntityReference.IterationEntity, EntityNumericProperty.Toughness),
+            power = DynamicAmount.EntityProperty(EffectTarget.IterationEntity, EntityNumericProperty.Power),
+            toughness = DynamicAmount.EntityProperty(EffectTarget.IterationEntity, EntityNumericProperty.Toughness),
             filter = filter,
             duration = duration
         )
@@ -282,19 +281,19 @@ object GroupPatterns {
     fun dealDamageToAll(amount: Int, filter: GroupFilter): ForEachEffect =
         ForEachInGroupEffect(
             filter = filter,
-            effect = DealDamageEffect(amount, EffectTarget.Self)
+            effect = DealDamageEffect(amount, EffectTarget.IterationEntity)
         )
 
     fun dealDamageToAll(amount: DynamicAmount, filter: GroupFilter): ForEachEffect =
         ForEachInGroupEffect(
             filter = filter,
-            effect = DealDamageEffect(amount, EffectTarget.Self)
+            effect = DealDamageEffect(amount, EffectTarget.IterationEntity)
         )
 
     fun gainControlOfGroup(filter: GroupFilter = GroupFilter.AllCreatures, duration: Duration = Duration.EndOfTurn): ForEachEffect =
         ForEachInGroupEffect(
             filter = filter,
-            effect = GainControlEffect(EffectTarget.Self, duration)
+            effect = GainControlEffect(EffectTarget.IterationEntity, duration)
         )
 
     /**

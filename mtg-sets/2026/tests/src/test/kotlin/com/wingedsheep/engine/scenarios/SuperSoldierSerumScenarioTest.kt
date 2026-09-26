@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.engine.view.ClientStateTransformer
@@ -10,6 +11,7 @@ import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Super-Soldier Serum (MSH) — "Enchanted creature gets +2/+2, has first strike and vigilance, and is
@@ -34,10 +36,10 @@ class SuperSoldierSerumScenarioTest : FunSpec({
 
         val aura = d.putCardInHand(d.player1, "Super-Soldier Serum")
         d.giveMana(d.player1, Color.WHITE, 2)
-        d.castSpell(d.player1, aura, listOf(bear)).isSuccess shouldBe true
+        d.castSpell(d.player1, aura, listOf(bear)).outcome shouldBe Outcome.Done
         repeat(6) { if (d.state.pendingDecision != null) d.autoResolveDecision() else d.bothPass() }
 
-        val card = ClientStateTransformer(d.cardRegistry)
+        val card = ClientStateTransformer(d.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .transform(d.state, d.player1)
             .cards
             .getValue(bear)

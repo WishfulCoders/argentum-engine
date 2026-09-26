@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Wasteland
@@ -29,7 +28,7 @@ val Wasteland = card("Wasteland") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.SacrificeSelf)
-        val land = target("target", TargetPermanent(filter = TargetFilter.NonbasicLand))
+        val land = target(TargetFilter.NonbasicLand)
         effect = Effects.Destroy(land)
     }
 

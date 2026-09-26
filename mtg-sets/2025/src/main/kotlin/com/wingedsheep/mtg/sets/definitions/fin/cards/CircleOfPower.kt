@@ -13,10 +13,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -35,10 +31,9 @@ val CircleOfPower = card("Circle of Power") {
     typeLine = "Sorcery"
     oracleText = "You draw two cards and you lose 2 life. Create a 0/1 black Wizard creature token with \"Whenever you cast a noncreature spell, this token deals 1 damage to each opponent.\"\nWizards you control get +1/+0 and gain lifelink until end of turn."
     spell {
-        effect = Effects.Composite(
-            DrawCardsEffect(2),
-            LoseLifeEffect(2, EffectTarget.Controller),
-            CreateTokenEffect(
+        effect = Effects.DrawCards(2) then
+            Effects.LoseLife(2, EffectTarget.Controller) then
+            Effects.CreateToken(
                 power = 0,
                 toughness = 1,
                 colors = setOf(Color.BLACK),
@@ -46,20 +41,16 @@ val CircleOfPower = card("Circle of Power") {
                 imageUri = "https://cards.scryfall.io/normal/front/1/8/187fe54c-7d0c-4225-9d46-3affbead897d.jpg?1782725378",
                 triggeredAbilities = listOf(
                     TriggeredAbility.create(
-                        trigger = Triggers.YouCastNoncreature.event,
-                        binding = Triggers.YouCastNoncreature.binding,
-                        effect = DealDamageEffect(1, EffectTarget.PlayerRef(Player.EachOpponent))
+                        trigger = Triggers.you.casts(GameObjectFilter.Noncreature),
+                        effect = Effects.DealDamage(1, EffectTarget.PlayerRef(Player.EachOpponent))
                     )
                 )
-            ),
+            ) then
             Effects.ForEachInGroup(
                 GroupFilter(GameObjectFilter.Creature.withSubtype(Subtype.WIZARD).youControl()),
-                Effects.Composite(
-                    Effects.ModifyStats(1, 0, EffectTarget.Self),
-                    Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self)
-                )
+                Effects.ModifyStats(1, 0, EffectTarget.IterationEntity) then
+                    Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.IterationEntity)
             )
-        )
     }
     metadata {
         rarity = Rarity.UNCOMMON

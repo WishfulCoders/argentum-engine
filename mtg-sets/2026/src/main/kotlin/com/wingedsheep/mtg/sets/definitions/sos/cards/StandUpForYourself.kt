@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -24,7 +23,7 @@ val StandUpForYourself = card("Stand Up for Yourself") {
     typeLine = "Instant"
     oracleText = "Destroy target creature with power 3 or greater."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.powerAtLeast(3)))
+        val t = target(TargetFilter.Creature.powerAtLeast(3))
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     metadata {

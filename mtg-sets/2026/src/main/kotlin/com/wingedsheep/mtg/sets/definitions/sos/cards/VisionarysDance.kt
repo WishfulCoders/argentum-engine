@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Visionary's Dance
@@ -48,8 +47,8 @@ val VisionarysDance = card("Visionary's Dance") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.DiscardSelf)
         effect = Patterns.Library.lookAtTopAndKeep(
-            count = DynamicAmount.Fixed(2),
-            keepCount = DynamicAmount.Fixed(1)
+            count = 2,
+            keepCount = 1
         )
         activateFromZone = Zone.HAND
     }

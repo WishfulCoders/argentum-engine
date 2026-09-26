@@ -12,6 +12,7 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.RedirectZoneChange
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.predicates.ControllerPredicate
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Valgavoth, Terror Eater
@@ -52,7 +53,7 @@ val ValgavothTerrorEater = card("Valgavoth, Terror Eater") {
     keywords(Keyword.FLYING, Keyword.LIFELINK)
 
     // Ward—Sacrifice three nonland permanents.
-    keywordAbility(KeywordAbility.wardSacrifice(GameObjectFilter.NonlandPermanent, count = 3))
+    keywordAbility(KeywordAbility.Ward(WardCost.Sacrifice(GameObjectFilter.NonlandPermanent, count = 3)))
 
     // If a card you didn't control would be put into an opponent's graveyard from anywhere,
     // exile it instead — and link it to Valgavoth so the last ability can play it.

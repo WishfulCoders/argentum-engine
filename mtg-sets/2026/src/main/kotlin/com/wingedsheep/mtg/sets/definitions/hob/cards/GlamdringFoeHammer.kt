@@ -1,6 +1,5 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
@@ -10,14 +9,8 @@ import com.wingedsheep.sdk.scripting.CostReductionSource
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
 
 /**
@@ -75,30 +68,14 @@ val GlamdringFoeHammer = card("Glamdring, Foe-hammer") {
         oracleText = "Mill six cards, then put all instant and sorcery cards from among them into " +
             "your hand. (Then exile this card. You may cast the artifact later from exile.)"
         spell {
-            effect = Effects.Composite(
-                listOf(
-                    // Mill six cards.
-                    GatherCardsEffect(
-                        source = CardSource.TopOfLibrary(DynamicAmount.Fixed(6), Player.You, isMill = true),
-                        storeAs = "milled"
-                    ),
-                    MoveCollectionEffect(
-                        from = "milled",
-                        destination = CardDestination.ToZone(Zone.GRAVEYARD)
-                    ),
-                    // Then put all instant and sorcery cards from among them into your hand.
-                    FilterCollectionEffect(
-                        from = "milled",
-                        filter = CollectionFilter.MatchesFilter(GameObjectFilter.InstantOrSorcery),
-                        storeMatching = "spells",
-                        storeNonMatching = "rest"
-                    ),
-                    MoveCollectionEffect(
-                        from = "spells",
-                        destination = CardDestination.ToZone(Zone.HAND)
-                    )
-                )
-            )
+            effect = Effects.Pipeline {
+                // Mill six cards.
+                val milled = gather(CardSource.TopOfLibrary(6, Player.You, isMill = true))
+                toGraveyard(milled)
+                // Then put all instant and sorcery cards from among them into your hand.
+                val spells = filter(milled, GameObjectFilter.InstantOrSorcery)
+                toHand(spells)
+            }
         }
     }
 

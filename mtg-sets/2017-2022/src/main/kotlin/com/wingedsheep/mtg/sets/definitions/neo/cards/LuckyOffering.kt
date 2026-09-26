@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Lucky Offering — Kamigawa: Neon Dynasty #27 (canonical printing)
@@ -20,10 +19,7 @@ val LuckyOffering = card("Lucky Offering") {
     oracleText = "Destroy target artifact with mana value 3 or less. You gain 3 life."
 
     spell {
-        val t = target(
-            "cheap artifact",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Artifact.manaValueAtMost(3))),
-        )
+        val t = target(TargetFilter(GameObjectFilter.Artifact.manaValueAtMost(3)))
         effect = Effects.Destroy(t) then Effects.GainLife(3)
     }
 

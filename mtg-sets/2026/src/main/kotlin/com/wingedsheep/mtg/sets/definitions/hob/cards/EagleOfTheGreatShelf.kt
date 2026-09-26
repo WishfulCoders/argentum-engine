@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -8,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Eagle of the Great Shelf
@@ -33,12 +33,12 @@ val EagleOfTheGreatShelf = card("Eagle of the Great Shelf") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val otherCreatures = DynamicAmount.AggregateBattlefield(
+        trigger = Triggers.self.attacks()
+        val otherCreatures = DynamicAmounts.battlefield(
             Player.You,
             GameObjectFilter.Creature,
             excludeSelf = true
-        )
+        ).count()
         effect = Effects.ModifyStats(otherCreatures, otherCreatures, EffectTarget.Self)
     }
 

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Agonasaur Rex — Aetherdrift #151
@@ -42,16 +41,11 @@ val AgonasaurRex = card("Agonasaur Rex") {
     keywordAbility(KeywordAbility.cycling("{2}{G}"))
 
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
-        val t = target(
-            "up to one target creature or Vehicle",
-            TargetPermanent(optional = true, filter = TargetFilter(GameObjectFilter.CreatureOrVehicle))
-        )
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, t),
-            Effects.GrantKeyword(Keyword.TRAMPLE, t),
-            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t),
-        )
+        trigger = Triggers.self.isCycled()
+        val t = target(TargetFilter(GameObjectFilter.CreatureOrVehicle), optional = true)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, t) then
+            Effects.GrantKeyword(Keyword.TRAMPLE, t) then
+            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t)
         description = "When you cycle this card, put two +1/+1 counters on up to one target " +
             "creature or Vehicle. It gains trample and indestructible until end of turn."
     }

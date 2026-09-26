@@ -9,16 +9,16 @@ import com.wingedsheep.engine.registry.CardRegistry
  * Module providing all mana-related effect executors.
  */
 class ManaExecutors(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator(),
-    private val cardRegistry: CardRegistry,
+    private val amountEvaluator: DynamicAmountEvaluator,
+    private val cardRegistry: CardRegistry
 ) : ExecutorModule {
     override fun executors(): List<EffectExecutor<*>> = listOf(
         AddManaExecutor(amountEvaluator),
         AddColorlessManaExecutor(amountEvaluator),
         AddManaOfChoiceExecutor(cardRegistry, amountEvaluator),
         AddAnyColorManaSpendOnChosenTypeExecutor(amountEvaluator),
-        AddDynamicManaExecutor(amountEvaluator),
-        AddOneManaOfEachColorAmongExecutor(),
+        AddDynamicManaExecutor(amountEvaluator = amountEvaluator),
+        AddOneManaOfEachColorAmongExecutor(predicateEvaluator = amountEvaluator.predicates),
         RetainUnspentManaExecutor()
     )
 }

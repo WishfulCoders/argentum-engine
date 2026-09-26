@@ -23,8 +23,7 @@ import com.wingedsheep.sdk.scripting.effects.ManaExpiry
  */
 fun firebendingAttackTrigger(n: Int): TriggeredAbility =
     TriggeredAbility.create(
-        trigger = Triggers.Attacks.event,
-        binding = Triggers.Attacks.binding,
+        trigger = Triggers.self.attacks(),
         // CR 702.189b: firebending fires "whenever you firebend" when this ability resolves —
         // the red mana and the bend notification resolve together as one triggered ability.
         effect = CompositeEffect(listOf(

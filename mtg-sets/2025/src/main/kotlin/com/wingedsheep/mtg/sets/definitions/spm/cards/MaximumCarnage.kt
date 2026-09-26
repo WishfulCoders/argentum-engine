@@ -23,7 +23,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * controller's next turn" (701.15a–b) — word-for-word chapter I, with "you" being the Saga's
  * controller. We apply it to every creature via [Effects.ForEachInGroup] over
  * [GroupFilter.AllCreatures] (every creature on the battlefield, your own included), running
- * [Effects.Goad] on each iteration entity ([EffectTarget.Self]). Group iteration does NOT rebind
+ * [Effects.Goad] on each iteration entity ([EffectTarget.IterationEntity]). Group iteration does NOT rebind
  * the controller (only per-player iteration does), so the goader of record stays the Saga's
  * controller = "you" for every creature, and the built-in until-your-next-turn expiry (701.15a)
  * supplies the "Until your next turn" duration.
@@ -47,7 +47,7 @@ val MaximumCarnage = card("Maximum Carnage") {
     sagaChapter(1) {
         effect = Effects.ForEachInGroup(
             filter = GroupFilter.AllCreatures,
-            effect = Effects.Goad(EffectTarget.Self)
+            effect = Effects.Goad(EffectTarget.IterationEntity)
         )
     }
 

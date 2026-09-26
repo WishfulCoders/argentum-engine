@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern.OneOrMoreDealCombatDamageToPlayerEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
 /**
@@ -33,22 +32,13 @@ val InvasionTactics = card("Invasion Tactics") {
 
     // When this enchantment enters, creatures you control get +2/+2 until end of turn.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Group.modifyStatsForAll(2, 2, GroupFilter.AllCreaturesYouControl)
     }
 
     // Whenever one or more Allies you control deal combat damage to a player, draw a card.
     triggeredAbility {
-        trigger = TriggerSpec(
-            OneOrMoreDealCombatDamageToPlayerEvent(
-                // "Allies", not "Ally creatures" — a bare tribal noun names *permanents* of that
-                // type. Behaviourally the same here, since the event's detector already requires
-                // the damage source to be a creature; spelled this way so the corpus has one
-                // reading of the noun.
-                sourceFilter = GameObjectFilter.Permanent.withSubtype("Ally"),
-            ),
-            TriggerBinding.ANY,
-        )
+        trigger = Triggers.oneOrMore(GameObjectFilter.Permanent.withSubtype("Ally")).dealCombatDamageToAPlayer()
         effect = Effects.DrawCards(1)
     }
 

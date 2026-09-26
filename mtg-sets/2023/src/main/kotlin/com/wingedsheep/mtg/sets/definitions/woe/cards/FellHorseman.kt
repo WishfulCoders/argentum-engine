@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Fell Horseman // Deathly Ride
@@ -35,7 +35,7 @@ val FellHorseman = card("Fell Horseman") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.PutOnBottomOfLibrary(EffectTarget.Self)
     }
 
@@ -45,7 +45,7 @@ val FellHorseman = card("Fell Horseman") {
         oracleText = "Return target creature card from your graveyard to your hand. " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            val t = target("target creature card in your graveyard", Targets.CreatureCardInYourGraveyard)
+            val t = target(TargetFilter.CreatureInYourGraveyard)
             effect = Effects.Move(t, Zone.HAND)
         }
     }

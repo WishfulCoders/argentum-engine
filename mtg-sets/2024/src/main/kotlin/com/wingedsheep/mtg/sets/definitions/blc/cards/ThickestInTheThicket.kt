@@ -1,17 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.blc.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Thickest in the Thicket
@@ -33,11 +33,11 @@ val ThickestInTheThicket = card("Thickest in the Thicket") {
         "with the greatest power or tied for the greatest power."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("creature", Targets.Creature)
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature)
         effect = Effects.AddDynamicCounters(
-            Counters.PLUS_ONE_PLUS_ONE,
-            DynamicAmounts.targetPower(0),
+            CounterType.PLUS_ONE_PLUS_ONE,
+            DynamicAmounts.powerOf(creature),
             creature
         )
     }
@@ -46,10 +46,10 @@ val ThickestInTheThicket = card("Thickest in the Thicket") {
     // ≡ you control a creature AND your max creature-power >= the global max creature-power.
     // The `ControlCreature` conjunct excludes the 0-vs-0 case when no creatures exist.
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         triggerRestriction = Conditions.All(
             Conditions.ControlCreature,
-            Compare(
+            Conditions.CompareAmounts(
                 DynamicAmounts.battlefield(Player.You, GameObjectFilter.Creature).maxPower(),
                 ComparisonOperator.GTE,
                 DynamicAmounts.battlefield(Player.Each, GameObjectFilter.Creature).maxPower()

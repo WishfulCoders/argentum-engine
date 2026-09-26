@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Grazing Gladehart
@@ -12,7 +13,7 @@ import com.wingedsheep.sdk.model.Rarity
  * 2/2
  * Landfall — Whenever a land you control enters, you may gain 2 life.
  *
- * Landfall is [Triggers.LandYouControlEnters] — the `ZoneChangeEvent` over
+ * Landfall is `Triggers.a(GameObjectFilter.Land.youControl()).enters()` — the `ZoneChangeEvent` over
  * `GameObjectFilter.Land.youControl()` with [com.wingedsheep.sdk.scripting.TriggerBinding.ANY].
  * The printed "you may" is the builder's `optional = true`, which lowers to a
  * [com.wingedsheep.sdk.scripting.effects.Gate.MayDecide] gate around [Effects.GainLife], so the
@@ -27,7 +28,7 @@ val GrazingGladehart = card("Grazing Gladehart") {
     oracleText = "Landfall — Whenever a land you control enters, you may gain 2 life."
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         optional = true
         effect = Effects.GainLife(2)
     }

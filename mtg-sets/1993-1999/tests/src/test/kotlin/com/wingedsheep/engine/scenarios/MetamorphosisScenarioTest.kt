@@ -26,7 +26,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  *  Spend this mana only to cast creature spells."
  *
  * This is the first card that pairs a SPELL additional-cost sacrifice with an
- * [com.wingedsheep.sdk.scripting.values.EntityReference.Sacrificed] reference in the
+ * [com.wingedsheep.sdk.scripting.targets.EffectTarget.SacrificedAsCost] reference in the
  * resolving effect, so the test pins three things at once:
  *   - the dynamic amount resolves to 1 + the sacrificed creature's mana value, read from
  *     the cost-payment snapshot (the creature is in the graveyard by resolution);

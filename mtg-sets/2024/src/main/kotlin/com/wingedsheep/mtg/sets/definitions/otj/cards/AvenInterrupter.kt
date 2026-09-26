@@ -3,13 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.otj.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CostModification
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Aven Interrupter
@@ -44,8 +44,8 @@ val AvenInterrupter = card("Aven Interrupter") {
     keywords(Keyword.FLASH, Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target("spell", Targets.Spell)
+        trigger = Triggers.self.enters()
+        target(TargetFilter.SpellOnStack)
         effect = Effects.ExileTargetSpell(makePlotted = true)
         description = "When this creature enters, exile target spell. It becomes plotted."
     }

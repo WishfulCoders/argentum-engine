@@ -2,14 +2,15 @@ package com.wingedsheep.mtg.sets.definitions.isd.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.PreventDamageByRemovingCounter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Unbreathing Horde
@@ -45,20 +46,18 @@ val UnbreathingHorde = card("Unbreathing Horde") {
 
     replacementEffect(
         EntersWithDynamicCounters(
-            count = DynamicAmount.Add(
-                DynamicAmount.Count(
-                    player = Player.You,
-                    zone = Zone.BATTLEFIELD,
-                    filter = GameObjectFilter.Creature
-                        .withSubtype(Subtype.ZOMBIE)
-                        .notSourceItself()
-                ),
-                DynamicAmount.Count(
-                    player = Player.You,
-                    zone = Zone.GRAVEYARD,
-                    filter = GameObjectFilter.Any.withSubtype(Subtype.ZOMBIE)
+            count = DynamicAmounts.count(
+                Player.You,
+                Zone.BATTLEFIELD,
+                GameObjectFilter.Creature
+                    .withSubtype(Subtype.ZOMBIE)
+                    .notSourceItself()
+            ) +
+                DynamicAmounts.count(
+                    Player.You,
+                    Zone.GRAVEYARD,
+                    GameObjectFilter.Any.withSubtype(Subtype.ZOMBIE)
                 )
-            )
         )
     )
 

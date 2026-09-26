@@ -30,9 +30,8 @@ val CrystalSpray = card("Crystal Spray") {
     oracleText = "Change the text of target spell or permanent by replacing all instances of one color word with another or one basic land type with another until end of turn.\nDraw a card."
 
     spell {
-        val t = target("target", TargetSpellOrPermanent())
-        effect = Effects.ChangeWordInText(t)
-            .then(Effects.DrawCards(1))
+        val t = target(TargetSpellOrPermanent())
+        effect = Effects.ChangeWordInText(t) then Effects.DrawCards(1)
     }
 
     metadata {

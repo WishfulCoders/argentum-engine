@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Pyrotechnic Performer — Murders at Karlov Manor #140
@@ -25,8 +23,8 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * Three details the modelling has to get right:
  *
  * - **"this creature or another creature you control"** has no "another" clause, so the ability
- *   must fire for the Performer's own flip too. That is [Triggers.CreatureTurnedFaceUp] with
- *   `Player.You` — an ANY-bound trigger over the controller's creatures — not [Triggers.TurnedFaceUp]
+ *   must fire for the Performer's own flip too. That is `Triggers.<player>.permanentTurnedFaceUp(filter)` with
+ *   `Player.You` — an ANY-bound trigger over the controller's creatures — not `Triggers.self.turnedFaceUp()`
  *   (SELF-only) nor an OTHER binding. The same reasoning [PerimeterEnforcer] documents.
  * - **The damage source is the flipped creature, not the Performer** ("*that creature* deals
  *   damage"), so `damageSource` is [EffectTarget.TriggeringEntity]. This is what makes the flipped
@@ -36,7 +34,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * - **The amount is read at resolution, with last-known information.** Per the Scryfall ruling
  *   below, a flipped creature that has left the battlefield before the trigger resolves still deals
  *   damage equal to its power as it last existed there — which is exactly the semantics of
- *   [DynamicAmount.EntityProperty] over [EntityReference.Triggering], so no special casing is needed.
+ *   [DynamicAmount.EntityProperty] over [EffectTarget.TriggeringEntity], so no special casing is needed.
  *
  * Turning a permanent face up is a special action that doesn't use the stack (CR 701.34a); the
  * trigger goes on the stack afterwards and can be responded to, but the flip itself cannot.
@@ -55,12 +53,9 @@ val PyrotechnicPerformer = card("Pyrotechnic Performer") {
     disguise = "{R}"
 
     triggeredAbility {
-        trigger = Triggers.CreatureTurnedFaceUp(player = Player.You)
+        trigger = Triggers.you.permanentTurnedFaceUp()
         effect = Effects.DealDamage(
-            amount = DynamicAmount.EntityProperty(
-                EntityReference.Triggering,
-                EntityNumericProperty.Power
-            ),
+            amount = DynamicAmounts.triggeringPower(),
             target = EffectTarget.PlayerRef(Player.EachOpponent),
             damageSource = EffectTarget.TriggeringEntity
         )

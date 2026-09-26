@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Liberate
@@ -25,7 +25,7 @@ val Liberate = card("Liberate") {
         "under its owner's control at the beginning of the next end step."
 
     spell {
-        val creature = target("target creature you control", Targets.CreatureYouControl)
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Patterns.Exile.exileUntilEndStep(creature)
     }
 

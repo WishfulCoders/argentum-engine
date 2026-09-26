@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Oubliette
@@ -31,13 +31,13 @@ val Oubliette = card("Oubliette") {
         "phase out with it. While permanents are phased out, they're treated as though they don't exist.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("creature", TargetCreature())
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature)
         effect = Effects.PhaseOutUntilLeaves(creature, tapOnPhaseIn = true)
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.PhaseInLinkedToSource()
     }
 

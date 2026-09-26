@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -49,9 +48,9 @@ val FigureOfFable = card("Figure of Fable") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{G/W}{G/W}")
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.SourceHasSubtype(Subtype.SCOUT),
-            effect = Effects.BecomeCreature(
+            then = Effects.BecomeCreature(
                 target = EffectTarget.Self,
                 power = 4,
                 toughness = 5,
@@ -63,9 +62,9 @@ val FigureOfFable = card("Figure of Fable") {
 
     activatedAbility {
         cost = Costs.Mana("{3}{G/W}{G/W}{G/W}")
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.SourceHasSubtype(Subtype.SOLDIER),
-            effect = Effects.BecomeCreature(
+            then = Effects.BecomeCreature(
                 target = EffectTarget.Self,
                 power = 7,
                 toughness = 8,

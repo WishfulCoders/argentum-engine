@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Cruel Somnophage // Can't Wake Up
@@ -47,8 +46,8 @@ val CruelSomnophage = card("Cruel Somnophage") {
         oracleText = "Target player mills four cards. (Then exile this card. You may cast the " +
             "creature later from exile.)"
         spell {
-            target("target player", Targets.Player)
-            effect = Patterns.Library.mill(4, EffectTarget.ContextTarget(0))
+            val player = target(Targets.Player)
+            effect = Patterns.Library.mill(4, player)
         }
     }
 

@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.msh.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -11,9 +12,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.WardCost
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Captain America, Wings of Freedom — Marvel Super Heroes #10 (rare)
@@ -26,11 +25,11 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * Implementation notes:
  * - Ward is the parameterized [KeywordAbility.Ward] with a [WardCost.Mana] of `{1}`; flying and
  *   first strike are plain engine keywords.
- * - The attack trigger is the default SELF-bound [Triggers.attacks] and pumps the group with
- *   [Patterns.Group.modifyStatsForAll]. X is [EntityReference.Source]'s toughness — the group
- *   loop only rebinds `EffectTarget.Self` to the iteration entity, leaving `Source` pointing at
- *   Captain America, so every other Hero gets the *same* +X/+X read off his (projected)
- *   toughness. `excludeSelf` implements "each **other** Hero".
+ * - The attack trigger is the default SELF-bound `Triggers.<subject>.attacks(requires)` and pumps the group with
+ *   [Patterns.Group.modifyStatsForAll]. X is [EffectTarget.Self]'s toughness — inside the group
+ *   loop the visited Hero is `EffectTarget.IterationEntity` while `Self` stays Captain America,
+ *   so every other Hero gets the *same* +X/+X read off his (projected) toughness. `excludeSelf`
+ *   implements "each **other** Hero".
  * - X is snapshotted when the trigger resolves; later changes to his toughness (or his death)
  *   don't retune the already-applied bonuses, which is correct for a "+X/+X until end of turn"
  *   one-shot.
@@ -49,11 +48,8 @@ val CaptainAmericaWingsOfFreedom = card("Captain America, Wings of Freedom") {
     keywordAbility(KeywordAbility.Ward(WardCost.Mana("{1}")))
 
     triggeredAbility {
-        trigger = Triggers.attacks()
-        val sourceToughness = DynamicAmount.EntityProperty(
-            EntityReference.Source,
-            EntityNumericProperty.Toughness,
-        )
+        trigger = Triggers.self.attacks()
+        val sourceToughness = DynamicAmounts.sourceToughness()
         effect = Patterns.Group.modifyStatsForAll(
             power = sourceToughness,
             toughness = sourceToughness,

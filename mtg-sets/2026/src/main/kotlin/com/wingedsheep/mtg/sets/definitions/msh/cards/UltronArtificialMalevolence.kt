@@ -10,10 +10,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Ultron, Artificial Malevolence — Marvel Super Heroes #252
@@ -28,7 +26,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *   [Zone.BATTLEFIELD] filtered to `Artifact.youControl().nontoken()` — with
  *   [TriggerBinding.OTHER] for "another", so Ultron entering doesn't trigger itself. It fires
  *   once per qualifying artifact, including artifact creatures.
- * - "You may pay {2}. If you do, ..." is [MayPayManaEffect], which lowers to a
+ * - "You may pay {2}. If you do, ..." is [Effects.MayPay], which lowers to a
  *   `Gate.MayPay`: the controller is offered the payment at resolution and the rest of the
  *   ability only happens if they pay.
  * - The copy is [Effects.CreateTokenCopyOfTarget] over [EffectTarget.TriggeringEntity] — the
@@ -54,23 +52,17 @@ val UltronArtificialMalevolence = card("Ultron, Artificial Malevolence") {
         "Robot Villain creature in addition to its other types."
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Artifact.youControl().nontoken(),
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.OTHER
-        )
-        effect = MayPayManaEffect(
+        trigger = Triggers.another(GameObjectFilter.Artifact.youControl().nontoken()).enters()
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{2}"),
-            effect = ConditionalEffect(
+            then = Effects.If(
                 condition = Conditions.EntityMatches(
                     EffectTarget.TriggeringEntity,
                     GameObjectFilter.Noncreature
                 ),
                 // Noncreature artifact — the token becomes a 2/2 Robot Villain creature
                 // in addition to its other types.
-                effect = Effects.CreateTokenCopyOfTarget(
+                then = Effects.CreateTokenCopyOfTarget(
                     target = EffectTarget.TriggeringEntity,
                     overridePower = 2,
                     overrideToughness = 2,
@@ -78,7 +70,7 @@ val UltronArtificialMalevolence = card("Ultron, Artificial Malevolence") {
                     addCardTypes = setOf("CREATURE")
                 ),
                 // Already a creature — a plain copy.
-                elseEffect = Effects.CreateTokenCopyOfTarget(
+                otherwise = Effects.CreateTokenCopyOfTarget(
                     target = EffectTarget.TriggeringEntity
                 )
             )

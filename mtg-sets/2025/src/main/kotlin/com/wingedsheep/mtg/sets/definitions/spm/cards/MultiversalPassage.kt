@@ -4,10 +4,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.OnEnterRunEffect
+import com.wingedsheep.sdk.scripting.OnEnterRun
 import com.wingedsheep.sdk.scripting.effects.OptionType
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
-import com.wingedsheep.sdk.scripting.effects.PayLifeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -18,9 +16,9 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * it enters tapped.
  * This land is the chosen type.
  *
- * The whole "as this land enters" clause is one [OnEnterRunEffect] — the generic "as ~ enters,
+ * The whole "as this land enters" clause is one [OnEnterRun] — the generic "as ~ enters,
  * run [effect]" self-replacement — wrapping a three-step composite of existing atoms. Both ETB
- * clauses must live in the *same* replacement: `PlayLandHandler` runs the first `OnEnterRunEffect`
+ * clauses must live in the *same* replacement: `PlayLandHandler` runs the first `OnEnterRun`
  * inline and returns, so a separate `EntersTapped(payLifeCost = 2)` replacement would never be
  * consulted. Folding them keeps the printed order (choose type, then pay-or-tap).
  *
@@ -31,7 +29,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *     chosen type.") and gains its intrinsic mana ability (e.g. Island → "{T}: Add {U}"). This is
  *     the self / at-entry / permanent counterpart of Dream Thrush's targeted, end-of-turn
  *     `ChooseOption(BASIC_LAND_TYPE)` → `SetLandType`.
- *  3. [OptionalCostEffect] gating [PayLifeEffect]`(2)` — "you may pay 2 life" — with an empty
+ *  3. [Effects.MayPay] gating [PayLifeEffect]`(2)` — "you may pay 2 life" — with an empty
  *     `ifPaid` (paying is its own reward; the land stays untapped) and `ifNotPaid` =
  *     `Effects.Tap(EffectTarget.Self)`, the same "if you don't, this land enters tapped" rider the
  *     SOI shadow-land cycle (Game Trail, Port Town, …) uses for its decline branch.
@@ -43,25 +41,22 @@ val MultiversalPassage = card("Multiversal Passage") {
         "This land is the chosen type."
 
     replacementEffect(
-        OnEnterRunEffect(
-            Effects.Composite(
+        OnEnterRun(
+            Effects.Pipeline {
                 // Choose a basic land type; this land becomes it permanently.
-                Effects.ChooseOption(
-                    optionType = OptionType.BASIC_LAND_TYPE,
-                    storeAs = "chosenLandType",
-                ),
-                Effects.SetLandType(
+                val chosenLandType = chooseOption(OptionType.BASIC_LAND_TYPE)
+                run(Effects.SetLandType(
                     target = EffectTarget.Self,
                     duration = Duration.Permanent,
-                    fromChosenValueKey = "chosenLandType",
-                ),
+                    fromChosen = chosenLandType,
+                ))
                 // Then you may pay 2 life. If you don't, it enters tapped.
-                OptionalCostEffect(
-                    cost = PayLifeEffect(2),
-                    ifPaid = Effects.Composite(),
-                    ifNotPaid = Effects.Tap(EffectTarget.Self),
-                ),
-            )
+                run(Effects.MayPay(
+                    cost = Effects.PayLife(2),
+                    then = Effects.Nothing,
+                    otherwise = Effects.Tap(EffectTarget.Self),
+                ))
+            }
         )
     )
 

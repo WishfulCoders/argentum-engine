@@ -35,7 +35,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Advocate of the Beast:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "END"
@@ -43,11 +43,11 @@
                 "binding": "ANY",
                 "effect": {
                     "type": "AddCounters",
-                    "counterType": "+1/+1",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
                     "count": 1,
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target Beast creature you control"
+                        "name": "t0"
                     }
                 },
                 "targetRequirement": {
@@ -55,7 +55,7 @@
                     "filter": {
                         "baseFilter": "creature Beast ctrl:you"
                     },
-                    "id": "target Beast creature you control"
+                    "id": "t0"
                 },
                 "descriptionOverride": "At the beginning of your end step, put a +1/+1 counter on target Beast creature you control."
             }
@@ -81,7 +81,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Barrage of Expendables:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -108,12 +108,15 @@
                         "amount": 1
                     },
                     "target": {
-                        "type": "ContextTarget",
-                        "index": 0
+                        "type": "BoundVariable",
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
-                    "AnyTarget"
+                    {
+                        "type": "AnyTarget",
+                        "id": "t0"
+                    }
                 ],
                 "descriptionOverride": "{R}, Sacrifice a creature: This enchantment deals 1 damage to any target."
             }
@@ -178,7 +181,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Blightcaster:1",
                 "trigger": {
                     "type": "SpellCastEvent",
                     "spellFilter": {
@@ -203,7 +206,7 @@
                         },
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target"
+                            "name": "t0"
                         }
                     },
                     "descriptionOverride": "Whenever you cast an enchantment spell, you may have target creature get -2/-2 until end of turn."
@@ -213,7 +216,7 @@
                     "filter": {
                         "baseFilter": "creature"
                     },
-                    "id": "target"
+                    "id": "t0"
                 },
                 "descriptionOverride": "Whenever you cast an enchantment spell, you may have target creature get -2/-2 until end of turn."
             }
@@ -244,7 +247,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Blood Bairn:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -370,13 +373,13 @@
             },
             "target": {
                 "type": "BoundVariable",
-                "name": "target player"
+                "name": "t0"
             }
         },
         "targetRequirements": [
             {
                 "type": "TargetPlayer",
-                "id": "target player"
+                "id": "t0"
             }
         ]
     },
@@ -407,7 +410,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Charging Griffin:1",
                 "trigger": "AttackEvent",
                 "effect": {
                     "type": "ModifyStats",
@@ -498,7 +501,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Elvish Mystic:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -529,7 +532,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Encroaching Wastes:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddColorlessMana",
@@ -542,7 +545,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Encroaching Wastes:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -561,7 +564,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     },
                     "destination": "Graveyard",
                     "byDestruction": true
@@ -580,7 +583,7 @@
                                 ]
                             }
                         },
-                        "id": "target"
+                        "id": "t0"
                     }
                 ]
             }
@@ -709,7 +712,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Gnawing Zombie:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -740,7 +743,7 @@
                             },
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "player"
+                                "name": "t0"
                             }
                         },
                         {
@@ -755,7 +758,7 @@
                 "targetRequirements": [
                     {
                         "type": "TargetPlayer",
-                        "id": "player"
+                        "id": "t0"
                     }
                 ]
             }
@@ -871,7 +874,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     },
                     "destination": "Graveyard",
                     "byDestruction": true
@@ -892,7 +895,7 @@
                 "filter": {
                     "baseFilter": "creature"
                 },
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -922,7 +925,7 @@
             {
                 "type": "GrantActivatedAbility",
                 "ability": {
-                    "id": "ability_1",
+                    "id": "Manaweft Sliver:1",
                     "cost": "CostTap",
                     "effect": "AddManaOfChoice",
                     "timing": "ManaAbility",
@@ -996,7 +999,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Messenger Drake:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield",
@@ -1040,7 +1043,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Mindsparker:1",
                 "trigger": {
                     "type": "SpellCastEvent",
                     "spellFilter": {
@@ -1124,7 +1127,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Oath of the Ancient Wood:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "enchantment ctrl:you",
@@ -1136,11 +1139,11 @@
                     "gate": "Gate.MayDecide",
                     "then": {
                         "type": "AddCounters",
-                        "counterType": "+1/+1",
+                        "counterType": "PLUS_ONE_PLUS_ONE",
                         "count": 1,
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target"
+                            "name": "t0"
                         }
                     },
                     "descriptionOverride": "Whenever this enchantment or another enchantment you control enters, you may put a +1/+1 counter on target creature."
@@ -1150,7 +1153,7 @@
                     "filter": {
                         "baseFilter": "creature"
                     },
-                    "id": "target"
+                    "id": "t0"
                 },
                 "descriptionOverride": "Whenever this enchantment or another enchantment you control enters, you may put a +1/+1 counter on target creature."
             }
@@ -1210,7 +1213,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Primeval Bounty:1",
                 "trigger": {
                     "type": "SpellCastEvent",
                     "spellFilter": {
@@ -1234,7 +1237,7 @@
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Primeval Bounty:2",
                 "trigger": {
                     "type": "SpellCastEvent",
                     "spellFilter": {
@@ -1246,11 +1249,11 @@
                 "binding": "ANY",
                 "effect": {
                     "type": "AddCounters",
-                    "counterType": "+1/+1",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
                     "count": 3,
                     "target": {
                         "type": "BoundVariable",
-                        "name": "creature"
+                        "name": "t0"
                     }
                 },
                 "targetRequirement": {
@@ -1258,11 +1261,11 @@
                     "filter": {
                         "baseFilter": "creature ctrl:you"
                     },
-                    "id": "creature"
+                    "id": "t0"
                 }
             },
             {
-                "id": "ability_3",
+                "id": "Primeval Bounty:3",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "land ctrl:you",
@@ -1334,11 +1337,11 @@
                         "player": "Each",
                         "filter": "creature"
                     },
-                    "storeAs": "creatureCardsInAllGraveyards"
+                    "storeAs": "gathered0"
                 },
                 {
                     "type": "MoveCollection",
-                    "from": "creatureCardsInAllGraveyards",
+                    "from": "gathered0",
                     "destination": {
                         "type": "ToZone",
                         "zone": "Battlefield"
@@ -1466,7 +1469,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Soulmender:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "GainLife",
@@ -1502,7 +1505,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Sporemound:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "land ctrl:you",
@@ -1581,7 +1584,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Stonehorn Chanter:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -1718,7 +1721,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Vampire Warlord:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -1756,7 +1759,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Vial of Poison:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -1775,7 +1778,7 @@
                     "keyword": "DEATHTOUCH",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -1784,7 +1787,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target"
+                        "id": "t0"
                     }
                 ],
                 "descriptionOverride": "{1}, Sacrifice this artifact: Target creature gains deathtouch until end of turn."
@@ -1888,7 +1891,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Xathrid Necromancer:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "creature Human ctrl:you",
@@ -1937,7 +1940,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Young Pyromancer:1",
                 "trigger": {
                     "type": "SpellCastEvent",
                     "spellFilter": {
@@ -1994,7 +1997,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Zephyr Charge:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -2007,7 +2010,7 @@
                     "keyword": "FLYING",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -2016,7 +2019,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target"
+                        "id": "t0"
                     }
                 ]
             }

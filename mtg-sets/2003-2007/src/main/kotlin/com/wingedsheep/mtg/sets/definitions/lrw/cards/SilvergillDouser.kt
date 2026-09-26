@@ -2,13 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.unaryMinus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Silvergill Douser
@@ -32,16 +33,13 @@ val SilvergillDouser = card("Silvergill Douser") {
 
     activatedAbility {
         cost = Costs.Tap
-        val creature = target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(
-            power = DynamicAmount.Multiply(
-                DynamicAmount.AggregateBattlefield(
-                    Player.You,
-                    GameObjectFilter.Permanent.withAnySubtype(Subtype.MERFOLK.value, Subtype.FAERIE.value)
-                ),
-                -1
-            ),
-            toughness = DynamicAmount.Fixed(0),
+            power = -DynamicAmounts.battlefield(
+                Player.You,
+                GameObjectFilter.Permanent.withAnySubtype(Subtype.MERFOLK.value, Subtype.FAERIE.value)
+            ).count(),
+            toughness = DynamicAmounts.fixed(0),
             target = creature
         )
         description = "Target creature gets -X/-0 until end of turn, where X is the number of Merfolk and/or Faeries you control."

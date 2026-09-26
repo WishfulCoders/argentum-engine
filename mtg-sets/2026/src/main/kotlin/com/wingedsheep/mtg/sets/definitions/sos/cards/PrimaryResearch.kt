@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Primary Research
@@ -34,21 +34,18 @@ val PrimaryResearch = card("Primary Research") {
         "At the beginning of your end step, if a card left your graveyard this turn, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val card = target(
-            "card",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.NonlandPermanent.ownedByYou().manaValueAtMost(3),
-                    zone = Zone.GRAVEYARD,
-                ),
+            TargetFilter(
+                GameObjectFilter.NonlandPermanent.ownedByYou().manaValueAtMost(3),
+                zone = Zone.GRAVEYARD,
             ),
         )
         effect = Effects.PutOntoBattlefield(card)
     }
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.CardsLeftGraveyardThisTurn(1)
         effect = Effects.DrawCards(1)
     }

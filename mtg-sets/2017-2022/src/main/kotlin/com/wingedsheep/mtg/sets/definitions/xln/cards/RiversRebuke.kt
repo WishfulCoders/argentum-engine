@@ -27,7 +27,7 @@ val RiversRebuke = card("River's Rebuke") {
     oracleText = "Return all nonland permanents target player controls to their owner's hand."
 
     spell {
-        target("target player", Targets.Player)
+        target(Targets.Player)
         effect = Patterns.Group.returnAllToHand(
             GroupFilter(GameObjectFilter.NonlandPermanent.targetPlayerControls())
         )

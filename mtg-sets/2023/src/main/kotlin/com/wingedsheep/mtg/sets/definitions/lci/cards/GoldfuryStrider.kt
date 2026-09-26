@@ -3,12 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.lci.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Goldfury Strider
@@ -35,12 +34,12 @@ val GoldfuryStrider = card("Goldfury Strider") {
     keywords(Keyword.TRAMPLE)
 
     activatedAbility {
+        val creature = target(TargetFilter.Creature)
         cost = Costs.TapPermanents(
             count = 2,
             filter = GameObjectFilter.Artifact or GameObjectFilter.Creature,
         )
-        target = Targets.Creature
-        effect = Effects.ModifyStats(2, 0, EffectTarget.ContextTarget(0))
+        effect = Effects.ModifyStats(2, 0, creature)
         timing = TimingRule.SorcerySpeed
     }
 

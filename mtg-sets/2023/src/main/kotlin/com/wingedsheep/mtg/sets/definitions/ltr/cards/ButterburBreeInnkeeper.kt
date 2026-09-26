@@ -9,6 +9,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.Exists
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Butterbur, Bree Innkeeper
@@ -26,7 +27,7 @@ val ButterburBreeInnkeeper = card("Butterbur, Bree Innkeeper") {
     oracleText = "At the beginning of your end step, if you don't control a Food, create a Food token. (It's an artifact with \"{2}, {T}, Sacrifice this token: You gain 3 life.\")"
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.Not(
             Exists(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Any.withSubtype("Food"))
         )

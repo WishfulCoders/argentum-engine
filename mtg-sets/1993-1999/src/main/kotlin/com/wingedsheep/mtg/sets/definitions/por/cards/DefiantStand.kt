@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.conditions.YouWereAttackedThisStep
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -28,11 +27,8 @@ val DefiantStand = card("Defiant Stand") {
     spell {
         castOnlyDuring(Step.DECLARE_ATTACKERS)
         castOnlyIf(YouWereAttackedThisStep)
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 3, t),
-            Effects.Untap(t)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(1, 3, t) then Effects.Untap(t)
     }
     metadata {
         rarity = Rarity.UNCOMMON

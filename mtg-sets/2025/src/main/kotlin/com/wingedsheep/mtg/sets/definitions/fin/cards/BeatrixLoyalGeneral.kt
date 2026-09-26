@@ -3,15 +3,14 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Beatrix, Loyal General
@@ -24,9 +23,9 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Implementation notes — this is pure composition over existing primitives, no new engine type:
  *
- *  - **Trigger** — [Triggers.BeginCombat] is "at the beginning of combat on your turn"
+ *  - **Trigger** — `Triggers.you.beginningOf(Step.BEGIN_COMBAT)` is "at the beginning of combat on your turn"
  *    (`StepEvent(BEGIN_COMBAT, Player.You)`).
- *  - **"you may"** — a [MayEffect] wrapper: one yes/no decided up front (before targeting); "no"
+ *  - **"you may"** — a [Effects.May] wrapper: one yes/no decided up front (before targeting); "no"
  *    skips the whole effect. Beatrix always controls at least herself, so a legal target always
  *    exists and the may-question is always asked.
  *  - **Target** — only the creature is a *target* (the oracle says "target creature you control");
@@ -35,7 +34,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *    target means an illegal target by resolution fizzles the ability (CR 608.2c).
  *  - **Any number** — a resolution-time `chooseAnyNumber` (0..all) over the Equipment you control,
  *    then [ForEachInCollectionEffect] runs [Effects.AttachTargetEquipmentToCreature] once per
- *    chosen Equipment — `EffectTarget.Self` binds to each iterated Equipment, `ContextTarget(0)`
+ *    chosen Equipment — `EffectTarget.IterationEntity` binds to each iterated Equipment, `ContextTarget(0)`
  *    to the target creature. The attach executor detaches each Equipment from its current host
  *    first, so re-attaching an already-equipped Equipment is correct.
  *
@@ -59,10 +58,10 @@ val BeatrixLoyalGeneral = card("Beatrix, Loyal General") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        val creature = target("target creature you control", Targets.CreatureYouControl)
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        val creature = target(TargetFilter.CreatureYouControl)
         // "you may …" — a single yes/no decided before targeting; declining skips the whole effect.
-        effect = MayEffect(
+        effect = Effects.May(
             Effects.Pipeline {
                 // Look at the Equipment you control; choose any number of them.
                 val equipment = gather(
@@ -76,10 +75,10 @@ val BeatrixLoyalGeneral = card("Beatrix, Loyal General") {
                 )
                 // Attach each chosen Equipment to the target creature.
                 run(
-                    ForEachInCollectionEffect(
-                        collection = chosen.key,
-                        effect = Effects.AttachTargetEquipmentToCreature(
-                            equipmentTarget = EffectTarget.Self,
+                    Effects.ForEachInCollection(
+                        chosen,
+                        Effects.AttachTargetEquipmentToCreature(
+                            equipmentTarget = EffectTarget.IterationEntity,
                             creatureTarget = creature
                         )
                     )

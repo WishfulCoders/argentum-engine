@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
 
 /**
  * Spectral Interference — Aetherdrift #63
@@ -26,9 +25,7 @@ val SpectralInterference = card("Spectral Interference") {
     oracleText = "Counter target artifact or creature spell unless its controller pays {4}."
 
     spell {
-        target = TargetSpell(
-            filter = TargetFilter(GameObjectFilter.CreatureOrArtifact, zone = Zone.STACK)
-        )
+        val spell = target(TargetFilter(GameObjectFilter.CreatureOrArtifact, zone = Zone.STACK))
         effect = Effects.CounterUnlessPays("{4}")
     }
 

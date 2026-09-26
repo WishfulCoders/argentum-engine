@@ -10,10 +10,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -32,12 +30,12 @@ val StoneSeederHierophant = card("Stone-Seeder Hierophant") {
     power = 1
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(filter = GameObjectFilter.Land.youControl(), binding = TriggerBinding.ANY)
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.Untap(EffectTarget.Self)
     }
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", TargetPermanent(filter = TargetFilter.Land))
+        val t = target(TargetFilter.Land)
         effect = Effects.Untap(t)
     }
     metadata {

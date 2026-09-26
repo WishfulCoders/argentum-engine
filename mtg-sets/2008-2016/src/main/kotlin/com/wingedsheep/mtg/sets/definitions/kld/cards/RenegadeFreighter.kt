@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Crew 2 (Tap any number of creatures you control with total power 2 or more: This Vehicle becomes
  * an artifact creature until end of turn.)
  *
- * "This Vehicle" is just the source, so the attack trigger is the SELF-bound [Triggers.Attacks]
+ * "This Vehicle" is just the source, so the attack trigger is the SELF-bound `Triggers.self.attacks()`
  * and both halves of its effect point at [EffectTarget.Self]. Crew is the engine's own
  * [KeywordAbility.crew] activated ability; the printed 4 / 3 only matters once it is crewed.
  */
@@ -30,11 +30,9 @@ val RenegadeFreighter = card("Renegade Freighter") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 1, EffectTarget.Self),
+        trigger = Triggers.self.attacks()
+        effect = Effects.ModifyStats(1, 1, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
-        )
         description = "It gets +1/+1 and gains trample until end of turn."
     }
 

@@ -31,10 +31,7 @@ val SulfurVent = card("Sulfur Vent") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.SacrificeSelf)
-        effect = Effects.Composite(
-            Effects.AddMana(Color.BLUE),
-            Effects.AddMana(Color.RED),
-        )
+        effect = Effects.AddMana(Color.BLUE) then Effects.AddMana(Color.RED)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

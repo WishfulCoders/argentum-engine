@@ -4,12 +4,11 @@
 
 package com.wingedsheep.mtg.sets.definitions.m21.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -24,15 +23,10 @@ val PrimalMight = card("Primal Might") {
     typeLine = "Sorcery"
     oracleText = "Target creature you control gets +X/+X until end of turn. Then it fights up to one target creature you don't control. (Each deals damage equal to its power to the other.)"
     spell {
-        val t1 = target("target creature you control", TargetCreature(filter = TargetFilter.Creature.youControl()))
-        val t2 = target(
-            "up to one target creature you don't control",
-            TargetCreature(filter = TargetFilter.CreatureOpponentControls, optional = true),
-        )
-        effect = Effects.Composite(
-            Effects.ModifyStats(DynamicAmount.XValue, DynamicAmount.XValue, t1),
+        val t1 = target(TargetFilter.Creature.youControl())
+        val t2 = target(TargetFilter.CreatureOpponentControls, optional = true)
+        effect = Effects.ModifyStats(DynamicAmounts.xValue(), DynamicAmounts.xValue(), t1) then
             Effects.Fight(t1, t2)
-        )
     }
     metadata {
         rarity = Rarity.RARE

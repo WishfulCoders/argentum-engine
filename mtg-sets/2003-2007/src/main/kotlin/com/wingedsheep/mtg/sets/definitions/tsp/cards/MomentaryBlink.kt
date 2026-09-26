@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.tsp.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Momentary Blink
@@ -23,8 +23,8 @@ val MomentaryBlink = card("Momentary Blink") {
             "Flashback {3}{U} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
 
     spell {
-        val creature = target("target creature you control", Targets.CreatureYouControl)
-        effect = Effects.Exile(creature).then(Effects.Move(creature, Zone.BATTLEFIELD))
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.Exile(creature) then Effects.Move(creature, Zone.BATTLEFIELD)
     }
 
     keywordAbility(KeywordAbility.flashback("{3}{U}"))

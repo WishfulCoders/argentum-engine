@@ -1,21 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Coordinated Clobbering
@@ -28,7 +20,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * At resolution we gather the chosen targets into two collections by controller. This avoids
  * relying on a positional target index when the one-or-two-creature group is flattened into the
  * cast action. We then tap the clobberers and have each deal damage equal to its own power — read
- * per-iteration via [EntityReference.IterationEntity] — to the opponent's creature.
+ * per-iteration via [EffectTarget.IterationEntity] — to the opponent's creature.
  */
 val CoordinatedClobbering = card("Coordinated Clobbering") {
     manaCost = "{G}"
@@ -40,50 +32,29 @@ val CoordinatedClobbering = card("Coordinated Clobbering") {
     spell {
         // Keep the fixed-count victim first so the flattened target list remains unambiguous when
         // the controller chooses only one creature from the following one-or-two target group.
-        target("creature an opponent controls", Targets.CreatureOpponentControls)
-        target(
-            "untapped creatures you control",
-            TargetCreature(
-                count = 2,
-                minCount = 1,
-                filter = TargetFilter(GameObjectFilter.Creature.untapped().youControl()),
-            ),
-        )
+        target(TargetFilter.CreatureOpponentControls)
+        targets(TargetFilter(GameObjectFilter.Creature.untapped().youControl()), count = 2, minCount = 1)
 
-        effect = Effects.Composite(
+        effect = Effects.Pipeline {
             // Gather every chosen target, then separate the clobberers from the victim.
-            GatherCardsEffect(
-                source = CardSource.ChosenTargets,
-                storeAs = "allTargets",
-            ),
-            FilterCollectionEffect(
-                from = "allTargets",
-                filter = CollectionFilter.MatchesFilter(GameObjectFilter.Creature.youControl()),
-                storeMatching = "clobberers",
-            ),
-            FilterCollectionEffect(
-                from = "allTargets",
-                filter = CollectionFilter.MatchesFilter(GameObjectFilter.Creature.opponentControls()),
-                storeMatching = "victim",
-            ),
+            val allTargets = gather(CardSource.ChosenTargets)
+            val clobberers = filter(allTargets, GameObjectFilter.Creature.youControl())
+            val victim = filter(allTargets, GameObjectFilter.Creature.opponentControls())
             // Tap all chosen creatures first ("Tap one or two target untapped creatures you control").
-            ForEachInCollectionEffect(
-                collection = "clobberers",
-                effect = Effects.Tap(EffectTarget.Self),
-            ),
+            run(Effects.ForEachInCollection(
+                collection = clobberers,
+                effect = Effects.Tap(EffectTarget.IterationEntity),
+            ))
             // Then each deals damage equal to its power to the opponent's creature.
-            ForEachInCollectionEffect(
-                collection = "clobberers",
+            run(Effects.ForEachInCollection(
+                collection = clobberers,
                 effect = Effects.DealDamage(
-                    amount = DynamicAmount.EntityProperty(
-                        EntityReference.IterationEntity,
-                        EntityNumericProperty.Power,
-                    ),
-                    target = EffectTarget.PipelineTarget("victim"),
-                    damageSource = EffectTarget.Self,
+                    amount = DynamicAmounts.powerOf(EffectTarget.IterationEntity),
+                    target = victim.asTarget,
+                    damageSource = EffectTarget.IterationEntity,
                 ),
-            ),
-        )
+            ))
+        }
     }
 
     metadata {

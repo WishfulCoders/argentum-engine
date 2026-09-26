@@ -14,7 +14,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 
 /**
  * Tests for Akroma's Blessing — the group-protection path of the
- * `ChooseColorThen(ForEachInGroup(GrantProtectionFromChosenColor(Self)))`
+ * `ChooseColorThen(ForEachInGroup(GrantProtectionFromChosenColor(IterationEntity)))`
  * composition that replaced the old `ChooseColorAndGrantProtectionToGroupEffect`
  * monolith.
  *

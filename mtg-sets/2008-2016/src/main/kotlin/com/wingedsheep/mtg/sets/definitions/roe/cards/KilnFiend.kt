@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Kiln Fiend
@@ -23,7 +24,7 @@ val KilnFiend = card("Kiln Fiend") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.YouCastInstantOrSorcery
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
         effect = Effects.ModifyStats(3, 0, EffectTarget.Self)
         description = "Whenever you cast an instant or sorcery spell, this creature gets +3/+0 until end of turn."
     }

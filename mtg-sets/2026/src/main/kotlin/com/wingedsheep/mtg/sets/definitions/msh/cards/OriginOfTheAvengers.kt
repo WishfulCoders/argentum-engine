@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -22,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * III — Put a +1/+1 counter on each creature you control.
  *
  * Modeling notes:
- *  - Chapter II is the Courier of Comestibles / Kellan, the Kid shape: [IfYouDoEffect] gating on
+ *  - Chapter II is the Courier of Comestibles / Kellan, the Kid shape: [Effects.IfYouDo] gating on
  *    whether the action actually moved a card, with an empty `ifYouDo` and the draw as
  *    `ifYouDont`. `Patterns.Hand.putFromHand` is a Gather → Select(`ChooseUpTo` 1) → Move
  *    pipeline, so the "you may" lives in the selection (declining, or having no legal card,
@@ -30,7 +28,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *    destination growth. That makes "If you don't" fire for a decline *and* for an empty hand —
  *    exactly the card's wording, which keys off the put, not off a yes/no answer.
  *  - Chapter III's "each creature you control" is [Effects.ForEachInGroup] over a
- *    [GroupFilter], counters applied to `EffectTarget.Self` per iterated creature
+ *    [GroupFilter], counters applied to `EffectTarget.IterationEntity` per iterated creature
  *    (Cathars' Crusade's shape) — not a target.
  */
 val OriginOfTheAvengers = card("Origin of the Avengers") {
@@ -48,21 +46,21 @@ val OriginOfTheAvengers = card("Origin of the Avengers") {
     }
 
     sagaChapter(2) {
-        effect = IfYouDoEffect(
+        effect = Effects.IfYouDo(
             action = Patterns.Hand.putFromHand(
                 filter = GameObjectFilter.Creature.withSubtype(Subtype.HERO).manaValueAtMost(3),
                 count = 1,
                 prompt = "You may put a Hero creature card with mana value 3 or less onto the battlefield",
             ),
-            ifYouDo = Effects.Composite(),
-            ifYouDont = Effects.DrawCards(1),
+            then = Effects.Nothing,
+            otherwise = Effects.DrawCards(1),
         )
     }
 
     sagaChapter(3) {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            AddCountersEffect(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity),
         )
     }
 

@@ -13,15 +13,9 @@ import com.wingedsheep.sdk.scripting.GrantMayCastFromLinkedExile
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.FaceDownMode
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Jacob Hauken, Inspector // Hauken's Insight — Innistrad: Crimson Vow #65
@@ -74,30 +68,22 @@ private val JacobHaukenInspectorFront = card("Jacob Hauken, Inspector") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.Composite(
-            Effects.DrawCards(1),
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.HAND, Player.You),
-                storeAs = "haukenHand",
-            ),
-            SelectFromCollectionEffect(
-                from = "haukenHand",
-                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                storeSelected = "haukenExiled",
-                prompt = "Choose a card to exile face down",
-            ),
-            MoveCollectionEffect(
-                from = "haukenExiled",
-                destination = CardDestination.ToZone(Zone.EXILE),
+        effect = Effects.Pipeline {
+            run(Effects.DrawCards(1))
+            val haukenHand = gather(CardSource.FromZone(Zone.HAND, Player.You))
+            val haukenExiled = chooseExactly(1, from = haukenHand, prompt = "Choose a card to exile face down")
+            move(
+                haukenExiled,
+                CardDestination.ToZone(Zone.EXILE),
                 faceDown = FaceDownMode.HIDDEN,
                 linkToSource = true,
-                lookableInExile = true,
-            ),
-            MayPayManaEffect(
+                lookableInExile = true
+            )
+            run(Effects.MayPay(
                 cost = ManaCost.parse("{4}{U}{U}"),
-                effect = TransformEffect(EffectTarget.Self),
-            ),
-        )
+                then = Effects.Transform(EffectTarget.Self),
+            ))
+        }
         description = "{T}: Draw a card, then exile a card from your hand face down. You may look " +
             "at that card for as long as it remains exiled. You may pay {4}{U}{U}. If you do, " +
             "transform Jacob Hauken."
@@ -122,20 +108,17 @@ private val HaukensInsight = card("Hauken's Insight") {
         "exiled with this permanent without paying its mana cost."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1)),
-                storeAs = "haukensInsightExiled",
-            ),
-            MoveCollectionEffect(
-                from = "haukensInsightExiled",
-                destination = CardDestination.ToZone(Zone.EXILE),
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.Pipeline {
+            val haukensInsightExiled = gather(CardSource.TopOfLibrary(1))
+            move(
+                haukensInsightExiled,
+                CardDestination.ToZone(Zone.EXILE),
                 faceDown = FaceDownMode.HIDDEN,
                 linkToSource = true,
-                lookableInExile = true,
-            ),
-        )
+                lookableInExile = true
+            )
+        }
         description = "At the beginning of your upkeep, exile the top card of your library face " +
             "down. You may look at that card for as long as it remains exiled."
     }

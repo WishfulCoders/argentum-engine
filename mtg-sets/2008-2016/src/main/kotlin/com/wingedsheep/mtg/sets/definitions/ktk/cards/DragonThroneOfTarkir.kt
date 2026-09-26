@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.GrantActivatedAbility
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.DynamicAmounts
@@ -45,20 +43,16 @@ val DragonThroneOfTarkir = card("Dragon Throne of Tarkir") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap),
-                effect = Effects.Composite(
-                    listOf(
-                        Effects.ForEachInGroup(
-                            GroupFilter.OtherCreaturesYouControl,
-                            GrantKeywordEffect(Keyword.TRAMPLE, EffectTarget.Self)
-                        ),
-                        Effects.ForEachInGroup(
-                            GroupFilter.OtherCreaturesYouControl,
-                            ModifyStatsEffect(DynamicAmounts.sourcePower(), DynamicAmounts.sourcePower(), EffectTarget.Self)
-                        )
-                    )
-                ),
+                effect = Effects.ForEachInGroup(
+                    GroupFilter.OtherCreaturesYouControl,
+                    Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.IterationEntity)
+                ) then
+                    Effects.ForEachInGroup(
+                        GroupFilter.OtherCreaturesYouControl,
+                        Effects.ModifyStats(DynamicAmounts.sourcePower(), DynamicAmounts.sourcePower(), EffectTarget.IterationEntity)
+                    ),
                 descriptionOverride = "{2}, {T}: Other creatures you control gain trample and get +X/+X until end of turn, where X is this creature's power."
             )
         )

@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
 
 /**
@@ -51,22 +50,21 @@ val MosswoodDreadknight = card("Mosswood Dreadknight") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        effect = Effects.Composite(listOf(
-            GatherCardsEffect(
-                source = CardSource.FromZone(
+        trigger = Triggers.self.dies()
+        effect = Effects.Pipeline {
+            val dreadknight = gather(
+                CardSource.FromZone(
                     zone = Zone.GRAVEYARD,
                     player = Player.You,
                     filter = GameObjectFilter.Any.sourceItself()
-                ),
-                storeAs = "dreadknight"
-            ),
-            Effects.GrantMayPlayFromExile(
-                from = "dreadknight",
+                )
+            )
+            run(Effects.GrantMayPlayFromExile(
+                from = dreadknight,
                 expiry = MayPlayExpiry.UntilEndOfNextTurn,
                 castFaceIndex = 0
-            )
-        ))
+            ))
+        }
     }
 
     adventure("Dread Whispers") {
@@ -75,10 +73,7 @@ val MosswoodDreadknight = card("Mosswood Dreadknight") {
         oracleText = "You draw a card and you lose 1 life. " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            effect = Effects.Composite(listOf(
-                Effects.DrawCards(1),
-                Effects.LoseLife(1, EffectTarget.Controller)
-            ))
+            effect = Effects.DrawCards(1) then Effects.LoseLife(1, EffectTarget.Controller)
         }
     }
 

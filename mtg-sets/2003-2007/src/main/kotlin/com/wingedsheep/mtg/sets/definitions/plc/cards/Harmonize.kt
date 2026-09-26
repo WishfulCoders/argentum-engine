@@ -4,9 +4,9 @@
 
 package com.wingedsheep.mtg.sets.definitions.plc.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -21,7 +21,7 @@ val Harmonize = card("Harmonize") {
     typeLine = "Sorcery"
     oracleText = "Draw three cards."
     spell {
-        effect = DrawCardsEffect(3)
+        effect = Effects.DrawCards(3)
     }
     metadata {
         rarity = Rarity.UNCOMMON

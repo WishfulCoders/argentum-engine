@@ -4,11 +4,7 @@ import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -27,18 +23,14 @@ val UrzasRuinousBlast = card("Urza's Ruinous Blast") {
     spell {
         castOnlyIf(Conditions.ControlLegendaryCreatureOrPlaneswalker)
 
-        effect = Effects.Composite(listOf(
-            GatherCardsEffect(
-                source = CardSource.BattlefieldMatching(
+        effect = Effects.Pipeline {
+            val exileAllGathered = gather(
+                CardSource.BattlefieldMatching(
                     filter = GameObjectFilter.NonlandPermanent.nonlegendary()
-                ),
-                storeAs = "exileAll_gathered"
-            ),
-            MoveCollectionEffect(
-                from = "exileAll_gathered",
-                destination = CardDestination.ToZone(Zone.EXILE)
+                )
             )
-        ))
+            exile(exileAllGathered)
+        }
     }
 
     metadata {

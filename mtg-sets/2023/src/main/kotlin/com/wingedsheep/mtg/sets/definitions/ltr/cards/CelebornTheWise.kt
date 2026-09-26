@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -8,8 +9,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Celeborn the Wise
@@ -30,15 +29,15 @@ val CelebornTheWise = card("Celeborn the Wise") {
         "Whenever you scry, Celeborn gets +1/+1 until end of turn for each card looked at while scrying this way."
 
     triggeredAbility {
-        trigger = Triggers.YouAttackWithFilter(GameObjectFilter.Creature.withSubtype(Subtype.ELF))
+        trigger = Triggers.you.attacks(GameObjectFilter.Creature.withSubtype(Subtype.ELF))
         effect = Patterns.Library.scry(1)
     }
 
     triggeredAbility {
-        trigger = Triggers.WheneverYouScry
+        trigger = Triggers.you.scries()
         effect = Effects.ModifyStats(
-            power = DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_SCRY_COUNT),
-            toughness = DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_SCRY_COUNT),
+            power = DynamicAmounts.triggerScryCount(),
+            toughness = DynamicAmounts.triggerScryCount(),
             target = EffectTarget.Self
         )
     }

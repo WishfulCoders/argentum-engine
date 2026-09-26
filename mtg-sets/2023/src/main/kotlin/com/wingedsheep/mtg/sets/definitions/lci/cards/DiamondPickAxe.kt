@@ -22,7 +22,7 @@ import com.wingedsheep.sdk.scripting.TriggeredAbility
  *   wired via [keywords(Keyword.INDESTRUCTIBLE)].
  * - The +1/+1 pump is a [ModifyStats] static ability scoped to [Filters.EquippedCreature].
  * - The attack-triggered Treasure creation is granted to the equipped creature via
- *   [GrantTriggeredAbility] with [Triggers.attacks()] (SELF binding) so the ability lives on the
+ *   [GrantTriggeredAbility] with `Triggers.self.attacks()` (SELF binding) so the ability lives on the
  *   creature and fires when that creature attacks — matching the oracle "Whenever this creature
  *   attacks, create a Treasure token."
  */
@@ -46,8 +46,7 @@ val DiamondPickAxe = card("Diamond Pick-Axe") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.attacks().event,
-                binding = Triggers.attacks().binding,
+                trigger = Triggers.self.attacks(),
                 effect = Effects.CreateTreasure()
             ),
             filter = Filters.EquippedCreature

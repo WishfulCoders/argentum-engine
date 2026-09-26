@@ -26,7 +26,7 @@ val HystericalBlindness = card("Hysterical Blindness") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.opponentControls()),
-            Effects.ModifyStats(-4, 0, EffectTarget.Self)
+            Effects.ModifyStats(-4, 0, EffectTarget.IterationEntity)
         )
     }
     metadata {

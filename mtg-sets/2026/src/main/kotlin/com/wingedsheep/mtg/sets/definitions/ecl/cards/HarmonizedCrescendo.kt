@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.withSubtypeFromVariable
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ChooseOptionEffect
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.effects.OptionType
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -29,18 +28,15 @@ val HarmonizedCrescendo = card("Harmonized Crescendo") {
     keywords(Keyword.CONVOKE)
 
     spell {
-        effect = Effects.Composite(listOf(
-            ChooseOptionEffect(
-                optionType = OptionType.CREATURE_TYPE,
-                storeAs = "chosenType"
-            ),
-            DrawCardsEffect(
-                count = DynamicAmount.AggregateBattlefield(
-                    player = Player.You,
-                    filter = GameObjectFilter.Permanent.withSubtypeFromVariable("chosenType")
-                )
-            )
-        ))
+        effect = Effects.Pipeline {
+            val chosenType = chooseOption(OptionType.CREATURE_TYPE)
+            run(Effects.DrawCards(
+                count = DynamicAmounts.battlefield(
+                    Player.You,
+                    GameObjectFilter.Permanent.withSubtypeFromVariable(chosenType)
+                ).count()
+            ))
+        }
     }
 
     metadata {

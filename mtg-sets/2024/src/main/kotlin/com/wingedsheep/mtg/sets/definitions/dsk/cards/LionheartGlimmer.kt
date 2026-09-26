@@ -32,10 +32,10 @@ val LionheartGlimmer = card("Lionheart Glimmer") {
 
     // Whenever you attack, creatures you control get +1/+1 until end of turn.
     triggeredAbility {
-        trigger = Triggers.YouAttack
+        trigger = Triggers.you.attacks()
         effect = Effects.ForEachInGroup(
             filter = GroupFilter.AllCreaturesYouControl,
-            effect = Effects.ModifyStats(1, 1, EffectTarget.Self),
+            effect = Effects.ModifyStats(1, 1, EffectTarget.IterationEntity),
         )
     }
 

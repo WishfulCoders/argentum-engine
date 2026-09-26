@@ -1,13 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Spell Stutter
@@ -42,15 +43,12 @@ val SpellStutter = card("Spell Stutter") {
         "each Faerie you control."
 
     spell {
-        target = Targets.Spell
+        val spell = target(TargetFilter.SpellOnStack)
         effect = Effects.CounterUnlessDynamicPays(
-            DynamicAmount.Add(
-                DynamicAmount.Fixed(2),
-                DynamicAmount.Count(
-                    Player.You,
-                    Zone.BATTLEFIELD,
-                    GameObjectFilter.Any.withSubtype("Faerie"),
-                ),
+            2 + DynamicAmounts.count(
+                Player.You,
+                Zone.BATTLEFIELD,
+                GameObjectFilter.Any.withSubtype("Faerie"),
             )
         )
     }

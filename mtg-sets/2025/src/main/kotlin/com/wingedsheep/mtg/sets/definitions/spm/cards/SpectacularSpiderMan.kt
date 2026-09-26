@@ -33,10 +33,8 @@ val SpectacularSpiderMan = card("Spectacular Spider-Man") {
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeSelf)
-        effect = Effects.Composite(
-            Patterns.Group.grantKeywordToAll(Keyword.HEXPROOF, Filters.Group.creaturesYouControl),
+        effect = Patterns.Group.grantKeywordToAll(Keyword.HEXPROOF, Filters.Group.creaturesYouControl) then
             Patterns.Group.grantKeywordToAll(Keyword.INDESTRUCTIBLE, Filters.Group.creaturesYouControl)
-        )
     }
 
     metadata {

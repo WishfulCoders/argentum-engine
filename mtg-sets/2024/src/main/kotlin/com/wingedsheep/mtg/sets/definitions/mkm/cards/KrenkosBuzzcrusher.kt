@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.MoveType
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
@@ -42,7 +41,7 @@ val KrenkosBuzzcrusher = card("Krenko's Buzzcrusher") {
     keywords(Keyword.FLYING, Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ForEachPlayer(
             Player.Each,
             listOf(
@@ -74,7 +73,7 @@ val KrenkosBuzzcrusher = card("Krenko's Buzzcrusher") {
                     )
                     ifNotEmpty(destroyed) {
                         run(
-                            MayEffect(
+                            Effects.May(
                                 Patterns.Library.searchLibrary(
                                     filter = GameObjectFilter.BasicLand,
                                     count = 1,

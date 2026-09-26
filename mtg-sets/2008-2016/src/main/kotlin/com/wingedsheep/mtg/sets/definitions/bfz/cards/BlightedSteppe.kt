@@ -4,9 +4,9 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Blighted Steppe
@@ -31,7 +31,7 @@ val BlightedSteppe = card("Blighted Steppe") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}{W}"), Costs.Tap, Costs.SacrificeSelf)
         effect = Effects.GainLife(
-            DynamicAmount.Multiply(DynamicAmounts.creaturesYouControl(), 2),
+            DynamicAmounts.creaturesYouControl() * 2,
         )
     }
 

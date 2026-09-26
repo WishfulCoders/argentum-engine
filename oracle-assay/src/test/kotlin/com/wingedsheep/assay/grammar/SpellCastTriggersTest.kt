@@ -3,6 +3,7 @@ package com.wingedsheep.assay.grammar
 import com.wingedsheep.assay.syntax.ParseOutcome
 import com.wingedsheep.assay.syntax.parseLine
 import com.wingedsheep.assay.syntax.printLine
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.model.CardScript
@@ -43,8 +44,8 @@ class SpellCastTriggersTest : StringSpec({
                     spellFilter = GameObjectFilter.Noncreature,
                     player = Player.You,
                 ),
-                binding = SdkTriggers.YouCastNoncreature.binding,
-                effect = Effects.AddCounters("+1/+1", 1, EffectTarget.Self),
+                binding = SdkTriggers.you.casts(GameObjectFilter.Noncreature).binding,
+                effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
             )
         roundTrips("Whenever you cast a noncreature spell, put a +1/+1 counter on ~.")
     }
@@ -137,7 +138,7 @@ class SpellCastTriggersTest : StringSpec({
                         player = Player.You,
                         spellFilter = GameObjectFilter.Any,
                     ),
-                    binding = SdkTriggers.YouCastSpell.binding,
+                    binding = SdkTriggers.you.casts().binding,
                     effect = Effects.DrawCards(1),
                 ),
             ),

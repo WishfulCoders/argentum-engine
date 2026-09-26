@@ -15,7 +15,7 @@ import io.kotest.matchers.shouldBe
  * "Reach. Whenever you draw your second card each turn, put a +1/+1 counter on target creature.
  *  It gains lifelink until end of turn."
  *
- * The trigger is [com.wingedsheep.sdk.dsl.Triggers.NthCardDrawn]`(2)`; both halves ride the one
+ * The trigger is `Triggers.<player>.drawsNth(n)``(2)`; both halves ride the one
  * target, so an illegal target has to fizzle the whole ability.
  */
 class BardTheBowmanScenarioTest : ScenarioTestBase() {

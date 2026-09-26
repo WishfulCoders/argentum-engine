@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.khm.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Depart the Realm
@@ -24,7 +24,7 @@ val DepartTheRealm = card("Depart the Realm") {
         "Foretell {U} (During your turn, you may pay {2} and exile this card from your hand face down. Cast it on a later turn for its foretell cost.)"
 
     spell {
-        val victim = target("target nonland permanent", Targets.NonlandPermanent)
+        val victim = target(TargetFilter.NonlandPermanent)
         effect = Effects.ReturnToHand(victim)
     }
 

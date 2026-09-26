@@ -29,7 +29,7 @@ val AlabasterWall = card("Alabaster Wall") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.PreventNextDamage(1, t)
     }
 

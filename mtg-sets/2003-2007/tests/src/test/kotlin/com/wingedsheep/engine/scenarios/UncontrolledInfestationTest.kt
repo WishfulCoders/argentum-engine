@@ -12,17 +12,17 @@ import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.AddManaEffect
 import com.wingedsheep.sdk.scripting.effects.MoveToZoneEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Tests for Uncontrolled Infestation.
@@ -39,19 +39,17 @@ class UncontrolledInfestationTest : FunSpec({
         typeLine = "Enchantment — Aura"
         oracleText = "Enchant nonbasic land\nWhen enchanted land becomes tapped, destroy it."
 
-        auraTarget = TargetPermanent(
-            filter = TargetFilter(
+        auraTarget = TargetObject(filter = TargetFilter(
                 GameObjectFilter(
                     cardPredicates = listOf(
                         CardPredicate.IsLand,
                         CardPredicate.Not(CardPredicate.IsBasicLand)
                     )
                 )
-            )
-        )
+            ))
 
         triggeredAbility {
-            trigger = Triggers.becomesTapped(binding = TriggerBinding.ATTACHED)
+            trigger = Triggers.attached.becomesTapped()
             effect = MoveToZoneEffect(EffectTarget.EnchantedCreature, Zone.GRAVEYARD, byDestruction = true)
         }
     }
@@ -143,7 +141,7 @@ class UncontrolledInfestationTest : FunSpec({
         val aura = driver.putCardInHand(activePlayer, "Uncontrolled Infestation")
         driver.giveMana(activePlayer, Color.RED, 2)
         val result = driver.castSpell(activePlayer, aura, listOf(basicLand))
-        result.isSuccess shouldBe false
+        result.outcome shouldNotBe Outcome.Done
     }
 
     test("tapping enchanted land before aura is attached does not trigger") {

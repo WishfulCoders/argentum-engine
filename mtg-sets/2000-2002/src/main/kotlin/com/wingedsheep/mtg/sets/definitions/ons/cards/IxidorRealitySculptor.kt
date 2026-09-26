@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.dsl.Costs
@@ -7,8 +8,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.effects.TurnFaceUpEffect
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Ixidor, Reality Sculptor
@@ -36,10 +35,8 @@ val IxidorRealitySculptor = card("Ixidor, Reality Sculptor") {
 
     activatedAbility {
         cost = Costs.Mana("{2}{U}")
-        val t = target("target", TargetPermanent(
-            filter = TargetFilter(GameObjectFilter.Creature.faceDown())
-        ))
-        effect = TurnFaceUpEffect(t)
+        val t = target(TargetFilter(GameObjectFilter.Creature.faceDown()))
+        effect = Effects.TurnFaceUp(t)
     }
 
     metadata {

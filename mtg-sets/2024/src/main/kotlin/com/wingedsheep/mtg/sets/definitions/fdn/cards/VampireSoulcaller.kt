@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBlock
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -36,8 +35,8 @@ val VampireSoulcaller = card("Vampire Soulcaller") {
         ability = CantBlock()
     }
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetObject(filter = TargetFilter.CreatureInYourGraveyard))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.Move(t, Zone.HAND)
     }
     metadata {

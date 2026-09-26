@@ -11,21 +11,11 @@ import com.wingedsheep.sdk.scripting.CostReductionSource
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.ConditionalOnCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetOpponent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Hollow Marauder
@@ -75,35 +65,26 @@ val HollowMarauder = card("Hollow Marauder") {
     // When this creature enters, any number of target opponents each discard a card. For each of
     // those opponents who didn't discard a card with mana value 4 or greater, draw a card.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target("any number of target opponents", TargetOpponent(unlimited = true))
-        effect = ForEachTargetEffect(
-            listOf(
-                // The current target opponent discards a card.
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.HAND, Player.ContextPlayer(0)),
-                    storeAs = "hm_hand"
-                ),
-                SelectFromCollectionEffect(
-                    from = "hm_hand",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                    chooser = Chooser.TargetPlayer,
-                    storeSelected = "hm_discarded",
-                    prompt = "Choose a card to discard"
-                ),
-                MoveCollectionEffect(
-                    from = "hm_discarded",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
-                    moveType = MoveType.Discard
-                ),
-                // Draw a card unless the discarded card had mana value 4 or greater.
-                ConditionalOnCollectionEffect(
-                    collection = "hm_discarded",
-                    filter = GameObjectFilter.Any.manaValueAtLeast(4),
-                    ifNotEmpty = Effects.Composite(emptyList()),
-                    ifEmpty = DrawCardsEffect(count = 1, target = EffectTarget.Controller)
-                )
+        trigger = Triggers.self.enters()
+        target(TargetOpponent(unlimited = true))
+        effect = Effects.ForEachTarget(
+            Effects.Pipeline {
+            // The current target opponent discards a card.
+            val hmHand = gather(CardSource.FromZone(Zone.HAND, Player.ContextPlayer(0)))
+            val hmDiscarded = chooseExactly(
+                1,
+                from = hmHand,
+                chooser = Chooser.TargetPlayer,
+                prompt = "Choose a card to discard"
             )
+            discard(hmDiscarded, Player.ContextPlayer(0))
+            // Draw a card unless the discarded card had mana value 4 or greater.
+            ifNotEmpty(hmDiscarded, filter = GameObjectFilter.Any.manaValueAtLeast(4)) {
+                run(Effects.Nothing)
+            } orElse {
+                run(Effects.DrawCards(count = 1, target = EffectTarget.Controller))
+            }
+        }
         )
     }
 

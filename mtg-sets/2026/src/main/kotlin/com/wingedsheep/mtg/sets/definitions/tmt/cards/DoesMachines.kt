@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
@@ -10,11 +10,10 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Does Machines
@@ -41,24 +40,24 @@ val DoesMachines = card("Does Machines") {
 
     // Level 1: ETB mill 2, draw 2, then discard 2.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Patterns.Library.mill(2)
-            .then(Effects.DrawCards(2))
-            .then(Patterns.Hand.discardCards(2))
+        trigger = Triggers.self.enters()
+        effect = Patterns.Library.mill(2) then
+            Effects.DrawCards(2) then
+            Patterns.Hand.discardCards(2)
     }
 
     // Level 2: "When this Class becomes level 2" — modeled as an EntersBattlefield trigger
     // inside the level block (Caretaker's Talent idiom).
     classLevel(2, "{1}{U}") {
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             target = TargetObject(
                 count = 2,
                 optional = true,
                 filter = TargetFilter.ArtifactInYourGraveyard
             )
-            effect = ForEachTargetEffect(
-                effects = listOf(Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND))
+            effect = Effects.ForEachTarget(
+                Effects.Move(EffectTarget.ContextTarget(0), Zone.HAND)
             )
         }
     }
@@ -67,22 +66,17 @@ val DoesMachines = card("Does Machines") {
     // control; a noncreature one also becomes a 0/0 Robot in addition to its other types.
     classLevel(3, "{4}{U}") {
         triggeredAbility {
-            trigger = Triggers.BeginCombat
-            target = TargetObject(
-                count = 1,
-                filter = TargetFilter(GameObjectFilter.Artifact.youControl())
-            )
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 3, EffectTarget.ContextTarget(0))
-                .then(
-                    ConditionalEffect(
-                        condition = Conditions.Not(Conditions.TargetMatchesFilter(GameObjectFilter.Creature)),
-                        effect = Effects.BecomeCreature(
-                            target = EffectTarget.ContextTarget(0),
-                            power = 0,
-                            toughness = 0,
-                            creatureTypes = setOf("Robot"),
-                            duration = Duration.Permanent
-                        )
+            val target = target(TargetFilter(GameObjectFilter.Artifact.youControl()))
+            trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 3, target) then
+                Effects.If(
+                    condition = Conditions.Not(Conditions.TargetMatchesFilter(GameObjectFilter.Creature, target)),
+                    then = Effects.BecomeCreature(
+                        target = target,
+                        power = 0,
+                        toughness = 0,
+                        creatureTypes = setOf("Robot"),
+                        duration = Duration.Permanent
                     )
                 )
         }

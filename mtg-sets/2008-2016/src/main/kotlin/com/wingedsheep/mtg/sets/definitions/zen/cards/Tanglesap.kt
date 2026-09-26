@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
 /**
  * Tanglesap
@@ -24,9 +23,7 @@ val Tanglesap = card("Tanglesap") {
     oracleText = "Prevent all combat damage that would be dealt this turn by creatures without trample."
 
     spell {
-        effect = Effects.PreventCombatDamageFrom(
-            GroupFilter(GameObjectFilter.Creature.withoutKeyword(Keyword.TRAMPLE))
-        )
+        effect = Effects.PreventCombatDamageFrom(GameObjectFilter.Creature.withoutKeyword(Keyword.TRAMPLE))
     }
 
     metadata {

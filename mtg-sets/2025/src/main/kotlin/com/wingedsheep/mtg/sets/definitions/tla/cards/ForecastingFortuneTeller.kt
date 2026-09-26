@@ -24,7 +24,7 @@ val ForecastingFortuneTeller = card("Forecasting Fortune Teller") {
         "(It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateClue()
     }
 

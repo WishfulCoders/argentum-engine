@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Archon of Falling Stars
@@ -19,12 +18,12 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  * Flying
  * When this creature dies, you may return target enchantment card from your graveyard to the battlefield.
  *
- * A plain [Triggers.Dies] — battlefield → graveyard, SELF binding, and *no* `triggerZone`: setting
+ * A plain `Triggers.self.dies()` — battlefield → graveyard, SELF binding, and *no* `triggerZone`: setting
  * one replaces the default `{BATTLEFIELD}` and the dies trigger would never be indexed.
  *
  * The target is an object in the graveyard, so its controller predicate reads **owner**
  * (`ownedByYou()`): a card in a graveyard has no controller. `optional = true` is the DSL's
- * shorthand for the printed "you may" and lowers to exactly `MayEffect(effect)`.
+ * shorthand for the printed "you may" and lowers to exactly `Effects.May(effect)`.
  *
  * [Effects.PutOntoBattlefieldFromGraveyard] keeps its `fromZone = GRAVEYARD` guard even though the
  * target requirement already scopes the graveyard: the requirement decides legality at
@@ -42,11 +41,8 @@ val ArchonOfFallingStars = card("Archon of Falling Stars") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val enchantment = target(
-            "target",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Enchantment.ownedByYou(), zone = Zone.GRAVEYARD)),
-        )
+        trigger = Triggers.self.dies()
+        val enchantment = target(TargetFilter(GameObjectFilter.Enchantment.ownedByYou(), zone = Zone.GRAVEYARD))
         optional = true
         effect = Effects.PutOntoBattlefieldFromGraveyard(enchantment)
         description = "When this creature dies, you may return target enchantment card from your " +

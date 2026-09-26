@@ -1,11 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ths.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Scourgemark
@@ -22,10 +23,10 @@ val Scourgemark = card("Scourgemark") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature\nWhen this Aura enters, draw a card.\nEnchanted creature gets +1/+0."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1)
     }
 

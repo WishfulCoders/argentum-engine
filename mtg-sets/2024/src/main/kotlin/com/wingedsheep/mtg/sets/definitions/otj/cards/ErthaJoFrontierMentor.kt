@@ -2,16 +2,15 @@ package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedActivatedAbility
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
-import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.events.AbilityTargetMatch
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ertha Jo, Frontier Mentor
@@ -31,7 +30,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * the Mercenary token's `{T}:` ability does, so activating it copies the pump onto a second creature.
  *
  * The "targets a creature or player" restriction is enforced by
- * [AbilityTargetMatch.CreatureOrPlayer] on the trigger — a non-targeting ability (tap-for-mana,
+ * [Recipient.CreatureOrPlayer] on the trigger — a non-targeting ability (tap-for-mana,
  * etc.) never fires it.
  */
 val ErthaJoFrontierMentor = card("Ertha Jo, Frontier Mentor") {
@@ -46,26 +45,26 @@ val ErthaJoFrontierMentor = card("Ertha Jo, Frontier Mentor") {
         "You may choose new targets for the copy."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreateTokenEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
             colors = setOf(Color.RED),
             creatureTypes = setOf("Mercenary"),
             activatedAbilities = listOf(
-                ActivatedAbility(
-                    cost = AbilityCost.Tap,
-                    effect = Effects.ModifyStats(1, 0, EffectTarget.ContextTarget(0)),
-                    targetRequirements = listOf(Targets.CreatureYouControl),
+                grantedActivatedAbility {
+                    cost = AbilityCost.Tap
+                    val creatureYouControl = target(TargetFilter.CreatureYouControl)
+                    effect = Effects.ModifyStats(1, 0, creatureYouControl)
                     timing = TimingRule.SorcerySpeed
-                )
+                }
             ),
             imageUri = "https://cards.scryfall.io/normal/front/5/f/5f04607f-eed2-462e-897f-82e41e5f7049.jpg?1712316319"
         )
     }
 
     triggeredAbility {
-        trigger = Triggers.youActivateAbilityTargeting(AbilityTargetMatch.CreatureOrPlayer)
+        trigger = Triggers.you.activatesAbility(targeting = Recipient.CreatureOrPlayer)
         effect = Effects.CopyTargetSpellOrAbility(EffectTarget.TriggeringEntity)
     }
 

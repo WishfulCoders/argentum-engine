@@ -20,7 +20,7 @@ val RadiantFountain = card("Radiant Fountain") {
         "{T}: Add {C}."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(2)
         description = "When this land enters, you gain 2 life."
     }

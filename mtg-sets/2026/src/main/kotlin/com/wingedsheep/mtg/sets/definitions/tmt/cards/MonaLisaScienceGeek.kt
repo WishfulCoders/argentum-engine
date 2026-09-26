@@ -2,13 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Mona Lisa, Science Geek
@@ -32,7 +31,7 @@ val MonaLisaScienceGeek = card("Mona Lisa, Science Geek") {
     activatedAbility {
         cost = Costs.Tap
         effect = Effects.AddAnyColorMana(
-            DynamicAmount.EntityProperty(EntityReference.Source, EntityNumericProperty.Power)
+            DynamicAmounts.sourcePower()
         )
         manaAbility = true
         timing = TimingRule.ManaAbility

@@ -2,12 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.fem.cards
 
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.dsl.Costs
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Elvish Hunter
@@ -29,11 +28,11 @@ val ElvishHunter = card("Elvish Hunter") {
     toughness = 1
 
     activatedAbility {
+        val creature = target(TargetFilter.Creature)
         cost = Costs.Composite(Costs.Mana("{1}{G}"), Costs.Tap)
-        target = Targets.Creature
-        effect = GrantKeywordEffect(
-            AbilityFlag.DOESNT_UNTAP.name,
-            EffectTarget.ContextTarget(0),
+        effect = Effects.GrantKeyword(
+            AbilityFlag.DOESNT_UNTAP,
+            creature,
             Duration.UntilAfterAffectedControllersNextUntap,
         )
         description = "{1}{G}, {T}: Target creature doesn't untap during its controller's next untap step."

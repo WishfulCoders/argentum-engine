@@ -5,11 +5,11 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -26,8 +26,8 @@ val ShrapnelBlast = card("Shrapnel Blast") {
     oracleText = "As an additional cost to cast this spell, sacrifice an artifact.\nShrapnel Blast deals 5 damage to any target."
     additionalCost(Costs.additional.SacrificePermanent(GameObjectFilter.Artifact))
     spell {
-        val t = target("target", AnyTarget())
-        effect = DealDamageEffect(5, t)
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(5, t)
     }
     metadata {
         rarity = Rarity.UNCOMMON

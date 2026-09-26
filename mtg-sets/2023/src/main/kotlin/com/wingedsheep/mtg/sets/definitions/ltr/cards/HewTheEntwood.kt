@@ -9,11 +9,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
 
@@ -48,60 +43,23 @@ val HewTheEntwood = card("Hew the Entwood") {
         "on the bottom of your library in a random order."
 
     spell {
-        effect = Effects.SacrificeAnyNumber(GameObjectFilter.Land)
-            .then(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(
-                        DynamicAmounts.permanentsSacrificedThisWay(),
-                        Player.You
-                    ),
-                    storeAs = "revealed"
-                )
+        effect = Effects.Pipeline {
+            run(Effects.SacrificeAnyNumber(GameObjectFilter.Land))
+            val revealed = gather(CardSource.TopOfLibrary(DynamicAmounts.permanentsSacrificedThisWay(), Player.You))
+            reveal(revealed)
+            val (chosen, rest) = chooseAnyNumberSplit(
+                from = revealed,
+                filter = GameObjectFilter.Artifact or GameObjectFilter.Land,
+                prompt = "Choose any number of artifact and/or land cards to put onto the battlefield"
             )
-            .then(RevealCollectionEffect(from = "revealed"))
-            .then(
-                SelectFromCollectionEffect(
-                    from = "revealed",
-                    selection = SelectionMode.ChooseAnyNumber,
-                    filter = GameObjectFilter.Artifact or GameObjectFilter.Land,
-                    storeSelected = "chosen",
-                    storeRemainder = "rest",
-                    prompt = "Choose any number of artifact and/or land cards to put onto the battlefield"
-                )
+            move(chosen, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You), filter = GameObjectFilter.Nonland)
+            move(
+                chosen,
+                CardDestination.ToZone(Zone.BATTLEFIELD, Player.You, ZonePlacement.Tapped),
+                filter = GameObjectFilter.Land
             )
-            .then(
-                MoveCollectionEffect(
-                    from = "chosen",
-                    filter = GameObjectFilter.Nonland,
-                    destination = CardDestination.ToZone(
-                        Zone.BATTLEFIELD,
-                        player = Player.You,
-                        placement = ZonePlacement.Default
-                    )
-                )
-            )
-            .then(
-                MoveCollectionEffect(
-                    from = "chosen",
-                    filter = GameObjectFilter.Land,
-                    destination = CardDestination.ToZone(
-                        Zone.BATTLEFIELD,
-                        player = Player.You,
-                        placement = ZonePlacement.Tapped
-                    )
-                )
-            )
-            .then(
-                MoveCollectionEffect(
-                    from = "rest",
-                    destination = CardDestination.ToZone(
-                        Zone.LIBRARY,
-                        player = Player.You,
-                        placement = ZonePlacement.Bottom
-                    ),
-                    order = CardOrder.Random
-                )
-            )
+            toLibraryBottom(rest, order = CardOrder.Random)
+        }
     }
 
     metadata {

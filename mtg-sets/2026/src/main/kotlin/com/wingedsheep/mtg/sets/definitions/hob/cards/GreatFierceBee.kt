@@ -29,10 +29,7 @@ val GreatFierceBee = card("Great Fierce Bee") {
     toughness = 2
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.OneOrMoreCreaturesYouControlDie(
-            filter = GameObjectFilter.Creature.anyController(),
-            excludeSelf = true,
-        )
+        trigger = Triggers.oneOrMoreOther(GameObjectFilter.Creature.anyController()).die()
         effect = Effects.Scry(1)
     }
     metadata {

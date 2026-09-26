@@ -1,13 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Splash Lasher
@@ -35,17 +36,16 @@ val SplashLasher = card("Splash Lasher") {
 
     // Offspring ETB: create token copy when kicked
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = WasKicked
         effect = Effects.CreateTokenCopyOfSelf(overridePower = 1, overrideToughness = 1)
     }
 
     // ETB: tap up to one target creature and put a stun counter on it
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("creature", Targets.UpToCreatures(1))
-        effect = Effects.Tap(t)
-            .then(Effects.AddCounters("STUN", 1, t))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature, optional = true)
+        effect = Effects.Tap(t) then Effects.AddCounters(CounterType.STUN, 1, t)
     }
 
     metadata {

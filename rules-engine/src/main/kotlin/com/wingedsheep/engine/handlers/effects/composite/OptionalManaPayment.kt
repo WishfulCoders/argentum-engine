@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.scripting.effects.PayManaCostEffect
 
 /**
  * The "you may pay <mana>. If you do, <then>." shape — the lowered form of the former
- * `MayPayManaEffect` wrapper: a [GatedEffect] whose gate is a [Gate.MayPay] over a flat
+ * `Effects.MayPay` wrapper: a [GatedEffect] whose gate is a [Gate.MayPay] over a flat
  * [PayManaCostEffect], with no `otherwise` branch and the default (controller) decision-maker.
  *
  * The engine recognizes this exact shape to preserve the bespoke optional-mana-payment UX that the

@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -47,8 +46,8 @@ val OperaLoveSong = card("Opera Love Song") {
                     minCount = 1,
                     filter = TargetFilter(GameObjectFilter.Creature)
                 )
-                effect = ForEachTargetEffect(
-                    effects = listOf(Effects.ModifyStats(2, 0, EffectTarget.ContextTarget(0)))
+                effect = Effects.ForEachTarget(
+                    Effects.ModifyStats(2, 0, EffectTarget.ContextTarget(0))
                 )
             }
         }

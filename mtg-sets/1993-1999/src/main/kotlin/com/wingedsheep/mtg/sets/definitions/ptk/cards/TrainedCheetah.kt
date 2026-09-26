@@ -22,7 +22,7 @@ val TrainedCheetah = card("Trained Cheetah") {
     oracleText = "Whenever this creature becomes blocked, it gets +1/+1 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
+        trigger = Triggers.self.becomesBlocked()
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }
 

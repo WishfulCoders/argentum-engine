@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Dark Offering
@@ -23,11 +22,8 @@ val DarkOffering = card("Dark Offering") {
     oracleText = "Destroy target nonblack creature. You gain 3 life."
 
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.notColor(Color.BLACK)))
-        effect = Effects.Composite(
-            Effects.Destroy(t),
-            Effects.GainLife(3)
-        )
+        val t = target(TargetFilter.Creature.notColor(Color.BLACK))
+        effect = Effects.Destroy(t) then Effects.GainLife(3)
     }
 
     metadata {

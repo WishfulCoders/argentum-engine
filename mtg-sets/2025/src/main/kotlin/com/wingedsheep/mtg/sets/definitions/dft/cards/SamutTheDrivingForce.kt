@@ -8,12 +8,11 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CostModification
 import com.wingedsheep.sdk.scripting.CostReductionSource
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Samut, the Driving Force — Aetherdrift #222
@@ -28,7 +27,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * [CostReductionSource.YourSpeed] — through two different seams, because the engine reads costs and
  * stats through different machinery:
  *
- * - The lord is an ordinary dynamic layer-7c bonus ([GrantDynamicStatsEffect]), re-evaluated every
+ * - The lord is an ordinary dynamic layer-7c bonus ([GrantDynamicStats]), re-evaluated every
  *   projection, so the buff grows the instant your speed ticks up and `excludeSelf` keeps Samut out
  *   of its own "other creatures" clause. Toughness is a literal `Fixed(0)`, not the speed amount —
  *   the card grants +X/+0.
@@ -57,10 +56,10 @@ val SamutTheDrivingForce = card("Samut, the Driving Force") {
     startYourEngines()
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.OtherCreaturesYouControl,
             powerBonus = DynamicAmounts.speed(Player.You),
-            toughnessBonus = DynamicAmount.Fixed(0),
+            toughnessBonus = DynamicAmounts.fixed(0),
         )
     }
 

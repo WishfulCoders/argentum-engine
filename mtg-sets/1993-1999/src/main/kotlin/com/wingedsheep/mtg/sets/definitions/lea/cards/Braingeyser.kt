@@ -4,11 +4,11 @@
 
 package com.wingedsheep.mtg.sets.definitions.lea.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -23,8 +23,8 @@ val Braingeyser = card("Braingeyser") {
     typeLine = "Sorcery"
     oracleText = "Target player draws X cards."
     spell {
-        val t = target("target", TargetPlayer())
-        effect = DrawCardsEffect(DynamicAmount.XValue, t)
+        val t = target(Targets.Player)
+        effect = Effects.DrawCards(DynamicAmounts.xValue(), t)
     }
     metadata {
         rarity = Rarity.RARE

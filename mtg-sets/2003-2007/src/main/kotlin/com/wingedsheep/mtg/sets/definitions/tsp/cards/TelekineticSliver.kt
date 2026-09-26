@@ -31,7 +31,7 @@ val TelekineticSliver = card("Telekinetic Sliver") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Tap,
                 effect = Effects.Tap(EffectTarget.BoundVariable("target")),
                 targetRequirements = listOf(

@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Goblin Grenade
@@ -26,7 +26,7 @@ val GoblinGrenade = card("Goblin Grenade") {
     additionalCost(Costs.additional.SacrificePermanent(GameObjectFilter.Permanent.withSubtype("Goblin")))
 
     spell {
-        val t = target("any target", AnyTarget())
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(5, t)
     }
 

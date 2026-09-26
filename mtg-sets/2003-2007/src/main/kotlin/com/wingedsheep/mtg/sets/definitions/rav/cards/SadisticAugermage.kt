@@ -25,7 +25,7 @@ val SadisticAugermage = card("Sadistic Augermage") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.EachPlayerPutsCardsOnTopOfLibrary()
         description = "When this creature dies, each player puts a card from their hand on top of their library."
     }

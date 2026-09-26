@@ -2,13 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * War Squeak
@@ -27,13 +27,13 @@ val WarSqueak = card("War Squeak") {
         "When this Aura enters, target creature an opponent controls can't block this turn.\n" +
         "Enchanted creature gets +1/+1 and has haste."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     // When this Aura enters, target creature an opponent controls can't block this turn.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = Targets.CreatureOpponentControls
-        effect = Effects.CantBlock(EffectTarget.ContextTarget(0))
+        val creatureOpponentControls = target(TargetFilter.CreatureOpponentControls)
+        trigger = Triggers.self.enters()
+        effect = Effects.CantBlock(creatureOpponentControls)
     }
 
     // Enchanted creature gets +1/+1

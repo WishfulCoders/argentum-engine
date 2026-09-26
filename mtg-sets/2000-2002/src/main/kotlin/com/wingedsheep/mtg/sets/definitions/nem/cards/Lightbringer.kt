@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -29,7 +28,7 @@ val Lightbringer = card("Lightbringer") {
     toughness = 2
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.SacrificeSelf)
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.withColor(Color.BLACK)))
+        val t = target(TargetFilter.Creature.withColor(Color.BLACK))
         effect = Effects.Exile(t)
     }
     metadata {

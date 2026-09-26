@@ -29,7 +29,7 @@ val SkyEelSchool = card("Sky-Eel School") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Hand.loot()
     }
 

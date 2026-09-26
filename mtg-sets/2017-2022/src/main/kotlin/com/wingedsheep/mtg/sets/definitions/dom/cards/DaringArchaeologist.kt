@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Daring Archaeologist
@@ -27,10 +27,8 @@ val DaringArchaeologist = card("Daring Archaeologist") {
     oracleText = "When this creature enters, you may return target artifact card from your graveyard to your hand.\nWhenever you cast a historic spell, put a +1/+1 counter on this creature. (Artifacts, legendaries, and Sagas are historic.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetObject(
-            filter = TargetFilter.ArtifactInYourGraveyard
-        ))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.ArtifactInYourGraveyard)
         // The "you may" is consent to *do it*, not permission to skip choosing a target. CR 603.3d
         // routes a trigger's targets through CR 601.2c, which requires a choice for each target, and
         // only "up to one target" makes one optional — which is exactly what `optional = true` on
@@ -43,8 +41,8 @@ val DaringArchaeologist = card("Daring Archaeologist") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YouCastHistoric
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.casts(GameObjectFilter.Historic)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     metadata {

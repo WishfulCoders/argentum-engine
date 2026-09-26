@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Hex Magic — Marvel Super Heroes #133 (uncommon)
@@ -54,11 +53,11 @@ val HexMagic = card("Hex Magic") {
 
             run(
                 Effects.DrawCards(
-                    DynamicAmount.DistinctEntitiesInCollections(listOf(exiled.key))
+                    DynamicAmounts.distinctEntitiesIn(exiled)
                 )
             )
 
-            run(GrantMayPlayFromExileEffect(exiled.key, MayPlayExpiry.UntilEndOfNextTurn))
+            run(Effects.GrantMayPlayFromExile(exiled, MayPlayExpiry.UntilEndOfNextTurn))
         }
     }
 

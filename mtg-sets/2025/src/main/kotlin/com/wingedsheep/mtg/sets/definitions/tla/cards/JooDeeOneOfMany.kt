@@ -27,15 +27,13 @@ val JooDeeOneOfMany = card("Joo Dee, One of Many") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{B}"), Costs.Tap)
         timing = TimingRule.SorcerySpeed
-        effect = Effects.Composite(
-            Effects.Surveil(1),
-            Effects.CreateTokenCopyOfTarget(target = EffectTarget.Self),
+        effect = Effects.Surveil(1) then
+            Effects.CreateTokenCopyOfTarget(target = EffectTarget.Self) then
             Effects.Sacrifice(
                 GameObjectFilter.Artifact or GameObjectFilter.Creature,
                 count = 1,
                 target = EffectTarget.Controller,
-            ),
-        )
+            )
     }
 
     metadata {

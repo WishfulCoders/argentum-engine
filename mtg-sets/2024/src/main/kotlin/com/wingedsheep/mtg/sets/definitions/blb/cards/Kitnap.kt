@@ -1,16 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.gift
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ControlEnchantedPermanent
 import com.wingedsheep.sdk.scripting.GiftKind
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Kitnap
@@ -36,18 +37,16 @@ val Kitnap = card("Kitnap") {
     typeLine = "Enchantment — Aura"
     oracleText = "Gift a card (You may promise an opponent a gift as you cast this spell. If you do, when it enters, they draw a card.)\nEnchant creature\nWhen this Aura enters, tap enchanted creature. If the gift wasn't promised, put three stun counters on it.\nYou control enchanted creature."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     gift(GiftKind.CARD)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Tap(EffectTarget.EnchantedCreature)
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.Not(Conditions.GiftWasPromised),
-                    effect = Effects.AddCounters("STUN", 3, EffectTarget.EnchantedCreature)
-                )
+        trigger = Triggers.self.enters()
+        effect = Effects.Tap(EffectTarget.EnchantedCreature) then
+            Effects.If(
+                condition = Conditions.Not(Conditions.GiftWasPromised),
+                then = Effects.AddCounters(CounterType.STUN, 3, EffectTarget.EnchantedCreature)
             )
     }
 

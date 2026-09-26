@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 
@@ -25,11 +24,11 @@ val BarrageOfBoulders = card("Barrage of Boulders") {
     oracleText = "Barrage of Boulders deals 1 damage to each creature you don't control.\nFerocious — If you control a creature with power 4 or greater, creatures can't block this turn."
 
     spell {
-        effect = Patterns.Group.dealDamageToAll(1, GroupFilter.AllCreaturesOpponentsControl)
-            .then(ConditionalEffect(
+        effect = Patterns.Group.dealDamageToAll(1, GroupFilter.AllCreaturesOpponentsControl) then
+            Effects.If(
                 condition = Exists(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature.powerAtLeast(4)),
-                effect = Effects.CantBlockGroup(GroupFilter.AllCreatures)
-            ))
+                then = Effects.CantBlockGroup(GroupFilter.AllCreatures)
+            )
     }
 
     metadata {

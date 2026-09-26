@@ -23,6 +23,7 @@ import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.model.CreatureStats
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.TriggerSpec
@@ -36,6 +37,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.ints.shouldBeGreaterThan
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Tests for death triggers (when a creature dies).
@@ -64,6 +66,7 @@ class DeathTriggerTest : FunSpec({
         oracleText = "Whenever a creature you control with toughness 4 or greater dies, you gain 4 life.",
         script = CardScript.creature(
             TriggeredAbility.create(
+                id = AbilityId("DeathTriggerTest_1"),
                 trigger = EventPattern.ZoneChangeEvent(
                     filter = GameObjectFilter.Creature.youControl().toughnessAtLeast(4),
                     from = Zone.BATTLEFIELD,
@@ -111,7 +114,7 @@ class DeathTriggerTest : FunSpec({
 
         // Cast Lightning Bolt targeting our own creature (to trigger death)
         val castResult = driver.castSpellWithTargets(activePlayer, bolt, listOf(ChosenTarget.Permanent(creature)))
-        castResult.isSuccess shouldBe true
+        castResult.outcome shouldBe Outcome.Done
 
         // Resolve the spell (creature takes 3 damage, dies from SBA)
         driver.bothPass()
@@ -161,12 +164,12 @@ class DeathTriggerTest : FunSpec({
 
         // Cast first Lightning Bolt targeting our creature
         val castResult1 = driver.castSpellWithTargets(activePlayer, bolt1, listOf(ChosenTarget.Permanent(creature)))
-        castResult1.isSuccess shouldBe true
+        castResult1.outcome shouldBe Outcome.Done
         driver.bothPass() // Resolve first bolt (3 damage, creature survives)
 
         // Cast second Lightning Bolt targeting our creature
         val castResult2 = driver.castSpellWithTargets(activePlayer, bolt2, listOf(ChosenTarget.Permanent(creature)))
-        castResult2.isSuccess shouldBe true
+        castResult2.outcome shouldBe Outcome.Done
         driver.bothPass() // Resolve second bolt (3 more damage, creature dies from SBA)
 
         // The creature should be dead
@@ -200,6 +203,7 @@ class DeathTriggerTest : FunSpec({
             oracleText = "Whenever a Saproling you control dies, you gain 1 life.",
             script = CardScript.creature(
                 TriggeredAbility.create(
+                    id = AbilityId("DeathTriggerTest_2"),
                     trigger = EventPattern.ZoneChangeEvent(
                         filter = GameObjectFilter.Creature.youControl().withSubtype("Saproling"),
                         from = Zone.BATTLEFIELD,
@@ -258,7 +262,7 @@ class DeathTriggerTest : FunSpec({
 
         // Cast Lightning Bolt targeting the Saproling token
         val castResult = driver.castSpellWithTargets(activePlayer, bolt, listOf(ChosenTarget.Permanent(tokenId)))
-        castResult.isSuccess shouldBe true
+        castResult.outcome shouldBe Outcome.Done
 
         // Resolve the spell (token takes 3 damage, dies from SBA, then SBA cleans up token)
         driver.bothPass()
@@ -316,11 +320,11 @@ class DeathTriggerTest : FunSpec({
         val bolt2 = driver.putCardInHand(activePlayer, "Lightning Bolt")
 
         val castResult1 = driver.castSpellWithTargets(activePlayer, bolt1, listOf(ChosenTarget.Permanent(creatureId)))
-        castResult1.isSuccess shouldBe true
+        castResult1.outcome shouldBe Outcome.Done
         driver.bothPass()
 
         val castResult2 = driver.castSpellWithTargets(activePlayer, bolt2, listOf(ChosenTarget.Permanent(creatureId)))
-        castResult2.isSuccess shouldBe true
+        castResult2.outcome shouldBe Outcome.Done
         driver.bothPass()
 
         // The creature should be dead

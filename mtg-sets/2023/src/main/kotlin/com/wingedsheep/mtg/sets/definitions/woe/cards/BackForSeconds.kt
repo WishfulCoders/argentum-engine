@@ -9,16 +9,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Back for Seconds
@@ -48,47 +39,32 @@ val BackForSeconds = card("Back for Seconds") {
     bargain()
 
     spell {
-        target = TargetObject(
-            count = 2,
-            optional = true,
-            filter = TargetFilter.CreatureInYourGraveyard,
-        )
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.ChosenTargets,
-                storeAs = "backForSecondsTargets",
-            ),
-            ConditionalEffect(
+        targets(TargetFilter.CreatureInYourGraveyard, count = 2, optional = true)
+        effect = Effects.Pipeline {
+            val backForSecondsTargets = gather(CardSource.ChosenTargets)
+            run(Effects.If(
                 condition = Conditions.WasBargained,
-                effect = Effects.Composite(
-                    SelectFromCollectionEffect(
-                        from = "backForSecondsTargets",
-                        selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                        storeSelected = "backForSecondsReanimated",
+                then = Effects.Pipeline {
+                    val backForSecondsReanimated = chooseUpTo(
+                        1,
+                        from = backForSecondsTargets,
                         filter = GameObjectFilter.Creature.manaValueAtMost(4),
-                        prompt = "Put up to one creature card with mana value 4 or less onto the battlefield",
-                    ),
-                    MoveCollectionEffect(
-                        from = "backForSecondsReanimated",
-                        destination = CardDestination.ToZone(Zone.BATTLEFIELD),
-                        underOwnersControl = true,
-                    ),
-                    FilterCollectionEffect(
-                        from = "backForSecondsTargets",
-                        filter = CollectionFilter.InZone(Zone.GRAVEYARD),
-                        storeMatching = "backForSecondsToHand",
-                    ),
-                    MoveCollectionEffect(
-                        from = "backForSecondsToHand",
-                        destination = CardDestination.ToZone(Zone.HAND),
-                    ),
-                ),
-                elseEffect = MoveCollectionEffect(
-                    from = "backForSecondsTargets",
-                    destination = CardDestination.ToZone(Zone.HAND),
-                ),
-            ),
-        )
+                        prompt = "Put up to one creature card with mana value 4 or less onto the battlefield"
+                    )
+                    move(
+                        backForSecondsReanimated,
+                        CardDestination.ToZone(Zone.BATTLEFIELD),
+                        underOwnersControl = true
+                    )
+                    val backForSecondsToHand = filter(
+                        backForSecondsTargets,
+                        GameObjectFilter.Any.currentlyIn(Zone.GRAVEYARD)
+                    )
+                    toHand(backForSecondsToHand)
+                },
+                otherwise = Effects.Pipeline { toHand(backForSecondsTargets) },
+            ))
+        }
     }
 
     metadata {

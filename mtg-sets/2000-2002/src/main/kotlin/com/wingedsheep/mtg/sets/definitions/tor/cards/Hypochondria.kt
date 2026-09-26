@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -25,12 +25,12 @@ val Hypochondria = card("Hypochondria") {
     oracleText = "{W}, Discard a card: Prevent the next 3 damage that would be dealt to any target this turn.\n{W}, Sacrifice this enchantment: Prevent the next 3 damage that would be dealt to any target this turn."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{W}"), Costs.DiscardCard)
-        val t = target("target", AnyTarget())
+        val t = target(Targets.Any)
         effect = Effects.PreventNextDamage(3, t)
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{W}"), Costs.SacrificeSelf)
-        val t = target("target", AnyTarget())
+        val t = target(Targets.Any)
         effect = Effects.PreventNextDamage(3, t)
     }
     metadata {

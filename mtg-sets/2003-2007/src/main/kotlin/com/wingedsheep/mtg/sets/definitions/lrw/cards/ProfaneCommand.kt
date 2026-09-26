@@ -1,16 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.unaryMinus
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Profane Command
@@ -51,31 +49,22 @@ val ProfaneCommand = card("Profane Command") {
     spell {
         modal(chooseCount = 2) {
             mode("Target player loses X life") {
-                val player = target("player to lose life", Targets.Player)
-                effect = Effects.LoseLife(DynamicAmount.XValue, player)
+                val player = target(Targets.Player)
+                effect = Effects.LoseLife(DynamicAmounts.xValue(), player)
             }
             mode("Return target creature card with mana value X or less from your graveyard to the battlefield") {
-                val creatureCard = target(
-                    "creature card with mana value X or less in your graveyard",
-                    TargetObject(filter = TargetFilter.CreatureInYourGraveyard.manaValueAtMostX())
-                )
+                val creatureCard = target(TargetFilter.CreatureInYourGraveyard.manaValueAtMostX())
                 effect = Effects.PutOntoBattlefieldFromGraveyard(creatureCard)
             }
             mode("Target creature gets -X/-X until end of turn") {
-                val creature = target("creature to weaken", Targets.Creature)
-                val negX = DynamicAmount.Multiply(DynamicAmount.XValue, -1)
+                val creature = target(TargetFilter.Creature)
+                val negX = -DynamicAmounts.xValue()
                 effect = Effects.ModifyStats(negX, negX, creature)
             }
             mode("Up to X target creatures gain fear until end of turn") {
-                target(
-                    // The id is the whole phrase after the "up to " the optional flag prints, so
-                    // the server-driven per-mode prompt reads "up to X target creatures" rather
-                    // than "up to creatures".
-                    "X target creatures",
-                    TargetCreature(optional = true, dynamicMaxCount = DynamicAmount.XValue)
-                )
-                effect = ForEachTargetEffect(
-                    listOf(Effects.GrantKeyword(Keyword.FEAR, EffectTarget.ContextTarget(0)))
+                targets(TargetFilter.Creature, optional = true, dynamicMaxCount = DynamicAmounts.xValue())
+                effect = Effects.ForEachTarget(
+                    Effects.GrantKeyword(Keyword.FEAR, EffectTarget.ContextTarget(0))
                 )
             }
         }

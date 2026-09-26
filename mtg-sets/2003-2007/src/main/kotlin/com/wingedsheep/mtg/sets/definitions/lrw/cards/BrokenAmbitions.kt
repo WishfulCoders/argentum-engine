@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 val BrokenAmbitions = card("Broken Ambitions") {
     manaCost = "{X}{U}"
@@ -15,11 +15,11 @@ val BrokenAmbitions = card("Broken Ambitions") {
     oracleText = "Counter target spell unless its controller pays {X}. Clash with an opponent. If you win, that spell's controller mills four cards. (Each clashing player reveals the top card of their library, then puts that card on their choice of the top or bottom. A player wins if their card had a greater mana value.)"
 
     spell {
-        target("target spell", Targets.Spell)
+        target(TargetFilter.SpellOnStack)
         effect = Effects.Pipeline {
-            val spell = gather(CardSource.ChosenTargets, name = "ambitionsSpell")
-            val controllers = captureControllers(spell, name = "ambitionsControllers")
-            run(Effects.CounterUnlessDynamicPays(DynamicAmount.XValue))
+            val spell = gather(CardSource.ChosenTargets)
+            val controllers = captureControllers(spell)
+            run(Effects.CounterUnlessDynamicPays(DynamicAmounts.xValue()))
             run(Patterns.Mechanic.clash(ifYouWin = Effects.Pipeline {
                 // The rider applies even when payment or an ability prevents the counter.
                 forEachCaptured(spell, spell, controllers) {

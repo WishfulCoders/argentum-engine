@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.iko.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sanctuary Lockdown
@@ -44,7 +44,7 @@ val SanctuaryLockdown = card("Sanctuary Lockdown") {
                 filter = GameObjectFilter.Permanent.withSubtype("Human")
             )
         )
-        val victim = target("target", Targets.CreatureOpponentControls)
+        val victim = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.Tap(victim)
     }
 

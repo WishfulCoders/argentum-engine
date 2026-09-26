@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Nuisance Engine — Mirrodin #221
@@ -33,7 +33,7 @@ val NuisanceEngine = card("Nuisance Engine") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        effect = CreateTokenEffect(
+        effect = Effects.CreateToken(
             power = 0,
             toughness = 1,
             colors = emptySet(),

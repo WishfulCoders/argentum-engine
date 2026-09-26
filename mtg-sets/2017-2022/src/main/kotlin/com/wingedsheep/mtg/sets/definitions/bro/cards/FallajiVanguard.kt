@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.bro.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Fallaji Vanguard
@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.TriggerBinding
  * Whenever this creature or another creature you control enters, target creature gets +2/+0 until end of turn.
  *
  * The inclusive "this creature or another creature you control enters" shape is
- * [Triggers.entersBattlefield] over `Creature.youControl()` with [TriggerBinding.ANY] — the same
+ * `Triggers.a(filter).enters()` over `Creature.youControl()` with [TriggerBinding.ANY] — the same
  * construct Elrond, Lord of Rivendell uses. `ANY` is what lets the source itself entering fire it.
  */
 val FallajiVanguard = card("Fallaji Vanguard") {
@@ -33,11 +33,8 @@ val FallajiVanguard = card("Fallaji Vanguard") {
     keywords(Keyword.FIRST_STRIKE)
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.youControl(),
-            binding = TriggerBinding.ANY
-        )
-        val creature = target("target creature", Targets.Creature)
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).enters()
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(2, 0, creature)
     }
 

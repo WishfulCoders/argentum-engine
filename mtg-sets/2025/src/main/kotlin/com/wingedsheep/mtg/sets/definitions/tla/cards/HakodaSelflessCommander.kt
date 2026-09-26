@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CastSpellTypesFromTopOfLibrary
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.LookAtTopOfLibrary
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -53,12 +52,8 @@ val HakodaSelflessCommander = card("Hakoda, Selfless Commander") {
         cost = Costs.SacrificeSelf
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreaturesYouControl,
-            Effects.Composite(
-                listOf(
-                    ModifyStatsEffect(0, 5, EffectTarget.Self),
-                    Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self)
-                )
-            )
+            Effects.ModifyStats(0, 5, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.IterationEntity)
         )
     }
 

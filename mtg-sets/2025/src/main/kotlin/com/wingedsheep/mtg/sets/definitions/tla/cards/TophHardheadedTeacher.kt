@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
@@ -8,11 +8,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Toph, Hardheaded Teacher
@@ -38,33 +34,25 @@ val TophHardheadedTeacher = card("Toph, Hardheaded Teacher") {
 
     // ETB: optional discard; if you do, return the targeted instant/sorcery from your graveyard.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val spellCard = target(
-            "target instant or sorcery card from your graveyard",
-            TargetObject(filter = TargetFilter.InstantOrSorceryInYourGraveyard),
-        )
-        effect = MayEffect(
-            effect = IfYouDoEffect(
+        trigger = Triggers.self.enters()
+        val spellCard = target(TargetFilter.InstantOrSorceryInYourGraveyard)
+        effect = Effects.May(
+            effect = Effects.IfYouDo(
                 action = Patterns.Hand.discardCards(1),
-                ifYouDo = Effects.ReturnToHand(spellCard),
+                then = Effects.ReturnToHand(spellCard),
             ),
         )
     }
 
     // Whenever you cast a spell: earthbend 1, with an extra +1/+1 counter on that land if it's a Lesson.
     triggeredAbility {
-        trigger = Triggers.youCastSpell()
-        val land = target(
-            "target land you control",
-            TargetObject(filter = TargetFilter.Land.youControl()),
-        )
-        effect = Effects.Composite(
-            Effects.Earthbend(1, land),
-            ConditionalEffect(
+        trigger = Triggers.you.casts()
+        val land = target(TargetFilter.Land.youControl())
+        effect = Effects.Earthbend(1, land) then
+            Effects.If(
                 Conditions.TriggeringSpellMatches(GameObjectFilter.Any.withSubtype("Lesson")),
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, land),
-            ),
-        )
+                Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, land),
+            )
     }
 
     metadata {

@@ -28,7 +28,7 @@ val SpringjawTrap = card("Springjaw Trap") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{4}"), Costs.Tap, Costs.SacrificeSelf)
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(3, t)
     }
 

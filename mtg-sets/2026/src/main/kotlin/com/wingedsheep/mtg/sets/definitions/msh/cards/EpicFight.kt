@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.msh.cards
 
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Epic Fight — Marvel Super Heroes #166
@@ -38,19 +38,16 @@ val EpicFight = card("Epic Fight") {
     spell {
         modal(chooseCount = 2, minChooseCount = 1) {
             mode("Double target creature's power and toughness until end of turn") {
-                val creature = target("target creature", Targets.Creature)
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.ModifyStats(
-                    power = DynamicAmounts.targetPower(),
-                    toughness = DynamicAmounts.targetToughness(),
+                    power = DynamicAmounts.powerOf(creature),
+                    toughness = DynamicAmounts.toughnessOf(creature),
                     target = creature
                 )
             }
             mode("Target creature you control fights target creature an opponent controls") {
-                val yours = target("target creature you control", Targets.CreatureYouControl)
-                val theirs = target(
-                    "target creature an opponent controls",
-                    Targets.CreatureOpponentControls
-                )
+                val yours = target(TargetFilter.CreatureYouControl)
+                val theirs = target(TargetFilter.CreatureOpponentControls)
                 effect = Effects.Fight(yours, theirs)
             }
         }

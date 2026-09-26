@@ -23,7 +23,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  * {3}{W}, {T}: Create a 2/2 white Knight creature token with vigilance.
  *
  * Four existing primitives: [KeywordAbility.AffinityForSubtype] (Riders of the Mark), a static
- * [ModifyStats] anthem over `Creature.youControl()` (Glorious Anthem), `Triggers.youCastSpell`
+ * [ModifyStats] anthem over `Creature.youControl()` (Glorious Anthem), `Triggers.you.casts(spell, requires)`
  * with a legendary spell filter (Venat, Heart of Hydaelyn), and Aryel's token-making activated
  * ability.
  */
@@ -47,7 +47,7 @@ val TheCircleOfLoyalty = card("The Circle of Loyalty") {
 
     // Whenever you cast a legendary spell, create a 2/2 white Knight creature token with vigilance.
     triggeredAbility {
-        trigger = Triggers.youCastSpell(spellFilter = GameObjectFilter.Any.legendary())
+        trigger = Triggers.you.casts(GameObjectFilter.Any.legendary())
         effect = Effects.CreateToken(
             power = 2,
             toughness = 2,

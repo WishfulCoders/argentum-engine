@@ -24,8 +24,8 @@ val MinersBane = card("Miner's Bane") {
 
     activatedAbility {
         cost = Costs.Mana("{2}{R}")
-        effect = Effects.ModifyStats(1, 0, EffectTarget.Self)
-            .then(Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self))
+        effect = Effects.ModifyStats(1, 0, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
     }
 
     metadata {

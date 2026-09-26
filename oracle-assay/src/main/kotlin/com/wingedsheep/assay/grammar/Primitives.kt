@@ -11,11 +11,9 @@ import com.wingedsheep.assay.syntax.separated
 import com.wingedsheep.assay.syntax.token
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.CounterType
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.scripting.ProtectionScope
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 
 /**
  * The leaf rules every other rule is built from. Slots are themselves phrases, recursively, so
@@ -80,12 +78,12 @@ object Primitives {
      *
      * ### Gated on the SDK's own list, for [creatureSubtype]'s reason
      *
-     * The model field is a bare `String`, so an ungated leaf would read *any* lowercase word as a
-     * counter kind and round-trip it perfectly — "put a growing counter on it" naming a counter Magic
-     * does not have, byte-exact in both directions. [CounterType.fromName] is the SDK's own answer to
-     * "is this a counter", the same function `StatePredicate.HasCounter` parses with, so a word it
-     * rejects makes this leaf decline rather than invent a kind. That is the difference between
-     * recovering information and inventing it, and it is why "Elves" → `Elve` could happen here too.
+     * [CounterType] is open — [CounterType.of] names a kind for any word — so an ungated leaf would
+     * read *any* lowercase word as a counter kind and round-trip it perfectly — "put a growing
+     * counter on it" naming a counter Magic does not have, byte-exact in both directions.
+     * [CounterType.KNOWN] is the SDK's own answer to "is this a counter", so a word outside it makes
+     * this leaf decline rather than invent a kind. That is the difference between recovering
+     * information and inventing it, and it is why "Elves" → `Elve` could happen here too.
      *
      * ### The second word, and why it needs a lookahead
      *
@@ -95,14 +93,18 @@ object Primitives {
      * decline the lot. The lookahead spells out what the noun cannot be, which costs one clause and
      * keeps both quantities of every kind readable.
      */
-    val counterKind: Phrase<String> = token(
+    val counterKind: Phrase<CounterType> = token(
         name = "a counter kind",
         pattern = Regex("""[+-][0-9]+/[+-][0-9]+|[a-z]+(?: (?!counters?\b)[a-z]+)?"""),
-        read = { it.takeIf(::isCounterKind) },
-        write = { it.takeIf(::isCounterKind) },
+        read = ::knownCounterKind,
+        write = ::printedCounterKind,
     )
 
-    private fun isCounterKind(name: String) = CounterType.fromName(name) != null
+    /** The [CounterType.KNOWN] kind [text] prints, or null for a word the SDK does not name. */
+    private fun knownCounterKind(text: String): CounterType? =
+        CounterType.of(text).takeIf { it in CounterType.KNOWN && it.printed == text }
+
+    private fun printedCounterKind(kind: CounterType): String? = kind.takeIf { it in CounterType.KNOWN }?.printed
 
     /**
      * One counter of a kind, **article included** — "a +1/+1", "an aim", "an hourglass".
@@ -125,14 +127,14 @@ object Primitives {
      * whose article this got wrong could not round-trip: `token` re-reads what it writes on every
      * call, and [read] rejects an article that disagrees with [article].
      */
-    val singularCounterKind: Phrase<String> = token(
+    val singularCounterKind: Phrase<CounterType> = token(
         name = "a counter kind",
         pattern = Regex("""an? (?:[+-][0-9]+/[+-][0-9]+|[a-z]+(?: (?!counters?\b)[a-z]+)?)"""),
         read = { text ->
-            val kind = text.substringAfter(' ')
-            kind.takeIf { isCounterKind(it) && text.substringBefore(' ') == article(it) }
+            knownCounterKind(text.substringAfter(' '))
+                ?.takeIf { text.substringBefore(' ') == article(it.printed) }
         },
-        write = { kind -> kind.takeIf(::isCounterKind)?.let { "${article(it)} $it" } },
+        write = { kind -> printedCounterKind(kind)?.let { "${article(it)} $it" } },
     )
 
     /** Silent-h kinds, which take "an" against the letter rule. Only `hourglass` is an SDK counter. */
@@ -140,38 +142,6 @@ object Primitives {
 
     private fun article(kind: String): String =
         if (kind in SILENT_H || kind.first() in "aeiou") "an" else "a"
-
-    /**
-     * The same kind as [CounterTypeFilter], which is how `EntersWithCounters` spells it.
-     *
-     * ### One concept, two SDK types — and a `Named` spelling the grammar must never emit
-     *
-     * An effect says which counter it means with a `String`; a replacement effect says it with a
-     * [CounterTypeFilter], whose `Named` case takes that same string. So `PlusOnePlusOne` and
-     * `Named("+1/+1")` are two spellings of one value, and registering both would be genuine
-     * ambiguity with nothing for the printer to choose between. This maps to the dedicated case
-     * wherever the SDK has published one and to `Named` only where it has not — and [counterKindOf],
-     * its inverse, **refuses** a `Named` carrying a name that has a dedicated case, so a card written
-     * the minority way reports as a divergence rather than quietly agreeing.
-     */
-    fun counterFilter(kind: String): CounterTypeFilter =
-        DEDICATED_COUNTER_FILTERS[kind] ?: CounterTypeFilter.Named(kind)
-
-    /** [counterFilter]'s inverse; null where the value is a spelling this grammar does not emit. */
-    fun counterKindOf(filter: CounterTypeFilter): String? = when (filter) {
-        is CounterTypeFilter.Named -> filter.name.takeIf { it !in DEDICATED_COUNTER_FILTERS }
-        else -> DEDICATED_COUNTER_FILTERS.entries.firstOrNull { it.value == filter }?.key
-    }
-
-    private val DEDICATED_COUNTER_FILTERS: Map<String, CounterTypeFilter> = mapOf(
-        Counters.PLUS_ONE_PLUS_ONE to CounterTypeFilter.PlusOnePlusOne,
-        Counters.MINUS_ONE_MINUS_ONE to CounterTypeFilter.MinusOneMinusOne,
-        Counters.PLUS_ONE_PLUS_ZERO to CounterTypeFilter.PlusOnePlusZero,
-        Counters.PLUS_ZERO_PLUS_ONE to CounterTypeFilter.PlusZeroPlusOne,
-        Counters.MINUS_ONE_MINUS_ZERO to CounterTypeFilter.MinusOneMinusZero,
-        Counters.MINUS_ZERO_MINUS_ONE to CounterTypeFilter.MinusZeroMinusOne,
-        Counters.LOYALTY to CounterTypeFilter.Loyalty,
-    )
 
     /**
      * A run of mana symbols — `{2}{U}`, `{W/P}`, `{X}`. Symbols are lexed as tokens and never as
@@ -340,7 +310,7 @@ object Primitives {
      * position can have chosen a *card* ("Return target creature card from your graveyard to the
      * battlefield. You gain life equal to **its** mana value.") or a *spell* ("Counter target spell.
      * … **that spell's** mana value"), and Oracle names those with the noun rather than the
-     * permanent word. All four denote `EntityReference.Target`; the noun is printed shape.
+     * permanent word. All four denote `EffectTarget.ContextTarget`; the noun is printed shape.
      *
      * Which spelling is canonical is [targetPronoun]'s measurement, re-taken for the possessive over
      * the Oracle bulk: "its ⟨characteristic⟩" 525 lines against the demonstratives' 149 together. So

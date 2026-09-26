@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Curator of Destinies
@@ -61,10 +60,10 @@ val CuratorOfDestinies = card("Curator of Destinies") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Pipeline {
             // "look at the top five cards of your library"
-            val looked = gather(CardSource.TopOfLibrary(DynamicAmount.Fixed(5)), name = "looked")
+            val looked = gather(CardSource.TopOfLibrary(5))
             ifNotEmpty(looked) {
                 // "and separate them into a face-down pile and a face-up pile."
                 val piles = chooseAnyNumberSplit(
@@ -75,12 +74,10 @@ val CuratorOfDestinies = card("Curator of Destinies") {
                     selectedLabel = "Face-up pile",
                     remainderLabel = "Face-down pile",
                     showAllCards = true,
-                    alwaysPrompt = true,
-                    name = "faceUp",
-                    remainderName = "faceDown"
+                    alwaysPrompt = true
                 )
                 // The face-up pile is public from here on; the face-down pile stays hidden.
-                val faceUp = gather(piles.selected.asSource, revealed = true, name = "faceUpRevealed")
+                val faceUp = gather(piles.selected.asSource, revealed = true)
                 // "An opponent chooses one of those piles."
                 val picked = choosePile(
                     pileA = faceUp,

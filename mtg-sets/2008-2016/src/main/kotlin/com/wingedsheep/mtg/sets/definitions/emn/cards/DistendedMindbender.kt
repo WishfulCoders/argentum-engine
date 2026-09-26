@@ -10,9 +10,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.RevealHandEffect
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Distended Mindbender
@@ -51,18 +49,17 @@ val DistendedMindbender = card("Distended Mindbender") {
     emerge("{5}{B}{B}")
 
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
-        val opponent = target("target opponent", TargetOpponent())
+        trigger = Triggers.self.isCast()
+        val opponent = target(Targets.Opponent)
         effect = Effects.Pipeline {
-            run(RevealHandEffect(opponent))
-            val hand = gather(CardSource.FromZone(Zone.HAND, Player.ContextPlayer(0)), name = "hand")
+            run(Effects.RevealHand(opponent))
+            val hand = gather(CardSource.FromZone(Zone.HAND, opponent.asPlayer))
             val cheap = chooseExactly(
                 1, from = hand,
                 filter = GameObjectFilter.Nonland.manaValueAtMost(3),
                 prompt = "Choose a nonland card with mana value 3 or less",
                 alwaysPrompt = true,
                 showAllCards = true,
-                name = "cheap",
             )
             val expensive = chooseExactly(
                 1, from = hand,
@@ -70,16 +67,15 @@ val DistendedMindbender = card("Distended Mindbender") {
                 prompt = "Choose a card with mana value 4 or greater",
                 alwaysPrompt = true,
                 showAllCards = true,
-                name = "expensive",
             )
             move(
                 cheap,
-                CardDestination.ToZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
+                CardDestination.ToZone(Zone.GRAVEYARD, opponent.asPlayer),
                 moveType = MoveType.Discard,
             )
             move(
                 expensive,
-                CardDestination.ToZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
+                CardDestination.ToZone(Zone.GRAVEYARD, opponent.asPlayer),
                 moveType = MoveType.Discard,
             )
         }

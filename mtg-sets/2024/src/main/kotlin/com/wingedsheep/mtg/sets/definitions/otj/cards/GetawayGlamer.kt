@@ -2,26 +2,16 @@ package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.Aggregation
-import com.wingedsheep.sdk.scripting.values.CardNumericProperty
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Getaway Glamer {W}
@@ -56,44 +46,33 @@ val GetawayGlamer = card("Getaway Glamer") {
         "+ {2} — Destroy target creature if no other creature has greater power."
 
     spell {
-        effect = ModalEffect(
+        effect = Effects.Modal(
             modes = listOf(
-                Mode(
-                    effect = Effects.Composite(
-                        Effects.Move(EffectTarget.ContextTarget(0), Zone.EXILE),
-                        CreateDelayedTriggerEffect(
-                            step = Step.END,
-                            effect = Effects.Move(EffectTarget.ContextTarget(0), Zone.BATTLEFIELD)
-                        )
-                    ),
-                    targetRequirements = listOf(
-                        TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.nontoken()))
-                    ),
-                    description = "+ {1} — Exile target nontoken creature. Return it to the " +
-                        "battlefield under its owner's control at the beginning of the next end step.",
+                mode("+ {1} — Exile target nontoken creature. Return it to the " +
+                    "battlefield under its owner's control at the beginning of the next end step.") {
+                    val creature = target(TargetFilter(GameObjectFilter.Creature.nontoken()))
                     additionalManaCost = "{1}"
-                ),
-                Mode(
-                    effect = ConditionalEffect(
-                        condition = Compare(
-                            left = DynamicAmount.EntityProperty(
-                                EntityReference.Target(0),
-                                EntityNumericProperty.Power
-                            ),
-                            operator = ComparisonOperator.GTE,
-                            right = DynamicAmount.AggregateBattlefield(
-                                player = Player.Each,
-                                filter = GameObjectFilter.Creature,
-                                aggregation = Aggregation.MAX,
-                                property = CardNumericProperty.POWER
-                            )
-                        ),
-                        effect = Effects.Destroy(EffectTarget.ContextTarget(0))
-                    ),
-                    targetRequirements = listOf(Targets.Creature),
-                    description = "+ {2} — Destroy target creature if no other creature has greater power.",
+                    effect = Effects.Move(creature, Zone.EXILE) then
+                        Effects.CreateDelayedTrigger(
+                            step = Step.END,
+                            effect = Effects.Move(creature, Zone.BATTLEFIELD)
+                        )
+                },
+                mode("+ {2} — Destroy target creature if no other creature has greater power.") {
+                    val creature = target(TargetFilter.Creature)
                     additionalManaCost = "{2}"
-                )
+                    effect = Effects.If(
+                        condition = Conditions.CompareAmounts(
+                            left = DynamicAmounts.powerOf(creature),
+                            operator = ComparisonOperator.GTE,
+                            right = DynamicAmounts.battlefield(
+                                Player.Each,
+                                GameObjectFilter.Creature
+                            ).maxPower()
+                        ),
+                        then = Effects.Destroy(creature)
+                    )
+                }
             ),
             chooseCount = 2,
             minChooseCount = 1

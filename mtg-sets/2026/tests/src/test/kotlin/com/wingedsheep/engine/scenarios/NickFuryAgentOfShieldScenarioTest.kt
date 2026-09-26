@@ -14,6 +14,7 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.CardScript
+import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.TriggeredAbility
@@ -95,6 +96,7 @@ class NickFuryAgentOfShieldScenarioTest : ScenarioTestBase() {
             oracleText = "When this creature enters, draw a card.",
             script = CardScript.creature(
                 TriggeredAbility.create(
+                    id = AbilityId("NickFuryAgentOfShieldScenarioTest_1"),
                     trigger = EventPattern.ZoneChangeEvent(to = Zone.BATTLEFIELD),
                     binding = TriggerBinding.SELF,
                     effect = Effects.DrawCards(1)

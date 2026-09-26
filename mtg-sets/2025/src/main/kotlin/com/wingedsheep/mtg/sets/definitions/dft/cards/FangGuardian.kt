@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Fang Guardian — Aetherdrift #162
@@ -33,16 +32,8 @@ val FangGuardian = card("Fang Guardian") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "another target creature or Vehicle you control",
-            TargetPermanent(
-                filter = TargetFilter(
-                    GameObjectFilter.CreatureOrVehicle.youControl(),
-                    excludeSelf = true
-                )
-            )
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter(GameObjectFilter.CreatureOrVehicle.youControl(), excludeSelf = true))
         effect = Effects.ModifyStats(2, 2, t)
         description = "When this creature enters, another target creature or Vehicle you control gets " +
             "+2/+2 until end of turn."

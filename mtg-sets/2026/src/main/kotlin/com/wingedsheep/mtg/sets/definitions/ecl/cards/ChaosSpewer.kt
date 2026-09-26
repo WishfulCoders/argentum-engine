@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
 import com.wingedsheep.sdk.core.ManaCost
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Patterns
 
@@ -27,8 +27,8 @@ val ChaosSpewer = card("Chaos Spewer") {
         "(To blight 2, put two -1/-1 counters on a creature you control.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = PayOrSufferEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.PayOrSuffer(
             cost = Costs.pay.Mana(ManaCost.parse("{2}")),
             suffer = Patterns.Mechanic.blight(2)
         )

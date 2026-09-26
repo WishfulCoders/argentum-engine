@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -52,10 +51,7 @@ val WoodlandWeavemaster = card("Woodland Weavemaster") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Any.withSubtype(Subtype.ELF).youControl(),
-            binding = TriggerBinding.OTHER,
-        )
+        trigger = Triggers.another(GameObjectFilter.Any.withSubtype(Subtype.ELF).youControl()).enters()
         effect = Effects.ModifyStats(+1, +1, EffectTarget.Self)
         description = "Whenever another Elf you control enters, this creature gets +1/+1 until " +
             "end of turn."

@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Consuming Bonfire
@@ -30,17 +29,11 @@ val ConsumingBonfire = card("Consuming Bonfire") {
     spell {
         modal(chooseCount = 1) {
             mode("Consuming Bonfire deals 4 damage to target non-Elemental creature") {
-                val creature = target(
-                    "target non-Elemental creature",
-                    TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.notSubtype(Subtype.ELEMENTAL)))
-                )
+                val creature = target(TargetFilter(GameObjectFilter.Creature.notSubtype(Subtype.ELEMENTAL)))
                 effect = Effects.DealDamage(4, creature)
             }
             mode("Consuming Bonfire deals 7 damage to target Treefolk creature") {
-                val treefolk = target(
-                    "target Treefolk creature",
-                    TargetCreature(filter = TargetFilter.Creature.withSubtype(Subtype.TREEFOLK))
-                )
+                val treefolk = target(TargetFilter.Creature.withSubtype(Subtype.TREEFOLK))
                 effect = Effects.DealDamage(7, treefolk)
             }
         }

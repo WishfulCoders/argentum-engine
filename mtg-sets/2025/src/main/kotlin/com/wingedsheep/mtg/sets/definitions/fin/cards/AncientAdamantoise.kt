@@ -11,8 +11,9 @@ import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.RedirectDamage
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Ancient Adamantoise
@@ -26,8 +27,8 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * When this creature dies, exile it and create ten tapped Treasure tokens.
  *
  * The redirection is modelled as two static [RedirectDamage] replacements — one for damage to
- * the controller ([RecipientFilter.You]) and one for damage to their permanents
- * ([RecipientFilter.Matching] over `Permanent.youControl()`). Both redirect to [EffectTarget.Self].
+ * the controller ([Recipient.You]) and one for damage to their permanents
+ * ([Recipient.Object] over `Permanent.youControl()`). Both redirect to [EffectTarget.Self].
  * Damage already headed to the Adamantoise itself is left alone (the engine skips a redirect
  * whose destination equals the original recipient, CR-faithful "other permanents").
  *
@@ -52,7 +53,7 @@ val AncientAdamantoise = card("Ancient Adamantoise") {
         "When this creature dies, exile it and create ten tapped Treasure tokens."
 
     keywords(Keyword.VIGILANCE, Keyword.WARD)
-    keywordAbility(KeywordAbility.ward("{3}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{3}")))
 
     staticAbility {
         ability = DamagePersistsThroughCleanup
@@ -62,7 +63,7 @@ val AncientAdamantoise = card("Ancient Adamantoise") {
     replacementEffect(
         RedirectDamage(
             redirectTo = EffectTarget.Self,
-            appliesTo = EventPattern.DamageEvent(recipient = RecipientFilter.You),
+            appliesTo = EventPattern.DamageEvent(recipient = Recipient.You),
         )
     )
     // "... and other permanents you control is dealt to this creature instead."
@@ -70,18 +71,15 @@ val AncientAdamantoise = card("Ancient Adamantoise") {
         RedirectDamage(
             redirectTo = EffectTarget.Self,
             appliesTo = EventPattern.DamageEvent(
-                recipient = RecipientFilter.Matching(GameObjectFilter.Permanent.youControl()),
+                recipient = Recipient.Object(GameObjectFilter.Permanent.youControl()),
             ),
         )
     )
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         triggerZone = Zone.GRAVEYARD
-        effect = Effects.Composite(
-            Effects.Exile(EffectTarget.Self),
-            Effects.CreateTreasure(count = 10, tapped = true)
-        )
+        effect = Effects.Exile(EffectTarget.Self) then Effects.CreateTreasure(count = 10, tapped = true)
     }
 
     metadata {

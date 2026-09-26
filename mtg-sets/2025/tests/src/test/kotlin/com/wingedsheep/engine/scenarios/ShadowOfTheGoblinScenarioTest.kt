@@ -13,7 +13,7 @@ import io.kotest.matchers.shouldBe
 /**
  * Shadow of the Goblin (SPM), Undying Vengeance — "Whenever you play a land … from anywhere other
  * than your hand, this enchantment deals 1 damage to each opponent." Pins the new
- * `Triggers.youPlayLand(fromZoneOtherThan = Zone.HAND)` (`LandPlayedEvent`) end-to-end, exercised by
+ * `Triggers.you.playsLand(Zone.HAND)` (`LandPlayedEvent`) end-to-end, exercised by
  * playing Oscorp Industries from the graveyard via Mayhem.
  *
  * Shadow is placed *after* reaching the first main phase so its own first-main loot trigger (which

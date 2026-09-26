@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Archaeomender
@@ -24,11 +23,8 @@ val Archaeomender = card("Archaeomender") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val card = target(
-            "target artifact card in your graveyard",
-            TargetObject(filter = TargetFilter.ArtifactInYourGraveyard),
-        )
+        trigger = Triggers.self.enters()
+        val card = target(TargetFilter.ArtifactInYourGraveyard)
         effect = Effects.ReturnToHand(card)
         description = "When this creature enters, return target artifact card from your graveyard to your hand."
     }

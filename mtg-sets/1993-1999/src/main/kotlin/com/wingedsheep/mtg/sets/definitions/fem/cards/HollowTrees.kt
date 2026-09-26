@@ -2,16 +2,17 @@ package com.wingedsheep.mtg.sets.definitions.fem.cards
 
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Hollow Trees
@@ -40,19 +41,19 @@ val HollowTrees = card("Hollow Trees") {
     flags(AbilityFlag.MAY_NOT_UNTAP)
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         interveningIf = Conditions.SourceIsTapped
-        effect = Effects.AddCounters(Counters.STORAGE, 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.STORAGE, 1, EffectTarget.Self)
         description = "At the beginning of your upkeep, if this land is tapped, put a storage counter on it."
     }
 
     activatedAbility {
         cost = Costs.Composite(
             Costs.Tap,
-            Costs.RemoveXCounters(counterType = Counters.STORAGE, self = true),
+            Costs.RemoveXCounters(counterType = CounterType.STORAGE, self = true),
         )
         manaAbility = true
-        effect = Effects.AddMana(Color.GREEN, DynamicAmount.XValue)
+        effect = Effects.AddMana(Color.GREEN, DynamicAmounts.xValue())
         description = "{T}, Remove any number of storage counters from this land: Add {G} for each storage counter removed this way."
     }
 

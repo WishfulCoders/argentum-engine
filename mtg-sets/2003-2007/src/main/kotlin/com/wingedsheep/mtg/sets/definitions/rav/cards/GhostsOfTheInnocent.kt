@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.HalveDamage
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Ghosts of the Innocent
@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.scripting.events.RecipientFilter
  * half of 1 rounded down is 0 (a 1-damage source deals nothing), and three copies compound
  * 14 → 7 → 3 → 1, because each applicable replacement applies once (CR 616.1).
  *
- * `RecipientFilter.Any` is the "a permanent **or** player" half: unlike most of the damage family
+ * `Recipient.Any` is the "a permanent **or** player" half: unlike most of the damage family
  * this card scopes neither by recipient nor by source, so every damage event in the game is
  * halved — including damage dealt to the Ghosts themselves and to their controller.
  *
@@ -38,7 +38,7 @@ val GhostsOfTheInnocent = card("Ghosts of the Innocent") {
         "damage, rounded down, to that permanent or player instead."
 
     replacementEffect(
-        HalveDamage(appliesTo = EventPattern.DamageEvent(recipient = RecipientFilter.Any))
+        HalveDamage(appliesTo = EventPattern.DamageEvent(recipient = Recipient.Any))
     )
 
     metadata {

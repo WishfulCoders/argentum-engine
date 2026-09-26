@@ -22,8 +22,8 @@ import io.kotest.matchers.shouldBe
  *  {T}: You may cast an artifact spell from your hand with mana value less than or equal to the
  *  number of ingenuity counters on Lady Octopus without paying its mana cost."
  *
- * Exercises the two [com.wingedsheep.sdk.dsl.Triggers.NthCardDrawn] triggers (first + second draw)
- * feeding an [com.wingedsheep.sdk.core.Counters.INGENUITY] counter, and the {T} gather → filter (mv
+ * Exercises the two `Triggers.<player>.drawsNth(n)` triggers (first + second draw)
+ * feeding an [com.wingedsheep.sdk.core.CounterType.INGENUITY] counter, and the {T} gather → filter (mv
  * ≤ counter count) → choose-up-to-one → cast-without-paying pipeline.
  */
 class LadyOctopusInspiredInventorScenarioTest : ScenarioTestBase() {

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantHexproofToController
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
 /**
@@ -55,7 +54,7 @@ val CaptainAmericaSuperSoldier = card("Captain America, Super-Soldier") {
 
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.Named(Counters.SHIELD),
+            counterType = CounterType.SHIELD,
             count = 1,
             selfOnly = true,
         )
@@ -64,7 +63,7 @@ val CaptainAmericaSuperSoldier = card("Captain America, Super-Soldier") {
     staticAbility {
         ability = ConditionalStaticAbility(
             ability = GrantHexproofToController,
-            condition = Conditions.SourceHasCounter(CounterTypeFilter.Named(Counters.SHIELD)),
+            condition = Conditions.SourceHasCounter(CounterType.SHIELD),
         )
     }
 
@@ -77,7 +76,7 @@ val CaptainAmericaSuperSoldier = card("Captain America, Super-Soldier") {
                     excludeSelf = true,
                 ),
             ),
-            condition = Conditions.SourceHasCounter(CounterTypeFilter.Named(Counters.SHIELD)),
+            condition = Conditions.SourceHasCounter(CounterType.SHIELD),
         )
     }
 

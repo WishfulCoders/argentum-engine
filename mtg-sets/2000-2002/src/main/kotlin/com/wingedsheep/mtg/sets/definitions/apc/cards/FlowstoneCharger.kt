@@ -26,7 +26,7 @@ val FlowstoneCharger = card("Flowstone Charger") {
     power = 2
     toughness = 5
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ModifyStats(3, -3, EffectTarget.Self)
     }
     metadata {

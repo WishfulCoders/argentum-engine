@@ -29,7 +29,7 @@ val WarriorsStand = card("Warrior's Stand") {
         castOnlyIf(YouWereAttackedThisStep)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(2, 2, EffectTarget.Self)
+            Effects.ModifyStats(2, 2, EffectTarget.IterationEntity)
         )
     }
 

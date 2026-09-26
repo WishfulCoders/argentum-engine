@@ -1,17 +1,18 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.unaryMinus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Song of Stupefaction
@@ -26,7 +27,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * The Aura attaches to a creature or Vehicle ([GameObjectFilter.CreatureOrVehicle], a Vehicle
  * matched by its subtype — same enchant clause as Silken Strength). The enters trigger is an
  * optional (`optional = true`) self-mill of two cards. The static power penalty is a
- * continuously recomputed [GrantDynamicStatsEffect] on the attached permanent: power is reduced
+ * continuously recomputed [GrantDynamicStats] on the attached permanent: power is reduced
  * by the number of permanent cards in your graveyard (`Count(GRAVEYARD, Permanent)` negated via
  * `Multiply(..., -1)` — the "fathomless descent" count), toughness unchanged. The default
  * [GroupFilter.attachedCreature] scope is AttachedTo of any permanent, so the -X/-0 applies even
@@ -40,22 +41,19 @@ val SongOfStupefaction = card("Song of Stupefaction") {
         "When this Aura enters, you may mill two cards. (You may put the top two cards of your library into your graveyard.)\n" +
         "Fathomless descent — Enchanted permanent gets -X/-0, where X is the number of permanent cards in your graveyard."
 
-    auraTarget = TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrVehicle))
+    auraTarget = TargetObject(filter = TargetFilter(GameObjectFilter.CreatureOrVehicle))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         effect = Patterns.Library.mill(2)
     }
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.attachedCreature(),
-            powerBonus = DynamicAmount.Multiply(
-                DynamicAmount.Count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Permanent),
-                -1
-            ),
-            toughnessBonus = DynamicAmount.Fixed(0)
+            powerBonus = -DynamicAmounts.count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Permanent),
+            toughnessBonus = DynamicAmounts.fixed(0)
         )
     }
 

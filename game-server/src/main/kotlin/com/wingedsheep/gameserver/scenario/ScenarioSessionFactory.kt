@@ -1,5 +1,6 @@
 package com.wingedsheep.gameserver.scenario
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.registry.PrintingRegistry
 import com.wingedsheep.engine.registry.TokenArtRegistry
@@ -33,7 +34,7 @@ class ScenarioSessionFactory(
     private val gamePlayHandler: GamePlayHandler,
 ) {
     private val logger = LoggerFactory.getLogger(ScenarioSessionFactory::class.java)
-    private val stateTransformer = ClientStateTransformer(cardRegistry)
+    private val stateTransformer = ClientStateTransformer(cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
     /**
      * Create and persist a session for [build]. [player1Token]/[player2Token] pin specific
@@ -66,7 +67,7 @@ class ScenarioSessionFactory(
             stateTransformer = if (playRegistry === cardRegistry) {
                 stateTransformer
             } else {
-                ClientStateTransformer(playRegistry)
+                ClientStateTransformer(playRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             },
             printingRegistry = printingRegistry,
             // Without this a scenario mints every token with the engine-wide generic art for its

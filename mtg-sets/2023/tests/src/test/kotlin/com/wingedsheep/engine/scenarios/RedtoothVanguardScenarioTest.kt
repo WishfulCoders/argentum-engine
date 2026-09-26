@@ -18,7 +18,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  *  your graveyard to your hand."
  *
  * Exercises the graveyard-resident enters trigger (`triggerZone = GRAVEYARD`, same mechanism as
- * Dragon Shadow / Flamewake Phoenix), the optional {2} payment (`MayPayManaEffect`), and the
+ * Dragon Shadow / Flamewake Phoenix), the optional {2} payment (`Effects.MayPay`), and the
  * return-to-hand from the graveyard. All primitives already exist.
  */
 class RedtoothVanguardScenarioTest : ScenarioTestBase() {

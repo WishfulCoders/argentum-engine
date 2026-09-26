@@ -7,9 +7,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.training
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Gryffwing Cavalry
@@ -25,7 +23,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * Three pieces:
  *  - [Keyword.FLYING] evasion plus [training] (keyword badge + the +1/+1 attack trigger).
  *  - A hand-written attack trigger whose payoff is gated behind an optional mana payment
- *    ([MayPayManaEffect] — the "you may pay {1}{W}. If you do" reflexive, CR 603.12): pay {1}{W}
+ *    ([Effects.MayPay] — the "you may pay {1}{W}. If you do" reflexive, CR 603.12): pay {1}{W}
  *    to grant flying until end of turn to a chosen attacking creature that doesn't already have
  *    it. The target filter is `AttackingCreature.withoutKeyword(FLYING)` so only a grounded
  *    attacker is a legal target (matching "target attacking creature without flying"), and the
@@ -50,14 +48,11 @@ val GryffwingCavalry = card("Gryffwing Cavalry") {
     training()
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val flyer = target(
-            "target attacking creature without flying",
-            TargetCreature(filter = TargetFilter.AttackingCreature.withoutKeyword(Keyword.FLYING)),
-        )
-        effect = MayPayManaEffect(
+        trigger = Triggers.self.attacks()
+        val flyer = target(TargetFilter.AttackingCreature.withoutKeyword(Keyword.FLYING))
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{1}{W}"),
-            effect = Effects.GrantKeyword(Keyword.FLYING, flyer),
+            then = Effects.GrantKeyword(Keyword.FLYING, flyer),
         )
     }
 

@@ -13,10 +13,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.WardCost
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -38,14 +36,9 @@ val AbueloAncestralEcho = card("Abuelo, Ancestral Echo") {
     keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
     activatedAbility {
         cost = Costs.Mana("{1}{W}{U}")
-        val t = target(
-            "target",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrArtifact.youControl()).other())
-        )
-        effect = Effects.Composite(
-            Effects.Exile(t),
-            CreateDelayedTriggerEffect(step = Step.END, effect = Effects.Move(t, Zone.BATTLEFIELD))
-        )
+        val t = target(TargetFilter(GameObjectFilter.CreatureOrArtifact.youControl()).other())
+        effect = Effects.Exile(t) then
+            Effects.CreateDelayedTrigger(step = Step.END, effect = Effects.Move(t, Zone.BATTLEFIELD))
     }
     metadata {
         rarity = Rarity.RARE

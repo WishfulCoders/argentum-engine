@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.akh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Stinging Shot
@@ -23,8 +23,8 @@ val StingingShot = card("Stinging Shot") {
             "Cycling {2} ({2}, Discard this card: Draw a card.)"
 
     spell {
-        val flier = target("target", Targets.CreatureWithKeyword(Keyword.FLYING))
-        effect = Effects.AddCounters(Counters.MINUS_ONE_MINUS_ONE, 3, flier)
+        val flier = target(TargetFilter.Creature.withKeyword(Keyword.FLYING))
+        effect = Effects.AddCounters(CounterType.MINUS_ONE_MINUS_ONE, 3, flier)
     }
 
     keywordAbility(KeywordAbility.cycling("{2}"))

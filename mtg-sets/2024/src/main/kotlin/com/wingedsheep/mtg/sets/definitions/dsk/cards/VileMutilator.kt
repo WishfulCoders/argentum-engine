@@ -25,7 +25,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * - The additional cost is the standard [Costs.additional.SacrificePermanent] over
  *   [GameObjectFilter.CreatureOrEnchantment] (same shape as Final Vengeance / Embrace Oblivion).
  * - Flying and trample are plain keywords.
- * - The ETB is a [Triggers.EntersBattlefield] whose effect is a two-step [Effects.Composite] in the
+ * - The ETB is a `Triggers.self.enters()` whose effect is a two-step [Effects.Composite] in the
  *   printed order: first each opponent sacrifices a nontoken enchantment, *then* each opponent
  *   sacrifices a nontoken creature. Each step is an [Effects.Sacrifice] over the matching
  *   `.nontoken()` filter targeting [Player.EachOpponent]; because the sacrifice is forced onto a
@@ -50,19 +50,17 @@ val VileMutilator = card("Vile Mutilator") {
     keywords(Keyword.FLYING, Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            // First: each opponent sacrifices a nontoken enchantment of their choice.
-            Effects.Sacrifice(
-                filter = GameObjectFilter.Enchantment.nontoken(),
-                target = EffectTarget.PlayerRef(Player.EachOpponent),
-            ),
+        trigger = Triggers.self.enters()
+        // First: each opponent sacrifices a nontoken enchantment of their choice.
+        effect = Effects.Sacrifice(
+            filter = GameObjectFilter.Enchantment.nontoken(),
+            target = EffectTarget.PlayerRef(Player.EachOpponent),
+        ) then
             // Then: each opponent sacrifices a nontoken creature of their choice.
             Effects.Sacrifice(
                 filter = GameObjectFilter.Creature.nontoken(),
                 target = EffectTarget.PlayerRef(Player.EachOpponent),
-            ),
-        )
+            )
         description = "When this creature enters, each opponent sacrifices a nontoken enchantment of " +
             "their choice, then sacrifices a nontoken creature of their choice."
     }

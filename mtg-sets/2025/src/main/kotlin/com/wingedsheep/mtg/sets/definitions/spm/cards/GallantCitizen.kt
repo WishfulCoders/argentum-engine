@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.spm.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 /**
  * Gallant Citizen
@@ -20,8 +20,8 @@ val GallantCitizen = card("Gallant Citizen") {
     power = 1
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = DrawCardsEffect(1)
+        trigger = Triggers.self.enters()
+        effect = Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.COMMON

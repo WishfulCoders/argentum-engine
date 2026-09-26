@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.conflux.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Constricting Tendrils
@@ -27,7 +27,7 @@ val ConstrictingTendrils = card("Constricting Tendrils") {
         "Cycling {2} ({2}, Discard this card: Draw a card.)"
 
     spell {
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(-3, 0, t)
     }
 

@@ -8,14 +8,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Troop of Ponies
@@ -42,40 +36,28 @@ val TroopOfPonies = card("Troop of Ponies") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap, Costs.SacrificeSelf)
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.BasicLand),
-                    storeAs = "searchable"
-                ),
-                SelectFromCollectionEffect(
-                    from = "searchable",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(2)),
-                    storeSelected = "found",
-                    prompt = "Search your library for up to two basic land cards"
-                ),
-                SelectFromCollectionEffect(
-                    from = "found",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                    storeSelected = "toBattlefield",
-                    storeRemainder = "toHand",
-                    selectedLabel = "Onto the battlefield tapped",
-                    remainderLabel = "Into your hand",
-                    prompt = "Choose which basic land enters the battlefield tapped; the other goes to your hand."
-                ),
-                MoveCollectionEffect(
-                    from = "toBattlefield",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped),
-                    revealed = true
-                ),
-                MoveCollectionEffect(
-                    from = "toHand",
-                    destination = CardDestination.ToZone(Zone.HAND),
-                    revealed = true
-                ),
-                ShuffleLibraryEffect()
+        effect = Effects.Pipeline {
+            val searchable = gather(CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.BasicLand))
+            val found = chooseUpTo(
+                2,
+                from = searchable,
+                prompt = "Search your library for up to two basic land cards"
             )
-        )
+            val (toBattlefield, toHandCards) = chooseExactlySplit(
+                1,
+                from = found,
+                selectedLabel = "Onto the battlefield tapped",
+                remainderLabel = "Into your hand",
+                prompt = "Choose which basic land enters the battlefield tapped; the other goes to your hand."
+            )
+            move(
+                toBattlefield,
+                CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped),
+                revealed = true
+            )
+            toHand(toHandCards, revealed = true)
+            run(Effects.ShuffleLibrary())
+        }
     }
 
     metadata {

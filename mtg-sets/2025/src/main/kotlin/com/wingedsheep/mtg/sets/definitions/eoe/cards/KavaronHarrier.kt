@@ -7,8 +7,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Step
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 
 /**
  * Kavaron Harrier
@@ -26,10 +24,10 @@ val KavaronHarrier = card("Kavaron Harrier") {
 
     // Triggered ability: Whenever this creature attacks, you may pay {2} to create a 2/2 Robot token
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = MayPayManaEffect(
+        trigger = Triggers.self.attacks()
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{2}"),
-            effect = CreateTokenEffect(
+            then = Effects.CreateToken(
                 power = 2,
                 toughness = 2,
                 colors = setOf(), // colorless

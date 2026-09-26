@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.engineSerializersModule
 import com.wingedsheep.engine.state.ComponentContainer
 import com.wingedsheep.engine.state.components.player.HotseatControlComponent
@@ -39,7 +40,7 @@ class HotseatRoutingTest : FunSpec({
     }
 
     fun transformer(d: GameTestDriver): ClientStateTransformer =
-        ClientStateTransformer(cardRegistry = d.cardRegistry)
+        ClientStateTransformer(cardRegistry = d.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
     /** Mark both seats as hotseat-controlled by [controller]. */
     fun GameTestDriver.enableHotseat(controller: EntityId) {

@@ -26,7 +26,7 @@ val IrascibleWolverine = card("Irascible Wolverine") {
     keywordAbility(KeywordAbility.plot("{2}{R}"))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Exile.impulse(1)
     }
 

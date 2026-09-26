@@ -17,7 +17,7 @@ import io.kotest.matchers.shouldNotBe
  * instead of putting it into its owner's graveyard. You may cast that card without paying its mana
  * cost for as long as it remains exiled."
  *
- * The card composes an existing `ConditionalEffect` over `Conditions.TargetMatchesFilter`, but it is
+ * The card composes an existing `Effects.If` over `Conditions.TargetMatchesFilter`, but it is
  * the first one to evaluate that condition against a **spell on the stack** rather than a
  * battlefield permanent — `ConditionEvaluator.evaluateTargetFilterMatch` has to route
  * `ChosenTarget.Spell` to the spell entity and read its printed card types. Both branches are

@@ -115,11 +115,16 @@ export function chooseTargetsView(
   walk: ChooseTargetsWalkState,
   cards: ClientGameState['cards'] | undefined,
 ): ChooseTargetsView {
-  // Targets confirmed for other requirements can't be picked again.
-  const alreadySelected = Object.values(walk.collected).flat()
-  const legalTargets = (decision.legalTargets[walk.requirementIndex] ?? []).filter(
-    (id) => !alreadySelected.includes(id),
-  )
+  // Targets confirmed for earlier requirements stay pickable — each "target" word is its own
+  // instance (Seeds of Strength) — unless this requirement says "another target".
+  const requirement = decision.targetRequirements[walk.requirementIndex]
+  const earlierPicks = Object.entries(walk.collected)
+    .filter(([index]) => Number(index) < walk.requirementIndex)
+    .flatMap(([, ids]) => ids)
+  const pool = decision.legalTargets[walk.requirementIndex] ?? []
+  const legalTargets = requirement?.mustDifferFromEarlier
+    ? pool.filter((id) => !earlierPicks.includes(id))
+    : pool
 
   const { mode, pileCards, pileZoneLabel } = routeTargetsByZone(legalTargets, cards)
   const isMixed = mode === 'mixed'

@@ -1,15 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GainControlByActivePlayerEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Contested Game Ball (The Lost Caverns of Ixalan)
@@ -23,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Implementation:
  *  - The combat-damage trigger uses the defensive batch trigger
- *    [Triggers.OneOrMoreCreaturesDealCombatDamageToYou] (Witch-king of Angmar's idiom): it fires
+ *    `Triggers.oneOrMore(filter).dealCombatDamageToYou()` (Witch-king of Angmar's idiom): it fires
  *    at most once per combat-damage batch no matter how many creatures connected (matching the
  *    ruling "triggers only once ... no matter how many creatures deal combat damage to you at the
  *    same time"). "You" re-binds to whoever currently controls the artifact each combat.
@@ -36,11 +35,11 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *    member of the attacking team gains control; multiplayer isn't supported yet — see
  *    backlog/multiplayer.md.) The artifact is then untapped so the new controller can use it.
  *  - The activated ability composes [Effects.DrawCards] (1) -> [Effects.AddCounters] (a passive
- *    [Counters.POINT] counter on Self) -> a resolution-time [ConditionalEffect] gated on
+ *    [CounterType.POINT] counter on Self) -> a resolution-time [Effects.If] gated on
  *    [Conditions.SourceCounterCountAtLeast]`(point, 5)` that sacrifices the artifact
  *    ([Effects.SacrificeTarget]`(Self)`) and makes a Treasure ([Effects.CreateTreasure]). The
  *    threshold is checked only as the ability resolves (ruling: point counters added another way
- *    don't trigger the sacrifice), which `ConditionalEffect` does. Same "add a counter, then
+ *    don't trigger the sacrifice), which `Effects.If` does. Same "add a counter, then
  *    conditionally do more" shape as Treasure Map / Brass's Tunnel-Grinder.
  */
 val ContestedGameBall = card("Contested Game Ball") {
@@ -52,28 +51,20 @@ val ContestedGameBall = card("Contested Game Ball") {
         "more point counters on it, sacrifice it and create a Treasure token."
 
     triggeredAbility {
-        trigger = Triggers.OneOrMoreCreaturesDealCombatDamageToYou()
-        effect = Effects.Composite(
-            GainControlByActivePlayerEffect(EffectTarget.Self),
-            Effects.Untap(EffectTarget.Self),
-        )
+        trigger = Triggers.oneOrMore(GameObjectFilter.Creature).dealCombatDamageToYou()
+        effect = Effects.GainControlByActivePlayer(EffectTarget.Self) then Effects.Untap(EffectTarget.Self)
         description = "Whenever you're dealt combat damage, the attacking player gains control of " +
             "this artifact and untaps it."
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        effect = Effects.Composite(
-            Effects.DrawCards(1),
-            Effects.AddCounters(Counters.POINT, 1, EffectTarget.Self),
-            ConditionalEffect(
-                condition = Conditions.SourceCounterCountAtLeast(Counters.POINT, 5),
-                effect = Effects.Composite(
-                    Effects.SacrificeTarget(EffectTarget.Self),
-                    Effects.CreateTreasure(1),
-                ),
-            ),
-        )
+        effect = Effects.DrawCards(1) then
+            Effects.AddCounters(CounterType.POINT, 1, EffectTarget.Self) then
+            Effects.If(
+                condition = Conditions.SourceCounterCountAtLeast(CounterType.POINT, 5),
+                then = Effects.SacrificeTarget(EffectTarget.Self) then Effects.CreateTreasure(1),
+            )
         description = "{2}, {T}: Draw a card and put a point counter on this artifact. Then if it " +
             "has five or more point counters on it, sacrifice it and create a Treasure token."
     }

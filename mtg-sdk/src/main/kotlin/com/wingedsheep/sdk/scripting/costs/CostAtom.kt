@@ -1,5 +1,6 @@
 package com.wingedsheep.sdk.scripting.costs
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Zone
@@ -144,6 +145,32 @@ sealed interface CostAtom : TextReplaceable<CostAtom> {
     }
 
     /**
+     * Sacrifice **every** permanent you control matching [filter] — "as an additional cost to cast
+     * this spell, sacrifice all creatures you control" (Soulblast).
+     *
+     * Distinct from [Sacrifice] rather than a count on it, for the same reason [DiscardHand] is
+     * distinct from [Discard]: the number is whatever the payer controls when the cost is paid, and
+     * there is nothing to *select*. Controlling none pays it for free (CR 118.3), so affordability
+     * is unconditionally true. The sacrificed permanents are snapshotted as they last existed on the
+     * battlefield, so the spell's "the sacrificed creatures' total power" reads
+     * [com.wingedsheep.sdk.scripting.values.DynamicAmount.TotalPowerSacrificedThisWay].
+     */
+    @SerialName("AtomSacrificeAll")
+    @Serializable
+    data class SacrificeAll(
+        val filter: GameObjectFilter = GameObjectFilter.Creature
+    ) : CostAtom {
+        // Every matching permanent goes, so the payer picks nothing.
+        override val selectionCount: Int get() = 0
+        override val description: String get() = "sacrifice all ${filter.description}s you control"
+
+        override fun applyTextReplacement(replacer: TextReplacer): CostAtom {
+            val newFilter = filter.applyTextReplacement(replacer)
+            return if (newFilter !== filter) copy(filter = newFilter) else this
+        }
+    }
+
+    /**
      * Put one or more permanents matching [filter] you control into another zone — a
      * *variable-count* cost: the payer chooses how many (at least [minCount]). Unlike the
      * fixed-count [Sacrifice] / [ExileFrom] atoms, the number is a player choice made as the ability
@@ -280,15 +307,22 @@ sealed interface CostAtom : TextReplaceable<CostAtom> {
          * be combined, so a board with one creature card in each graveyard pays nothing.
          */
         val singleZone: Boolean = false,
+        /**
+         * Leave the cost's own source out of the pool — "exile **another** creature card from your
+         * graveyard" (Gallia, Tragic Host), whose ability is activated from that same graveyard.
+         * The [Sacrifice.excludeSelf] twin; spell additional costs have no source and leave it false.
+         */
+        val excludeSelf: Boolean = false,
     ) : CostAtom {
         override val selectionCount: Int get() = count
-        override val description: String get() = when {
-            anyPlayersZone && singleZone ->
-                "exile ${quantify(count, filter.description)} from a single ${zone.name.lowercase()}"
-            anyPlayersZone ->
-                "exile ${quantify(count, filter.description)} from a ${zone.name.lowercase()}"
-            else ->
-                "exile ${quantify(count, filter.description)} from your ${zone.name.lowercase()}"
+        override val description: String get() {
+            val what = if (excludeSelf && count == 1) "another ${filter.description}"
+            else quantify(count, filter.description)
+            return when {
+                anyPlayersZone && singleZone -> "exile $what from a single ${zone.name.lowercase()}"
+                anyPlayersZone -> "exile $what from a ${zone.name.lowercase()}"
+                else -> "exile $what from your ${zone.name.lowercase()}"
+            }
         }
 
         override fun applyTextReplacement(replacer: TextReplacer): CostAtom {
@@ -372,7 +406,7 @@ sealed interface CostAtom : TextReplaceable<CostAtom> {
     @SerialName("AtomRemoveCounters")
     @Serializable
     data class RemoveCounters(
-        val counterType: String? = null,
+        val counterType: CounterType? = null,
         val count: DynamicAmount = DynamicAmount.Fixed(1),
         val filter: GameObjectFilter = GameObjectFilter.Permanent,
         val self: Boolean = false
@@ -383,7 +417,7 @@ sealed interface CostAtom : TextReplaceable<CostAtom> {
         }
         override val description: String get() = buildString {
             append("remove ")
-            val counterTypeString = if (counterType != null) "$counterType counter" else "counter"
+            val counterTypeString = if (counterType != null) "${counterType.printed} counter" else "counter"
             val isSingle = count is DynamicAmount.Fixed && count.amount == 1
             when (count) {
                 is DynamicAmount.XValue -> append("X ${counterTypeString}s")
@@ -420,12 +454,12 @@ sealed interface CostAtom : TextReplaceable<CostAtom> {
     @SerialName("AtomPutCountersOnSelf")
     @Serializable
     data class PutCountersOnSelf(
-        val counterType: String,
+        val counterType: CounterType,
         val count: Int = 1,
     ) : CostAtom {
         override val description: String get() = buildString {
             append("put ")
-            append(quantify(count, "$counterType counter"))
+            append(quantify(count, "${counterType.printed} counter"))
             append(" on this permanent")
         }
     }
@@ -443,14 +477,14 @@ sealed interface CostAtom : TextReplaceable<CostAtom> {
     @SerialName("AtomPutCountersOnPermanent")
     @Serializable
     data class PutCountersOnPermanent(
-        val counterType: String,
+        val counterType: CounterType,
         val count: Int = 1,
         val filter: GameObjectFilter = GameObjectFilter.Permanent,
     ) : CostAtom {
         override val selectionCount: Int get() = 1
         override val description: String get() = buildString {
             append("put ")
-            append(quantify(count, "$counterType counter"))
+            append(quantify(count, "${counterType.printed} counter"))
             append(" on ")
             append(filter.indefiniteArticle)
             append(" ")
@@ -667,6 +701,35 @@ sealed interface CostAtom : TextReplaceable<CostAtom> {
     @Serializable
     data object Unattach : CostAtom {
         override val description: String get() = "unattach this Equipment"
+    }
+
+    /**
+     * Put [count] cards matching [filter] from your hand on top of your library — "Put a card from
+     * your hand on top of your library: Return this creature to its owner's hand." (Leashling).
+     *
+     * Not a discard: the cards go to the library, not the graveyard, so no "whenever you discard"
+     * trigger or madness replacement sees them. The payer chooses which cards (a real choice even
+     * over identical-looking hands — the order of the library matters), and the cost is
+     * unpayable with fewer than [count] matching cards in hand (CR 118.3). When [count] > 1 the
+     * cards go on top in the order chosen, the last chosen ending up on top.
+     */
+    @SerialName("AtomPutFromHandOnTopOfLibrary")
+    @Serializable
+    data class PutFromHandOnTopOfLibrary(
+        val count: Int = 1,
+        val filter: GameObjectFilter = GameObjectFilter.Any
+    ) : CostAtom {
+        override val selectionCount: Int get() = count
+        override val description: String get() = buildString {
+            append("put ")
+            append(quantify(count, filter.description))
+            append(" from your hand on top of your library")
+        }
+
+        override fun applyTextReplacement(replacer: TextReplacer): CostAtom {
+            val newFilter = filter.applyTextReplacement(replacer)
+            return if (newFilter !== filter) copy(filter = newFilter) else this
+        }
     }
 
     /** Reveal [count] cards matching [filter] from your hand (the cards stay in hand). */

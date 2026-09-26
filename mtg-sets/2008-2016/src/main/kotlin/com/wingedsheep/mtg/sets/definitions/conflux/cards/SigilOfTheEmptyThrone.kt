@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Sigil of the Empty Throne
@@ -20,7 +21,7 @@ val SigilOfTheEmptyThrone = card("Sigil of the Empty Throne") {
     oracleText = "Whenever you cast an enchantment spell, create a 4/4 white Angel creature token with flying."
 
     triggeredAbility {
-        trigger = Triggers.YouCastEnchantment
+        trigger = Triggers.you.casts(GameObjectFilter.Enchantment)
         effect = Effects.CreateToken(
             power = 4,
             toughness = 4,

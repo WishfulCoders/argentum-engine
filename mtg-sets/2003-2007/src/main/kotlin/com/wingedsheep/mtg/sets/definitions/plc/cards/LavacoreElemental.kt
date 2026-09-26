@@ -1,17 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.plc.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Lavacore Elemental
@@ -38,15 +35,8 @@ val LavacoreElemental = card("Lavacore Elemental") {
     keywordAbility(KeywordAbility.vanishing(1))
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = EventPattern.DealsDamageEvent(
-                damageType = DamageType.Combat,
-                recipient = RecipientFilter.AnyPlayer,
-                sourceFilter = GameObjectFilter.Creature.youControl()
-            ),
-            binding = TriggerBinding.ANY
-        )
-        effect = Effects.AddCounters(Counters.TIME, 1, EffectTarget.Self)
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.AddCounters(CounterType.TIME, 1, EffectTarget.Self)
     }
 
     metadata {

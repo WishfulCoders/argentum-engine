@@ -25,7 +25,7 @@ import kotlin.reflect.KClass
  * (stripBattlefieldComponents, cleanupCombatReferences, cleanupReverseAttachmentLink,
  * removeFloatingEffectsTargeting).
  */
-class SacrificeTargetExecutor : EffectExecutor<SacrificeTargetEffect> {
+class SacrificeTargetExecutor(private val zones: ZoneTransitionService) : EffectExecutor<SacrificeTargetEffect> {
 
     override val effectType: KClass<SacrificeTargetEffect> = SacrificeTargetEffect::class
 
@@ -77,7 +77,7 @@ class SacrificeTargetExecutor : EffectExecutor<SacrificeTargetEffect> {
         // opponent's spell or ability. Killing Wave is the shape this guards: its per-creature
         // "sacrifice it unless you pay" runs under a ForEachPlayer that rebinds the resolution
         // controller to the creature's controller, so the caster is read off effectControllerId.
-        if (SacrificeImmunity.appliesTo(state, controllerId, context.effectControllerId ?: context.controllerId)) {
+        if (SacrificeImmunity.appliesTo(state, controllerId, context.effectControllerId ?: context.controllerId, predicateEvaluator = zones.predicateEvaluator)) {
             return EffectResult.success(state)
         }
 
@@ -96,7 +96,7 @@ class SacrificeTargetExecutor : EffectExecutor<SacrificeTargetEffect> {
         var newState = ZoneTransitionService.trackPermanentSacrifice(state, listOf(targetId), controllerId)
 
         // Delegate zone movement to ZoneTransitionService
-        val transitionResult = ZoneTransitionService.moveToZone(
+        val transitionResult = zones.moveToZone(
             newState, targetId, Zone.GRAVEYARD, fromZoneKey = currentZone
         )
 

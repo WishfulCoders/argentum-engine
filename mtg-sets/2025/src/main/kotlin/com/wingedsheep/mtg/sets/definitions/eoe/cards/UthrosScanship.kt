@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -32,7 +32,7 @@ val UthrosScanship = card("Uthros Scanship") {
 
     // ETB: draw two cards, then discard a card
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Hand.loot(draw = 2, discard = 1)
     }
 
@@ -40,7 +40,7 @@ val UthrosScanship = card("Uthros Scanship") {
     station()
 
     // 8+ charge counters: becomes artifact creature and gains flying
-    val charge8 = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 8)
+    val charge8 = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 8)
 
     staticAbility {
         condition = charge8

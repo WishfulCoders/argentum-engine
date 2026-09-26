@@ -14,7 +14,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -34,7 +33,7 @@ val RathiAssassin = card("Rathi Assassin") {
     toughness = 2
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{B}{B}"), Costs.Tap)
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.notColor(Color.BLACK).tapped()))
+        val t = target(TargetFilter.Creature.notColor(Color.BLACK).tapped())
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     activatedAbility {

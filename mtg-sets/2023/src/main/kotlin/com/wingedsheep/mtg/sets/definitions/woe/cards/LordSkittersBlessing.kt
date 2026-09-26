@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Lord Skitter's Blessing
@@ -50,24 +50,20 @@ val LordSkittersBlessing = card("Lord Skitter's Blessing") {
         "and you draw an additional card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target(
-            "target creature you control",
-            TargetCreature(filter = TargetFilter.CreatureYouControl),
-        )
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.CreateRoleToken("Wicked Role", creature)
         description = "When this enchantment enters, create a Wicked Role token attached to target " +
             "creature you control."
     }
 
     triggeredAbility {
-        trigger = Triggers.YourDrawStep
+        trigger = Triggers.you.beginningOf(Step.DRAW)
         interveningIf = Conditions.YouControlAtLeast(
             1,
             GameObjectFilter.Creature.youControl().enchanted(),
         )
-        effect = Effects.LoseLife(1, EffectTarget.Controller)
-            .then(Effects.DrawCards(1))
+        effect = Effects.LoseLife(1, EffectTarget.Controller) then Effects.DrawCards(1)
         description = "At the beginning of your draw step, if you control an enchanted creature, " +
             "you lose 1 life and you draw an additional card."
     }

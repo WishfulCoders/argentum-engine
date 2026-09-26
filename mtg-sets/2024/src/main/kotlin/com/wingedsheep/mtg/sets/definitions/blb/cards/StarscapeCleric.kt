@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.scripting.CantBlock
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -36,7 +35,7 @@ val StarscapeCleric = card("Starscape Cleric") {
 
     // Offspring ETB: create token copy when kicked
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = WasKicked
         effect = Effects.CreateTokenCopyOfSelf(overridePower = 1, overrideToughness = 1)
     }
@@ -48,8 +47,8 @@ val StarscapeCleric = card("Starscape Cleric") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YouGainLife
-        effect = LoseLifeEffect(1, EffectTarget.PlayerRef(Player.EachOpponent))
+        trigger = Triggers.you.gainsLife()
+        effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent))
     }
 
     metadata {

@@ -17,6 +17,7 @@ import com.wingedsheep.engine.state.components.combat.PlayerAttackersThisTurnCom
 import com.wingedsheep.engine.state.components.combat.AttackingComponent
 import com.wingedsheep.engine.state.components.identity.LifeTotalComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.engine.state.components.identity.FaceDownComponent
 import com.wingedsheep.engine.state.components.identity.PlayerComponent
 import com.wingedsheep.engine.state.components.player.ManaPoolComponent
 import com.wingedsheep.engine.mechanics.combat.rules.AttackCheckContext
@@ -47,10 +48,9 @@ internal class AttackPhaseManager(
     private val attackRestrictionRules: List<AttackRestrictionRule>,
     private val attackDefenderRules: List<AttackDefenderRule>,
     private val manaAbilitySideEffectExecutor: com.wingedsheep.engine.mechanics.mana.ManaAbilitySideEffectExecutor,
+    private val predicateEvaluator: PredicateEvaluator
 ) {
-
-    private val predicateEvaluator = PredicateEvaluator()
-    private val conditionEvaluator = com.wingedsheep.engine.handlers.ConditionEvaluator()
+    private val conditionEvaluator = predicateEvaluator.conditions
 
     /**
      * Validate and declare attackers.
@@ -120,9 +120,10 @@ internal class AttackPhaseManager(
             return ExecutionResult.error(state, coAttackerValidation)
         }
 
-        // Check global attacker-count caps (Dueling Grounds — "No more than one creature can
-        // attack each combat"). Applies to the whole declared attacker set, not per creature.
-        val attackerCountValidation = validateGlobalAttackerCount(state, attackers.keys)
+        // Check attacker-count caps — global (Dueling Grounds — "No more than one creature can
+        // attack each combat") and per-defender (Tomik, Orzhov Lawmage). Both apply to the whole
+        // declared attacker set, not per creature.
+        val attackerCountValidation = validateAttackerCountLimits(state, projected, attackers)
         if (attackerCountValidation != null) {
             return ExecutionResult.error(state, attackerCountValidation)
         }
@@ -209,6 +210,7 @@ internal class AttackPhaseManager(
                 container.with(AttackingComponent(defenderId, bandIdByAttacker[attackerId]))
                     .with(AttackedThisCombatComponent)
             }
+            newState = AttackedPermanents.markAttacked(newState, defenderId)
             // Non-vigilance attackers tap as a turn-based action; route through the tap atom so the
             // TappedEvent fires "becomes tapped" triggers (it was open-coded and once dropped here).
             if (!hasVigilance) {
@@ -296,7 +298,7 @@ internal class AttackPhaseManager(
         val manaCost = com.wingedsheep.sdk.core.ManaCost(
             List(totalTax) { com.wingedsheep.sdk.core.ManaSymbol.generic(1) }
         )
-        val manaSolver = com.wingedsheep.engine.mechanics.mana.ManaSolver(cardRegistry)
+        val manaSolver = com.wingedsheep.engine.mechanics.mana.ManaSolver(cardRegistry, predicateEvaluator)
         val sources = manaSolver.findAvailableManaSources(state, attackingPlayer)
         val sourceOptions = sources.map { source ->
             com.wingedsheep.engine.core.ManaSourceOption(
@@ -363,7 +365,8 @@ internal class AttackPhaseManager(
     ): ExecutionResult {
         val (payingAttacker, requirement) = costs.first()
         val eligible = AttackSacrificeCosts.eligiblePermanents(
-            state, attackingPlayer, payingAttacker, requirement
+            state, attackingPlayer, payingAttacker, requirement,
+            predicateEvaluator = predicateEvaluator
         )
         val attackerName = state.getEntity(payingAttacker)?.get<CardComponent>()?.name ?: "your attacker"
         val continuation = com.wingedsheep.engine.core.AttackSacrificeSelectionContinuation(
@@ -416,7 +419,8 @@ internal class AttackPhaseManager(
                 state, attackingPlayer, attackers, state.projectedState, carryEvents, bands
             )
         val eligible = AttackSacrificeCosts.eligiblePermanents(
-            state, attackingPlayer, payingAttacker, requirement
+            state, attackingPlayer, payingAttacker, requirement,
+            predicateEvaluator = predicateEvaluator
         )
         val attackerName = state.getEntity(payingAttacker)?.get<CardComponent>()?.name ?: "your attacker"
         val continuation = com.wingedsheep.engine.core.AttackSacrificeSelectionContinuation(
@@ -538,27 +542,51 @@ internal class AttackPhaseManager(
     }
 
     /**
-     * Validate global attacker-count caps. While any permanent with [AttackerCountLimit] is on
-     * the battlefield (e.g. Dueling Grounds), the total number of declared attackers across all
-     * players may not exceed the smallest such cap. Returns an error message when violated.
+     * Validate [AttackerCountLimit] caps, both shapes:
+     *  - **global** (`defenders == null`, Dueling Grounds): the total number of declared attackers
+     *    across all players may not exceed the smallest such cap;
+     *  - **per-defender** (`defenders` set, Tomik, Orzhov Lawmage): each attacked permanent that
+     *    matches `defenders` — read relative to the limiting permanent's controller, against
+     *    projected state — may be attacked by at most `maxAttackers` creatures.
+     * A face-down permanent has no abilities (CR 708.2), so it imposes no cap. Returns an error
+     * message when violated.
      */
-    private fun validateGlobalAttackerCount(
+    private fun validateAttackerCountLimits(
         state: GameState,
-        attackerIds: Set<EntityId>
+        projected: ProjectedState,
+        attackers: Map<EntityId, EntityId>
     ): String? {
         var cap: Int? = null
         var capDescription = ""
+        val attackersPerDefender by lazy { attackers.values.groupingBy { it }.eachCount() }
         for (permId in state.getBattlefield()) {
-            val cardComponent = state.getEntity(permId)?.get<CardComponent>() ?: continue
+            val container = state.getEntity(permId) ?: continue
+            if (container.has<FaceDownComponent>()) continue
+            val cardComponent = container.get<CardComponent>() ?: continue
             val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
             for (ability in cardDef.staticAbilities.filterIsInstance<AttackerCountLimit>()) {
-                if (cap == null || ability.maxAttackers < cap) {
-                    cap = ability.maxAttackers
-                    capDescription = ability.description
+                val defenders = ability.defenders
+                if (defenders == null) {
+                    if (cap == null || ability.maxAttackers < cap) {
+                        cap = ability.maxAttackers
+                        capDescription = ability.description
+                    }
+                    continue
+                }
+                val controllerId = projected.getController(permId) ?: continue
+                val context = PredicateContext(controllerId = controllerId, sourceId = permId)
+                for ((defenderId, count) in attackersPerDefender) {
+                    if (count <= ability.maxAttackers) continue
+                    if (defenderId !in state.getBattlefield()) continue
+                    if (defenders.excludeSelf && defenderId == permId) continue
+                    if (!predicateEvaluator.matches(state, projected, defenderId, defenders.baseFilter, context)) continue
+                    val defenderName = state.getEntity(defenderId)?.get<CardComponent>()?.name ?: "that permanent"
+                    return "No more than ${ability.maxAttackers} creature" +
+                        "${if (ability.maxAttackers == 1) "" else "s"} can attack $defenderName each combat"
                 }
             }
         }
-        if (cap != null && attackerIds.size > cap) {
+        if (cap != null && attackers.size > cap) {
             return capDescription
         }
         return null
@@ -870,5 +898,5 @@ internal class AttackPhaseManager(
         state: GameState,
         attackers: Map<EntityId, EntityId>,
         projected: ProjectedState
-    ): Int = CombatTaxes.attackTax(state, cardRegistry, attackers, projected)
+    ): Int = CombatTaxes.attackTax(state, cardRegistry, attackers, projected, predicateEvaluator = predicateEvaluator)
 }

@@ -1,6 +1,7 @@
 package com.wingedsheep.sdk.scripting.effects
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -20,14 +21,25 @@ sealed interface ManaSpellRider {
     val description: String
 
     /**
-     * "That spell can't be countered." (Cavern of Souls)
+     * "That spell can't be countered." (Cavern of Souls, with the default [spellFilter].)
+     * "If that mana is spent on an instant or sorcery spell, that spell can't be countered."
+     * (Boseiju, Who Shelters All, with `spellFilter = GameObjectFilter.InstantOrSorcery`.)
      *
-     * Translates to stamping `CantBeCounteredComponent` on the spell at cast time.
+     * On consumption the cast pipeline matches the spell against [spellFilter] using its cast
+     * characteristics and, on a match, stamps `CantBeCounteredComponent` on it. A non-matching
+     * spell (Boseiju's {C} spent on a creature spell) is left counterable — the rider is a no-op.
+     *
+     * @property spellFilter Which cast spells the rider makes uncounterable. [GameObjectFilter.Any]
+     *   when the mana's restriction already fences where it can be spent (Cavern of Souls).
      */
     @SerialName("MakesSpellUncounterable")
     @Serializable
-    data object MakesSpellUncounterable : ManaSpellRider {
-        override val description: String = "That spell can't be countered"
+    data class MakesSpellUncounterable(
+        val spellFilter: GameObjectFilter = GameObjectFilter.Any
+    ) : ManaSpellRider {
+        override val description: String =
+            if (spellFilter == GameObjectFilter.Any) "That spell can't be countered"
+            else "If that mana is spent on ${article(spellFilter.description)} spell, that spell can't be countered"
     }
 
     /**
@@ -92,19 +104,40 @@ sealed interface ManaSpellRider {
      * ruling: mana spent on a non-Dragon spell that *becomes* a Dragon later in the turn grants
      * nothing, and an instant or sorcery that makes Dragon tokens is not a Dragon creature spell.
      *
+     * With `duration = Duration.Permanent` the grant has no end: "If that mana is spent on a
+     * creature spell, it gains haste." (Hall of the Bandit Lord). Instead of a floating effect on
+     * the stack object, the keyword is frozen onto the spell's cast record and granted to the
+     * permanent it becomes as it enters, so a spell that's countered or otherwise never resolves
+     * carries nothing into another zone (CR 400.7). The permanent keeps the keyword until it leaves
+     * the battlefield.
+     *
      * @property keyword Keyword enum name (e.g. `"HASTE"`), matching [GrantKeywordEffect.keyword].
      * @property spellFilter Which cast spells the rider grants [keyword] to.
+     * @property duration [Duration.EndOfTurn] (the default) or [Duration.Permanent].
      */
     @SerialName("GrantsKeywordWhenSpent")
     @Serializable
     data class GrantsKeywordWhenSpent(
         val keyword: String,
         val spellFilter: GameObjectFilter,
+        val duration: Duration = Duration.EndOfTurn,
     ) : ManaSpellRider {
-        constructor(keyword: Keyword, spellFilter: GameObjectFilter) : this(keyword.name, spellFilter)
+        init {
+            require(duration == Duration.EndOfTurn || duration == Duration.Permanent) {
+                "GrantsKeywordWhenSpent supports only EndOfTurn or Permanent, got $duration"
+            }
+        }
+
+        constructor(keyword: Keyword, spellFilter: GameObjectFilter, duration: Duration = Duration.EndOfTurn) :
+            this(keyword.name, spellFilter, duration)
 
         override val description: String =
-            "If that mana is spent on a ${spellFilter.description} spell, it gains " +
-                "${keyword.lowercase().replace('_', ' ')} until end of turn"
+            "If that mana is spent on ${article(spellFilter.description)} spell, it gains " +
+                keyword.lowercase().replace('_', ' ') +
+                (if (duration == Duration.Permanent) "" else " until end of turn")
     }
 }
+
+/** "an instant or sorcery", "a creature" — the article a rider description puts before a filter. */
+private fun article(noun: String): String =
+    if (noun.firstOrNull()?.lowercaseChar() in setOf('a', 'e', 'i', 'o', 'u')) "an $noun" else "a $noun"

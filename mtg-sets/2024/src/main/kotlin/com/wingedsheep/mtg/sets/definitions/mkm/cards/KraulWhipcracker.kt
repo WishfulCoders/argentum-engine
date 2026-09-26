@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Kraul Whipcracker — Murders at Karlov Manor #213
@@ -32,11 +31,8 @@ val KraulWhipcracker = card("Kraul Whipcracker") {
     keywords(Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "target token an opponent controls",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Token.opponentControls()))
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter(GameObjectFilter.Token.opponentControls()))
         effect = Effects.Destroy(t)
     }
 

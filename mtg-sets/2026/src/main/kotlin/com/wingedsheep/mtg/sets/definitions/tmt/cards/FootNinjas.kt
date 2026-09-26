@@ -28,7 +28,7 @@ val FootNinjas = card("Foot Ninjas") {
     sneak("{3}{W/B}")
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(3)
     }
 

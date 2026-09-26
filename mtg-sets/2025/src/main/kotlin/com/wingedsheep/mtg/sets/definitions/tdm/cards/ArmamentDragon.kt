@@ -6,7 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Armament Dragon — Tarkir: Dragonstorm #168
@@ -33,8 +33,8 @@ val ArmamentDragon = card("Armament Dragon") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = TargetCreature(count = 3, minCount = 1, filter = TargetFilter.CreatureYouControl)
+        trigger = Triggers.self.enters()
+        target = TargetObject(filter = TargetFilter.CreatureYouControl, count = 3, minCount = 1)
         effect = Effects.DistributeCountersAmongTargets(totalCounters = 3)
     }
 

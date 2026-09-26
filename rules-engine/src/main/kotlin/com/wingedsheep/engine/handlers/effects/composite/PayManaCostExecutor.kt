@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.composite
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
@@ -14,7 +15,8 @@ import kotlin.reflect.KClass
  * Shares the auto-tap/deduct core with [PayDynamicManaCostExecutor] via [payManaCostFromPool].
  */
 class PayManaCostExecutor(
-    private val cardRegistry: CardRegistry
+    private val cardRegistry: CardRegistry,
+    private val predicateEvaluator: PredicateEvaluator
 ) : EffectExecutor<PayManaCostEffect> {
 
     override val effectType: KClass<PayManaCostEffect> = PayManaCostEffect::class
@@ -24,5 +26,5 @@ class PayManaCostExecutor(
         effect: PayManaCostEffect,
         context: EffectContext
     ): EffectResult =
-        payManaCostFromPool(state, context.controllerId, effect.cost, cardRegistry)
+        payManaCostFromPool(state, context.controllerId, effect.cost, cardRegistry, predicateEvaluator = predicateEvaluator)
 }

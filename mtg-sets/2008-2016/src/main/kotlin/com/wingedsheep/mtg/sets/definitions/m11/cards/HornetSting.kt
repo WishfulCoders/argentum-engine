@@ -22,7 +22,7 @@ val HornetSting = card("Hornet Sting") {
     oracleText = "Hornet Sting deals 1 damage to any target."
 
     spell {
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
     }
 

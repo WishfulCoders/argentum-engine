@@ -26,7 +26,7 @@ val CentaurHealer = card("Centaur Healer") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(3)
     }
 

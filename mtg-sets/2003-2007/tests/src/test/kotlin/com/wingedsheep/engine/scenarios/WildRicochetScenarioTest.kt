@@ -21,6 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Wild Ricochet (LRW #196) — "You may choose new targets for target instant or sorcery spell. Then
@@ -49,10 +50,8 @@ class WildRicochetScenarioTest : FunSpec({
         typeLine = TypeLine.parse("Instant"),
         oracleText = "Split Shock deals 1 damage to target creature and 1 damage to another target creature.",
         script = CardScript.spell(
-            Effects.Composite(
-                Effects.DealDamage(1, EffectTarget.ContextTarget(0)),
+            Effects.DealDamage(1, EffectTarget.ContextTarget(0)) then
                 Effects.DealDamage(1, EffectTarget.ContextTarget(1)),
-            ),
             TargetObject(filter = TargetFilter.Creature),
             TargetObject(filter = TargetFilter.Creature),
         )
@@ -79,7 +78,7 @@ class WildRicochetScenarioTest : FunSpec({
         d.passPriority(p1)
         d.submit(
             CastSpell(p2, bolt, targets = listOf(ChosenTarget.Player(p1)), paymentStrategy = PaymentStrategy.FromPool)
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         val boltOnStack = d.getTopOfStack()!!
         d.passPriority(p2)
 
@@ -89,7 +88,7 @@ class WildRicochetScenarioTest : FunSpec({
                 targets = listOf(ChosenTarget.Spell(boltOnStack)),
                 paymentStrategy = PaymentStrategy.FromPool
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
 
         d.bothPass() // Wild Ricochet resolves and pauses on the original's one target slot
 
@@ -139,7 +138,7 @@ class WildRicochetScenarioTest : FunSpec({
                 targets = listOf(ChosenTarget.Permanent(mine), ChosenTarget.Permanent(alsoMine)),
                 paymentStrategy = PaymentStrategy.FromPool
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         val shockOnStack = d.getTopOfStack()!!
         d.passPriority(p2)
 
@@ -149,7 +148,7 @@ class WildRicochetScenarioTest : FunSpec({
                 targets = listOf(ChosenTarget.Spell(shockOnStack)),
                 paymentStrategy = PaymentStrategy.FromPool
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
 
         d.bothPass()
 

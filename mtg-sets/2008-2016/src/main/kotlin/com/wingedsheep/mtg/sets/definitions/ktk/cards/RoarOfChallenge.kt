@@ -7,11 +7,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.MustBeBlockedEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Roar of Challenge
@@ -28,12 +25,12 @@ val RoarOfChallenge = card("Roar of Challenge") {
     oracleText = "All creatures able to block target creature this turn do so.\nFerocious — That creature gains indestructible until end of turn if you control a creature with power 4 or greater."
 
     spell {
-        val t = target("creature", TargetCreature())
-        effect = MustBeBlockedEffect(t)
-            .then(ConditionalEffect(
+        val t = target(TargetFilter.Creature)
+        effect = Effects.MustBeBlocked(t) then
+            Effects.If(
                 condition = Exists(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Creature.powerAtLeast(4)),
-                effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t)
-            ))
+                then = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t)
+            )
     }
 
     metadata {

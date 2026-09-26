@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Expel — Strixhaven: School of Mages #18 (canonical printing)
@@ -23,7 +24,7 @@ val Expel = card("Expel") {
         "Exile target tapped creature."
 
     spell {
-        val victim = target("target tapped creature", Targets.TappedCreature)
+        val victim = target(TargetFilter.TappedCreature)
         effect = Effects.Exile(victim)
     }
 

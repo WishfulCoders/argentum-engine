@@ -1,16 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.divRoundedUp
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.FeasibilityCheck
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * The Goose Mother
@@ -31,7 +31,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *
  * "Half X, rounded up" is `Divide(CastX, 2, roundUp = true)` — X=0 makes no Food, X=1 makes one.
  *
- * The attack ability is [ProvisionsMerchant]'s exactly: a [MayEffect] over
+ * The attack ability is [ProvisionsMerchant]'s exactly: a [Effects.May] over
  * `Sacrifice(Food).then(draw)`, so declining leaves the ability resolving harmlessly rather than
  * fizzling, and "If you do" (not "When you do") keeps the draw in the same resolution instead of a
  * reflexive trigger. The `feasibility` gate suppresses the prompt when the controller has no Food
@@ -53,28 +53,24 @@ val TheGooseMother = card("The Goose Mother") {
 
     keywords(Keyword.FLYING)
 
-    replacementEffect(EntersWithDynamicCounters(count = DynamicAmount.CastX))
+    replacementEffect(EntersWithDynamicCounters(count = DynamicAmounts.castX()))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateFood(
-            DynamicAmount.Divide(
-                numerator = DynamicAmount.CastX,
-                denominator = DynamicAmount.Fixed(2),
-                roundUp = true,
-            )
+            DynamicAmounts.castX() divRoundedUp 2
         )
         description = "When The Goose Mother enters, create half X Food tokens, rounded up."
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = MayEffect(
+        trigger = Triggers.self.attacks()
+        effect = Effects.May(
             Effects.Sacrifice(
                 GameObjectFilter.Artifact.withSubtype("Food"),
                 count = 1,
                 target = EffectTarget.Controller,
-            ).then(Effects.DrawCards(1)),
+            ) then Effects.DrawCards(1),
             feasibility = FeasibilityCheck.ControlsPermanentMatching(
                 GameObjectFilter.Artifact.withSubtype("Food")
             ),

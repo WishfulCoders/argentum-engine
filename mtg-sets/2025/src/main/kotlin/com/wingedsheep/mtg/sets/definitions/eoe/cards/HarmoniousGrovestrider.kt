@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Harmonious Grovestrider
@@ -26,7 +27,7 @@ val HarmoniousGrovestrider = card("Harmonious Grovestrider") {
     // Intrinsic ward {2} — a printed keyword ability on this creature, not a grant to an
     // attached permanent (GrantWard's default filter is Scope.AttachedTo, which matches
     // nothing on a creature that isn't an Aura/Equipment).
-    keywordAbility(KeywordAbility.ward("{2}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
 
     metadata {
         rarity = Rarity.UNCOMMON

@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.sneak
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Michelangelo, Improviser
@@ -37,11 +38,9 @@ val MichelangeloImproviser = card("Michelangelo, Improviser") {
     sneak("{2}{G}{G}")
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = Effects.Composite(
-            Patterns.Hand.putFromHand(GameObjectFilter.Creature, count = 1),
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Patterns.Hand.putFromHand(GameObjectFilter.Creature, count = 1) then
             Patterns.Hand.putFromHand(GameObjectFilter.Land, count = 1)
-        )
     }
 
     metadata {

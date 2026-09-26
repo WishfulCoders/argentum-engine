@@ -22,8 +22,7 @@ val ThirstForDiscovery = card("Thirst for Discovery") {
     oracleText = "Draw three cards. Then discard two cards unless you discard a basic land card."
 
     spell {
-        effect = Effects.DrawCards(3)
-            .then(Effects.DiscardUnlessMatching(2, GameObjectFilter.BasicLand))
+        effect = Effects.DrawCards(3) then Effects.DiscardUnlessMatching(2, GameObjectFilter.BasicLand)
     }
 
     metadata {

@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * The Mechanist, Aerial Artisan
@@ -35,7 +34,7 @@ val TheMechanistAerialArtisan = card("The Mechanist, Aerial Artisan") {
 
     // Whenever you cast a noncreature spell, create a Clue token.
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
         effect = Effects.CreateClue()
     }
 
@@ -43,10 +42,7 @@ val TheMechanistAerialArtisan = card("The Mechanist, Aerial Artisan") {
     // artifact creature with flying.
     activatedAbility {
         cost = Costs.Tap
-        val artifactToken = target(
-            "target artifact token you control",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Artifact.token().youControl())),
-        )
+        val artifactToken = target(TargetFilter(GameObjectFilter.Artifact.token().youControl()))
         effect = Effects.BecomeCreature(
             target = artifactToken,
             power = 3,

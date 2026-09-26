@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Deprive
@@ -39,7 +40,7 @@ val Deprive = card("Deprive") {
     additionalCost(Costs.additional.ReturnToHand(GameObjectFilter.Land))
 
     spell {
-        target("target spell", Targets.Spell)
+        target(TargetFilter.SpellOnStack)
         effect = Effects.CounterSpell()
     }
 

@@ -2,13 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.ManaCost
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 
 /**
  * Militia's Pride
@@ -23,7 +21,7 @@ import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
  * The `nontoken()` half is what stops the tokens it makes from triggering it again.
  *
  * "You may pay {W}. If you do, …" is an optional cost rider on the triggered ability itself
- * ([MayPayManaEffect] → `Gate.MayPay`), resolved as the ability resolves — Customs Depot's shape.
+ * ([Effects.MayPay] → `Gate.MayPay`), resolved as the ability resolves — Customs Depot's shape.
  *
  * The token enters tapped and attacking, so it was never declared as an attacker: it doesn't
  * re-trigger this enchantment, and "whenever a creature attacks" triggers elsewhere don't see it
@@ -39,13 +37,10 @@ val MilitiasPride = card("Militia's Pride") {
         "create a 1/1 white Kithkin Soldier creature token that's tapped and attacking."
 
     triggeredAbility {
-        trigger = Triggers.attacks(
-            filter = GameObjectFilter.Creature.youControl().nontoken(),
-            binding = TriggerBinding.ANY,
-        )
-        effect = MayPayManaEffect(
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl().nontoken()).attacks()
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{W}"),
-            effect = CreateTokenEffect(
+            then = Effects.CreateToken(
                 power = 1,
                 toughness = 1,
                 colors = setOf(Color.WHITE),

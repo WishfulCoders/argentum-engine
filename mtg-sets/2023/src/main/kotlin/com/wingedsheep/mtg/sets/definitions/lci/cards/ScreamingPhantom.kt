@@ -24,7 +24,7 @@ val ScreamingPhantom = card("Screaming Phantom") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Library.mill(1)
     }
 

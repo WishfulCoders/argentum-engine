@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -20,10 +19,7 @@ val KinTreeSeverance = card("Kin-Tree Severance") {
     oracleText = "Exile target permanent with mana value 3 or greater."
 
     spell {
-        val t = target(
-            "target permanent with mana value 3 or greater",
-            TargetPermanent(filter = TargetFilter.Permanent.manaValueAtLeast(3))
-        )
+        val t = target(TargetFilter.Permanent.manaValueAtLeast(3))
         effect = Effects.Move(t, Zone.EXILE)
     }
 

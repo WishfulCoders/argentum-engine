@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.dtk.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -9,7 +10,6 @@ import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Collected Company
@@ -34,10 +34,10 @@ val CollectedCompany = card("Collected Company") {
 
     spell {
         effect = Patterns.Library.lookAtTopAndTakeMatching(
-            count = DynamicAmount.Fixed(6),
+            count = DynamicAmounts.fixed(6),
             filter = GameObjectFilter.Creature.manaValueAtMost(3),
             prompt = "Put up to two creature cards with mana value 3 or less from among them onto the battlefield",
-            selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(2)),
+            selection = SelectionMode.ChooseUpTo(DynamicAmounts.fixed(2)),
             keepDestination = CardDestination.ToZone(Zone.BATTLEFIELD),
             restDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
             restOrder = CardOrder.ControllerChooses

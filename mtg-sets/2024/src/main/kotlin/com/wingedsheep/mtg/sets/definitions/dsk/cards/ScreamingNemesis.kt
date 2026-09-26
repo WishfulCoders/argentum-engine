@@ -1,15 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
+import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.targets.AnyTarget
 import com.wingedsheep.sdk.scripting.targets.TargetOther
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Screaming Nemesis
@@ -35,18 +34,14 @@ val ScreamingNemesis = card("Screaming Nemesis") {
     // Whenever this creature is dealt damage, it deals that much damage to any other target.
     // If a player is dealt damage this way, they can't gain life for the rest of the game.
     triggeredAbility {
-        trigger = Triggers.TakesDamage
-        val victim = target("any other target", TargetOther(AnyTarget()))
-        effect = Effects.Composite(
-            listOf(
-                Effects.DealDamage(
-                    amount = DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_DAMAGE_AMOUNT),
-                    target = victim,
-                ),
-                // No-op when the target isn't a player; locks a struck player for the rest of the game.
-                Effects.LockLifeGain(target = victim),
-            ),
-        )
+        trigger = Triggers.self.isDealtDamage()
+        val victim = target(TargetOther(Targets.Any))
+        effect = Effects.DealDamage(
+            amount = DynamicAmounts.triggerDamageAmount(),
+            target = victim,
+        ) then
+            // No-op when the target isn't a player; locks a struck player for the rest of the game.
+            Effects.LockLifeGain(target = victim)
     }
 
     metadata {

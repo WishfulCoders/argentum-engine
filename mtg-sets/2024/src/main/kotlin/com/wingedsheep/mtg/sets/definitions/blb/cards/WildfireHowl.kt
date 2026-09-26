@@ -4,9 +4,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
@@ -34,7 +33,7 @@ val WildfireHowl = card("Wildfire Howl") {
 
     val damageToEachCreature = Effects.ForEachInGroup(
         filter = GroupFilter.AllCreatures,
-        effect = DealDamageEffect(2, EffectTarget.Self)
+        effect = Effects.DealDamage(2, EffectTarget.IterationEntity)
     )
 
     spell {
@@ -45,18 +44,13 @@ val WildfireHowl = card("Wildfire Howl") {
                 "Don't promise a gift — deal 2 damage to each creature"
             ),
             // Mode 2: Gift a card — opponent draws, then 1 damage to any target, then 2 damage to each creature
-            Mode.withTarget(
-                Effects.Composite(
-                    listOf(
-                        DrawCardsEffect(1, EffectTarget.PlayerRef(Player.ChosenOpponent)),
-                        DealDamageEffect(1, EffectTarget.ContextTarget(0)),
-                        damageToEachCreature,
-                        Effects.GiftGiven()
-                    )
-                ),
-                Targets.Any,
-                "Promise a gift — an opponent draws a card, then deal 1 damage to any target and 2 damage to each creature"
-            )
+            mode("Promise a gift — an opponent draws a card, then deal 1 damage to any target and 2 damage to each creature") {
+                val anyTarget = target(Targets.Any)
+                effect = Effects.DrawCards(1, EffectTarget.PlayerRef(Player.ChosenOpponent)) then
+                    Effects.DealDamage(1, anyTarget) then
+                    damageToEachCreature then
+                    Effects.GiftGiven()
+            }
         )
     }
 

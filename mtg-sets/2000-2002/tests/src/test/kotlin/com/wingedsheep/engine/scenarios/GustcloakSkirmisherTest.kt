@@ -65,7 +65,7 @@ class GustcloakSkirmisherTest : FunSpec({
         // Trigger fires and goes on stack. Both pass to resolve.
         driver.bothPass()
 
-        // MayEffect creates a yes/no decision. Choose yes.
+        // Effects.May creates a yes/no decision. Choose yes.
         driver.submitYesNo(attacker, true)
 
         // Skirmisher should be untapped (from the effect)

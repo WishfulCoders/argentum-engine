@@ -1,20 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.effects.IncrementAbilityResolutionCountEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Ashling the Pilgrim — Lorwyn #149
@@ -58,42 +54,37 @@ val AshlingThePilgrim = card("Ashling the Pilgrim") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{R}")
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
-            .then(IncrementAbilityResolutionCountEffect)
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.SourceAbilityResolvedNTimes(3),
-                    effect = Effects.Composite(
-                        listOf(
-                            Effects.StoreNumber(
-                                "ashlingRemovedCounters",
-                                DynamicAmounts.countersOnSelf(
-                                    CounterTypeFilter.Named(Counters.PLUS_ONE_PLUS_ONE)
-                                ),
-                            ),
-                            Effects.RemoveAllCountersOfType(
-                                Counters.PLUS_ONE_PLUS_ONE,
-                                EffectTarget.Self,
-                            ),
-                            Effects.ForEachInGroup(
-                                GroupFilter.AllCreatures,
-                                DealDamageEffect(
-                                    DynamicAmount.VariableReference("ashlingRemovedCounters"),
-                                    EffectTarget.Self,
-                                ),
-                            ),
-                            Effects.ForEachPlayer(
-                                Player.Each,
-                                listOf(
-                                    Effects.DealDamage(
-                                        DynamicAmount.VariableReference("ashlingRemovedCounters"),
-                                        EffectTarget.Controller,
-                                    )
-                                ),
-                            ),
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self) then
+            IncrementAbilityResolutionCountEffect then
+            Effects.If(
+                condition = Conditions.SourceAbilityResolvedNTimes(3),
+                then = Effects.Pipeline {
+                    val ashlingRemovedCounters = storeNumber(
+                        DynamicAmounts.countersOnSelf(
+                            CounterType.PLUS_ONE_PLUS_ONE
                         )
                     )
-                )
+                    run(Effects.RemoveAllCountersOfType(
+                        CounterType.PLUS_ONE_PLUS_ONE,
+                        EffectTarget.Self,
+                    ))
+                    run(Effects.ForEachInGroup(
+                        GroupFilter.AllCreatures,
+                        Effects.DealDamage(
+                            ashlingRemovedCounters.amount,
+                            EffectTarget.IterationEntity,
+                        ),
+                    ))
+                    run(Effects.ForEachPlayer(
+                        Player.Each,
+                        listOf(
+                            Effects.DealDamage(
+                                ashlingRemovedCounters.amount,
+                                EffectTarget.Controller,
+                            )
+                        ),
+                    ))
+                }
             )
         description = "Put a +1/+1 counter on Ashling. If this is the third time this ability has " +
             "resolved this turn, remove all +1/+1 counters from Ashling, and it deals that much " +

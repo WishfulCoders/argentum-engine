@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Molten Duplication
@@ -24,10 +23,7 @@ val MoltenDuplication = card("Molten Duplication") {
     oracleText = "Create a token that's a copy of target artifact or creature you control, except it's an artifact in addition to its other types. It gains haste until end of turn. Sacrifice it at the beginning of the next end step."
 
     spell {
-        val t = target(
-            "target",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrArtifact.youControl()))
-        )
+        val t = target(TargetFilter(GameObjectFilter.CreatureOrArtifact.youControl()))
         // Haste is granted as a permanent keyword on the copy; because the token is sacrificed
         // at the next end step it never outlives "until end of turn" — same modeling Esika's
         // Chariot / Mardu Siegebreaker use for haste copies.

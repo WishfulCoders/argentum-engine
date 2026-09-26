@@ -7,8 +7,6 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Sonic Shrieker — Tarkir: Dragonstorm #226
@@ -40,16 +38,14 @@ val SonicShrieker = card("Sonic Shrieker") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val anyTarget = target("any target", Targets.Any)
-        effect = Effects.Composite(listOf(
-            Effects.DealDamage(2, anyTarget),
-            Effects.GainLife(2),
-            ConditionalEffect(
+        trigger = Triggers.self.enters()
+        val anyTarget = target(Targets.Any)
+        effect = Effects.DealDamage(2, anyTarget) then
+            Effects.GainLife(2) then
+            Effects.If(
                 condition = Conditions.TargetIsPlayer(0),
-                effect = Effects.Discard(1, EffectTarget.ContextTarget(0))
+                then = Effects.Discard(1, anyTarget)
             )
-        ))
         description = "When this creature enters, it deals 2 damage to any target and you gain 2 life. " +
             "If a player is dealt damage this way, they discard a card."
     }

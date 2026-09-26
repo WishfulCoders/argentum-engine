@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -10,7 +11,6 @@ import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.predicates.ControllerPredicate
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Squirming Emergence — {1}{B}{G}
@@ -42,23 +42,19 @@ val SquirmingEmergence = card("Squirming Emergence") {
 
     spell {
         val t = target(
-            "target nonland permanent card in your graveyard with mana value less than or " +
-                "equal to the number of permanent cards in your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter(
-                        cardPredicates = listOf(
-                            CardPredicate.IsNonland,
-                            CardPredicate.IsPermanent,
-                            CardPredicate.ManaValueAtMostDynamic(
-                                DynamicAmount.Count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Permanent)
-                            )
-                        ),
-                        controllerPredicate = ControllerPredicate.OwnedByYou
+            TargetFilter(
+                GameObjectFilter(
+                    cardPredicates = listOf(
+                        CardPredicate.IsNonland,
+                        CardPredicate.IsPermanent,
+                        CardPredicate.ManaValueAtMostDynamic(
+                            DynamicAmounts.count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Permanent)
+                        )
                     ),
-                    zone = Zone.GRAVEYARD
-                )
-            )
+                    controllerPredicate = ControllerPredicate.OwnedByYou
+                ),
+                zone = Zone.GRAVEYARD
+            ),
         )
         effect = Effects.PutOntoBattlefield(t)
     }

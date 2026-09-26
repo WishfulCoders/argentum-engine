@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * This creature doesn't untap during your untap step.
  * Whenever you gain life, untap this creature.
  *
- * [Triggers.YouGainLife] already carries `TriggerBinding.ANY`: the printed line watches every
+ * `Triggers.you.gainsLife()` already carries `TriggerBinding.ANY`: the printed line watches every
  * life gain you get, not only the ones this creature causes.
  */
 val FamishedPaladin = card("Famished Paladin") {
@@ -30,7 +30,7 @@ val FamishedPaladin = card("Famished Paladin") {
     flags(AbilityFlag.DOESNT_UNTAP)
 
     triggeredAbility {
-        trigger = Triggers.YouGainLife
+        trigger = Triggers.you.gainsLife()
         effect = Effects.Untap(EffectTarget.Self)
     }
 

@@ -1,14 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Zoyowa's Justice
@@ -22,7 +19,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * spell's controller, so the whole action is wrapped in [Effects.ForEachPlayer] keyed to
  * [Player.OwnerOf] the target — the loop rebinds the resolution context's controller to the owner,
  * so the discover walks the owner's library and the cast/hand decision is presented to the owner.
- * X is read as the target's mana value ([EntityReference.Target] → [EntityNumericProperty.ManaValue]),
+ * X is read as the target's mana value ([EffectTarget.ContextTarget] → [EntityNumericProperty.ManaValue]),
  * an intrinsic characteristic that survives the shuffle (the entity keeps its id and CardComponent
  * across the zone change).
  */
@@ -37,16 +34,13 @@ val ZoyowasJustice = card("Zoyowa's Justice") {
         "on the bottom in a random order.)"
 
     spell {
-        val permanent = target(
-            "target artifact or creature",
-            TargetPermanent(filter = TargetFilter.CreatureOrArtifact.manaValueAtLeast(1))
-        )
+        val permanent = target(TargetFilter.CreatureOrArtifact.manaValueAtLeast(1))
         effect = Effects.ForEachPlayer(
             Player.OwnerOf("target artifact or creature"),
             listOf(
                 Effects.ShuffleIntoLibrary(permanent),
                 Effects.Discover(
-                    DynamicAmount.EntityProperty(EntityReference.Target(0), EntityNumericProperty.ManaValue)
+                    DynamicAmounts.manaValueOf(permanent)
                 )
             )
         )

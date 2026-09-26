@@ -30,10 +30,8 @@ val ScornfulAetherLich = card("Scornful Aether-Lich") {
 
     activatedAbility {
         cost = Costs.Mana("{W}{B}")
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.FEAR, EffectTarget.Self),
+        effect = Effects.GrantKeyword(Keyword.FEAR, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.VIGILANCE, EffectTarget.Self)
-        )
     }
 
     metadata {

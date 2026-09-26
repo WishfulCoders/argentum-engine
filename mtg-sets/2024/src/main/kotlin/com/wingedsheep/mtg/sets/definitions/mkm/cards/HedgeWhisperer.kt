@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Hedge Whisperer — Murders at Karlov Manor #165
@@ -37,10 +36,7 @@ val HedgeWhisperer = card("Hedge Whisperer") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}{G}"), Costs.Tap, Costs.CollectEvidence(4))
         timing = TimingRule.SorcerySpeed
-        val land = target(
-            "target land you control",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.Land.youControl())),
-        )
+        val land = target(TargetFilter(GameObjectFilter.Land.youControl()))
         effect = Effects.BecomeCreature(
             target = land,
             power = 5,

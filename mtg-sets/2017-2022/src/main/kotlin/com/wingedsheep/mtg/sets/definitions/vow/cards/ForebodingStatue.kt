@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -9,8 +9,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Foreboding Statue // Forsaken Thresher (Innistrad: Crimson Vow)
@@ -48,19 +48,16 @@ private val ForebodingStatueFront = card("Foreboding Statue") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.Composite(
-            Effects.AddAnyColorMana(1),
-            Effects.AddCounters(Counters.OMEN, 1, EffectTarget.Self)
-        )
+        effect = Effects.AddAnyColorMana(1) then Effects.AddCounters(CounterType.OMEN, 1, EffectTarget.Self)
         manaAbility = true
         timing = TimingRule.ManaAbility
         description = "{T}: Add one mana of any color. Put an omen counter on this creature."
     }
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
-        interveningIf = Conditions.SourceCounterCountAtLeast(Counters.OMEN, 3)
-        effect = Effects.Untap(EffectTarget.Self) then TransformEffect(EffectTarget.Self)
+        trigger = Triggers.you.beginningOf(Step.END)
+        interveningIf = Conditions.SourceCounterCountAtLeast(CounterType.OMEN, 3)
+        effect = Effects.Untap(EffectTarget.Self) then Effects.Transform(EffectTarget.Self)
         description = "At the beginning of your end step, if there are three or more omen counters " +
             "on this creature, untap it, then transform it."
     }
@@ -89,7 +86,7 @@ private val ForsakenThresher = card("Forsaken Thresher") {
     oracleText = "At the beginning of your first main phase, add one mana of any color."
 
     triggeredAbility {
-        trigger = Triggers.FirstMainPhase
+        trigger = Triggers.you.beginningOf(Step.PRECOMBAT_MAIN)
         effect = Effects.AddAnyColorMana(1)
         description = "At the beginning of your first main phase, add one mana of any color."
     }

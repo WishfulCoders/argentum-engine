@@ -31,7 +31,7 @@ import io.kotest.matchers.shouldBe
  */
 class EvaluateExistsControllerProjectionTest : FunSpec({
 
-    val evaluator = ConditionEvaluator()
+    val evaluator = PredicateEvaluator(cardRegistry = null).conditions
 
     val player1 = EntityId.generate()
     val player2 = EntityId.generate()

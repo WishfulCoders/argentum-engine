@@ -18,7 +18,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 
 /**
- * Exercises the explore trigger feature (CR 701.44) — [com.wingedsheep.sdk.dsl.Triggers.creatureExplores]
+ * Exercises the explore trigger feature (CR 701.44) — `Triggers.a(filter).explores(revealed)`
  * / `WheneverCreatureYouControlExplores[Land|Nonland]` — via two LCI observers:
  *
  *  - **Merfolk Cave-Diver** — "Whenever a creature you control explores, this creature gets +1/+0

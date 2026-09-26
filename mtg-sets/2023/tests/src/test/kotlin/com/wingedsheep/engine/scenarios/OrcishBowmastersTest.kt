@@ -21,7 +21,7 @@ import io.kotest.matchers.shouldBe
 
 /**
  * Orcish Bowmasters / A-Orcish Bowmasters and the underlying
- * [com.wingedsheep.sdk.dsl.Triggers.OpponentDrawsExceptFirstEachDrawStep] primitive.
+ * `Triggers.anOpponent.draws(true)` primitive.
  *
  * Rules proven (every clause has a paired assertion):
  *  - CR 504.1 — the first card a player draws in their own draw step (the turn-based draw) is
@@ -36,7 +36,7 @@ import io.kotest.matchers.shouldBe
  *  - The effect is "deal 1 damage to any target. Then amass Orcs 1." per firing.
  *  - Batch boundary: when one resolution emits several CardsDrawnEvents for the same player
  *    while the exempt slot is open, the exemption lands on the first card, not on none of them.
- *  - The plain [com.wingedsheep.sdk.dsl.Triggers.OpponentDraws] variant has no exemption — the
+ *  - The plain `Triggers.anOpponent.draws()` variant has no exemption — the
  *    for-turn draw fires it.
  */
 class OrcishBowmastersTest : FunSpec({
@@ -64,7 +64,7 @@ class OrcishBowmastersTest : FunSpec({
         manaCost = "{0}"
         typeLine = "Instant"
         oracleText = "Draw a card. Draw a card."
-        spell { effect = Effects.Composite(Effects.DrawCards(1), Effects.DrawCards(1)) }
+        spell { effect = Effects.DrawCards(1) then Effects.DrawCards(1) }
         metadata { rarity = Rarity.COMMON; collectorNumber = "T03" }
     }
     // Plain OpponentDraws (no draw-step exemption) — the for-turn draw fires it too.
@@ -75,7 +75,7 @@ class OrcishBowmastersTest : FunSpec({
         toughness = 1
         oracleText = "Whenever an opponent draws a card, you gain 1 life."
         triggeredAbility {
-            trigger = Triggers.OpponentDraws
+            trigger = Triggers.anOpponent.draws()
             effect = Effects.GainLife(1)
         }
         metadata { rarity = Rarity.COMMON; collectorNumber = "T04" }

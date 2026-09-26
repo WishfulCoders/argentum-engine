@@ -7,9 +7,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Mana Vortex
@@ -23,7 +23,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * counters its own spell — the ability resolves before the spell does, so a Vortex whose controller
  * declines never enters at all.
  *
- * The upkeep clause is where "that player" matters: with `Triggers.EachUpkeep` the ability's own
+ * The upkeep clause is where "that player" matters: with `Triggers.anyPlayer.beginningOf(Step.UPKEEP)` the ability's own
  * controller stays the Vortex's controller, so the sacrifice is aimed at `Player.TriggeringPlayer`,
  * which for a step trigger is the player whose upkeep it is. Aiming it at the controller instead
  * would make the Vortex eat only its owner's lands.
@@ -41,8 +41,8 @@ val ManaVortex = card("Mana Vortex") {
         "When there are no lands on the battlefield, sacrifice this enchantment."
 
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
-        effect = PayOrSufferEffect(
+        trigger = Triggers.self.isCast()
+        effect = Effects.PayOrSuffer(
             cost = Costs.pay.Sacrifice(GameObjectFilter.Land),
             suffer = Effects.CounterTriggeringSpell(),
         )
@@ -50,7 +50,7 @@ val ManaVortex = card("Mana Vortex") {
     }
 
     triggeredAbility {
-        trigger = Triggers.EachUpkeep
+        trigger = Triggers.anyPlayer.beginningOf(Step.UPKEEP)
         effect = Effects.Sacrifice(
             GameObjectFilter.Land,
             count = 1,

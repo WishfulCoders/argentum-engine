@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Quake, Agent of S.H.I.E.L.D. — Marvel Super Heroes #32
@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  * Modeling notes:
  *  - "Seismic Takedown" is a flavor ability name only; it carries no rules meaning, so it lives
  *    in the oracle text and the trigger's description, and nowhere else.
- *  - [Triggers.YouCastNoncreature] fires on the cast, so the trigger goes on the stack *above*
+ *  - `Triggers.you.casts(GameObjectFilter.Noncreature)` fires on the cast, so the trigger goes on the stack *above*
  *    the spell that caused it and resolves first (CR 603.3b) — the tap happens before the
  *    noncreature spell resolves.
  *  - The union "creature or land" target is the pre-built [TargetFilter.CreatureOrLandPermanent]
@@ -31,11 +31,8 @@ val QuakeAgentOfShield = card("Quake, Agent of S.H.I.E.L.D.") {
     oracleText = "Seismic Takedown — Whenever you cast a noncreature spell, tap target creature or land."
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
-        val shaken = target(
-            "target creature or land",
-            TargetPermanent(filter = TargetFilter.CreatureOrLandPermanent)
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
+        val shaken = target(TargetFilter.CreatureOrLandPermanent)
         effect = Effects.Tap(shaken)
         description = "Seismic Takedown — Whenever you cast a noncreature spell, tap target creature or land."
     }

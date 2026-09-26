@@ -1,13 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Kavu Lair
@@ -22,10 +19,7 @@ val KavuLair = card("Kavu Lair") {
     oracleText = "Whenever a creature with power 4 or greater enters, its controller draws a card."
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            ZoneChangeEvent(filter = GameObjectFilter.Creature.powerAtLeast(4), to = Zone.BATTLEFIELD),
-            TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.powerAtLeast(4)).enters()
         controlledByTriggeringEntityController = true
         effect = Effects.DrawCards(1)
     }

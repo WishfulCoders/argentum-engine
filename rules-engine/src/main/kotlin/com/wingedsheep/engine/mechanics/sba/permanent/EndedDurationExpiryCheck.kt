@@ -15,7 +15,6 @@ import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
-import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.Duration
 
@@ -186,7 +185,7 @@ class EndedDurationExpiryCheck : StateBasedActionCheck {
                 // entities that still carry the counter (CR 611.2b). Entities that merely left
                 // the battlefield are kept here and reaped by zone-change cleanup instead, matching
                 // the other per-affected gates.
-                val counterType = CounterType.fromName(floating.duration.counterType) ?: return emptySet()
+                val counterType = floating.duration.counterType
                 all.filterTo(LinkedHashSet()) { id ->
                     !state.getBattlefield().contains(id) ||
                         (state.getEntity(id)?.get<CountersComponent>()?.getCount(counterType) ?: 0) > 0

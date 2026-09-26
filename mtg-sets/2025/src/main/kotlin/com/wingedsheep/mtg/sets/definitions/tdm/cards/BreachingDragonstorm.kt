@@ -2,21 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalOnCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherUntilMatchEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Breaching Dragonstorm — Tarkir: Dragonstorm #101
@@ -33,12 +26,12 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *      the nonland stored as `nonland`, every revealed card (lands + the nonland) as `allRevealed`,
  *   2. move `allRevealed` to exile,
  *   3. narrow the nonland to mana value ≤ 8 ([CollectionFilter.ManaValueAtMost]) → `castable`,
- *   4. `MayEffect(CastFromCollectionWithoutPayingCost("castable"))` — you may cast it for free
+ *   4. `Effects.May(CastFromCollectionWithoutPayingCost("castable"))` — you may cast it for free
  *      (the may-cast simply has no candidate when MV > 8, so it's skipped),
  *   5. of the nonland, keep only the copy still in exile ([CollectionFilter.InZone] — the cast
  *      one has moved to the stack) → `uncast`, and put it into hand.
  * The lands exiled along the way stay in exile (only the nonland is ever moved to hand), matching
- * the printed card. The Dragon-bounce is the shared cycle trigger: [Triggers.entersBattlefield]
+ * the printed card. The Dragon-bounce is the shared cycle trigger: `Triggers.a(filter).enters()`
  * scoped to Dragons you control ([TriggerBinding.OTHER]) returning this enchantment to hand.
  */
 val BreachingDragonstorm = card("Breaching Dragonstorm") {
@@ -51,54 +44,30 @@ val BreachingDragonstorm = card("Breaching Dragonstorm") {
         "When a Dragon you control enters, return this enchantment to its owner's hand."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            listOf(
-                // Exile from the top of the library until a nonland card is exiled.
-                GatherUntilMatchEffect(
-                    filter = GameObjectFilter.Nonland,
-                    storeMatch = "nonland",
-                    storeRevealed = "allRevealed"
-                ),
-                MoveCollectionEffect(
-                    from = "allRevealed",
-                    destination = CardDestination.ToZone(Zone.EXILE)
-                ),
-                // Only mana value ≤ 8 may be cast for free.
-                FilterCollectionEffect(
-                    from = "nonland",
-                    filter = CollectionFilter.ManaValueAtMost(DynamicAmount.Fixed(8)),
-                    storeMatching = "castable"
-                ),
-                // You may cast it without paying its mana cost — only prompted when there is a
-                // mana-value-≤-8 nonland to cast (no empty "may cast" when MV > 8).
-                ConditionalOnCollectionEffect(
-                    collection = "castable",
-                    ifNotEmpty = MayEffect(Effects.CastFromCollectionWithoutPayingCost("castable"))
-                ),
-                // If you don't (declined, or MV > 8), put that card into your hand. The card just
-                // cast has left exile for the stack, so only the nonland still in exile moves.
-                FilterCollectionEffect(
-                    from = "nonland",
-                    filter = CollectionFilter.InZone(Zone.EXILE),
-                    storeMatching = "uncast"
-                ),
-                MoveCollectionEffect(
-                    from = "uncast",
-                    destination = CardDestination.ToZone(Zone.HAND)
-                )
-            )
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            // Exile from the top of the library until a nonland card is exiled.
+            val (nonland, allRevealed) = gatherUntilMatch(GameObjectFilter.Nonland)
+            exile(allRevealed)
+            // Only mana value ≤ 8 may be cast for free.
+            val castable = filter(nonland, GameObjectFilter.Any.manaValueAtMostDynamic(DynamicAmounts.fixed(8)))
+            // You may cast it without paying its mana cost — only prompted when there is a
+            // mana-value-≤-8 nonland to cast (no empty "may cast" when MV > 8).
+            ifNotEmpty(castable) {
+                run(Effects.May(Effects.CastFromCollectionWithoutPayingCost(castable)))
+            }
+            // If you don't (declined, or MV > 8), put that card into your hand. The card just
+            // cast has left exile for the stack, so only the nonland still in exile moves.
+            val uncast = filter(nonland, GameObjectFilter.Any.currentlyIn(Zone.EXILE))
+            toHand(uncast)
+        }
         description = "When this enchantment enters, exile cards from the top of your library " +
             "until you exile a nonland card. You may cast it without paying its mana cost if " +
             "that spell's mana value is 8 or less. If you don't, put that card into your hand."
     }
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.youControl().withSubtype(Subtype.DRAGON),
-            binding = TriggerBinding.OTHER
-        )
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl().withSubtype(Subtype.DRAGON)).enters()
         effect = Effects.ReturnToHand(EffectTarget.Self)
         description = "When a Dragon you control enters, return this enchantment to its owner's hand."
     }

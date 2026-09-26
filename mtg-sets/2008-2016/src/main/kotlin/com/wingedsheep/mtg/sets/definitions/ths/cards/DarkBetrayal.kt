@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Dark Betrayal
@@ -23,7 +24,7 @@ val DarkBetrayal = card("Dark Betrayal") {
     oracleText = "Destroy target black creature."
 
     spell {
-        val t = target("target", Targets.CreatureWithColor(Color.BLACK))
+        val t = target(TargetFilter.Creature.withColor(Color.BLACK))
         effect = Effects.Destroy(t)
     }
 

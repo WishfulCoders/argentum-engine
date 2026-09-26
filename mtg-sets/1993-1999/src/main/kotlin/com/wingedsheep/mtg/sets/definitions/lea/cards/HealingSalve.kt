@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
 
 
 /**
@@ -25,11 +24,11 @@ val HealingSalve = card("Healing Salve") {
     spell {
         modal(chooseCount = 1) {
             mode("Target player gains 3 life") {
-                val player = target("target player", TargetPlayer())
+                val player = target(Targets.Player)
                 effect = Effects.GainLife(3, player)
             }
             mode("Prevent the next 3 damage that would be dealt to any target this turn") {
-                val anyTarget = target("any target", Targets.Any)
+                val anyTarget = target(Targets.Any)
                 effect = Effects.PreventNextDamage(3, anyTarget)
             }
         }

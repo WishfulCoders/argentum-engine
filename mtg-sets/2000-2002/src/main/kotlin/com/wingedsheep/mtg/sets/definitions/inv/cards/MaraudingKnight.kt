@@ -1,16 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.ProtectionScope
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Marauding Knight
@@ -31,17 +31,17 @@ val MaraudingKnight = card("Marauding Knight") {
     keywordAbility(KeywordAbility.Protection(ProtectionScope.Color(Color.WHITE)))
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
-            powerBonus = DynamicAmount.Count(
-                player = Player.EachOpponent,
-                zone = Zone.BATTLEFIELD,
-                filter = GameObjectFilter.Land.withSubtype("Plains")
+            powerBonus = DynamicAmounts.count(
+                Player.EachOpponent,
+                Zone.BATTLEFIELD,
+                GameObjectFilter.Land.withSubtype("Plains")
             ),
-            toughnessBonus = DynamicAmount.Count(
-                player = Player.EachOpponent,
-                zone = Zone.BATTLEFIELD,
-                filter = GameObjectFilter.Land.withSubtype("Plains")
+            toughnessBonus = DynamicAmounts.count(
+                Player.EachOpponent,
+                Zone.BATTLEFIELD,
+                GameObjectFilter.Land.withSubtype("Plains")
             )
         )
     }

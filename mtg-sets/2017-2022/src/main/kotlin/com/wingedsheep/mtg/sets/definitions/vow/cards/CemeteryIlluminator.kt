@@ -28,7 +28,7 @@ import com.wingedsheep.sdk.scripting.references.Player
  * it keeps exiling — one card per enter *and* per attack — so its payoff reads the whole
  * linked-exile pile (CR 607) rather than a single "the exiled card": `sharingCardTypeWithLinkedExile`
  * is the filter form of the reading `CostReductionSource.SharedCardTypesWithLinkedExile` already
- * takes on the Prowler's cost side. An index-keyed `EntityReference.LinkedExiledCard` would only
+ * takes on the Prowler's cost side. An index-keyed `EffectTarget.LinkedExiledCard` would only
  * ever see the first exile and go stale the moment it left exile.
  *
  * "Enters or attacks" is two triggered abilities for [CemeteryGatekeeper]'s reason: the corpus
@@ -61,14 +61,14 @@ val CemeteryIlluminator = card("Cemetery Illuminator") {
 
     // Whenever this creature enters …
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = exileFromAGraveyard()
         description = "When Cemetery Illuminator enters, exile a card from a graveyard."
     }
 
     // … or attacks, exile a card from a graveyard.
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = exileFromAGraveyard()
         description = "Whenever Cemetery Illuminator attacks, exile a card from a graveyard."
     }
@@ -113,7 +113,6 @@ val CemeteryIlluminator = card("Cemetery Illuminator") {
 private fun exileFromAGraveyard(): Effect = Effects.Pipeline {
     val graveyards = gather(
         CardSource.FromZone(Zone.GRAVEYARD, Player.Each, GameObjectFilter.Any),
-        name = "graveyards",
     )
     val exiled = chooseExactly(
         1,
@@ -121,7 +120,6 @@ private fun exileFromAGraveyard(): Effect = Effects.Pipeline {
         useTargetingUI = true,
         prompt = "Exile a card from a graveyard",
         selectedLabel = "Exile",
-        name = "exiled",
     )
     exile(exiled, linkToSource = true)
 }

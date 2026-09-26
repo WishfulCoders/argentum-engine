@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -11,7 +12,6 @@ import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.TargetPlayer
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Officious Interrogation — Murders at Karlov Manor #222
@@ -74,12 +74,12 @@ val OfficiousInterrogation = card("Officious Interrogation") {
     }
 
     spell {
-        target("targets", TargetPlayer(unlimited = true))
+        target(TargetPlayer(unlimited = true))
         effect = Effects.Investigate(
-            count = DynamicAmount.Count(
-                player = Player.EachTargetedPlayer,
-                zone = Zone.BATTLEFIELD,
-                filter = GameObjectFilter.Creature
+            count = DynamicAmounts.count(
+                Player.EachTargetedPlayer,
+                Zone.BATTLEFIELD,
+                GameObjectFilter.Creature
             )
         )
     }

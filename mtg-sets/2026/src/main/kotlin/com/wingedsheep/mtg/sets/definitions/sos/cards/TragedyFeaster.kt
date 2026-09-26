@@ -2,12 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
+import com.wingedsheep.sdk.scripting.effects.WardCost
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Tragedy Feaster — Secrets of Strixhaven #102
@@ -23,7 +25,7 @@ import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
  * — i.e. the trigger only goes on the stack when you did NOT gain life this turn
  * ([Conditions.Not] of [Conditions.YouGainedLifeThisTurn]), and its effect makes the controller
  * sacrifice a permanent of their choice ([SacrificeEffect] over any permanent — the controller-
- * chooses idiom shared with Accursed Centaur). Ward—Discard a card via [KeywordAbility.wardDiscard].
+ * chooses idiom shared with Accursed Centaur). Ward—Discard a card via [WardCost.Discard].
  */
 val TragedyFeaster = card("Tragedy Feaster") {
     manaCost = "{2}{B}{B}"
@@ -37,12 +39,12 @@ val TragedyFeaster = card("Tragedy Feaster") {
         "life this turn."
 
     keywords(Keyword.TRAMPLE)
-    keywordAbility(KeywordAbility.wardDiscard())
+    keywordAbility(KeywordAbility.Ward(WardCost.Discard()))
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         triggerRestriction = Conditions.Not(Conditions.YouGainedLifeThisTurn)
-        effect = SacrificeEffect(GameObjectFilter.Permanent)
+        effect = Effects.SacrificeOwn(GameObjectFilter.Permanent)
         description = "Infusion — At the beginning of your end step, sacrifice a permanent unless " +
             "you gained life this turn."
     }

@@ -6,14 +6,8 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Under the Skin
@@ -41,28 +35,21 @@ val UnderTheSkin = card("Under the Skin") {
         "You may return a permanent card from your graveyard to your hand."
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                Patterns.Library.manifestDread(),
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Permanent),
-                    storeAs = "underTheSkinReturnable"
-                ),
-                SelectFromCollectionEffect(
-                    from = "underTheSkinReturnable",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    storeSelected = "underTheSkinToReturn",
-                    showAllCards = true,
-                    prompt = "You may return a permanent card from your graveyard to your hand",
-                    selectedLabel = "Return to hand",
-                    remainderLabel = "Leave in graveyard"
-                ),
-                MoveCollectionEffect(
-                    from = "underTheSkinToReturn",
-                    destination = CardDestination.ToZone(Zone.HAND)
-                )
+        effect = Effects.Pipeline {
+            run(Patterns.Library.manifestDread())
+            val underTheSkinReturnable = gather(
+                CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Permanent)
             )
-        )
+            val underTheSkinToReturn = chooseUpTo(
+                1,
+                from = underTheSkinReturnable,
+                showAllCards = true,
+                prompt = "You may return a permanent card from your graveyard to your hand",
+                selectedLabel = "Return to hand",
+                remainderLabel = "Leave in graveyard"
+            )
+            toHand(underTheSkinToReturn)
+        }
     }
 
     metadata {

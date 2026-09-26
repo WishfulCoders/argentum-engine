@@ -3,10 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.hob.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Lake-town Toymaker
@@ -19,7 +20,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * The "if you've drawn two or more cards this turn" clause is an intervening-if (CR 603.4) —
  * checked both when the trigger would go on the stack and again on resolution — so it's
- * [interveningIf], not a [com.wingedsheep.sdk.scripting.effects.ConditionalEffect]. It reads the
+ * [interveningIf], not a [com.wingedsheep.sdk.dsl.Effects.If]. It reads the
  * controller's `CardsDrawnThisTurnComponent`, which counts every draw this turn regardless of source.
  */
 val LaketownToymaker = card("Lake-town Toymaker") {
@@ -32,13 +33,10 @@ val LaketownToymaker = card("Lake-town Toymaker") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
         interveningIf = Conditions.YouDrewCardsThisTurn(2)
-        val t = target("another target creature you control", Targets.OtherCreatureYouControl)
-        effect = Effects.Composite(
-            Effects.ModifyStats(3, 0, t),
-            Effects.GrantKeyword(Keyword.FIRST_STRIKE, t),
-        )
+        val t = target(TargetFilter.OtherCreatureYouControl)
+        effect = Effects.ModifyStats(3, 0, t) then Effects.GrantKeyword(Keyword.FIRST_STRIKE, t)
     }
 
     metadata {

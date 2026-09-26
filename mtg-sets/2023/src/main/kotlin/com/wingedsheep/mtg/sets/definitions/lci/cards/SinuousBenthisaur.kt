@@ -1,21 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Sinuous Benthisaur
@@ -58,47 +53,35 @@ val SinuousBenthisaur = card("Sinuous Benthisaur") {
         "of those cards into your hand and the rest on the bottom of your library in a random order."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
 
-        val cavesControlled = DynamicAmount.Count(
-            player = Player.You,
-            zone = Zone.BATTLEFIELD,
-            filter = GameObjectFilter.Land.withSubtype("Cave"),
+        val cavesControlled = DynamicAmounts.count(
+            Player.You,
+            Zone.BATTLEFIELD,
+            GameObjectFilter.Land.withSubtype("Cave"),
         )
-        val cavesInGraveyard = DynamicAmount.Count(
-            player = Player.You,
-            zone = Zone.GRAVEYARD,
-            filter = GameObjectFilter.Any.withSubtype("Cave"),
+        val cavesInGraveyard = DynamicAmounts.count(
+            Player.You,
+            Zone.GRAVEYARD,
+            GameObjectFilter.Any.withSubtype("Cave"),
         )
 
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(
-                        DynamicAmount.Add(cavesControlled, cavesInGraveyard)
-                    ),
-                    storeAs = "looked"
-                ),
-                SelectFromCollectionEffect(
-                    from = "looked",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(2)),
-                    storeSelected = "kept",
-                    storeRemainder = "rest",
-                    selectedLabel = "Put into hand",
-                    remainderLabel = "Put on bottom",
-                    prompt = "Put two of those cards into your hand"
-                ),
-                MoveCollectionEffect(
-                    from = "kept",
-                    destination = CardDestination.ToZone(Zone.HAND)
-                ),
-                MoveCollectionEffect(
-                    from = "rest",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
-                    order = CardOrder.Random
+        effect = Effects.Pipeline {
+            val looked = gather(
+                CardSource.TopOfLibrary(
+                    cavesControlled + cavesInGraveyard
                 )
             )
-        )
+            val (kept, rest) = chooseExactlySplit(
+                2,
+                from = looked,
+                selectedLabel = "Put into hand",
+                remainderLabel = "Put on bottom",
+                prompt = "Put two of those cards into your hand"
+            )
+            toHand(kept)
+            toLibraryBottom(rest, order = CardOrder.Random)
+        }
     }
 
     metadata {

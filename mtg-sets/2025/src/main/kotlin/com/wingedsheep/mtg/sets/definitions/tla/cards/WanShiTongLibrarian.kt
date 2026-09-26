@@ -1,13 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.div
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Wan Shi Tong, Librarian
@@ -26,7 +27,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * (integer division = round down).
  *
  * The opponent-search clause is the engine's new
- * [Triggers.WheneverAnOpponentSearchesTheirLibrary] (CR 701.23) — every tutor / fetch / basic-land
+ * `Triggers.anOpponent.searchesLibrary()` (CR 701.23) — every tutor / fetch / basic-land
  * search an opponent resolves fires the auto-emitted `LibrarySearchedEvent`; since searching is the
  * act of looking (CR 701.23a) and finding a card is not required (CR 701.23b), it fires even when
  * the opponent finds nothing. The controller's own searches are not opponents', so they never
@@ -46,22 +47,18 @@ val WanShiTongLibrarian = card("Wan Shi Tong, Librarian") {
     keywords(Keyword.FLASH, Keyword.FLYING, Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Effects.AddDynamicCounters(Counters.PLUS_ONE_PLUS_ONE, DynamicAmount.XValue, EffectTarget.Self),
+        trigger = Triggers.self.enters()
+        effect = Effects.AddDynamicCounters(CounterType.PLUS_ONE_PLUS_ONE, DynamicAmounts.xValue(), EffectTarget.Self) then
             Effects.DrawCards(
-                DynamicAmount.Divide(DynamicAmount.XValue, DynamicAmount.Fixed(2), roundUp = false),
-            ),
-        )
+                DynamicAmounts.xValue() / 2,
+            )
         description = "Put X +1/+1 counters on Wan Shi Tong. Then draw half X cards, rounded down."
     }
 
     triggeredAbility {
-        trigger = Triggers.WheneverAnOpponentSearchesTheirLibrary
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
-            Effects.DrawCards(1),
-        )
+        trigger = Triggers.anOpponent.searchesLibrary()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self) then
+            Effects.DrawCards(1)
         description = "Put a +1/+1 counter on Wan Shi Tong and draw a card."
     }
 

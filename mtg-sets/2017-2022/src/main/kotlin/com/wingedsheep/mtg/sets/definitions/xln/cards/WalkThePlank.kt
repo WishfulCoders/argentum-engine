@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Walk the Plank
@@ -22,10 +21,7 @@ val WalkThePlank = card("Walk the Plank") {
     oracleText = "Destroy target non-Merfolk creature."
 
     spell {
-        val victim = target(
-            "target",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Creature.notSubtype(Subtype.MERFOLK)))
-        )
+        val victim = target(TargetFilter(GameObjectFilter.Creature.notSubtype(Subtype.MERFOLK)))
         effect = Effects.Destroy(victim)
     }
 

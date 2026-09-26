@@ -1,21 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ChoosePileEffect
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.TargetPlayer
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Do or Die
@@ -37,51 +29,38 @@ val DoOrDie = card("Do or Die") {
     oracleText = "Separate all creatures target player controls into two piles. Destroy all creatures in the pile of that player's choice. They can't be regenerated."
 
     spell {
-        target = TargetPlayer()
-        effect = Effects.Composite(
-            listOf(
-                // 1. Gather every creature the target player controls (projected).
-                GatherCardsEffect(
-                    source = CardSource.BattlefieldMatching(
-                        filter = GameObjectFilter.Creature,
-                        player = Player.ContextPlayer(0)
-                    ),
-                    storeAs = "creatures"
-                ),
-                // 2. You partition them into two piles by clicking creatures in
-                //    play. The creatures you select form Pile 1; the rest, Pile 2.
-                SelectFromCollectionEffect(
-                    from = "creatures",
-                    selection = SelectionMode.ChooseAnyNumber,
-                    chooser = Chooser.Controller,
-                    storeSelected = "pileA",
-                    storeRemainder = "pileB",
-                    selectedLabel = "Pile 1",
-                    remainderLabel = "Pile 2",
-                    prompt = "Separate the target player's creatures into two piles. The creatures you select form Pile 1; the rest form Pile 2.",
-                    useTargetingUI = true,
-                    alwaysPrompt = true
-                ),
-                // 3. The target player chooses which pile is destroyed.
-                ChoosePileEffect(
-                    pileA = "pileA",
-                    pileB = "pileB",
-                    pileALabel = "Pile 1",
-                    pileBLabel = "Pile 2",
-                    chooser = Chooser.TargetPlayer,
-                    storeChosenAs = "doomed",
-                    storeOtherAs = "spared",
-                    prompt = "Choose which pile of your creatures is destroyed."
-                ),
-                // 4. Destroy the chosen pile; it can't be regenerated.
-                MoveCollectionEffect(
-                    from = "doomed",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD),
-                    moveType = MoveType.Destroy,
-                    noRegenerate = true
+        val player = target(Targets.Player)
+        effect = Effects.Pipeline {
+            // 1. Gather every creature the target player controls (projected).
+            val creatures = gather(
+                CardSource.BattlefieldMatching(
+                    filter = GameObjectFilter.Creature,
+                    player = player.asPlayer
                 )
             )
-        )
+            // 2. You partition them into two piles by clicking creatures in
+            //    play. The creatures you select form Pile 1; the rest, Pile 2.
+            val (pileA, pileB) = chooseAnyNumberSplit(
+                from = creatures,
+                chooser = Chooser.Controller,
+                selectedLabel = "Pile 1",
+                remainderLabel = "Pile 2",
+                prompt = "Separate the target player's creatures into two piles. The creatures you select form Pile 1; the rest form Pile 2.",
+                useTargetingUI = true,
+                alwaysPrompt = true
+            )
+            // 3. The target player chooses which pile is destroyed.
+            val (doomed, _) = choosePile(
+                pileA,
+                pileB,
+                pileALabel = "Pile 1",
+                pileBLabel = "Pile 2",
+                chooser = Chooser.TargetPlayer,
+                prompt = "Choose which pile of your creatures is destroyed."
+            )
+            // 4. Destroy the chosen pile; it can't be regenerated.
+            destroy(doomed, noRegenerate = true)
+        }
     }
 
     metadata {

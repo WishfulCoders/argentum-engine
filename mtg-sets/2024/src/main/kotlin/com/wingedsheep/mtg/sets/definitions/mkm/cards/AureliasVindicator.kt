@@ -1,19 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Aurelia's Vindicator — Murders at Karlov Manor #4
@@ -67,35 +63,26 @@ val AureliasVindicator = card("Aurelia's Vindicator") {
         "When this creature leaves the battlefield, return the exiled cards to their owners' hands."
 
     keywords(Keyword.FLYING, Keyword.LIFELINK)
-    keywordAbility(KeywordAbility.ward("{2}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
     disguise = "{X}{3}{W}"
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        target(
-            "up to X other target creatures from the battlefield and/or creature cards from graveyards",
-            TargetObject(
-                optional = true,
-                filter = TargetFilter.OtherCreature.or(TargetFilter.CreatureInGraveyard),
-                dynamicMaxCount = DynamicAmount.XValue,
-            ),
+        trigger = Triggers.self.turnedFaceUp()
+        targets(
+            TargetFilter.OtherCreature.or(TargetFilter.CreatureInGraveyard),
+            optional = true,
+            dynamicMaxCount = DynamicAmounts.xValue(),
         )
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(source = CardSource.ChosenTargets, storeAs = "vindicated"),
-                MoveCollectionEffect(
-                    from = "vindicated",
-                    destination = CardDestination.ToZone(Zone.EXILE),
-                    linkToSource = true,
-                ),
-            )
-        )
+        effect = Effects.Pipeline {
+            val vindicated = gather(CardSource.ChosenTargets)
+            exile(vindicated, linkToSource = true)
+        }
         description = "When this creature is turned face up, exile up to X other target creatures " +
             "from the battlefield and/or creature cards from graveyards."
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileToHand()
         description = "When this creature leaves the battlefield, return the exiled cards to " +
             "their owners' hands."

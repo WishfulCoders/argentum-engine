@@ -1,7 +1,5 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.handlers.ConditionEvaluator
-import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.legalactions.utils.CastPermissionUtils
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
@@ -62,7 +60,7 @@ class KutzilMalametExemplarScenarioTest : ScenarioTestBase() {
                 val opponentBolt = game.state.getZone(ZoneKey(game.player2Id, Zone.HAND)).first()
                 val controllerBolt = game.state.getZone(ZoneKey(game.player1Id, Zone.HAND)).first()
 
-                val utils = CastPermissionUtils(cardRegistry, PredicateEvaluator(), ConditionEvaluator())
+                val utils = CastPermissionUtils(cardRegistry, services.predicateEvaluator, services.conditionEvaluator)
                 withClue("Opponent is locked out of casting during Kutzil's controller's turn") {
                     utils.reasonCannotCast(game.state, game.player2Id, opponentBolt) shouldNotBe null
                 }
@@ -82,7 +80,7 @@ class KutzilMalametExemplarScenarioTest : ScenarioTestBase() {
 
                 val opponentBolt = game.state.getZone(ZoneKey(game.player2Id, Zone.HAND)).first()
 
-                val utils = CastPermissionUtils(cardRegistry, PredicateEvaluator(), ConditionEvaluator())
+                val utils = CastPermissionUtils(cardRegistry, services.predicateEvaluator, services.conditionEvaluator)
                 withClue("The cast lock is your-turn-only, so the opponent casts freely on their own turn") {
                     utils.reasonCannotCast(game.state, game.player2Id, opponentBolt) shouldBe null
                 }

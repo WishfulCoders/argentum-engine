@@ -28,7 +28,7 @@ val FoulSpirit = card("Foul Spirit") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.SacrificeOwn(GameObjectFilter.Land)
     }
 

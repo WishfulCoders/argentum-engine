@@ -5,8 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Rite of Replication
@@ -19,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  *
  * "Create five … instead" is a mutually-exclusive branch, not additive: a kicked cast
  * makes five copies *and no more* (not five + the base one). Modeled as a
- * [ConditionalEffect] on [Conditions.WasKicked] — the kicked branch creates five copies,
+ * [Effects.If] on [Conditions.WasKicked] — the kicked branch creates five copies,
  * the else branch creates one. Each token is a copy of the resolved target creature via
  * `Effects.CreateTokenCopyOfTarget` (copiable characteristics per Rule 707); the copies'
  * own enters-the-battlefield triggers fire as they are created.
@@ -35,11 +34,11 @@ val RiteOfReplication = card("Rite of Replication") {
     keywordAbility(KeywordAbility.kicker("{5}"))
 
     spell {
-        val t = target("target", TargetCreature())
-        effect = ConditionalEffect(
+        val t = target(TargetFilter.Creature)
+        effect = Effects.If(
             condition = Conditions.WasKicked,
-            effect = Effects.CreateTokenCopyOfTarget(t, count = 5),
-            elseEffect = Effects.CreateTokenCopyOfTarget(t, count = 1)
+            then = Effects.CreateTokenCopyOfTarget(t, count = 5),
+            otherwise = Effects.CreateTokenCopyOfTarget(t, count = 1)
         )
     }
 

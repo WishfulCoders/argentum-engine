@@ -26,7 +26,7 @@ val JeditSDragoons = card("Jedit's Dragoons") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(4)
     }
 

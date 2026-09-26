@@ -10,20 +10,19 @@ import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
-import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Gap 12 substrate: `DealsDamageEvent(requireExcess = true)` fires only when the recipient took
@@ -47,12 +46,7 @@ class ExcessDamageTriggerScenarioTest : FunSpec({
         typeLine = "Creature — Spirit"
         power = 0; toughness = 1
         triggeredAbility {
-            trigger = Triggers.dealsDamage(
-                damageType = DamageType.NonCombat,
-                recipient = RecipientFilter.CreatureOpponentControls,
-                binding = TriggerBinding.ANY,
-                requireExcess = true,
-            )
+            trigger = Triggers.a().dealsDamage(Recipient.CreatureOpponentControls, damageType = DamageType.NonCombat, requireExcess = true)
             effect = Effects.Amass(
                 DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_EXCESS_DAMAGE_AMOUNT),
                 "Orc"
@@ -67,7 +61,7 @@ class ExcessDamageTriggerScenarioTest : FunSpec({
         typeLine = "Sorcery"
         oracleText = "This deals 5 damage to target creature."
         spell {
-            val creature = target("target creature", Targets.Creature)
+            val creature = target(TargetFilter.Creature)
             effect = Effects.DealDamage(5, creature)
         }
     }
@@ -78,7 +72,7 @@ class ExcessDamageTriggerScenarioTest : FunSpec({
         typeLine = "Sorcery"
         oracleText = "This deals 2 damage to target creature."
         spell {
-            val creature = target("target creature", Targets.Creature)
+            val creature = target(TargetFilter.Creature)
             effect = Effects.DealDamage(2, creature)
         }
     }
@@ -98,12 +92,7 @@ class ExcessDamageTriggerScenarioTest : FunSpec({
         typeLine = "Creature — Spirit"
         power = 0; toughness = 3
         triggeredAbility {
-            trigger = Triggers.dealsDamage(
-                damageType = DamageType.Combat,
-                recipient = RecipientFilter.CreatureOpponentControls,
-                binding = TriggerBinding.ANY,
-                requireExcess = true,
-            )
+            trigger = Triggers.a().dealsCombatDamage(Recipient.CreatureOpponentControls, requireExcess = true)
             effect = Effects.Amass(
                 DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_EXCESS_DAMAGE_AMOUNT),
                 "Orc"
@@ -237,9 +226,9 @@ class ExcessDamageTriggerScenarioTest : FunSpec({
         driver.removeSummoningSickness(attacker)
 
         driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        driver.declareAttackers(active, listOf(attacker), opponent).isSuccess shouldBe true
+        driver.declareAttackers(active, listOf(attacker), opponent).outcome shouldBe Outcome.Done
         driver.passPriorityUntil(Step.DECLARE_BLOCKERS)
-        driver.declareBlockers(opponent, mapOf(blocker to listOf(attacker))).isSuccess shouldBe true
+        driver.declareBlockers(opponent, mapOf(blocker to listOf(attacker))).outcome shouldBe Outcome.Done
 
         driver.passPriorityUntil(Step.POSTCOMBAT_MAIN)
 
@@ -269,9 +258,9 @@ class ExcessDamageTriggerScenarioTest : FunSpec({
         driver.removeSummoningSickness(adder)
 
         driver.passPriorityUntil(Step.DECLARE_ATTACKERS)
-        driver.declareAttackers(active, listOf(adder), opponent).isSuccess shouldBe true
+        driver.declareAttackers(active, listOf(adder), opponent).outcome shouldBe Outcome.Done
         driver.passPriorityUntil(Step.DECLARE_BLOCKERS)
-        driver.declareBlockers(opponent, mapOf(blocker to listOf(adder))).isSuccess shouldBe true
+        driver.declareBlockers(opponent, mapOf(blocker to listOf(adder))).outcome shouldBe Outcome.Done
 
         driver.passPriorityUntil(Step.POSTCOMBAT_MAIN)
 

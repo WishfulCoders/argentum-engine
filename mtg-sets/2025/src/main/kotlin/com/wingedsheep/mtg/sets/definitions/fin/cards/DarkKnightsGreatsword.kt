@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.jobSelect
 import com.wingedsheep.sdk.model.Rarity
@@ -11,6 +10,7 @@ import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GrantSubtype
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Dark Knight's Greatsword
@@ -47,7 +47,7 @@ val DarkKnightsGreatsword = card("Dark Knight's Greatsword") {
     activatedAbility {
         isEquipAbility = true
         cost = Costs.PayLife(3)
-        val creature = target("target creature you control", Targets.CreatureYouControl)
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.AttachEquipment(creature)
         timing = TimingRule.SorcerySpeed
         restrictions = listOf(ActivationRestriction.OncePerTurn)

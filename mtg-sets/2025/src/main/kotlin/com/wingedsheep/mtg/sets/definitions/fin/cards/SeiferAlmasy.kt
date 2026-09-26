@@ -8,14 +8,12 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
 import com.wingedsheep.sdk.scripting.events.AttackPredicate
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Seifer Almasy — Final Fantasy #156
@@ -27,7 +25,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  * mana cost. If that spell would be put into your graveyard, exile it instead.
  *
  * First ability uses the Thoughtweft Imbuer "attacks alone" shape: an ANY-bound
- * [Triggers.attacks] with [AttackPredicate.Alone] over "creature you control", granting the
+ * `Triggers.<subject>.attacks(requires)` with [AttackPredicate.Alone] over "creature you control", granting the
  * keyword to [EffectTarget.TriggeringEntity] (the lone attacker).
  *
  * "Fire Cross" is an ability word (CR 207.2c) — flavor only, no rules meaning, so it adds no
@@ -51,11 +49,7 @@ val SeiferAlmasy = card("Seifer Almasy") {
         "that spell would be put into your graveyard, exile it instead."
 
     triggeredAbility {
-        trigger = Triggers.attacks(
-            filter = GameObjectFilter.Creature.youControl(),
-            requires = setOf(AttackPredicate.Alone),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).attacks(setOf(AttackPredicate.Alone))
         effect = Effects.GrantKeyword(
             Keyword.DOUBLE_STRIKE,
             EffectTarget.TriggeringEntity,
@@ -65,23 +59,21 @@ val SeiferAlmasy = card("Seifer Almasy") {
     }
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        target = TargetObject(
-            filter = TargetFilter.InstantOrSorceryInYourGraveyard.manaValueAtMost(3),
-        )
-        effect = Effects.Composite(
+        val target = target(TargetFilter.InstantOrSorceryInYourGraveyard.manaValueAtMost(3))
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.Pipeline {
             // Exile the targeted card from your graveyard so the free-cast grant keys off it.
-            Effects.Move(EffectTarget.ContextTarget(0), Zone.EXILE),
-            GatherCardsEffect(source = CardSource.ChosenTargets, storeAs = "fireCross"),
+            run(Effects.Move(target, Zone.EXILE))
+            val fireCross = gather(CardSource.ChosenTargets)
             // "You may cast ..." + "if it would be put into your graveyard, exile it instead."
-            Effects.GrantMayPlayFromExile(
-                from = "fireCross",
+            run(Effects.GrantMayPlayFromExile(
+                from = fireCross,
                 expiry = MayPlayExpiry.EndOfTurn,
                 exileAfterResolve = true,
-            ),
+            ))
             // "... without paying its mana cost."
-            Effects.GrantPlayWithoutPayingCost("fireCross"),
-        )
+            run(Effects.GrantPlayWithoutPayingCost(fireCross))
+        }
         description = "Fire Cross — Whenever Seifer Almasy deals combat damage to a player, you may cast " +
             "target instant or sorcery card with mana value 3 or less from your graveyard without paying " +
             "its mana cost. If that spell would be put into your graveyard, exile it instead."

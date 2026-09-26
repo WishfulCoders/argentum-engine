@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Roadside Blowout — Aetherdrift #58
@@ -38,16 +37,8 @@ val RoadsideBlowout = card("Roadside Blowout") {
         "Draw a card."
 
     spell {
-        val t = target(
-            "target creature or Vehicle an opponent controls",
-            TargetPermanent(
-                filter = TargetFilter(GameObjectFilter.CreatureOrVehicle.opponentControls()),
-            ),
-        )
-        effect = Effects.Composite(
-            Effects.ReturnToHand(t),
-            Effects.DrawCards(1),
-        )
+        val t = target(TargetFilter(GameObjectFilter.CreatureOrVehicle.opponentControls()))
+        effect = Effects.ReturnToHand(t) then Effects.DrawCards(1)
     }
 
     staticAbility {

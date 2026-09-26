@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -33,8 +31,8 @@ val WingnutBatOnTheBelfry = card("Wingnut, Bat on the Belfry") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.OtherCreatureEnters
-        effect = ModalEffect(
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
+        effect = Effects.Modal(
             modes = listOf(
                 Mode.noTarget(
                     Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self, Duration.EndOfTurn),
@@ -56,13 +54,13 @@ val WingnutBatOnTheBelfry = card("Wingnut, Bat on the Belfry") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ForEachInGroup(
             filter = GroupFilter(
                 GameObjectFilter.Creature.attacking(),
                 excludeSelf = true
             ),
-            effect = ModifyStatsEffect(1, 0, EffectTarget.Self)
+            effect = Effects.ModifyStats(1, 0, EffectTarget.IterationEntity)
         )
     }
 

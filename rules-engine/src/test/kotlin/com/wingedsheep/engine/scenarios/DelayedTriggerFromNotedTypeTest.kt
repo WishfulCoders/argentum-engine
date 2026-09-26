@@ -15,16 +15,14 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
-import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
 import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * End-to-end test for the Long List of the Ents (LTR) chapter shape:
@@ -62,16 +60,11 @@ class DelayedTriggerFromNotedTypeTest : FunSpec({
             effect = CompositeEffect(listOf(
                 Effects.NoteCreatureType("notedType"),
                 CreateDelayedTriggerEffect(
-                    trigger = TriggerSpec(
-                        event = EventPattern.SpellCastEvent(
-                            spellFilter = GameObjectFilter.Creature.withSubtypeFromVariable("notedType"),
-                            player = Player.You
-                        )
-                    ),
+                    trigger = Triggers.you.casts(GameObjectFilter.Creature.withSubtypeFromVariable("notedType")),
                     fireOnce = true,
                     expiry = DelayedTriggerExpiry.EndOfTurn,
                     effect = Effects.AddCounters(
-                        com.wingedsheep.sdk.core.Counters.PLUS_ONE_PLUS_ONE,
+                        com.wingedsheep.sdk.core.CounterType.PLUS_ONE_PLUS_ONE,
                         1,
                         EffectTarget.TriggeringEntity
                     )

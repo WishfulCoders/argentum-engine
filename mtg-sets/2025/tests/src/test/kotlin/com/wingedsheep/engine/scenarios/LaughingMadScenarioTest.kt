@@ -6,6 +6,8 @@ import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.scripting.AdditionalCostPayment
 import io.kotest.assertions.withClue
+import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 
 /**
@@ -89,6 +91,40 @@ class LaughingMadScenarioTest : ScenarioTestBase() {
                 game.isInHand(1, "Plains") shouldBe true
                 game.isInHand(1, "Island") shouldBe true
             }
+        }
+        // The printed "discard a card" is owed on the flashback cast too, so the flashback legal
+        // action — not only a hand-submitted CastSpell — must carry its picker.
+        test("the flashback legal action offers the printed discard picker") {
+            val game = scenario()
+                .withPlayers()
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                .withCardInGraveyard(1, "Laughing Mad")
+                .withCardInHand(1, "Forest")
+                .withLandsOnBattlefield(1, "Mountain", 4)
+                .build()
+            val forest = game.findCardsInHand(1, "Forest").single()
+
+            val flashback = game.getLegalActions(1)
+                .firstOrNull { it.actionType == "CastWithFlashback" }
+                .shouldNotBeNull()
+            flashback.isAffordable shouldBe true
+            val info = flashback.additionalCostInfo.shouldNotBeNull()
+            info.costType shouldBe "DiscardCard"
+            info.validDiscardTargets shouldContainExactly listOf(forest)
+        }
+
+        test("with an empty hand, flashback is offered but not affordable") {
+            val game = scenario()
+                .withPlayers()
+                .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                .withCardInGraveyard(1, "Laughing Mad")
+                .withLandsOnBattlefield(1, "Mountain", 4)
+                .build()
+
+            val flashback = game.getLegalActions(1)
+                .firstOrNull { it.actionType == "CastWithFlashback" }
+                .shouldNotBeNull()
+            flashback.isAffordable shouldBe false
         }
     }
 }

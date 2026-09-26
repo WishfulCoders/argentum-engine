@@ -1,10 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.chk.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Patterns
@@ -13,10 +14,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Myojin of Night's Reach
@@ -40,7 +39,7 @@ val MyojinOfNightsReach = card("Myojin of Night's Reach") {
 
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.Named(Counters.DIVINITY),
+            counterType = CounterType.DIVINITY,
             count = 1,
             selfOnly = true,
             condition = Conditions.WasCastFromHand,
@@ -53,17 +52,17 @@ val MyojinOfNightsReach = card("Myojin of Night's Reach") {
     staticAbility {
         ability = ConditionalStaticAbility(
             ability = GrantKeyword(Keyword.INDESTRUCTIBLE, Filters.Self),
-            condition = Conditions.SourceHasCounter(CounterTypeFilter.Named(Counters.DIVINITY)),
+            condition = Conditions.SourceHasCounter(CounterType.DIVINITY),
         )
     }
 
     activatedAbility {
-        cost = Costs.RemoveCounterFromSelf(Counters.DIVINITY)
+        cost = Costs.RemoveCounterFromSelf(CounterType.DIVINITY)
         effect = Effects.ForEachPlayer(
             Player.EachOpponent,
             listOf(
                 Patterns.Hand.discardCards(
-                    DynamicAmount.Count(Player.You, Zone.HAND),
+                    DynamicAmounts.cardsInYourHand(),
                     EffectTarget.Controller,
                 )
             ),

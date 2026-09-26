@@ -9,6 +9,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Gleancrawler — Ravnica: City of Guilds #247
@@ -43,7 +44,7 @@ val Gleancrawler = card("Gleancrawler") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         effect = Effects.Pipeline {
             val fallen = gather(
                 CardSource.FromZone(
@@ -51,7 +52,6 @@ val Gleancrawler = card("Gleancrawler") {
                     player = Player.You,
                     filter = GameObjectFilter.Creature.putIntoGraveyardFromBattlefieldThisTurn(),
                 ),
-                name = "fallen",
             )
             toHand(fallen)
         }

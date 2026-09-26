@@ -7,11 +7,11 @@ import com.wingedsheep.engine.core.DiscoverMayCastContinuation
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.core.GameEvent as EngineGameEvent
 import com.wingedsheep.engine.handlers.DecisionHandler
-import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PipelineState
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
 import com.wingedsheep.engine.handlers.effects.ZoneMovementUtils
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.identity.CardComponent
@@ -22,6 +22,7 @@ import com.wingedsheep.sdk.scripting.effects.DiscoverEffect
 import com.wingedsheep.sdk.scripting.effects.Effect
 import com.wingedsheep.sdk.scripting.effects.EmitDiscoveredEventEffect
 import kotlin.reflect.KClass
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Executor for [DiscoverEffect] (CR 701.57).
@@ -47,14 +48,14 @@ import kotlin.reflect.KClass
  * ≤ threshold and keeps the discovered card on the non-cast branch.
  */
 class DiscoverExecutor(
-    /** Runs a [DiscoverEffect.thenEffect] through the registry (the late-bound recursion entry). */
+    private val zones: ZoneTransitionService,
+    /** Runs a [DiscoverEffect.thenEffect] through the registry. */
     private val runEffect: (GameState, Effect, EffectContext) -> EffectResult,
     private val decisionHandler: DecisionHandler = DecisionHandler()
 ) : EffectExecutor<DiscoverEffect> {
+    private val amountEvaluator = zones.predicateEvaluator.amounts
 
     override val effectType: KClass<DiscoverEffect> = DiscoverEffect::class
-
-    private val amountEvaluator = DynamicAmountEvaluator()
 
     override fun execute(
         state: GameState,
@@ -112,8 +113,8 @@ class DiscoverExecutor(
         )
 
         for (cardId in exiledCards) {
-            val result = ZoneMovementUtils.moveCardToZone(currentState, cardId, Zone.EXILE)
-            if (result.isSuccess) {
+            val result = ZoneMovementUtils.moveCardToZone(zones, currentState, cardId, Zone.EXILE)
+            if (result.outcome is Outcome.Done) {
                 currentState = result.state
                 allEvents.addAll(result.events)
             }
@@ -122,7 +123,7 @@ class DiscoverExecutor(
         if (discoveredCard == null) {
             // Library exhausted without exiling a nonland card with mana value ≤ N — no castable
             // stopping card, so no may-cast/hand decision; every exiled card is bottom-randomized.
-            val bottomEvents = CascadeExecutor.bottomRandomize(currentState, controllerId, exiledCards) { newState ->
+            val bottomEvents = CascadeExecutor.bottomRandomize(zones, currentState, controllerId, exiledCards) { newState ->
                 currentState = newState
             }
             // CR 701.57c: the final card exiled is still the "discovered card" if its mana value is
@@ -146,7 +147,7 @@ class DiscoverExecutor(
                     pipeline = PipelineState.EMPTY.copy(storedCollections = discoveredCollections)
                 )
             )
-            return if (thenResult.isPaused) {
+            return if (thenResult.outcome is Outcome.Paused) {
                 EffectResult.propagatePause(thenResult.state, allEvents + bottomEvents + thenResult.events)
             } else {
                 EffectResult.success(thenResult.state, allEvents + bottomEvents + thenResult.events)

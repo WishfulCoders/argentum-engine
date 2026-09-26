@@ -51,7 +51,7 @@ val SmaugWickedWorm = card("Smaug, Wicked Worm") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateTreasure(
             count = DynamicAmounts.battlefield(Player.EachOpponent, GameObjectFilter.Artifact).count(),
             tapped = true
@@ -61,11 +61,8 @@ val SmaugWickedWorm = card("Smaug, Wicked Worm") {
     }
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            requires = setOf(SpellCastPredicate.PaidWithManaFromSubtype(Subtype.TREASURE))
-        )
-        effect = Effects.DrawCards(1)
-            .then(Effects.LoseLife(1, EffectTarget.PlayerRef(Player.You)))
+        trigger = Triggers.you.casts(requires = setOf(SpellCastPredicate.PaidWithManaFromSubtype(Subtype.TREASURE)))
+        effect = Effects.DrawCards(1) then Effects.LoseLife(1, EffectTarget.PlayerRef(Player.You))
         description = "You draw a card and lose 1 life."
     }
 

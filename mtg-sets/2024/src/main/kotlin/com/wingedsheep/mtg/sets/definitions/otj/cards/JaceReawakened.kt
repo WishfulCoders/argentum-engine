@@ -7,14 +7,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MakePlottedEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Jace Reawakened
@@ -52,26 +45,24 @@ val JaceReawakened = card("Jace Reawakened") {
 
     // +1: Draw a card, then discard a card.
     loyaltyAbility(+1) {
-        effect = Effects.DrawCards(1).then(Patterns.Hand.discardCards(1))
+        effect = Effects.DrawCards(1) then Patterns.Hand.discardCards(1)
     }
 
     // +1: You may exile a nonland card with mana value 3 or less from your hand. If you do, it becomes plotted.
     loyaltyAbility(+1) {
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                CardSource.FromZone(Zone.HAND, filter = GameObjectFilter.Nonland.manaValueAtMost(3)),
-                storeAs = "handCards",
-            ),
-            SelectFromCollectionEffect(
-                from = "handCards",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
+        effect = Effects.Pipeline {
+            val handCards = gather(
+                CardSource.FromZone(Zone.HAND, filter = GameObjectFilter.Nonland.manaValueAtMost(3))
+            )
+            val toPlot = chooseUpTo(
+                1,
+                from = handCards,
                 filter = GameObjectFilter.Nonland.manaValueAtMost(3),
-                storeSelected = "toPlot",
-                selectedLabel = "Exile and plot",
-            ),
-            MoveCollectionEffect(from = "toPlot", destination = CardDestination.ToZone(Zone.EXILE)),
-            MakePlottedEffect(from = "toPlot"),
-        )
+                selectedLabel = "Exile and plot"
+            )
+            exile(toPlot)
+            run(Effects.MakePlotted(from = toPlot))
+        }
     }
 
     // −6: Until end of turn, whenever you cast a spell, copy it. You may choose new targets for the copy.

@@ -24,10 +24,7 @@ val AncientCraving = card("Ancient Craving") {
     oracleText = "You draw three cards and you lose 3 life."
 
     spell {
-        effect = Effects.Composite(
-            Effects.DrawCards(3),
-            Effects.LoseLife(3, EffectTarget.Controller),
-        )
+        effect = Effects.DrawCards(3) then Effects.LoseLife(3, EffectTarget.Controller)
     }
 
     metadata {

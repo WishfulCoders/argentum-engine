@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
@@ -18,6 +17,9 @@ import com.wingedsheep.sdk.scripting.GrantFlashToSpellType
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * A [GrantFlashToSpellType] wrapped in a `ConditionalStaticAbility` — what
@@ -94,7 +96,7 @@ class ConditionalFlashGrantTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Gain control of target creature."
         spell {
-            val t = target("target creature", Targets.Creature)
+            val t = target(TargetFilter.Creature)
             effect = Effects.GainControl(t, Duration.Permanent)
         }
     }
@@ -145,7 +147,7 @@ class ConditionalFlashGrantTest : FunSpec({
         // Two red: one burnt on the Bolt that occupies the stack, one left for the creature, so
         // affordability is never what decides these assertions.
         driver.giveMana(me, Color.RED, 2)
-        driver.castSpell(me, bolt, listOf(opponent)).isSuccess shouldBe true
+        driver.castSpell(me, bolt, listOf(opponent)).outcome shouldBe Outcome.Done
         driver.state.stack.isEmpty() shouldBe false
         driver.state.priorityPlayerId shouldBe me
         return me
@@ -167,7 +169,7 @@ class ConditionalFlashGrantTest : FunSpec({
         withClue("and the cast handler agrees — this is the authoritative read site") {
             driver.submit(
                 CastSpell(playerId = me, cardId = sliver, paymentStrategy = com.wingedsheep.engine.core.PaymentStrategy.FromPool)
-            ).isSuccess shouldBe false
+            ).outcome shouldNotBe Outcome.Done
         }
     }
 
@@ -193,7 +195,7 @@ class ConditionalFlashGrantTest : FunSpec({
 
         castOffered(driver, me, sliver) shouldBe true
         withClue("CastZoneResolver re-checks the grant at cast time and must reach the same answer") {
-            driver.castSpell(me, sliver).isSuccess shouldBe true
+            driver.castSpell(me, sliver).outcome shouldBe Outcome.Done
         }
     }
 
@@ -272,7 +274,7 @@ class ConditionalFlashGrantTest : FunSpec({
         driver.passPriority(me)
         val stealCard = driver.putCardInHand(opponent, "Test Steal")
         driver.giveMana(opponent, Color.BLUE, 2)
-        driver.castSpell(opponent, stealCard, listOf(granter)).isSuccess shouldBe true
+        driver.castSpell(opponent, stealCard, listOf(granter)).outcome shouldBe Outcome.Done
         // Pass exactly as far as it takes to resolve the steal — `bothPass()` would pass once more
         // afterwards. `PassPriorityHandler.resolveTopOfStack` hands priority back to the resolved
         // spell's caster, so one more pass is needed to get back to my seat.
@@ -290,7 +292,7 @@ class ConditionalFlashGrantTest : FunSpec({
         // Rebuild the sorcery-illegal board now that the stack has emptied again.
         val bolt = driver.putCardInHand(me, "Lightning Bolt")
         driver.giveMana(me, Color.RED, 2)
-        driver.castSpell(me, bolt, listOf(opponent)).isSuccess shouldBe true
+        driver.castSpell(me, bolt, listOf(opponent)).outcome shouldBe Outcome.Done
         driver.state.stack.isEmpty() shouldBe false
         val mySliver = driver.putCardInHand(me, "Test Gated Sliver")
 

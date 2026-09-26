@@ -19,9 +19,11 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.TimingRule
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Joshua, Phoenix's Dominant // Phoenix, Warden of Fire (FIN #229).
@@ -32,8 +34,10 @@ import io.kotest.matchers.shouldNotBe
  * III reanimates creatures (total mana value 6 or less) and flips back to the front face.
  *
  * The transform machinery itself is proven generically in [DominantEikonTransformScenarioTest];
- * this test pins Joshua's own behavior — the ETB loot draws exactly what was discarded, and
- * Rising Flames' 2 damage to each opponent feeds the back face's lifelink.
+ * this test pins Joshua's own behavior — the ETB loot draws exactly what was discarded,
+ * Rising Flames' 2 damage to each opponent feeds the back face's lifelink, and Flames of Rebirth
+ * chooses its creature cards as real targets when chapter III triggers (CR 603.3d), with the
+ * total-mana-value cap enforced on the target choice.
  */
 class JoshuaPhoenixsDominantScenarioTest : FunSpec({
 
@@ -134,7 +138,7 @@ class JoshuaPhoenixsDominantScenarioTest : FunSpec({
         driver.giveColorlessMana(me, 3)
         val abilityId = JoshuaPhoenixsDominant.activatedAbilities.first().id
         driver.submit(ActivateAbility(playerId = me, sourceId = joshua, abilityId = abilityId))
-            .isSuccess shouldBe true
+            .outcome shouldBe Outcome.Done
         driver.bothPass()
         declineOptionalDecisions(driver)
         resolveStack(driver)
@@ -154,5 +158,62 @@ class JoshuaPhoenixsDominantScenarioTest : FunSpec({
         // Rising Flames (chapter I): 2 to each opponent, and Phoenix's lifelink gains me 2.
         driver.getLifeTotal(opp) shouldBe oppLifeBefore - 2
         driver.getLifeTotal(me) shouldBe myLifeBefore + 2
+    }
+
+    test("Flames of Rebirth targets creature cards as the chapter triggers, capped at total mana value 6") {
+        val driver = newDriver()
+        val me = driver.player1
+
+        val joshua = castJoshua(driver, me)
+        declineOptionalDecisions(driver)
+        resolveStack(driver)
+
+        val giant = driver.putCardInGraveyard(me, "Hill Giant")          // MV 4
+        val bears = driver.putCardInGraveyard(me, "Grizzly Bears")       // MV 2
+        val courser = driver.putCardInGraveyard(me, "Centaur Courser")   // MV 3
+        driver.putCardInGraveyard(me, "Lightning Bolt")                   // not a creature card
+
+        driver.removeSummoningSickness(joshua)
+        driver.giveMana(me, Color.RED, 1)
+        driver.giveMana(me, Color.WHITE, 1)
+        driver.giveColorlessMana(me, 3)
+        driver.submit(
+            ActivateAbility(playerId = me, sourceId = joshua, abilityId = JoshuaPhoenixsDominant.activatedAbilities.first().id)
+        ).outcome shouldBe Outcome.Done
+
+        // Play on until chapter III's trigger asks for its targets (lore 2 and 3 land on my next
+        // two precombat main phases). Chapters I and II need no answers.
+        var guard = 0
+        while (guard++ < 400) {
+            when (val pending = driver.pendingDecision) {
+                is ChooseTargetsDecision -> break
+                is YesNoDecision -> driver.submitDecision(pending.playerId, YesNoResponse(pending.id, false))
+                is SelectCardsDecision ->
+                    driver.submitCardSelection(pending.playerId, pending.options.take(pending.minSelections))
+                null -> {
+                    driver.autoSubmitCombatDeclarationIfNeeded()
+                    driver.state.priorityPlayerId?.let { driver.passPriority(it) }
+                }
+                else -> driver.autoResolveDecision()
+            }
+        }
+        val decision = driver.pendingDecision as ChooseTargetsDecision
+        withClue("the chapter ability is the one asking, and only for creature cards in my graveyard") {
+            decision.playerId shouldBe me
+            decision.legalTargets[0]?.toSet() shouldBe setOf(giant, bears, courser)
+        }
+        withClue("4 + 3 is over the total-mana-value cap") {
+            driver.submitDecision(me, TargetsResponse(decision.id, mapOf(0 to listOf(giant, courser)))).error shouldNotBe null
+        }
+        driver.submitDecision(me, TargetsResponse(decision.id, mapOf(0 to listOf(giant, bears)))).error shouldBe null
+        resolveStack(driver)
+        declineOptionalDecisions(driver)
+
+        driver.findPermanent(me, "Hill Giant") shouldBe giant
+        driver.findPermanent(me, "Grizzly Bears") shouldBe bears
+        withClue("the untargeted card stays in the graveyard") { driver.getGraveyard(me).contains(courser) shouldBe true }
+        withClue("Phoenix returned front face up") {
+            driver.findPermanent(me, "Joshua, Phoenix's Dominant") shouldNotBe null
+        }
     }
 })

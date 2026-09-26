@@ -7,16 +7,10 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -56,39 +50,32 @@ val KodamaOfTheEastTree = card("Kodama of the East Tree") {
     keywords(Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Any.youControl(),
-            binding = TriggerBinding.OTHER,
-        )
+        trigger = Triggers.another(GameObjectFilter.Any.youControl()).enters()
         // Anti-loop: the trigger ignores permanents that Kodama itself put onto the
         // battlefield. Set as an intervening-if (Rule 603.4) so the trigger never goes
         // on the stack for chained entries.
         interveningIf = Conditions.TriggeringEntityWasNotPutByThisSource
         // The "you may" is modeled by `ChooseUpTo(1)` — the player can pick zero cards
         // to decline. No separate yes/no decision is required.
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        zone = Zone.HAND,
-                        player = Player.You,
-                        filter = GameObjectFilter.Permanent.manaValueAtMostEntity(EntityReference.Triggering)
-                    ),
-                    storeAs = "kodama_candidates"
-                ),
-                SelectFromCollectionEffect(
-                    from = "kodama_candidates",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    storeSelected = "kodama_putting",
-                    prompt = "Choose a permanent card with equal or lesser mana value to put onto the battlefield"
-                ),
-                MoveCollectionEffect(
-                    from = "kodama_putting",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD, Player.You),
-                    markEnteredViaSourceAbility = true
+        effect = Effects.Pipeline {
+            val kodamaCandidates = gather(
+                CardSource.FromZone(
+                    zone = Zone.HAND,
+                    player = Player.You,
+                    filter = GameObjectFilter.Permanent.manaValueAtMostEntity(EffectTarget.TriggeringEntity)
                 )
             )
-        )
+            val kodamaPutting = chooseUpTo(
+                1,
+                from = kodamaCandidates,
+                prompt = "Choose a permanent card with equal or lesser mana value to put onto the battlefield"
+            )
+            move(
+                kodamaPutting,
+                CardDestination.ToZone(Zone.BATTLEFIELD, Player.You),
+                markEnteredViaSourceAbility = true
+            )
+        }
     }
 
     metadata {

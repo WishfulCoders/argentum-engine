@@ -1,6 +1,6 @@
 package com.wingedsheep.sdk.dsl
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.conditions.AnyCondition
@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Add Increment (Secrets of Strixhaven).
@@ -34,7 +33,7 @@ fun CardBuilder.increment() {
     keywordAbilityList.add(KeywordAbility.Increment)
 
     val manaSpent = DynamicAmount.EntityProperty(
-        EntityReference.Triggering,
+        EffectTarget.TriggeringEntity,
         EntityNumericProperty.ManaSpent
     )
     val incrementCondition = AnyCondition(
@@ -46,9 +45,8 @@ fun CardBuilder.increment() {
 
     triggeredAbilities.add(
         TriggeredAbility.create(
-            trigger = Triggers.YouCastSpell.event,
-            binding = Triggers.YouCastSpell.binding,
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
+            trigger = Triggers.you.casts(),
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
             interveningIf = incrementCondition,
             descriptionOverride = "Increment (Whenever you cast a spell, if the amount of mana " +
                 "you spent is greater than this creature's power or toughness, put a +1/+1 " +

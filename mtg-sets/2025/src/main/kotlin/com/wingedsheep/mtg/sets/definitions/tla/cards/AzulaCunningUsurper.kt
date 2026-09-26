@@ -9,18 +9,9 @@ import com.wingedsheep.sdk.dsl.firebending
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.IsYourTurn
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.ConditionalOnCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Azula, Cunning Usurper
@@ -62,81 +53,54 @@ val AzulaCunningUsurper = card("Azula, Cunning Usurper") {
     firebending(2)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target("target opponent", Targets.Opponent)
-        effect = Effects.Composite(
-            listOf(
-                // Opponent exiles a nontoken creature they control (their choice), linked to Azula.
-                GatherCardsEffect(
-                    source = CardSource.BattlefieldMatching(
-                        filter = GameObjectFilter.Creature.nontoken(),
-                        player = Player.ContextPlayer(0)
-                    ),
-                    storeAs = "azulaCreatures"
-                ),
-                ConditionalOnCollectionEffect(
-                    collection = "azulaCreatures",
-                    ifNotEmpty = Effects.Composite(
-                        listOf(
-                            SelectFromCollectionEffect(
-                                from = "azulaCreatures",
-                                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                                chooser = Chooser.TargetPlayer,
-                                storeSelected = "azulaChosenCreature",
-                                prompt = "Choose a nontoken creature to exile",
-                                useTargetingUI = true
-                            ),
-                            MoveCollectionEffect(
-                                from = "azulaChosenCreature",
-                                destination = CardDestination.ToZone(Zone.EXILE, Player.ContextPlayer(0)),
-                                linkToSource = true
-                            )
-                        )
-                    )
-                ),
-                // Then they exile a nonland card from their graveyard (their choice), linked to Azula.
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        zone = Zone.GRAVEYARD,
-                        player = Player.ContextPlayer(0),
-                        filter = GameObjectFilter.Nonland
-                    ),
-                    storeAs = "azulaGraveyard"
-                ),
-                ConditionalOnCollectionEffect(
-                    collection = "azulaGraveyard",
-                    ifNotEmpty = Effects.Composite(
-                        listOf(
-                            SelectFromCollectionEffect(
-                                from = "azulaGraveyard",
-                                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                                chooser = Chooser.TargetPlayer,
-                                storeSelected = "azulaChosenGraveyardCard",
-                                prompt = "Choose a nonland card in your graveyard to exile"
-                            ),
-                            MoveCollectionEffect(
-                                from = "azulaChosenGraveyardCard",
-                                destination = CardDestination.ToZone(Zone.EXILE, Player.ContextPlayer(0)),
-                                linkToSource = true
-                            )
-                        )
-                    )
-                ),
-                // During your turn you may cast cards exiled with Azula, as though they had flash,
-                // spending mana of any type. Gather the whole linked-exile pile and grant the play.
-                GatherCardsEffect(
-                    source = CardSource.FromLinkedExile(),
-                    storeAs = "azulaExiled"
-                ),
-                GrantMayPlayFromExileEffect(
-                    from = "azulaExiled",
-                    expiry = MayPlayExpiry.Permanent,
-                    condition = IsYourTurn,
-                    withAnyManaType = true,
-                    asThoughFlash = true
+        trigger = Triggers.self.enters()
+        val opponent = target(Targets.Opponent)
+        effect = Effects.Pipeline {
+            // Opponent exiles a nontoken creature they control (their choice), linked to Azula.
+            val azulaCreatures = gather(
+                CardSource.BattlefieldMatching(
+                    filter = GameObjectFilter.Creature.nontoken(),
+                    player = opponent.asPlayer
                 )
             )
-        )
+            ifNotEmpty(azulaCreatures) {
+                val azulaChosenCreature = chooseExactly(
+                    1,
+                    from = azulaCreatures,
+                    chooser = Chooser.TargetPlayer,
+                    prompt = "Choose a nontoken creature to exile",
+                    useTargetingUI = true
+                )
+                exile(azulaChosenCreature, opponent.asPlayer, linkToSource = true)
+            }
+            // Then they exile a nonland card from their graveyard (their choice), linked to Azula.
+            val azulaGraveyard = gather(
+                CardSource.FromZone(
+                    zone = Zone.GRAVEYARD,
+                    player = opponent.asPlayer,
+                    filter = GameObjectFilter.Nonland
+                )
+            )
+            ifNotEmpty(azulaGraveyard) {
+                val azulaChosenGraveyardCard = chooseExactly(
+                    1,
+                    from = azulaGraveyard,
+                    chooser = Chooser.TargetPlayer,
+                    prompt = "Choose a nonland card in your graveyard to exile"
+                )
+                exile(azulaChosenGraveyardCard, opponent.asPlayer, linkToSource = true)
+            }
+            // During your turn you may cast cards exiled with Azula, as though they had flash,
+            // spending mana of any type. Gather the whole linked-exile pile and grant the play.
+            val azulaExiled = gather(CardSource.FromLinkedExile())
+            run(Effects.GrantMayPlayFromExile(
+                from = azulaExiled,
+                expiry = MayPlayExpiry.Permanent,
+                condition = IsYourTurn,
+                withAnyManaType = true,
+                asThoughFlash = true
+            ))
+        }
         description = "When Azula enters, target opponent exiles a nontoken creature they control, " +
             "then they exile a nonland card from their graveyard."
     }

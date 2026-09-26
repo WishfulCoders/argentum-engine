@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.RedirectZoneChange
@@ -30,12 +29,9 @@ val AnafenzaTheForemost = card("Anafenza, the Foremost") {
     oracleText = "Whenever Anafenza, the Foremost attacks, put a +1/+1 counter on another target tapped creature you control.\nIf a nontoken creature an opponent owns would die or a creature card not on the battlefield would be put into an opponent's graveyard, exile that card instead."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val tappedCreature = target(
-            "another target tapped creature you control",
-            TargetCreature(filter = TargetFilter.TappedCreature.youControl().other())
-        )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, tappedCreature)
+        trigger = Triggers.self.attacks()
+        val tappedCreature = target(TargetFilter.TappedCreature.youControl().other())
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, tappedCreature)
     }
 
     // Exile nontoken creature cards owned by opponents that would go to graveyard

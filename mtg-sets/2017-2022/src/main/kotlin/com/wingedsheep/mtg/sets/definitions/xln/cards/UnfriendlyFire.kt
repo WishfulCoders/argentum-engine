@@ -19,7 +19,7 @@ val UnfriendlyFire = card("Unfriendly Fire") {
     oracleText = "Unfriendly Fire deals 4 damage to any target."
 
     spell {
-        val victim = target("target", Targets.Any)
+        val victim = target(Targets.Any)
         effect = Effects.DealDamage(4, victim)
     }
 

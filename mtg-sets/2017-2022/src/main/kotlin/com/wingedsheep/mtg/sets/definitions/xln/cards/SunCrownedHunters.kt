@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Sun-Crowned Hunters
@@ -26,8 +25,8 @@ val SunCrownedHunters = card("Sun-Crowned Hunters") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.TakesDamage
-        val victim = target("target", Targets.OpponentOrPlaneswalker)
+        trigger = Triggers.self.isDealtDamage()
+        val victim = target(Targets.OpponentOrPlaneswalker)
         effect = Effects.DealDamage(3, victim)
         description = "Enrage — Whenever this creature is dealt damage, it deals 3 damage to " +
             "target opponent or planeswalker."

@@ -2,17 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreatePredefinedTokenEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Lobelia Sackville-Baggins
@@ -48,31 +44,20 @@ val LobeliaSackvilleBaggins = card("Lobelia Sackville-Baggins") {
     keywords(Keyword.FLASH, Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val exileTarget = target(
-            "creature card in an opponent's graveyard that was put there from the battlefield this turn",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.Creature
-                        .ownedByOpponent()
-                        .putIntoGraveyardFromBattlefieldThisTurn(),
-                    zone = Zone.GRAVEYARD
-                )
-            )
+            TargetFilter(
+                GameObjectFilter.Creature
+                    .ownedByOpponent()
+                    .putIntoGraveyardFromBattlefieldThisTurn(),
+                zone = Zone.GRAVEYARD
+            ),
         )
         effect = Effects.Move(
             target = exileTarget,
             destination = Zone.EXILE,
             fromZone = Zone.GRAVEYARD
-        ).then(
-            CreatePredefinedTokenEffect(
-                tokenType = "Treasure",
-                dynamicCount = DynamicAmount.EntityProperty(
-                    entity = EntityReference.Target(0),
-                    numericProperty = EntityNumericProperty.Power
-                )
-            )
-        )
+        ) then Effects.CreateTreasure(DynamicAmounts.powerOf(exileTarget))
     }
 
     metadata {

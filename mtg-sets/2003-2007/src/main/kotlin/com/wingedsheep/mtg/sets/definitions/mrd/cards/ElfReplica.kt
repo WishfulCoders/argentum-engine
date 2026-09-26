@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -29,7 +28,7 @@ val ElfReplica = card("Elf Replica") {
     toughness = 2
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{G}"), Costs.SacrificeSelf)
-        val t = target("target", TargetPermanent(filter = TargetFilter.Enchantment))
+        val t = target(TargetFilter.Enchantment)
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     metadata {

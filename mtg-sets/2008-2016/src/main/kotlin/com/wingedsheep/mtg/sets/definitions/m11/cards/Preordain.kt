@@ -17,10 +17,7 @@ val Preordain = card("Preordain") {
     oracleText = "Scry 2, then draw a card. (To scry 2, look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.)"
 
     spell {
-        effect = Effects.Composite(
-            Effects.Scry(2),
-            Effects.DrawCards(1),
-        )
+        effect = Effects.Scry(2) then Effects.DrawCards(1)
     }
 
     metadata {

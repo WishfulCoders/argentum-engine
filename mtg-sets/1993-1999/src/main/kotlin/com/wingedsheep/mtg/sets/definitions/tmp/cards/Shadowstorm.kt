@@ -23,7 +23,7 @@ val Shadowstorm = card("Shadowstorm") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withKeyword(Keyword.SHADOW)),
-            Effects.DealDamage(2, EffectTarget.Self)
+            Effects.DealDamage(2, EffectTarget.IterationEntity)
         )
     }
 

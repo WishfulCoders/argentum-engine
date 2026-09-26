@@ -2,14 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * General Traag, Heart of Stone
@@ -34,13 +32,13 @@ val GeneralTraagHeartOfStone = card("General Traag, Heart of Stone") {
     // "you may sacrifice another artifact. When you do, [deal 4 to target creature]" —
     // the reflexive trigger picks its target only after the optional sacrifice is paid.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ReflexiveTriggerEffect(
-            action = SacrificeEffect(GameObjectFilter.Artifact, excludeSource = true),
-            optional = true,
-            reflexiveEffect = Effects.DealDamage(4, EffectTarget.ContextTarget(0), damageSource = EffectTarget.Self),
-            reflexiveTargetRequirements = listOf(Targets.Creature)
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.ReflexiveTrigger(
+            action = Effects.SacrificeOwn(GameObjectFilter.Artifact, excludeSource = true),
+            optional = true) {
+            val creature = target(TargetFilter.Creature)
+            effect = Effects.DealDamage(4, creature, damageSource = EffectTarget.Self)
+        }
         description = "When General Traag enters, you may sacrifice another artifact. When you do, General Traag deals 4 damage to target creature."
     }
 

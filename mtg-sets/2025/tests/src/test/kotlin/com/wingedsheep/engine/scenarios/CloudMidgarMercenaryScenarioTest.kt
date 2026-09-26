@@ -35,7 +35,7 @@ class CloudMidgarMercenaryScenarioTest : FunSpec({
         typeLine = "Artifact — Equipment"
         oracleText = "At the beginning of your upkeep, you gain 1 life.\nEquip {2}"
         triggeredAbility {
-            trigger = Triggers.YourUpkeep
+            trigger = Triggers.you.beginningOf(Step.UPKEEP)
             effect = Effects.GainLife(1)
         }
         equipAbility("{2}")
@@ -50,7 +50,7 @@ class CloudMidgarMercenaryScenarioTest : FunSpec({
         oracleText = "At the beginning of your upkeep, you gain 1 life.\n" +
             "If a triggered ability of this creature triggers, it triggers an additional time."
         triggeredAbility {
-            trigger = Triggers.YourUpkeep
+            trigger = Triggers.you.beginningOf(Step.UPKEEP)
             effect = Effects.GainLife(1)
         }
         staticAbility {

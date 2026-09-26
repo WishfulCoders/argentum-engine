@@ -25,7 +25,7 @@ val ProsperousPirates = card("Prosperous Pirates") {
     power = 3
     toughness = 4
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateTreasure(2)
     }
     metadata {

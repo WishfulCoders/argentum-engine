@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantAdditionalLandDrop
-import com.wingedsheep.sdk.scripting.values.Aggregation
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -29,13 +28,12 @@ val PrismaticUndercurrents = card("Prismatic Undercurrents") {
     // where X is the number of colors among permanents you control. Reveal those cards,
     // put them into your hand, then shuffle.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = Filters.BasicLand,
-            count = DynamicAmount.AggregateBattlefield(
-                player = Player.You,
-                aggregation = Aggregation.DISTINCT_COLORS
-            ),
+            count = DynamicAmounts.battlefield(
+                Player.You
+            ).distinctColors(),
             reveal = true
         )
     }

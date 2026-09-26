@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.DrawFailedEvent
 import com.wingedsheep.engine.core.GameEndReason
 import com.wingedsheep.engine.core.GameEndedEvent
@@ -22,6 +23,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Tests for Rule 704.5c: A player who was unable to draw a card
@@ -294,7 +296,7 @@ class EmptyLibraryLossTest : FunSpec({
         lostComponent!!.reason shouldBe LossReason.EMPTY_LIBRARY
     }
 
-    test("TurnManager.drawCards marks player as lost when library is empty") {
+    test("TurnManager.drawCards records the failed draw; the 704.5b SBA turns it into the loss") {
         val driver = GameTestDriver()
         driver.registerCards(TestCards.all)
 
@@ -313,16 +315,23 @@ class EmptyLibraryLossTest : FunSpec({
         driver.state.getLibrary(player1).size shouldBe 0
 
         // Use TurnManager.drawCards directly (this is what performDrawStep calls)
-        val turnManager = com.wingedsheep.engine.core.TurnManager(cardRegistry = com.wingedsheep.engine.registry.CardRegistry())
+        val turnManager = driver.services.turnManager
         val result = turnManager.drawCards(driver.state, player1, 1)
 
-        // The draw should succeed (return success) but mark the player as lost
-        result.isSuccess.shouldBeTrue()
+        // The draw succeeds and only records the attempt (CR 121.4) — the player hasn't lost yet
+        (result.outcome is Outcome.Done).shouldBeTrue()
+        result.newState.getEntity(player1)
+            ?.has<com.wingedsheep.engine.state.components.player.AttemptedDrawFromEmptyLibraryComponent>() shouldBe true
+        result.newState.getEntity(player1)?.get<PlayerLostComponent>() shouldBe null
 
-        // Check that player is marked as lost due to empty library
-        val lostComponent = result.newState.getEntity(player1)?.get<PlayerLostComponent>()
+        // The state-based action (CR 704.5b) applies the loss and consumes the marker
+        val afterSba = com.wingedsheep.engine.mechanics.sba.player.EmptyLibraryDrawLossCheck(predicateEvaluator = PredicateEvaluator(cardRegistry = null))
+            .check(result.newState).newState
+        val lostComponent = afterSba.getEntity(player1)?.get<PlayerLostComponent>()
         lostComponent shouldNotBe null
         lostComponent!!.reason shouldBe LossReason.EMPTY_LIBRARY
+        afterSba.getEntity(player1)
+            ?.has<com.wingedsheep.engine.state.components.player.AttemptedDrawFromEmptyLibraryComponent>() shouldBe false
 
         // Check that DrawFailedEvent was emitted
         val drawFailedEvent = result.events.filterIsInstance<DrawFailedEvent>()

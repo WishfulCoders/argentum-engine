@@ -12,6 +12,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.core.Step
 
 
 /**
@@ -29,7 +30,7 @@ val DragonmasterOutcast = card("Dragonmaster Outcast") {
     power = 1
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         interveningIf = Conditions.YouControlAtLeast(6, GameObjectFilter.Land)
         effect = Effects.CreateToken(
             power = 5,

@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.rtr.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Batterhorn
@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Canonical printing: Return to Ravnica, the card's earliest real printing.
  *
  * "You may" on a triggered ability is the builder's `optional = true`, which lowers to a
- * `MayEffect` around the declared effect — one consent gate, asked at resolution. The target is
+ * `Effects.May` around the declared effect — one consent gate, asked at resolution. The target is
  * still chosen when the ability goes on the stack, so declining wastes the choice (CR 603.3d).
  */
 val Batterhorn = card("Batterhorn") {
@@ -29,9 +29,9 @@ val Batterhorn = card("Batterhorn") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
-        val t = target("target artifact", Targets.Artifact)
+        val t = target(TargetFilter.Artifact)
         effect = Effects.Destroy(t)
     }
 

@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Absolving Lammasu — Murders at Karlov Manor #2
@@ -55,24 +54,18 @@ val AbsolvingLammasu = card("Absolving Lammasu") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.suspected()),
-            Effects.NoLongerSuspected(EffectTarget.Self)
+            Effects.NoLongerSuspected(EffectTarget.IterationEntity)
         )
         description = "When this creature enters, all suspected creatures are no longer suspected."
     }
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val suspect = target(
-            "up to one target creature an opponent controls",
-            TargetCreature(optional = true, filter = TargetFilter.CreatureOpponentControls)
-        )
-        effect = Effects.Composite(
-            Effects.GainLife(3),
-            Effects.Suspect(suspect)
-        )
+        trigger = Triggers.self.dies()
+        val suspect = target(TargetFilter.CreatureOpponentControls, optional = true)
+        effect = Effects.GainLife(3) then Effects.Suspect(suspect)
         description = "When this creature dies, you gain 3 life and suspect up to one target " +
             "creature an opponent controls."
     }

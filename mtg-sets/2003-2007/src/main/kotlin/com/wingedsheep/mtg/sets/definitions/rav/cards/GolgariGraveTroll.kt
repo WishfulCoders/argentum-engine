@@ -1,8 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -11,7 +12,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Golgari Grave-Troll
@@ -48,7 +48,7 @@ val GolgariGraveTroll = card("Golgari Grave-Troll") {
     // "This creature enters with a +1/+1 counter on it for each creature card in your graveyard."
     replacementEffect(
         EntersWithDynamicCounters(
-            count = DynamicAmount.Count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Creature)
+            count = DynamicAmounts.creatureCardsInYourGraveyard()
         )
     )
 
@@ -56,7 +56,7 @@ val GolgariGraveTroll = card("Golgari Grave-Troll") {
     activatedAbility {
         cost = Costs.Composite(
             Costs.Mana("{1}"),
-            Costs.RemoveCounterFromSelf(Counters.PLUS_ONE_PLUS_ONE, 1)
+            Costs.RemoveCounterFromSelf(CounterType.PLUS_ONE_PLUS_ONE, 1)
         )
         effect = Effects.Regenerate(EffectTarget.Self)
         description = "{1}, Remove a +1/+1 counter from this creature: Regenerate this creature."

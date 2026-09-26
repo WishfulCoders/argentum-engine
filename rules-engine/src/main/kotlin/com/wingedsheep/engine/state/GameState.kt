@@ -138,6 +138,15 @@ data class GameState(
     /** Continuation stack for resuming after player decisions */
     val continuationStack: List<ContinuationFrame> = emptyList(),
 
+    /**
+     * Triggered abilities that have triggered but are not on the stack yet (CR 603.3): they wait
+     * until the next time a player would receive priority. Only [com.wingedsheep.engine.core.Settler]
+     * fills and drains this. It detects triggers once per action at the engine boundary, parks them
+     * here while a decision is pending, and puts them on the stack when the game settles. Nothing
+     * else detects triggers from events, so no trigger is detected twice.
+     */
+    val pendingTriggers: List<com.wingedsheep.engine.event.PendingTrigger> = emptyList(),
+
     /** Number of spells cast this turn (by all players), used for Storm count */
     val spellsCastThisTurn: Int = 0,
 
@@ -295,6 +304,18 @@ data class GameState(
      * the `PlayerCommittedCrimeThisTurn` condition (e.g. Seize the Secrets' cost reduction).
      */
     val playersWhoCommittedCrimeThisTurn: Set<EntityId> = emptySet(),
+    /**
+     * Players (by entity id) who were dealt noncombat damage this turn — more than zero damage
+     * after prevention, from any source. Populated in `DamageUtils.dealDamageToTarget` and cleared
+     * at every turn boundary. Backs `TurnTracker.DEALT_NONCOMBAT_DAMAGE`.
+     */
+    val playersDealtNoncombatDamageThisTurn: Set<EntityId> = emptySet(),
+    /**
+     * [playersDealtNoncombatDamageThisTurn] as it stood when the previous turn ended, rolled over by
+     * `TurnManager.startTurn`. "Last turn" is the previous turn in the game, not the reader's own
+     * last turn. Backs `TurnTracker.DEALT_NONCOMBAT_DAMAGE_LAST_TURN` (Command the Stage).
+     */
+    val playersDealtNoncombatDamageLastTurn: Set<EntityId> = emptySet(),
 
     /**
      * Colors of the spell most recently cast this turn (by any player), or null if no spell has
@@ -401,6 +422,17 @@ data class GameState(
      * would be independently checked against the processor.
      */
     val activeReplacementChain: Set<ReplacementEffectIdentity>? = null,
+
+    /**
+     * Results of prevention effects that are still owed — Purity's "You gain life equal to the
+     * damage prevented this way", Vigor's counters, Hostility's tokens. The prevention itself
+     * happens inside the damage arithmetic, which can't run an [com.wingedsheep.sdk.scripting.effects.Effect];
+     * it queues the result here instead, and
+     * [com.wingedsheep.engine.replacement.ReplacementRiders.drain] runs it as soon as the effect that
+     * dealt the damage finishes, or at the settle boundary for combat damage. Either way it runs
+     * before state-based actions and before trigger detection, and it never uses the stack.
+     */
+    val pendingReplacementRiders: List<com.wingedsheep.engine.replacement.PendingReplacementRider> = emptyList(),
 
     /**
      * Answers to the "**you may** have that damage dealt to you instead" prompts of an optional
@@ -1535,8 +1567,8 @@ data class CastSpellRecord(
 data class ActiveCounterPlacementModifier(
     val modifier: Int,
     val controllerId: EntityId,
-    val counterType: com.wingedsheep.sdk.scripting.events.CounterTypeFilter,
-    val recipient: com.wingedsheep.sdk.scripting.events.RecipientFilter,
+    val counterType: com.wingedsheep.sdk.core.CounterType,
+    val recipient: com.wingedsheep.sdk.scripting.events.Recipient,
     val duration: com.wingedsheep.sdk.scripting.Duration,
 )
 

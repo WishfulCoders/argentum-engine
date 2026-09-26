@@ -7,8 +7,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBeBlockedByCreaturesWithLessPower
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Shrill Howler // Howling Chorus (Eldritch Moon #168)
@@ -50,7 +50,7 @@ private val ShrillHowlerFront = card("Shrill Howler") {
 
     activatedAbility {
         cost = Costs.Mana("{5}{G}")
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
         description = "Transform this creature."
     }
 
@@ -92,7 +92,7 @@ private val HowlingChorus = card("Howling Chorus") {
     }
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         effect = Effects.CreateToken(
             power = 3,
             toughness = 2,

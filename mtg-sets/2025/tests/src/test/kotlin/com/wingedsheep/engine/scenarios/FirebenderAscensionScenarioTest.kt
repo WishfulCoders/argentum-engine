@@ -25,7 +25,7 @@ import io.kotest.matchers.shouldBe
  *  put a quest counter on this enchantment. Then if it has four or more quest counters on it, you may
  *  copy that ability. You may choose new targets for the copy."
  *
- * Exercises the new `Triggers.AttackCausesYourCreaturesTriggeredAbility` trigger + matcher and the
+ * Exercises the new `Triggers.you.attackTriggersAbility()` trigger + matcher and the
  * `causedByAttack` stamp on `AbilityTriggeredEvent`:
  *  - the ETB builds the firebending Soldier token;
  *  - a creature's own attack trigger firing adds a quest counter;
@@ -36,7 +36,7 @@ import io.kotest.matchers.shouldBe
 class FirebenderAscensionScenarioTest : FunSpec({
 
     // A creature whose OWN attack trigger is a plain, observable, non-targeting effect: gain 1 life.
-    // SELF-bound `Triggers.Attacks` (a per-attacker AttackEvent) is exactly the "whenever this
+    // SELF-bound `Triggers.self.attacks()` (a per-attacker AttackEvent) is exactly the "whenever this
     // creature attacks" shape Firebender Ascension keys on.
     val lifeAttacker = card("Life Attacker") {
         manaCost = "{1}{R}"
@@ -45,7 +45,7 @@ class FirebenderAscensionScenarioTest : FunSpec({
         toughness = 2
         oracleText = "Whenever this creature attacks, you gain 1 life."
         triggeredAbility {
-            trigger = Triggers.Attacks
+            trigger = Triggers.self.attacks()
             effect = Effects.GainLife(1)
             description = "Whenever this creature attacks, you gain 1 life."
         }
@@ -60,7 +60,7 @@ class FirebenderAscensionScenarioTest : FunSpec({
         toughness = 1
         oracleText = "When this creature enters, you gain 1 life."
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             effect = Effects.GainLife(1)
             description = "When this creature enters, you gain 1 life."
         }

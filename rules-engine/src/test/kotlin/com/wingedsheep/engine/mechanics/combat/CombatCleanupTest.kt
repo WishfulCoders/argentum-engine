@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.mechanics.combat
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.mechanics.mana.ManaAbilitySideEffectExecutor
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.ComponentContainer
@@ -18,7 +20,8 @@ import io.kotest.matchers.shouldBe
 
 class CombatCleanupTest : FunSpec({
     val registry = CardRegistry()
-    val manager = CombatManager(registry, ManaAbilitySideEffectExecutor(registry) { _, _, _ ->
+    val zones = ZoneTransitionService(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
+    val manager = CombatManager(zones, registry, ManaAbilitySideEffectExecutor(zones, registry) { _, _, _ ->
         error("Combat cleanup must not execute mana-ability side effects")
     })
 

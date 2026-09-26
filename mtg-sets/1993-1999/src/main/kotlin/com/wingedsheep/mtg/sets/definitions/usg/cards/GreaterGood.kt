@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  * then discard three cards.
  *
  * The sacrificed creature's power is read from last known information, which
- * `DynamicAmounts.sacrificedPower()` resolves via `EntityReference.Sacrificed`.
+ * `DynamicAmounts.sacrificedPower()` resolves via `EffectTarget.SacrificedAsCost`.
  */
 val GreaterGood = card("Greater Good") {
     manaCost = "{2}{G}{G}"

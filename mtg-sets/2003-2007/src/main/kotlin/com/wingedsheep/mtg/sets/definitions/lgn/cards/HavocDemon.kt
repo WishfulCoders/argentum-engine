@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -28,10 +27,10 @@ val HavocDemon = card("Havoc Demon") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.ForEachInGroup(
             filter = GroupFilter.AllCreatures,
-            effect = ModifyStatsEffect(-5, -5, EffectTarget.Self)
+            effect = Effects.ModifyStats(-5, -5, EffectTarget.IterationEntity)
         )
     }
 

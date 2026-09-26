@@ -24,10 +24,10 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * `AttachTargetEquipmentToCreature` is the force-attach atom (Blacksmith's Talent, Beatrix): it
  * detaches from the current host first, so Equipment already strapped to another creature is
- * pulled off exactly as the ruling describes. Inside `ForEachInGroup` the pipeline rebinds
- * [EffectTarget.Self] to the current iteration entity, which is why the Equipment side is `Self`
- * and the Battlemaster is referenced as [EffectTarget.TriggeringEntity] — the entering permanent
- * carried on the enters-the-battlefield `ZoneChangeEvent`.
+ * pulled off exactly as the ruling describes. Inside `ForEachInGroup` the Equipment being moved
+ * is [EffectTarget.IterationEntity], and the Battlemaster is referenced as
+ * [EffectTarget.TriggeringEntity] — the entering permanent carried on the enters-the-battlefield
+ * `ZoneChangeEvent`.
  *
  * Known gap: the engine's attach atom does not re-check equip legality, so an Equipment whose
  * own restriction excludes the Battlemaster ("equipped creature is a Human", protection from
@@ -48,11 +48,11 @@ val VulshokBattlemaster = card("Vulshok Battlemaster") {
     keywords(Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ForEachInGroup(
             filter = GroupFilter(GameObjectFilter.Artifact.withSubtype("Equipment")),
             effect = Effects.AttachTargetEquipmentToCreature(
-                equipmentTarget = EffectTarget.Self,
+                equipmentTarget = EffectTarget.IterationEntity,
                 creatureTarget = EffectTarget.TriggeringEntity
             )
         )

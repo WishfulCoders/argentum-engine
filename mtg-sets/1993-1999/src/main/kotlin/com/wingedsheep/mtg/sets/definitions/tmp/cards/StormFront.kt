@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.tmp.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Storm Front
@@ -21,7 +21,7 @@ val StormFront = card("Storm Front") {
 
     activatedAbility {
         cost = Costs.Mana("{G}{G}")
-        val flier = target("target", Targets.CreatureWithKeyword(Keyword.FLYING))
+        val flier = target(TargetFilter.Creature.withKeyword(Keyword.FLYING))
         effect = Effects.Tap(flier)
     }
 

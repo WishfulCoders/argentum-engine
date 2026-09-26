@@ -9,6 +9,7 @@ import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.core.RemoveAnyNumberOfCountersContinuation
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.model.EntityId
 
 /**
@@ -58,7 +59,7 @@ object RemoveAnyNumberOfCountersFlow {
         targetName: String,
         sourceId: EntityId?,
         sourceName: String?,
-        order: List<String>,
+        order: List<CounterType>,
         budget: Int?,
         floor: Int,
         priorEvents: List<GameEvent> = emptyList()
@@ -103,7 +104,7 @@ object RemoveAnyNumberOfCountersFlow {
             val decision = { decisionId: String -> ChooseNumberDecision(
                 id = decisionId,
                 playerId = controllerId,
-                prompt = "Remove how many $kind counters from $targetName? ($minHere-$maxHere)",
+                prompt = "Remove how many ${kind.printed} counters from $targetName? ($minHere-$maxHere)",
                 context = DecisionContext(
                     sourceId = sourceId,
                     sourceName = sourceName,
@@ -137,25 +138,24 @@ object RemoveAnyNumberOfCountersFlow {
     }
 
     /** Live count of [kind] on [targetId]; 0 when the entity is gone or tracks no counters. */
-    fun countOf(state: GameState, targetId: EntityId, kind: String): Int =
+    fun countOf(state: GameState, targetId: EntityId, kind: CounterType): Int =
         state.getEntity(targetId)
             ?.get<CountersComponent>()
-            ?.getCount(resolveCounterType(kind))
+            ?.getCount(kind)
             ?: 0
 
     /** Apply a removal, paired with the event to emit (null when [count] is 0). */
     fun removeCounters(
         state: GameState,
         targetId: EntityId,
-        kind: String,
+        kind: CounterType,
         count: Int,
         targetName: String
     ): Pair<GameState, CountersRemovedEvent?> {
         if (count <= 0) return state to null
-        val counterType = resolveCounterType(kind)
         val current = state.getEntity(targetId)?.get<CountersComponent>() ?: return state to null
         val updated = state.updateEntity(targetId) { container ->
-            container.with(current.withRemoved(counterType, count))
+            container.with(current.withRemoved(kind, count))
         }
         return updated to CountersRemovedEvent(targetId, kind, count, targetName)
     }

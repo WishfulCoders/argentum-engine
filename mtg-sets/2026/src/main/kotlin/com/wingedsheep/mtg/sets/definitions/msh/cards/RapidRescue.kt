@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Rapid Rescue
@@ -38,8 +37,7 @@ val RapidRescue = card("Rapid Rescue") {
         effect = Effects.Pipeline {
             // "Mill two cards."
             val milled = gather(
-                CardSource.TopOfLibrary(DynamicAmount.Fixed(2), Player.You, isMill = true),
-                name = "milled"
+                CardSource.TopOfLibrary(2, Player.You, isMill = true)
             )
             toGraveyard(milled)
             // "You may put a permanent card from among the milled cards into your hand."

@@ -30,7 +30,7 @@ val NutrientBlock = card("Nutrient Block") {
     }
 
     triggeredAbility {
-        trigger = Triggers.PutIntoGraveyardFromBattlefield
+        trigger = Triggers.self.dies()
         effect = Effects.DrawCards(1)
     }
 

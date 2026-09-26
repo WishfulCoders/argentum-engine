@@ -13,7 +13,7 @@ import io.kotest.matchers.shouldBe
 /**
  * East-Mark Cavalier (LTR #9) — "Whenever this creature deals damage to a Goblin or Orc, destroy
  * that creature." Regression coverage for the shipped card that shares Spider-Slayer's shape: the
- * `RecipientFilter.Matching` deals-damage trigger repaired in `TriggerMatcher.matchesDealsDamageTrigger`.
+ * `Recipient.Object` deals-damage trigger repaired in `TriggerMatcher.matchesDealsDamageTrigger`.
  * Before that fix this ability silently never fired.
  *
  * The Goblin blocker is a 0/4 so the Cavalier survives and the Goblin survives the raw 2 combat

@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 
 /**
  * Nasty End
@@ -36,10 +35,10 @@ val NastyEnd = card("Nasty End") {
     )
 
     spell {
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.SacrificedWasLegendary,
-            effect = Effects.DrawCards(3),
-            elseEffect = Effects.DrawCards(2)
+            then = Effects.DrawCards(3),
+            otherwise = Effects.DrawCards(2)
         )
     }
 

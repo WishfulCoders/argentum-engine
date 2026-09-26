@@ -1,23 +1,20 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.TurnTracker
 
 /**
  * Kutzil's Flanker
@@ -46,37 +43,28 @@ val KutzilsFlanker = card("Kutzil's Flanker") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseOne(
             Mode.noTarget(
                 Effects.AddDynamicCounters(
-                    Counters.PLUS_ONE_PLUS_ONE,
-                    DynamicAmount.TurnTracking(Player.You, TurnTracker.CREATURES_LEFT_BATTLEFIELD),
+                    CounterType.PLUS_ONE_PLUS_ONE,
+                    DynamicAmounts.creaturesLeftBattlefieldThisTurn(Player.You),
                     EffectTarget.Self
                 ),
                 "Put a +1/+1 counter on this creature for each creature that left the battlefield " +
                     "under your control this turn"
             ),
             Mode.noTarget(
-                Effects.Composite(listOf(Effects.GainLife(2), Effects.Scry(2))),
+                Effects.GainLife(2) then Effects.Scry(2),
                 "You gain 2 life and scry 2"
             ),
-            Mode.withTarget(
-                Effects.Composite(
-                    listOf(
-                        GatherCardsEffect(
-                            source = CardSource.FromZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
-                            storeAs = "targetGraveyard"
-                        ),
-                        MoveCollectionEffect(
-                            from = "targetGraveyard",
-                            destination = CardDestination.ToZone(Zone.EXILE, Player.ContextPlayer(0))
-                        )
-                    )
-                ),
-                Targets.Player,
-                "Exile target player's graveyard"
-            )
+            mode("Exile target player's graveyard") {
+                val player = target(Targets.Player)
+                effect = Effects.Pipeline {
+                    val targetGraveyard = gather(CardSource.FromZone(Zone.GRAVEYARD, player.asPlayer))
+                    exile(targetGraveyard, player.asPlayer)
+                }
+            }
         )
     }
 

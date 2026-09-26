@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.mh3.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sarpadian Simulacrum — Modern Horizons 3 #135
@@ -35,7 +35,7 @@ val SarpadianSimulacrum = card("Sarpadian Simulacrum") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}{R}"), Costs.SacrificeSelf)
-        val t = target("target creature", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.DealDamage(4, t)
         description = "{3}{R}, Sacrifice this creature: It deals 4 damage to target creature."
     }

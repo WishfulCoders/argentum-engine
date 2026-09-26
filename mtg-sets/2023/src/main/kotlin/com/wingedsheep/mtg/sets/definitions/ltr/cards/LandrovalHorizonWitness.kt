@@ -4,11 +4,8 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.YouAttackEvent
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Landroval, Horizon Witness
@@ -30,11 +27,8 @@ val LandrovalHorizonWitness = card("Landroval, Horizon Witness") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = TriggerSpec(YouAttackEvent(minAttackers = 2), TriggerBinding.ANY)
-        val creature = target(
-            "target attacking creature without flying",
-            TargetCreature(filter = TargetFilter.AttackingCreature.withoutKeyword(Keyword.FLYING))
-        )
+        trigger = Triggers.you.attacks(minAttackers = 2)
+        val creature = target(TargetFilter.AttackingCreature.withoutKeyword(Keyword.FLYING))
         effect = Effects.GrantKeyword(Keyword.FLYING, creature)
     }
 

@@ -1,16 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.spm.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.AddCardTypeEffect
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 val OriginOfSpiderMan = card("Origin of Spider-Man") {
     manaCost = "{1}{W}"
@@ -33,18 +30,16 @@ val OriginOfSpiderMan = card("Origin of Spider-Man") {
     }
 
     sagaChapter(2) {
-        val creature = target("creature you control", Targets.CreatureYouControl)
-        effect = Effects.Composite(listOf(
-            AddCountersEffect(Counters.PLUS_ONE_PLUS_ONE, 1, creature),
-            AddCardTypeEffect("LEGENDARY", creature, Duration.Permanent),
-            Effects.AddCreatureType("Spider", creature, Duration.Permanent),
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature) then
+            Effects.AddCardType("LEGENDARY", creature, Duration.Permanent) then
+            Effects.AddCreatureType("Spider", creature, Duration.Permanent) then
             Effects.AddCreatureType("Hero", creature, Duration.Permanent)
-        ))
     }
 
     sagaChapter(3) {
-        val creature = target("creature you control", Targets.CreatureYouControl)
-        effect = GrantKeywordEffect(Keyword.DOUBLE_STRIKE.name, creature, Duration.EndOfTurn)
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.GrantKeyword(Keyword.DOUBLE_STRIKE, creature, Duration.EndOfTurn)
     }
 
     metadata {

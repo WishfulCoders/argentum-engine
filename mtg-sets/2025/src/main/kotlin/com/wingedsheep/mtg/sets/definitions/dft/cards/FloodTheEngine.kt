@@ -10,7 +10,7 @@ import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.LoseAllAbilities
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Flood the Engine — Aetherdrift #42
@@ -37,10 +37,10 @@ val FloodTheEngine = card("Flood the Engine") {
         "Enchanted permanent loses all abilities and doesn't untap during its controller's " +
         "untap step."
 
-    auraTarget = TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrVehicle))
+    auraTarget = TargetObject(filter = TargetFilter(GameObjectFilter.CreatureOrVehicle))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Tap(EffectTarget.EnchantedPermanent)
         description = "When this Aura enters, tap enchanted permanent."
     }

@@ -29,7 +29,7 @@ val SustainerOfTheRealm = card("Sustainer of the Realm") {
     toughness = 3
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         effect = Effects.ModifyStats(0, 2, EffectTarget.Self)
     }
     metadata {

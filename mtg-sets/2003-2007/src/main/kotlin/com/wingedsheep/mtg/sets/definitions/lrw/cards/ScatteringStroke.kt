@@ -4,18 +4,12 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerTiming
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-
-/** Pipeline slot holding the countered spell's mana value, frozen before the counter. */
-private const val SCATTERED_MANA_VALUE = "scatteredManaValue"
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Scattering Stroke
@@ -28,10 +22,10 @@ private const val SCATTERED_MANA_VALUE = "scatteredManaValue"
  * Three time-shifts stack up here, and each one is a place the amount can silently read zero:
  *
  *  1. **"That spell" is already gone.** The counter moves it to its owner's graveyard before the
- *     clash even begins, and [com.wingedsheep.sdk.scripting.values.EntityReference.Target] is
+ *     clash even begins, and [com.wingedsheep.sdk.scripting.targets.EffectTarget.ContextTarget] is
  *     `LIVE_ONLY` by design (CR 608.2b) with no target LKI behind it. So the mana value is frozen
- *     up front with [Effects.StoreNumber] and read back through
- *     [DynamicAmount.VariableReference] — the same shape Weed Strangle uses for a destroyed
+ *     up front with the pipeline's `storeNumber` and read back through its handle's
+ *     `amount` — the same shape Weed Strangle uses for a destroyed
  *     creature's toughness. Mana Sculpt solves the same problem the other way, by creating its
  *     delayed trigger *before* the counter; that isn't available here because the clash sits
  *     between the two and decides whether the trigger exists at all.
@@ -40,7 +34,7 @@ private const val SCATTERED_MANA_VALUE = "scatteredManaValue"
  *  3. **The payoff fires a phase later**, when the resolution pipeline that holds the stored number
  *     is gone. `CreateDelayedTriggerExecutor` snapshots an
  *     [com.wingedsheep.sdk.scripting.effects.AddColorlessManaEffect]'s amount into a literal at
- *     creation time for exactly this reason, and it recurses through the [MayEffect] consent gate
+ *     creation time for exactly this reason, and it recurses through the [Effects.May] consent gate
  *     to reach it — so the number is baked in while the pipeline can still answer.
  *
  * "You may" is a resolution-time consent gate on the delayed trigger, not a choice made now: the
@@ -61,21 +55,21 @@ val ScatteringStroke = card("Scattering Stroke") {
         "choice of the top or bottom. A player wins if their card had a greater mana value.)"
 
     spell {
-        target("target spell", Targets.Spell)
-        effect = Effects.StoreNumber(SCATTERED_MANA_VALUE, DynamicAmounts.targetManaValue())
-            .then(Effects.CounterSpell())
-            .then(
+        val spellTarget = target(TargetFilter.SpellOnStack)
+        effect = Effects.Pipeline {
+            val manaValue = storeNumber(DynamicAmounts.manaValueOf(spellTarget))
+            run(Effects.CounterSpell())
+            run(
                 Patterns.Mechanic.clash(
-                    CreateDelayedTriggerEffect(
+                    Effects.CreateDelayedTrigger(
                         step = Step.PRECOMBAT_MAIN,
                         fireOnPlayer = EffectTarget.PlayerRef(Player.You),
                         timing = DelayedTriggerTiming.CURRENT_TURN_OR_LATER,
-                        effect = MayEffect(
-                            Effects.AddColorlessMana(DynamicAmount.VariableReference(SCATTERED_MANA_VALUE))
-                        )
+                        effect = Effects.May(Effects.AddColorlessMana(manaValue.amount))
                     )
                 )
             )
+        }
     }
 
     metadata {

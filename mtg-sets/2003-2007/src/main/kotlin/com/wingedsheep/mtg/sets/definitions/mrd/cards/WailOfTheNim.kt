@@ -4,8 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -37,13 +35,13 @@ val WailOfTheNim = card("Wail of the Nim") {
             mode("Regenerate each creature you control") {
                 effect = Effects.ForEachInGroup(
                     GroupFilter(GameObjectFilter.Creature.youControl()),
-                    RegenerateEffect(EffectTarget.Self)
+                    Effects.Regenerate(EffectTarget.IterationEntity)
                 )
             }
             mode("Wail of the Nim deals 1 damage to each creature and each player") {
                 effect = Effects.ForEachInGroup(
                     GroupFilter.AllCreatures,
-                    DealDamageEffect(1, EffectTarget.Self)
+                    Effects.DealDamage(1, EffectTarget.IterationEntity)
                 ) then Effects.ForEachPlayer(
                     Player.Each,
                     listOf(Effects.DealDamage(1, EffectTarget.Controller))

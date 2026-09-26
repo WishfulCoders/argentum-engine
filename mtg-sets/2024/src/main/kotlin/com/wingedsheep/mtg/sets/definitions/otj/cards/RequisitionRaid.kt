@@ -1,15 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Requisition Raid {W}
@@ -24,7 +24,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * `chooseCount = modes.size`, and per-mode `additionalManaCost` (CR 702.166).
  * Mode 2 distributes a +1/+1 counter over every creature the targeted player
  * controls (`ForEachInGroup` over a target-relative group filter, with the counter
- * placed on each iterated permanent via [EffectTarget.Self]).
+ * placed on each iterated permanent via [EffectTarget.IterationEntity]).
  */
 val RequisitionRaid = card("Requisition Raid") {
     manaCost = "{W}"
@@ -36,31 +36,28 @@ val RequisitionRaid = card("Requisition Raid") {
         "+ {1} — Put a +1/+1 counter on each creature target player controls."
 
     spell {
-        effect = ModalEffect(
+        effect = Effects.Modal(
             modes = listOf(
-                Mode(
-                    effect = Effects.Destroy(EffectTarget.ContextTarget(0)),
-                    targetRequirements = listOf(Targets.Artifact),
-                    description = "+ {1} — Destroy target artifact.",
+                mode("+ {1} — Destroy target artifact.") {
+                    val artifact = target(TargetFilter.Artifact)
                     additionalManaCost = "{1}"
-                ),
-                Mode(
-                    effect = Effects.Destroy(EffectTarget.ContextTarget(0)),
-                    targetRequirements = listOf(Targets.Enchantment),
-                    description = "+ {1} — Destroy target enchantment.",
+                    effect = Effects.Destroy(artifact)
+                },
+                mode("+ {1} — Destroy target enchantment.") {
+                    val enchantment = target(TargetFilter.Enchantment)
                     additionalManaCost = "{1}"
-                ),
-                Mode(
+                    effect = Effects.Destroy(enchantment)
+                },
+                mode("+ {1} — Put a +1/+1 counter on each creature target player controls.") {
+                    val player = target(Targets.Player)
+                    additionalManaCost = "{1}"
                     effect = Effects.ForEachInGroup(
                         filter = GroupFilter(
-                            GameObjectFilter.Creature.targetPlayerControls(EffectTarget.ContextTarget(0))
+                            GameObjectFilter.Creature.targetPlayerControls(player)
                         ),
-                        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
-                    ),
-                    targetRequirements = listOf(Targets.Player),
-                    description = "+ {1} — Put a +1/+1 counter on each creature target player controls.",
-                    additionalManaCost = "{1}"
-                )
+                        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity)
+                    )
+                }
             ),
             chooseCount = 3,
             minChooseCount = 1

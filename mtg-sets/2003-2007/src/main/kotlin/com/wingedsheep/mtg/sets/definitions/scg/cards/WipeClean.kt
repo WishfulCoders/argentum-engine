@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -23,7 +22,7 @@ val WipeClean = card("Wipe Clean") {
     oracleText = "Exile target enchantment.\nCycling {3}"
 
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter(GameObjectFilter.Enchantment)))
+        val t = target(TargetFilter(GameObjectFilter.Enchantment))
         effect = Effects.Move(t, Zone.EXILE)
     }
 

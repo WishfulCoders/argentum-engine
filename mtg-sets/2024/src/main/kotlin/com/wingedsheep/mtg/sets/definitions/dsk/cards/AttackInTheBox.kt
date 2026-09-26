@@ -5,8 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -32,15 +30,13 @@ val AttackInTheBox = card("Attack-in-the-Box") {
         "If you do, sacrifice it at the beginning of the next end step."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = MayEffect(
-            Effects.Composite(
-                Effects.ModifyStats(4, 0, EffectTarget.Self),
-                CreateDelayedTriggerEffect(
+        trigger = Triggers.self.attacks()
+        effect = Effects.May(
+            Effects.ModifyStats(4, 0, EffectTarget.Self) then
+                Effects.CreateDelayedTrigger(
                     step = Step.END,
                     effect = Effects.SacrificeTarget(EffectTarget.Self),
                 ),
-            ),
             descriptionOverride = "Have Attack-in-the-Box get +4/+0 until end of turn? " +
                 "(If you do, sacrifice it at the beginning of the next end step.)",
         )

@@ -9,17 +9,11 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.GrantTriggeredAbilityEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Dropkick Bomber
@@ -62,31 +56,21 @@ val DropkickBomber = card("Dropkick Bomber") {
     activatedAbility {
         cost = Costs.Mana("{R}")
         val goblin = target(
-            "another target Goblin you control",
-            TargetCreature(
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.withSubtype(Subtype.GOBLIN).youControl(),
-                    excludeSelf = true
-                )
-            )
+            TargetFilter(
+                GameObjectFilter.Creature.withSubtype(Subtype.GOBLIN).youControl(),
+                excludeSelf = true
+            ),
         )
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.FLYING, goblin, Duration.EndOfTurn),
-            GrantTriggeredAbilityEffect(
+        effect = Effects.GrantKeyword(Keyword.FLYING, goblin, Duration.EndOfTurn) then
+            Effects.GrantTriggeredAbility(
                 ability = TriggeredAbility.create(
-                    trigger = Triggers.dealsDamage(
-                        damageType = DamageType.Combat,
-                        recipient = RecipientFilter.Any,
-                        binding = TriggerBinding.SELF
-                    ).event,
-                    binding = TriggerBinding.SELF,
+                    trigger = Triggers.self.dealsCombatDamage(),
                     effect = SacrificeSelfEffect,
                     descriptionOverride = "When this creature deals combat damage, sacrifice it."
                 ),
                 target = goblin,
                 duration = Duration.EndOfTurn
             )
-        )
         description = "Until end of turn, another target Goblin you control gains flying and " +
             "\"When this creature deals combat damage, sacrifice it.\""
     }

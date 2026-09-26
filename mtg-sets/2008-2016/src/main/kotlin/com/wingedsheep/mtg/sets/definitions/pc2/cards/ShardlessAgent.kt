@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * [Keyword.CASCADE] is display-only vocabulary — nothing in the rules engine reads it. Cascade *is*
  * a "when you cast this spell" triggered ability (CR 702.85a), so the behaviour lives in a
- * [Triggers.WhenYouCastThisSpell] trigger feeding [Effects.Cascade], with the keyword kept only for
+ * `Triggers.self.isCast()` trigger feeding [Effects.Cascade], with the keyword kept only for
  * the printed line — the canonical lowering in `arb/cards/BloodbraidElf.kt`. The trigger goes on the
  * stack above the Agent itself, so the free spell resolves first and the 2/2 body lands after it.
  */
@@ -35,7 +35,7 @@ val ShardlessAgent = card("Shardless Agent") {
 
     // Cascade — the cast trigger the keyword abbreviates (CR 702.85a).
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
+        trigger = Triggers.self.isCast()
         effect = Effects.Cascade
         description = "Cascade"
     }

@@ -4,11 +4,11 @@
 
 package com.wingedsheep.mtg.sets.definitions.ody.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.targets.TargetPlayerOrPlaneswalker
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -24,8 +24,8 @@ val ScorchingMissile = card("Scorching Missile") {
     typeLine = "Sorcery"
     oracleText = "Scorching Missile deals 4 damage to target player or planeswalker.\nFlashback {9}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
     spell {
-        val t = target("target", TargetPlayerOrPlaneswalker())
-        effect = DealDamageEffect(4, t)
+        val t = target(Targets.PlayerOrPlaneswalker)
+        effect = Effects.DealDamage(4, t)
     }
     keywordAbility(KeywordAbility.flashback("{9}{R}"))
     metadata {

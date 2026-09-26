@@ -125,12 +125,14 @@ class AbsoluteVirtueScenarioTest : ScenarioTestBase() {
 
                 withClue("opponent-controlled source is blocked against the protected controller") {
                     PlayerProtectionRules.isProtectedFromSource(
-                        game.state, game.player1Id, opponentSource, game.player2Id
+                        game.state, game.player1Id, opponentSource, game.player2Id,
+                        predicateEvaluator = services.predicateEvaluator
                     ) shouldBe true
                 }
                 withClue("the controller's own source (Absolute Virtue) is not blocked") {
                     PlayerProtectionRules.isProtectedFromSource(
-                        game.state, game.player1Id, virtueId, game.player1Id
+                        game.state, game.player1Id, virtueId, game.player1Id,
+                        predicateEvaluator = services.predicateEvaluator
                     ) shouldBe false
                 }
             }
@@ -147,7 +149,8 @@ class AbsoluteVirtueScenarioTest : ScenarioTestBase() {
 
                 withClue("the protection is sourced from the permanent — absent it, none applies") {
                     PlayerProtectionRules.isProtectedFromSource(
-                        game.state, game.player1Id, opponentSource, game.player2Id
+                        game.state, game.player1Id, opponentSource, game.player2Id,
+                        predicateEvaluator = services.predicateEvaluator
                     ) shouldBe false
                 }
             }

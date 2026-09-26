@@ -28,7 +28,7 @@ val WoodElves = card("Wood Elves") {
     power = 1
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Land.withSubtype(Subtype.FOREST),
             destination = SearchDestination.BATTLEFIELD

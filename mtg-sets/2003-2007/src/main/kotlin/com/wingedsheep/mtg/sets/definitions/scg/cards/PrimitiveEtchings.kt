@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.RevealFirstDrawEachTurn
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Primitive Etchings
@@ -24,7 +25,7 @@ val PrimitiveEtchings = card("Primitive Etchings") {
     }
 
     triggeredAbility {
-        trigger = Triggers.RevealCreatureFromDraw
+        trigger = Triggers.you.revealsFirstDraw(GameObjectFilter.Creature)
         effect = Effects.DrawCards(1)
     }
 

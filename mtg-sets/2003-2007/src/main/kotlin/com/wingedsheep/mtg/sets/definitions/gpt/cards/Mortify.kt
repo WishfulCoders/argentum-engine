@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.gpt.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Mortify
@@ -18,7 +18,7 @@ val Mortify = card("Mortify") {
     oracleText = "Destroy target creature or enchantment."
 
     spell {
-        val t = target("creature or enchantment", Targets.CreatureOrEnchantment)
+        val t = target(TargetFilter.CreatureOrEnchantment)
         effect = Effects.Destroy(t)
     }
 

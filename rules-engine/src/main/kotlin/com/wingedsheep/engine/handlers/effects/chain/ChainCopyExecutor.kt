@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.chain
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PredicateContext
@@ -27,8 +28,9 @@ import kotlin.reflect.KClass
  * executor registry, then offers the chain copy to the recipient.
  */
 class ChainCopyExecutor(
-    private val targetFinder: TargetFinder = TargetFinder(),
-    private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult
+    private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult,
+    private val targetFinder: TargetFinder,
+    private val predicateEvaluator: PredicateEvaluator
 ) : EffectExecutor<ChainCopyEffect> {
 
     override val effectType: KClass<ChainCopyEffect> = ChainCopyEffect::class
@@ -65,7 +67,7 @@ class ChainCopyExecutor(
         // Step 4: Inner action completed (success or error) — pop the unused after-action continuation
         val (_, stateAfterPop) = actionResult.state.popContinuation()
 
-        if (!actionResult.isSuccess) {
+        if (actionResult.outcome !is Outcome.Done) {
             return actionResult.copy(state = stateAfterPop)
         }
 
@@ -122,7 +124,7 @@ class ChainCopyExecutor(
         context: EffectContext
     ): EffectResult {
         // Check cost prerequisites
-        if (!canPayCopyCost(state, recipientPlayerId, effect.copyCost)) {
+        if (!canPayCopyCost(state, recipientPlayerId, effect.copyCost, predicateEvaluator = predicateEvaluator)) {
             return EffectResult.success(state, events)
         }
 
@@ -137,13 +139,13 @@ class ChainCopyExecutor(
         // Build the yes/no decision
         val sourceName = context.sourceId?.let { sourceId ->
             state.getEntity(sourceId)?.get<CardComponent>()?.name
-        } ?: effect.spellName
+        } ?: "this spell"
 
         val copyCost = effect.copyCost
         val prompt = if (copyCost == null) {
-            "Copy ${effect.spellName} and choose a new target?"
+            "Copy $sourceName and choose a new target?"
         } else {
-            "${copyCost.description.replaceFirstChar { it.uppercase() }} to copy ${effect.spellName} and choose a new target?"
+            "${copyCost.description.replaceFirstChar { it.uppercase() }} to copy $sourceName and choose a new target?"
         }
 
         val (yesText, noText) = if (copyCost == null) {
@@ -179,11 +181,11 @@ class ChainCopyExecutor(
         /**
          * Check if the recipient can pay the copy cost.
          */
-        fun canPayCopyCost(state: GameState, playerId: EntityId, cost: PayCost?): Boolean {
+        fun canPayCopyCost(state: GameState, playerId: EntityId, cost: PayCost?, predicateEvaluator: PredicateEvaluator): Boolean {
             if (cost == null) return true
             return when (val atom = (cost as? PayCost.Atom)?.atom) {
                 is CostAtom.Sacrifice -> {
-                    findMatchingPermanents(state, playerId, atom.filter).size >= atom.count
+                    findMatchingPermanents(state, playerId, atom.filter, predicateEvaluator = predicateEvaluator).size >= atom.count
                 }
                 is CostAtom.Discard -> {
                     val handZone = ZoneKey(playerId, Zone.HAND)
@@ -197,10 +199,12 @@ class ChainCopyExecutor(
         fun findMatchingPermanents(
             state: GameState,
             controllerId: EntityId,
-            filter: GameObjectFilter
+            filter: GameObjectFilter,
+            predicateEvaluator: PredicateEvaluator
         ): List<EntityId> {
             return BattlefieldFilterUtils.findMatchingOnBattlefield(
-                state, filter.youControl(), PredicateContext(controllerId = controllerId)
+                state, filter.youControl(), PredicateContext(controllerId = controllerId),
+                predicateEvaluator = predicateEvaluator
             )
         }
     }

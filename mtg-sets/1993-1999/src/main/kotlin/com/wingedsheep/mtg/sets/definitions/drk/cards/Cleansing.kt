@@ -33,7 +33,7 @@ val Cleansing = card("Cleansing") {
             GroupFilter.AllLands,
             Effects.UnlessAnyPlayerPays(
                 cost = Costs.pay.PayLife(1),
-                effect = Effects.Destroy(EffectTarget.Self),
+                effect = Effects.Destroy(EffectTarget.IterationEntity),
             ),
         )
     }

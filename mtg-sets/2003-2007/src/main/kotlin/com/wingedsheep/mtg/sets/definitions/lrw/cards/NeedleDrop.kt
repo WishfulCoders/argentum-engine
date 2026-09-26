@@ -13,8 +13,7 @@ val NeedleDrop = card("Needle Drop") {
     oracleText = "Needle Drop deals 1 damage to any target that was dealt damage this turn.\nDraw a card."
 
     spell {
-        val recipient = target("target that was dealt damage this turn",
-            Targets.Any(GameObjectFilter.Any.wasDealtDamageThisTurn()))
+        val recipient = target(Targets.Any(GameObjectFilter.Any.wasDealtDamageThisTurn()))
         effect = Effects.DealDamage(1, recipient) then Effects.DrawCards(1)
     }
 

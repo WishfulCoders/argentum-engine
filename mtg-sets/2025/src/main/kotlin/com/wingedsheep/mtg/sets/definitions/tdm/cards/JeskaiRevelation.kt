@@ -28,11 +28,10 @@ val JeskaiRevelation = card("Jeskai Revelation") {
         "cards. You gain 4 life."
 
     spell {
-        val bounceTarget = target("target spell or permanent", TargetSpellOrPermanent())
-        val damageTarget = target("any target", Targets.Any)
-        effect = Effects.Composite(
-            Effects.ReturnSpellOrPermanentToOwnersHand(bounceTarget),
-            Effects.DealDamage(4, damageTarget),
+        val bounceTarget = target(TargetSpellOrPermanent())
+        val damageTarget = target(Targets.Any)
+        effect = Effects.ReturnSpellOrPermanentToOwnersHand(bounceTarget) then
+            Effects.DealDamage(4, damageTarget) then
             Effects.CreateToken(
                 power = 1,
                 toughness = 1,
@@ -41,10 +40,9 @@ val JeskaiRevelation = card("Jeskai Revelation") {
                 keywords = setOf(Keyword.PROWESS),
                 count = 2,
                 imageUri = "https://cards.scryfall.io/normal/front/6/3/633d2d10-def7-426f-8496-ed6b45684299.jpg?1742421122"
-            ),
-            Effects.DrawCards(2),
-            Effects.GainLife(4),
-        )
+            ) then
+            Effects.DrawCards(2) then
+            Effects.GainLife(4)
     }
 
     metadata {

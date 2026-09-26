@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.legalactions.enumerators
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.TurnFaceUp
 import com.wingedsheep.engine.legalactions.ActionEnumerator
 import com.wingedsheep.engine.legalactions.EnumerationContext
@@ -27,7 +28,9 @@ import com.wingedsheep.sdk.scripting.costs.PayCost
  * is then driven by [CostPaymentService] as a decision pause when the action is taken, rather than
  * pre-selected via [AdditionalCostData][com.wingedsheep.engine.legalactions.AdditionalCostData].
  */
-class TurnFaceUpEnumerator : ActionEnumerator {
+class TurnFaceUpEnumerator(
+    private val predicateEvaluator: PredicateEvaluator
+) : ActionEnumerator {
 
     // Lets restricted mana tagged "spend only to turn permanents face up" count toward
     // affordability of the turn-face-up special action (Overgrown Zealot, Creeping Peeper).
@@ -108,7 +111,7 @@ class TurnFaceUpEnumerator : ActionEnumerator {
                     // selection happens afterward as a decision pause (handled by the standard
                     // decision flow), not via AdditionalCostData pre-selection.
                     else -> {
-                        if (CostPaymentService.canAfford(state, playerId, cost, entityId, context.manaSolver)) {
+                        if (CostPaymentService.canAfford(state, playerId, cost, entityId, context.manaSolver, predicateEvaluator = predicateEvaluator)) {
                             result.add(
                                 LegalAction(
                                     actionType = "ActivateAbility",

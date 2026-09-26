@@ -18,7 +18,7 @@ import kotlin.reflect.KClass
  * [com.wingedsheep.sdk.scripting.values.DynamicAmount.VariableReference].
  */
 class StoreNumberExecutor(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<StoreNumberEffect> {
 
     override val effectType: KClass<StoreNumberEffect> = StoreNumberEffect::class

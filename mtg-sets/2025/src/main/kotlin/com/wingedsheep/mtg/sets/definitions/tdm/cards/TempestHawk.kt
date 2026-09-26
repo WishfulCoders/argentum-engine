@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Tempest Hawk — Tarkir: Dragonstorm #31
@@ -18,7 +19,7 @@ import com.wingedsheep.sdk.scripting.predicates.CardPredicate
  * named Tempest Hawk, reveal it, put it into your hand, then shuffle.
  * A deck can have any number of cards named Tempest Hawk.
  *
- * The combat-damage trigger reuses [Triggers.DealsCombatDamageToPlayer] + the
+ * The combat-damage trigger reuses `Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)` + the
  * `Patterns.Library.searchLibrary` Gather→Select→Move pipeline, filtered to the card's own name via
  * `CardPredicate.NameEquals`. The search is `ChooseUpTo(1)`, so selecting zero cards is the "you may"
  * decline (no separate yes/no needed) — the same idiom as Embermouth Sentinel's optional ETB search.
@@ -41,7 +42,7 @@ val TempestHawk = card("Tempest Hawk") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter(cardPredicates = listOf(CardPredicate.NameEquals("Tempest Hawk"))),
             count = 1,

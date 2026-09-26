@@ -24,10 +24,8 @@ val OranRiefInvoker = card("Oran-Rief Invoker") {
 
     activatedAbility {
         cost = Costs.Mana("{8}")
-        effect = Effects.Composite(
-            Effects.ModifyStats(5, 5, EffectTarget.Self),
-            Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self),
-        )
+        effect = Effects.ModifyStats(5, 5, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
     }
 
     metadata {

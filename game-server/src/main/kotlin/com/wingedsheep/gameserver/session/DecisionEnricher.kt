@@ -1,5 +1,6 @@
 package com.wingedsheep.gameserver.session
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.FACE_DOWN_DISPLAY_NAME
@@ -12,7 +13,7 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 
 class DecisionEnricher(private val cardRegistry: CardRegistry) {
-    private val visibility = Visibility(cardRegistry)
+    private val visibility = Visibility(cardRegistry, conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
 
     /**
      * Whether [entityId]'s real name must be hidden from [viewerId]. The engine visibility authority

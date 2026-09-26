@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Arc-Slogger — Mirrodin #85 (canonical printing)
@@ -32,7 +32,7 @@ val ArcSlogger = card("Arc-Slogger") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{R}"), Costs.ExileTopOfLibrary(10))
-        val victim = target("any target", AnyTarget())
+        val victim = target(Targets.Any)
         effect = Effects.DealDamage(2, victim)
         description = "{R}, Exile the top ten cards of your library: This creature deals 2 damage to any target."
     }

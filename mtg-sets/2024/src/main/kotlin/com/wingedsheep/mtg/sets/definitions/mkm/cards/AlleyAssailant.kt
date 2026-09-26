@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Alley Assailant — Murders at Karlov Manor #76
@@ -44,12 +44,9 @@ val AlleyAssailant = card("Alley Assailant") {
     replacementEffect(EntersTapped())
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        val victim = target("target opponent", TargetOpponent())
-        effect = Effects.Composite(
-            Effects.LoseLife(3, target = victim),
-            Effects.GainLife(3)
-        )
+        trigger = Triggers.self.turnedFaceUp()
+        val victim = target(Targets.Opponent)
+        effect = Effects.LoseLife(3, target = victim) then Effects.GainLife(3)
         description = "When this creature is turned face up, target opponent loses 3 life and you gain 3 life."
     }
 

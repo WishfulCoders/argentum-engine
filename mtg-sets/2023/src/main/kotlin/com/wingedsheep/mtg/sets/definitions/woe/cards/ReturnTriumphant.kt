@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Return Triumphant
@@ -35,19 +34,8 @@ val ReturnTriumphant = card("Return Triumphant") {
         "it.\" If you put another Role on the creature later, put this one into the graveyard.)"
 
     spell {
-        val t = target(
-            "target creature card with mana value 3 or less from your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.ownedByYou().manaValueAtMost(3),
-                    zone = Zone.GRAVEYARD
-                )
-            )
-        )
-        effect = Effects.Composite(
-            Effects.PutOntoBattlefield(t),
-            Effects.CreateRoleToken("Young Hero Role", t)
-        )
+        val t = target(TargetFilter(GameObjectFilter.Creature.ownedByYou().manaValueAtMost(3), zone = Zone.GRAVEYARD))
+        effect = Effects.PutOntoBattlefield(t) then Effects.CreateRoleToken("Young Hero Role", t)
     }
 
     metadata {

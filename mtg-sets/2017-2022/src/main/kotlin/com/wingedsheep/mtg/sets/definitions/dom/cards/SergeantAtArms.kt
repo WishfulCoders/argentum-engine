@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Sergeant-at-Arms
@@ -28,10 +27,10 @@ val SergeantAtArms = card("Sergeant-at-Arms") {
     keywordAbility(KeywordAbility.kicker("{2}{W}"))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ConditionalEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.If(
             condition = WasKicked,
-            effect = CreateTokenEffect(
+            then = Effects.CreateToken(
                 count = 2,
                 power = 1,
                 toughness = 1,

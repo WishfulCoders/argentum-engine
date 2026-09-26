@@ -11,8 +11,6 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -32,7 +30,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *     cards that *actually* arrived on the battlefield; a card that couldn't be returned must not
  *     be scheduled for sacrifice.
  *  2. The sacrifice clause becomes one delayed trigger *per* returned permanent, scheduled inside
- *     [ForEachInCollectionEffect] where `EffectTarget.Self` is the current permanent.
+ *     [ForEachInCollectionEffect] where `EffectTarget.IterationEntity` is the current permanent.
  *     `CreateDelayedTriggerExecutor` bakes that into a concrete entity id at scheduling time, so
  *     each trigger still finds its permanent at the end step. N single-permanent triggers firing
  *     together at the same step are indistinguishable from the printed one-ability-sacrifices-all:
@@ -74,33 +72,31 @@ val PushTheLimit = card("Push the Limit") {
                     player = Player.You,
                     filter = MountOrVehicleCardInGraveyard,
                 ),
-                name = "wrecks",
             )
             val returned = moveTracked(
                 wrecks,
                 CardDestination.ToZone(Zone.BATTLEFIELD),
                 underOwnersControl = true,
-                name = "returned",
             )
             run(
-                ForEachInCollectionEffect(
-                    collection = returned.key,
-                    effect = CreateDelayedTriggerEffect(
+                Effects.ForEachInCollection(
+                    returned,
+                    Effects.CreateDelayedTrigger(
                         step = Step.END,
-                        effect = Effects.SacrificeTarget(EffectTarget.Self),
+                        effect = Effects.SacrificeTarget(EffectTarget.IterationEntity),
                     ),
                 )
             )
             run(
                 Effects.ForEachInGroup(
                     VehiclesYouControl,
-                    Effects.AddCardType("Creature", EffectTarget.Self, Duration.EndOfTurn),
+                    Effects.AddCardType("Creature", EffectTarget.IterationEntity, Duration.EndOfTurn),
                 )
             )
             run(
                 Effects.ForEachInGroup(
                     GroupFilter.AllCreaturesYouControl,
-                    Effects.GrantKeyword(Keyword.HASTE, EffectTarget.Self, Duration.EndOfTurn),
+                    Effects.GrantKeyword(Keyword.HASTE, EffectTarget.IterationEntity, Duration.EndOfTurn),
                 )
             )
         }

@@ -20,6 +20,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Tests for Tishana's Tidebinder (LCI).
@@ -43,7 +44,7 @@ class TishanasTidebinderScenarioTest : FunSpec({
         toughness = 2
 
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             effect = Effects.GainLife(3)
         }
     }
@@ -79,7 +80,7 @@ class TishanasTidebinderScenarioTest : FunSpec({
                 abilityId = abilityId,
                 costPayment = AdditionalCostPayment(sacrificedPermanents = listOf(fodder))
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         val abilityOnStack = driver.getTopOfStack()!!
 
         // Activator passes; caster flashes Tishana in response.

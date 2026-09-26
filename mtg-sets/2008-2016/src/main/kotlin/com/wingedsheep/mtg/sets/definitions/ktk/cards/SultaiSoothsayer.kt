@@ -22,7 +22,7 @@ val SultaiSoothsayer = card("Sultai Soothsayer") {
     oracleText = "When this creature enters, look at the top four cards of your library. Put one of them into your hand and the rest into your graveyard."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.lookAtTopAndKeep(
             count = 4,
             keepCount = 1

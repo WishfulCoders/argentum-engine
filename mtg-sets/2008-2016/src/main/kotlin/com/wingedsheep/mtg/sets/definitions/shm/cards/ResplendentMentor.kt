@@ -39,7 +39,7 @@ val ResplendentMentor = card("Resplendent Mentor") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Tap,
                 effect = Effects.GainLife(1)
             ),

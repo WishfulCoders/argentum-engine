@@ -22,13 +22,11 @@ import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Tests for Chain of Vapor.
@@ -68,7 +66,7 @@ class ChainOfVaporTest : FunSpec({
         driver.giveMana(activePlayer, Color.BLUE, 1)
 
         val castResult = driver.castSpell(activePlayer, chain, listOf(bears))
-        castResult.isSuccess shouldBe true
+        castResult.outcome shouldBe Outcome.Done
 
         driver.bothPass()
 
@@ -103,7 +101,7 @@ class ChainOfVaporTest : FunSpec({
         driver.giveMana(activePlayer, Color.BLUE, 1)
 
         val castResult = driver.castSpell(activePlayer, chain, listOf(bears))
-        castResult.isSuccess shouldBe true
+        castResult.outcome shouldBe Outcome.Done
 
         driver.bothPass()
 
@@ -144,7 +142,7 @@ class ChainOfVaporTest : FunSpec({
         driver.giveMana(activePlayer, Color.BLUE, 1)
 
         val castResult = driver.castSpell(activePlayer, chain, listOf(bears))
-        castResult.isSuccess shouldBe true
+        castResult.outcome shouldBe Outcome.Done
 
         driver.bothPass()
 
@@ -192,7 +190,7 @@ class ChainOfVaporTest : FunSpec({
         driver.giveMana(activePlayer, Color.BLUE, 1)
 
         val castResult = driver.castSpell(activePlayer, chain, listOf(land))
-        castResult.isSuccess shouldBe false
+        castResult.outcome shouldNotBe Outcome.Done
     }
 
     test("Chain of Vapor - no chain when controller has no lands") {
@@ -214,7 +212,7 @@ class ChainOfVaporTest : FunSpec({
         driver.giveMana(activePlayer, Color.BLUE, 1)
 
         val castResult = driver.castSpell(activePlayer, chain, listOf(bears))
-        castResult.isSuccess shouldBe true
+        castResult.outcome shouldBe Outcome.Done
 
         driver.bothPass()
 
@@ -241,7 +239,7 @@ class ChainOfVaporTest : FunSpec({
         driver.giveMana(activePlayer, Color.BLUE, 1)
 
         val castResult = driver.castSpell(activePlayer, chain, listOf(bears))
-        castResult.isSuccess shouldBe true
+        castResult.outcome shouldBe Outcome.Done
 
         driver.bothPass()
 
@@ -302,7 +300,7 @@ class ChainOfVaporTest : FunSpec({
         driver.giveMana(p2, Color.BLUE, 1)
 
         val castResult = driver.castSpell(p2, chain, listOf(bears))
-        castResult.isSuccess shouldBe true
+        castResult.outcome shouldBe Outcome.Done
 
         driver.bothPass()
 

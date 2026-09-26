@@ -22,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * printed keyword line is left for `CardBuilder.build()` to derive. Affinity shaves generic mana
  * only, flooring this at {U}.
  *
- * The trigger is the Thopter Architect / Perimeter Patrol shape: [Triggers.entersBattlefield] over
+ * The trigger is the Thopter Architect / Perimeter Patrol shape: `Triggers.a(filter).enters()` over
  * `Artifact.youControl()` with [TriggerBinding.ANY]. `ANY` rather than `OTHER` because the printed
  * text says "an artifact you control", not "*another* artifact" — the Whale is not itself an
  * artifact, so the binding never actually matters for its own entry, but it does mean an artifact
@@ -45,10 +45,7 @@ val SteelfinWhale = card("Steelfin Whale") {
     keywordAbility(KeywordAbility.Affinity(CardType.ARTIFACT))
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Artifact.youControl()).enters()
         effect = Effects.Untap(EffectTarget.Self)
         description = "Whenever an artifact you control enters, untap this creature."
     }

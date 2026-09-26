@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Clear a Path
@@ -24,10 +23,7 @@ val ClearAPath = card("Clear a Path") {
     oracleText = "Destroy target creature with defender."
 
     spell {
-        val t = target(
-            "target creature with defender",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.withKeyword(Keyword.DEFENDER)))
-        )
+        val t = target(TargetFilter(GameObjectFilter.Creature.withKeyword(Keyword.DEFENDER)))
         effect = Effects.Destroy(t)
     }
 

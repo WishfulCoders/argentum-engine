@@ -23,7 +23,7 @@ val EarthTremor = card("Earth Tremor") {
     oracleText = "Earth Tremor deals damage to target creature or planeswalker equal to the number of lands you control."
 
     spell {
-        val t = target("target", Targets.CreatureOrPlaneswalker)
+        val t = target(Targets.CreatureOrPlaneswalker)
         effect = Effects.DealDamage(DynamicAmounts.landsYouControl(), t)
     }
 

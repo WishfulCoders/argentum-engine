@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
@@ -11,12 +11,10 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantCardType
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.station
 
@@ -40,17 +38,14 @@ val SpecimenFreighter = card("Specimen Freighter") {
 
     // ETB: return up to two target non-Spacecraft creatures to their owners' hands
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target(
-            "up to two target non-Spacecraft creatures",
-            TargetCreature(
-                count = 2,
-                optional = true,
-                filter = TargetFilter(GameObjectFilter.Creature.notSubtype(Subtype("Spacecraft")))
-            )
+        trigger = Triggers.self.enters()
+        targets(
+            TargetFilter(GameObjectFilter.Creature.notSubtype(Subtype("Spacecraft"))),
+            count = 2,
+            optional = true,
         )
-        effect = ForEachTargetEffect(
-            listOf(Effects.ReturnToHand(EffectTarget.ContextTarget(0)))
+        effect = Effects.ForEachTarget(
+            Effects.ReturnToHand(EffectTarget.ContextTarget(0))
         )
     }
 
@@ -58,7 +53,7 @@ val SpecimenFreighter = card("Specimen Freighter") {
     station()
 
     // Station threshold: 9+ charge counters
-    val charge9 = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 9)
+    val charge9 = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 9)
 
     // 9+ charge counters: becomes artifact creature
     staticAbility {
@@ -74,7 +69,7 @@ val SpecimenFreighter = card("Specimen Freighter") {
 
     // Whenever this Spacecraft attacks, defending player mills four cards
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Library.mill(4, EffectTarget.PlayerRef(Player.DefendingPlayer))
     }
 

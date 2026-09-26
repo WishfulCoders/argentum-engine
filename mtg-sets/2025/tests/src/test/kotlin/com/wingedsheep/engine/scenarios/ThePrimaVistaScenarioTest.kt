@@ -9,6 +9,7 @@ import com.wingedsheep.sdk.model.Deck
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Tests for The Prima Vista (FIN #64).
@@ -20,7 +21,7 @@ import io.kotest.matchers.shouldBe
  * Crew 2.
  *
  * Exercises the [com.wingedsheep.sdk.dsl.Conditions.TriggeringSpellManaSpentAtLeast] intervening-if
- * on the [com.wingedsheep.sdk.dsl.Triggers.YouCastNoncreature] cast trigger: a 4-mana noncreature
+ * on the `Triggers.you.casts(GameObjectFilter.Noncreature)` cast trigger: a 4-mana noncreature
  * spell animates the Vehicle into an artifact creature until end of turn; a 1-mana one does not.
  */
 class ThePrimaVistaScenarioTest : FunSpec({
@@ -52,7 +53,7 @@ class ThePrimaVistaScenarioTest : FunSpec({
             active,
             stoke,
             listOf(entityIdToChosenTarget(driver.state, opponent)),
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         // Resolve The Prima Vista's trigger (on top of the stack), then the spell.
         driver.bothPass()
         driver.bothPass()
@@ -82,7 +83,7 @@ class ThePrimaVistaScenarioTest : FunSpec({
             active,
             bolt,
             listOf(entityIdToChosenTarget(driver.state, opponent)),
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
         driver.bothPass()
 

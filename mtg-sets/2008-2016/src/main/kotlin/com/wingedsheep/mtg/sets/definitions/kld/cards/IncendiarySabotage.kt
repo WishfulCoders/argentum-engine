@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Incendiary Sabotage deals 3 damage to each creature.
  *
  * "Each creature" is [Effects.ForEachInGroup] over an unrestricted creature [GroupFilter], with
- * the body pointed at [EffectTarget.Self] — the iterated permanent, not the spell's source.
+ * the body pointed at [EffectTarget.IterationEntity] — the iterated permanent, not the spell's source.
  */
 val IncendiarySabotage = card("Incendiary Sabotage") {
     manaCost = "{2}{R}{R}"
@@ -30,7 +30,7 @@ val IncendiarySabotage = card("Incendiary Sabotage") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature),
-            Effects.DealDamage(3, EffectTarget.Self)
+            Effects.DealDamage(3, EffectTarget.IterationEntity)
         )
     }
 

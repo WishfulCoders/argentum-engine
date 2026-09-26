@@ -28,13 +28,7 @@ val WaxWaneWitness = card("Wax-Wane Witness") {
     keywords(Keyword.FLYING, Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.YouGainLife
-        triggerRestriction = Conditions.IsYourTurn
-        effect = Effects.ModifyStats(1, 0, EffectTarget.Self)
-    }
-
-    triggeredAbility {
-        trigger = Triggers.YouLoseLife
+        trigger = Triggers.or(Triggers.you.gainsLife(), Triggers.you.losesLife())
         triggerRestriction = Conditions.IsYourTurn
         effect = Effects.ModifyStats(1, 0, EffectTarget.Self)
     }

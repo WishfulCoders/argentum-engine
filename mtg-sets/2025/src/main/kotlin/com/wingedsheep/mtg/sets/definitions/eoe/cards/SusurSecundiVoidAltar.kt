@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
@@ -45,7 +45,7 @@ val SusurSecundiVoidAltar = card("Susur Secundi, Void Altar") {
 
     // 12+ charge counters: {1}{B}, {T}, Pay 2 life, Sacrifice a creature:
     // Draw cards equal to the sacrificed creature's power
-    val charge12 = Conditions.SourceCounterCountAtLeast(Counters.CHARGE, 12)
+    val charge12 = Conditions.SourceCounterCountAtLeast(CounterType.CHARGE, 12)
 
     activatedAbility {
         cost = Costs.Composite(

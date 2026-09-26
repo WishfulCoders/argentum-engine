@@ -3,13 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Scarblade's Malice
@@ -27,26 +25,22 @@ val ScarbladesMalice = card("Scarblade's Malice") {
         "When that creature dies this turn, create a 2/2 black and green Elf creature token."
 
     spell {
-        val creature = target("creature you control", Targets.CreatureYouControl)
-        effect = Effects.Composite(
-            listOf(
-                Effects.GrantKeyword(Keyword.DEATHTOUCH, creature),
-                Effects.GrantKeyword(Keyword.LIFELINK, creature),
-                CreateDelayedTriggerEffect(
-                    trigger = Triggers.Dies,
-                    watchedTarget = creature,
-                    expiry = DelayedTriggerExpiry.EndOfTurn,
-                    effect = CreateTokenEffect(
-                        count = 1,
-                        power = 2,
-                        toughness = 2,
-                        colors = setOf(Color.BLACK, Color.GREEN),
-                        creatureTypes = setOf("Elf"),
-                        imageUri = "https://cards.scryfall.io/normal/front/3/9/39b36f22-21f9-44fe-8a49-bdc859503342.jpg?1767955588"
-                    )
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.GrantKeyword(Keyword.DEATHTOUCH, creature) then
+            Effects.GrantKeyword(Keyword.LIFELINK, creature) then
+            Effects.CreateDelayedTrigger(
+                trigger = Triggers.self.dies(),
+                watchedTarget = creature,
+                expiry = DelayedTriggerExpiry.EndOfTurn,
+                effect = Effects.CreateToken(
+                    count = 1,
+                    power = 2,
+                    toughness = 2,
+                    colors = setOf(Color.BLACK, Color.GREEN),
+                    creatureTypes = setOf("Elf"),
+                    imageUri = "https://cards.scryfall.io/normal/front/3/9/39b36f22-21f9-44fe-8a49-bdc859503342.jpg?1767955588"
                 )
             )
-        )
     }
 
     metadata {

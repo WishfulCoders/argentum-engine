@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Staggershock
@@ -32,7 +33,7 @@ val Staggershock = card("Staggershock") {
     keywords(Keyword.REBOUND)
 
     spell {
-        val t = target("any target", AnyTarget())
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(2, t)
     }
 

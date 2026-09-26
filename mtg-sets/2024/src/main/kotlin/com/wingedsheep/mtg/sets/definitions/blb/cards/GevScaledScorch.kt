@@ -3,6 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
@@ -13,8 +14,7 @@ import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.TurnTracker
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Gev, Scaled Scorch
@@ -39,12 +39,12 @@ val GevScaledScorch = card("Gev, Scaled Scorch") {
     toughness = 2
 
     keywords(Keyword.WARD)
-    keywordAbility(KeywordAbility.wardLife(2))
+    keywordAbility(KeywordAbility.Ward(WardCost.Life(2)))
 
     // Other creatures you control enter with +1/+1 counters
     replacementEffect(
         EntersWithDynamicCounters(
-            count = DynamicAmount.TurnTracking(Player.You, TurnTracker.OPPONENTS_WHO_LOST_LIFE),
+            count = DynamicAmounts.opponentsWhoLostLifeThisTurn(),
             otherOnly = true,
             appliesTo = EventPattern.ZoneChangeEvent(
                 filter = GameObjectFilter.Creature.youControl(),
@@ -55,8 +55,8 @@ val GevScaledScorch = card("Gev, Scaled Scorch") {
 
     // Whenever you cast a Lizard spell, deal 1 damage to target opponent
     triggeredAbility {
-        trigger = Triggers.YouCastSubtype(Subtype.LIZARD)
-        val opponent = target("opponent", Targets.Opponent)
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withSubtype(Subtype.LIZARD))
+        val opponent = target(Targets.Opponent)
         effect = Effects.DealDamage(1, opponent)
     }
 

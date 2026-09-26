@@ -2,13 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Thaumaton Torpedo
@@ -26,18 +25,15 @@ val ThaumatonTorpedo = card("Thaumaton Torpedo") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{6}"), Costs.Tap, Costs.SacrificeSelf)
-        val permanent = target(
-            "target nonland permanent",
-            TargetPermanent(filter = TargetFilter.NonlandPermanent)
-        )
+        val permanent = target(TargetFilter.NonlandPermanent)
         effect = Effects.Destroy(permanent)
-        genericCostReduction = DynamicAmount.Conditional(
+        genericCostReduction = DynamicAmounts.conditional(
             condition = Conditions.YouAttackedWithCreaturesThisTurn(
                 filter = GameObjectFilter.Permanent.withSubtype("Spacecraft"),
                 atLeast = 1
             ),
-            ifTrue = DynamicAmount.Fixed(3),
-            ifFalse = DynamicAmount.Fixed(0)
+            ifTrue = 3,
+            ifFalse = 0
         )
         description = "{6}, {T}, Sacrifice this artifact: Destroy target nonland permanent. " +
             "This ability costs {3} less to activate if you attacked with a Spacecraft this turn."

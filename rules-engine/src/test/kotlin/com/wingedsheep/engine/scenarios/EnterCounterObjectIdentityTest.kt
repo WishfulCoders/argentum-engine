@@ -9,7 +9,6 @@ import com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComp
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.CounterType
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
@@ -17,23 +16,23 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.EntersWithCounters
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.serialization.json.Json
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 class EnterCounterObjectIdentityTest : FunSpec({
     val observer = card("Identity Counter Observer") {
         manaCost = "{0}"; typeLine = "Creature — Human"; power = 1; toughness = 1
         triggeredAbility {
-            trigger = Triggers.countersPlacedOn()
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.TriggeringEntity)
+            trigger = Triggers.a(GameObjectFilter.Creature.youControl()).getsCounters(firstTimeEachTurn = true)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.TriggeringEntity)
         }
     }
     val entering = card("Identity Counter Entrant") {
         manaCost = "{0}"; typeLine = "Creature — Construct"; power = 1; toughness = 1
-        replacementEffect(EntersWithCounters(CounterTypeFilter.PlusOnePlusOne, 1, selfOnly = true))
+        replacementEffect(EntersWithCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, selfOnly = true))
     }
     val json = Json { serializersModule = engineSerializersModule; allowStructuredMapKeys = true }
     for (blink in listOf(false, true)) {

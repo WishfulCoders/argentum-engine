@@ -13,15 +13,8 @@ import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Mobile Homestead
@@ -59,33 +52,16 @@ val MobileHomestead = card("Mobile Homestead") {
     // Whenever this Vehicle attacks, look at the top card of your library.
     // If it's a land card, you may put it onto the battlefield tapped.
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(
-            listOf(
-                // Look at top 1 card.
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1)),
-                    storeAs = "looked",
-                ),
-                // Keep only land cards as candidates.
-                FilterCollectionEffect(
-                    from = "looked",
-                    filter = CollectionFilter.MatchesFilter(GameObjectFilter.Land),
-                    storeMatching = "landCards",
-                ),
-                // You may put the land onto the battlefield tapped; otherwise it stays on top.
-                SelectFromCollectionEffect(
-                    from = "landCards",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    storeSelected = "toBattlefield",
-                    selectedLabel = "Put onto the battlefield tapped",
-                ),
-                MoveCollectionEffect(
-                    from = "toBattlefield",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped),
-                ),
-            )
-        )
+        trigger = Triggers.self.attacks()
+        effect = Effects.Pipeline {
+            // Look at top 1 card.
+            val looked = gather(CardSource.TopOfLibrary(1))
+            // Keep only land cards as candidates.
+            val landCards = filter(looked, GameObjectFilter.Land)
+            // You may put the land onto the battlefield tapped; otherwise it stays on top.
+            val toBattlefield = chooseUpTo(1, from = landCards, selectedLabel = "Put onto the battlefield tapped")
+            move(toBattlefield, CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped))
+        }
     }
 
     keywordAbility(KeywordAbility.Numeric(Keyword.CREW, 2))

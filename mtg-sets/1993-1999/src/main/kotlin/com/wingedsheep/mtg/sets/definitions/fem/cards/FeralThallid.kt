@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.fem.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Feral Thallid
@@ -27,14 +27,14 @@ val FeralThallid = card("Feral Thallid") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.AddCounters(Counters.SPORE, 1, EffectTarget.Self)
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.AddCounters(CounterType.SPORE, 1, EffectTarget.Self)
         description = "At the beginning of your upkeep, put a spore counter on this creature."
     }
 
     activatedAbility {
-        cost = Costs.RemoveCounterFromSelf(Counters.SPORE, 3)
-        effect = RegenerateEffect(EffectTarget.Self)
+        cost = Costs.RemoveCounterFromSelf(CounterType.SPORE, 3)
+        effect = Effects.Regenerate(EffectTarget.Self)
         description = "Remove three spore counters from this creature: Regenerate this creature."
     }
 

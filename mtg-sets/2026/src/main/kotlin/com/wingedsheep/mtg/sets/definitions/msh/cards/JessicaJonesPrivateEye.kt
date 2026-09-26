@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Patterns
@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
  *
  * Implementation notes:
  * - The activation cost is a two-atom [Costs.Composite]: the tap symbol plus
- *   [Costs.PutCounterOnSelf] with [Counters.STUN] — the Bandit's Haul idiom for counters paid as
+ *   [Costs.PutCounterOnSelf] with [CounterType.STUN] — the Bandit's Haul idiom for counters paid as
  *   part of a cost. The stun counter is the self-imposed brake (CR 701.24: a permanent with a stun
  *   counter that would untap removes one instead), so repeat activations cost successive untap
  *   steps rather than mana.
@@ -44,12 +44,11 @@ val JessicaJonesPrivateEye = card("Jessica Jones, Private Eye") {
     activatedAbility {
         cost = Costs.Composite(
             Costs.Tap,
-            Costs.PutCounterOnSelf(Counters.STUN),
+            Costs.PutCounterOnSelf(CounterType.STUN),
         )
         effect = Patterns.Exile.impulse(
             count = DynamicAmounts.sourcePower(),
             expiry = MayPlayExpiry.EndOfTurn,
-            storeAs = "jessicaJonesExiled",
         )
         description = "{T}, Put a stun counter on Jessica Jones: Exile the top X cards of your " +
             "library, where X is Jessica Jones's power. You may play those cards this turn."

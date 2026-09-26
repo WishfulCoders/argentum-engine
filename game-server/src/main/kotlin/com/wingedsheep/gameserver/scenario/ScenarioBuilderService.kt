@@ -109,7 +109,7 @@ class ScenarioBuilderService(
             for (card in battlefield) {
                 if (!registry.hasCard(card.name)) errors += "Unknown card: ${card.name}"
                 card.counters?.keys?.forEach { key ->
-                    if (runCatching { CounterType.valueOf(key) }.isFailure) {
+                    if (CounterType.of(key) !in CounterType.KNOWN) {
                         errors += "Unknown counter type '$key' on ${card.name}."
                     }
                 }
@@ -288,7 +288,7 @@ class ScenarioBuilderService(
             }
 
             if (counters.isNotEmpty()) {
-                val counterMap = counters.mapKeys { CounterType.valueOf(it.key) }
+                val counterMap = counters.mapKeys { CounterType.of(it.key) }
                 container = container.with(CountersComponent(counterMap))
             }
 

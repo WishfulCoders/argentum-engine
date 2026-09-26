@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.GrantActivatedAbilityToGroupEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
 /**
@@ -25,9 +24,9 @@ val DivergentGrowth = card("Divergent Growth") {
     oracleText = "Until end of turn, lands you control gain \"{T}: Add one mana of any color.\""
 
     spell {
-        effect = GrantActivatedAbilityToGroupEffect(
+        effect = Effects.GrantActivatedAbilityToGroup(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = AbilityCost.Tap,
                 effect = Effects.AddAnyColorMana(1),
                 isManaAbility = true,

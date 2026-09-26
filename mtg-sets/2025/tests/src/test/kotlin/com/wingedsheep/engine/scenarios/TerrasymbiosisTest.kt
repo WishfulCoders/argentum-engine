@@ -6,15 +6,14 @@ import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.mtg.sets.definitions.eoe.cards.Terrasymbiosis
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.CounterType
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Tests for Terrasymbiosis ({2}{G} Enchantment):
@@ -25,7 +24,7 @@ import io.kotest.matchers.shouldBe
  * triggered ability. The engine silently ignores that flag for no-target / no-elseEffect
  * abilities (it only wires `optional` for targeted abilities or ones with an elseEffect),
  * so the draw happened unconditionally and the player was never offered the "may" choice.
- * The fix wraps the draw in `MayEffect`; these tests pin both branches of the choice and
+ * The fix wraps the draw in `Effects.May`; these tests pin both branches of the choice and
  * the once-per-turn gate.
  */
 class TerrasymbiosisTest : FunSpec({
@@ -37,8 +36,8 @@ class TerrasymbiosisTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Put two +1/+1 counters on target creature you control."
         spell {
-            val target = target("target creature you control", Targets.CreatureYouControl)
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, target)
+            val target = target(TargetFilter.CreatureYouControl)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, target)
         }
     }
 
@@ -69,7 +68,7 @@ class TerrasymbiosisTest : FunSpec({
         // Place two +1/+1 counters → Terrasymbiosis triggers.
         driver.castSpell(player, spell, targets = listOf(creature))
         driver.bothPass()   // resolve Counter Infusion; the trigger goes on the stack
-        driver.bothPass()   // resolve the trigger → MayEffect yes/no decision
+        driver.bothPass()   // resolve the trigger → Effects.May yes/no decision
 
         // The "may" choice must be offered. Accept it.
         driver.submitYesNo(player, true)

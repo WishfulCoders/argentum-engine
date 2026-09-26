@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -23,11 +23,8 @@ val FillWithFright = card("Fill with Fright") {
     typeLine = "Sorcery"
     oracleText = "Target player discards two cards. Scry 2. (Look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.)"
     spell {
-        val t = target("target", TargetPlayer())
-        effect = Effects.Composite(
-            Patterns.Hand.discardCards(2, t),
-            Patterns.Library.scry(2)
-        )
+        val t = target(Targets.Player)
+        effect = Patterns.Hand.discardCards(2, t) then Patterns.Library.scry(2)
     }
     metadata {
         rarity = Rarity.COMMON

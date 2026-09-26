@@ -7,12 +7,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Pore Over the Pages
@@ -36,25 +31,21 @@ val PoreOverThePages = card("Pore Over the Pages") {
     oracleText = "Draw three cards, untap up to two lands, then discard a card."
 
     spell {
-        effect = Effects.Composite(
-            Effects.DrawCards(3),
-            GatherCardsEffect(
-                source = CardSource.BattlefieldMatching(filter = GameObjectFilter.Land),
-                storeAs = "lands",
-            ),
-            SelectFromCollectionEffect(
-                from = "lands",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(2)),
+        effect = Effects.Pipeline {
+            run(Effects.DrawCards(3))
+            val lands = gather(CardSource.BattlefieldMatching(filter = GameObjectFilter.Land))
+            val toUntap = chooseUpTo(
+                2,
+                from = lands,
                 chooser = Chooser.Controller,
-                storeSelected = "toUntap",
-                prompt = "Choose up to two lands to untap",
-            ),
-            ForEachInCollectionEffect(
-                collection = "toUntap",
-                effect = Effects.Untap(EffectTarget.Self),
-            ),
-            Patterns.Hand.discardCards(1),
-        )
+                prompt = "Choose up to two lands to untap"
+            )
+            run(Effects.ForEachInCollection(
+                collection = toUntap,
+                effect = Effects.Untap(EffectTarget.IterationEntity),
+            ))
+            run(Patterns.Hand.discardCards(1))
+        }
     }
 
     metadata {

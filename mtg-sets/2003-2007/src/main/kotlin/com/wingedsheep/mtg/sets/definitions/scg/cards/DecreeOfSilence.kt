@@ -1,25 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
-import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.DynamicAmounts
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Decree of Silence
@@ -39,21 +31,16 @@ val DecreeOfSilence = card("Decree of Silence") {
 
     // Ability 1: Whenever an opponent casts a spell, counter that spell + depletion counter + sacrifice check
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = EventPattern.SpellCastEvent(player = Player.EachOpponent),
-            binding = TriggerBinding.ANY
-        )
-        effect = Effects.CounterTriggeringSpell()
-            .then(Effects.AddCounters(Counters.DEPLETION, 1, EffectTarget.Self))
-            .then(
-                ConditionalEffect(
-                    condition = Compare(
-                        DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.DEPLETION)),
-                        ComparisonOperator.GTE,
-                        DynamicAmount.Fixed(3)
-                    ),
-                    effect = SacrificeSelfEffect
-                )
+        trigger = Triggers.anOpponent.casts()
+        effect = Effects.CounterTriggeringSpell() then
+            Effects.AddCounters(CounterType.DEPLETION, 1, EffectTarget.Self) then
+            Effects.If(
+                condition = Conditions.CompareAmounts(
+                    DynamicAmounts.countersOnSelf(CounterType.DEPLETION),
+                    ComparisonOperator.GTE,
+                    3
+                ),
+                then = SacrificeSelfEffect
             )
     }
 
@@ -62,9 +49,9 @@ val DecreeOfSilence = card("Decree of Silence") {
 
     // When you cycle this card, you may counter target spell.
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
-        val t = target("target spell", Targets.Spell)
-        effect = MayEffect(Effects.CounterSpell())
+        trigger = Triggers.self.isCycled()
+        val t = target(TargetFilter.SpellOnStack)
+        effect = Effects.May(Effects.CounterSpell())
     }
 
     metadata {

@@ -6,10 +6,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerTiming
 import com.wingedsheep.sdk.scripting.effects.CREATED_TOKENS
-import com.wingedsheep.sdk.scripting.effects.SacrificeTargetEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -42,20 +40,16 @@ val KavLandseeker = card("Kav Landseeker") {
     // current step; fireOnPlayer = PlayerRef(You) lands the trigger on the controller's
     // upcoming turn rather than an intervening opponent turn.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            listOf(
-                Effects.CreateLander(),
-                CreateDelayedTriggerEffect(
-                    step = Step.END,
-                    effect = SacrificeTargetEffect(
-                        target = EffectTarget.PipelineTarget(CREATED_TOKENS, 0)
-                    ),
-                    fireOnPlayer = EffectTarget.PlayerRef(Player.You),
-                    timing = DelayedTriggerTiming.NEXT_TURN
-                )
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateLander() then
+            Effects.CreateDelayedTrigger(
+                step = Step.END,
+                effect = Effects.SacrificeTarget(
+                    target = EffectTarget.PipelineTarget(CREATED_TOKENS, 0)
+                ),
+                fireOnPlayer = EffectTarget.PlayerRef(Player.You),
+                timing = DelayedTriggerTiming.NEXT_TURN
             )
-        )
     }
 
     metadata {

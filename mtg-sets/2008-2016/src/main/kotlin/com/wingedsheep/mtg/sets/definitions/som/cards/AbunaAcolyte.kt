@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Abuna Acolyte
@@ -33,17 +32,14 @@ val AbunaAcolyte = card("Abuna Acolyte") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.PreventNextDamage(1, t)
         description = "{T}: Prevent the next 1 damage that would be dealt to any target this turn."
     }
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target(
-            "target",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.ArtifactCreature))
-        )
+        val t = target(TargetFilter(GameObjectFilter.ArtifactCreature))
         effect = Effects.PreventNextDamage(2, t)
         description = "{T}: Prevent the next 2 damage that would be dealt to target artifact creature this turn."
     }

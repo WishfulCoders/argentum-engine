@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Diversion Unit — Aetherdrift #41
@@ -31,8 +32,8 @@ val DiversionUnit = card("Diversion Unit") {
     keywords(Keyword.FLYING)
 
     activatedAbility {
+        val instantOrSorcerySpell = target(TargetFilter.InstantOrSorcerySpellOnStack)
         cost = Costs.Composite(Costs.Mana("{U}"), Costs.SacrificeSelf)
-        target = Targets.InstantOrSorcerySpell
         effect = Effects.CounterUnlessPays("{3}")
     }
 

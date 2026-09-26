@@ -1,23 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.CardOrder
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherUntilMatchEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Goblin Charbelcher — Mirrodin #176 (canonical printing)
@@ -55,41 +46,25 @@ val GoblinCharbelcher = card("Goblin Charbelcher") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap)
-        val victim = target("any target", AnyTarget())
+        val victim = target(Targets.Any)
 
-        val nonlandsRevealed = DynamicAmounts.distinctEntitiesIn("nonlands")
-
-        effect = Effects.Composite(
-            listOf(
-                GatherUntilMatchEffect(
-                    filter = GameObjectFilter.Land,
-                    storeMatch = "landCard",
-                    storeRevealed = "revealed"
-                ),
-                RevealCollectionEffect(from = "revealed"),
-                FilterCollectionEffect(
-                    from = "revealed",
-                    filter = CollectionFilter.MatchesFilter(GameObjectFilter.Nonland),
-                    storeMatching = "nonlands"
-                ),
+        effect = Effects.Pipeline {
+            val (landCard, revealed) = gatherUntilMatch(GameObjectFilter.Land)
+            reveal(revealed)
+            val nonlands = filter(revealed, GameObjectFilter.Nonland)
+            val nonlandsRevealed = DynamicAmounts.distinctEntitiesIn(nonlands)
+            run(
                 Effects.DealDamage(
-                    amount = DynamicAmount.Conditional(
-                        condition = Conditions.CollectionContainsMatch(
-                            collection = "landCard",
-                            filter = GameObjectFilter.Land.withSubtype("Mountain")
-                        ),
-                        ifTrue = DynamicAmount.Multiply(nonlandsRevealed, 2),
+                    amount = DynamicAmounts.conditional(
+                        condition = whenMatches(landCard, GameObjectFilter.Land.withSubtype("Mountain")),
+                        ifTrue = nonlandsRevealed * 2,
                         ifFalse = nonlandsRevealed
                     ),
                     target = victim
-                ),
-                MoveCollectionEffect(
-                    from = "revealed",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
-                    order = CardOrder.ControllerChooses
                 )
             )
-        )
+            toLibraryBottom(revealed)
+        }
         description = "{3}, {T}: Reveal cards from the top of your library until you reveal a land card. " +
             "This artifact deals damage equal to the number of nonland cards revealed this way to any target. " +
             "If the revealed land card was a Mountain, this artifact deals double that damage instead. " +

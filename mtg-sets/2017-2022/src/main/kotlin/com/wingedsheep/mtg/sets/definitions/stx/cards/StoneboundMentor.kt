@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Stonebound Mentor — Strixhaven: School of Mages #239 (canonical printing)
@@ -12,7 +13,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Whenever one or more cards leave your graveyard, scry 1.
  *
  * "One or more … leave" is CR 603.2c batch wording, so the batching
- * [Triggers.CardsLeaveYourGraveyard] is the right shape: a mass reanimation or a graveyard-exiling
+ * `Triggers.oneOrMore(filter).leaveYourGraveyard()` is the right shape: a mass reanimation or a graveyard-exiling
  * sweep fires this exactly once. The payoff is a bare [Effects.Scry].
  */
 val StoneboundMentor = card("Stonebound Mentor") {
@@ -25,7 +26,7 @@ val StoneboundMentor = card("Stonebound Mentor") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.CardsLeaveYourGraveyard()
+        trigger = Triggers.oneOrMore(GameObjectFilter.Any).leaveYourGraveyard()
         effect = Effects.Scry(1)
         description = "Whenever one or more cards leave your graveyard, scry 1."
     }

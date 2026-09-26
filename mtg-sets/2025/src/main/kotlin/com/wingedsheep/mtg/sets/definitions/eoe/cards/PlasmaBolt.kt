@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Plasma Bolt
@@ -25,14 +24,14 @@ val PlasmaBolt = card("Plasma Bolt") {
         "this turn or a spell was warped this turn."
 
     spell {
-        target = Targets.Any
+        val anyTarget = target(Targets.Any)
         effect = Effects.DealDamage(
-            amount = DynamicAmount.Conditional(
+            amount = DynamicAmounts.conditional(
                 condition = Conditions.Void,
-                ifTrue = DynamicAmount.Fixed(3),
-                ifFalse = DynamicAmount.Fixed(2)
+                ifTrue = 3,
+                ifFalse = 2
             ),
-            target = EffectTarget.ContextTarget(0)
+            target = anyTarget
         )
     }
 

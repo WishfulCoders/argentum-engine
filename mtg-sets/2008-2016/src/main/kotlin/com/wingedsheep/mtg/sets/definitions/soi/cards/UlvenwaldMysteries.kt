@@ -1,15 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.soi.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 
 /**
  * Ulvenwald Mysteries
@@ -37,23 +33,13 @@ val UlvenwaldMysteries = card("Ulvenwald Mysteries") {
         "Whenever you sacrifice a Clue, create a 1/1 white Human Soldier creature token."
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.youControl().nontoken(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl().nontoken()).dies()
         effect = Effects.Investigate()
         description = "Whenever a nontoken creature you control dies, investigate."
     }
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = EventPattern.PermanentsSacrificedEvent(
-                filter = GameObjectFilter.Artifact.withSubtype("Clue"),
-                perPermanent = true
-            ),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Artifact.withSubtype("Clue"))
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -34,13 +32,13 @@ val CouncilsDeliberation = card("Council's Deliberation") {
     }
 
     triggeredAbility {
-        trigger = Triggers.WheneverYouScry
+        trigger = Triggers.you.scries()
         triggerZone = Zone.GRAVEYARD
         interveningIf = Conditions.YouControl(GameObjectFilter.Land.withSubtype(Subtype.ISLAND))
-        effect = MayEffect(
-            IfYouDoEffect(
+        effect = Effects.May(
+            Effects.IfYouDo(
                 action = Effects.Move(EffectTarget.Self, Zone.EXILE),
-                ifYouDo = Effects.DrawCards(1)
+                then = Effects.DrawCards(1)
             )
         )
     }

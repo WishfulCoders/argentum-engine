@@ -5,9 +5,10 @@ import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.core.LifeChangeReason
 import com.wingedsheep.engine.core.TappedEvent
-import com.wingedsheep.engine.core.tap
+import com.wingedsheep.engine.core.tapForMana
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.DamageUtils
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.handlers.effects.life.LifePaymentService
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
@@ -42,6 +43,7 @@ import com.wingedsheep.sdk.scripting.effects.Effect
  * (which the auto-tap path has already accounted for).
  */
 class ManaAbilitySideEffectExecutor(
+    private val zones: ZoneTransitionService,
     private val cardRegistry: CardRegistry,
     private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult
 ) {
@@ -69,9 +71,9 @@ class ManaAbilitySideEffectExecutor(
         var currentState = state
         val events = mutableListOf<GameEvent>()
         for (source in solution.sources) {
-            val (tappedState, event) = tap(currentState, source.entityId)
+            val (tappedState, tapEvents) = tapForMana(currentState, source.entityId, controllerId)
             currentState = tappedState
-            event?.let(events::add)
+            events.addAll(tapEvents)
 
             val production = solution.manaProduced[source.entityId]
             // Resolved once and shared: both the activation event and the side effects want the
@@ -133,15 +135,22 @@ class ManaAbilitySideEffectExecutor(
         )
     }
 
-    /** The printed mana ability of [sourceId] that produced [producedColor], if there is one. */
+    /**
+     * The mana ability of [sourceId] that produced [producedColor], if there is one: a printed one
+     * first, then one a resolved effect granted it (`GameState.grantedActivatedAbilities` — the
+     * auto-payer taps those too, e.g. Emrakul, the Exigent Doom's "{T}: Add {C}{C}").
+     */
     private fun matchingManaAbility(
         state: GameState,
         sourceId: EntityId,
         producedColor: Color?,
     ): ActivatedAbility? {
         val card = state.getEntity(sourceId)?.get<CardComponent>() ?: return null
-        val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: return null
-        return cardDef.script.activatedAbilities
+        val printed = cardRegistry.getCard(card.cardDefinitionId)?.script?.activatedAbilities.orEmpty()
+        val granted = state.grantedActivatedAbilities.asSequence()
+            .filter { it.entityId == sourceId }
+            .map { it.ability }
+        return (printed.asSequence() + granted)
             .filter { it.isManaAbility }
             .firstOrNull { abilityProducesColor(it, producedColor) }
     }
@@ -174,7 +183,7 @@ class ManaAbilitySideEffectExecutor(
         // priority, but never deducts the life.
         val lifeCost = payLifeCost(matchingAbility.cost)
         if (lifeCost > 0) {
-            LifePaymentService.pay(currentState, controllerId, lifeCost)?.let { (afterLife, lifeEvents) ->
+            LifePaymentService.pay(zones, currentState, controllerId, lifeCost)?.let { (afterLife, lifeEvents) ->
                 currentState = afterLife
                 events.addAll(lifeEvents)
             }
@@ -245,8 +254,8 @@ class ManaAbilitySideEffectExecutor(
          * built without an [EngineServices] wiring). Side effects are dropped on the
          * floor — production code must use the executor wired by [EngineServices].
          */
-        fun noOp(cardRegistry: CardRegistry): ManaAbilitySideEffectExecutor =
-            ManaAbilitySideEffectExecutor(cardRegistry) { state, _, _ ->
+        fun noOp(zones: ZoneTransitionService): ManaAbilitySideEffectExecutor =
+            ManaAbilitySideEffectExecutor(zones, zones.cardRegistry) { state, _, _ ->
                 EffectResult.success(state)
             }
     }

@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Stern Dismissal
@@ -25,10 +24,7 @@ val SternDismissal = card("Stern Dismissal") {
     oracleText = "Return target creature or enchantment an opponent controls to its owner's hand."
 
     spell {
-        val victim = target(
-            "target",
-            TargetPermanent(filter = TargetFilter.CreatureOrEnchantment.opponentControls()),
-        )
+        val victim = target(TargetFilter.CreatureOrEnchantment.opponentControls())
         effect = Effects.ReturnToHand(victim)
     }
 

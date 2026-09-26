@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ths.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Dissolve
@@ -22,11 +22,8 @@ val Dissolve = card("Dissolve") {
     oracleText = "Counter target spell. Scry 1. (Look at the top card of your library. You may put that card on the bottom.)"
 
     spell {
-        target = Targets.Spell
-        effect = Effects.Composite(
-            Effects.CounterSpell(),
-            Effects.Scry(1),
-        )
+        val spell = target(TargetFilter.SpellOnStack)
+        effect = Effects.CounterSpell() then Effects.Scry(1)
     }
 
     metadata {

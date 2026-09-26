@@ -727,7 +727,7 @@ data object MayPlayLandsFromGraveyard : StaticAbility {
  * with an empty stack).
  *
  * @property filter Which exiled cards may be played — e.g.
- *   `GameObjectFilter.Any.ownedByOpponent().withCounter(Counters.STASH)` for "cards you don't own
+ *   `GameObjectFilter.Any.ownedByOpponent().withCounter(CounterType.STASH)` for "cards you don't own
  *   with stash counters on them". Ownership predicates work here because cards in exile carry an
  *   owner but no controller.
  * @property condition Optional gate re-evaluated on every read, so the permission opens and closes
@@ -1037,7 +1037,10 @@ data class RetainUnspentColoredMana(val color: Color) : StaticAbility {
  * The "legend rule" (CR 704.5j) doesn't apply to permanents matching [filter] that the controller
  * of this permanent controls (Spider-Verse: "The 'legend rule' doesn't apply to Spiders you
  * control"). Such permanents are excluded from the legend-rule duplicate grouping in
- * `LegendRuleCheck`, so the controller may keep multiple same-named copies.
+ * `LegendRuleCheck`, so the controller may keep multiple same-named copies. May be wrapped in a
+ * [ConditionalStaticAbility]; `LegendRuleCheck` then honours it only while the condition holds
+ * (Brothers Yamazaki: "If there are exactly two permanents named Brothers Yamazaki on the
+ * battlefield, …").
  */
 @SerialName("LegendRuleDoesNotApplyTo")
 @Serializable
@@ -1496,8 +1499,10 @@ data class AdditionalDeathTriggers(
 }
 
 /**
- * You may play additional lands on each of your turns.
- * Used for permanents like Hugs, Grisly Guardian and Oracle of Mul Daya.
+ * You may play additional lands on each of your turns (CR 305.2 — a continuous effect that
+ * increases the number of lands a player can play). Used for permanents like Hugs, Grisly Guardian
+ * and Oracle of Mul Daya; with [affected] = [Player.Each] it is the symmetric "each player may play
+ * an additional land on each of their turns" of Rites of Flourishing and Ghirapur Orrery.
  *
  * This is a continuous effect — the bonus applies as long as the permanent is on the
  * battlefield. If the permanent enters mid-turn, the extra land drop is immediately
@@ -1506,14 +1511,29 @@ data class AdditionalDeathTriggers(
  * Multiple copies are additive: two copies yield two additional land drops.
  *
  * @property count The number of additional land drops granted each turn (default 1)
+ * @property affected Who gets the extra drops, relative to the source's controller: [Player.You]
+ *   (default), [Player.Each], or [Player.EachOpponent].
  */
 @SerialName("GrantAdditionalLandDrop")
 @Serializable
 data class GrantAdditionalLandDrop(
-    val count: Int = 1
+    val count: Int = 1,
+    val affected: Player = Player.You
 ) : StaticAbility {
-    override val description: String =
-        "You may play ${if (count == 1) "an additional land" else "$count additional lands"} on each of your turns"
+    init {
+        require(affected == Player.You || affected == Player.Each || affected == Player.EachOpponent) {
+            "GrantAdditionalLandDrop.affected must be You, Each, or EachOpponent, was $affected"
+        }
+    }
+
+    override val description: String = run {
+        val lands = if (count == 1) "an additional land" else "$count additional lands"
+        when (affected) {
+            Player.Each -> "Each player may play $lands on each of their turns"
+            Player.EachOpponent -> "Each opponent may play $lands on each of their turns"
+            else -> "You may play $lands on each of your turns"
+        }
+    }
 }
 
 /**

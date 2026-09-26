@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Deadly Embrace
@@ -26,7 +26,7 @@ val DeadlyEmbrace = card("Deadly Embrace") {
     oracleText = "Destroy target creature an opponent controls. Then draw a card for each creature that died this turn."
 
     spell {
-        val creature = target("target creature an opponent controls", Targets.CreatureOpponentControls)
+        val creature = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.Destroy(creature) then
             Effects.DrawCards(DynamicAmounts.creaturesDiedThisTurn(Player.Each))
     }

@@ -19,7 +19,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Ash Barrens:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddColorlessMana",

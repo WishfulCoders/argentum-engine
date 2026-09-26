@@ -4,6 +4,7 @@ import com.wingedsheep.engine.core.DecisionPhase
 import com.wingedsheep.engine.core.ExecutionResult
 import com.wingedsheep.engine.core.LegendRuleContinuation
 import com.wingedsheep.engine.handlers.DecisionHandler
+import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.layers.ProjectedState
@@ -15,8 +16,10 @@ import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.LegendRuleDoesNotApplyTo
+import com.wingedsheep.sdk.scripting.StaticAbility
 
 /**
  * 704.5j - Legend rule: If a player controls two or more legendary permanents
@@ -24,20 +27,32 @@ import com.wingedsheep.sdk.scripting.LegendRuleDoesNotApplyTo
  */
 class LegendRuleCheck(
     private val decisionHandler: DecisionHandler,
-    private val cardRegistry: CardRegistry
+    private val cardRegistry: CardRegistry,
+    private val predicateEvaluator: PredicateEvaluator
 ) : StateBasedActionCheck {
     override val name = "704.5j Legend Rule"
     override val order = SbaOrder.LEGEND_RULE
 
-    private val predicateEvaluator = PredicateEvaluator()
-
     /**
-     * The filters of every [LegendRuleDoesNotApplyTo] static among [permanents] (a single player's
-     * battlefield). Collected once per player so the per-legendary exemption test doesn't re-scan
-     * the battlefield (Spider-Verse: "The 'legend rule' doesn't apply to Spiders you control").
+     * The filters of every [LegendRuleDoesNotApplyTo] static that applies to [playerId]'s
+     * [permanents] (a single player's battlefield). Collected once per player so the per-legendary
+     * exemption test doesn't re-scan the battlefield. Two sources:
+     *  - printed statics on those permanents (Spider-Verse: "The 'legend rule' doesn't apply to
+     *    Spiders you control");
+     *  - durational grants in [GameState.grantedStaticAbilities] anchored to the player or to one of
+     *    those permanents — the one-shot, turn-scoped form (Hall of Echoes: "The 'legend rule'
+     *    doesn't apply to permanents you control this turn" = a player-anchored
+     *    `GrantStaticAbility(LegendRuleDoesNotApplyTo(Permanent), Controller, EndOfTurn)`, which
+     *    outlives the permanent that created it and expires in the cleanup step).
+     *
+     * Either form may sit behind a [ConditionalStaticAbility]; it counts only while its condition
+     * holds now (Brothers Yamazaki: "If there are exactly two permanents named Brothers Yamazaki on
+     * the battlefield, the 'legend rule' doesn't apply to them" — a third copy switches the
+     * exemption off and the rule sees all three).
      */
     private fun collectExemptionFilters(
         state: GameState,
+        playerId: EntityId,
         permanents: List<EntityId>
     ): List<GameObjectFilter> {
         val filters = mutableListOf<GameObjectFilter>()
@@ -45,10 +60,40 @@ class LegendRuleCheck(
             val cardDef = state.getEntity(permId)?.get<CardComponent>()
                 ?.let { cardRegistry.getCard(it.cardDefinitionId) } ?: continue
             for (ability in cardDef.script.staticAbilities) {
-                if (ability is LegendRuleDoesNotApplyTo) filters.add(ability.filter)
+                activeExemption(state, ability, permId, playerId)?.let { filters.add(it.filter) }
+            }
+        }
+        if (state.grantedStaticAbilities.isNotEmpty()) {
+            val holders = permanents.toSet() + playerId
+            for (grant in state.grantedStaticAbilities) {
+                if (grant.entityId !in holders) continue
+                activeExemption(state, grant.ability, grant.sourceId ?: grant.entityId, playerId)
+                    ?.let { filters.add(it.filter) }
             }
         }
         return filters
+    }
+
+    /**
+     * Unwrap [raw] to a live [LegendRuleDoesNotApplyTo] — directly, or behind a
+     * [ConditionalStaticAbility] whose condition holds for [sourceId] controlled by [controllerId] —
+     * else `null`.
+     */
+    private fun activeExemption(
+        state: GameState,
+        raw: StaticAbility,
+        sourceId: EntityId,
+        controllerId: EntityId
+    ): LegendRuleDoesNotApplyTo? = when (raw) {
+        is LegendRuleDoesNotApplyTo -> raw
+        is ConditionalStaticAbility -> (raw.ability as? LegendRuleDoesNotApplyTo)?.takeIf {
+            predicateEvaluator.conditions.evaluate(
+                state,
+                raw.condition,
+                EffectContext(sourceId = sourceId, controllerId = controllerId)
+            )
+        }
+        else -> null
     }
 
     /**
@@ -77,7 +122,7 @@ class LegendRuleCheck(
             val permanents = state.getZone(battlefieldZone)
 
             // Collect this player's legend-rule exemptions once, not per legendary permanent.
-            val exemptionFilters = collectExemptionFilters(state, permanents)
+            val exemptionFilters = collectExemptionFilters(state, playerId, permanents)
 
             val legendaryByName = mutableMapOf<String, MutableList<EntityId>>()
 

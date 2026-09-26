@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.akh.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Forsake the Worldly
@@ -21,7 +21,7 @@ val ForsakeTheWorldly = card("Forsake the Worldly") {
             "Cycling {2} ({2}, Discard this card: Draw a card.)"
 
     spell {
-        val t = target("target", Targets.ArtifactOrEnchantment)
+        val t = target(TargetFilter.ArtifactOrEnchantment)
         effect = Effects.Exile(t)
     }
 

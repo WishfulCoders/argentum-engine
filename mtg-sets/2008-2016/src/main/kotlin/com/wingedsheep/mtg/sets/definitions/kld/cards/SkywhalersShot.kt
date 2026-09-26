@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Skywhaler's Shot
@@ -25,11 +24,8 @@ val SkywhalersShot = card("Skywhaler's Shot") {
     oracleText = "Destroy target creature with power 3 or greater. Scry 1. (Look at the top card of your library. You may put that card on the bottom.)"
 
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.powerAtLeast(3)))
-        effect = Effects.Composite(
-            Effects.Destroy(t),
-            Patterns.Library.scry(1)
-        )
+        val t = target(TargetFilter.Creature.powerAtLeast(3))
+        effect = Effects.Destroy(t) then Patterns.Library.scry(1)
     }
 
     metadata {

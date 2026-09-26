@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Owlin Shieldmage — Strixhaven: School of Mages #210 (canonical printing)
@@ -13,7 +14,7 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
  * Ward—Pay 3 life. (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays 3 life.)
  *
  * Flying is a plain [Keyword] marker. Ward with a life payment is the parameterized
- * [KeywordAbility.wardLife] (CR 702.21a); the bare `Keyword.WARD` marker is derived from that
+ * [WardCost.Life] (CR 702.21a); the bare `Keyword.WARD` marker is derived from that
  * ability by the builder, so it is not restated here.
  */
 val OwlinShieldmage = card("Owlin Shieldmage") {
@@ -27,7 +28,7 @@ val OwlinShieldmage = card("Owlin Shieldmage") {
     toughness = 3
 
     keywords(Keyword.FLYING)
-    keywordAbility(KeywordAbility.wardLife(3))
+    keywordAbility(KeywordAbility.Ward(WardCost.Life(3)))
 
     metadata {
         rarity = Rarity.COMMON

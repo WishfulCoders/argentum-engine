@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 
 /**
@@ -25,7 +26,7 @@ val SkitteringHorror = card("Skittering Horror") {
     power = 4
     toughness = 3
     triggeredAbility {
-        trigger = Triggers.YouCastCreature
+        trigger = Triggers.you.casts(GameObjectFilter.Creature)
         effect = SacrificeSelfEffect
     }
     metadata {

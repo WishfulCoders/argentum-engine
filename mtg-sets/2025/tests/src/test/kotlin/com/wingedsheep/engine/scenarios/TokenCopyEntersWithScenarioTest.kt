@@ -19,10 +19,8 @@ import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -49,7 +47,7 @@ class TokenCopyEntersWithScenarioTest : FunSpec({
         toughness = 1
         replacementEffect(
             EntersWithCounters(
-                counterType = CounterTypeFilter.PlusOnePlusOne,
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
                 count = 1,
                 selfOnly = true,
             )
@@ -86,7 +84,7 @@ class TokenCopyEntersWithScenarioTest : FunSpec({
         colorIdentity = "U"
         typeLine = "Sorcery"
         spell {
-            val t = target("target creature", TargetCreature(filter = TargetFilter.Creature))
+            val t = target(TargetFilter.Creature)
             effect = Effects.CreateTokenCopyOfTarget(t)
         }
     }
@@ -97,7 +95,7 @@ class TokenCopyEntersWithScenarioTest : FunSpec({
         colorIdentity = "U"
         typeLine = "Sorcery"
         spell {
-            val t = target("target creature", TargetCreature(filter = TargetFilter.Creature))
+            val t = target(TargetFilter.Creature)
             effect = Effects.CreateTokenCopyOfTarget(t, count = 2)
         }
     }

@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.WardCost
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Lake-town Mariners // Gone Fishing — The Hobbit #44
@@ -55,13 +54,7 @@ val LaketownMariners = card("Lake-town Mariners") {
             "battlefield under their owner's control. (Then exile this card. You may cast the " +
             "creature later from exile.)"
         spell {
-            target(
-                "two target creatures and/or lands you control",
-                TargetPermanent(
-                    count = 2,
-                    filter = TargetFilter(GameObjectFilter.CreatureOrLand.youControl())
-                )
-            )
+            targets(TargetFilter(GameObjectFilter.CreatureOrLand.youControl()), count = 2)
             effect = Effects.Pipeline(
                 descriptionOverride = "Exile two target creatures and/or lands you control, then " +
                     "return them to the battlefield under their owner's control"

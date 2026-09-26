@@ -23,7 +23,7 @@ val DeeprootWarrior = card("Deeproot Warrior") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
+        trigger = Triggers.self.becomesBlocked()
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }
 

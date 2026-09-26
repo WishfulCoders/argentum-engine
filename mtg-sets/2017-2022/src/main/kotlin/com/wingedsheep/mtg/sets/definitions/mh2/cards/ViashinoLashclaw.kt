@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * which is the cycling-style "discard this card".
  *
  * "Creatures you control gain haste" is a group grant, not a targeted one: [Effects.ForEachInGroup]
- * iterates the battlefield group and [EffectTarget.Self] inside the body names the *iterated*
+ * iterates the battlefield group and [EffectTarget.IterationEntity] inside the body names the *iterated*
  * creature, so each one picks up its own until-end-of-turn haste grant. The set is locked in on
  * resolution, so a creature that enters afterwards this turn does not get haste (CR 611.2c).
  */
@@ -35,7 +35,7 @@ val ViashinoLashclaw = card("Viashino Lashclaw") {
         cost = Costs.Composite(Costs.Tap, Costs.DiscardCard)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.GrantKeyword(Keyword.HASTE, EffectTarget.Self)
+            Effects.GrantKeyword(Keyword.HASTE, EffectTarget.IterationEntity)
         )
         description = "Creatures you control gain haste until end of turn."
     }

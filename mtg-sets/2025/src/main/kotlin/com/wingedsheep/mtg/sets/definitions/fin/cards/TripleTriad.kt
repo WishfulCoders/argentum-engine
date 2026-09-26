@@ -1,21 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.minus
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
-import com.wingedsheep.sdk.scripting.effects.GrantPlayWithoutPayingCostEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Triple Triad — Final Fantasy #166
@@ -48,36 +43,27 @@ val TripleTriad = card("Triple Triad") {
         "card exiled this way with lesser mana value than it without paying their mana costs."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.Composite(
-            listOf(
-                // Your top card → "mine"
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(count = DynamicAmount.Fixed(1), player = Player.You),
-                    storeAs = "mine"
-                ),
-                MoveCollectionEffect(from = "mine", destination = CardDestination.ToZone(Zone.EXILE)),
-                // Each opponent's top card → "others"
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(count = DynamicAmount.Fixed(1), player = Player.EachOpponent),
-                    storeAs = "others"
-                ),
-                MoveCollectionEffect(from = "others", destination = CardDestination.ToZone(Zone.EXILE)),
-                // Others with strictly lesser mana value than your card (< mineMV  ==  <= mineMV - 1)
-                FilterCollectionEffect(
-                    from = "others",
-                    filter = CollectionFilter.ManaValueAtMost(
-                        DynamicAmount.Subtract(DynamicAmount.StoredCardManaValue("mine"), DynamicAmount.Fixed(1))
-                    ),
-                    storeMatching = "playableOthers"
-                ),
-                // Until end of turn, play them without paying mana costs.
-                GrantMayPlayFromExileEffect("mine", MayPlayExpiry.EndOfTurn),
-                GrantPlayWithoutPayingCostEffect("mine"),
-                GrantMayPlayFromExileEffect("playableOthers", MayPlayExpiry.EndOfTurn),
-                GrantPlayWithoutPayingCostEffect("playableOthers")
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.Pipeline {
+            // Your top card → "mine"
+            val mine = gather(CardSource.TopOfLibrary(count = 1, player = Player.You))
+            exile(mine)
+            // Each opponent's top card → "others"
+            val others = gather(CardSource.TopOfLibrary(count = 1, player = Player.EachOpponent))
+            exile(others)
+            // Others with strictly lesser mana value than your card (< mineMV  ==  <= mineMV - 1)
+            val playableOthers = filter(
+                others,
+                GameObjectFilter.Any.manaValueAtMostDynamic(
+                    DynamicAmounts.manaValueOf(mine) - 1
+                )
             )
-        )
+            // Until end of turn, play them without paying mana costs.
+            run(Effects.GrantMayPlayFromExile(mine, MayPlayExpiry.EndOfTurn))
+            run(Effects.GrantPlayWithoutPayingCost(mine))
+            run(Effects.GrantMayPlayFromExile(playableOthers, MayPlayExpiry.EndOfTurn))
+            run(Effects.GrantPlayWithoutPayingCost(playableOthers))
+        }
         description = "At the beginning of your upkeep, each player exiles the top card of their " +
             "library. Until end of turn, you may play the card you own exiled this way and each " +
             "other card exiled this way with lesser mana value than it without paying their mana costs."

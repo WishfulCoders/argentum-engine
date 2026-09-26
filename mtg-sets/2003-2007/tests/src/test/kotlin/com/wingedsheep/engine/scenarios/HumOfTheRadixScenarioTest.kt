@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.mana.CostCalculator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.support.GameTestDriver
@@ -47,7 +48,7 @@ class HumOfTheRadixScenarioTest : FunSpec({
     /** The generic component of what [caster] would pay for the {2} artifact creature. */
     fun GameTestDriver.artifactSpellGenericFor(caster: EntityId): Int {
         val registry = registry()
-        return CostCalculator(registry)
+        return CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .calculateEffectiveCost(state, registry.requireCard("Artifact Creature"), caster)
             .genericAmount
     }
@@ -95,7 +96,7 @@ class HumOfTheRadixScenarioTest : FunSpec({
         d.putPermanentOnBattlefield(d.player1, "Artifact Creature")
 
         val registry = registry()
-        val cost = CostCalculator(registry)
+        val cost = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .calculateEffectiveCost(d.state, registry.requireCard("Black Creature"), d.player1)
 
         withClue("{1}{B} stays {1}{B} — the filter is artifact spells, not all spells") {

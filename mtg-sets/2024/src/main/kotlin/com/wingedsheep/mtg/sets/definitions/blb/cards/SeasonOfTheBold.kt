@@ -1,27 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedTriggeredAbility
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.BudgetModalEffect
 import com.wingedsheep.sdk.scripting.effects.BudgetMode
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.EventPattern.SpellCastEvent
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Triggers
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Season of the Bold {3}{R}{R}
@@ -44,7 +32,7 @@ val SeasonOfTheBold = card("Season of the Bold") {
         "{P}{P}{P} — Until the end of your next turn, whenever you cast a spell, Season of the Bold deals 2 damage to up to one target creature."
 
     spell {
-        effect = BudgetModalEffect(
+        effect = Effects.BudgetModal(
             budget = 5,
             modes = listOf(
                 // {P} — Create a tapped Treasure token
@@ -56,17 +44,11 @@ val SeasonOfTheBold = card("Season of the Bold") {
                 // {P}{P} — Exile top 2 and play until end of next turn
                 BudgetMode(
                     cost = 2,
-                    effect = Effects.Composite(listOf(
-                        GatherCardsEffect(
-                            source = CardSource.TopOfLibrary(DynamicAmount.Fixed(2)),
-                            storeAs = "exiledCards"
-                        ),
-                        MoveCollectionEffect(
-                            from = "exiledCards",
-                            destination = CardDestination.ToZone(Zone.EXILE)
-                        ),
-                        GrantMayPlayFromExileEffect("exiledCards", MayPlayExpiry.UntilEndOfNextTurn)
-                    )),
+                    effect = Effects.Pipeline {
+                        val exiledCards = gather(CardSource.TopOfLibrary(2))
+                        exile(exiledCards)
+                        run(Effects.GrantMayPlayFromExile(exiledCards, MayPlayExpiry.UntilEndOfNextTurn))
+                    },
                     description = "Exile the top two cards of your library. Until the end of your next turn, you may play them"
                 ),
                 // {P}{P}{P} — Until end of your next turn, whenever you cast a spell,
@@ -74,15 +56,14 @@ val SeasonOfTheBold = card("Season of the Bold") {
                 BudgetMode(
                     cost = 3,
                     effect = Effects.CreateGlobalTriggeredAbility(
-                        ability = TriggeredAbility.create(
-                            trigger = SpellCastEvent(player = Player.You),
-                            binding = TriggerBinding.ANY,
-                            effect = DealDamageEffect(
-                                amount = DynamicAmount.Fixed(2),
-                                target = EffectTarget.ContextTarget(0)
-                            ),
-                            targetRequirement = TargetCreature(optional = true)
-                        ),
+                        ability = grantedTriggeredAbility {
+                            trigger = Triggers.you.casts()
+                            val creature = target(TargetFilter.Creature, optional = true)
+                            effect = Effects.DealDamage(
+                                amount = 2,
+                                target = creature
+                            )
+                        },
                         duration = Duration.UntilYourNextTurn
                     ),
                     description = "Until the end of your next turn, whenever you cast a spell, Season of the Bold deals 2 damage to up to one target creature"

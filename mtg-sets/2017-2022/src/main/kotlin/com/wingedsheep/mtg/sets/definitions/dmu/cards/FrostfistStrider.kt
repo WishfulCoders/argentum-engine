@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.dmu.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Frostfist Strider
@@ -27,16 +27,13 @@ val FrostfistStrider = card("Frostfist Strider") {
     toughness = 4
 
     keywords(Keyword.WARD)
-    keywordAbility(KeywordAbility.ward("{2}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
 
     // A stun counter replaces the permanent's next untap, so the tap sticks for a turn cycle.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.opponentControls()))
-        effect = Effects.Composite(
-            Effects.Tap(t),
-            Effects.AddCounters(Counters.STUN, 1, t)
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature.opponentControls())
+        effect = Effects.Tap(t) then Effects.AddCounters(CounterType.STUN, 1, t)
     }
 
     metadata {

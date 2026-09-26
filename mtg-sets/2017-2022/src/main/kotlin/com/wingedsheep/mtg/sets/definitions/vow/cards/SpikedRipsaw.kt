@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -23,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Equip {3}
  *
  * Standard Equipment shell: the +3/+3 is a [ModifyStats] static over [Filters.EquippedCreature].
- * The attack trigger lives on the Equipment itself (`Triggers.attacks(binding = ATTACHED)` =
+ * The attack trigger lives on the Equipment itself (`Triggers.<subject>.attacks(requires)` =
  * "equipped creature attacks"), so "that creature" is [EffectTarget.EquippedCreature]. The body is
  * the Midgar / Highway Robbery optional-sacrifice idiom: [Effects.IfYouDo] gathers the controller's
  * Forests, lets them choose up to one to sacrifice, and only on a successful sacrifice
@@ -45,7 +44,7 @@ val SpikedRipsaw = card("Spiked Ripsaw") {
     }
 
     triggeredAbility {
-        trigger = Triggers.attacks(binding = TriggerBinding.ATTACHED)
+        trigger = Triggers.attached.attacks()
         effect = Effects.IfYouDo(
             action = Effects.Pipeline {
                 val forests = gather(GameObjectFilter.Land.withSubtype("Forest"), player = Player.You)
@@ -57,7 +56,7 @@ val SpikedRipsaw = card("Spiked Ripsaw") {
                 )
                 sacrifice(chosen)
             },
-            ifYouDo = Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.EquippedCreature)
+            then = Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.EquippedCreature)
         )
     }
 

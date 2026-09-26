@@ -1,12 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.Mode
@@ -14,8 +16,6 @@ import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Bumi, King of Three Trials
@@ -60,32 +60,30 @@ val BumiKingOfThreeTrials = card("Bumi, King of Three Trials") {
         "battlefield tapped.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseUpToDynamic(
-            dynamicMax = DynamicAmount.Count(
+            dynamicMax = DynamicAmounts.count(
                 Player.You,
                 Zone.GRAVEYARD,
                 GameObjectFilter.Any.withSubtype(Subtype.LESSON)
             ),
             // Mode 1 — three +1/+1 counters on Bumi.
             Mode.noTarget(
-                Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 3, EffectTarget.Self),
+                Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 3, EffectTarget.Self),
                 description = "Put three +1/+1 counters on Bumi."
             ),
             // Mode 2 — target player scries 3.
-            Mode.withTarget(
-                Effects.Scry(3, EffectTarget.ContextTarget(0)),
-                Targets.Player,
-                description = "Target player scries 3."
-            ),
+            mode("Target player scries 3.") {
+                val player = target(Targets.Player)
+                effect = Effects.Scry(3, player)
+            },
             // Mode 3 — Earthbend 3.
-            Mode.withTarget(
-                Effects.Earthbend(3, EffectTarget.ContextTarget(0)),
-                TargetObject(filter = TargetFilter.Land.youControl()),
-                description = "Earthbend 3. (Target land you control becomes a 0/0 creature with " +
-                    "haste that's still a land. Put three +1/+1 counters on it. When it dies or is " +
-                    "exiled, return it to the battlefield tapped.)"
-            )
+            mode("Earthbend 3. (Target land you control becomes a 0/0 creature with " +
+                "haste that's still a land. Put three +1/+1 counters on it. When it dies or is " +
+                "exiled, return it to the battlefield tapped.)") {
+                val land = target(TargetFilter.Land.youControl())
+                effect = Effects.Earthbend(3, land)
+            }
         )
         description = "When Bumi enters, choose up to X, where X is the number of Lesson cards in " +
             "your graveyard — • Put three +1/+1 counters on Bumi. • Target player scries 3. " +

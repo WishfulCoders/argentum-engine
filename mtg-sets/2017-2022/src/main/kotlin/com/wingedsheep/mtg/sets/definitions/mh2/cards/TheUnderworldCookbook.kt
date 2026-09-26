@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * The Underworld Cookbook — Modern Horizons 2 #240
@@ -44,7 +43,7 @@ val TheUnderworldCookbook = card("The Underworld Cookbook") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{4}"), Costs.Tap, Costs.SacrificeSelf)
-        val t = target("target creature card from your graveyard", TargetObject(filter = TargetFilter.CreatureInYourGraveyard))
+        val t = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.Move(t, Zone.HAND)
         description = "{4}, {T}, Sacrifice this artifact: Return target creature card from your graveyard to your hand."
     }

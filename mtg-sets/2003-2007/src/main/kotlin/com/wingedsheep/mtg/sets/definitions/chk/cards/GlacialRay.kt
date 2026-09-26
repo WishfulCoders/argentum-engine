@@ -28,7 +28,7 @@ val GlacialRay = card("Glacial Ray") {
     splice("{1}{R}")
 
     spell {
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(2, t)
     }
 

@@ -30,12 +30,10 @@ val QuilledCharger = card("Quilled Charger") {
     power = 4
     toughness = 3
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         triggerRestriction = Conditions.SourceIsSaddled
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 2, EffectTarget.Self),
+        effect = Effects.ModifyStats(1, 2, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.MENACE, EffectTarget.Self)
-        )
     }
     keywordAbility(KeywordAbility.saddle(2))
     metadata {

@@ -32,7 +32,7 @@ val Blightspeaker = card("Blightspeaker") {
 
     activatedAbility {
         cost = Costs.Tap
-        val p = target("target", Targets.Player)
+        val p = target(Targets.Player)
         effect = Effects.LoseLife(1, p)
         description = "{T}: Target player loses 1 life."
     }

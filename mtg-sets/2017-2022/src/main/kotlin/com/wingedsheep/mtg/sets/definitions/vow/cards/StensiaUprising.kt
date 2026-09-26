@@ -3,6 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
@@ -10,11 +11,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Stensia Uprising — Innistrad: Crimson Vow #178
@@ -25,9 +24,9 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * exactly thirteen permanents, you may sacrifice this enchantment. When you do, it deals 7 damage
  * to any target.
  *
- * A single [Triggers.YourEndStep] trigger whose effect is a [Effects.Composite]:
+ * A single `Triggers.you.beginningOf(Step.END)` trigger whose effect is a [Effects.Composite]:
  *  1. [Effects.CreateToken] — one 1/1 red Human.
- *  2. A [ConditionalEffect] gated on `CompareAmounts(AggregateBattlefield(You, Any) == 13)` — the
+ *  2. A [Effects.If] gated on `CompareAmounts(AggregateBattlefield(You, Any) == 13)` — the
  *     "then if you control exactly thirteen permanents" intervening clause. GTE-style helpers
  *     (`ControlPermanentsAtLeast`) can't express *exactly* 13, so this uses the general
  *     [Conditions.CompareAmounts] with `ComparisonOperator.EQ`. The token just created counts toward
@@ -46,35 +45,34 @@ val StensiaUprising = card("Stensia Uprising") {
         "When you do, it deals 7 damage to any target."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                power = 1,
-                toughness = 1,
-                colors = setOf(Color.RED),
-                creatureTypes = setOf(Subtype.HUMAN.value),
-                imageUri = "https://cards.scryfall.io/normal/front/1/1/11c8ff82-b598-4ccc-83a7-99f1e53b64d3.jpg?1783924697"
-            ),
-            ConditionalEffect(
+        trigger = Triggers.you.beginningOf(Step.END)
+        effect = Effects.CreateToken(
+            power = 1,
+            toughness = 1,
+            colors = setOf(Color.RED),
+            creatureTypes = setOf(Subtype.HUMAN.value),
+            imageUri = "https://cards.scryfall.io/normal/front/1/1/11c8ff82-b598-4ccc-83a7-99f1e53b64d3.jpg?1783924697"
+        ) then
+            Effects.If(
                 condition = Conditions.CompareAmounts(
-                    DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Any),
+                    DynamicAmounts.battlefield(Player.You, GameObjectFilter.Any).count(),
                     ComparisonOperator.EQ,
-                    DynamicAmount.Fixed(13)
+                    13
                 ),
-                effect = ReflexiveTriggerEffect(
+                then = Effects.ReflexiveTrigger(
                     action = Effects.SacrificeTarget(EffectTarget.Self),
                     optional = true,
-                    reflexiveEffect = Effects.DealDamage(
-                        amount = 7,
-                        target = EffectTarget.ContextTarget(0),
-                        damageSource = EffectTarget.Self
-                    ),
-                    reflexiveTargetRequirements = listOf(Targets.Any),
                     descriptionOverride = "You may sacrifice this enchantment. When you do, " +
                         "it deals 7 damage to any target."
-                )
+                ) {
+                    val anyTarget = target(Targets.Any)
+                    effect = Effects.DealDamage(
+                        amount = 7,
+                        target = anyTarget,
+                        damageSource = EffectTarget.Self
+                    )
+                }
             )
-        )
         description = "At the beginning of your end step, create a 1/1 red Human creature token. " +
             "Then if you control exactly thirteen permanents, you may sacrifice this enchantment. " +
             "When you do, it deals 7 damage to any target."

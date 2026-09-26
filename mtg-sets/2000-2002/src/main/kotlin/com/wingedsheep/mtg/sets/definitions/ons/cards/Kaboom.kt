@@ -21,7 +21,7 @@ val Kaboom = card("Kaboom!") {
     oracleText = "Choose any number of target players or planeswalkers. For each of them, reveal cards from the top of your library until you reveal a nonland card, Kaboom! deals damage equal to that card's mana value to that player or planeswalker, then you put the revealed cards on the bottom of your library in any order."
 
     spell {
-        target = TargetPlayer(unlimited = true)
+        val player = target(TargetPlayer(unlimited = true))
         effect = Patterns.Library.revealUntilNonlandDealDamageEachTarget()
     }
 

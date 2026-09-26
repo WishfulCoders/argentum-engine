@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Ride's End
@@ -30,10 +29,7 @@ val RidesEnd = card("Ride's End") {
         "Exile target creature or Vehicle."
 
     spell {
-        val t = target(
-            "creature or Vehicle",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrVehicle)),
-        )
+        val t = target(TargetFilter(GameObjectFilter.CreatureOrVehicle))
         effect = Effects.Exile(t)
     }
 

@@ -7,13 +7,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -37,45 +31,31 @@ val UnitedBattlefront = card("United Battlefront") {
         "Put the rest on the bottom of your library in a random order."
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(7)),
-                    storeAs = "looked"
+        effect = Effects.Pipeline {
+            val looked = gather(CardSource.TopOfLibrary(7))
+            // "Look at the top seven cards" is information the player is owed even when
+            // nothing among them can be kept — show all seven, with the ineligible ones
+            // greyed out, instead of silently skipping the prompt.
+            val (onto, rest) = chooseUpToSplit(
+                2,
+                from = looked,
+                filter = GameObjectFilter(
+                    cardPredicates = listOf(
+                        CardPredicate.IsNoncreature,
+                        CardPredicate.IsNonland,
+                        CardPredicate.IsPermanent,
+                        CardPredicate.ManaValueAtMost(3)
+                    )
                 ),
-                SelectFromCollectionEffect(
-                    from = "looked",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(2)),
-                    filter = GameObjectFilter(
-                        cardPredicates = listOf(
-                            CardPredicate.IsNoncreature,
-                            CardPredicate.IsNonland,
-                            CardPredicate.IsPermanent,
-                            CardPredicate.ManaValueAtMost(3)
-                        )
-                    ),
-                    storeSelected = "onto",
-                    storeRemainder = "rest",
-                    prompt = "Put up to two noncreature, nonland permanent cards with mana value 3 or less " +
-                        "onto the battlefield",
-                    selectedLabel = "Put onto the battlefield",
-                    remainderLabel = "Put on bottom",
-                    // "Look at the top seven cards" is information the player is owed even when
-                    // nothing among them can be kept — show all seven, with the ineligible ones
-                    // greyed out, instead of silently skipping the prompt.
-                    showAllCards = true
-                ),
-                MoveCollectionEffect(
-                    from = "onto",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD)
-                ),
-                MoveCollectionEffect(
-                    from = "rest",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
-                    order = CardOrder.Random
-                )
+                prompt = "Put up to two noncreature, nonland permanent cards with mana value 3 or less " +
+                    "onto the battlefield",
+                selectedLabel = "Put onto the battlefield",
+                remainderLabel = "Put on bottom",
+                showAllCards = true
             )
-        )
+            move(onto, CardDestination.ToZone(Zone.BATTLEFIELD))
+            toLibraryBottom(rest, order = CardOrder.Random)
+        }
     }
 
     metadata {

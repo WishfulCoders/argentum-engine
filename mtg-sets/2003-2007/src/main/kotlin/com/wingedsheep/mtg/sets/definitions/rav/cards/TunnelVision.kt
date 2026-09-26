@@ -1,20 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.namedFromVariable
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.ConditionalOnCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherUntilMatchEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Tunnel Vision — Ravnica: City of Guilds #72 (canonical printing)
@@ -52,43 +45,23 @@ val TunnelVision = card("Tunnel Vision") {
         "their library. Otherwise, the player shuffles."
 
     spell {
-        val victim = target("target player", TargetPlayer())
-        val named = GameObjectFilter.Any.namedFromVariable("chosenName")
-
-        effect = Effects.Composite(
-            listOf(
-                // 1. Name a card. Any name is legal, basic lands included.
-                Effects.ChooseCardName(
-                    storeAs = "chosenName",
-                    prompt = "Choose a card name"
-                ),
-                // 2. Walk the target's library from the top until that name shows up (or it runs out).
-                GatherUntilMatchEffect(
-                    player = Player.TargetPlayer,
-                    filter = named,
-                    storeMatch = "match",
-                    storeRevealed = "revealed"
-                ),
-                RevealCollectionEffect(from = "revealed"),
-                // 3. Split the reveal: the named card vs. everything seen on the way down to it.
-                SelectFromCollectionEffect(
-                    from = "revealed",
-                    selection = SelectionMode.All,
-                    filter = named,
-                    storeSelected = "namedCard",
-                    storeRemainder = "rest"
-                ),
-                // 4. Hit: bin the rest, which leaves the named card on top. Miss: shuffle, bin nothing.
-                ConditionalOnCollectionEffect(
-                    collection = "match",
-                    ifNotEmpty = MoveCollectionEffect(
-                        from = "rest",
-                        destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.TargetPlayer)
-                    ),
-                    ifEmpty = ShuffleLibraryEffect(target = victim)
-                )
-            )
-        )
+        val victim = target(Targets.Player)
+        effect = Effects.Pipeline {
+            // 1. Name a card. Any name is legal, basic lands included.
+            val chosenName = chooseCardName(prompt = "Choose a card name")
+            val named = GameObjectFilter.Any.namedFromVariable(chosenName)
+            // 2. Walk the target's library from the top until that name shows up (or it runs out).
+            val (match, revealed) = gatherUntilMatch(named, player = Player.TargetPlayer)
+            reveal(revealed)
+            // 3. Split the reveal: the named card vs. everything seen on the way down to it.
+            val (_, rest) = selectAllSplit(from = revealed, filter = named)
+            // 4. Hit: bin the rest, which leaves the named card on top. Miss: shuffle, bin nothing.
+            ifNotEmpty(match) {
+                toGraveyard(rest, Player.TargetPlayer)
+            } orElse {
+                run(Effects.ShuffleLibrary(target = victim))
+            }
+        }
     }
 
     metadata {

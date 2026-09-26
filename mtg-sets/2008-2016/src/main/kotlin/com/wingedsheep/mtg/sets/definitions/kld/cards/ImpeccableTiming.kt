@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Impeccable Timing
@@ -19,7 +18,7 @@ val ImpeccableTiming = card("Impeccable Timing") {
     oracleText = "Impeccable Timing deals 3 damage to target attacking or blocking creature."
 
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter.AttackingOrBlockingCreature))
+        val t = target(TargetFilter.AttackingOrBlockingCreature)
         effect = Effects.DealDamage(3, t)
     }
 

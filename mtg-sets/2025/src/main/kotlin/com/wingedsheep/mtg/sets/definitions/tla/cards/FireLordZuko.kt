@@ -1,24 +1,19 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.effects.AddManaEffect
 import com.wingedsheep.sdk.scripting.effects.ManaExpiry
 import com.wingedsheep.sdk.scripting.events.SpellCastPredicate
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Fire Lord Zuko
@@ -33,7 +28,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  *
  * Dynamic firebending: the `firebending(n)` DSL only models a fixed amount, so the attack trigger
  * is hand-wired as an [AddManaEffect] producing red mana equal to this creature's power
- * (`EntityProperty(Source, Power)`) with [ManaExpiry.END_OF_COMBAT] — the same firebending-style
+ * (`EntityProperty(Self, Power)`) with [ManaExpiry.END_OF_COMBAT] — the same firebending-style
  * mana the pool keeps through combat and discards once combat ends. The display keyword is omitted
  * because the `Firebending N` keyword ability is fixed-N only; the behavior and reminder text live
  * in the triggered ability and `oracleText`.
@@ -55,10 +50,10 @@ val FireLordZuko = card("Fire Lord Zuko") {
         "put a +1/+1 counter on each creature you control."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = AddManaEffect(
+        trigger = Triggers.self.attacks()
+        effect = Effects.AddMana(
             Color.RED,
-            DynamicAmount.EntityProperty(EntityReference.Source, EntityNumericProperty.Power),
+            DynamicAmounts.sourcePower(),
             expiry = ManaExpiry.END_OF_COMBAT,
         )
         description = "Firebending X, where X is Fire Lord Zuko's power. Whenever this creature " +
@@ -66,24 +61,19 @@ val FireLordZuko = card("Fire Lord Zuko") {
     }
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            requires = setOf(SpellCastPredicate.CastFromZone(Zone.EXILE)),
-        )
+        trigger = Triggers.you.casts(requires = setOf(SpellCastPredicate.CastFromZone(Zone.EXILE)))
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity),
         )
         description = "Whenever you cast a spell from exile, put a +1/+1 counter on each creature you control."
     }
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(from = Zone.EXILE, to = Zone.BATTLEFIELD),
-            binding = TriggerBinding.ANY,
-        ).youControl()
+        trigger = Triggers.a(GameObjectFilter.Any.youControl()).enters(from = Zone.EXILE)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity),
         )
         description = "Whenever a permanent you control enters from exile, put a +1/+1 counter on each creature you control."
     }

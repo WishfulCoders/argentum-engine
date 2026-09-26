@@ -7,7 +7,6 @@ import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.mtg.sets.definitions.otj.cards.ErthaJoFrontierMentor
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
@@ -16,6 +15,9 @@ import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Ertha Jo, Frontier Mentor — {2}{R}{W} Legendary Creature — Kor Advisor 2/4
@@ -25,7 +27,7 @@ import io.kotest.matchers.shouldBe
  *  Whenever you activate an ability that targets a creature or player, copy that ability. You may
  *  choose new targets for the copy."
  *
- * Exercises the new `Triggers.youActivateAbilityTargeting(AbilityTargetMatch.CreatureOrPlayer)`
+ * Exercises the new `Triggers.you.activatesAbility(targeting = Recipient.CreatureOrPlayer)`
  * trigger + matcher: the copy fires only when the activated ability targets a creature or player,
  * and the copy reprompts for new targets (CR 707.10 / 707.10c) so a second creature can be hit.
  */
@@ -42,7 +44,7 @@ class ErthaJoFrontierMentorScenarioTest : FunSpec({
         activatedAbility {
             cost = AbilityCost.Tap
             effect = Effects.ModifyStats(1, 0, EffectTarget.ContextTarget(0))
-            target = Targets.CreatureYouControl
+            target = TargetObject(filter = TargetFilter.CreatureYouControl)
             timing = TimingRule.InstantSpeed
         }
     }
@@ -128,7 +130,7 @@ class ErthaJoFrontierMentorScenarioTest : FunSpec({
             guard++
         }
         (driver.state.pendingDecision is ChooseTargetsDecision) shouldBe true
-        driver.submitTargetSelection(me, listOf(creatureB)).isSuccess shouldBe true
+        driver.submitTargetSelection(me, listOf(creatureB)).outcome shouldBe Outcome.Done
 
         // Resolve everything (the copy, then the original ability).
         guard = 0

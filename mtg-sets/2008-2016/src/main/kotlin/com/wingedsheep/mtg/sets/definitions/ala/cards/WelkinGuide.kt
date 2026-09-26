@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Welkin Guide
@@ -16,7 +17,7 @@ import com.wingedsheep.sdk.model.Rarity
  * When this creature enters, target creature gets +2/+2 and gains flying until end of turn.
  *
  * The printed flying is a bare [Keyword.FLYING] on the card's keyword set. The enters trigger is
- * [Triggers.EntersBattlefield] with one named [Targets.Creature] slot, and its effect is the pair
+ * `Triggers.self.enters()` with one named [Targets.Creature] slot, and its effect is the pair
  * [Effects.ModifyStats] `then` [Effects.GrantKeyword] over that same bound target — both take the
  * default [com.wingedsheep.sdk.scripting.Duration.EndOfTurn], which is the printed "until end of
  * turn" for the whole sentence.
@@ -33,10 +34,9 @@ val WelkinGuide = card("Welkin Guide") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", Targets.Creature)
-        effect = Effects.ModifyStats(2, 2, t)
-            .then(Effects.GrantKeyword(Keyword.FLYING, t))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 2, t) then Effects.GrantKeyword(Keyword.FLYING, t)
     }
 
     metadata {

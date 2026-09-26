@@ -26,7 +26,7 @@ val SageAven = card("Sage Aven") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.lookAtTopAndReorder(4)
     }
 

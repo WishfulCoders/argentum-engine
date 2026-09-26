@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
  * token with flying.
  * Crew 2
  *
- * "Your second card each turn" is [Triggers.NthCardDrawn] — it reads the per-player draw counter,
+ * "Your second card each turn" is `Triggers.<player>.drawsNth(n)` — it reads the per-player draw counter,
  * so it fires exactly once per turn even when a single multi-card draw crosses the threshold, and
  * cards put into hand without the word "draw" (CR 121.5) don't advance it.
  */
@@ -35,7 +35,7 @@ val ThopterFabricator = card("Thopter Fabricator") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.NthCardDrawn(2)
+        trigger = Triggers.you.drawsNth(2)
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

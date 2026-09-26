@@ -1,21 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Seismic Sense — {G} Sorcery — Lesson
@@ -36,33 +30,26 @@ val SeismicSense = card("Seismic Sense") {
     oracleText = "Look at the top X cards of your library, where X is the number of lands you control. You may reveal a creature or land card from among them and put it into your hand. Put the rest on the bottom of your library in a random order."
 
     spell {
-        effect = Effects.Composite(
-            GatherCardsEffect(
+        effect = Effects.Pipeline {
+            val looked = gather(
                 CardSource.TopOfLibrary(
-                    DynamicAmount.Count(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Land)
-                ),
-                storeAs = "looked"
-            ),
-            SelectFromCollectionEffect(
-                from = "looked",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
+                    DynamicAmounts.count(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Land)
+                )
+            )
+            val (kept, rest) = chooseUpToSplit(
+                1,
+                from = looked,
                 filter = GameObjectFilter(
                     cardPredicates = listOf(
                         CardPredicate.Or(listOf(CardPredicate.IsCreature, CardPredicate.IsLand))
                     )
                 ),
-                storeSelected = "kept",
-                storeRemainder = "rest",
                 selectedLabel = "Put in hand",
                 remainderLabel = "Put on bottom"
-            ),
-            MoveCollectionEffect(from = "kept", destination = CardDestination.ToZone(Zone.HAND), revealed = true),
-            MoveCollectionEffect(
-                from = "rest",
-                destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
-                order = CardOrder.Random
             )
-        )
+            toHand(kept, revealed = true)
+            toLibraryBottom(rest, order = CardOrder.Random)
+        }
     }
 
     metadata {

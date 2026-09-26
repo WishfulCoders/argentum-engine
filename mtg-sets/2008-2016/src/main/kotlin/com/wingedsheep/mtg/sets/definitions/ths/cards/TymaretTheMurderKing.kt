@@ -28,7 +28,7 @@ val TymaretTheMurderKing = card("Tymaret, the Murder King") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{R}"), Costs.SacrificeAnother(GameObjectFilter.Creature))
-        val t = target("target", Targets.PlayerOrPlaneswalker)
+        val t = target(Targets.PlayerOrPlaneswalker)
         effect = Effects.DealDamage(2, t)
     }
 

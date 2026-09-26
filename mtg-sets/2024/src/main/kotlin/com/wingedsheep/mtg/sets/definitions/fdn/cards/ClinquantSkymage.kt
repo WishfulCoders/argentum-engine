@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fdn.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Flying
  * Whenever you draw a card, put a +1/+1 counter on this creature.
  *
- * The draw trigger ([Triggers.YouDraw]) fires once per card drawn (CR 121.2), so
+ * The draw trigger (`Triggers.you.draws()`) fires once per card drawn (CR 121.2), so
  * multi-card draws stack multiple counters.
  */
 val ClinquantSkymage = card("Clinquant Skymage") {
@@ -31,8 +31,8 @@ val ClinquantSkymage = card("Clinquant Skymage") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YouDraw
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.draws()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     metadata {

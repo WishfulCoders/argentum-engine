@@ -2,13 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.msh.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Trickster's Stratagem
@@ -24,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  *  - The connive half copies Unstable Experiment: "up to one target creature you control connives"
  *    means *that creature* is the source of the connive keyword action (CR 701.50), so when the
  *    optional target was declined — or the chosen creature has left the battlefield by resolution —
- *    nothing connives and you neither draw nor discard. Hence the [ConditionalEffect] gate on the
+ *    nothing connives and you neither draw nor discard. Hence the [Effects.If] gate on the
  *    second target slot actually holding a creature, rather than an unconditional connive.
  */
 val TrickstersStratagem = card("Trickster's Stratagem") {
@@ -37,14 +34,11 @@ val TrickstersStratagem = card("Trickster's Stratagem") {
         "+1/+1 counter on that creature.)"
 
     spell {
-        val victim = target("target creature an opponent controls", Targets.CreatureOpponentControls)
-        val conniver = target(
-            "up to one target creature you control",
-            TargetCreature(optional = true, filter = TargetFilter.CreatureYouControl),
-        )
-        effect = Effects.PutSecondFromTopOrBottomOfLibrary(victim) then ConditionalEffect(
-            condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature, targetIndex = 1),
-            effect = Effects.Connive(conniver),
+        val victim = target(TargetFilter.CreatureOpponentControls)
+        val conniver = target(TargetFilter.CreatureYouControl, optional = true)
+        effect = Effects.PutSecondFromTopOrBottomOfLibrary(victim) then Effects.If(
+            condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature, conniver),
+            then = Effects.Connive(conniver),
         )
     }
 

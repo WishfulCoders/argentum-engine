@@ -2,11 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.dom.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Merfolk Trickster
@@ -28,9 +27,9 @@ val MerfolkTrickster = card("Merfolk Trickster") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("creature an opponent controls", Targets.CreatureOpponentControls)
-        effect = Effects.Tap(t).then(Effects.RemoveAllAbilities(t))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.Tap(t) then Effects.RemoveAllAbilities(t)
     }
 
     metadata {

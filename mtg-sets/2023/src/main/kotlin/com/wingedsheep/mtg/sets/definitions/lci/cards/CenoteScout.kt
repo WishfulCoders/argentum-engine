@@ -21,7 +21,7 @@ val CenoteScout = card("Cenote Scout") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Explore(EffectTarget.Self)
     }
 

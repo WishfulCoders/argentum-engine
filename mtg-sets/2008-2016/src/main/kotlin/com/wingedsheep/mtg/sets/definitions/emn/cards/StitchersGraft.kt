@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -25,7 +24,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * two Grafts on one attacker grants the flag twice over the *same* untap step rather than two, per
  * the 2016-07-13 ruling.
  *
- * The drawback rides [Triggers.becomesUnattached] — the mirror of "becomes attached", which fires on
+ * The drawback rides `Triggers.<subject>.becomesUnattached(from, controller)` — the mirror of "becomes attached", which fires on
  * every way an Equipment can come off (CR 701.3d): equipping it to a new creature, the Graft leaving
  * the battlefield, the host leaving the battlefield, and the CR 704.5n state-based unattach when the
  * host stops being a creature or the Graft stops being an Equipment. "That permanent" is
@@ -48,7 +47,7 @@ val StitchersGraft = card("Stitcher's Graft") {
     }
 
     triggeredAbility {
-        trigger = Triggers.attacks(binding = TriggerBinding.ATTACHED)
+        trigger = Triggers.attached.attacks()
         effect = Effects.GrantKeyword(
             AbilityFlag.DOESNT_UNTAP,
             EffectTarget.EquippedCreature,
@@ -59,7 +58,7 @@ val StitchersGraft = card("Stitcher's Graft") {
     }
 
     triggeredAbility {
-        trigger = Triggers.becomesUnattached()
+        trigger = Triggers.self.becomesUnattached()
         effect = Effects.SacrificeTarget(EffectTarget.AttachedToTriggeringPermanent)
         description = "Whenever this Equipment becomes unattached from a permanent, sacrifice that permanent."
     }

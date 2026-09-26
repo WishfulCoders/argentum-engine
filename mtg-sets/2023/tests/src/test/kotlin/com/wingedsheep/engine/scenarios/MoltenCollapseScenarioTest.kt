@@ -1,7 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.CastSpell
-import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
@@ -17,6 +16,8 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import io.kotest.matchers.shouldNotBe
 
 /**
  * Molten Collapse — {B}{R} Sorcery
@@ -57,7 +58,7 @@ class MoltenCollapseScenarioTest : FunSpec({
 
     /** Move a permanent card to the graveyard to trigger descend (CR 700.11). */
     fun GameTestDriver.descend(entityId: EntityId) {
-        val result = ZoneTransitionService.moveToZone(
+        val result = zones.moveToZone(
             state = state,
             entityId = entityId,
             destinationZone = Zone.GRAVEYARD
@@ -93,7 +94,7 @@ class MoltenCollapseScenarioTest : FunSpec({
             )
         ))
 
-        result.isSuccess shouldBe false
+        result.outcome shouldNotBe Outcome.Done
     }
 
     test("not descended — choose mode 0 destroys target creature") {
@@ -110,7 +111,7 @@ class MoltenCollapseScenarioTest : FunSpec({
             chosenModes = listOf(0),
             modeTargetsOrdered = listOf(listOf(ChosenTarget.Permanent(creature)))
         ))
-        if (!result.isSuccess) throw AssertionError("cast failed: ${result.error}")
+        if (result.outcome !is Outcome.Done) throw AssertionError("cast failed: ${result.error}")
 
         d.bothPass()
         d.findPermanent(p2, "Centaur Courser").shouldBeNull()
@@ -130,7 +131,7 @@ class MoltenCollapseScenarioTest : FunSpec({
             chosenModes = listOf(1),
             modeTargetsOrdered = listOf(listOf(ChosenTarget.Permanent(trinket)))
         ))
-        if (!result.isSuccess) throw AssertionError("cast failed: ${result.error}")
+        if (result.outcome !is Outcome.Done) throw AssertionError("cast failed: ${result.error}")
 
         d.bothPass()
         d.findPermanent(p2, "Test Trinket").shouldBeNull()
@@ -151,7 +152,7 @@ class MoltenCollapseScenarioTest : FunSpec({
             modeTargetsOrdered = listOf(listOf(ChosenTarget.Permanent(relic)))
         ))
 
-        result.isSuccess shouldBe false
+        result.outcome shouldNotBe Outcome.Done
     }
 
     test("descended this turn — may choose both: destroy the creature AND the MV<=1 permanent") {
@@ -176,7 +177,7 @@ class MoltenCollapseScenarioTest : FunSpec({
                 listOf(ChosenTarget.Permanent(trinket))
             )
         ))
-        if (!result.isSuccess) throw AssertionError("cast failed: ${result.error}")
+        if (result.outcome !is Outcome.Done) throw AssertionError("cast failed: ${result.error}")
 
         d.bothPass()
         d.findPermanent(p2, "Centaur Courser").shouldBeNull()
@@ -201,7 +202,7 @@ class MoltenCollapseScenarioTest : FunSpec({
             chosenModes = listOf(0),
             modeTargetsOrdered = listOf(listOf(ChosenTarget.Permanent(creature)))
         ))
-        if (!result.isSuccess) throw AssertionError("cast failed: ${result.error}")
+        if (result.outcome !is Outcome.Done) throw AssertionError("cast failed: ${result.error}")
 
         d.bothPass()
         d.findPermanent(p2, "Centaur Courser").shouldBeNull()

@@ -22,10 +22,7 @@ val Foresee = card("Foresee") {
     oracleText = "Scry 4, then draw two cards."
 
     spell {
-        effect = Effects.Composite(
-            Effects.Scry(4),
-            Effects.DrawCards(2)
-        )
+        effect = Effects.Scry(4) then Effects.DrawCards(2)
     }
 
     metadata {

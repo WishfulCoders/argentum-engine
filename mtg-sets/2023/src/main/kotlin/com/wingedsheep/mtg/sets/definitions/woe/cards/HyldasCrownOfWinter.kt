@@ -2,13 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Hylda's Crown of Winter
@@ -39,12 +39,12 @@ val HyldasCrownOfWinter = card("Hylda's Crown of Winter") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
-        val creature = target("target creature", TargetCreature())
+        val creature = target(TargetFilter.Creature)
         effect = Effects.Tap(creature)
-        genericCostReduction = DynamicAmount.Conditional(
+        genericCostReduction = DynamicAmounts.conditional(
             condition = Conditions.IsYourTurn,
-            ifTrue = DynamicAmount.Fixed(1),
-            ifFalse = DynamicAmount.Fixed(0),
+            ifTrue = 1,
+            ifFalse = 0,
         )
         description = "{1}, {T}: Tap target creature. This ability costs {1} less to activate " +
             "during your turn."
@@ -53,10 +53,10 @@ val HyldasCrownOfWinter = card("Hylda's Crown of Winter") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.SacrificeSelf)
         effect = Effects.DrawCards(
-            DynamicAmount.AggregateBattlefield(
-                player = Player.EachOpponent,
-                filter = GameObjectFilter.Creature.tapped(),
-            )
+            DynamicAmounts.battlefield(
+                Player.EachOpponent,
+                GameObjectFilter.Creature.tapped(),
+            ).count()
         )
         description = "{3}, Sacrifice Hylda's Crown of Winter: Draw a card for each tapped " +
             "creature your opponents control."

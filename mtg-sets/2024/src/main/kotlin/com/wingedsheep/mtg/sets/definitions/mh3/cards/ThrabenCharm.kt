@@ -3,17 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.mh3.cards
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.TargetPlayer
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Thraben Charm
@@ -42,29 +38,23 @@ val ThrabenCharm = card("Thraben Charm") {
     spell {
         modal(chooseCount = 1) {
             mode("Thraben Charm deals damage equal to twice the number of creatures you control to target creature") {
-                val creature = target("target creature", Targets.Creature)
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.DealDamage(
-                    DynamicAmount.Multiply(DynamicAmounts.creaturesYouControl(), 2),
+                    DynamicAmounts.creaturesYouControl() * 2,
                     creature,
                 )
             }
             mode("Destroy target enchantment") {
-                val enchantment = target("target enchantment", Targets.Enchantment)
+                val enchantment = target(TargetFilter.Enchantment)
                 effect = Effects.Destroy(enchantment)
             }
             mode("Exile any number of target players' graveyards") {
-                target("any number of target players", TargetPlayer(unlimited = true))
-                effect = ForEachTargetEffect(
-                    listOf(
-                        GatherCardsEffect(
-                            source = CardSource.FromZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
-                            storeAs = "tc_graveyard",
-                        ),
-                        MoveCollectionEffect(
-                            from = "tc_graveyard",
-                            destination = CardDestination.ToZone(Zone.EXILE),
-                        ),
-                    ),
+                target(TargetPlayer(unlimited = true))
+                effect = Effects.ForEachTarget(
+                    Effects.Pipeline {
+                    val tcGraveyard = gather(CardSource.FromZone(Zone.GRAVEYARD, Player.ContextPlayer(0)))
+                    exile(tcGraveyard)
+                },
                 )
             }
         }

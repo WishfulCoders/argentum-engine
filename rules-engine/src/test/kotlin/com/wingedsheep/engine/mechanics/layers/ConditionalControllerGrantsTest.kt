@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.mechanics.layers
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.ControllerGrants
 import com.wingedsheep.engine.mechanics.targeting.ControllerHexproof
 import com.wingedsheep.engine.mechanics.targeting.ControllerShroud
@@ -23,7 +24,6 @@ import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.state.components.identity.OwnerComponent
 import com.wingedsheep.sdk.core.CardType
 import com.wingedsheep.sdk.core.CounterType
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.TypeLine
 import com.wingedsheep.sdk.core.Zone
@@ -45,7 +45,6 @@ import com.wingedsheep.sdk.scripting.ProtectionScope
 import com.wingedsheep.sdk.scripting.StationUsingToughness
 import com.wingedsheep.sdk.scripting.StaticAbility
 import com.wingedsheep.sdk.scripting.conditions.Condition
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -78,7 +77,7 @@ class ConditionalControllerGrantsTest : FunSpec({
     val player = EntityId.generate()
 
     /** Cheap, easy-to-flip gate: "as long as this permanent has a shield counter on it". */
-    val gate: Condition = Conditions.SourceHasCounter(CounterTypeFilter.Named(Counters.SHIELD))
+    val gate: Condition = Conditions.SourceHasCounter(CounterType.SHIELD)
 
     /**
      * One marker under test: the SDK ability that produces it, and how to read the stamped
@@ -248,18 +247,18 @@ class ConditionalControllerGrantsTest : FunSpec({
 
         withClue("gate open: no shield counter, so the grant is off") {
             val state = battlefieldWith(permanentId, stamped, shieldCounters = 0)
-            ControllerGrants.isActive(state, permanentId, gate) shouldBe false
+            ControllerGrants.isActive(state, permanentId, gate, predicateEvaluator = PredicateEvaluator(cardRegistry = null)) shouldBe false
         }
         withClue("gate closed: a shield counter switches the grant on") {
             val state = battlefieldWith(permanentId, stamped, shieldCounters = 1)
-            ControllerGrants.isActive(state, permanentId, gate) shouldBe true
+            ControllerGrants.isActive(state, permanentId, gate, predicateEvaluator = PredicateEvaluator(cardRegistry = null)) shouldBe true
         }
     }
 
     test("an unconditional grant is always active") {
         val permanentId = EntityId.generate()
         val state = battlefieldWith(permanentId, stamp(GrantShroudToController), shieldCounters = 0)
-        ControllerGrants.isActive(state, permanentId, condition = null) shouldBe true
+        ControllerGrants.isActive(state, permanentId, condition = null, predicateEvaluator = PredicateEvaluator(cardRegistry = null)) shouldBe true
     }
 
     context("the facade readers honour the gate") {
@@ -267,10 +266,12 @@ class ConditionalControllerGrantsTest : FunSpec({
             val permanentId = EntityId.generate()
             val stamped = stamp(ConditionalStaticAbility(GrantShroudToController, gate))
             ControllerShroud.appliesTo(
-                battlefieldWith(permanentId, stamped, shieldCounters = 0), player
+                battlefieldWith(permanentId, stamped, shieldCounters = 0), player,
+                predicateEvaluator = PredicateEvaluator(cardRegistry = null)
             ) shouldBe false
             ControllerShroud.appliesTo(
-                battlefieldWith(permanentId, stamped, shieldCounters = 1), player
+                battlefieldWith(permanentId, stamped, shieldCounters = 1), player,
+                predicateEvaluator = PredicateEvaluator(cardRegistry = null)
             ) shouldBe true
         }
 
@@ -278,10 +279,12 @@ class ConditionalControllerGrantsTest : FunSpec({
             val permanentId = EntityId.generate()
             val stamped = stamp(ConditionalStaticAbility(GrantHexproofToController, gate))
             ControllerHexproof.appliesTo(
-                battlefieldWith(permanentId, stamped, shieldCounters = 0), player
+                battlefieldWith(permanentId, stamped, shieldCounters = 0), player,
+                predicateEvaluator = PredicateEvaluator(cardRegistry = null)
             ) shouldBe false
             ControllerHexproof.appliesTo(
-                battlefieldWith(permanentId, stamped, shieldCounters = 1), player
+                battlefieldWith(permanentId, stamped, shieldCounters = 1), player,
+                predicateEvaluator = PredicateEvaluator(cardRegistry = null)
             ) shouldBe true
         }
 
@@ -289,7 +292,8 @@ class ConditionalControllerGrantsTest : FunSpec({
             val permanentId = EntityId.generate()
             val stamped = stamp(GrantShroudToController)
             ControllerShroud.appliesTo(
-                battlefieldWith(permanentId, stamped, shieldCounters = 0), player
+                battlefieldWith(permanentId, stamped, shieldCounters = 0), player,
+                predicateEvaluator = PredicateEvaluator(cardRegistry = null)
             ) shouldBe true
         }
     }

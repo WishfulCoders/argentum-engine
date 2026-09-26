@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -31,7 +30,7 @@ val SerraAdvocate = card("Serra Advocate") {
     keywords(Keyword.FLYING)
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", TargetCreature(filter = TargetFilter.AttackingOrBlockingCreature))
+        val t = target(TargetFilter.AttackingOrBlockingCreature)
         effect = Effects.ModifyStats(2, 2, t)
     }
     metadata {

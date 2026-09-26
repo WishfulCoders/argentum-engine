@@ -4,12 +4,13 @@
 
 package com.wingedsheep.mtg.sets.definitions.ulg.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 
 /**
@@ -24,8 +25,8 @@ val IronMaiden = card("Iron Maiden") {
     typeLine = "Artifact"
     oracleText = "At the beginning of each opponent's upkeep, this artifact deals X damage to that player, where X is the number of cards in their hand minus 4."
     triggeredAbility {
-        trigger = Triggers.EachOpponentUpkeep
-        effect = DealDamageEffect(4, EffectTarget.PlayerRef(Player.TriggeringPlayer))
+        trigger = Triggers.anOpponent.beginningOf(Step.UPKEEP)
+        effect = Effects.DealDamage(4, EffectTarget.PlayerRef(Player.TriggeringPlayer))
     }
     metadata {
         rarity = Rarity.RARE

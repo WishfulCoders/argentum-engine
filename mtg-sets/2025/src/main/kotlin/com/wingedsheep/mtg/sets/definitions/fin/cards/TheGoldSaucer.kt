@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.FlipCoinEffect
 
 
 /**
@@ -31,7 +30,7 @@ val TheGoldSaucer = card("The Gold Saucer") {
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        effect = FlipCoinEffect(wonEffect = Effects.CreateTreasure(1))
+        effect = Effects.FlipCoin(wonEffect = Effects.CreateTreasure(1))
     }
     activatedAbility {
         cost = Costs.Composite(

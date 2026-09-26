@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  *
  * One of Darksteel's five "Feather/Horn/Claw/Eye/Tooth" artifacts — a single shape with the spell
  * filter recoloured. "A player" is every player, this artifact's controller included, so the trigger
- * is [Triggers.anyPlayerCasts] (binding ANY, `Player.Each`). The filter is colour-based rather than
+ * is `Triggers.anyPlayer.casts(spell, requires)` (binding ANY, `Player.Each`). The filter is colour-based rather than
  * type-based: any white spell qualifies, a partly-white multicoloured spell included. The printed
  * "you may" is the builder's `optional = true`, which lowers to a `Gate.MayDecide` around the life
  * gain; the artifact's controller is always the one who decides and gains, whoever cast the spell.
@@ -28,7 +28,7 @@ val AngelsFeather = card("Angel's Feather") {
     oracleText = "Whenever a player casts a white spell, you may gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.anyPlayerCasts(GameObjectFilter.Any.withColor(Color.WHITE))
+        trigger = Triggers.anyPlayer.casts(GameObjectFilter.Any.withColor(Color.WHITE))
         optional = true
         effect = Effects.GainLife(1)
     }

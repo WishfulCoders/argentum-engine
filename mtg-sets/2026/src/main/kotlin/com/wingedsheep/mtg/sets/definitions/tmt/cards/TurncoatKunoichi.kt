@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.sneak
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.conditions.SneakCostWasPaid
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Turncoat Kunoichi
@@ -35,17 +34,17 @@ val TurncoatKunoichi = card("Turncoat Kunoichi") {
     // ETB: exile the chosen creature. With the sneak cost paid the exile is permanent;
     // otherwise it returns when Turncoat Kunoichi leaves (the LTB trigger below).
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("target creature an opponent controls", Targets.CreatureOpponentControls)
-        effect = ConditionalEffect(
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.If(
             condition = SneakCostWasPaid,
-            effect = Effects.Exile(creature),
-            elseEffect = Effects.ExileUntilLeaves(creature)
+            then = Effects.Exile(creature),
+            otherwise = Effects.ExileUntilLeaves(creature)
         )
     }
     // LTB: return any creature exiled "until this leaves" (no-op when it was exiled permanently).
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 

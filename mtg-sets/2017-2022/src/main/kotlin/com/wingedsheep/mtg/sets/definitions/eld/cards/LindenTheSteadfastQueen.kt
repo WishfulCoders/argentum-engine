@@ -36,10 +36,7 @@ val LindenTheSteadfastQueen = card("Linden, the Steadfast Queen") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.attacks(
-            filter = GameObjectFilter.Creature.withColor(Color.WHITE).youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.withColor(Color.WHITE).youControl()).attacks()
         effect = Effects.GainLife(1)
         description = "Whenever a white creature you control attacks, you gain 1 life."
     }

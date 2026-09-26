@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -26,7 +25,7 @@ val RadiantsJudgment = card("Radiant's Judgment") {
     typeLine = "Instant"
     oracleText = "Destroy target creature with power 4 or greater.\nCycling {2} ({2}, Discard this card: Draw a card.)"
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.powerAtLeast(4)))
+        val t = target(TargetFilter.Creature.powerAtLeast(4))
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     keywordAbility(KeywordAbility.cycling("{2}"))

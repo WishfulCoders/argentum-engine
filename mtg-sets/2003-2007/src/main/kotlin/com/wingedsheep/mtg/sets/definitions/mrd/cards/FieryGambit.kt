@@ -1,19 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.Gate
-import com.wingedsheep.sdk.scripting.effects.GatedEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Fiery Gambit — Mirrodin #90
@@ -52,46 +50,36 @@ val FieryGambit = card("Fiery Gambit") {
         "opponent. If you win three or more flips, draw nine cards and untap all lands you control."
 
     spell {
-        val creature = target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
 
         /** `wins >= threshold` over the tally the flip run published. */
-        fun wonAtLeast(threshold: Int) = Gate.WhenCondition(
-            Conditions.CompareAmounts(
-                DynamicAmount.VariableReference("fieryGambitWins"),
-                ComparisonOperator.GTE,
-                DynamicAmount.Fixed(threshold),
-            )
+        fun wonAtLeast(threshold: Int) = Conditions.CompareAmounts(
+            DynamicAmounts.storedNumber("fieryGambitWins"),
+            ComparisonOperator.GTE,
+            threshold,
         )
 
-        effect = Effects.FlipCoinsUntilLoss(storeWinsAs = "fieryGambitWins")
-            .then(
-                GatedEffect(
-                    gate = wonAtLeast(1),
-                    then = Effects.DealDamage(3, creature),
-                    descriptionOverride = "If you win one or more flips, Fiery Gambit deals 3 " +
-                        "damage to target creature.",
-                )
-            )
-            .then(
-                GatedEffect(
-                    gate = wonAtLeast(2),
-                    then = Effects.DealDamage(6, EffectTarget.PlayerRef(Player.EachOpponent)),
-                    descriptionOverride = "If you win two or more flips, Fiery Gambit deals 6 " +
-                        "damage to each opponent.",
-                )
-            )
-            .then(
-                GatedEffect(
-                    gate = wonAtLeast(3),
-                    then = Effects.DrawCards(9)
-                        .then(
-                            Patterns.Group.untapGroup(
-                                GroupFilter(GameObjectFilter.Land.youControl())
-                            )
-                        ),
-                    descriptionOverride = "If you win three or more flips, draw nine cards and " +
-                        "untap all lands you control.",
-                )
+        effect = Effects.FlipCoinsUntilLoss(storeWinsAs = "fieryGambitWins") then
+            Effects.If(
+                condition = wonAtLeast(1),
+                then = Effects.DealDamage(3, creature),
+                descriptionOverride = "If you win one or more flips, Fiery Gambit deals 3 " +
+                    "damage to target creature.",
+            ) then
+            Effects.If(
+                condition = wonAtLeast(2),
+                then = Effects.DealDamage(6, EffectTarget.PlayerRef(Player.EachOpponent)),
+                descriptionOverride = "If you win two or more flips, Fiery Gambit deals 6 " +
+                    "damage to each opponent.",
+            ) then
+            Effects.If(
+                condition = wonAtLeast(3),
+                then = Effects.DrawCards(9) then
+                    Patterns.Group.untapGroup(
+                        GroupFilter(GameObjectFilter.Land.youControl())
+                    ),
+                descriptionOverride = "If you win three or more flips, draw nine cards and " +
+                    "untap all lands you control.",
             )
     }
 

@@ -49,7 +49,7 @@ val CaseOfTheRansackedLab = card("Case of the Ransacked Lab") {
     toSolve(Conditions.YouCastSpellsThisTurn(4, GameObjectFilter.InstantOrSorcery))
 
     solvedTriggeredAbility {
-        trigger = Triggers.YouCastInstantOrSorcery
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
         effect = Effects.DrawCards(1)
         description = "Solved — Whenever you cast an instant or sorcery spell, draw a card."
     }

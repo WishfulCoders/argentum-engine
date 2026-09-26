@@ -25,7 +25,7 @@ val DoomedDissenter = card("Doomed Dissenter") {
     oracleText = "When this creature dies, create a 2/2 black Zombie creature token."
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateToken(
             power = 2,
             toughness = 2,

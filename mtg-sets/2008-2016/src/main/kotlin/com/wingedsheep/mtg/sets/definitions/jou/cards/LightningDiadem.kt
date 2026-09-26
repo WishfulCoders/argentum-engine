@@ -6,6 +6,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Lightning Diadem
@@ -22,11 +24,11 @@ val LightningDiadem = card("Lightning Diadem") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature\nWhen this Aura enters, it deals 2 damage to any target.\nEnchanted creature gets +2/+2."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val victim = target("any target", Targets.Any)
+        trigger = Triggers.self.enters()
+        val victim = target(Targets.Any)
         effect = Effects.DealDamage(2, victim)
         description = "When this Aura enters, it deals 2 damage to any target."
     }

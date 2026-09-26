@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Wardens of the Cycle
@@ -31,7 +32,7 @@ val WardensOfTheCycle = card("Wardens of the Cycle") {
     oracleText = "Morbid — At the beginning of your end step, if a creature died this turn, choose one —\n• You gain 2 life.\n• You draw a card and you lose 1 life."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.CreatureDiedThisTurn
         effect = ModalEffect.chooseOne(
             Mode(
@@ -39,7 +40,7 @@ val WardensOfTheCycle = card("Wardens of the Cycle") {
                 description = "You gain 2 life"
             ),
             Mode(
-                effect = Effects.DrawCards(1).then(Effects.LoseLife(1, EffectTarget.Controller)),
+                effect = Effects.DrawCards(1) then Effects.LoseLife(1, EffectTarget.Controller),
                 description = "You draw a card and you lose 1 life"
             )
         )

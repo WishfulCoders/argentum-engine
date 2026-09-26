@@ -2,11 +2,11 @@ package com.wingedsheep.sdk.scripting
 
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.CastFromCollectionWithoutPayingCostEffect
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
 import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.MoveToZoneEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -66,7 +66,7 @@ object Madness {
         activeZones = setOf(Zone.EXILE),
         effect = CompositeEffect(
             listOf(
-                MayEffect(
+                Effects.May(
                     CompositeEffect(
                         listOf(
                             GatherCardsEffect(CardSource.Self, storeAs = CAST_COLLECTION),

@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -26,10 +26,8 @@ val TurtleDuck = card("Turtle-Duck") {
 
     activatedAbility {
         cost = Costs.Mana("{3}")
-        effect = Effects.Composite(
-            Effects.SetBasePower(EffectTarget.Self, DynamicAmount.Fixed(4), Duration.EndOfTurn),
-            Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self, Duration.EndOfTurn),
-        )
+        effect = Effects.SetBasePower(EffectTarget.Self, DynamicAmounts.fixed(4), Duration.EndOfTurn) then
+            Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self, Duration.EndOfTurn)
     }
 
     metadata {

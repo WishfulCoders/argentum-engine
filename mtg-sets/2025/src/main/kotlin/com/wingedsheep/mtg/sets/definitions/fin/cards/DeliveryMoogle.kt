@@ -33,7 +33,7 @@ val DeliveryMoogle = card("Delivery Moogle") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchMultipleZones(
             zones = listOf(Zone.LIBRARY, Zone.GRAVEYARD),
             filter = GameObjectFilter.Artifact.manaValueAtMost(2),

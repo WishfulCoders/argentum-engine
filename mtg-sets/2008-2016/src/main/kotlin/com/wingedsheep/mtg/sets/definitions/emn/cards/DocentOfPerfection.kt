@@ -11,8 +11,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -33,8 +31,8 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *   Whenever you cast an instant or sorcery spell, create a 1/1 blue Human Wizard creature token.
  *
  * Implementation:
- *  - Both faces share the same [Triggers.YouCastInstantOrSorcery] → [Effects.CreateToken] trigger;
- *    the front adds a [ConditionalEffect] on [Conditions.YouControlAtLeast]`(3, Wizard)` that flips
+ *  - Both faces share the same `Triggers.you.casts(GameObjectFilter.InstantOrSorcery)` → [Effects.CreateToken] trigger;
+ *    the front adds a [Effects.If] on [Conditions.YouControlAtLeast]`(3, Wizard)` that flips
  *    it. The token is made *before* the count, so the Wizard it just created counts toward the
  *    three, and the flip only happens while this ability resolves (printed ruling: already
  *    controlling three Wizards doesn't transform it on its own).
@@ -69,17 +67,15 @@ private val DocentOfPerfectionFront = card("Docent of Perfection") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YouCastInstantOrSorcery
-        effect = Effects.Composite(
-            HumanWizardToken,
-            ConditionalEffect(
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
+        effect = HumanWizardToken then
+            Effects.If(
                 condition = Conditions.YouControlAtLeast(
                     3,
                     GameObjectFilter.Creature.withSubtype("Wizard"),
                 ),
-                effect = TransformEffect(EffectTarget.Self),
-            ),
-        )
+                then = Effects.Transform(EffectTarget.Self),
+            )
         description = "Create a 1/1 blue Human Wizard creature token. Then if you control three " +
             "or more Wizards, transform this creature."
     }
@@ -137,7 +133,7 @@ private val FinalIteration = card("Final Iteration") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YouCastInstantOrSorcery
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
         effect = HumanWizardToken
         description = "Create a 1/1 blue Human Wizard creature token."
     }

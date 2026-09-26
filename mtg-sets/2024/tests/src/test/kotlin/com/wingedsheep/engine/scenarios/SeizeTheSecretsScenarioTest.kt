@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.mechanics.mana.CostCalculator
 import com.wingedsheep.engine.support.GameTestDriver
@@ -10,6 +11,7 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Seize the Secrets:
@@ -34,7 +36,7 @@ class SeizeTheSecretsScenarioTest : FunSpec({
         val registry = CardRegistry()
         registry.register(TestCards.all)
         registry.register(SeizeTheSecrets)
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         val driver = createDriver()
         driver.initMirrorMatch(deck = Deck.of("Island" to 40))
@@ -49,7 +51,7 @@ class SeizeTheSecretsScenarioTest : FunSpec({
         val registry = CardRegistry()
         registry.register(TestCards.all)
         registry.register(SeizeTheSecrets)
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         val driver = createDriver()
         driver.initMirrorMatch(deck = Deck.of("Island" to 40))
@@ -63,7 +65,7 @@ class SeizeTheSecretsScenarioTest : FunSpec({
         // Cast Lightning Bolt at the opponent's creature → commits a crime.
         val bolt = driver.putCardInHand(you, "Lightning Bolt")
         driver.giveMana(you, Color.RED, 1)
-        driver.castSpell(you, bolt, listOf(victim)).isSuccess shouldBe true
+        driver.castSpell(you, bolt, listOf(victim)).outcome shouldBe Outcome.Done
 
         driver.state.playersWhoCommittedCrimeThisTurn.contains(you) shouldBe true
 
@@ -75,7 +77,7 @@ class SeizeTheSecretsScenarioTest : FunSpec({
         val registry = CardRegistry()
         registry.register(TestCards.all)
         registry.register(SeizeTheSecrets)
-        val calculator = CostCalculator(registry)
+        val calculator = CostCalculator(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
         val driver = createDriver()
         driver.initMirrorMatch(deck = Deck.of("Island" to 40))

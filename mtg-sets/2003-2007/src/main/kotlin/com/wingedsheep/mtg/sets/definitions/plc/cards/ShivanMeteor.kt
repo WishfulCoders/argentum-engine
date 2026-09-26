@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.plc.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Shivan Meteor
@@ -23,7 +23,7 @@ val ShivanMeteor = card("Shivan Meteor") {
     keywordAbility(KeywordAbility.suspend("{1}{R}{R}", 2))
 
     spell {
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.DealDamage(13, t)
     }
 

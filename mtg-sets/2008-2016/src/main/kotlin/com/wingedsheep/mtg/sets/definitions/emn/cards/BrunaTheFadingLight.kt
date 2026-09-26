@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Bruna, the Fading Light
@@ -34,17 +33,14 @@ val BrunaTheFadingLight = card("Bruna, the Fading Light") {
     keywords(Keyword.FLYING, Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
+        trigger = Triggers.self.isCast()
         optional = true
         val creature = target(
-            "target Angel or Human creature card in your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter.Creature
-                        .withAnySubtype("Angel", "Human")
-                        .ownedByYou(),
-                    zone = Zone.GRAVEYARD,
-                ),
+            TargetFilter(
+                baseFilter = GameObjectFilter.Creature
+                    .withAnySubtype("Angel", "Human")
+                    .ownedByYou(),
+                zone = Zone.GRAVEYARD,
             ),
         )
         effect = Effects.PutOntoBattlefield(creature)

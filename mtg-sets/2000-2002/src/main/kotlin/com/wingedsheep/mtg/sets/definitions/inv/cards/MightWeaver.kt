@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Might Weaver
@@ -28,10 +27,7 @@ val MightWeaver = card("Might Weaver") {
 
     activatedAbility {
         cost = Costs.Mana("{2}")
-        val t = target(
-            "target",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.withAnyColor(Color.RED, Color.WHITE)))
-        )
+        val t = target(TargetFilter(GameObjectFilter.Creature.withAnyColor(Color.RED, Color.WHITE)))
         effect = Effects.GrantKeyword(Keyword.TRAMPLE, target = t)
         description = "{2}: Target red or white creature gains trample until end of turn."
     }

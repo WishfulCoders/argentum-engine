@@ -2,11 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Twisted Fealty
@@ -39,14 +38,12 @@ val TwistedFealty = card("Twisted Fealty") {
         "token is put into a graveyard, each opponent loses 1 life.)"
 
     spell {
-        val stolen = target("target creature", Targets.Creature)
-        val roleHost = target("up to one target creature", TargetCreature(optional = true))
-        effect = Effects.Composite(
-            Effects.GainControl(stolen, Duration.EndOfTurn),
-            Effects.Untap(stolen),
-            Effects.GrantKeyword(Keyword.HASTE, stolen),
+        val stolen = target(TargetFilter.Creature)
+        val roleHost = target(TargetFilter.Creature, optional = true)
+        effect = Effects.GainControl(stolen, Duration.EndOfTurn) then
+            Effects.Untap(stolen) then
+            Effects.GrantKeyword(Keyword.HASTE, stolen) then
             Effects.CreateRoleToken("Wicked Role", roleHost)
-        )
     }
 
     metadata {

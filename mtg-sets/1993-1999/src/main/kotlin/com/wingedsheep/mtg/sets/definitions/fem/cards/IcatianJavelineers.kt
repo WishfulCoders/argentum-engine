@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.fem.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Icatian Javelineers
@@ -31,15 +30,15 @@ val IcatianJavelineers = card("Icatian Javelineers") {
 
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.Named(Counters.JAVELIN),
+            counterType = CounterType.JAVELIN,
             count = 1,
             selfOnly = true
         )
     )
 
     activatedAbility {
-        cost = Costs.Composite(Costs.Tap, Costs.RemoveCounterFromSelf(Counters.JAVELIN, 1))
-        val t = target("any target", AnyTarget())
+        cost = Costs.Composite(Costs.Tap, Costs.RemoveCounterFromSelf(CounterType.JAVELIN, 1))
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
         description = "{T}, Remove a javelin counter from this creature: It deals 1 damage to any target."
     }

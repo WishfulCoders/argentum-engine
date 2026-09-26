@@ -7,13 +7,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Fall of the Thran
@@ -36,24 +30,17 @@ val FallOfTheThran = card("Fall of the Thran") {
         effect = Effects.DestroyAll(GameObjectFilter.Land)
     }
 
-    val returnLandsEffect = ForEachPlayerEffect(
+    val returnLandsEffect = Effects.ForEachPlayer(
         players = Player.Each,
-        effects = listOf(
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Land),
-                storeAs = "graveyardLands"
-            ),
-            SelectFromCollectionEffect(
-                from = "graveyardLands",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(2)),
-                storeSelected = "returningLands",
+        Effects.Pipeline {
+            val graveyardLands = gather(CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Land))
+            val returningLands = chooseUpTo(
+                2,
+                from = graveyardLands,
                 prompt = "Choose up to two land cards to return to the battlefield"
-            ),
-            MoveCollectionEffect(
-                from = "returningLands",
-                destination = CardDestination.ToZone(Zone.BATTLEFIELD)
             )
-        )
+            move(returningLands, CardDestination.ToZone(Zone.BATTLEFIELD))
+        }
     )
 
     sagaChapter(2) {

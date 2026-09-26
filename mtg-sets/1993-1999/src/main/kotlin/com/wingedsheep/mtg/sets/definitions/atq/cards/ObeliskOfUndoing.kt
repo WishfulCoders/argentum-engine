@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.ControllerPredicate
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Obelisk of Undoing
@@ -24,19 +23,16 @@ val ObeliskOfUndoing = card("Obelisk of Undoing") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{6}"), Costs.Tap)
         val permanent = target(
-            "target permanent you both own and control",
-            TargetPermanent(
-                filter = TargetFilter(
-                    GameObjectFilter.Permanent.withControllerPredicate(
-                        ControllerPredicate.And(
-                            listOf(
-                                ControllerPredicate.OwnedByYou,
-                                ControllerPredicate.ControlledByYou
-                            )
+            TargetFilter(
+                GameObjectFilter.Permanent.withControllerPredicate(
+                    ControllerPredicate.And(
+                        listOf(
+                            ControllerPredicate.OwnedByYou,
+                            ControllerPredicate.ControlledByYou
                         )
                     )
                 )
-            )
+            ),
         )
         effect = Effects.ReturnToHand(permanent)
         description = "{6}, {T}: Return target permanent you both own and control to your hand."

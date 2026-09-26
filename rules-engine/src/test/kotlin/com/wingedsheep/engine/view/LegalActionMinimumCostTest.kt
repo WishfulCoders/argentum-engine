@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.view
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.legalactions.ConvokeCreatureData
 import com.wingedsheep.engine.legalactions.DelveCardData
@@ -43,7 +44,7 @@ class LegalActionMinimumCostTest : FunSpec({
     }
 
     fun enricher(driver: GameTestDriver) =
-        LegalActionEnricher(ManaSolver(driver.cardRegistry), driver.cardRegistry)
+        LegalActionEnricher(ManaSolver(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)), driver.cardRegistry)
 
     /** Enrich a single hand-built action and read back the floor the DTO advertises. */
     fun floorOf(driver: GameTestDriver, action: LegalAction): String? =
@@ -227,7 +228,7 @@ class LegalActionMinimumCostTest : FunSpec({
 
         val actions = LegalActionEnumerator.create(driver.cardRegistry)
             .enumerate(driver.state, caster, EnumerationMode.FULL)
-        val enriched = LegalActionEnricher(ManaSolver(driver.cardRegistry), driver.cardRegistry)
+        val enriched = LegalActionEnricher(ManaSolver(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)), driver.cardRegistry)
             .enrich(actions, driver.state, caster)
 
         val cast = enriched.single {

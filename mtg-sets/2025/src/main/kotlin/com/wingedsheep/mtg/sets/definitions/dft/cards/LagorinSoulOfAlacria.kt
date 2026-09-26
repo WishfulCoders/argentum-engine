@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
@@ -10,10 +10,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Lagorin, Soul of Alacria — Aetherdrift #211
@@ -24,7 +23,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  * Mounts and/or Vehicles.
  * Saddle 1
  *
- * "Attacks while saddled" is [Triggers.Attacks] gated by [Conditions.SourceIsSaddled] as an
+ * "Attacks while saddled" is `Triggers.self.attacks()` gated by [Conditions.SourceIsSaddled] as an
  * intervening-if (CR 603.4) — per the printed rulings the ability triggers only if Lagorin was
  * saddled *when it was declared as an attacker*, which is exactly when the attack trigger is
  * checked. Same shape as Brightfield Glider and the rest of the DFT saddled-attacker cycle.
@@ -56,16 +55,11 @@ val LagorinSoulOfAlacria = card("Lagorin, Soul of Alacria") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         triggerRestriction = Conditions.SourceIsSaddled
-        target = TargetPermanent(
-            count = 2,
-            optional = true,
-            filter = TargetFilter(MountsAndVehicles),
-            id = "two target Mounts and/or Vehicles"
-        )
-        effect = ForEachTargetEffect(
-            listOf(Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0)))
+        target = TargetObject(filter = TargetFilter(MountsAndVehicles), count = 2, optional = true, id = "two target Mounts and/or Vehicles")
+        effect = Effects.ForEachTarget(
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0))
         )
         description = "Whenever Lagorin attacks while saddled, put a +1/+1 counter on each of " +
             "up to two target Mounts and/or Vehicles."

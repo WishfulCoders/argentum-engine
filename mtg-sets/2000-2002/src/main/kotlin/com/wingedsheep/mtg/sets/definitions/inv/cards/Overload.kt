@@ -1,19 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.Effect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Overload
@@ -23,14 +20,14 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * Destroy target artifact if its mana value is 2 or less. If this spell was kicked,
  * destroy that artifact if its mana value is 5 or less instead.
  */
-private fun destroyIfManaValueAtMost(max: Int): Effect =
-    ConditionalEffect(
-        condition = Compare(
-            left = DynamicAmount.EntityProperty(EntityReference.Target(0), EntityNumericProperty.ManaValue),
+private fun destroyIfManaValueAtMost(artifact: EffectTarget.SingleEntity, max: Int): Effect =
+    Effects.If(
+        condition = Conditions.CompareAmounts(
+            left = DynamicAmounts.manaValueOf(artifact),
             operator = ComparisonOperator.LTE,
-            right = DynamicAmount.Fixed(max)
+            right = max
         ),
-        effect = Effects.Destroy(EffectTarget.ContextTarget(0))
+        then = Effects.Destroy(artifact)
     )
 
 val Overload = card("Overload") {
@@ -44,11 +41,11 @@ val Overload = card("Overload") {
     keywordAbility(KeywordAbility.kicker("{2}"))
 
     spell {
-        target = Targets.Artifact
-        effect = ConditionalEffect(
+        val artifact = target(TargetFilter.Artifact)
+        effect = Effects.If(
             condition = WasKicked,
-            effect = destroyIfManaValueAtMost(5),
-            elseEffect = destroyIfManaValueAtMost(2)
+            then = destroyIfManaValueAtMost(artifact, 5),
+            otherwise = destroyIfManaValueAtMost(artifact, 2)
         )
     }
 

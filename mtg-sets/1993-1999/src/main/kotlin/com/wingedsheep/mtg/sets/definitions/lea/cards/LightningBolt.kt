@@ -4,10 +4,10 @@
 
 package com.wingedsheep.mtg.sets.definitions.lea.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -22,8 +22,8 @@ val LightningBolt = card("Lightning Bolt") {
     typeLine = "Instant"
     oracleText = "Lightning Bolt deals 3 damage to any target."
     spell {
-        val t = target("target", AnyTarget())
-        effect = DealDamageEffect(3, t)
+        val t = target(Targets.Any)
+        effect = Effects.DealDamage(3, t)
     }
     metadata {
         rarity = Rarity.COMMON

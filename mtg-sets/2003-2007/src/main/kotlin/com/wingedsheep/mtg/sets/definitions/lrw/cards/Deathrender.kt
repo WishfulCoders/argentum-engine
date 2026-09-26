@@ -3,15 +3,15 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.ConditionalOnCollectionEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.effects.CardDestination
+import com.wingedsheep.sdk.scripting.effects.CardSource
+import com.wingedsheep.sdk.scripting.references.Player
 
 /**
  * Deathrender — Lorwyn #255
@@ -52,16 +52,19 @@ val Deathrender = card("Deathrender") {
     }
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(to = Zone.GRAVEYARD, binding = TriggerBinding.ATTACHED)
-        effect = Patterns.Hand.putFromHand(
-            filter = GameObjectFilter.Creature,
-            prompt = "Put a creature card from your hand onto the battlefield"
-        ).then(
-            ConditionalOnCollectionEffect(
-                collection = "putting",
-                ifNotEmpty = Effects.AttachEquipment(EffectTarget.PipelineTarget("putting", 0))
+        trigger = Triggers.attached.dies()
+        effect = Effects.Pipeline {
+            val candidates = gather(CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Creature))
+            val putting = chooseUpTo(
+                1,
+                from = candidates,
+                prompt = "Put a creature card from your hand onto the battlefield"
             )
-        )
+            move(putting, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You))
+            ifNotEmpty(putting) {
+                run(Effects.AttachEquipment(putting.asTarget))
+            }
+        }
         description = "Whenever equipped creature dies, you may put a creature card from your " +
             "hand onto the battlefield and attach this Equipment to it."
     }

@@ -9,17 +9,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.LookAtTargetHandEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Deep-Cavern Bat
@@ -55,43 +46,29 @@ val DeepCavernBat = card("Deep-Cavern Bat") {
     keywords(Keyword.FLYING, Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val opponent = target("target opponent", Targets.Opponent)
-        effect = Effects.Composite(
-            listOf(
-                LookAtTargetHandEffect(opponent),
-                ConditionalEffect(
-                    condition = Conditions.SourceInZone(Zone.BATTLEFIELD),
-                    effect = Effects.Composite(
-                        listOf(
-                            GatherCardsEffect(
-                                source = CardSource.FromZone(Zone.HAND, Player.ContextPlayer(0)),
-                                storeAs = "opponentHand"
-                            ),
-                            SelectFromCollectionEffect(
-                                from = "opponentHand",
-                                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                                chooser = Chooser.Controller,
-                                filter = GameObjectFilter.Nonland,
-                                storeSelected = "exiledCard",
-                                prompt = "You may exile a nonland card from target opponent's hand",
-                                showAllCards = true,
-                                alwaysPrompt = true
-                            ),
-                            MoveCollectionEffect(
-                                from = "exiledCard",
-                                destination = CardDestination.ToZone(Zone.EXILE, Player.ContextPlayer(0)),
-                                linkToSource = true
-                            )
-                        )
+        trigger = Triggers.self.enters()
+        val opponent = target(Targets.Opponent)
+        effect = Effects.LookAtHand(opponent) then
+            Effects.If(
+                condition = Conditions.SourceInZone(Zone.BATTLEFIELD),
+                then = Effects.Pipeline {
+                    val opponentHand = gather(CardSource.FromZone(Zone.HAND, opponent.asPlayer))
+                    val exiledCard = chooseUpTo(
+                        1,
+                        from = opponentHand,
+                        chooser = Chooser.Controller,
+                        filter = GameObjectFilter.Nonland,
+                        prompt = "You may exile a nonland card from target opponent's hand",
+                        showAllCards = true,
+                        alwaysPrompt = true
                     )
-                )
+                    exile(exiledCard, opponent.asPlayer, linkToSource = true)
+                }
             )
-        )
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileToHand()
     }
 

@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
 
 
 /**
@@ -29,15 +28,13 @@ val StitchersApprentice = card("Stitcher's Apprentice") {
     toughness = 2
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{U}"), Costs.Tap)
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                power = 2,
-                toughness = 2,
-                colors = setOf(Color.BLUE),
-                creatureTypes = setOf("Homunculus")
-            ),
-            SacrificeEffect(GameObjectFilter.Creature)
-        )
+        effect = Effects.CreateToken(
+            power = 2,
+            toughness = 2,
+            colors = setOf(Color.BLUE),
+            creatureTypes = setOf("Homunculus")
+        ) then
+            Effects.SacrificeOwn(GameObjectFilter.Creature)
     }
     metadata {
         rarity = Rarity.COMMON

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fem.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
@@ -10,12 +10,12 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Tourach's Gate
@@ -43,22 +43,20 @@ val TourachsGate = card("Tourach's Gate") {
         "time counters on this Aura, sacrifice it.\n" +
         "Tap enchanted land: Attacking creatures you control get +2/-1 until end of turn. " +
         "Activate only if enchanted land is untapped."
-    auraTarget = TargetPermanent(filter = TargetFilter(GameObjectFilter.Land.youControl()))
+    auraTarget = TargetObject(filter = TargetFilter(GameObjectFilter.Land.youControl()))
 
     activatedAbility {
         cost = Costs.Sacrifice(GameObjectFilter.Permanent.withSubtype(Subtype.THRULL))
-        effect = Effects.AddCounters(Counters.TIME, 3, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.TIME, 3, EffectTarget.Self)
         description = "Sacrifice a Thrull: Put three time counters on this Aura."
     }
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.RemoveCounters(Counters.TIME, 1, EffectTarget.Self)
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.Not(Conditions.SourceCounterCountAtLeast(Counters.TIME, 1)),
-                    effect = SacrificeSelfEffect
-                )
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.RemoveCounters(CounterType.TIME, 1, EffectTarget.Self) then
+            Effects.If(
+                condition = Conditions.Not(Conditions.SourceCounterCountAtLeast(CounterType.TIME, 1)),
+                then = SacrificeSelfEffect
             )
         description = "At the beginning of your upkeep, remove a time counter from this Aura. If there are no time counters on this Aura, sacrifice it."
     }

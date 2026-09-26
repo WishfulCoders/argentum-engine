@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.scripting.CanOnlyBlockCreaturesWith
 import com.wingedsheep.sdk.scripting.CantBlock
@@ -21,7 +22,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * [count] is a [DynamicAmount] so the same helper covers the fixed-count cards and Song of
  * Totentanz's "create X … Rat creature tokens".
  */
-internal fun woeRatToken(count: DynamicAmount = DynamicAmount.Fixed(1)): Effect = Effects.CreateToken(
+internal fun woeRatToken(count: DynamicAmount = DynamicAmounts.fixed(1)): Effect = Effects.CreateToken(
     count = count,
     power = 1,
     toughness = 1,
@@ -40,7 +41,7 @@ internal fun woeRatToken(count: DynamicAmount = DynamicAmount.Fixed(1)): Effect 
  * controller creates a 1/1 white Human creature token".
  */
 internal fun woeHumanToken(
-    count: DynamicAmount = DynamicAmount.Fixed(1),
+    count: DynamicAmount = DynamicAmounts.fixed(1),
     controller: EffectTarget? = null,
 ): Effect = Effects.CreateToken(
     count = count,
@@ -56,7 +57,7 @@ internal fun woeHumanToken(
  * Wilds of Eldraine's Faerie token: a 1/1 blue Faerie creature token with flying that can block
  * only creatures with flying.
  */
-internal fun woeFaerieToken(count: DynamicAmount = DynamicAmount.Fixed(1)): Effect = Effects.CreateToken(
+internal fun woeFaerieToken(count: DynamicAmount = DynamicAmounts.fixed(1)): Effect = Effects.CreateToken(
     count = count,
     power = 1,
     toughness = 1,

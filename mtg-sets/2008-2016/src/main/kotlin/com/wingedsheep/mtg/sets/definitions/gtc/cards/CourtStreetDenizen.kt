@@ -10,9 +10,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -30,11 +28,8 @@ val CourtStreetDenizen = card("Court Street Denizen") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.withColor(Color.WHITE).youControl(),
-            binding = TriggerBinding.OTHER
-        )
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.opponentControls()))
+        trigger = Triggers.another(GameObjectFilter.Creature.withColor(Color.WHITE).youControl()).enters()
+        val t = target(TargetFilter.Creature.opponentControls())
         effect = Effects.Tap(t)
     }
     metadata {

@@ -19,6 +19,7 @@ import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Tests for LifeLossEvent trigger support.
@@ -36,9 +37,9 @@ class LifeLossTriggerTest : FunSpec({
         script = CardScript(
             triggeredAbilities = listOf(
                 TriggeredAbility(
-                    id = AbilityId.generate(),
-                    trigger = Triggers.YouLoseLife.event,
-                    binding = Triggers.YouLoseLife.binding,
+                    id = AbilityId("LifeLossTriggerTest_1"),
+                    trigger = Triggers.you.losesLife().event,
+                    binding = Triggers.you.losesLife().binding,
                     effect = DrawCardsEffect(1)
                 )
             )
@@ -52,9 +53,9 @@ class LifeLossTriggerTest : FunSpec({
         script = CardScript(
             triggeredAbilities = listOf(
                 TriggeredAbility(
-                    id = AbilityId.generate(),
-                    trigger = Triggers.YouLoseLife.event,
-                    binding = Triggers.YouLoseLife.binding,
+                    id = AbilityId("LifeLossTriggerTest_2"),
+                    trigger = Triggers.you.losesLife().event,
+                    binding = Triggers.you.losesLife().binding,
                     effect = LoseLifeEffect(
                         amount = DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_LIFE_LOST),
                         target = EffectTarget.PlayerRef(Player.EachOpponent)
@@ -98,7 +99,7 @@ class LifeLossTriggerTest : FunSpec({
 
         val spell = driver.putCardInHand(activePlayer, "Lose Three Life")
         driver.giveMana(activePlayer, Color.BLACK, 1)
-        driver.castSpell(activePlayer, spell).isSuccess shouldBe true
+        driver.castSpell(activePlayer, spell).outcome shouldBe Outcome.Done
         driver.bothPass() // resolve Lose Three Life (lose 3 life, trigger fires)
         driver.bothPass() // resolve triggered ability (draw a card)
 
@@ -153,7 +154,7 @@ class LifeLossTriggerTest : FunSpec({
 
         val spell = driver.putCardInHand(activePlayer, "Lose Three Life")
         driver.giveMana(activePlayer, Color.BLACK, 1)
-        driver.castSpell(activePlayer, spell).isSuccess shouldBe true
+        driver.castSpell(activePlayer, spell).outcome shouldBe Outcome.Done
         driver.bothPass() // resolve Lose Three Life
         driver.bothPass() // resolve triggered ability
 
@@ -169,9 +170,9 @@ class LifeLossTriggerTest : FunSpec({
             script = CardScript(
                 triggeredAbilities = listOf(
                     TriggeredAbility(
-                        id = AbilityId.generate(),
-                        trigger = Triggers.AnyPlayerLosesLife.event,
-                        binding = Triggers.AnyPlayerLosesLife.binding,
+                        id = AbilityId("LifeLossTriggerTest_3"),
+                        trigger = Triggers.anyPlayer.losesLife().event,
+                        binding = Triggers.anyPlayer.losesLife().binding,
                         effect = DrawCardsEffect(1)
                     )
                 )
@@ -193,7 +194,7 @@ class LifeLossTriggerTest : FunSpec({
 
         val spell = driver.putCardInHand(activePlayer, "Lose Three Life")
         driver.giveMana(activePlayer, Color.BLACK, 1)
-        driver.castSpell(activePlayer, spell).isSuccess shouldBe true
+        driver.castSpell(activePlayer, spell).outcome shouldBe Outcome.Done
         driver.bothPass() // resolve spell
         driver.bothPass() // resolve trigger
 

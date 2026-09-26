@@ -27,7 +27,7 @@ val Skystinger = card("Skystinger") {
     keywords(Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.blocks(attackerFilter = GameObjectFilter.Creature.withKeyword(Keyword.FLYING))
+        trigger = Triggers.self.blocks(attackerFilter = GameObjectFilter.Creature.withKeyword(Keyword.FLYING))
         effect = Effects.ModifyStats(5, 0, EffectTarget.Self)
     }
 

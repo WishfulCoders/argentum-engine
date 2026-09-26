@@ -12,12 +12,12 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
@@ -27,6 +27,8 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Pins the attachment arm of `EntityMatches` (`EffectTarget.EnchantedPermanent` /
@@ -65,7 +67,7 @@ class EntityMatchesAttachmentScenarioTest : FunSpec({
         oracleText = "Enchant permanent\nAs long as enchanted permanent is red or green, it has " +
             "flying and \"At the beginning of your upkeep, draw a card.\""
 
-        auraTarget = Targets.Permanent
+        auraTarget = TargetObject(filter = TargetFilter.Permanent)
 
         staticAbility {
             ability = ConditionalStaticAbility(
@@ -79,8 +81,8 @@ class EntityMatchesAttachmentScenarioTest : FunSpec({
             ability = ConditionalStaticAbility(
                 ability = GrantTriggeredAbility(
                     ability = TriggeredAbility.create(
-                        trigger = Triggers.YourUpkeep.event,
-                        binding = Triggers.YourUpkeep.binding,
+                        id = AbilityId("EntityMatchesAttachmentScenarioTest_1"),
+                        trigger = Triggers.you.beginningOf(Step.UPKEEP),
                         effect = Effects.DrawCards(1)
                     ),
                     filter = GroupFilter.attachedCreature()

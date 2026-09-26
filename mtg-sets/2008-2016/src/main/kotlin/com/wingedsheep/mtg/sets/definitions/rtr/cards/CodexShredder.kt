@@ -34,16 +34,13 @@ val CodexShredder = card("Codex Shredder") {
 
     activatedAbility {
         cost = Costs.Tap
-        val p = target("target player", Targets.Player)
+        val p = target(Targets.Player)
         effect = Patterns.Library.mill(1, p)
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{5}"), Costs.Tap, Costs.SacrificeSelf)
-        val c = target(
-            "target card in your graveyard",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Any.ownedByYou(), zone = Zone.GRAVEYARD))
-        )
+        val c = target(TargetFilter(GameObjectFilter.Any.ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.ReturnToHand(c)
     }
 

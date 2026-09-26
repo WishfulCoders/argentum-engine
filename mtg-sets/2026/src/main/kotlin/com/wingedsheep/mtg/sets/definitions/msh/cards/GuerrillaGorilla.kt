@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Guerrilla Gorilla — Marvel Super Heroes #169
@@ -37,12 +36,7 @@ val GuerrillaGorilla = card("Guerrilla Gorilla") {
 
     activatedAbility {
         cost = Costs.SacrificeSelf
-        val victim = target(
-            "target noncreature artifact or noncreature enchantment",
-            TargetPermanent(
-                filter = TargetFilter(GameObjectFilter.ArtifactOrEnchantment.notCreature())
-            )
-        )
+        val victim = target(TargetFilter(GameObjectFilter.ArtifactOrEnchantment.notCreature()))
         effect = Effects.Destroy(victim)
         timing = TimingRule.SorcerySpeed
         description = "Sacrifice this creature: Destroy target noncreature artifact or " +

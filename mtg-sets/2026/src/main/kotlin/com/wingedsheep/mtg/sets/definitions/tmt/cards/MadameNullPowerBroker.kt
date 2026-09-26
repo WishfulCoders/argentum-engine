@@ -1,16 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Madame Null, Power Broker
@@ -33,13 +31,13 @@ val MadameNullPowerBroker = card("Madame Null, Power Broker") {
     keywords(Keyword.DEATHTOUCH)
 
     triggeredAbility {
-        trigger = Triggers.OtherCreatureEnters
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
         // "its power" / "that many" — the entering creature's power, used for both the life
         // payment and the counters (Effects.PayDynamicLife is the dynamic pay-life cost).
-        val enteringPower = DynamicAmount.EntityProperty(EntityReference.Triggering, EntityNumericProperty.Power)
-        effect = OptionalCostEffect(
+        val enteringPower = DynamicAmounts.triggeringPower()
+        effect = Effects.MayPay(
             cost = Effects.PayDynamicLife(enteringPower),
-            ifPaid = Effects.AddDynamicCounters(Counters.PLUS_ONE_PLUS_ONE, enteringPower, EffectTarget.TriggeringEntity)
+            then = Effects.AddDynamicCounters(CounterType.PLUS_ONE_PLUS_ONE, enteringPower, EffectTarget.TriggeringEntity)
         )
         description = "Whenever another creature you control enters, you may pay life equal to its power. If you do, put that many +1/+1 counters on it."
     }

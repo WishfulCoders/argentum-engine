@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreatePredefinedTokenEffect
 
 /**
  * The Sentry, Golden Guardian
@@ -37,9 +37,9 @@ val TheSentryGoldenGuardian = card("The Sentry, Golden Guardian") {
     keywords(Keyword.FLYING, Keyword.VIGILANCE, Keyword.INDESTRUCTIBLE)
 
     triggeredAbility {
-        val opponent = target("target opponent", Targets.Opponent)
-        trigger = Triggers.EntersBattlefield
-        effect = CreatePredefinedTokenEffect("The Void", controller = opponent)
+        val opponent = target(Targets.Opponent)
+        trigger = Triggers.self.enters()
+        effect = Effects.CreatePredefinedToken("The Void", controller = opponent)
         description = "When The Sentry enters, target opponent creates The Void, a legendary 5/5 " +
             "black Horror Villain creature token with flying, indestructible, and \"The Void " +
             "attacks each combat if able.\""

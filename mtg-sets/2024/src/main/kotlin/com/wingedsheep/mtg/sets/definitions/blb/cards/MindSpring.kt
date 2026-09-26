@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Mind Spring
@@ -19,7 +19,7 @@ val MindSpring = card("Mind Spring") {
     oracleText = "Draw X cards."
 
     spell {
-        effect = Effects.DrawCards(DynamicAmount.XValue)
+        effect = Effects.DrawCards(DynamicAmounts.xValue())
     }
 
     metadata {

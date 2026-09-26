@@ -1,7 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -9,6 +8,8 @@ import com.wingedsheep.sdk.scripting.GrantCardType
 import com.wingedsheep.sdk.scripting.GrantSubtype
 import com.wingedsheep.sdk.scripting.SetBasePowerToughnessStatic
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Zoetic Glyph
@@ -24,7 +25,7 @@ val ZoeticGlyph = card("Zoetic Glyph") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant artifact\nEnchanted artifact is a Golem creature with base power and toughness 5/4 in addition to its other types.\nWhen this Aura is put into a graveyard from the battlefield, discover 3."
 
-    auraTarget = Targets.Artifact
+    auraTarget = TargetObject(filter = TargetFilter.Artifact)
 
     staticAbility {
         ability = GrantCardType("CREATURE", filter = GroupFilter.attachedCreature())
@@ -37,7 +38,7 @@ val ZoeticGlyph = card("Zoetic Glyph") {
     }
 
     triggeredAbility {
-        trigger = Triggers.PutIntoGraveyardFromBattlefield
+        trigger = Triggers.self.dies()
         effect = Effects.Discover(3)
     }
 

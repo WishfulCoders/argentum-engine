@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -39,7 +38,7 @@ val TidalFlats = card("Tidal Flats") {
         cost = Costs.Mana("{U}{U}")
         effect = Effects.ForEachInGroup(
             filter = GroupFilter(GameObjectFilter.Creature.attacking().withoutKeyword(Keyword.FLYING)),
-            effect = PayOrSufferEffect(
+            effect = Effects.PayOrSuffer(
                 cost = Costs.pay.Mana("{1}"),
                 suffer = Patterns.Group.grantKeywordToAll(
                     Keyword.FIRST_STRIKE,

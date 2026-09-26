@@ -3,8 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.ons.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.effects.CopyRecipient
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Chain of Acid
@@ -20,11 +21,13 @@ val ChainOfAcid = card("Chain of Acid") {
     oracleText = "Destroy target noncreature permanent. Then that permanent's controller may copy this spell and may choose a new target for that copy."
 
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter.NoncreaturePermanent))
-        effect = Effects.DestroyAndChainCopy(
+        val permanent = TargetObject(filter = TargetFilter.NoncreaturePermanent)
+        val t = target(permanent)
+        effect = Effects.ChainCopy(
+            action = Effects.Destroy(t),
             target = t,
-            targetFilter = TargetFilter.NoncreaturePermanent,
-            spellName = "Chain of Acid"
+            offerTo = CopyRecipient.TARGET_CONTROLLER,
+            copyTarget = permanent
         )
     }
 

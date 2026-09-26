@@ -26,7 +26,7 @@ val LagonnaBandElder = card("Lagonna-Band Elder") {
     oracleText = "When this creature enters, if you control an enchantment, you gain 3 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Exists(Player.You, Zone.BATTLEFIELD, GameObjectFilter.Enchantment)
         effect = Effects.GainLife(3)
     }

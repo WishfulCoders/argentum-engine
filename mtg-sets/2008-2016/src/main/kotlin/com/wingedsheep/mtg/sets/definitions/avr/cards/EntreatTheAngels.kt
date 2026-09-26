@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.avr.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Entreat the Angels
@@ -31,7 +31,7 @@ val EntreatTheAngels = card("Entreat the Angels") {
 
     spell {
         effect = Effects.CreateToken(
-            count = DynamicAmount.XValue,
+            count = DynamicAmounts.xValue(),
             power = 4,
             toughness = 4,
             colors = setOf(Color.WHITE),

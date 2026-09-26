@@ -40,7 +40,7 @@ val CrescentIslandTemple = card("Crescent Island Temple") {
         .count()
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             count = shrinesYouControl,
             power = 1,
@@ -52,10 +52,7 @@ val CrescentIslandTemple = card("Crescent Island Temple") {
     }
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Any.withSubtype("Shrine").youControl(),
-            binding = TriggerBinding.OTHER,
-        )
+        trigger = Triggers.another(GameObjectFilter.Any.withSubtype("Shrine").youControl()).enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

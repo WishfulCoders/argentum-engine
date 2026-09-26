@@ -6,10 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -36,19 +33,11 @@ val Leveler = card("Leveler") {
     oracleText = "When this creature enters, exile all cards from your library."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.Any),
-                    storeAs = "library"
-                ),
-                MoveCollectionEffect(
-                    from = "library",
-                    destination = CardDestination.ToZone(Zone.EXILE, Player.You)
-                )
-            )
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val library = gather(CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.Any))
+            exile(library)
+        }
         description = "When this creature enters, exile all cards from your library."
     }
 

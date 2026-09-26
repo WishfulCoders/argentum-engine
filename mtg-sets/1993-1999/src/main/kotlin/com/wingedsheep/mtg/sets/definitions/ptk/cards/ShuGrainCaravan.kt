@@ -21,7 +21,7 @@ val ShuGrainCaravan = card("Shu Grain Caravan") {
     oracleText = "When this creature enters, you gain 2 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(2)
     }
 

@@ -1,16 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.BudgetModalEffect
 import com.wingedsheep.sdk.scripting.effects.BudgetMode
-import com.wingedsheep.sdk.scripting.effects.CreateTokenCopyOfChosenPermanentEffect
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -33,20 +30,20 @@ val SeasonOfWeaving = card("Season of Weaving") {
         "{P}{P}{P} — Return each nonland, nontoken permanent to its owner's hand."
 
     spell {
-        effect = BudgetModalEffect(
+        effect = Effects.BudgetModal(
             budget = 5,
             modes = listOf(
                 BudgetMode(
                     cost = 1,
-                    effect = DrawCardsEffect(
-                        count = DynamicAmount.Fixed(1),
+                    effect = Effects.DrawCards(
+                        count = 1,
                         target = EffectTarget.Controller
                     ),
                     description = "Draw a card"
                 ),
                 BudgetMode(
                     cost = 2,
-                    effect = CreateTokenCopyOfChosenPermanentEffect(
+                    effect = Effects.CreateTokenCopyOfChosenPermanent(
                         filter = GameObjectFilter.Artifact or GameObjectFilter.Creature
                     ),
                     description = "Choose an artifact or creature you control. Create a token that's a copy of it"

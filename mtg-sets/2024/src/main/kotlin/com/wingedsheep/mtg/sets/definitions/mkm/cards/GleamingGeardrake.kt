@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * The two abilities are a closed loop by design: the enters trigger hands you the Clue, and
  * cracking that Clue is a sacrifice the second ability sees. Nothing about that needs wiring — a
  * Clue's own "{2}, Sacrifice this token: Draw a card" routes through the same sacrifice hook as any
- * other, so [Triggers.YouSacrificeA] over `GameObjectFilter.Artifact` picks it up.
+ * other, so `Triggers.you.sacrifices(filter)` over `GameObjectFilter.Artifact` picks it up.
  *
  * `YouSacrificeA` (per-permanent, bare article) rather than `YouSacrificeOneOrMore` (batched): the
  * text says "an artifact", so sacrificing three artifacts to one cost puts three counters on the
@@ -43,14 +43,14 @@ val GleamingGeardrake = card("Gleaming Geardrake") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Investigate()
         description = "When this creature enters, investigate."
     }
 
     triggeredAbility {
-        trigger = Triggers.YouSacrificeA(GameObjectFilter.Artifact)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Artifact)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Whenever you sacrifice an artifact, put a +1/+1 counter on this creature."
     }
 

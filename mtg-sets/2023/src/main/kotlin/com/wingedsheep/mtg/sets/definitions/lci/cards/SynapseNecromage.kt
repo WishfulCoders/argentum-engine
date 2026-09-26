@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  * "This token can't block."
  *
  * Dies is CR 700.4 (battlefield to graveyard); modelled as the SELF-bound
- * [Triggers.Dies]. The tokens are identical to Broodrage Mycoid / The Mycotyrant's
+ * `Triggers.self.dies()`. The tokens are identical to Broodrage Mycoid / The Mycotyrant's
  * 1/1 black Fungus "can't block" token — the "This token can't block" restriction is a
  * static ability on the token itself, [CantBlock] with [GroupFilter.source()].
  */
@@ -31,7 +31,7 @@ val SynapseNecromage = card("Synapse Necromage") {
     oracleText = "When this creature dies, create two 1/1 black Fungus creature tokens with \"This token can't block.\""
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateToken(
             count = 2,
             power = 1,

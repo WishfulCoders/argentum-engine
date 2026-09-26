@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.assertions.withClue
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -35,7 +34,7 @@ class CaptainAmericaLivingLegendScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Tap target creature."
         spell {
-            val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+            val t = target(TargetFilter.Creature)
             effect = Effects.Tap(t)
         }
     }
@@ -46,7 +45,7 @@ class CaptainAmericaLivingLegendScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Untap target creature."
         spell {
-            val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+            val t = target(TargetFilter.Creature)
             effect = Effects.Untap(t)
         }
     }
@@ -57,7 +56,7 @@ class CaptainAmericaLivingLegendScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Regenerate target creature."
         spell {
-            val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+            val t = target(TargetFilter.Creature)
             effect = RegenerateEffect(t)
         }
     }
@@ -68,7 +67,7 @@ class CaptainAmericaLivingLegendScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Bolt Pulse deals 3 damage to target creature."
         spell {
-            val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+            val t = target(TargetFilter.Creature)
             effect = Effects.DealDamage(3, t)
         }
     }

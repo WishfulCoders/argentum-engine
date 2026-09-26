@@ -29,7 +29,7 @@ val AutarchMammoth = card("Autarch Mammoth") {
     power = 5
     toughness = 5
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 3,
             toughness = 3,
@@ -38,7 +38,7 @@ val AutarchMammoth = card("Autarch Mammoth") {
         )
     }
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         triggerRestriction = Conditions.SourceIsSaddled
         effect = Effects.CreateToken(
             power = 3,

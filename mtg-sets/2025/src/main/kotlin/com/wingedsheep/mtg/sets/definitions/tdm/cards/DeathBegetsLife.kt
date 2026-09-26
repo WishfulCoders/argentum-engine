@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Death Begets Life
@@ -24,12 +23,12 @@ val DeathBegetsLife = card("Death Begets Life") {
     oracleText = "Destroy all creatures and enchantments. Draw a card for each permanent destroyed this way."
 
     spell {
-        effect = Effects.DestroyAll(
-            filter = GameObjectFilter.CreatureOrEnchantment,
-            storeDestroyedAs = "destroyed"
-        ).then(
-            Effects.DrawCards(DynamicAmount.VariableReference("destroyed_count"))
-        )
+        effect = Effects.Pipeline {
+            val destroyed = runStoringCollection {
+                Effects.DestroyAll(filter = GameObjectFilter.CreatureOrEnchantment, storeDestroyedAs = it)
+            }
+            run(Effects.DrawCards(destroyed.count))
+        }
     }
 
     metadata {

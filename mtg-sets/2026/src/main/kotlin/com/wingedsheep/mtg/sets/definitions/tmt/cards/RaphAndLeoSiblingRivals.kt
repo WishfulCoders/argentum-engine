@@ -4,11 +4,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
-import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Raph & Leo, Sibling Rivals
@@ -45,21 +42,14 @@ val RaphAndLeoSiblingRivals = card("Raph & Leo, Sibling Rivals") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         oncePerTurn = true
-        target(
-            "one or two attacking creatures",
-            TargetCreature(count = 2, minCount = 1, filter = TargetFilter.AttackingCreature)
-        )
-        effect = Effects.Composite(
-            listOf(
-                ForEachTargetEffect(
-                    listOf(TapUntapEffect(EffectTarget.ContextTarget(0), tap = false))
-                ),
-                // "After this phase, there is an additional combat phase." (combat only — no main)
-                Effects.AddCombatPhase,
-            )
-        )
+        targets(TargetFilter.AttackingCreature, count = 2, minCount = 1)
+        effect = Effects.ForEachTarget(
+            Effects.Untap(EffectTarget.ContextTarget(0))
+        ) then
+            // "After this phase, there is an additional combat phase." (combat only — no main)
+            Effects.AddCombatPhase
     }
 
     metadata {

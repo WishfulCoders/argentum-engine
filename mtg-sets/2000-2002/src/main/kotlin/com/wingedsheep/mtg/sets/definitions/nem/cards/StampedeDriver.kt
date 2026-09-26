@@ -32,10 +32,8 @@ val StampedeDriver = card("Stampede Driver") {
         cost = Costs.Composite(Costs.Mana("{1}{G}"), Costs.Tap, Costs.DiscardCard)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.Composite(
-                Effects.ModifyStats(1, 1, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
-            )
+            Effects.ModifyStats(1, 1, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.IterationEntity)
         )
     }
     metadata {

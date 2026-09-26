@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -11,10 +11,9 @@ import com.wingedsheep.sdk.scripting.EntersWithChoice
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModeOption
 import com.wingedsheep.sdk.scripting.conditions.SourceChosenModeIs
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Barrensteppe Siege
@@ -66,14 +65,14 @@ val BarrensteppeSiege = card("Barrensteppe Siege") {
 
     // Abzan — At the beginning of your end step, put a +1/+1 counter on each creature you control.
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         triggerRestriction = SourceChosenModeIs("abzan")
         effect = Effects.ForEachInGroup(
             filter = GroupFilter.AllCreaturesYouControl,
-            effect = AddCountersEffect(
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
+            effect = Effects.AddCounters(
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
                 count = 1,
-                target = EffectTarget.Self
+                target = EffectTarget.IterationEntity
             )
         )
     }
@@ -81,11 +80,11 @@ val BarrensteppeSiege = card("Barrensteppe Siege") {
     // Mardu — At the beginning of your end step, if a creature died under your control this turn,
     // each opponent sacrifices a creature of their choice.
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = SourceChosenModeIs("mardu")
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.ControlledCreatureDiedThisTurn,
-            effect = Effects.Sacrifice(
+            then = Effects.Sacrifice(
                 filter = GameObjectFilter.Creature,
                 count = 1,
                 target = EffectTarget.PlayerRef(com.wingedsheep.sdk.scripting.references.Player.EachOpponent)

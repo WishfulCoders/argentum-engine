@@ -8,8 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Astelli Reclaimer
@@ -46,17 +45,14 @@ val AstelliReclaimer = card("Astelli Reclaimer") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val card = target(
-            "noncreature, nonland permanent card with mana value X or less in your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    baseFilter = (GameObjectFilter.NoncreaturePermanent and GameObjectFilter.Nonland)
-                        .ownedByYou()
-                        .manaValueAtMostEntityManaSpent(EntityReference.Source),
-                    zone = Zone.GRAVEYARD
-                )
-            )
+            TargetFilter(
+                baseFilter = (GameObjectFilter.NoncreaturePermanent and GameObjectFilter.Nonland)
+                    .ownedByYou()
+                    .manaValueAtMostEntityManaSpent(EffectTarget.Self),
+                zone = Zone.GRAVEYARD
+            ),
         )
         effect = Effects.PutOntoBattlefield(card)
         description = "When this creature enters, return target noncreature, nonland permanent card " +

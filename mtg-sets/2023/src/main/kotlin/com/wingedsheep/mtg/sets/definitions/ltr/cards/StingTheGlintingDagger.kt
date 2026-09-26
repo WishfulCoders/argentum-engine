@@ -12,6 +12,7 @@ import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Sting, the Glinting Dagger
@@ -50,7 +51,7 @@ val StingTheGlintingDagger = card("Sting, the Glinting Dagger") {
 
     // At the beginning of each combat, untap equipped creature.
     triggeredAbility {
-        trigger = Triggers.EachCombat
+        trigger = Triggers.anyPlayer.beginningOf(Step.BEGIN_COMBAT)
         effect = Effects.Untap(EffectTarget.EquippedCreature)
     }
 

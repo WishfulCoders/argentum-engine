@@ -8,7 +8,6 @@ import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.CardScript
@@ -19,6 +18,8 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Tests for Guardian Beast (Arabian Nights, {3}{B} 2/4 Beast).
@@ -40,13 +41,13 @@ class GuardianBeastScenarioTest : FunSpec({
         name = "Smash Relic",
         manaCost = ManaCost.parse("{1}"),
         oracleText = "Destroy target artifact.",
-        script = CardScript.spell(Effects.Destroy(EffectTarget.ContextTarget(0)), Targets.Artifact),
+        script = CardScript.spell(Effects.Destroy(EffectTarget.ContextTarget(0)), TargetObject(filter = TargetFilter.Artifact)),
     )
     val seizeRelic = CardDefinition.sorcery(
         name = "Seize Relic",
         manaCost = ManaCost.parse("{1}"),
         oracleText = "Gain control of target artifact.",
-        script = CardScript.spell(Effects.GainControl(EffectTarget.ContextTarget(0)), Targets.Artifact),
+        script = CardScript.spell(Effects.GainControl(EffectTarget.ContextTarget(0)), TargetObject(filter = TargetFilter.Artifact)),
     )
     // Exchange control of two target artifacts (exercises ExchangeControlExecutor).
     val swapRelics = CardDefinition.sorcery(
@@ -55,8 +56,8 @@ class GuardianBeastScenarioTest : FunSpec({
         oracleText = "Exchange control of two target artifacts.",
         script = CardScript.spell(
             Effects.ExchangeControl(EffectTarget.ContextTarget(0), EffectTarget.ContextTarget(1)),
-            Targets.Artifact,
-            Targets.Artifact,
+            TargetObject(filter = TargetFilter.Artifact),
+            TargetObject(filter = TargetFilter.Artifact),
         ),
     )
     // The player with the most life gains control of target artifact (exercises GainControlByMostExecutor).
@@ -66,7 +67,7 @@ class GuardianBeastScenarioTest : FunSpec({
         oracleText = "The player with the most life gains control of target artifact.",
         script = CardScript.spell(
             GainControlByRankEffect(PlayerRankMetric.LifeTotal, EffectTarget.ContextTarget(0)),
-            Targets.Artifact,
+            TargetObject(filter = TargetFilter.Artifact),
         ),
     )
     // An Aura that enchants artifacts.
@@ -74,7 +75,7 @@ class GuardianBeastScenarioTest : FunSpec({
         manaCost = "{1}"
         typeLine = "Enchantment — Aura"
         oracleText = "Enchant artifact"
-        auraTarget = Targets.Artifact
+        auraTarget = TargetObject(filter = TargetFilter.Artifact)
     }
 
     fun createDriver(): GameTestDriver {

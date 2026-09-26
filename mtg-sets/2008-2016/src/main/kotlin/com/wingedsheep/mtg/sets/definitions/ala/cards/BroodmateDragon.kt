@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Flying
  * When this creature enters, create a 4/4 red Dragon creature token with flying.
  *
- * A plain [Triggers.EntersBattlefield] (SELF binding) over a single [Effects.CreateToken] — one
+ * A plain `Triggers.self.enters()` (SELF binding) over a single [Effects.CreateToken] — one
  * token, the mate; the pair of Dragons on the board is the Broodmate plus its token, not two
  * tokens. The token's flying is a keyword on the token itself rather than a granted continuous
  * effect, so it survives the trigger finishing resolution.
@@ -32,7 +32,7 @@ val BroodmateDragon = card("Broodmate Dragon") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 4,
             toughness = 4,

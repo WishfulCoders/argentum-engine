@@ -32,7 +32,7 @@ val BrazenCollector = card("Brazen Collector") {
     keywords(Keyword.FIRST_STRIKE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.AddMana(Color.RED, 1, expiry = ManaExpiry.UNTIL_END_OF_TURN)
     }
 

@@ -31,7 +31,7 @@ val GreatDivideGuide = card("Great Divide Guide") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Tap,
                 effect = Effects.AddAnyColorMana(),
                 isManaAbility = true,

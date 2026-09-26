@@ -22,7 +22,7 @@ val FerociousPup = card("Ferocious Pup") {
     oracleText = "When this creature enters, create a 2/2 green Wolf creature token."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 2,
             toughness = 2,

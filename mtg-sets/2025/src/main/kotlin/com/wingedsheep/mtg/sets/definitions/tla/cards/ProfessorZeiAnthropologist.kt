@@ -6,8 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Professor Zei, Anthropologist
@@ -34,9 +32,9 @@ val ProfessorZeiAnthropologist = card("Professor Zei, Anthropologist") {
     }
 
     activatedAbility {
+        val target = target(TargetFilter.InstantOrSorceryInYourGraveyard)
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap, Costs.SacrificeSelf)
-        target = TargetObject(filter = TargetFilter.InstantOrSorceryInYourGraveyard)
-        effect = Effects.ReturnToHand(EffectTarget.ContextTarget(0))
+        effect = Effects.ReturnToHand(target)
         restrictions = listOf(ActivationRestriction.OnlyDuringYourTurn)
         description = "{1}, {T}, Sacrifice Professor Zei: Return target instant or sorcery " +
             "card from your graveyard to your hand. Activate only during your turn."

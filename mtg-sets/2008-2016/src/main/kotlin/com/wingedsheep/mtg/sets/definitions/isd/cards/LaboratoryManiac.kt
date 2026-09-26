@@ -4,7 +4,7 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.ReplaceDrawWithEffect
+import com.wingedsheep.sdk.scripting.ReplaceDrawWith
 import com.wingedsheep.sdk.scripting.conditions.Exists
 import com.wingedsheep.sdk.scripting.references.Player
 
@@ -25,7 +25,7 @@ val LaboratoryManiac = card("Laboratory Maniac") {
     oracleText = "If you would draw a card while your library has no cards in it, you win the game instead."
 
     replacementEffect(
-        ReplaceDrawWithEffect(
+        ReplaceDrawWith(
             replacementEffect = Effects.WinGame(),
             restrictions = listOf(
                 Exists(

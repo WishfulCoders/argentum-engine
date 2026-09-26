@@ -3,7 +3,6 @@ package com.wingedsheep.engine.scenarios
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.PlayLand
 import com.wingedsheep.engine.handlers.PredicateContext
-import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.DoubleFacedComponent
 import com.wingedsheep.engine.state.components.identity.TokenComponent
@@ -18,6 +17,7 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.AbilityCost
+import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -66,6 +66,7 @@ class DoubleFacedEntryAndPredicateTest : ScenarioTestBase() {
             oracleText = "{T}: Transform this land.",
             script = CardScript.permanent(
                 ActivatedAbility(
+                    id = AbilityId("DoubleFacedEntryAndPredicateTest_1"),
                     cost = AbilityCost.Tap,
                     effect = TransformEffect(EffectTarget.Self)
                 )
@@ -78,7 +79,7 @@ class DoubleFacedEntryAndPredicateTest : ScenarioTestBase() {
         get() = cardRegistry.getCard("Test Flip Land Front")!!.script.activatedAbilities[0].id
 
     private fun TestGame.isDoubleFaced(entityId: EntityId, controllerId: EntityId): Boolean =
-        PredicateEvaluator().matches(
+        services.predicateEvaluator.matches(
             state,
             state.projectedState,
             entityId,

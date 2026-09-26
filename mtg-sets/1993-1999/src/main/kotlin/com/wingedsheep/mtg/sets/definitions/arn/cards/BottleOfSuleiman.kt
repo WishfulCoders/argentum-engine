@@ -2,11 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.arn.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.FlipCoinEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -23,8 +21,8 @@ val BottleOfSuleiman = card("Bottle of Suleiman") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeSelf)
-        effect = FlipCoinEffect(
-            wonEffect = CreateTokenEffect(
+        effect = Effects.FlipCoin(
+            wonEffect = Effects.CreateToken(
                 power = 5,
                 toughness = 5,
                 colors = emptySet(),
@@ -32,7 +30,7 @@ val BottleOfSuleiman = card("Bottle of Suleiman") {
                 keywords = setOf(Keyword.FLYING),
                 artifactToken = true,
             ),
-            lostEffect = DealDamageEffect(5, EffectTarget.Controller),
+            lostEffect = Effects.DealDamage(5, EffectTarget.Controller),
         )
     }
 

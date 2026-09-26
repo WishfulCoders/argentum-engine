@@ -1,14 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Inventive Wingsmith
@@ -35,12 +35,12 @@ val InventiveWingsmith = card("Inventive Wingsmith") {
         "this turn and this creature doesn't have a flying counter on it, put a flying counter on it."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.All(
             Conditions.Not(Conditions.YouCastSpellsThisTurn(1, fromZone = Zone.HAND)),
-            Conditions.Not(Conditions.SourceHasCounter(CounterTypeFilter.Named(Counters.FLYING))),
+            Conditions.Not(Conditions.SourceHasCounter(CounterType.FLYING)),
         )
-        effect = Effects.AddCounters(Counters.FLYING, 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.FLYING, 1, EffectTarget.Self)
         description = "At the beginning of your end step, if you haven't cast a spell from your hand " +
             "this turn and this creature doesn't have a flying counter on it, put a flying counter on it."
     }

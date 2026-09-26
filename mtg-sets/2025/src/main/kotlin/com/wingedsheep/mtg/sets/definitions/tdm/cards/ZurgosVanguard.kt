@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.mobilize
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Zurgo's Vanguard — Tarkir: Dragonstorm #133
@@ -32,7 +32,7 @@ val ZurgosVanguard = card("Zurgo's Vanguard") {
 
     mobilize(1)
     dynamicPower(
-        DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Creature)
+        DynamicAmounts.creaturesYouControl()
     )
 
     metadata {

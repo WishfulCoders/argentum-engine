@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Scarecrone
@@ -38,12 +37,7 @@ val Scarecrone = card("Scarecrone") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{4}"), Costs.Tap)
-        val card = target(
-            "target artifact creature card in your graveyard",
-            TargetObject(
-                filter = TargetFilter(GameObjectFilter.ArtifactCreature.ownedByYou(), zone = Zone.GRAVEYARD)
-            ),
-        )
+        val card = target(TargetFilter(GameObjectFilter.ArtifactCreature.ownedByYou(), zone = Zone.GRAVEYARD))
         effect = Effects.PutOntoBattlefieldFromGraveyard(card)
         description = "{4}, {T}: Return target artifact creature card from your graveyard to the battlefield."
     }

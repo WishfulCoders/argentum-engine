@@ -2,15 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Lazav, Wearer of Faces — Murders at Karlov Manor #216
@@ -36,7 +35,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * The copy half is Lazav, Familiar Stranger's shape with a different pool: gather → keep the
  * creature cards → choose up to one → become a copy of it until end of turn, reading the copy
  * source from exile via `sourceFromAnyZone`. `chooseUpTo(1)` *is* the printed "you may" —
- * declining selects nothing and the [ConditionalEffect] gate leaves Lazav alone. Copying takes
+ * declining selects nothing and the [Effects.If] gate leaves Lazav alone. Copying takes
  * copiable values only (CR 707.2), so Lazav keeps his counters, his tapped-and-attacking state and
  * any Auras, and reverts at end of turn.
  *
@@ -56,36 +55,31 @@ val LazavWearerOfFaces = card("Lazav, Wearer of Faces") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val graveyardCard = target("target card from a graveyard", Targets.CardInGraveyard)
-        effect = Effects.Composite(
-            Effects.Move(graveyardCard, Zone.EXILE, linkToSource = true),
-            Effects.Investigate(),
-        )
+        trigger = Triggers.self.attacks()
+        val graveyardCard = target(TargetFilter.CardInGraveyard)
+        effect = Effects.Move(graveyardCard, Zone.EXILE, linkToSource = true) then Effects.Investigate()
         description = "Whenever Lazav attacks, exile target card from a graveyard, then investigate."
     }
 
     triggeredAbility {
-        trigger = Triggers.YouSacrificeA(GameObjectFilter.Artifact.withSubtype("Clue"))
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Artifact.withSubtype("Clue"))
         effect = Effects.Pipeline {
             val exiledWithLazav = gather(CardSource.FromLinkedExile())
             val creatureCards = filter(
                 exiledWithLazav,
                 GameObjectFilter.Creature,
-                name = "lazavCreatureCards",
             )
             val chosen = chooseUpTo(
                 1,
                 from = creatureCards,
                 prompt = "You may have Lazav become a copy of a creature card exiled with it",
                 selectedLabel = "Become a copy",
-                name = "lazavCopySource",
             )
             run(
-                ConditionalEffect(
+                Effects.If(
                     condition = whenMatches(chosen),
-                    effect = Effects.EachPermanentBecomesCopyOfTarget(
-                        target = EffectTarget.PipelineTarget(chosen.key),
+                    then = Effects.EachPermanentBecomesCopyOfTarget(
+                        target = chosen.asTarget,
                         duration = Duration.EndOfTurn,
                         affected = EffectTarget.Self,
                         sourceFromAnyZone = true,

@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.tsp.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Tolarian Sentinel
@@ -27,7 +27,7 @@ val TolarianSentinel = card("Tolarian Sentinel") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{U}"), Costs.Tap, Costs.DiscardCard)
-        val permanent = target("target permanent you control", Targets.PermanentYouControl)
+        val permanent = target(TargetFilter.PermanentYouControl)
         effect = Effects.ReturnToHand(permanent)
     }
 

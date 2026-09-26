@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Foot Elite
@@ -27,13 +26,10 @@ val FootElite = card("Foot Elite") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val creature = target(
-            "another target creature you control",
-            TargetPermanent(filter = TargetFilter.CreatureYouControl.other())
-        )
-        effect = Effects.ModifyStats(1, 0, creature)
-            .then(Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, creature, Duration.EndOfTurn))
+        trigger = Triggers.self.attacks()
+        val creature = target(TargetFilter.CreatureYouControl.other())
+        effect = Effects.ModifyStats(1, 0, creature) then
+            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, creature, Duration.EndOfTurn)
     }
 
     metadata {

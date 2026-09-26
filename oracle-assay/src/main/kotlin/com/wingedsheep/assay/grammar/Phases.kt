@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.dsl.Triggers as SdkTriggers
  *
  * ## Why this is a vocabulary and not thirteen rules
  *
- * The SDK has already done the factoring. `dsl.Triggers.phase(step, player, binding)` is the one
+ * The SDK has already done the factoring. `dsl.Triggers.<player>.beginningOf(step)` is the one
  * language for "at the beginning of a step", its named constants (`YourUpkeep`, `EachEndStep`,
  * `BeginCombat`, …) are calls to it with every argument frozen, and its own KDoc says to "reach for
  * this factory for any other combination". [Triggers] was calling the frozen constants — thirteen
@@ -64,7 +64,7 @@ import com.wingedsheep.sdk.dsl.Triggers as SdkTriggers
  * ## Two rows that are one model with the wrong number of words
  *
  * - **`"the end step"`** (62 lines) is the pre-2015 templating for `Player.Each` — Skizzik's golden
- *   reads it as `Triggers.EachEndStep` — so it is a spelling of the all-players rule and not a
+ *   reads it as `Triggers.anyPlayer.beginningOf(Step.END)` — so it is a spelling of the all-players rule and not a
  *   fourth frame.
  * - **`"each of your postcombat main phases"`** (9 lines) is `Player.You` again: the SDK has one
  *   `Step.POSTCOMBAT_MAIN`, so the distributive plural and "your second main phase" (32 lines) are
@@ -75,7 +75,7 @@ import com.wingedsheep.sdk.dsl.Triggers as SdkTriggers
  * ## The attached frame, and what it declines
  *
  * `"the upkeep of enchanted creature's controller"` is `TriggerBinding.ATTACHED` — the SDK's own
- * worked example for [SdkTriggers.phase], and Unstable Mutation's and Lingering Death's goldens read
+ * worked example for `SdkTriggers.<player>.beginningOf(step)`, and Unstable Mutation's and Lingering Death's goldens read
  * it exactly that way. The binding is a third axis of the same factory, so it is one more frame
  * rather than a family of its own.
  *
@@ -168,10 +168,10 @@ object Phases {
     private fun possessiveRule(player: Player): Phrase<TriggerSpec> =
         phrase("${player.possessive} {step}", name = "${player.possessive} step") {
             slot("step", stepNoun)
-            build { SdkTriggers.phase(it.value("step"), player) }
+            build { SdkTriggers.player(player).beginningOf(it.value("step")) }
             match { spec ->
                 val step = (spec.event as? EventPattern.StepEvent)?.step ?: return@match null
-                if (SdkTriggers.phase(step, player) != spec) return@match null
+                if (SdkTriggers.player(player).beginningOf(step) != spec) return@match null
                 bind("step" to step)
             }
         }
@@ -187,8 +187,8 @@ object Phases {
     private fun allPlayersRule(step: Step, canonicalSurface: String, vararg spellings: String): Phrase<TriggerSpec> =
         phrase(canonicalSurface, name = canonicalSurface) {
             spellings.forEach { alsoSpelled(it, it) }
-            build { SdkTriggers.phase(step, Player.Each) }
-            match { if (it == SdkTriggers.phase(step, Player.Each)) bind() else null }
+            build { SdkTriggers.anyPlayer.beginningOf(step) }
+            match { if (it == SdkTriggers.anyPlayer.beginningOf(step)) bind() else null }
         }
 
     /**
@@ -213,7 +213,7 @@ object Phases {
      * the two frames disagree about word order and about nothing else.
      */
     private fun combatRule(player: Player): Phrase<TriggerSpec> =
-        constant("combat on ${player.possessive} turn", SdkTriggers.phase(Step.BEGIN_COMBAT, player))
+        constant("combat on ${player.possessive} turn", SdkTriggers.player(player).beginningOf(Step.BEGIN_COMBAT))
 
     /**
      * `"the {step} of enchanted creature's controller"` — `TriggerBinding.ATTACHED`.
@@ -227,10 +227,10 @@ object Phases {
     private val attached: Phrase<TriggerSpec> =
         phrase("the {step} of enchanted creature's controller", name = "an attached step") {
             slot("step", stepNoun)
-            build { SdkTriggers.phase(it.value("step"), Player.You, TriggerBinding.ATTACHED) }
+            build { SdkTriggers.attached.beginningOf(it.value("step")) }
             match { spec ->
                 val step = (spec.event as? EventPattern.StepEvent)?.step ?: return@match null
-                if (SdkTriggers.phase(step, Player.You, TriggerBinding.ATTACHED) != spec) return@match null
+                if (SdkTriggers.attached.beginningOf(step) != spec) return@match null
                 bind("step" to step)
             }
         }
@@ -248,10 +248,10 @@ object Phases {
     private val eachOfYours: Phrase<TriggerSpec> = alternate(
         phrase("each of your {step}", name = "each of your steps") {
             slot("step", pluralStepNoun)
-            build { SdkTriggers.phase(it.value("step"), Player.You) }
+            build { SdkTriggers.you.beginningOf(it.value("step")) }
             match { spec ->
                 val step = (spec.event as? EventPattern.StepEvent)?.step ?: return@match null
-                if (SdkTriggers.phase(step, Player.You) != spec) return@match null
+                if (SdkTriggers.you.beginningOf(step) != spec) return@match null
                 bind("step" to step)
             }
         }

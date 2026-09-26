@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.thb.cards
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Soul-Guide Lantern
@@ -29,8 +29,8 @@ val SoulGuideLantern = card("Soul-Guide Lantern") {
 
     // When this artifact enters, exile target card from a graveyard.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", Targets.CardInGraveyard)
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.CardInGraveyard)
         effect = Effects.Move(t, Zone.EXILE)
     }
 

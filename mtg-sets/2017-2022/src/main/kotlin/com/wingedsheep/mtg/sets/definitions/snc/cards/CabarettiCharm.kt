@@ -33,7 +33,7 @@ val CabarettiCharm = card("Cabaretti Charm") {
     spell {
         modal(chooseCount = 1) {
             mode("Cabaretti Charm deals damage equal to the number of creatures you control to target creature or planeswalker") {
-                val t = target("target", Targets.CreatureOrPlaneswalker)
+                val t = target(Targets.CreatureOrPlaneswalker)
                 effect = Effects.DealDamage(DynamicAmounts.creaturesYouControl(), t)
             }
             mode("Creatures you control get +1/+1 and gain trample until end of turn") {

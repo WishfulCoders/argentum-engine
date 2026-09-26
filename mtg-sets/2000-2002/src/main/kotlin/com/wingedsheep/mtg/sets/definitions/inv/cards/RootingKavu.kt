@@ -8,9 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -25,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * The dies trigger functions from the graveyard (`triggerZone = Zone.GRAVEYARD`) so
  * "exile it" can reference Self. Exiling the card always succeeds once the player
- * chooses to, so the "if you do" shuffle is composed under the same MayEffect.
+ * chooses to, so the "if you do" shuffle is composed under the same Effects.May.
  */
 val RootingKavu = card("Rooting Kavu") {
     manaCost = "{2}{G}{G}"
@@ -37,30 +34,27 @@ val RootingKavu = card("Rooting Kavu") {
         "creature cards from your graveyard into your library."
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         triggerZone = Zone.GRAVEYARD
-        effect = MayEffect(
-            effect = Effects.Composite(
-                listOf(
-                    Effects.Exile(EffectTarget.Self),
-                    GatherCardsEffect(
-                        source = CardSource.FromZone(
-                            Zone.GRAVEYARD,
-                            Player.You,
-                            GameObjectFilter.Creature
-                        ),
-                        storeAs = "graveyardCreatures"
-                    ),
-                    MoveCollectionEffect(
-                        from = "graveyardCreatures",
-                        destination = CardDestination.ToZone(
-                            Zone.LIBRARY,
-                            Player.You,
-                            ZonePlacement.Shuffled
-                        )
+        effect = Effects.May(
+            effect = Effects.Pipeline {
+                run(Effects.Exile(EffectTarget.Self))
+                val graveyardCreatures = gather(
+                    CardSource.FromZone(
+                        Zone.GRAVEYARD,
+                        Player.You,
+                        GameObjectFilter.Creature
                     )
                 )
-            ),
+                move(
+                    graveyardCreatures,
+                    CardDestination.ToZone(
+                        Zone.LIBRARY,
+                        Player.You,
+                        ZonePlacement.Shuffled
+                    )
+                )
+            },
             descriptionOverride = "You may exile this creature. If you do, shuffle all " +
                 "creature cards from your graveyard into your library."
         )

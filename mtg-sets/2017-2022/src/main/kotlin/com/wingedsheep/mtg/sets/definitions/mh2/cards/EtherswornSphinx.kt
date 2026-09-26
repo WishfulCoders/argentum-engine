@@ -28,7 +28,7 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
  *
  * **Cascade** is not: [Keyword.CASCADE] is display-only vocabulary and nothing in the rules engine
  * reads it. Cascade *is* a "when you cast this spell" triggered ability (CR 702.85a), so the
- * behaviour lives in a [Triggers.WhenYouCastThisSpell] trigger feeding [Effects.Cascade], with the
+ * behaviour lives in a `Triggers.self.isCast()` trigger feeding [Effects.Cascade], with the
  * keyword kept only for the printed line — the canonical lowering in `arb/cards/BloodbraidElf.kt`.
  * Note the two do not interact: cascade compares against the *printed* mana value, so affinity
  * making the Sphinx cheap to cast never shrinks what cascade can hit.
@@ -48,7 +48,7 @@ val EtherswornSphinx = card("Ethersworn Sphinx") {
 
     // Cascade — the cast trigger the keyword abbreviates (CR 702.85a).
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
+        trigger = Triggers.self.isCast()
         effect = Effects.Cascade
         description = "Cascade"
     }

@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.eoe.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Kavaron Turbodrone
@@ -25,13 +25,8 @@ val KavaronTurbodrone = card("Kavaron Turbodrone") {
     // {T}: Target creature you control gets +1/+1 and gains haste until end of turn. Activate only as a sorcery.
     activatedAbility {
         cost = Costs.Tap
-        val target = target("target creature you control", Targets.CreatureYouControl)
-        effect = Effects.Composite(
-            listOf(
-                Effects.ModifyStats(1, 1, target),
-                Effects.GrantKeyword(Keyword.HASTE, target)
-            )
-        )
+        val target = target(TargetFilter.CreatureYouControl)
+        effect = Effects.ModifyStats(1, 1, target) then Effects.GrantKeyword(Keyword.HASTE, target)
         timing = TimingRule.SorcerySpeed
         description = "{T}: Target creature you control gets +1/+1 and gains haste until end of turn. Activate only as a sorcery."
     }

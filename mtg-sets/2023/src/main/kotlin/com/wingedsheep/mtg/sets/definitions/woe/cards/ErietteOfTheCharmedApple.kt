@@ -11,6 +11,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Eriette of the Charmed Apple
@@ -47,7 +48,7 @@ val ErietteOfTheCharmedApple = card("Eriette of the Charmed Apple") {
         .count()
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         effect = Effects.LoseLife(
             aurasYouControl,
             EffectTarget.PlayerRef(Player.EachOpponent),

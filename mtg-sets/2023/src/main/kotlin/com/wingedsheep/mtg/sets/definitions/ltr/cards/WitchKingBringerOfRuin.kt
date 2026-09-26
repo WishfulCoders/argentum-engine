@@ -38,7 +38,7 @@ val WitchKingBringerOfRuin = card("Witch-king, Bringer of Ruin") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.Sacrifice(
             GameObjectFilter.Creature.hasLeastPower(),
             1,

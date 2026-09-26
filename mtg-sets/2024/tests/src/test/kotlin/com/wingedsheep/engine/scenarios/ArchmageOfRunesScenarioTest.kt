@@ -11,7 +11,7 @@ import io.kotest.matchers.shouldNotBe
  * "Instant and sorcery spells you cast cost {1} less to cast.
  *  Whenever you cast an instant or sorcery spell, draw a card."
  *
- * Verifies both halves: the [Triggers.YouCastInstantOrSorcery] draw payoff, and the
+ * Verifies both halves: the `Triggers.you.casts(GameObjectFilter.InstantOrSorcery)` draw payoff, and the
  * ModifySpellCost {1}-generic reduction (proven by casting a spell with only the reduced
  * amount of mana available).
  */

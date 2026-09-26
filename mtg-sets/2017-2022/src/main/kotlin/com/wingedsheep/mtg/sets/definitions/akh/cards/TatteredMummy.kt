@@ -23,7 +23,7 @@ val TatteredMummy = card("Tattered Mummy") {
     oracleText = "When this creature dies, each opponent loses 2 life."
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent))
     }
 

@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.p02.cards
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Festival of Trokin
@@ -25,10 +25,7 @@ val FestivalOfTrokin = card("Festival of Trokin") {
 
     spell {
         effect = Effects.GainLife(
-            DynamicAmount.Multiply(
-                DynamicAmounts.battlefield(Player.You, GameObjectFilter.Creature).count(),
-                2
-            )
+            DynamicAmounts.battlefield(Player.You, GameObjectFilter.Creature).count() * 2
         )
     }
 

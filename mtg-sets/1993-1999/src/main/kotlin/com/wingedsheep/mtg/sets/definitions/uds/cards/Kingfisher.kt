@@ -5,10 +5,10 @@
 package com.wingedsheep.mtg.sets.definitions.uds.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -28,8 +28,8 @@ val Kingfisher = card("Kingfisher") {
     toughness = 2
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.Dies
-        effect = DrawCardsEffect(1)
+        trigger = Triggers.self.dies()
+        effect = Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.COMMON

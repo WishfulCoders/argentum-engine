@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.clb.cards
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Bonecaller Cleric
@@ -30,7 +30,7 @@ val BonecallerCleric = card("Bonecaller Cleric") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}{B}"), Costs.SacrificeSelf)
-        val creature = target("target", Targets.CreatureCardInYourGraveyard)
+        val creature = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.Move(creature, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)
         timing = TimingRule.SorcerySpeed
         description = "{3}{B}, Sacrifice this creature: Return target creature card from your " +

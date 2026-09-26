@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.mechanics.combat.rules
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.mechanics.layers.ProjectedState
@@ -21,8 +22,6 @@ import com.wingedsheep.sdk.model.EntityId
  */
 object AttackAvailability {
 
-    private val rules: List<AttackRestrictionRule> = defaultAttackRestrictionRules()
-
     /**
      * True iff [entityId] passes every per-creature attack restriction for [playerId] in [state].
      * [projected] must be the projection the caller is already working with — attack legality reads
@@ -34,7 +33,8 @@ object AttackAvailability {
         projected: ProjectedState,
         entityId: EntityId,
         playerId: EntityId,
-        cardRegistry: CardRegistry
+        cardRegistry: CardRegistry,
+        predicateEvaluator: PredicateEvaluator
     ): Boolean {
         val ctx = AttackCheckContext(
             state = state,
@@ -43,6 +43,6 @@ object AttackAvailability {
             attackingPlayer = playerId,
             cardRegistry = cardRegistry
         )
-        return rules.all { it.check(ctx) == null }
+        return defaultAttackRestrictionRules(predicateEvaluator).all { it.check(ctx) == null }
     }
 }

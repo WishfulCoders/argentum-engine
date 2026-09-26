@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Krumar Initiate — Tarkir: Dragonstorm #84
@@ -30,7 +30,7 @@ val KrumarInitiate = card("Krumar Initiate") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{X}{B}"), Costs.Tap, Costs.PayXLife)
         timing = TimingRule.SorcerySpeed
-        effect = Effects.Endure(DynamicAmount.XValue)
+        effect = Effects.Endure(DynamicAmounts.xValue())
         description = "{X}{B}, {T}, Pay X life: This creature endures X. Activate only as a sorcery."
     }
 

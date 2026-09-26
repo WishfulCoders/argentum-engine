@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -32,8 +30,8 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *  3. Filter the exiled pick to creature cards. If a creature card was exiled, the controller may
  *     have Lazav become a copy of that card until end of turn —
  *     [Effects.EachPermanentBecomesCopyOfTarget] with `affected = Self`, `sourceFromAnyZone = true`
- *     (the copy source sits in exile, not on the battlefield), wrapped in [MayEffect] and gated on
- *     the creature filter via [ConditionalEffect]. Copies copiable values only (Rule 707), so
+ *     (the copy source sits in exile, not on the battlefield), wrapped in [Effects.May] and gated on
+ *     the creature filter via [Effects.If]. Copies copiable values only (Rule 707), so
  *     Lazav keeps his counters and stays a Shapeshifter creature.
  */
 val LazavFamiliarStranger = card("Lazav, Familiar Stranger") {
@@ -48,11 +46,11 @@ val LazavFamiliarStranger = card("Lazav, Familiar Stranger") {
         "opponents, anything they control, and/or cards in their graveyards is a crime.)"
 
     triggeredAbility {
-        trigger = Triggers.YouCommitCrime
+        trigger = Triggers.you.commitsCrime()
         oncePerTurn = true
         effect = Effects.Pipeline {
             // Put a +1/+1 counter on Lazav.
-            run(Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self))
+            run(Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self))
 
             // Then you may exile a card from a graveyard.
             val graveyardCards = gather(
@@ -64,18 +62,17 @@ val LazavFamiliarStranger = card("Lazav, Familiar Stranger") {
                 useTargetingUI = true,
                 prompt = "You may exile a card from a graveyard",
                 selectedLabel = "Exile",
-                name = "lazavExiled",
             )
             exile(exiled)
 
             // If a creature card was exiled this way, you may have Lazav become a copy of that card.
-            val creatureExiled = filter(exiled, GameObjectFilter.Creature, name = "lazavCreature")
+            val creatureExiled = filter(exiled, GameObjectFilter.Creature)
             run(
-                ConditionalEffect(
+                Effects.If(
                     condition = whenMatches(creatureExiled, GameObjectFilter.Creature),
-                    effect = MayEffect(
+                    then = Effects.May(
                         Effects.EachPermanentBecomesCopyOfTarget(
-                            target = EffectTarget.PipelineTarget(creatureExiled.key),
+                            target = creatureExiled.asTarget,
                             duration = Duration.EndOfTurn,
                             affected = EffectTarget.Self,
                             sourceFromAnyZone = true,

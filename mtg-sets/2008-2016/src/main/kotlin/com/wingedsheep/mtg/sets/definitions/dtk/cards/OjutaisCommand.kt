@@ -1,11 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.dtk.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Ojutai's Command
@@ -44,17 +42,14 @@ val OjutaisCommand = card("Ojutai's Command") {
     spell {
         modal(chooseCount = 2) {
             mode("Return target creature card with mana value 2 or less from your graveyard to the battlefield") {
-                val creatureCard = target(
-                    "creature card with mana value 2 or less in your graveyard",
-                    TargetObject(filter = TargetFilter.CreatureInYourGraveyard.manaValueAtMost(2))
-                )
+                val creatureCard = target(TargetFilter.CreatureInYourGraveyard.manaValueAtMost(2))
                 effect = Effects.PutOntoBattlefieldFromGraveyard(creatureCard)
             }
             mode("You gain 4 life") {
                 effect = Effects.GainLife(4)
             }
             mode("Counter target creature spell") {
-                target = Targets.CreatureSpell
+                val creatureSpell = target(TargetFilter.CreatureSpellOnStack)
                 effect = Effects.CounterSpell()
             }
             mode("Draw a card") {

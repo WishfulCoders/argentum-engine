@@ -35,7 +35,7 @@ val HarriedDronesmith = card("Harried Dronesmith") {
         "beginning of your next end step."
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

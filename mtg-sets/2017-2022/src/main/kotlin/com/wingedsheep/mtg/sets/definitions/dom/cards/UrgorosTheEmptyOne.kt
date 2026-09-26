@@ -5,18 +5,10 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalOnCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Urgoros, the Empty One
@@ -38,31 +30,18 @@ val UrgorosTheEmptyOne = card("Urgoros, the Empty One") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = Effects.Composite(listOf(
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.Pipeline {
             // Gather the damaged player's hand
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.HAND, Player.TriggeringPlayer),
-                storeAs = "hand"
-            ),
+            val hand = gather(CardSource.FromZone(Zone.HAND, Player.TriggeringPlayer))
             // If hand not empty, discard one at random; if empty, controller draws
-            ConditionalOnCollectionEffect(
-                collection = "hand",
-                ifNotEmpty = Effects.Composite(listOf(
-                    SelectFromCollectionEffect(
-                        from = "hand",
-                        selection = SelectionMode.Random(DynamicAmount.Fixed(1)),
-                        storeSelected = "discarded"
-                    ),
-                    MoveCollectionEffect(
-                        from = "discarded",
-                        destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.TriggeringPlayer),
-                        moveType = MoveType.Discard
-                    )
-                )),
-                ifEmpty = DrawCardsEffect(count = DynamicAmount.Fixed(1))
-            )
-        ))
+            ifNotEmpty(hand) {
+                val discarded = chooseRandom(1, from = hand)
+                discard(discarded, Player.TriggeringPlayer)
+            } orElse {
+                run(Effects.DrawCards(count = 1))
+            }
+        }
     }
 
     metadata {

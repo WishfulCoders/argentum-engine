@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Food Coma
@@ -16,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  * leaves the battlefield. Create a Food token.
  *
  * The O-Ring shape (Banishing Light): [Effects.ExileUntilLeaves] on the ETB plus a companion
- * [Triggers.LeavesBattlefield] trigger that returns the linked exile. The Food rides along in the
+ * `Triggers.self.leaves()` trigger that returns the linked exile. The Food rides along in the
  * *same* ability, so it shares the target's fate — per the 2024-11-08 Food ruling, if the exile
  * target is illegal as the ability resolves the whole ability is countered and no Food is created.
  * [Effects.Composite] gives that for free; a second triggered ability would not.
@@ -30,18 +29,15 @@ val FoodComa = card("Food Coma") {
         "\"{2}, {T}, Sacrifice this token: You gain 3 life.\")"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val victim = target("target", TargetCreature(filter = TargetFilter.CreatureOpponentControls))
-        effect = Effects.Composite(
-            Effects.ExileUntilLeaves(victim),
-            Effects.CreateFood()
-        )
+        trigger = Triggers.self.enters()
+        val victim = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.ExileUntilLeaves(victim) then Effects.CreateFood()
         description = "When this enchantment enters, exile target creature an opponent controls " +
             "until this enchantment leaves the battlefield. Create a Food token."
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 

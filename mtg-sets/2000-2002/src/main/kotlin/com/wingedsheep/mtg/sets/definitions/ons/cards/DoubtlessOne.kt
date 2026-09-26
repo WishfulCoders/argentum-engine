@@ -1,11 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 
@@ -23,11 +22,11 @@ val DoubtlessOne = card("Doubtless One") {
     typeLine = "Creature — Cleric Avatar"
     oracleText = "Whenever Doubtless One deals damage, you gain that much life.\nDoubtless One's power and toughness are each equal to the number of Clerics on the battlefield."
 
-    dynamicStats(DynamicAmount.AggregateBattlefield(Player.Each, GameObjectFilter.Creature.withSubtype("Cleric")))
+    dynamicStats(DynamicAmounts.battlefield(Player.Each, GameObjectFilter.Creature.withSubtype("Cleric")).count())
 
     triggeredAbility {
-        trigger = Triggers.DealsDamage
-        effect = GainLifeEffect(DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_DAMAGE_AMOUNT))
+        trigger = Triggers.self.dealsDamage()
+        effect = Effects.GainLife(DynamicAmounts.triggerDamageAmount())
     }
 
     metadata {

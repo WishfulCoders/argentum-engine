@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
@@ -11,12 +12,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.ReturnFace
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Clive, Ifrit's Dominant // Ifrit, Warden of Inferno
@@ -47,20 +45,18 @@ private val IfritWardenOfInferno = card("Ifrit, Warden of Inferno") {
 
     // I — Lunge — Ifrit fights up to one other target creature.
     sagaChapter(1) {
-        val foe = target("creature", TargetObject(optional = true, filter = TargetFilter.OtherCreature))
+        val foe = target(TargetFilter.OtherCreature, optional = true)
         effect = Effects.Fight(EffectTarget.Self, foe)
     }
 
     // II, III — Brimstone — Add {R}{R}{R}{R}. If Ifrit has three or more lore counters on it,
     // exile it, then return it to the battlefield front face up. Only chapter III meets the
     // lore threshold, so it is the chapter that flips Ifrit back to Clive.
-    val brimstone = Effects.Composite(
-        Effects.AddMana(Color.RED, 4),
-        ConditionalEffect(
-            condition = Conditions.SourceCounterCountAtLeast("LORE", 3),
-            effect = Effects.ExileAndReturnTransformed(EffectTarget.Self, ReturnFace.FRONT),
-        ),
-    )
+    val brimstone = Effects.AddMana(Color.RED, 4) then
+        Effects.If(
+            condition = Conditions.SourceCounterCountAtLeast(CounterType.LORE, 3),
+            then = Effects.ExileAndReturnTransformed(EffectTarget.Self, ReturnFace.FRONT),
+        )
     sagaChapter(2) { effect = brimstone }
     sagaChapter(3) { effect = brimstone }
 
@@ -86,12 +82,9 @@ private val CliveIfritsDominantFront = card("Clive, Ifrit's Dominant") {
 
     // When Clive enters, you may discard your hand, then draw cards equal to your devotion to red.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(
-            Effects.Composite(
-                Patterns.Hand.discardHand(),
-                Effects.DrawCards(DynamicAmounts.devotionTo(Color.RED)),
-            ),
+        trigger = Triggers.self.enters()
+        effect = Effects.May(
+            Patterns.Hand.discardHand() then Effects.DrawCards(DynamicAmounts.devotionTo(Color.RED)),
         )
     }
 

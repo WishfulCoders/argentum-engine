@@ -36,7 +36,7 @@ class ReduceColoredIfAnyTargetMatchesTest : FunSpec({
     val registry = CardRegistry().apply { register(TestCards.all) }
     val brushOff: CardDefinition = registry.getCard("Brush Off")
         ?: error("Brush Off not registered")
-    val calculator = CostCalculator(registry, PredicateEvaluator())
+    val calculator = CostCalculator(registry, PredicateEvaluator(cardRegistry = null))
 
     fun stackSpell(type: CardType, name: String): Pair<EntityId, ComponentContainer> {
         val id = EntityId.generate()

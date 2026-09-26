@@ -5,10 +5,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddManaOfChoiceEffect
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
 import com.wingedsheep.sdk.scripting.effects.ManaSpellRider
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.values.ManaColorSet
 
 /**
@@ -43,11 +41,11 @@ val DelightedHalfling = card("Delighted Halfling") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = AddManaOfChoiceEffect(
+        effect = Effects.AddManaOfChoice(
             colorSet = ManaColorSet.AnyColor,
-            amount = DynamicAmount.Fixed(1),
+            amount = 1,
             restriction = ManaRestriction.LegendarySpellsOnly,
-            riders = setOf(ManaSpellRider.MakesSpellUncounterable)
+            riders = setOf(ManaSpellRider.MakesSpellUncounterable())
         )
         manaAbility = true
         timing = TimingRule.ManaAbility

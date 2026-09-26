@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.atq.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Triskelion
@@ -27,14 +26,14 @@ val Triskelion = card("Triskelion") {
         "Remove a +1/+1 counter from this creature: It deals 1 damage to any target."
 
     replacementEffect(EntersWithCounters(
-        counterType = CounterTypeFilter.PlusOnePlusOne,
+        counterType = CounterType.PLUS_ONE_PLUS_ONE,
         count = 3,
         selfOnly = true
     ))
 
     activatedAbility {
-        cost = Costs.RemoveCounterFromSelf(Counters.PLUS_ONE_PLUS_ONE, 1)
-        val t = target("any target", AnyTarget())
+        cost = Costs.RemoveCounterFromSelf(CounterType.PLUS_ONE_PLUS_ONE, 1)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
         description = "Remove a +1/+1 counter from this creature: It deals 1 damage to any target."
     }

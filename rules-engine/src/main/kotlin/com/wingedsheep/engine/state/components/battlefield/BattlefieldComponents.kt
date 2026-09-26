@@ -467,9 +467,11 @@ data class ProtectorComponent(
  * would never be cast. Damage dealt by a *resolving* spell needs no marker: triggers from that
  * resolution are already detected before the next SBA pass.
  *
- * The marker buys exactly one SBA pass. `BattleDefenseCheck` clears it instead of binning the
- * battle, so if the defeat trigger never materialises (it was countered, or the permanent stopped
- * being a Siege) the very next check puts the battle into its owner's graveyard as normal. A Siege
+ * The marker lasts until the Settler's trigger-detection pass: `BattleDefenseCheck` reads it but
+ * never clears it (an SBA pass can loop several times inside the combat damage step), and the
+ * Settler removes it once triggers are queued ([com.wingedsheep.engine.mechanics.battle.Battles.disarmDefeatTriggers]).
+ * From then on the queued defeat trigger is what spares the Siege; if none materialised (the
+ * permanent stopped being a Siege) the next check puts the battle into its owner's graveyard. A Siege
  * that never had a defense counter is never marked, which is what makes the "you won't exile it or
  * cast the other face" ruling fall out.
  */
@@ -861,14 +863,14 @@ data class ReceivedCountersThisTurnComponent(
      * `StatePredicate.ReceivedCounterThisTurn` be `counterTypes.isNotEmpty()` instead of a separate
      * marker-presence test that the by-controller axis could not mirror.
      */
-    val counterTypes: Set<String> = emptySet(),
+    val counterTypes: Set<CounterType> = emptySet(),
     /**
      * The subset of [counterTypes] placed by this permanent's own controller (as of the placement).
      * "You've put …" reads this; "counters would be put …" reads [counterTypes].
      */
-    val typesFromController: Set<String> = emptySet()
+    val typesFromController: Set<CounterType> = emptySet()
 ) : Component {
-    fun with(counterType: String, byController: Boolean): ReceivedCountersThisTurnComponent {
+    fun with(counterType: CounterType, byController: Boolean): ReceivedCountersThisTurnComponent {
         return copy(
             counterTypes = counterTypes + counterType,
             typesFromController =
@@ -1292,9 +1294,18 @@ data object DamageUnpreventableThisTurnComponent : Component
  * memory of dealing damage (CR 400.7).
  *
  * [lastDealtDamageTurn] has no default: every stamp site must name the turn it is recording.
+ *
+ * [lastDealtCombatDamageTurn] is the same record narrowed to combat damage (to any recipient), for
+ * `HasDealtDamage(combatOnly = true)` — Ruric Thar, Magecrusher's "as long as they haven't dealt
+ * combat damage yet". Null means this object has never dealt combat damage. It survives a later
+ * noncombat stamp (the one stamp site carries it forward), and it goes with the marker on a zone
+ * change. Its default exists only so a serialized state from before the field reads back.
  */
 @Serializable
-data class HasDealtDamageComponent(val lastDealtDamageTurn: Int) : Component
+data class HasDealtDamageComponent(
+    val lastDealtDamageTurn: Int,
+    val lastDealtCombatDamageTurn: Int? = null
+) : Component
 
 /** Actual damage total, scoped to a turn and object incarnation, including resolving spells. */
 @Serializable
@@ -1305,23 +1316,38 @@ data class DamageDealtThisTurnComponent(
 ) : Component
 
 /**
- * The players and planeswalkers this permanent has dealt damage to **this game** — the memory
- * behind The Fallen ("this creature deals 1 damage to each opponent and planeswalker it has dealt
- * damage to this game").
+ * The players and planeswalkers this permanent has dealt damage to **this game**, each stamped with
+ * the turn of the most recent damage — the memory behind The Fallen ("this creature deals 1 damage
+ * to each opponent and planeswalker it has dealt damage to this game") and, through the stamp, behind
+ * the per-turn readings "a creature that dealt damage to you this turn" (Reciprocate) and "target
+ * player dealt damage by this creature this turn" (Wicked Akuba).
+ *
+ * One fact, two windows, the [HasDealtDamageComponent] shape: key presence answers "this game",
+ * a stamp equal to the current turn answers "this turn", and nothing is cleared at end of turn —
+ * a stale stamp simply stops matching once the turn number moves on.
  *
  * Unlike [DealtCombatDamageToPlayersThisTurnComponent] this is not a per-turn marker: it is never
- * cleared by `CleanupPhaseManager`, so it accumulates across every turn the permanent spends on the
- * battlefield. It *is* stripped on a zone change like the rest of the damage memory, because a
- * permanent that leaves and returns is a new object with no history (CR 400.7) — which is the
- * printed behaviour: a Fallen that dies and is reanimated has dealt damage to nobody.
+ * cleared by `CleanupPhaseManager`. It has the [LastKnownPermanentComponent] lifetime instead: it
+ * survives the permanent's move off the battlefield, so an ability that outlives its source still
+ * knows whom the source damaged (CR 113.7a, CR 608.2h), and is dropped on the entity's next zone
+ * change — a permanent that leaves and returns is a new object with no history (CR 400.7), which is
+ * the printed behaviour: a Fallen that dies and is reanimated has dealt damage to nobody.
  *
  * Both combat and noncombat damage count, and it records planeswalkers alongside players; the
  * consumer filters to what the card asks for.
  */
 @Serializable
 data class DealtDamageToThisGameComponent(
-    val recipientIds: Set<EntityId> = emptySet()
-) : Component
+    val lastDamageTurnByRecipient: Map<EntityId, Int> = emptyMap()
+) : Component {
+    val recipientIds: Set<EntityId> get() = lastDamageTurnByRecipient.keys
+
+    fun dealtDamageToOnTurn(recipientId: EntityId, turnNumber: Int): Boolean =
+        lastDamageTurnByRecipient[recipientId] == turnNumber
+
+    fun withDamageTo(recipientId: EntityId, turnNumber: Int): DealtDamageToThisGameComponent =
+        copy(lastDamageTurnByRecipient = lastDamageTurnByRecipient + (recipientId to turnNumber))
+}
 
 /**
  * A number the controller chose as this permanent entered the battlefield, kept for as long as the

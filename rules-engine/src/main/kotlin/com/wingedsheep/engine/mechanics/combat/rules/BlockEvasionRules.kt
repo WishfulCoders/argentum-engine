@@ -132,7 +132,6 @@ class IntimidateRule : BlockEvasionRule {
  * Landwalk: Cannot be blocked if defending player controls land of that type.
  */
 class LandwalkRule : BlockEvasionRule {
-
     private val landwalkToSubtype = mapOf(
         Keyword.FORESTWALK to Subtype.FOREST,
         Keyword.SWAMPWALK to Subtype.SWAMP,
@@ -735,7 +734,7 @@ class RingBearerCantBeBlockedByGreaterPowerRule : BlockEvasionRule {
  * Default set of block evasion rules, ordered for efficient short-circuiting.
  */
 fun defaultBlockEvasionRules(
-    predicateEvaluator: PredicateEvaluator = PredicateEvaluator()
+    predicateEvaluator: PredicateEvaluator
 ): List<BlockEvasionRule> = listOf(
     UnblockableRule(),
     FlyingRule(),

@@ -2,13 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ChooseActionEffect
 import com.wingedsheep.sdk.scripting.effects.EffectChoice
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Combustion Man
@@ -41,9 +40,9 @@ val CombustionMan = card("Combustion Man") {
         "has Combustion Man deal damage to them equal to his power."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val permanent = target("target permanent", Targets.Permanent)
-        effect = ChooseActionEffect(
+        trigger = Triggers.self.attacks()
+        val permanent = target(TargetFilter.Permanent)
+        effect = Effects.ChooseAction(
             choices = listOf(
                 EffectChoice(
                     label = "Have Combustion Man deal damage to you equal to his power",

@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.targets.TargetOther
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Mabel's Mettle {1}{W}
@@ -21,11 +21,10 @@ val MabelsMettle = card("Mabel's Mettle") {
     oracleText = "Target creature gets +2/+2 until end of turn. Up to one other target creature gets +1/+1 until end of turn."
 
     spell {
-        val primary = target("target creature", Targets.Creature)
+        val primary = target(TargetFilter.Creature)
         // "other target creature" — must differ from the first target (CR 601.2c)
-        val secondary = target("up to one other target creature", TargetOther(TargetCreature(optional = true)))
-        effect = Effects.ModifyStats(2, 2, primary)
-            .then(Effects.ModifyStats(1, 1, secondary))
+        val secondary = target(TargetOther(TargetObject(filter = TargetFilter.Creature, optional = true)))
+        effect = Effects.ModifyStats(2, 2, primary) then Effects.ModifyStats(1, 1, secondary)
     }
 
     metadata {

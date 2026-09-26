@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Triggers
@@ -10,11 +11,8 @@ import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.HasCreatureTypesOf
 import com.wingedsheep.sdk.scripting.SetBasePowerToughnessDynamicStatic
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Duplicant — Mirrodin #165
@@ -26,7 +24,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  *
  * Modelling notes:
  * - The two halves are a *linked* pair (CR 607): `Effects.ExileLinkedToSource` writes the pile and
- *   both statics read it through [EntityReference.LinkedExiledCard]. The exiled *card* is what is
+ *   both statics read it through [EffectTarget.LinkedExiledCard]. The exiled *card* is what is
  *   read — not the permanent that was exiled — so a creature that dies out of exile, or an imprint
  *   the controller declined, simply leaves Duplicant a printed 2/4 Shapeshifter.
  * - "As long as a card exiled with this creature is a creature card" is the gate, not a card-level
@@ -57,12 +55,9 @@ val Duplicant = card("Duplicant") {
 
     // "Imprint — When this creature enters, you may exile target nontoken creature."
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
-        val exiled = target(
-            "target nontoken creature",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.nontoken()))
-        )
+        val exiled = target(TargetFilter(GameObjectFilter.Creature.nontoken()))
         effect = Effects.ExileLinkedToSource(exiled)
         description = "Imprint — When this creature enters, you may exile target nontoken creature."
     }
@@ -72,7 +67,7 @@ val Duplicant = card("Duplicant") {
     staticAbility {
         ability = ConditionalStaticAbility(
             ability = HasCreatureTypesOf(
-                source = EntityReference.LinkedExiledCard(),
+                source = EffectTarget.LinkedExiledCard(),
                 retainedTypes = setOf("Shapeshifter")
             ),
             condition = Conditions.LinkedExiledCardMatches(Filters.Creature)
@@ -83,14 +78,8 @@ val Duplicant = card("Duplicant") {
     staticAbility {
         ability = ConditionalStaticAbility(
             ability = SetBasePowerToughnessDynamicStatic(
-                power = DynamicAmount.EntityProperty(
-                    EntityReference.LinkedExiledCard(),
-                    EntityNumericProperty.Power
-                ),
-                toughness = DynamicAmount.EntityProperty(
-                    EntityReference.LinkedExiledCard(),
-                    EntityNumericProperty.Toughness
-                )
+                power = DynamicAmounts.powerOf(EffectTarget.LinkedExiledCard()),
+                toughness = DynamicAmounts.toughnessOf(EffectTarget.LinkedExiledCard())
             ),
             condition = Conditions.LinkedExiledCardMatches(Filters.Creature)
         )

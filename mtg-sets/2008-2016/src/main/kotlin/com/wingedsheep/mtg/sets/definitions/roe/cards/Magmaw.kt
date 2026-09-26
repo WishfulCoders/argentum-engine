@@ -44,7 +44,7 @@ val Magmaw = card("Magmaw") {
             Costs.Mana("{1}"),
             Costs.Sacrifice(GameObjectFilter.NonlandPermanent)
         )
-        val t = target("any target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
     }
 

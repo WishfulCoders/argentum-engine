@@ -1,17 +1,18 @@
 package com.wingedsheep.mtg.sets.definitions.plc.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Vitaspore Thallid
@@ -33,13 +34,13 @@ val VitasporeThallid = card("Vitaspore Thallid") {
         "Sacrifice a Saproling: Target creature gains haste until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.AddCounters(Counters.SPORE, 1, EffectTarget.Self)
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.AddCounters(CounterType.SPORE, 1, EffectTarget.Self)
         description = "At the beginning of your upkeep, put a spore counter on this creature."
     }
 
     activatedAbility {
-        cost = Costs.RemoveCounterFromSelf(Counters.SPORE, 3)
+        cost = Costs.RemoveCounterFromSelf(CounterType.SPORE, 3)
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
@@ -51,7 +52,7 @@ val VitasporeThallid = card("Vitaspore Thallid") {
 
     activatedAbility {
         cost = Costs.Sacrifice(GameObjectFilter.Permanent.withSubtype(Subtype.SAPROLING))
-        val t = target("target", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(Keyword.HASTE, t)
         description = "Sacrifice a Saproling: Target creature gains haste until end of turn."
     }

@@ -18,7 +18,7 @@ val Armageddon = card("Armageddon") {
     typeLine = "Sorcery"
 
     spell {
-        effect = Effects.ForEachInGroup(GroupFilter.AllLands, Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true))
+        effect = Effects.ForEachInGroup(GroupFilter.AllLands, Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true))
     }
 
     metadata {

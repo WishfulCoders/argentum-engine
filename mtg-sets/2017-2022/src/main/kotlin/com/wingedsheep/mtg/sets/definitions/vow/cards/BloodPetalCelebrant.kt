@@ -32,7 +32,7 @@ val BloodPetalCelebrant = card("Blood Petal Celebrant") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateBlood()
     }
 

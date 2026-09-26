@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Subterranean Schooner
@@ -41,11 +40,8 @@ val SubterraneanSchooner = card("Subterranean Schooner") {
     keywordAbility(KeywordAbility.crew(1))
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val crewer = target(
-            "target creature that crewed it this turn",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.crewedOrSaddledSourceThisTurn()))
-        )
+        trigger = Triggers.self.attacks()
+        val crewer = target(TargetFilter(GameObjectFilter.Creature.crewedOrSaddledSourceThisTurn()))
         effect = Effects.Explore(crewer)
     }
 

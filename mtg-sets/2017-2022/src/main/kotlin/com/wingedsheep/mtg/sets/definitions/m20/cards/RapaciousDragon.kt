@@ -28,7 +28,7 @@ val RapaciousDragon = card("Rapacious Dragon") {
     toughness = 3
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateTreasure(count = 2)
     }
     metadata {

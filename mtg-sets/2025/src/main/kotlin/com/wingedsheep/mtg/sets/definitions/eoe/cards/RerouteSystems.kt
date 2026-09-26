@@ -2,15 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Reroute Systems
@@ -29,17 +26,15 @@ val RerouteSystems = card("Reroute Systems") {
     spell {
         effect = ModalEffect.chooseOne(
             // Mode 1: Target artifact or creature gains indestructible until end of turn
-            Mode.withTarget(
-                Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.ContextTarget(0)),
-                TargetPermanent(filter = TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Creature)),
-                "Target artifact or creature gains indestructible until end of turn"
-            ),
+            mode("Target artifact or creature gains indestructible until end of turn") {
+                val artifact = target(TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Creature))
+                effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, artifact)
+            },
             // Mode 2: Reroute Systems deals 2 damage to target tapped creature
-            Mode.withTarget(
-                Effects.DealDamage(2, EffectTarget.ContextTarget(0)),
-                Targets.TappedCreature,
-                "Reroute Systems deals 2 damage to target tapped creature"
-            )
+            mode("Reroute Systems deals 2 damage to target tapped creature") {
+                val tappedCreature = target(TargetFilter.TappedCreature)
+                effect = Effects.DealDamage(2, tappedCreature)
+            }
         )
     }
 

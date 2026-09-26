@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.MustAttack
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -23,7 +22,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Implementation notes:
  * - "Attacks each combat if able" is the [MustAttack] static over [GroupFilter.source] — a
  *   requirement the declare-attackers legality check enforces, not an effect that taps Ares.
- * - The death trigger is a battlefield → graveyard zone change ([Triggers.leavesBattlefield] with
+ * - The death trigger is a battlefield → graveyard zone change (`Triggers.<subject>.leaves(to, excludeTo, excludeSacrifice)` with
  *   `to = Zone.GRAVEYARD`) over *every* creature you control, with the "attacking" half tested at
  *   **resolution** instead of in the trigger filter. That split is mandatory, not stylistic:
  *   `TriggerMatcher` gates zone-change triggers through `matchesStatePredicateForZoneChangeTrigger`,
@@ -58,17 +57,13 @@ val AresGodOfWar = card("Ares, God of War") {
     }
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.youControl(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY,
-        )
-        effect = ConditionalEffect(
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).dies()
+        effect = Effects.If(
             condition = Conditions.EntityMatches(
                 EffectTarget.TriggeringEntity,
                 GameObjectFilter.Any.attacking(),
             ),
-            effect = Effects.Move(
+            then = Effects.Move(
                 EffectTarget.TriggeringEntity,
                 Zone.HAND,
                 fromZone = Zone.GRAVEYARD,

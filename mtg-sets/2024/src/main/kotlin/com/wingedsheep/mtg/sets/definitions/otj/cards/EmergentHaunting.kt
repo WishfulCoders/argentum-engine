@@ -12,6 +12,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Emergent Haunting — Outlaws of Thunder Junction #46
@@ -44,7 +45,7 @@ val EmergentHaunting = card("Emergent Haunting") {
         "{2}{U}: Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)"
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.All(
             Conditions.Not(Conditions.YouCastSpellsThisTurn(1, fromZone = Zone.HAND)),
             Conditions.SourceMatches(GameObjectFilter.Noncreature)

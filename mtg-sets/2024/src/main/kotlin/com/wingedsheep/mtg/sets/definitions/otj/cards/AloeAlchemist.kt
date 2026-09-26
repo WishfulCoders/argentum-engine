@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Aloe Alchemist
@@ -31,12 +31,10 @@ val AloeAlchemist = card("Aloe Alchemist") {
     keywordAbility(KeywordAbility.plot("{1}{G}"))
 
     triggeredAbility {
-        trigger = Triggers.BecomesPlotted
-        val t = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(power = 3, toughness = 2, target = t),
+        trigger = Triggers.self.becomesPlotted()
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(power = 3, toughness = 2, target = t) then
             Effects.GrantKeyword(Keyword.TRAMPLE, target = t)
-        )
     }
 
     metadata {

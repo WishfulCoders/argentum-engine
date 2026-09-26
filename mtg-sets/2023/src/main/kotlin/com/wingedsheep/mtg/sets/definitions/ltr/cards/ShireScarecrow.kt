@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddManaOfChoiceEffect
 import com.wingedsheep.sdk.scripting.values.ManaColorSet
 
 /**
@@ -29,7 +29,7 @@ val ShireScarecrow = card("Shire Scarecrow") {
 
     activatedAbility {
         cost = Costs.Mana("{1}")
-        effect = AddManaOfChoiceEffect(ManaColorSet.AnyColor, 1)
+        effect = Effects.AddManaOfChoice(ManaColorSet.AnyColor, 1)
         manaAbility = true
         timing = TimingRule.ManaAbility
         restrictions = listOf(ActivationRestriction.OncePerTurn)

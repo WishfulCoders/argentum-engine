@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.ths.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.ProtectionScope
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Mistcutter Hydra
@@ -36,7 +36,7 @@ val MistcutterHydra = card("Mistcutter Hydra") {
     keywords(Keyword.HASTE)
     keywordAbility(KeywordAbility.Protection(ProtectionScope.Color(Color.BLUE)))
 
-    replacementEffect(EntersWithDynamicCounters(count = DynamicAmount.XValue))
+    replacementEffect(EntersWithDynamicCounters(count = DynamicAmounts.xValue()))
 
     metadata {
         rarity = Rarity.RARE

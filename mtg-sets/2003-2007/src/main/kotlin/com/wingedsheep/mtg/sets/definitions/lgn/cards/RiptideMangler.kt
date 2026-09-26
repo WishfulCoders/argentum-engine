@@ -3,12 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.lgn.cards
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Riptide Mangler
@@ -28,10 +28,10 @@ val RiptideMangler = card("Riptide Mangler") {
 
     activatedAbility {
         cost = Costs.Mana(ManaCost.parse("{1}{U}"))
-        target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.SetBasePower(
             target = EffectTarget.Self,
-            power = DynamicAmounts.targetPower(0)
+            power = DynamicAmounts.powerOf(creature)
         )
     }
 

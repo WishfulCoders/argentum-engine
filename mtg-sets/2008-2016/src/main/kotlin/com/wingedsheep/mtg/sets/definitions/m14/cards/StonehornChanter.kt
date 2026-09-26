@@ -24,10 +24,8 @@ val StonehornChanter = card("Stonehorn Chanter") {
 
     activatedAbility {
         cost = Costs.Mana("{5}{W}")
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.VIGILANCE, EffectTarget.Self),
+        effect = Effects.GrantKeyword(Keyword.VIGILANCE, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self)
-        )
         description = "{5}{W}: This creature gains vigilance and lifelink until end of turn."
     }
 

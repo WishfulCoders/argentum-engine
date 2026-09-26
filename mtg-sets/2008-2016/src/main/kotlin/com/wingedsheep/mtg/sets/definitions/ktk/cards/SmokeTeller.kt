@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.FaceDownLookScope
-import com.wingedsheep.sdk.scripting.effects.LookAtFaceDownEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Smoke Teller
@@ -26,10 +25,8 @@ val SmokeTeller = card("Smoke Teller") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{U}")
-        val t = target("target", TargetPermanent(
-            filter = TargetFilter(GameObjectFilter.Creature.faceDown())
-        ))
-        effect = LookAtFaceDownEffect(t, FaceDownLookScope.SINGLE_TARGET)
+        val t = target(TargetFilter(GameObjectFilter.Creature.faceDown()))
+        effect = Effects.LookAtFaceDown(t, FaceDownLookScope.SINGLE_TARGET)
     }
 
     metadata {

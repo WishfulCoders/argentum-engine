@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Grab the Reins
@@ -34,16 +35,14 @@ val GrabTheReins = card("Grab the Reins") {
             additionalManaCostPerExtraMode = "{2}{R}",
         ) {
             mode("Gain control of target creature until end of turn; it gains haste") {
-                val creature = target("creature to gain control of", Targets.Creature)
-                effect = Effects.Composite(
-                    Effects.GainControl(creature, Duration.EndOfTurn),
-                    Effects.GrantKeyword(Keyword.HASTE, creature),
-                )
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.GainControl(creature, Duration.EndOfTurn) then
+                    Effects.GrantKeyword(Keyword.HASTE, creature)
             }
             mode("Sacrifice a creature; deal damage equal to its power to any target") {
-                val damageTarget = target("damage target", Targets.Any)
-                effect = Effects.SacrificeOwn(GameObjectFilter.Creature)
-                    .then(Effects.DealDamage(DynamicAmounts.sacrificedPower(), damageTarget))
+                val damageTarget = target(Targets.Any)
+                effect = Effects.SacrificeOwn(GameObjectFilter.Creature) then
+                    Effects.DealDamage(DynamicAmounts.sacrificedPower(), damageTarget)
             }
         }
     }

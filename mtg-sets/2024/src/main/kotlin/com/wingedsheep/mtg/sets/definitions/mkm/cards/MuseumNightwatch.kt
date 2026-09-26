@@ -37,7 +37,7 @@ val MuseumNightwatch = card("Museum Nightwatch") {
     disguise = "{1}{W}"
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateToken(
             power = 2,
             toughness = 2,

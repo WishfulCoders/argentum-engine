@@ -4,6 +4,9 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.effects.PreventionSourceFilter
+import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 
 /**
  * Protective Sphere
@@ -15,7 +18,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * Modeling note: rather than tracking the color of the single generic mana spent on the cost,
  * the "shares a color with the mana spent" restriction is captured by only offering colored
- * sources for the choice (`PreventionSourceFilter.ChosenColoredSource`). A colorless source
+ * sources for the choice (a `PreventionSourceFilter.Chosen` over `CardPredicate.IsColored`). A colorless source
  * shares a color with no mana, so it can never be chosen — which is exactly what the reminder
  * text means by "colorless mana prevents no damage." The player picks the colored source they
  * want to stop (paying mana of a matching color, as the rules require).
@@ -30,7 +33,9 @@ val ProtectiveSphere = card("Protective Sphere") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.PayLife(1))
-        effect = Effects.PreventAllDamageFromChosenColoredSource()
+        effect = Effects.PreventDamage(
+            sources = PreventionSourceFilter.Chosen(GameObjectFilter.Any.withCardPredicate(CardPredicate.IsColored))
+        )
         description = "{1}, Pay 1 life: Prevent all damage that would be dealt to you this turn by " +
             "a source of your choice that shares a color with the mana spent on this activation cost."
     }

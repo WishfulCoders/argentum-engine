@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.tmp.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Fevered Convulsions
@@ -21,8 +21,8 @@ val FeveredConvulsions = card("Fevered Convulsions") {
 
     activatedAbility {
         cost = Costs.Mana("{2}{B}{B}")
-        val t = target("target", Targets.Creature)
-        effect = Effects.AddCounters(Counters.MINUS_ONE_MINUS_ONE, 1, t)
+        val t = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(CounterType.MINUS_ONE_MINUS_ONE, 1, t)
     }
 
     metadata {

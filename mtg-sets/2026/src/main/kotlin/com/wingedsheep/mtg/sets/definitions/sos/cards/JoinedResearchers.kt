@@ -7,7 +7,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Joined Researchers // Secret Rendezvous — Secrets of Strixhaven #23
@@ -42,7 +42,7 @@ val JoinedResearchers = card("Joined Researchers") {
 
     // End-step trigger: if an opponent has more cards in hand than you, become prepared.
     triggeredAbility {
-        trigger = Triggers.EachEndStep
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
         interveningIf = Conditions.OpponentHasMoreCardsInHand
         effect = Effects.BecomePrepared()
         description = "At the beginning of each end step, if an opponent has more cards in hand " +
@@ -55,11 +55,8 @@ val JoinedResearchers = card("Joined Researchers") {
         typeLine = "Sorcery"
         oracleText = "You and target opponent each draw three cards."
         spell {
-            target = Targets.Opponent
-            effect = Effects.Composite(
-                Effects.DrawCards(3),
-                Effects.DrawCards(3, EffectTarget.ContextTarget(0))
-            )
+            val opponent = target(Targets.Opponent)
+            effect = Effects.DrawCards(3) then Effects.DrawCards(3, opponent)
         }
     }
 

@@ -9,10 +9,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Brigid, Clachan's Heart // Brigid, Doun's Mind
@@ -29,7 +27,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *   {T}: Add X {G} or X {W}, where X is the number of other creatures you control.
  *   At the beginning of your first main phase, you may pay {W}. If you do, transform Brigid.
  */
-private val createKithkinToken = CreateTokenEffect(
+private val createKithkinToken = Effects.CreateToken(
     power = 1,
     toughness = 1,
     colors = setOf(Color.GREEN, Color.WHITE),
@@ -60,10 +58,10 @@ private val BrigidDounsMind = card("Brigid, Doun's Mind") {
     }
 
     triggeredAbility {
-        trigger = Triggers.FirstMainPhase
-        effect = MayPayManaEffect(
+        trigger = Triggers.you.beginningOf(Step.PRECOMBAT_MAIN)
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{W}"),
-            effect = TransformEffect(EffectTarget.Self)
+            then = Effects.Transform(EffectTarget.Self)
         )
     }
 
@@ -85,20 +83,20 @@ private val BrigidClachansHeartFrontFace = card("Brigid, Clachan's Heart") {
         "At the beginning of your first main phase, you may pay {G}. If you do, transform Brigid."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = createKithkinToken
     }
 
     triggeredAbility {
-        trigger = Triggers.TransformsToFront
+        trigger = Triggers.self.transforms(false)
         effect = createKithkinToken
     }
 
     triggeredAbility {
-        trigger = Triggers.FirstMainPhase
-        effect = MayPayManaEffect(
+        trigger = Triggers.you.beginningOf(Step.PRECOMBAT_MAIN)
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{G}"),
-            effect = TransformEffect(EffectTarget.Self)
+            then = Effects.Transform(EffectTarget.Self)
         )
     }
 

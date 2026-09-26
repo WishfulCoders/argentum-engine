@@ -18,7 +18,7 @@ val Reminisce = card("Reminisce") {
     oracleText = "Target player shuffles their graveyard into their library."
 
     spell {
-        val t = target("target", Targets.Player)
+        val t = target(Targets.Player)
         effect = Patterns.Library.shuffleGraveyardIntoLibrary(t)
     }
 

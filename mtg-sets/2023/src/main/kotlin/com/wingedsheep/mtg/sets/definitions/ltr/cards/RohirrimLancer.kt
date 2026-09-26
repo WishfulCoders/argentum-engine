@@ -26,7 +26,7 @@ val RohirrimLancer = card("Rohirrim Lancer") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.TheRingTemptsYou()
     }
 

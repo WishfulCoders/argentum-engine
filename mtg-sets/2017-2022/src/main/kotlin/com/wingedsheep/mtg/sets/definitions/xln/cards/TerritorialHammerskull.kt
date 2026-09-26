@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Territorial Hammerskull
@@ -25,11 +24,8 @@ val TerritorialHammerskull = card("Territorial Hammerskull") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val victim = target(
-            "target",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Creature.opponentControls()))
-        )
+        trigger = Triggers.self.attacks()
+        val victim = target(TargetFilter(GameObjectFilter.Creature.opponentControls()))
         effect = Effects.Tap(victim)
     }
 

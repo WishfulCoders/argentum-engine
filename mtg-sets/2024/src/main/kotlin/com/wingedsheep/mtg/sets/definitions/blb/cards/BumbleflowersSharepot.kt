@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Bumbleflower's Sharepot
@@ -25,14 +25,14 @@ val BumbleflowersSharepot = card("Bumbleflower's Sharepot") {
 
     // ETB: Create a Food token
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateFood()
     }
 
     // {5}, {T}, Sacrifice: Destroy target nonland permanent. Sorcery speed.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{5}"), Costs.Tap, Costs.SacrificeSelf)
-        val permanent = target("nonland permanent", Targets.NonlandPermanent)
+        val permanent = target(TargetFilter.NonlandPermanent)
         effect = Effects.Destroy(permanent)
         timing = TimingRule.SorcerySpeed
     }

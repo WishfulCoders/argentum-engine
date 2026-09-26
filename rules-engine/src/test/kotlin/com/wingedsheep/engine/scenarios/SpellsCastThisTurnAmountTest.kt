@@ -1,6 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.state.CastSpellRecord
 import com.wingedsheep.engine.state.components.battlefield.DamageComponent
@@ -15,10 +15,11 @@ import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * [DynamicAmount.SpellsCastThisTurn] — counts the spells a player has cast this turn,
@@ -48,7 +49,7 @@ class SpellsCastThisTurnAmountTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Deals damage to target creature equal to 2 plus the number of other spells you've cast this turn."
         spell {
-            val t = target("target", TargetCreature())
+            val t = target(TargetFilter.Creature)
             effect = DealDamageEffect(
                 DynamicAmount.Add(
                     DynamicAmount.Fixed(2),
@@ -67,7 +68,7 @@ class SpellsCastThisTurnAmountTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Deals damage to target creature equal to the number of noncreature spells you've cast this turn."
         spell {
-            val t = target("target", TargetCreature())
+            val t = target(TargetFilter.Creature)
             effect = DealDamageEffect(
                 DynamicAmount.SpellsCastThisTurn(Player.You, GameObjectFilter.Noncreature),
                 t
@@ -98,7 +99,7 @@ class SpellsCastThisTurnAmountTest : FunSpec({
 
         val salvo = driver.putCardInHand(you, "Other Spells Salvo")
         driver.giveMana(you, Color.RED, 1)
-        driver.castSpell(you, salvo, listOf(sponge)).isSuccess shouldBe true
+        driver.castSpell(you, salvo, listOf(sponge)).outcome shouldBe Outcome.Done
         driver.bothPass() // resolve the salvo
 
         // records = [salvo]; excludeSelf drops it → 0 other → damage = 2.
@@ -119,9 +120,9 @@ class SpellsCastThisTurnAmountTest : FunSpec({
         val salvo = driver.putCardInHand(you, "Other Spells Salvo")
         driver.giveMana(you, Color.RED, 3)
 
-        driver.castSpell(you, bolt1, listOf(you)).isSuccess shouldBe true
-        driver.castSpell(you, bolt2, listOf(you)).isSuccess shouldBe true
-        driver.castSpell(you, salvo, listOf(sponge)).isSuccess shouldBe true
+        driver.castSpell(you, bolt1, listOf(you)).outcome shouldBe Outcome.Done
+        driver.castSpell(you, bolt2, listOf(you)).outcome shouldBe Outcome.Done
+        driver.castSpell(you, salvo, listOf(sponge)).outcome shouldBe Outcome.Done
         driver.bothPass() // resolve the salvo (top of stack), bolts remain beneath
 
         // records = [bolt1, bolt2, salvo]; excludeSelf drops salvo → 2 others → damage = 2 + 2 = 4.
@@ -138,7 +139,7 @@ class SpellsCastThisTurnAmountTest : FunSpec({
 
         val counter = driver.putCardInHand(you, "Noncreature Count")
         driver.giveMana(you, Color.RED, 1)
-        driver.castSpell(you, counter, listOf(sponge)).isSuccess shouldBe true
+        driver.castSpell(you, counter, listOf(sponge)).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         // records = [counter] (an instant = noncreature); includes itself → 1.
@@ -159,10 +160,10 @@ class SpellsCastThisTurnAmountTest : FunSpec({
         driver.giveMana(you, Color.GREEN, 6)
         driver.giveMana(you, Color.RED, 6)
 
-        driver.castSpell(you, courser, emptyList()).isSuccess shouldBe true
+        driver.castSpell(you, courser, emptyList()).outcome shouldBe Outcome.Done
         driver.bothPass() // resolve the creature so it isn't left blocking the stack
-        driver.castSpell(you, bolt, listOf(you)).isSuccess shouldBe true
-        driver.castSpell(you, counter, listOf(sponge)).isSuccess shouldBe true
+        driver.castSpell(you, bolt, listOf(you)).outcome shouldBe Outcome.Done
+        driver.castSpell(you, counter, listOf(sponge)).outcome shouldBe Outcome.Done
         driver.bothPass() // resolve Noncreature Count
 
         // noncreature records = [bolt, counter] (courser is a creature) → 2.
@@ -180,7 +181,7 @@ class SpellsCastThisTurnAmountTest : FunSpec({
 
         val you = driver.player1
         val opp = driver.player2
-        val evaluator = DynamicAmountEvaluator()
+        val evaluator = PredicateEvaluator(cardRegistry = null).amounts
 
         val instant = TypeLine.parse("Instant")
         val creature = TypeLine.parse("Creature")
@@ -215,7 +216,7 @@ class SpellsCastThisTurnAmountTest : FunSpec({
         driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
 
         val you = driver.player1
-        val evaluator = DynamicAmountEvaluator()
+        val evaluator = PredicateEvaluator(cardRegistry = null).amounts
 
         val instant = TypeLine.parse("Instant")
         val state = driver.state.copy(

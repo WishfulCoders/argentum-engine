@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -27,7 +26,7 @@ val MalevolentAwakening = card("Malevolent Awakening") {
     oracleText = "{1}{B}{B}, Sacrifice a creature: Return target creature card from your graveyard to your hand."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{B}{B}"), Costs.Sacrifice(GameObjectFilter.Creature))
-        val t = target("target", TargetObject(filter = TargetFilter.CreatureInYourGraveyard))
+        val t = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.Move(t, Zone.HAND)
     }
     metadata {

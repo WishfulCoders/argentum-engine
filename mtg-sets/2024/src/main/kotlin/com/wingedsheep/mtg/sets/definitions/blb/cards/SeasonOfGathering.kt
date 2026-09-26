@@ -1,22 +1,21 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.BudgetModalEffect
 import com.wingedsheep.sdk.scripting.effects.BudgetMode
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.SelectTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Season of Gathering
@@ -38,16 +37,18 @@ val SeasonOfGathering = card("Season of Gathering") {
         "{P}{P}{P} — Draw cards equal to the greatest power among creatures you control."
 
     spell {
-        effect = BudgetModalEffect(
+        effect = Effects.BudgetModal(
             budget = 5,
             modes = listOf(
                 // {P} — +1/+1 counter + vigilance + trample on a creature you control
                 BudgetMode(
                     cost = 1,
-                    effect = Effects.SelectTarget(Targets.CreatureYouControl, "chosenCreature")
-                        .then(Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.PipelineTarget("chosenCreature")))
-                        .then(Effects.GrantKeyword(Keyword.VIGILANCE, EffectTarget.PipelineTarget("chosenCreature")))
-                        .then(Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.PipelineTarget("chosenCreature"))),
+                    effect = Effects.Pipeline {
+                        val chosenCreature = selectTarget(TargetObject(filter = TargetFilter.CreatureYouControl))
+                        run(Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, chosenCreature.asTarget))
+                        run(Effects.GrantKeyword(Keyword.VIGILANCE, chosenCreature.asTarget))
+                        run(Effects.GrantKeyword(Keyword.TRAMPLE, chosenCreature.asTarget))
+                    },
                     description = "Put a +1/+1 counter on a creature you control. It gains vigilance and trample until end of turn"
                 ),
                 // {P}{P} — Choose artifact or enchantment. Destroy all of that type.
@@ -57,14 +58,14 @@ val SeasonOfGathering = card("Season of Gathering") {
                         Mode.noTarget(
                             Effects.ForEachInGroup(
                                 filter = GroupFilter(GameObjectFilter.Artifact),
-                                effect = Effects.Destroy(EffectTarget.Self)
+                                effect = Effects.Destroy(EffectTarget.IterationEntity)
                             ),
                             "Destroy all artifacts"
                         ),
                         Mode.noTarget(
                             Effects.ForEachInGroup(
                                 filter = GroupFilter(GameObjectFilter.Enchantment),
-                                effect = Effects.Destroy(EffectTarget.Self)
+                                effect = Effects.Destroy(EffectTarget.IterationEntity)
                             ),
                             "Destroy all enchantments"
                         )
@@ -74,7 +75,7 @@ val SeasonOfGathering = card("Season of Gathering") {
                 // {P}{P}{P} — Draw cards equal to greatest power among creatures you control
                 BudgetMode(
                     cost = 3,
-                    effect = DrawCardsEffect(
+                    effect = Effects.DrawCards(
                         count = DynamicAmounts.battlefield(Player.You, GameObjectFilter.Creature).maxPower(),
                         target = EffectTarget.Controller
                     ),

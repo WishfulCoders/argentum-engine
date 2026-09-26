@@ -20,7 +20,7 @@ import io.kotest.matchers.shouldBe
  * Neglected Heirloom // Ashmouth Blade (SOI) — "When **equipped creature** transforms, transform
  * this Equipment."
  *
- * Exercises the new `Triggers.transforms(binding = TriggerBinding.ATTACHED)` shape end to end: the
+ * Exercises the new `Triggers.attached.transforms()` shape end to end: the
  * Equipment watches the permanent it's attached to, and a transform of that permanent flips the
  * Equipment. A transform happens in place, so the Equipment is still attached when the event fires.
  */

@@ -2,12 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.effects.PreventionDirection
+import com.wingedsheep.sdk.scripting.effects.PreventionSourceFilter
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Mourner's Shield — Mirrodin #209
@@ -19,15 +21,15 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  *
  * Modelling notes:
  * - Linked pair (CR 607), same as its Mirrodin cousins: `Effects.ExileLinkedToSource` writes the
- *   pile and [EntityReference.LinkedExiledCard] reads it back, so "the exiled card" can only ever
+ *   pile and [EffectTarget.LinkedExiledCard] reads it back, so "the exiled card" can only ever
  *   mean the one *this* Shield imprinted.
  * - The colour clause is an *eligibility filter on the choice*, not a restriction applied after the
  *   fact: only sources sharing a colour with the exiled card are offered. With no imprint (or a
  *   colourless one) nothing qualifies and the ability resolves without a choice — a colourless
  *   source shares a colour with nothing, exactly as printed.
  * - The prevention has **no recipient clause** — it stops that source's damage to anything, unlike
- *   Samite Ministration's "dealt to you … by a source of your choice". That is what
- *   `PreventAllDamageFromChosenSourceMatching` expresses, and it installs the same silence shield a
+ *   Samite Ministration's "dealt to you … by a source of your choice". That is
+ *   `direction = FromTarget` over a chosen source, and it installs the same silence shield a
  *   targeted "prevent all damage target creature would deal" does, so combat and noncombat damage
  *   are both covered.
  * - Activating with the pile empty is legal but does nothing; that is a real play pattern, since the
@@ -43,9 +45,9 @@ val MournersShield = card("Mourner's Shield") {
 
     // "Imprint — When this artifact enters, you may exile target card from a graveyard."
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
-        val exiled = target("target card from a graveyard", Targets.CardInGraveyard)
+        val exiled = target(TargetFilter.CardInGraveyard)
         effect = Effects.ExileLinkedToSource(exiled)
         description = "Imprint — When this artifact enters, you may exile target card from a graveyard."
     }
@@ -54,8 +56,11 @@ val MournersShield = card("Mourner's Shield") {
     // shares a color with the exiled card."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        effect = Effects.PreventAllDamageFromChosenSourceMatching(
-            GameObjectFilter.Any.sharingColorWith(EntityReference.LinkedExiledCard())
+        effect = Effects.PreventDamage(
+            direction = PreventionDirection.FromTarget,
+            sources = PreventionSourceFilter.Chosen(
+                GameObjectFilter.Any.sharingColorWith(EffectTarget.LinkedExiledCard())
+            )
         )
         description = "{2}, {T}: Prevent all damage that would be dealt this turn by a source of " +
             "your choice that shares a color with the exiled card."

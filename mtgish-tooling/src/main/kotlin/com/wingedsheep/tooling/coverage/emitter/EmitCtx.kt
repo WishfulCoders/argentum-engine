@@ -230,7 +230,7 @@ internal fun EmitCtx.renderEffectList(actions: List<JsonObject>, tvar: String?):
         val act = actions[i]
         // "You may pay <cost>. If you do, <then>." — a MayCost action immediately followed by an
         // If(CostWasPaid, [then]) gate (Pursue the Past's "you may discard a card. If you do, draw two
-        // cards"). Collapse the pair into one MayEffect(IfYouDoEffect(action = <cost>, ifYouDo = <then>)),
+        // cards"). Collapse the pair into one Effects.May(Effects.IfYouDo(action = <cost>, ifYouDo = <then>)),
         // the engine's loot idiom. Only renderable cost/then shapes collapse; anything else falls through
         // to the normal per-action path (which renders MayCost/If, or declines).
         if (act.strField("_Action") == "MayCost") {
@@ -457,7 +457,7 @@ internal fun EmitCtx.dynamicAmountExpr(node: JsonElement?): Dsl? {
             ) return null
             val reader = if (sourceSacrificedByCost) "DynamicAmounts.lastKnownSourceCounters"
                          else "DynamicAmounts.countersOnSelf"
-            return call(reader, arg("CounterTypeFilter.Any"))
+            return call(reader, arg("null"))
         }
         "LifeTotalOfPlayer" -> {
             val player = if (jsonContains(node, "_Player", "Opponent")) "Player.EachOpponent" else "Player.You"
@@ -1349,7 +1349,7 @@ internal fun EmitCtx.createValueXReusedEffect(actions: List<JsonObject>, tvar: S
 }
 
 /**
- * `MayCost(cost)` + `If(CostWasPaid, [then…])` -> `MayEffect(IfYouDoEffect(action = <cost>, ifYouDo =
+ * `MayCost(cost)` + `If(CostWasPaid, [then…])` -> `Effects.May(Effects.IfYouDo(action = <cost>, ifYouDo =
  * <then>))` — the engine's "you may pay <cost>. If you do, <then>." loot idiom (Pursue the Past's "you
  * may discard a card. If you do, draw two cards"). Only renderable shapes collapse: the cost must be one
  * we can express as an *effect* (currently the self-discard `DiscardACard` -> `Patterns.Hand.discardCards(1)`),
@@ -1358,7 +1358,7 @@ internal fun EmitCtx.createValueXReusedEffect(actions: List<JsonObject>, tvar: S
  *
  * The "you may draw a card. If you do, discard a card." loot (`MayCost(DrawACard)` +
  * `If(CostWasPaid, [DiscardACard])`, e.g. Stadium Tidalmage / Jeskai Elder) is special-cased to the
- * canonical `MayEffect(Patterns.Hand.loot())` — the exact gameplay tree the hand-authored cards use —
+ * canonical `Effects.May(Patterns.Hand.loot())` — the exact gameplay tree the hand-authored cards use —
  * rather than the generic IfYouDo form, since `loot()` is the named MTG loot mechanic.
  */
 internal fun EmitCtx.mayCostIfYouDoEffect(may: JsonObject, ifAct: JsonObject, tvar: String?): Dsl? {
@@ -1372,12 +1372,12 @@ internal fun EmitCtx.mayCostIfYouDoEffect(may: JsonObject, ifAct: JsonObject, tv
     val cost = (may["args"] as? JsonObject)?.strField("_Cost")
     // "you may draw a card. If you do, discard a card." — the canonical loot mechanic.
     if (cost == "DrawACard" && thenActions.singleOrNull()?.strField("_Action") == "DiscardACard") {
-        return call("MayEffect", arg(call("Patterns.Hand.loot")))
+        return call("Effects.May", arg(call("Patterns.Hand.loot")))
     }
     // "Whenever this creature attacks, you may have it get +X/+0 until end of turn. If you do, <then>."
     // (Attack-in-the-Box). Here the MayCost wraps a *layer effect* (the pump) rather than a real cost:
     // the optional action is the pump itself, and "if you do" gates <then> to the same yes. Faithful
-    // shape is MayEffect(Composite(<pump>, <then>)) — both run iff the player chooses to. Only the
+    // shape is Effects.May(Composite(<pump>, <then>)) — both run iff the player chooses to. Only the
     // until-end-of-turn AdjustPT pump on a self-reference renders; anything else falls through.
     if (cost == "CreatePermanentLayerEffectUntil") {
         val pumpNode = (may["args"] as? JsonObject)
@@ -1393,7 +1393,7 @@ internal fun EmitCtx.mayCostIfYouDoEffect(may: JsonObject, ifAct: JsonObject, tv
             if (pump != null && then != null) {
                 val body = if (then is Composite) Composite(listOf(pump) + then.parts)
                 else Composite(listOf(pump, then))
-                return call("MayEffect", arg(body))
+                return call("Effects.May", arg(body))
             }
         }
     }
@@ -1405,8 +1405,8 @@ internal fun EmitCtx.mayCostIfYouDoEffect(may: JsonObject, ifAct: JsonObject, tv
     }
     val thenEffect = renderEffectList(thenActions, tvar) ?: return null
     return call(
-        "MayEffect",
-        arg("effect", call("IfYouDoEffect", arg("action", costAction), arg("ifYouDo", thenEffect))),
+        "Effects.May",
+        arg("effect", call("Effects.IfYouDo", arg("action", costAction), arg("then", thenEffect))),
     )
 }
 

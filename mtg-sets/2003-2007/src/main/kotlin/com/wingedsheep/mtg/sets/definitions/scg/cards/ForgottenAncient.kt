@@ -1,17 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.SpellCastEvent
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Forgotten Ancient
@@ -31,13 +26,10 @@ val ForgottenAncient = card("Forgotten Ancient") {
     oracleText = "Whenever a player casts a spell, you may put a +1/+1 counter on Forgotten Ancient.\nAt the beginning of your upkeep, you may move any number of +1/+1 counters from Forgotten Ancient onto other creatures."
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = SpellCastEvent(player = Player.Each),
-            binding = TriggerBinding.ANY
-        )
-        effect = MayEffect(
-            AddCountersEffect(
-                counterType = Counters.PLUS_ONE_PLUS_ONE,
+        trigger = Triggers.anyPlayer.casts()
+        effect = Effects.May(
+            Effects.AddCounters(
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
                 count = 1,
                 target = EffectTarget.Self
             )
@@ -45,8 +37,8 @@ val ForgottenAncient = card("Forgotten Ancient") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = MayEffect(Effects.DistributeCountersFromSelf(Counters.PLUS_ONE_PLUS_ONE))
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.May(Effects.DistributeCountersFromSelf(CounterType.PLUS_ONE_PLUS_ONE))
     }
 
     metadata {

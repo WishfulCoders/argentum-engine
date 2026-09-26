@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Restless Cottage
@@ -71,15 +70,9 @@ val RestlessCottage = card("Restless Cottage") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val exiled = target(
-            "target card in a graveyard",
-            TargetObject(optional = true, filter = TargetFilter.CardInGraveyard),
-        )
-        effect = Effects.Composite(
-            Effects.CreateFood(),
-            Effects.Move(exiled, Zone.EXILE),
-        )
+        trigger = Triggers.self.attacks()
+        val exiled = target(TargetFilter.CardInGraveyard, optional = true)
+        effect = Effects.CreateFood() then Effects.Move(exiled, Zone.EXILE)
         description = "Whenever this land attacks, create a Food token and exile up to one target " +
             "card from a graveyard."
     }

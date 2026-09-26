@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Galvanic Giant // Storm Reading
@@ -39,12 +38,9 @@ val GalvanicGiant = card("Galvanic Giant") {
         "become untapped, remove one from it instead.)"
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(spellFilter = GameObjectFilter.Any.manaValueAtLeast(5))
-        val t = target(
-            "target creature an opponent controls",
-            TargetCreature(filter = TargetFilter.Creature.opponentControls())
-        )
-        effect = Effects.Tap(t) then Effects.AddCounters(Counters.STUN, 1, t)
+        trigger = Triggers.you.casts(GameObjectFilter.Any.manaValueAtLeast(5))
+        val t = target(TargetFilter.Creature.opponentControls())
+        effect = Effects.Tap(t) then Effects.AddCounters(CounterType.STUN, 1, t)
     }
 
     adventure("Storm Reading") {

@@ -50,7 +50,7 @@ val HeartflameDuelist = card("Heartflame Duelist") {
         oracleText = "Heartflame Slash deals 3 damage to any target. " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            val t = target("target", Targets.Any)
+            val t = target(Targets.Any)
             effect = Effects.DealDamage(3, t)
         }
     }

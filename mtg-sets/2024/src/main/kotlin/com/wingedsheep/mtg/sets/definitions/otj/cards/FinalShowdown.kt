@@ -7,15 +7,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ForEachEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.IterationSpace
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Final Showdown {W}
@@ -31,13 +24,13 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * which the resolver honours by mode index — so "lose all abilities" precedes "indestructible"
  * precedes "destroy all". Each mode composes existing atoms:
  *  - Mode 1: [Effects.ForEachInGroup] over every creature, each losing all abilities
- *    (`RemoveAllAbilities(Self)` per iteration). A creature that gains an ability *after* this
+ *    (`RemoveAllAbilities(IterationEntity)` per iteration). A creature that gains an ability *after* this
  *    resolves keeps it (the ruling) because the removal is a one-shot snapshot, not a continuous
  *    layer effect tied to a filter.
  *  - Mode 2 does **not** target (per ruling: the creature is chosen as the spell resolves, too
  *    late to respond). Modeled as a resolution-time gather -> choose-exactly-one -> grant pipeline:
  *    [GatherCardsEffect] over creatures you control, [SelectFromCollectionEffect] (battlefield
- *    click UI), then [ForEachEffect] over the singleton selection grants indestructible to `Self`.
+ *    click UI), then [ForEachEffect] over the singleton selection grants indestructible to `IterationEntity`.
  *  - Mode 3: [Effects.DestroyAll] over all creatures (honours indestructible granted by mode 2).
  */
 val FinalShowdown = card("Final Showdown") {
@@ -50,38 +43,34 @@ val FinalShowdown = card("Final Showdown") {
         "+ {3}{W}{W} — Destroy all creatures."
 
     spell {
-        effect = ModalEffect(
+        effect = Effects.Modal(
             modes = listOf(
                 Mode(
                     effect = Effects.ForEachInGroup(
                         GroupFilter(GameObjectFilter.Creature),
-                        Effects.RemoveAllAbilities(EffectTarget.Self)
+                        Effects.RemoveAllAbilities(EffectTarget.IterationEntity)
                     ),
                     description = "+ {1} — All creatures lose all abilities until end of turn.",
                     additionalManaCost = "{1}"
                 ),
                 Mode(
-                    effect = Effects.Composite(
-                        listOf(
-                            GatherCardsEffect(
-                                source = CardSource.ControlledPermanents(
-                                    filter = GameObjectFilter.Creature
-                                ),
-                                storeAs = "chooseIndestructible"
-                            ),
-                            SelectFromCollectionEffect(
-                                from = "chooseIndestructible",
-                                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                                storeSelected = "indestructibleChosen",
-                                useTargetingUI = true,
-                                prompt = "Choose a creature you control to gain indestructible"
-                            ),
-                            ForEachEffect(
-                                space = IterationSpace.Collection("indestructibleChosen"),
-                                body = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self)
+                    effect = Effects.Pipeline {
+                        val chooseIndestructible = gather(
+                            CardSource.ControlledPermanents(
+                                filter = GameObjectFilter.Creature
                             )
                         )
-                    ),
+                        val indestructibleChosen = chooseExactly(
+                            1,
+                            from = chooseIndestructible,
+                            useTargetingUI = true,
+                            prompt = "Choose a creature you control to gain indestructible"
+                        )
+                        run(Effects.ForEachInCollection(
+                            indestructibleChosen,
+                            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.IterationEntity)
+                        ))
+                    },
                     description = "+ {1} — Choose a creature you control. It gains indestructible until end of turn.",
                     additionalManaCost = "{1}"
                 ),

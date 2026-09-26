@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyDamageAmount
-import com.wingedsheep.sdk.scripting.events.SourceFilter
 
 /**
  * Valley Flamecaller
@@ -28,7 +27,7 @@ val ValleyFlamecaller = card("Valley Flamecaller") {
         ModifyDamageAmount(
             modifier = 1,
             appliesTo = EventPattern.DamageEvent(
-                source = SourceFilter.Matching(
+                source = 
                     GameObjectFilter.Creature
                         .youControl()
                         .withAnyOfSubtypes(
@@ -39,7 +38,7 @@ val ValleyFlamecaller = card("Valley Flamecaller") {
                                 Subtype("Raccoon")
                             )
                         )
-                )
+                
             )
         )
     )

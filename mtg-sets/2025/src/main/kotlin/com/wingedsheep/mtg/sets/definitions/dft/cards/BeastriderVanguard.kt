@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardOrder
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Beastrider Vanguard
@@ -29,7 +28,7 @@ val BeastriderVanguard = card("Beastrider Vanguard") {
     activatedAbility {
         cost = Costs.Mana("{4}{G}")
         effect = Patterns.Library.lookAtTopRevealMatchingToHand(
-            count = DynamicAmount.Fixed(3),
+            count = 3,
             filter = GameObjectFilter.Permanent,
             prompt = "You may reveal a permanent card to put into your hand",
             restOrder = CardOrder.ControllerChooses

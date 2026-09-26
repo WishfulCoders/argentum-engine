@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
@@ -8,15 +8,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ChooseActionEffect
 import com.wingedsheep.sdk.scripting.effects.Effect
 import com.wingedsheep.sdk.scripting.effects.EffectChoice
 import com.wingedsheep.sdk.scripting.effects.FeasibilityCheck
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
-import com.wingedsheep.sdk.scripting.effects.ForceSacrificeEffect
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
-import com.wingedsheep.sdk.scripting.effects.RepeatDynamicTimesEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.Costs
@@ -53,13 +47,13 @@ val RottenmouthViper = card("Rottenmouth Viper") {
 
     // Whenever this creature enters the battlefield
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = rottenmouthViperEffect()
     }
 
     // Whenever this creature attacks
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = rottenmouthViperEffect()
     }
 
@@ -88,44 +82,37 @@ val RottenmouthViper = card("Rottenmouth Viper") {
  * Put a blight counter on it, then for each blight counter,
  * each opponent chooses: sacrifice nonland permanent, discard, or lose 4 life.
  */
-private fun rottenmouthViperEffect(): Effect = Effects.Composite(
-    listOf(
-        // Step 1: Put a blight counter on Rottenmouth Viper
-        Effects.AddCounters(Counters.BLIGHT, 1, EffectTarget.Self),
-
-        // Step 2: For each blight counter, each opponent chooses
-        RepeatDynamicTimesEffect(
-            amount = DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.BLIGHT)),
-            body = ForEachPlayerEffect(
-                players = Player.EachOpponent,
-                effects = listOf(
-                    ChooseActionEffect(
-                        choices = listOf(
-                            EffectChoice(
-                                label = "Sacrifice a nonland permanent",
-                                effect = ForceSacrificeEffect(
-                                    filter = GameObjectFilter.NonlandPermanent,
-                                    count = 1,
-                                    target = EffectTarget.Controller
-                                ),
-                                feasibilityCheck = FeasibilityCheck.ControlsPermanentMatching(
-                                    GameObjectFilter.NonlandPermanent
-                                )
-                            ),
-                            EffectChoice(
-                                label = "Discard a card",
-                                effect = Patterns.Hand.discardCards(1, EffectTarget.Controller),
-                                feasibilityCheck = FeasibilityCheck.HasCardsInZone(Zone.HAND)
-                            ),
-                            EffectChoice(
-                                label = "Lose 4 life",
-                                effect = LoseLifeEffect(4, EffectTarget.Controller)
-                            )
+// Step 1: Put a blight counter on Rottenmouth Viper
+private fun rottenmouthViperEffect(): Effect = Effects.AddCounters(CounterType.BLIGHT, 1, EffectTarget.Self) then
+    // Step 2: For each blight counter, each opponent chooses
+    Effects.Repeat(
+        amount = DynamicAmounts.countersOnSelf(CounterType.BLIGHT),
+        body = Effects.ForEachPlayer(
+            players = Player.EachOpponent,
+            effect = Effects.ChooseAction(
+                choices = listOf(
+                    EffectChoice(
+                        label = "Sacrifice a nonland permanent",
+                        effect = Effects.Sacrifice(
+                            filter = GameObjectFilter.NonlandPermanent,
+                            count = 1,
+                            target = EffectTarget.Controller
                         ),
-                        player = EffectTarget.Controller
+                        feasibilityCheck = FeasibilityCheck.ControlsPermanentMatching(
+                            GameObjectFilter.NonlandPermanent
+                        )
+                    ),
+                    EffectChoice(
+                        label = "Discard a card",
+                        effect = Patterns.Hand.discardCards(1, EffectTarget.Controller),
+                        feasibilityCheck = FeasibilityCheck.HasCardsInZone(Zone.HAND)
+                    ),
+                    EffectChoice(
+                        label = "Lose 4 life",
+                        effect = Effects.LoseLife(4, EffectTarget.Controller)
                     )
-                )
+                ),
+                player = EffectTarget.Controller
             )
         )
     )
-)

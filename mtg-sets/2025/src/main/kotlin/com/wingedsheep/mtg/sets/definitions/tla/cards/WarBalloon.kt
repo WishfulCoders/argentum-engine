@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
@@ -23,7 +23,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * As long as this Vehicle has three or more fire counters on it, it's an artifact creature.
  * Crew 3
  *
- * The {1} activated ability accumulates generic [Counters.FIRE] counters on the source. The
+ * The {1} activated ability accumulates generic [CounterType.FIRE] counters on the source. The
  * conditional type change mirrors Phoenix Fleet Airship / Wedgelight Rammer: a Layer 4
  * [GrantCardType]("CREATURE") gated by [Conditions.SourceCounterCountAtLeast] so the Vehicle
  * counts as an artifact creature only while it has 3+ fire counters (CR 208.3 — it then uses
@@ -46,12 +46,12 @@ val WarBalloon = card("War Balloon") {
     // {1}: Put a fire counter on this Vehicle.
     activatedAbility {
         cost = Costs.Mana("{1}")
-        effect = Effects.AddCounters(Counters.FIRE, 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.FIRE, 1, EffectTarget.Self)
     }
 
     // Conditional type change: an artifact creature while it has 3+ fire counters.
     staticAbility {
-        condition = Conditions.SourceCounterCountAtLeast(Counters.FIRE, 3)
+        condition = Conditions.SourceCounterCountAtLeast(CounterType.FIRE, 3)
         ability = GrantCardType("CREATURE", GroupFilter.source())
     }
 

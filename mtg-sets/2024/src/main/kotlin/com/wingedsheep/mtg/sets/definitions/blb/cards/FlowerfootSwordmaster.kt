@@ -6,10 +6,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -38,20 +36,20 @@ val FlowerfootSwordmaster = card("Flowerfoot Swordmaster") {
 
     // Offspring ETB: create token copy when kicked
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = WasKicked
         effect = Effects.CreateTokenCopyOfSelf(overridePower = 1, overrideToughness = 1)
     }
 
     // Valiant — Mice you control get +1/+0 until end of turn
     triggeredAbility {
-        trigger = Triggers.Valiant
+        trigger = Triggers.self.becomesTarget(byYou = true, firstTimeEachTurn = true)
         effect = Effects.ForEachInGroup(
-            filter = GroupFilter(GameObjectFilter.Creature.withSubtype("Mouse")).youControl(),
-            effect = ModifyStatsEffect(
-                powerModifier = 1,
-                toughnessModifier = 0,
-                target = EffectTarget.Self,
+            filter = GroupFilter.allPermanentsWithSubtype("Mouse").youControl(),
+            effect = Effects.ModifyStats(
+                power = 1,
+                toughness = 0,
+                target = EffectTarget.IterationEntity,
                 duration = Duration.EndOfTurn
             )
         )

@@ -25,16 +25,14 @@ val CallToGlory = card("Call to Glory") {
     typeLine = "Instant"
     oracleText = "Untap all creatures you control. Samurai creatures you control get +1/+1 until end of turn."
     spell {
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(
-                GroupFilter(GameObjectFilter.Creature.youControl()),
-                Effects.Untap(EffectTarget.Self)
-            ),
+        effect = Effects.ForEachInGroup(
+            GroupFilter(GameObjectFilter.Creature.youControl()),
+            Effects.Untap(EffectTarget.IterationEntity)
+        ) then
             Effects.ForEachInGroup(
                 GroupFilter(GameObjectFilter.Creature.withSubtype(Subtype.SAMURAI).youControl()),
-                Effects.ModifyStats(1, 1, EffectTarget.Self)
+                Effects.ModifyStats(1, 1, EffectTarget.IterationEntity)
             )
-        )
     }
     metadata {
         rarity = Rarity.COMMON

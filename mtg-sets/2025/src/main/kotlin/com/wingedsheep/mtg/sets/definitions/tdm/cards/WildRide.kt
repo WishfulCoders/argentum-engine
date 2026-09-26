@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Wild Ride — Tarkir: Dragonstorm #132
@@ -25,9 +25,9 @@ val WildRide = card("Wild Ride") {
         "You may tap a creature you control to reduce that cost by {X}, where X is its power. Then exile this spell.)"
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.ModifyStats(power = 3, toughness = 0, target = creature)
-            .then(Effects.GrantKeyword(Keyword.HASTE, creature, Duration.EndOfTurn))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(power = 3, toughness = 0, target = creature) then
+            Effects.GrantKeyword(Keyword.HASTE, creature, Duration.EndOfTurn)
     }
 
     keywordAbility(KeywordAbility.harmonize("{4}{R}"))

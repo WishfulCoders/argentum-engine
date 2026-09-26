@@ -1,7 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CostModification
@@ -10,6 +9,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.predicates.StatePredicate
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Run Behind — Secrets of Strixhaven #66
@@ -31,7 +31,7 @@ val RunBehind = card("Run Behind") {
         "Target creature's owner puts it on their choice of the top or bottom of their library."
 
     spell {
-        val creature = target("target creature to put on top or bottom of library", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.PutOnTopOrBottomOfLibrary(creature)
     }
 

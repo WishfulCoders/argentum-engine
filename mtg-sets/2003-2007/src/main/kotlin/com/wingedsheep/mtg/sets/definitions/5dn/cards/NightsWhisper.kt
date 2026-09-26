@@ -7,8 +7,6 @@ package com.wingedsheep.mtg.sets.definitions.`5dn`.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 
@@ -24,10 +22,7 @@ val NightsWhisper = card("Night's Whisper") {
     typeLine = "Sorcery"
     oracleText = "You draw two cards and lose 2 life."
     spell {
-        effect = Effects.Composite(
-            DrawCardsEffect(2),
-            LoseLifeEffect(2, EffectTarget.Controller)
-        )
+        effect = Effects.DrawCards(2) then Effects.LoseLife(2, EffectTarget.Controller)
     }
     metadata {
         rarity = Rarity.UNCOMMON

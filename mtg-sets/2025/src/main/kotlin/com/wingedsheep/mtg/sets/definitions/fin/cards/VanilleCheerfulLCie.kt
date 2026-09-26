@@ -7,14 +7,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Vanille, Cheerful l'Cie
@@ -50,25 +44,18 @@ val VanilleCheerfulLCie = card("Vanille, Cheerful l'Cie") {
         "meld them into Ragnarok, Divine Deliverance."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Patterns.Library.mill(2),
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Permanent),
-                storeAs = "vanilleGraveyard",
-            ),
-            SelectFromCollectionEffect(
-                from = "vanilleGraveyard",
-                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                storeSelected = "vanilleReturned",
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            run(Patterns.Library.mill(2))
+            val vanilleGraveyard = gather(CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Permanent))
+            val vanilleReturned = chooseExactly(
+                1,
+                from = vanilleGraveyard,
                 showAllCards = true,
-                prompt = "Return a permanent card from your graveyard to your hand",
-            ),
-            MoveCollectionEffect(
-                from = "vanilleReturned",
-                destination = CardDestination.ToZone(Zone.HAND, Player.You),
-            ),
-        )
+                prompt = "Return a permanent card from your graveyard to your hand"
+            )
+            toHand(vanilleReturned)
+        }
         description = "When Vanille enters, mill two cards, then return a permanent card from your " +
             "graveyard to your hand."
     }

@@ -24,7 +24,7 @@ val BlindingSpray = card("Blinding Spray") {
             power = -4,
             toughness = 0,
             filter = GroupFilter.AllCreaturesOpponentsControl
-        ).then(Effects.DrawCards(1))
+        ) then Effects.DrawCards(1)
     }
 
     metadata {

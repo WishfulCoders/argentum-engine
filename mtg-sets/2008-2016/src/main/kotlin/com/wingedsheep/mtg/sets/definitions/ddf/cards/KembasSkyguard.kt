@@ -27,7 +27,7 @@ val KembasSkyguard = card("Kemba's Skyguard") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(2)
         description = "When this creature enters, you gain 2 life."
     }

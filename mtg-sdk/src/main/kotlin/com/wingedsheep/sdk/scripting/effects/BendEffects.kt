@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
  * that player's per-turn bend set (CR 701.65b Airbend / 701.66b Earthbend / 702.189b Firebending).
  *
  * Pure marker, mirroring [EmitSurveiledEventEffect]: the executor appends a `BendPerformedEvent` so
- * [com.wingedsheep.sdk.dsl.Triggers.YouBend] triggers fire, and folds [bendType] into the player's
+ * `Triggers.you.bends(types)` triggers fire, and folds [bendType] into the player's
  * `BendsThisTurnComponent` so [com.wingedsheep.sdk.scripting.values.TurnTracker.DISTINCT_BENDS] can
  * back "if you've done all four this turn". It is composed into
  * [com.wingedsheep.sdk.dsl.Effects.Earthbend] / [com.wingedsheep.sdk.dsl.Effects.Airbend] and the

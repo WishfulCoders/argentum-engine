@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.maxSpeed
 import com.wingedsheep.sdk.dsl.startYourEngines
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Endrider Spikespitter — Aetherdrift #125
@@ -42,7 +43,7 @@ val EndriderSpikespitter = card("Endrider Spikespitter") {
 
     maxSpeed {
         triggeredAbility {
-            trigger = Triggers.YourUpkeep
+            trigger = Triggers.you.beginningOf(Step.UPKEEP)
             effect = Patterns.Exile.impulse(1)
             description = "At the beginning of your upkeep, exile the top card of your library. " +
                 "You may play that card this turn."

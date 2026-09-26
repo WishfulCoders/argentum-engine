@@ -8,9 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.Gate
-import com.wingedsheep.sdk.scripting.effects.GatedEffect
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
 
 /**
  * Saw
@@ -22,7 +19,7 @@ import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
  * Equip {2}
  *
  * The static buff is the usual [ModifyStats] over [Filters.EquippedCreature]. The attack trigger
- * binds to the attached creature ([TriggerBinding.ATTACHED] on [Triggers.attacks], i.e. "whenever
+ * binds to the attached creature ([TriggerBinding.ATTACHED] on `Triggers.<subject>.attacks(requires)`, i.e. "whenever
  * equipped creature attacks"). The "you may sacrifice … If you do, draw" pay-then-payoff is a
  * [GatedEffect] with a [Gate.MayPay] whose cost is a [SacrificeEffect] over permanents you control;
  * `excludeSource = true` removes this Equipment from the choices and `notAttachedToBySource()`
@@ -44,15 +41,13 @@ val Saw = card("Saw") {
     }
 
     triggeredAbility {
-        trigger = Triggers.attacks(binding = TriggerBinding.ATTACHED)
-        effect = GatedEffect(
-            gate = Gate.MayPay(
-                SacrificeEffect(
+        trigger = Triggers.attached.attacks()
+        effect = Effects.MayPay(
+            cost = Effects.SacrificeOwn(
                     filter = GameObjectFilter.Permanent.notAttachedToBySource(),
                     count = 1,
                     excludeSource = true
-                )
-            ),
+                ),
             then = Effects.DrawCards(1)
         )
         description = "Whenever equipped creature attacks, you may sacrifice a permanent other " +

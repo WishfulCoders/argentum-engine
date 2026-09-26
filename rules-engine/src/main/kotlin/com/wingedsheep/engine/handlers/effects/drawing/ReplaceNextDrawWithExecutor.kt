@@ -18,7 +18,7 @@ import kotlin.reflect.KClass
  * Creates a floating replacement-effect shield that intercepts the controller's
  * next card draw this turn, replacing it with the stored [ReplaceNextDrawWithEffect.replacementEffect].
  *
- * The replacement effect is stored directly in the shield as a generic [SerializableModification.ReplaceDrawWithEffect],
+ * The replacement effect is stored directly in the shield as a generic [SerializableModification.ReplaceDrawWith],
  * which is consumed at draw time by delegating to the effect execution pipeline.
  */
 class ReplaceNextDrawWithExecutor : EffectExecutor<ReplaceNextDrawWithEffect> {
@@ -32,7 +32,7 @@ class ReplaceNextDrawWithExecutor : EffectExecutor<ReplaceNextDrawWithEffect> {
     ): EffectResult {
         val sourceName = context.sourceId?.let { state.getEntity(it)?.get<CardComponent>()?.name }
 
-        val modification = SerializableModification.ReplaceDrawWithEffect(
+        val modification = SerializableModification.ReplaceDrawWith(
             replacementEffect = effect.replacementEffect,
             targets = context.targets,
             namedTargets = context.pipeline.namedTargets,

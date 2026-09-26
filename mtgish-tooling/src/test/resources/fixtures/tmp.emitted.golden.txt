@@ -441,7 +441,7 @@ val ArmorSliver = card("Armor Sliver") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Mana("{2}"),
                 effect = Effects.ModifyStats(0, 1, EffectTarget.Self)
             ),
@@ -610,7 +610,7 @@ val BarbedSliver = card("Barbed Sliver") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Mana("{2}"),
                 effect = Effects.ModifyStats(1, 0, EffectTarget.Self)
             ),
@@ -845,7 +845,7 @@ val Boil = card("Boil") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Land.withSubtype(Subtype.ISLAND)),
-            Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true),
+            Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true),
             noRegenerate = false
         )
     }
@@ -1704,7 +1704,7 @@ val ClotSliver = card("Clot Sliver") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Mana("{2}"),
                 effect = RegenerateEffect(EffectTarget.Self)
             ),
@@ -1754,7 +1754,7 @@ val CloudchaserEagle = card("Cloudchaser Eagle") {
     toughness = 2
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val t = target("target", TargetPermanent(filter = TargetFilter.Enchantment))
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
@@ -1948,7 +1948,7 @@ val CommanderGrevenIlVec = card("Commander Greven il-Vec") {
     toughness = 5
     keywords(Keyword.FEAR)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = SacrificeEffect(GameObjectFilter.Creature)
     }
     metadata {
@@ -3200,7 +3200,7 @@ val EliteJavelineer = card("Elite Javelineer") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         val t = target("target", TargetCreature(filter = TargetFilter.Creature.attacking()))
         effect = DealDamageEffect(1, t)
     }
@@ -3398,7 +3398,7 @@ val EndlessScream = card("Endless Scream") {
 
 package com.wingedsheep.mtg.sets.generated.demo.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -3422,7 +3422,7 @@ val Energizer = card("Energizer") {
     toughness = 2
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        effect = AddCountersEffect(counterType = Counters.PLUS_ONE_PLUS_ONE, count = 1, target = EffectTarget.Self)
+        effect = AddCountersEffect(counterType = CounterType.PLUS_ONE_PLUS_ONE, count = 1, target = EffectTarget.Self)
     }
     metadata {
         rarity = Rarity.RARE
@@ -3714,7 +3714,7 @@ val Extinction = card("Extinction") {
 
 package com.wingedsheep.mtg.sets.generated.demo.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -3737,7 +3737,7 @@ val FeveredConvulsions = card("Fevered Convulsions") {
     activatedAbility {
         cost = Costs.Mana("{2}{B}{B}")
         val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = AddCountersEffect(counterType = Counters.MINUS_ONE_MINUS_ONE, count = 1, target = t)
+        effect = AddCountersEffect(counterType = CounterType.MINUS_ONE_MINUS_ONE, count = 1, target = t)
     }
     metadata {
         rarity = Rarity.RARE
@@ -4454,7 +4454,7 @@ val GerrardsBattleCry = card("Gerrard's Battle Cry") {
         cost = Costs.Mana("{2}{W}")
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(1, 1, EffectTarget.Self)
+            Effects.ModifyStats(1, 1, EffectTarget.IterationEntity)
         )
     }
     metadata {
@@ -4666,7 +4666,7 @@ val Gravedigger = card("Gravedigger") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         val t = target("target", TargetObject(filter = TargetFilter.CreatureInYourGraveyard))
         effect = Effects.Move(t, Zone.HAND)
@@ -5433,7 +5433,7 @@ val JackalPup = card("Jackal Pup") {
     power = 2
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.TakesDamage
+        trigger = Triggers.self.isDealtDamage()
         effect = DealDamageEffect(
             DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_DAMAGE_AMOUNT),
             EffectTarget.PlayerRef(Player.You)
@@ -5487,6 +5487,7 @@ val JetMedallion = card("Jet Medallion") {
 
 package com.wingedsheep.mtg.sets.generated.demo.cards
 
+import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -5512,7 +5513,7 @@ val JinxedIdol = card("Jinxed Idol") {
     typeLine = "Artifact"
     oracleText = "At the beginning of your upkeep, this artifact deals 2 damage to you.\nSacrifice a creature: Target opponent gains control of this artifact."
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = DealDamageEffect(2, EffectTarget.PlayerRef(Player.You))
     }
     activatedAbility {
@@ -6618,7 +6619,7 @@ val MindwhipSliver = card("Mindwhip Sliver") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Composite(Costs.Mana("{2}"), Costs.SacrificeSelf),
                 effect = Patterns.Hand.discardRandom(1, EffectTarget.ContextTarget(0)),
                 targetRequirement = TargetPlayer(),
@@ -6682,6 +6683,7 @@ val MinionOfTheWastes = card("Minion of the Wastes") {
 
 package com.wingedsheep.mtg.sets.generated.demo.cards
 
+import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -6700,7 +6702,7 @@ val MirrisGuile = card("Mirri's Guile") {
     typeLine = "Enchantment"
     oracleText = "At the beginning of your upkeep, you may look at the top three cards of your library, then put them back in any order."
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         optional = true
         effect = Patterns.Library.lookAtTopAndReorder(count = 3)
     }
@@ -6749,7 +6751,7 @@ val MnemonicSliver = card("Mnemonic Sliver") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Composite(Costs.Mana("{2}"), Costs.SacrificeSelf),
                 effect = DrawCardsEffect(1)
             ),
@@ -7261,7 +7263,7 @@ val NeedleStorm = card("Needle Storm") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withKeyword(Keyword.FLYING)),
-            DealDamageEffect(4, EffectTarget.Self)
+            DealDamageEffect(4, EffectTarget.IterationEntity)
         )
     }
     metadata {
@@ -7527,8 +7529,8 @@ val Overrun = card("Overrun") {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
             Effects.Composite(
-                Effects.ModifyStats(3, 3, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
+                Effects.ModifyStats(3, 3, EffectTarget.IterationEntity),
+                Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.IterationEntity)
             )
         )
     }
@@ -7763,7 +7765,7 @@ val Perish = card("Perish") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withColor(Color.GREEN)),
-            Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true),
+            Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true),
             noRegenerate = true
         )
     }
@@ -8157,7 +8159,6 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
@@ -8178,7 +8179,7 @@ val PuppetStrings = card("Puppet Strings") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
         val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = MayEffect(
+        effect = Effects.May(
             ModalEffect.chooseOne(
                 Mode.noTarget(Effects.Tap(t), "Tap that permanent"),
                 Mode.noTarget(Effects.Untap(t), "Untap that permanent"),
@@ -8390,7 +8391,7 @@ val RathiDragon = card("Rathi Dragon") {
     toughness = 5
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = PayOrSufferEffect(
             cost = Costs.pay.Sacrifice(GameObjectFilter.Land.withSubtype(Subtype.MOUNTAIN), count = 2),
             suffer = SacrificeSelfEffect
@@ -8699,10 +8700,10 @@ val RenegadeWarlord = card("Renegade Warlord") {
     toughness = 3
     keywords(Keyword.FIRST_STRIKE)
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.attacking(), excludeSelf = true),
-            Effects.ModifyStats(1, 0, EffectTarget.Self)
+            Effects.ModifyStats(1, 0, EffectTarget.IterationEntity)
         )
     }
     metadata {
@@ -9438,7 +9439,7 @@ val Sarcomancy = card("Sarcomancy") {
     typeLine = "Enchantment"
     oracleText = "When this enchantment enters, create a 2/2 black Zombie creature token.\nAt the beginning of your upkeep, if there are no Zombies on the battlefield, this enchantment deals 1 damage to you."
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 2,
             toughness = 2,
@@ -10035,7 +10036,10 @@ val Shadowstorm = card("Shadowstorm") {
     typeLine = "Sorcery"
     oracleText = "Shadowstorm deals 2 damage to each creature with shadow."
     spell {
-        effect = Effects.ForEachInGroup(GroupFilter(GameObjectFilter.Creature), DealDamageEffect(2, EffectTarget.Self))
+        effect = Effects.ForEachInGroup(
+            GroupFilter(GameObjectFilter.Creature),
+            DealDamageEffect(2, EffectTarget.IterationEntity)
+        )
     }
     metadata {
         rarity = Rarity.UNCOMMON
@@ -10359,12 +10363,12 @@ val SkyshroudForest = card("Skyshroud Forest") {
 package com.wingedsheep.mtg.sets.generated.demo.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 
 
 /**
@@ -10383,7 +10387,7 @@ val SkyshroudRanger = card("Skyshroud Ranger") {
     toughness = 1
     activatedAbility {
         cost = Costs.Tap
-        effect = MayEffect(Patterns.Hand.putFromHand(filter = GameObjectFilter.Land))
+        effect = Effects.May(Patterns.Hand.putFromHand(filter = GameObjectFilter.Land))
         timing = TimingRule.SorcerySpeed
     }
     metadata {
@@ -10788,7 +10792,7 @@ val SoltariTrooper = card("Soltari Trooper") {
     toughness = 1
     keywords(Keyword.SHADOW)
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }
     metadata {
@@ -10807,7 +10811,7 @@ val SoltariTrooper = card("Soltari Trooper") {
 
 package com.wingedsheep.mtg.sets.generated.demo.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -10831,7 +10835,7 @@ val Souldrinker = card("Souldrinker") {
     toughness = 2
     activatedAbility {
         cost = Costs.PayLife(3)
-        effect = AddCountersEffect(counterType = Counters.PLUS_ONE_PLUS_ONE, count = 1, target = EffectTarget.Self)
+        effect = AddCountersEffect(counterType = CounterType.PLUS_ONE_PLUS_ONE, count = 1, target = EffectTarget.Self)
     }
     metadata {
         rarity = Rarity.UNCOMMON
@@ -11012,7 +11016,10 @@ val SpontaneousCombustion = card("Spontaneous Combustion") {
     oracleText = "As an additional cost to cast this spell, sacrifice a creature.\nSpontaneous Combustion deals 3 damage to each creature."
     additionalCost(Costs.additional.SacrificePermanent(GameObjectFilter.Creature))
     spell {
-        effect = Effects.ForEachInGroup(GroupFilter(GameObjectFilter.Creature), DealDamageEffect(3, EffectTarget.Self))
+        effect = Effects.ForEachInGroup(
+            GroupFilter(GameObjectFilter.Creature),
+            DealDamageEffect(3, EffectTarget.IterationEntity)
+        )
     }
     metadata {
         rarity = Rarity.UNCOMMON
@@ -11201,7 +11208,7 @@ val StaunchDefenders = card("Staunch Defenders") {
     power = 3
     toughness = 4
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = GainLifeEffect(4)
     }
     metadata {
@@ -12067,7 +12074,7 @@ val Tranquility = card("Tranquility") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Enchantment),
-            Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true),
+            Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true),
             noRegenerate = false
         )
     }
@@ -12235,6 +12242,7 @@ val VecTownships = card("Vec Townships") {
 package com.wingedsheep.mtg.sets.generated.demo.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -12256,7 +12264,7 @@ val VerdantForce = card("Verdant Force") {
     power = 7
     toughness = 7
     triggeredAbility {
-        trigger = Triggers.EachUpkeep
+        trigger = Triggers.anyPlayer.beginningOf(Step.UPKEEP)
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
@@ -12637,7 +12645,7 @@ val WildWurm = card("Wild Wurm") {
     power = 5
     toughness = 4
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = FlipCoinEffect(lostEffect = Effects.Move(EffectTarget.Self, Zone.HAND))
     }
     metadata {
@@ -12761,7 +12769,7 @@ val WindsOfRath = card("Winds of Rath") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature),
-            Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true),
+            Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true),
             noRegenerate = true
         )
     }

@@ -26,10 +26,7 @@ val SparkReaper = card("Spark Reaper") {
             Costs.Mana("{3}"),
             Costs.Sacrifice(GameObjectFilter.CreatureOrPlaneswalker),
         )
-        effect = Effects.Composite(
-            Effects.GainLife(1),
-            Effects.DrawCards(1),
-        )
+        effect = Effects.GainLife(1) then Effects.DrawCards(1)
         description = "{3}, Sacrifice a creature or planeswalker: You gain 1 life and draw a card."
     }
 

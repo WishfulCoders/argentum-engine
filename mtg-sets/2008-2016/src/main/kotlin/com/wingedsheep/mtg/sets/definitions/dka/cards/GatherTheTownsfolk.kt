@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 
 /**
  * Gather the Townsfolk
@@ -21,16 +20,16 @@ val GatherTheTownsfolk = card("Gather the Townsfolk") {
     oracleText = "Create two 1/1 white Human creature tokens.\n" +
         "Fateful hour — If you have 5 or less life, create five of those tokens instead."
     spell {
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.LifeAtMost(5),
-            effect = Effects.CreateToken(
+            then = Effects.CreateToken(
                 power = 1,
                 toughness = 1,
                 colors = setOf(Color.WHITE),
                 creatureTypes = setOf("Human"),
                 count = 5
             ),
-            elseEffect = Effects.CreateToken(
+            otherwise = Effects.CreateToken(
                 power = 1,
                 toughness = 1,
                 colors = setOf(Color.WHITE),

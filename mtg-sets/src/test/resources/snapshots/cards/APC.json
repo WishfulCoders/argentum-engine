@@ -11,7 +11,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Ana Disciple:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -30,7 +30,7 @@
                     "keyword": "FLYING",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -39,12 +39,12 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target"
+                        "id": "t0"
                     }
                 ]
             },
             {
-                "id": "ability_2",
+                "id": "Ana Disciple:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -70,7 +70,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t1"
                     }
                 },
                 "targetRequirements": [
@@ -79,7 +79,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target"
+                        "id": "t1"
                     }
                 ]
             }
@@ -111,7 +111,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Angelfire Crusader:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -155,7 +155,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Battlefield Forge:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddColorlessMana",
@@ -168,7 +168,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Battlefield Forge:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "Composite",
@@ -194,7 +194,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_3",
+                "id": "Battlefield Forge:3",
                 "cost": "CostTap",
                 "effect": {
                     "type": "Composite",
@@ -246,7 +246,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Bloodfire Colossus:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -277,7 +277,7 @@
                                     "type": "Fixed",
                                     "amount": 6
                                 },
-                                "target": "Self"
+                                "target": "IterationEntity"
                             }
                         },
                         {
@@ -325,7 +325,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Bloodfire Dwarf:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -361,7 +361,7 @@
                             "type": "Fixed",
                             "amount": 1
                         },
-                        "target": "Self"
+                        "target": "IterationEntity"
                     }
                 }
             }
@@ -391,7 +391,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Bloodfire Kavu:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -419,7 +419,7 @@
                             "type": "Fixed",
                             "amount": 2
                         },
-                        "target": "Self"
+                        "target": "IterationEntity"
                     }
                 }
             }
@@ -446,7 +446,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Caves of Koilos:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddColorlessMana",
@@ -459,7 +459,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Caves of Koilos:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "Composite",
@@ -485,7 +485,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_3",
+                "id": "Caves of Koilos:3",
                 "cost": "CostTap",
                 "effect": {
                     "type": "Composite",
@@ -537,7 +537,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Ceta Disciple:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -563,7 +563,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -572,12 +572,12 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target"
+                        "id": "t0"
                     }
                 ]
             },
             {
-                "id": "ability_2",
+                "id": "Ceta Disciple:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -626,7 +626,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Coastal Drake:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -644,7 +644,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     },
                     "destination": "Hand"
                 },
@@ -654,7 +654,7 @@
                         "filter": {
                             "baseFilter": "permanent Kavu"
                         },
-                        "id": "target"
+                        "id": "t0"
                     }
                 ]
             }
@@ -686,7 +686,7 @@
                     "amount": "XValue",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 {
@@ -698,7 +698,7 @@
         "targetRequirements": [
             {
                 "type": "AnyTarget",
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -728,7 +728,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Dega Disciple:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -754,7 +754,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
@@ -763,12 +763,12 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target"
+                        "id": "t0"
                     }
                 ]
             },
             {
-                "id": "ability_2",
+                "id": "Dega Disciple:2",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -794,7 +794,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t1"
                     }
                 },
                 "targetRequirements": [
@@ -803,7 +803,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target"
+                        "id": "t1"
                     }
                 ]
             }
@@ -835,7 +835,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Ebony Treefolk:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -884,7 +884,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Flowstone Charger:1",
                 "trigger": "AttackEvent",
                 "effect": {
                     "type": "ModifyStats",
@@ -948,7 +948,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Goblin Trenches:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -1017,7 +1017,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Helionaut:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -1109,7 +1109,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Jungle Barrier:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -1150,7 +1150,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Kavu Glider:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -1172,7 +1172,7 @@
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Kavu Glider:2",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -1216,7 +1216,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Kavu Mauler:1",
                 "trigger": "AttackEvent",
                 "effect": {
                     "type": "ModifyStats",
@@ -1279,7 +1279,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 {
@@ -1301,7 +1301,7 @@
         "targetRequirements": [
             {
                 "type": "TargetPlayer",
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -1332,7 +1332,8 @@
                         "zone": "Library",
                         "filter": "basicland"
                     },
-                    "storeAs": "searchable"
+                    "storeAs": "searchable",
+                    "search": true
                 },
                 {
                     "type": "SelectFromCollection",
@@ -1415,7 +1416,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Living Airship:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -1455,7 +1456,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Llanowar Dead:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -1487,7 +1488,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Llanowar Wastes:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddColorlessMana",
@@ -1500,7 +1501,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Llanowar Wastes:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "Composite",
@@ -1526,7 +1527,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_3",
+                "id": "Llanowar Wastes:3",
                 "cost": "CostTap",
                 "effect": {
                     "type": "Composite",
@@ -1578,7 +1579,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Mournful Zombie:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -1600,13 +1601,13 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
                     {
                         "type": "TargetPlayer",
-                        "id": "target"
+                        "id": "t0"
                     }
                 ]
             }
@@ -1640,7 +1641,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Mystic Snake:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -1652,7 +1653,7 @@
                         "baseFilter": {},
                         "zone": "Stack"
                     },
-                    "id": "target"
+                    "id": "t0"
                 }
             }
         ]
@@ -1679,7 +1680,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Overgrown Estate:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -1724,7 +1725,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Penumbra Bobcat:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield",
@@ -1768,7 +1769,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Penumbra Kavu:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield",
@@ -1816,7 +1817,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Penumbra Wurm:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "from": "Battlefield",
@@ -1859,7 +1860,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Phyrexian Arena:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP"
@@ -1913,7 +1914,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Phyrexian Gargantua:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -1966,7 +1967,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Phyrexian Rager:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -2023,7 +2024,7 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 {
@@ -2080,7 +2081,7 @@
         "targetRequirements": [
             {
                 "type": "AnyTarget",
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -2109,7 +2110,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Quagmire Druid:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -2134,7 +2135,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     },
                     "destination": "Graveyard",
                     "byDestruction": true
@@ -2145,7 +2146,7 @@
                         "filter": {
                             "baseFilter": "enchantment"
                         },
-                        "id": "target"
+                        "id": "t0"
                     }
                 ]
             }
@@ -2176,7 +2177,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Razorfin Hunter:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "DealDamage",
@@ -2186,13 +2187,13 @@
                     },
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirements": [
                     {
                         "type": "AnyTarget",
-                        "id": "target"
+                        "id": "t0"
                     }
                 ]
             }
@@ -2223,7 +2224,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Savage Gorilla:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -2253,7 +2254,7 @@
                             },
                             "target": {
                                 "type": "BoundVariable",
-                                "name": "target"
+                                "name": "t0"
                             }
                         },
                         {
@@ -2271,7 +2272,7 @@
                         "filter": {
                             "baseFilter": "creature"
                         },
-                        "id": "target"
+                        "id": "t0"
                     }
                 ]
             }
@@ -2334,7 +2335,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Shivan Reef:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddColorlessMana",
@@ -2347,7 +2348,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Shivan Reef:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "Composite",
@@ -2373,7 +2374,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_3",
+                "id": "Shivan Reef:3",
                 "cost": "CostTap",
                 "effect": {
                     "type": "Composite",
@@ -2426,7 +2427,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     },
                     "destination": "Graveyard",
                     "byDestruction": true
@@ -2446,7 +2447,7 @@
                 "filter": {
                     "baseFilter": "artifact"
                 },
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -2483,7 +2484,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Spectral Lynx:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -2527,7 +2528,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Sylvan Messenger:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -2553,10 +2554,7 @@
                         {
                             "type": "FilterCollection",
                             "from": "looked",
-                            "filter": {
-                                "type": "MatchesFilter",
-                                "filter": "Elf"
-                            },
+                            "filter": "Elf",
                             "storeMatching": "kept",
                             "storeNonMatching": "rest"
                         },
@@ -2605,7 +2603,7 @@
             "type": "MoveToZone",
             "target": {
                 "type": "BoundVariable",
-                "name": "target"
+                "name": "t0"
             },
             "destination": "Library",
             "placement": "Top"
@@ -2616,7 +2614,7 @@
                 "filter": {
                     "baseFilter": "permanent"
                 },
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -2652,7 +2650,7 @@
                     },
                     "body": {
                         "type": "MoveToZone",
-                        "target": "Self",
+                        "target": "IterationEntity",
                         "destination": "Graveyard",
                         "byDestruction": true
                     }
@@ -2689,7 +2687,7 @@
             "type": "MoveToZone",
             "target": {
                 "type": "BoundVariable",
-                "name": "target"
+                "name": "t0"
             },
             "destination": "Graveyard",
             "byDestruction": true
@@ -2700,7 +2698,7 @@
                 "filter": {
                     "baseFilter": "permanent"
                 },
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -2726,7 +2724,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Wild Research:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -2744,7 +2742,8 @@
                                 "zone": "Library",
                                 "filter": "instant"
                             },
-                            "storeAs": "searchable"
+                            "storeAs": "searchable",
+                            "search": true
                         },
                         {
                             "type": "SelectFromCollection",
@@ -2773,7 +2772,7 @@
                 }
             },
             {
-                "id": "ability_2",
+                "id": "Wild Research:2",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -2791,7 +2790,8 @@
                                 "zone": "Library",
                                 "filter": "instant"
                             },
-                            "storeAs": "searchable"
+                            "storeAs": "searchable",
+                            "search": true
                         },
                         {
                             "type": "SelectFromCollection",
@@ -2843,7 +2843,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Yavimaya Coast:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddColorlessMana",
@@ -2856,7 +2856,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Yavimaya Coast:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "Composite",
@@ -2882,7 +2882,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_3",
+                "id": "Yavimaya Coast:3",
                 "cost": "CostTap",
                 "effect": {
                     "type": "Composite",

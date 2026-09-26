@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Aerial Volley
@@ -25,10 +24,7 @@ val AerialVolley = card("Aerial Volley") {
     oracleText = "Aerial Volley deals 3 damage divided as you choose among one, two, or three target creatures with flying."
 
     spell {
-        target(
-            "target creatures with flying",
-            TargetCreature(filter = TargetFilter.Creature.withKeyword(Keyword.FLYING), count = 3, minCount = 1)
-        )
+        targets(TargetFilter.Creature.withKeyword(Keyword.FLYING), count = 3, minCount = 1)
         effect = Effects.DividedDamage(total = 3, minTargets = 1, maxTargets = 3)
     }
 

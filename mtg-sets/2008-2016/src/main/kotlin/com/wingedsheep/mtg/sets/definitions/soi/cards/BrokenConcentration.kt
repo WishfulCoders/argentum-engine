@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.soi.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.madness
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Broken Concentration (Shadows over Innistrad #50)
@@ -22,7 +22,7 @@ val BrokenConcentration = card("Broken Concentration") {
         "Madness {3}{U} (If you discard this card, discard it into exile. When you do, cast it for its madness cost or put it into your graveyard.)"
 
     spell {
-        target("target", Targets.Spell)
+        target(TargetFilter.SpellOnStack)
         effect = Effects.CounterSpell()
     }
 

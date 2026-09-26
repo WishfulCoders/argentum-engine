@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -8,12 +8,11 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.RemoveCountersEffect
 import com.wingedsheep.sdk.scripting.effects.SuccessCriterion
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Plague Boiler — Ravnica: City of Guilds #269
@@ -39,9 +38,9 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * does its work on resolution. Both halves of that matter for the second ruling — removing a
  * counter in response does *not* stop the sacrifice (the condition is not rechecked on resolution),
  * but getting the Boiler off the battlefield does, because there is then nothing to sacrifice and
- * [IfYouDoEffect] gates the wipe on the sacrifice actually happening.
+ * [Effects.IfYouDo] gates the wipe on the sacrifice actually happening.
  *
- * The plague counter ([Counters.PLAGUE]) is a passive storage counter with no inherent rule.
+ * The plague counter ([CounterType.PLAGUE]) is a passive storage counter with no inherent rule.
  *
  * One deliberate simplification: with no plague counters on the Boiler, the "remove" mode is still
  * offered and simply does nothing, where the printed card would not let you choose it. Nothing
@@ -57,8 +56,8 @@ val PlagueBoiler = card("Plague Boiler") {
         "destroy all nonland permanents."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.AddCounters(Counters.PLAGUE, 1, EffectTarget.Self)
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.AddCounters(CounterType.PLAGUE, 1, EffectTarget.Self)
         description = "At the beginning of your upkeep, put a plague counter on this artifact."
     }
 
@@ -66,11 +65,11 @@ val PlagueBoiler = card("Plague Boiler") {
         cost = Costs.Mana("{1}{B}{G}")
         effect = ModalEffect.chooseOne(
             Mode.noTarget(
-                Effects.AddCounters(Counters.PLAGUE, 1, EffectTarget.Self),
+                Effects.AddCounters(CounterType.PLAGUE, 1, EffectTarget.Self),
                 "Put a plague counter on this artifact"
             ),
             Mode.noTarget(
-                RemoveCountersEffect(Counters.PLAGUE, 1, EffectTarget.Self),
+                Effects.RemoveCounters(CounterType.PLAGUE, 1, EffectTarget.Self),
                 "Remove a plague counter from this artifact"
             )
         )
@@ -79,10 +78,10 @@ val PlagueBoiler = card("Plague Boiler") {
     }
 
     stateTriggeredAbility {
-        condition = Conditions.SourceCounterCountAtLeast(Counters.PLAGUE, 3)
-        effect = IfYouDoEffect(
+        condition = Conditions.SourceCounterCountAtLeast(CounterType.PLAGUE, 3)
+        effect = Effects.IfYouDo(
             action = Effects.SacrificeTarget(EffectTarget.Self),
-            ifYouDo = Effects.DestroyAll(GameObjectFilter.NonlandPermanent),
+            then = Effects.DestroyAll(GameObjectFilter.NonlandPermanent),
             successCriterion = SuccessCriterion.PermanentsSacrificed,
         )
         description = "When this artifact has three or more plague counters on it, sacrifice it. " +

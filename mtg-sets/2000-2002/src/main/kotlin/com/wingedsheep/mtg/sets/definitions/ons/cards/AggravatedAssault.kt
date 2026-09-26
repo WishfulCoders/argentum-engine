@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.dsl.Effects
 
@@ -25,14 +24,9 @@ val AggravatedAssault = card("Aggravated Assault") {
     activatedAbility {
         cost = Costs.Mana("{3}{R}{R}")
         timing = TimingRule.SorcerySpeed
-        effect = Effects.Composite(
-            listOf(
-                Effects.ForEachInGroup(GroupFilter.AllCreaturesYouControl, TapUntapEffect(EffectTarget.Self, tap = false)),
-                // "an additional combat phase followed by an additional main phase"
-                Effects.AddCombatPhase,
-                Effects.AddMainPhase
-            )
-        )
+        effect = Effects.ForEachInGroup(GroupFilter.AllCreaturesYouControl, Effects.Untap(EffectTarget.IterationEntity)) then
+            // "an additional combat phase followed by an additional main phase"
+            Effects.AddCombatPhase then Effects.AddMainPhase
     }
 
     metadata {

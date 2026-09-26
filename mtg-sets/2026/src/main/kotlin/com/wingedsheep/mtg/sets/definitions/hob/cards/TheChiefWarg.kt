@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * you draw a card and lose 1 life.
  *
  * Modeling notes:
- *  - "Whenever you attack" is the once-per-combat group trigger ([Triggers.YouAttack]) — it fires
+ *  - "Whenever you attack" is the once-per-combat group trigger (`Triggers.you.attacks()`) — it fires
  *    once no matter how many creatures attack, and it does not require The Chief Warg itself to be
  *    among the attackers.
  *  - The "**while** you control a creature with power 4 or greater" clause qualifies the trigger
@@ -42,12 +42,9 @@ val TheChiefWarg = card("The Chief Warg") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.YouAttack
+        trigger = Triggers.you.attacks()
         triggerRestriction = Conditions.YouControl(GameObjectFilter.Creature.powerAtLeast(4))
-        effect = Effects.Composite(
-            Effects.DrawCards(1),
-            Effects.LoseLife(1, EffectTarget.Controller)
-        )
+        effect = Effects.DrawCards(1) then Effects.LoseLife(1, EffectTarget.Controller)
         description = "Ferocious — Whenever you attack while you control a creature with power 4 or " +
             "greater, you draw a card and lose 1 life."
     }

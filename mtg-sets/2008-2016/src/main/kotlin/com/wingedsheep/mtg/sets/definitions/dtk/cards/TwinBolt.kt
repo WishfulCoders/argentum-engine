@@ -1,8 +1,8 @@
 package com.wingedsheep.mtg.sets.definitions.dtk.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DividedDamageEffect
 import com.wingedsheep.sdk.scripting.targets.AnyTarget
 
 /**
@@ -22,8 +22,8 @@ val TwinBolt = card("Twin Bolt") {
 
     spell {
         target = AnyTarget(count = 2, minCount = 1)
-        effect = DividedDamageEffect(
-            totalDamage = 2,
+        effect = Effects.DividedDamage(
+            total = 2,
             minTargets = 1,
             maxTargets = 2
         )

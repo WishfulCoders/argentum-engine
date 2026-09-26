@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Targets
@@ -11,7 +12,6 @@ import com.wingedsheep.sdk.scripting.CantAttack
 import com.wingedsheep.sdk.scripting.CantBlock
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
@@ -78,18 +78,16 @@ val TheAncientOne = card("The Ancient One") {
     // player mills cards equal to its mana value.
     activatedAbility {
         cost = Costs.Mana("{2}{U}{B}")
-        effect = Effects.Composite(
-            Effects.DrawCards(1, EffectTarget.Controller),
-            ReflexiveTriggerEffect(
+        effect = Effects.DrawCards(1, EffectTarget.Controller) then
+            Effects.ReflexiveTrigger(
                 action = Patterns.Hand.discardCards(1),
-                optional = false,
-                reflexiveEffect = Patterns.Library.mill(
-                    DynamicAmount.StoredCardManaValue("discarded"),
-                    EffectTarget.ContextTarget(0)
-                ),
-                reflexiveTargetRequirements = listOf(Targets.Player)
-            )
-        )
+                optional = false) {
+                val player = target(Targets.Player)
+                effect = Patterns.Library.mill(
+                    DynamicAmounts.manaValueOf(Patterns.Hand.discarded),
+                    player
+                )
+            }
     }
 
     metadata {

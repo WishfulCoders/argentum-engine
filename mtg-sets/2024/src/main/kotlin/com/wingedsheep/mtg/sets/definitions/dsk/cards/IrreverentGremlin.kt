@@ -1,17 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Irreverent Gremlin — Duskmourn: House of Horror #142
@@ -23,7 +18,7 @@ import com.wingedsheep.sdk.scripting.effects.MayEffect
  * Whenever another creature you control with power 2 or less enters, you may discard a card.
  * If you do, draw a card. Do this only once each turn.
  *
- * The "rummage" is the standard MayEffect(IfYouDoEffect(discard, draw)) idiom — declining (or an
+ * The "rummage" is the standard Effects.May(Effects.IfYouDo(discard, draw)) idiom — declining (or an
  * empty hand) skips the draw. "Do this only once each turn" is `effectOncePerTurn` (CR 603.2h),
  * the rider keyed to the *action*: every qualifying creature keeps offering the rummage until one
  * is actually taken, so declining an early one to save the discard for a card you'd rather pitch
@@ -41,17 +36,11 @@ val IrreverentGremlin = card("Irreverent Gremlin") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Creature.youControl().powerAtMost(2),
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.OTHER
-        )
-        effect = MayEffect(
-            effect = IfYouDoEffect(
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl().powerAtMost(2)).enters()
+        effect = Effects.May(
+            effect = Effects.IfYouDo(
                 action = Patterns.Hand.discardCards(1),
-                ifYouDo = Effects.DrawCards(1)
+                then = Effects.DrawCards(1)
             ),
             descriptionOverride = "You may discard a card. If you do, draw a card."
         )

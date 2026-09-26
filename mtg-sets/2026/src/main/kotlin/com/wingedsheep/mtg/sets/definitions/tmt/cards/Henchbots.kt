@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Henchbots
@@ -24,16 +23,13 @@ val Henchbots = card("Henchbots") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target(
-            "tapped creature an opponent controls",
-            TargetPermanent(filter = TargetFilter.Creature.opponentControls().tapped())
-        )
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature.opponentControls().tapped())
         effect = Effects.ExileUntilLeaves(creature)
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 

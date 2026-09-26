@@ -1,20 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.GatherUntilMatchEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Black Widow, Super Spy — Marvel Super Heroes #89
@@ -33,7 +29,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *   (`widowExiled`, which includes the nonland). The whole walked run is exiled — the lands seen
  *   on the way are exiled too, and a library with no nonland card at all is exiled entirely,
  *   leaving `widowNonland` empty so the may-cast grant below is a no-op.
- * - "You may … If you don't, …" is a [MayEffect] with an `otherwise` branch: taking the counter
+ * - "You may … If you don't, …" is a [Effects.May] with an `otherwise` branch: taking the counter
  *   *is* the decision, so declining (not failing) is what hands over the cast permission. The
  *   grant is Ragavan's [Effects.GrantMayPlayFromExile] — a normal-cost "may cast", so all timing
  *   restrictions and costs still apply — plus `withAnyManaType` for the "mana of any type" rider
@@ -58,29 +54,24 @@ val BlackWidowSuperSpy = card("Black Widow, Super Spy") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        effect = Effects.Composite(
-            GatherUntilMatchEffect(
-                player = Player.TriggeringPlayer,
-                filter = GameObjectFilter.Nonland,
-                storeMatch = "widowNonland",
-                storeRevealed = "widowExiled",
-            ),
-            MoveCollectionEffect(
-                from = "widowExiled",
-                destination = CardDestination.ToZone(Zone.EXILE, Player.TriggeringPlayer),
-            ),
-            MayEffect(
-                effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = Effects.Pipeline {
+            val (widowNonland, widowExiled) = gatherUntilMatch(
+                GameObjectFilter.Nonland,
+                player = Player.TriggeringPlayer
+            )
+            exile(widowExiled, Player.TriggeringPlayer)
+            run(Effects.May(
+                effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
                 descriptionOverride = "Put a +1/+1 counter on Black Widow",
                 otherwise = Effects.GrantMayPlayFromExile(
-                    from = "widowNonland",
+                    from = widowNonland,
                     expiry = MayPlayExpiry.EndOfTurn,
                     withAnyManaType = true,
                     nonLandOnly = true,
                 ),
-            ),
-        )
+            ))
+        }
         description = "Whenever Black Widow deals combat damage to a player, that player exiles " +
             "cards from the top of their library until they exile a nonland card. You may put a " +
             "+1/+1 counter on Black Widow. If you don't, you may cast the exiled nonland card " +

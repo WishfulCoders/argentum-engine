@@ -10,11 +10,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherUntilMatchEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 
 /**
@@ -49,30 +44,14 @@ val TheRegalia = card("The Regalia") {
     keywords(Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(
-            GatherUntilMatchEffect(
-                filter = GameObjectFilter.Land,
-                storeMatch = "matchLand",
-                storeRevealed = "allRevealed"
-            ),
-            RevealCollectionEffect(from = "allRevealed"),
-            FilterCollectionEffect(
-                from = "allRevealed",
-                filter = CollectionFilter.MatchesFilter(GameObjectFilter.Land),
-                storeMatching = "landCard",
-                storeNonMatching = "rest"
-            ),
-            MoveCollectionEffect(
-                from = "landCard",
-                destination = CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped)
-            ),
-            MoveCollectionEffect(
-                from = "rest",
-                destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
-                order = CardOrder.Random
-            )
-        )
+        trigger = Triggers.self.attacks()
+        effect = Effects.Pipeline {
+            val (_, allRevealed) = gatherUntilMatch(GameObjectFilter.Land)
+            reveal(allRevealed)
+            val (landCard, rest) = filterSplit(allRevealed, GameObjectFilter.Land)
+            move(landCard, CardDestination.ToZone(Zone.BATTLEFIELD, placement = ZonePlacement.Tapped))
+            toLibraryBottom(rest, order = CardOrder.Random)
+        }
     }
 
     keywordAbility(KeywordAbility.crew(1))

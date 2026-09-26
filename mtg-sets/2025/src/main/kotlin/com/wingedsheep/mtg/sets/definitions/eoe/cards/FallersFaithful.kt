@@ -6,11 +6,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.StatePredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Faller's Faithful
@@ -37,19 +35,14 @@ val FallersFaithful = card("Faller's Faithful") {
         "If that creature wasn't dealt damage this turn, its controller draws two cards."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target(
-            "up to one other target creature",
-            TargetCreature(optional = true, filter = TargetFilter.OtherCreature)
-        )
-        effect = ConditionalEffect(
-            condition = Conditions.TargetMatchesFilter(
-                GameObjectFilter.Creature.copy(
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.OtherCreature, optional = true)
+        effect = Effects.If(
+            condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.copy(
                     statePredicates = listOf(StatePredicate.Not(StatePredicate.WasDealtDamageThisTurn))
-                )
-            ),
-            effect = Effects.DrawCards(2, EffectTarget.TargetController)
-        ).then(Effects.Destroy(creature))
+                ), creature),
+            then = Effects.DrawCards(2, EffectTarget.TargetController)
+        ) then Effects.Destroy(creature)
         description = "When this creature enters, destroy up to one other target creature. " +
             "If that creature wasn't dealt damage this turn, its controller draws two cards."
     }

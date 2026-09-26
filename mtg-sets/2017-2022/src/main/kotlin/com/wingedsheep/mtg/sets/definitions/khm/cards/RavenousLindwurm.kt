@@ -23,7 +23,7 @@ val RavenousLindwurm = card("Ravenous Lindwurm") {
     toughness = 6
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(4)
     }
 

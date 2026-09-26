@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Soothing of Sméagol
@@ -21,12 +20,8 @@ val SoothingOfSmeagol = card("Soothing of Sméagol") {
     oracleText = "Return target nontoken creature to its owner's hand. The Ring tempts you."
 
     spell {
-        val creature = target(
-            "nontoken creature",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.nontoken()))
-        )
-        effect = Effects.ReturnToHand(creature)
-            .then(Effects.TheRingTemptsYou())
+        val creature = target(TargetFilter(GameObjectFilter.Creature.nontoken()))
+        effect = Effects.ReturnToHand(creature) then Effects.TheRingTemptsYou()
     }
 
     metadata {

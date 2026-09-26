@@ -9,8 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.references.Player
 
@@ -41,7 +39,7 @@ val LilianaVess = card("Liliana Vess") {
 
     // +1: Target player discards a card.
     loyaltyAbility(+1) {
-        val player = target("target player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Effects.Discard(1, player)
     }
 
@@ -55,20 +53,16 @@ val LilianaVess = card("Liliana Vess") {
 
     // −8: Put all creature cards from all graveyards onto the battlefield under your control.
     loyaltyAbility(-8) {
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.FromZone(
+        effect = Effects.Pipeline {
+            val creatureCardsInAllGraveyards = gather(
+                CardSource.FromZone(
                     zone = Zone.GRAVEYARD,
                     player = Player.Each,
                     filter = GameObjectFilter.Creature
-                ),
-                storeAs = "creatureCardsInAllGraveyards"
-            ),
-            MoveCollectionEffect(
-                from = "creatureCardsInAllGraveyards",
-                destination = CardDestination.ToZone(Zone.BATTLEFIELD)
+                )
             )
-        )
+            move(creatureCardsInAllGraveyards, CardDestination.ToZone(Zone.BATTLEFIELD))
+        }
     }
 
     metadata {

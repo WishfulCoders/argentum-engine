@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -23,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * your graveyard to your hand.
  *
  * The recursion ability functions only while this card is in the graveyard (`triggerZone =
- * GRAVEYARD`), same shape as Dragon Shadow's graveyard-resident enters trigger. `MayPayManaEffect`
+ * GRAVEYARD`), same shape as Dragon Shadow's graveyard-resident enters trigger. `Effects.MayPay`
  * models "you may pay {2}. If you do, ..." and the inner Move returns the source from the graveyard
  * to its owner's hand.
  */
@@ -39,14 +37,11 @@ val RedtoothVanguard = card("Redtooth Vanguard") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Enchantment.youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Enchantment.youControl()).enters()
         triggerZone = Zone.GRAVEYARD
-        effect = MayPayManaEffect(
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{2}"),
-            effect = Effects.Move(EffectTarget.Self, Zone.HAND, fromZone = Zone.GRAVEYARD)
+            then = Effects.Move(EffectTarget.Self, Zone.HAND, fromZone = Zone.GRAVEYARD)
         )
     }
 

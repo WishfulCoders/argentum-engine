@@ -7,7 +7,6 @@ package com.wingedsheep.mtg.sets.definitions.dft.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -24,10 +23,7 @@ val RiskyShortcut = card("Risky Shortcut") {
     typeLine = "Sorcery"
     oracleText = "Draw two cards. Each player loses 2 life."
     spell {
-        effect = Effects.Composite(
-            DrawCardsEffect(2),
-            Effects.LoseLife(2, EffectTarget.PlayerRef(Player.Each))
-        )
+        effect = Effects.DrawCards(2) then Effects.LoseLife(2, EffectTarget.PlayerRef(Player.Each))
     }
     metadata {
         rarity = Rarity.COMMON

@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
@@ -12,8 +13,7 @@ import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.TurnTracker
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Emeritus of Woe // Demonic Tutor — Secrets of Strixhaven #80
@@ -50,11 +50,11 @@ val EmeritusOfWoe = card("Emeritus of Woe") {
 
     // At the beginning of your end step, if two or more creatures died this turn, it becomes prepared.
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.CompareAmounts(
-            DynamicAmount.TurnTracking(Player.Each, TurnTracker.CREATURES_DIED),
+            DynamicAmounts.creaturesDiedThisTurn(Player.Each),
             ComparisonOperator.GTE,
-            DynamicAmount.Fixed(2),
+            2,
         )
         effect = Effects.BecomePrepared(EffectTarget.Self)
     }

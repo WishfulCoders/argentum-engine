@@ -31,7 +31,7 @@ val CursedCourtier = card("Cursed Courtier") {
     keywords(Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateRoleToken("Cursed Role", EffectTarget.Self)
     }
 

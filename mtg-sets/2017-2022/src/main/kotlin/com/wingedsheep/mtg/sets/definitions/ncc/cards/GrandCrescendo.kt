@@ -2,13 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.ncc.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Grand Crescendo
@@ -30,19 +30,17 @@ val GrandCrescendo = card("Grand Crescendo") {
         "gain indestructible until end of turn."
 
     spell {
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                count = DynamicAmount.XValue,
-                power = 1,
-                toughness = 1,
-                colors = setOf(Color.GREEN, Color.WHITE),
-                creatureTypes = setOf("Citizen")
-            ),
+        effect = Effects.CreateToken(
+            count = DynamicAmounts.xValue(),
+            power = 1,
+            toughness = 1,
+            colors = setOf(Color.GREEN, Color.WHITE),
+            creatureTypes = setOf("Citizen")
+        ) then
             Effects.ForEachInGroup(
                 GroupFilter(GameObjectFilter.Creature.youControl()),
-                Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self)
+                Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.IterationEntity)
             )
-        )
     }
 
     metadata {

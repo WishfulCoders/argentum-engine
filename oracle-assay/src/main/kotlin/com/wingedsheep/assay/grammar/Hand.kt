@@ -206,11 +206,9 @@ object Hand {
      */
     private val putFromHandThenBounce: Phrase<CardScript> = run {
         val script = CardScript(
-            spellEffect = Patterns.Hand.putFromHand(filter = GameObjectFilter.Creature.withMorph()).then(
-                ConditionalOnCollectionEffect(
-                    collection = "putting",
-                    ifNotEmpty = Effects.Move(EffectTarget.Self, Zone.HAND),
-                )
+            spellEffect = Patterns.Hand.putFromHand(filter = GameObjectFilter.Creature.withMorph()) then ConditionalOnCollectionEffect(
+                collection = "putting",
+                ifNotEmpty = Effects.Move(EffectTarget.Self, Zone.HAND),
             )
         )
         phrase(
@@ -236,31 +234,27 @@ object Hand {
      */
     private val revealAndChooseDiscard: Phrase<CardScript> = run {
         val script = CardScript(
-            spellEffect = Effects.Composite(
-                listOf(
-                    GatherCardsEffect(
-                        source = CardSource.FromZone(Zone.HAND, Player.TriggeringPlayer),
-                        storeAs = "hand",
-                    ),
-                    SelectFromCollectionEffect(
-                        from = "hand",
-                        selection = SelectionMode.ChooseExactly(DynamicAmount.XValue),
-                        chooser = Chooser.TriggeringPlayer,
-                        storeSelected = "revealed",
-                    ),
-                    SelectFromCollectionEffect(
-                        from = "revealed",
-                        selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                        chooser = Chooser.Controller,
-                        storeSelected = "toDiscard",
-                    ),
-                    MoveCollectionEffect(
-                        from = "toDiscard",
-                        destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.TriggeringPlayer),
-                        moveType = MoveType.Discard,
-                    ),
+            spellEffect = GatherCardsEffect(
+                source = CardSource.FromZone(Zone.HAND, Player.TriggeringPlayer),
+                storeAs = "hand",
+            ) then
+                SelectFromCollectionEffect(
+                    from = "hand",
+                    selection = SelectionMode.ChooseExactly(DynamicAmount.XValue),
+                    chooser = Chooser.TriggeringPlayer,
+                    storeSelected = "revealed",
+                ) then
+                SelectFromCollectionEffect(
+                    from = "revealed",
+                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
+                    chooser = Chooser.Controller,
+                    storeSelected = "toDiscard",
+                ) then
+                MoveCollectionEffect(
+                    from = "toDiscard",
+                    destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.TriggeringPlayer),
+                    moveType = MoveType.Discard,
                 )
-            )
         )
         phrase(
             "that player reveals X cards from their hand and you choose one of them. that player " +

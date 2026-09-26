@@ -9,6 +9,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * The Prima Vista
@@ -44,7 +45,7 @@ val ThePrimaVista = card("The Prima Vista") {
     // Whenever you cast a noncreature spell, if at least four mana was spent to cast it,
     // The Prima Vista becomes an artifact creature until end of turn.
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
         interveningIf = Conditions.TriggeringSpellManaSpentAtLeast(4)
         effect = Effects.BecomeCreature(
             target = EffectTarget.Self,

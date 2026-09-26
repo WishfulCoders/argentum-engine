@@ -23,7 +23,7 @@ val ShieldWall = card("Shield Wall") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(0, 2, EffectTarget.Self),
+            Effects.ModifyStats(0, 2, EffectTarget.IterationEntity),
         )
     }
 

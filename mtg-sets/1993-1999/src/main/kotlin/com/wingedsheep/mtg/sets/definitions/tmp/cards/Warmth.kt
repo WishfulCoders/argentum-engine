@@ -20,7 +20,7 @@ val Warmth = card("Warmth") {
     oracleText = "Whenever an opponent casts a red spell, you gain 2 life."
 
     triggeredAbility {
-        trigger = Triggers.opponentCasts(GameObjectFilter.Any.withColor(Color.RED))
+        trigger = Triggers.anOpponent.casts(GameObjectFilter.Any.withColor(Color.RED))
         effect = Effects.GainLife(2)
     }
 

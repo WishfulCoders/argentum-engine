@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Shoal Serpent
@@ -15,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Defender
  * Landfall — Whenever a land you control enters, this creature loses defender until end of turn.
  *
- * Landfall is [Triggers.LandYouControlEnters] — the `ZoneChangeEvent` over
+ * Landfall is `Triggers.a(GameObjectFilter.Land.youControl()).enters()` — the `ZoneChangeEvent` over
  * `GameObjectFilter.Land.youControl()` with `TriggerBinding.ANY`.
  *
  * "Loses defender" is [Effects.RemoveKeyword], a layer-6 removal that lasts until end of turn —
@@ -33,7 +34,7 @@ val ShoalSerpent = card("Shoal Serpent") {
     keywords(Keyword.DEFENDER)
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Effects.RemoveKeyword(Keyword.DEFENDER, EffectTarget.Self)
     }
 

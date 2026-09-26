@@ -10,12 +10,11 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Supertype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Scenario test for Rakdos Joins Up (OTJ #225) — {3}{B}{R} Legendary Enchantment.
@@ -47,7 +46,7 @@ class RakdosJoinsUpScenarioTest : ScenarioTestBase() {
                 typeLine = "Instant"
                 oracleText = "Destroy target creature."
                 spell {
-                    val t = target("target creature", Targets.Creature)
+                    val t = target(TargetFilter.Creature)
                     effect = Effects.Destroy(t)
                 }
             }

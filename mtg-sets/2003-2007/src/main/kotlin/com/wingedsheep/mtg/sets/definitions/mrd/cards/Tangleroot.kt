@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.values.ManaColorSet
  *
  * Whenever a player casts a creature spell, that player adds {G}.
  *
- * A symmetric observer trigger — [Triggers.anyPlayerCasts]`(Creature)` fires for every player,
+ * A symmetric observer trigger — `Triggers.anyPlayer.casts(spell, requires)``(Creature)` fires for every player,
  * including Tangleroot's controller. The payoff is the cross-player mana shape:
  * [Effects.AddManaOfChoice] over a single-colour [ManaColorSet.Specific] (resolving to one colour
  * needs no choice) with `recipient = PlayerRef(TriggeringPlayer)`, so the {G} lands in the *caster's*
@@ -34,7 +34,7 @@ val Tangleroot = card("Tangleroot") {
     oracleText = "Whenever a player casts a creature spell, that player adds {G}."
 
     triggeredAbility {
-        trigger = Triggers.anyPlayerCasts(GameObjectFilter.Creature)
+        trigger = Triggers.anyPlayer.casts(GameObjectFilter.Creature)
         effect = Effects.AddManaOfChoice(
             colorSet = ManaColorSet.Specific(setOf(Color.GREEN)),
             recipient = EffectTarget.PlayerRef(Player.TriggeringPlayer),

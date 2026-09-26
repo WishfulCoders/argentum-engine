@@ -79,7 +79,7 @@ export interface GameplaySliceActions {
   submitDistributeDecision: (decisionId: string, distribution: Record<EntityId, number>) => void
   submitDamageAssignmentDecision: (decisionId: string, assignments: Record<EntityId, number>) => void
   submitCombatResolutionDecision: (decisionId: string, edges: ReadonlyArray<{ edgeId: string; amount: number }>) => void
-  submitColorDecision: (decisionId: string, color: string) => void
+  submitColorDecision: (decisionId: string, color: string, colors?: readonly string[]) => void
   submitManaSourcesDecision: (
     decisionId: string,
     selectedSources: readonly EntityId[],
@@ -400,7 +400,7 @@ export const createGameplaySlice: SliceCreator<GameplaySlice> = (set, get) => ({
     get().submitAction(action, decisionInteractionEpoch(action.response.decisionId))
   },
 
-  submitColorDecision: (decisionId, color) => {
+  submitColorDecision: (decisionId, color, colors) => {
     const { pendingDecision, playerId } = get()
     if (!pendingDecision || pendingDecision.id !== decisionId || !playerId) return
 
@@ -414,6 +414,8 @@ export const createGameplaySlice: SliceCreator<GameplaySlice> = (set, get) => ({
         type: 'ColorChosenResponse' as const,
         decisionId,
         color,
+        // Multi-color decisions ("the color or colors of your choice") send the whole set.
+        ...(colors && colors.length > 0 ? { colors } : {}),
       },
     }
     get().submitAction(action, decisionInteractionEpoch(action.response.decisionId))

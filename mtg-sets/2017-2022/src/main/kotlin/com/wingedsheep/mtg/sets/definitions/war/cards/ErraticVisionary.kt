@@ -23,7 +23,7 @@ val ErraticVisionary = card("Erratic Visionary") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{U}"), Costs.Tap)
-        effect = Effects.DrawCards(1).then(Effects.Discard(1))
+        effect = Effects.DrawCards(1) then Effects.Discard(1)
         description = "{1}{U}, {T}: Draw a card, then discard a card."
     }
 

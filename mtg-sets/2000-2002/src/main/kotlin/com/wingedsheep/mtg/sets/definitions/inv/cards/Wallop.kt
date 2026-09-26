@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Wallop
@@ -23,14 +22,11 @@ val Wallop = card("Wallop") {
 
     spell {
         val t = target(
-            "creature",
-            TargetCreature(
-                filter = TargetFilter(
-                    GameObjectFilter.Creature
-                        .withAnyColor(Color.BLUE, Color.BLACK)
-                        .withKeyword(Keyword.FLYING)
-                )
-            )
+            TargetFilter(
+                GameObjectFilter.Creature
+                    .withAnyColor(Color.BLUE, Color.BLACK)
+                    .withKeyword(Keyword.FLYING)
+            ),
         )
         effect = Effects.Destroy(t)
     }

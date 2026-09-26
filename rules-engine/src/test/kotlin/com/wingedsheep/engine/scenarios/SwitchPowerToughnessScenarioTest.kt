@@ -8,7 +8,6 @@ import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.Duration
@@ -16,6 +15,7 @@ import com.wingedsheep.sdk.scripting.effects.SwitchPowerToughnessEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 class SwitchPowerToughnessScenarioTest : FunSpec({
     val wall = card("Asymmetric Switch Test") {
@@ -28,7 +28,7 @@ class SwitchPowerToughnessScenarioTest : FunSpec({
         manaCost = "{U}"
         typeLine = "Instant"
         spell {
-            val permanent = target("permanent", Targets.Permanent)
+            val permanent = target(TargetFilter.Permanent)
             effect = Effects.SwitchPowerToughness(permanent, Duration.Permanent)
         }
     }
@@ -36,7 +36,7 @@ class SwitchPowerToughnessScenarioTest : FunSpec({
         manaCost = "{U}"
         typeLine = "Instant"
         spell {
-            val permanent = target("permanent", Targets.Permanent)
+            val permanent = target(TargetFilter.Permanent)
             effect = Effects.BecomeCreature(target = permanent, power = 2, toughness = 5)
         }
     }

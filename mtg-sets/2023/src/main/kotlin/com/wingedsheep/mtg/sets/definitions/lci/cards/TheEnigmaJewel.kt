@@ -47,7 +47,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *    ability of the cards exiled to craft it, each usable only once each turn (tracked per exiled
  *    card — two exiled copies of one card each get their own budget). `{T}` costs tap the Locus and
  *    self-references bind to it (CR 113.7 — a granted ability's source is the object that has it).
- *  - The back face's **copy clause** is [Triggers.YouActivateAbility] (fires for every activated
+ *  - The back face's **copy clause** is `Triggers.you.activatesAbility()` (fires for every activated
  *    ability you activate that isn't a mana ability, CR 605.1a) paired with
  *    [Effects.CopyTargetSpellOrAbility] against [EffectTarget.TriggeringEntity]: the triggering
  *    entity of an `AbilityActivatedEvent` is the activated ability already on the stack, and the
@@ -115,7 +115,7 @@ private val LocusOfEnlightenment = card("Locus of Enlightenment") {
     // new targets for the copy. (CR 605.1a excludes mana abilities from the trigger event;
     // the copy executor handles targeted and untargeted abilities — CR 707.10c.)
     triggeredAbility {
-        trigger = Triggers.YouActivateAbility
+        trigger = Triggers.you.activatesAbility()
         effect = Effects.CopyTargetSpellOrAbility(EffectTarget.TriggeringEntity)
     }
 

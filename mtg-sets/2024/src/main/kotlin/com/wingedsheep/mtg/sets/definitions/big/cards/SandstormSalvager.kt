@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.big.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -8,9 +8,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -39,8 +36,8 @@ val SandstormSalvager = card("Sandstorm Salvager") {
         "until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreateTokenEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateToken(
             power = 3,
             toughness = 3,
             colors = emptySet(),
@@ -56,16 +53,14 @@ val SandstormSalvager = card("Sandstorm Salvager") {
         description = "{2}, {T}: Put a +1/+1 counter on each creature token you control. They " +
             "gain trample until end of turn."
         val creatureTokensYouControl = GroupFilter(GameObjectFilter.Creature.youControl().token())
-        effect = Effects.Composite(
+        effect = Effects.ForEachInGroup(
+            filter = creatureTokensYouControl,
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity)
+        ) then
             Effects.ForEachInGroup(
                 filter = creatureTokensYouControl,
-                effect = AddCountersEffect(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
-            ),
-            Effects.ForEachInGroup(
-                filter = creatureTokensYouControl,
-                effect = GrantKeywordEffect(Keyword.TRAMPLE, EffectTarget.Self)
+                effect = Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.IterationEntity)
             )
-        )
     }
 
     metadata {

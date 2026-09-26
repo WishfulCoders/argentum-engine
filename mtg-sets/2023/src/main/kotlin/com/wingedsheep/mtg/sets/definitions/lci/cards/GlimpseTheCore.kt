@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Glimpse the Core
@@ -53,8 +52,7 @@ val GlimpseTheCore = card("Glimpse the Core") {
             }
             mode("Return target Cave card from your graveyard to the battlefield tapped") {
                 val cave = target(
-                    "target Cave card from your graveyard",
-                    TargetObject(filter = TargetFilter(GameObjectFilter.Land.withSubtype("Cave").ownedByYou(), zone = Zone.GRAVEYARD))
+                    TargetFilter(GameObjectFilter.Land.withSubtype("Cave").ownedByYou(), zone = Zone.GRAVEYARD),
                 )
                 effect = Effects.PutOntoBattlefield(cave, tapped = true)
             }

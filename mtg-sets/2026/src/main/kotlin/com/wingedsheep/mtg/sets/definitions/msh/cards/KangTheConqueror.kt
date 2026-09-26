@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -49,10 +49,8 @@ val KangTheConqueror = card("Kang the Conqueror") {
     activatedAbility {
         isPowerUp = true
         cost = Costs.Mana("{5}{U}{U}{U}")
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self) then
             Effects.TakeExtraTurn(powerUpAbilitiesCantBeActivated = true)
-        )
     }
 
     metadata {

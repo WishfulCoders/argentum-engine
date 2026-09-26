@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * For each token you control, create a token that's a copy of that permanent.
  *
  * `ForEachInGroup` snapshots the tokens you control at resolution and creates one copy per token
- * ([EffectTarget.Self] = the iterated token); the freshly-minted copies are not re-iterated.
+ * ([EffectTarget.IterationEntity] = the iterated token); the freshly-minted copies are not re-iterated.
  */
 val SecondHarvest = card("Second Harvest") {
     manaCost = "{2}{G}{G}"
@@ -25,7 +25,7 @@ val SecondHarvest = card("Second Harvest") {
     spell {
         effect = Effects.ForEachInGroup(
             filter = GroupFilter(GameObjectFilter.Token.youControl()),
-            effect = Effects.CreateTokenCopyOfTarget(target = EffectTarget.Self)
+            effect = Effects.CreateTokenCopyOfTarget(target = EffectTarget.IterationEntity)
         )
     }
 

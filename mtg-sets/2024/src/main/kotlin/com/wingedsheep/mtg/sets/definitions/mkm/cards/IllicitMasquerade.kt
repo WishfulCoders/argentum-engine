@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
@@ -7,11 +8,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Illicit Masquerade — Murders at Karlov Manor #88
@@ -34,30 +33,20 @@ val IllicitMasquerade = card("Illicit Masquerade") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreaturesYouControl,
-            Effects.AddCounters(IMPOSTOR_COUNTER, 1, EffectTarget.Self),
+            Effects.AddCounters(CounterType.IMPOSTOR, 1, EffectTarget.IterationEntity),
         )
         description = "When this enchantment enters, put an impostor counter on each creature " +
             "you control."
     }
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.youControl().withCounter(IMPOSTOR_COUNTER),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY,
-        )
-        val replacement = target(
-            "up to one other target creature card from your graveyard",
-            TargetObject(
-                optional = true,
-                filter = TargetFilter.CreatureInYourGraveyard.otherThanTriggeringEntity(),
-            ),
-        )
-        effect = Effects.Move(EffectTarget.TriggeringEntity, Zone.EXILE, fromZone = Zone.GRAVEYARD)
-            .then(Effects.Move(replacement, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD))
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl().withCounter(CounterType.IMPOSTOR)).dies()
+        val replacement = target(TargetFilter.CreatureInYourGraveyard.otherThanTriggeringEntity(), optional = true)
+        effect = Effects.Move(EffectTarget.TriggeringEntity, Zone.EXILE, fromZone = Zone.GRAVEYARD) then
+            Effects.Move(replacement, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)
         description = "Whenever a creature you control with an impostor counter on it dies, " +
             "exile it. Return up to one other target creature card from your graveyard to the " +
             "battlefield."
@@ -77,5 +66,3 @@ val IllicitMasquerade = card("Illicit Masquerade") {
         )
     }
 }
-
-private const val IMPOSTOR_COUNTER = "IMPOSTOR"

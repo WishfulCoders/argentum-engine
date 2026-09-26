@@ -10,6 +10,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.core.Step
 
 val TendershootDryad = card("Tendershoot Dryad") {
     manaCost = "{4}{G}"
@@ -29,7 +30,7 @@ val TendershootDryad = card("Tendershoot Dryad") {
 
     // At the beginning of each upkeep, create a 1/1 green Saproling token.
     triggeredAbility {
-        trigger = Triggers.EachUpkeep
+        trigger = Triggers.anyPlayer.beginningOf(Step.UPKEEP)
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
@@ -45,7 +46,7 @@ val TendershootDryad = card("Tendershoot Dryad") {
             ability = ModifyStats(
                 powerBonus = 2,
                 toughnessBonus = 2,
-                filter = GroupFilter.allCreaturesWithSubtype("Saproling").youControl()
+                filter = GroupFilter.allPermanentsWithSubtype("Saproling").youControl()
             ),
             condition = Conditions.YouHaveCitysBlessing
         )

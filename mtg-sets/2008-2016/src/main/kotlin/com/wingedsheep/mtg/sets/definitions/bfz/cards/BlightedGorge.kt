@@ -29,7 +29,7 @@ val BlightedGorge = card("Blighted Gorge") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{4}{R}"), Costs.Tap, Costs.SacrificeSelf)
-        val victim = target("any target", Targets.Any)
+        val victim = target(Targets.Any)
         effect = Effects.DealDamage(2, victim)
     }
 

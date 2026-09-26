@@ -20,12 +20,10 @@ val BewilderingBlizzard = card("Bewildering Blizzard") {
     oracleText = "Draw three cards. Creatures your opponents control get -3/-0 until end of turn."
 
     spell {
-        effect = Effects.DrawCards(3).then(
-            Patterns.Group.modifyStatsForAll(
-                power = -3,
-                toughness = 0,
-                filter = GroupFilter.AllCreaturesOpponentsControl
-            )
+        effect = Effects.DrawCards(3) then Patterns.Group.modifyStatsForAll(
+            power = -3,
+            toughness = 0,
+            filter = GroupFilter.AllCreaturesOpponentsControl
         )
     }
 

@@ -8,8 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.IfYouDoEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 
 /**
  * Giott, King of the Dwarves
@@ -35,28 +33,22 @@ val GiottKingOfTheDwarves = card("Giott, King of the Dwarves") {
     keywords(Keyword.DOUBLE_STRIKE)
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.withSubtype("Dwarf").youControl(),
-            binding = TriggerBinding.ANY,
-        )
-        effect = MayEffect(
-            effect = IfYouDoEffect(
+        trigger = Triggers.a(GameObjectFilter.Creature.withSubtype("Dwarf").youControl()).enters()
+        effect = Effects.May(
+            effect = Effects.IfYouDo(
                 action = Patterns.Hand.discardCards(1),
-                ifYouDo = Effects.DrawCards(1),
+                then = Effects.DrawCards(1),
             ),
             descriptionOverride = "You may discard a card. If you do, draw a card.",
         )
     }
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.withSubtype("Equipment").youControl(),
-            binding = TriggerBinding.ANY,
-        )
-        effect = MayEffect(
-            effect = IfYouDoEffect(
+        trigger = Triggers.a(GameObjectFilter.Artifact.withSubtype("Equipment").youControl()).enters()
+        effect = Effects.May(
+            effect = Effects.IfYouDo(
                 action = Patterns.Hand.discardCards(1),
-                ifYouDo = Effects.DrawCards(1),
+                then = Effects.DrawCards(1),
             ),
             descriptionOverride = "You may discard a card. If you do, draw a card.",
         )

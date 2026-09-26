@@ -14,7 +14,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -38,7 +37,7 @@ val FateOfTheSunCryst = card("Fate of the Sun-Cryst") {
         )
     }
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter.NonlandPermanent))
+        val t = target(TargetFilter.NonlandPermanent)
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     metadata {

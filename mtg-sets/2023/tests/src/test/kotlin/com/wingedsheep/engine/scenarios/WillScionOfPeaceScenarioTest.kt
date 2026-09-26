@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.mechanics.mana.CostCalculator
 import com.wingedsheep.engine.support.GameTestDriver
@@ -47,7 +48,7 @@ class WillScionOfPeaceScenarioTest : FunSpec({
 
     /** Effective cost of [cardName] for [driver]'s player 1, in total mana. */
     fun costOf(driver: GameTestDriver, cardName: String): Int {
-        val calculator = CostCalculator(driver.cardRegistry)
+        val calculator = CostCalculator(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val cardDef = driver.cardRegistry.requireCard(cardName)
         return calculator.calculateEffectiveCost(driver.state, cardDef, driver.player1).cmc
     }
@@ -168,7 +169,7 @@ class WillScionOfPeaceScenarioTest : FunSpec({
         driver.submitSuccess(ActivateAbility(driver.player1, will, abilityId))
         driver.bothPass()
 
-        val calculator = CostCalculator(driver.cardRegistry)
+        val calculator = CostCalculator(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val serra = driver.cardRegistry.requireCard("Serra Angel")
         calculator.calculateEffectiveCost(driver.state, serra, driver.player2).cmc shouldBe 5
     }

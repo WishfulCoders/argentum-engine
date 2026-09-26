@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.kld.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Essence Extraction
@@ -24,9 +24,8 @@ val EssenceExtraction = card("Essence Extraction") {
     oracleText = "Essence Extraction deals 3 damage to target creature and you gain 3 life."
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = Effects.DealDamage(3, t)
-            .then(Effects.GainLife(3))
+        val t = target(TargetFilter.Creature)
+        effect = Effects.DealDamage(3, t) then Effects.GainLife(3)
     }
 
     metadata {

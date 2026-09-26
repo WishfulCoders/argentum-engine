@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.legalactions.LegalActionEnumerator
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.support.GameTestDriver
@@ -12,6 +13,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
+import io.kotest.matchers.shouldNotBe
 
 /**
  * Irrigation Ditch has a sacrifice-free mana ability *and* a sacrifice one:
@@ -51,7 +54,7 @@ class IrrigationDitchAutoTapTest : FunSpec({
 
         // Affordable: the only green comes from "{T}, Sacrifice: Add {G}{U}", but the spell is
         // still a legal play (the player can opt into the sacrifice), so canPay reports true...
-        val solver = ManaSolver(driver.cardRegistry)
+        val solver = ManaSolver(driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         solver.canPay(driver.state, activePlayer, ManaCost.parse("{1}{G}")) shouldBe true
 
         // ...and it surfaces as a legal cast action for the player to choose.
@@ -75,7 +78,7 @@ class IrrigationDitchAutoTapTest : FunSpec({
         // sacrifice must be a deliberate choice.
         val result = driver.castSpell(activePlayer, elf)
 
-        result.isSuccess shouldBe false
+        result.outcome shouldNotBe Outcome.Done
         // Irrigation Ditch was NOT sacrificed: still on the battlefield, untapped.
         driver.findPermanent(activePlayer, "Irrigation Ditch") shouldBe ditch
         driver.isTapped(ditch) shouldBe false
@@ -94,7 +97,7 @@ class IrrigationDitchAutoTapTest : FunSpec({
         // {W}: Irrigation Ditch's plain "{T}: Add {W}" ability covers it without sacrificing.
         val result = driver.castSpell(activePlayer, bear)
 
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         // Tapped for {W}, but still on the battlefield (not sacrificed).
         driver.isTapped(ditch) shouldBe true
         driver.findPermanent(activePlayer, "Irrigation Ditch") shouldBe ditch

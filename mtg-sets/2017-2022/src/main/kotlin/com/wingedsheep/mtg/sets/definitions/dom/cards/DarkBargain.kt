@@ -20,8 +20,8 @@ val DarkBargain = card("Dark Bargain") {
     oracleText = "Look at the top three cards of your library. Put two of them into your hand and the other into your graveyard. Dark Bargain deals 2 damage to you."
 
     spell {
-        effect = Patterns.Library.lookAtTopAndKeep(count = 3, keepCount = 2)
-            .then(Effects.DealDamage(2, EffectTarget.Controller))
+        effect = Patterns.Library.lookAtTopAndKeep(count = 3, keepCount = 2) then
+            Effects.DealDamage(2, EffectTarget.Controller)
     }
 
     metadata {

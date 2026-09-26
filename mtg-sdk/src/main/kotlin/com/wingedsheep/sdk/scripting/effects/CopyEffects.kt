@@ -107,7 +107,7 @@ data class EachPermanentBecomesCopyOfTargetEffect(
  * ceases to exist if it's an instant/sorcery (Rule 707.10).
  *
  * This is the zone-side half of the "copy a card, then cast the copy" pattern: pair it with
- * [CastFromCollectionWithoutPayingCostEffect] (wrapped in `MayEffect` for "you may cast")
+ * [CastFromCollectionWithoutPayingCostEffect] (wrapped in `Effects.May` for "you may cast")
  * reading the same [storeAs] collection. A copy that is never cast is removed by the
  * Rule 707.10a state-based action (a copy of a card outside the stack/battlefield ceases to
  * exist), so no explicit cleanup step is needed.
@@ -116,7 +116,7 @@ data class EachPermanentBecomesCopyOfTargetEffect(
  *     CompositeEffect(listOf(
  *         MoveToZoneEffect(target, Zone.EXILE),
  *         CopyCardIntoCollectionEffect(target, storeAs = "copy"),
- *         MayEffect(CastFromCollectionWithoutPayingCostEffect("copy")),
+ *         Effects.May(CastFromCollectionWithoutPayingCostEffect("copy")),
  *     ))
  *
  * @property source The card to copy (e.g. `ContextTarget(0)` for a targeted graveyard card).

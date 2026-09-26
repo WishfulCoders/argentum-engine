@@ -7,7 +7,7 @@ package com.wingedsheep.mtg.sets.definitions.chk.cards
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -22,7 +22,7 @@ val WakingNightmare = card("Waking Nightmare") {
     typeLine = "Sorcery — Arcane"
     oracleText = "Target player discards two cards."
     spell {
-        val t = target("target", TargetPlayer())
+        val t = target(Targets.Player)
         effect = Patterns.Hand.discardCards(2, t)
     }
     metadata {

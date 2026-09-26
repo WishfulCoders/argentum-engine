@@ -43,7 +43,7 @@ val AmbitiousAugmenter = card("Ambitious Augmenter") {
     increment()
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         interveningIf = Conditions.TriggeringEntityHadCounters
         effect = Effects.CreateToken(
             power = 0,
@@ -51,9 +51,7 @@ val AmbitiousAugmenter = card("Ambitious Augmenter") {
             colors = setOf(Color.GREEN, Color.BLUE),
             creatureTypes = setOf("Fractal"),
             imageUri = "https://cards.scryfall.io/normal/front/d/e/de564776-9d88-4533-8717-842eecdd0594.jpg?1775828279"
-        ).then(
-            Effects.MoveAllLastKnownCounters(EffectTarget.PipelineTarget(CREATED_TOKENS, 0))
-        )
+        ) then Effects.MoveAllLastKnownCounters(EffectTarget.PipelineTarget(CREATED_TOKENS, 0))
         description = "When this creature dies, if it had one or more counters on it, create a 0/0 " +
             "green and blue Fractal creature token, then put this creature's counters on that token."
     }

@@ -26,7 +26,7 @@ all supported:
 - **Coin flips** — `FlipCoinExecutor` (Chaotic Strike)
 - **Cast-only-during-combat / after-blockers** — `CastRestriction.OnlyDuringPhase/Step` (Cauldron Dance, Spinal Embrace, Chaotic Strike)
 - **"Doesn't untap" static** — `DOESNT_UNTAP` keyword static (Shackles, Juntu Stakes, Tsabo's Web; Temporal Distortion via counter)
-- **Dynamic +X/+X statics** — `GrantDynamicStatsEffect` (Crusading Knight, Marauding Knight, Sparring Golem, Kavu Scout, Wayfaring Giant, Power Armor)
+- **Dynamic +X/+X statics** — `GrantDynamicStats` (Crusading Knight, Marauding Knight, Sparring Golem, Kavu Scout, Wayfaring Giant, Power Armor)
 - **CDA P/T** — `dynamicPower`/`dynamicToughness` (Molimo, Yavimaya Kavu)
 - **Protection from a subtype** — `ProtectionScope.Subtype` (Shoreline Raider)
 - **Multicolored predicate** — `CardPredicate.IsMulticolored` (Urza's Filter, Rewards of Diversity filter)

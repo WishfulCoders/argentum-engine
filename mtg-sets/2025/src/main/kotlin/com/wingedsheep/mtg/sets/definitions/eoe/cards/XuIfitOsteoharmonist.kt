@@ -3,11 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.eoe.cards
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.TimingRule
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 /**
  * Xu-Ifit, Osteoharmonist
  * {1}{B}{B}
@@ -34,14 +34,10 @@ val XuIfitOsteoharmonist = card("Xu-Ifit, Osteoharmonist") {
 
     activatedAbility {
         cost = Costs.Tap
-        val creature = target("target creature card in your graveyard", Targets.CreatureCardInYourGraveyard)
-        effect = Effects.Composite(
-            listOf(
-                Effects.PutOntoBattlefield(creature),
-                Effects.AddCreatureType(Subtype.SKELETON.value, creature, Duration.Permanent),
-                Effects.RemoveAllAbilities(creature, Duration.Permanent),
-            )
-        )
+        val creature = target(TargetFilter.CreatureInYourGraveyard)
+        effect = Effects.PutOntoBattlefield(creature) then
+            Effects.AddCreatureType(Subtype.SKELETON.value, creature, Duration.Permanent) then
+            Effects.RemoveAllAbilities(creature, Duration.Permanent)
         timing = TimingRule.SorcerySpeed
     }
 

@@ -30,11 +30,8 @@ val DecorumDissertation = card("Decorum Dissertation") {
         "your first main phases.)"
 
     spell {
-        val player = target("target player", Targets.Player)
-        effect = Effects.Composite(
-            Effects.DrawCards(2, player),
-            Effects.LoseLife(2, player),
-        )
+        val player = target(Targets.Player)
+        effect = Effects.DrawCards(2, player) then Effects.LoseLife(2, player)
         paradigm()
     }
 

@@ -19,7 +19,7 @@ val Sear = card("Sear") {
     oracleText = "Sear deals 4 damage to target creature or planeswalker."
 
     spell {
-        val t = target("target", Targets.CreatureOrPlaneswalker)
+        val t = target(Targets.CreatureOrPlaneswalker)
         effect = Effects.DealDamage(4, t)
     }
 

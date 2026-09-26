@@ -1,10 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.eld.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.MarkExileOnDeathEffect
 
 /**
  * Scorching Dragonfire — Throne of Eldraine #139 (canonical printing)
@@ -27,8 +26,8 @@ val ScorchingDragonfire = card("Scorching Dragonfire") {
         "If that creature or planeswalker would die this turn, exile it instead."
 
     spell {
-        val t = target("target creature or planeswalker", Targets.CreatureOrPlaneswalker)
-        effect = DealDamageEffect(3, t) then MarkExileOnDeathEffect(t)
+        val t = target(Targets.CreatureOrPlaneswalker)
+        effect = Effects.DealDamage(3, t) then Effects.MarkExileOnDeath(t)
     }
 
     metadata {

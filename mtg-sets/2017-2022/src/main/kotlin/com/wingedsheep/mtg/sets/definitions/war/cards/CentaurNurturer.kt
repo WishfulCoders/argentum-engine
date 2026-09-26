@@ -24,7 +24,7 @@ val CentaurNurturer = card("Centaur Nurturer") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(3)
     }
 

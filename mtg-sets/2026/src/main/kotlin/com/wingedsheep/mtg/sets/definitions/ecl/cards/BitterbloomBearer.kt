@@ -6,8 +6,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 val BitterbloomBearer = card("Bitterbloom Bearer") {
     manaCost = "{B}{B}"
@@ -21,10 +21,9 @@ val BitterbloomBearer = card("Bitterbloom Bearer") {
     keywords(Keyword.FLASH, Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.Composite(listOf(
-            Effects.LoseLife(1, EffectTarget.Controller),
-            CreateTokenEffect(
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.LoseLife(1, EffectTarget.Controller) then
+            Effects.CreateToken(
                 count = 1,
                 power = 1,
                 toughness = 1,
@@ -33,7 +32,6 @@ val BitterbloomBearer = card("Bitterbloom Bearer") {
                 keywords = setOf(Keyword.FLYING),
                 imageUri = "https://cards.scryfall.io/normal/front/0/1/01524db2-c96f-4902-8394-bc7a7128e573.jpg?1767956498"
             )
-        ))
     }
 
     metadata {

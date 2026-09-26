@@ -43,7 +43,7 @@ import io.kotest.matchers.shouldBe
 class JacobHaukenInspectorScenarioTest : ScenarioTestBase() {
 
     private val visibility: Visibility
-        get() = Visibility(cardRegistry)
+        get() = Visibility(cardRegistry, conditionEvaluator = services.conditionEvaluator)
 
     init {
         /**

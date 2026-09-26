@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.card
@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 
 /**
  * Dust Animus
@@ -44,7 +43,7 @@ val DustAnimus = card("Dust Animus") {
 
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.PlusOnePlusOne,
+            counterType = CounterType.PLUS_ONE_PLUS_ONE,
             count = 2,
             selfOnly = true,
             condition = Conditions.YouControlAtLeast(5, GameObjectFilter.Land.untapped())
@@ -52,7 +51,7 @@ val DustAnimus = card("Dust Animus") {
     )
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.Named(Counters.LIFELINK),
+            counterType = CounterType.LIFELINK,
             count = 1,
             selfOnly = true,
             condition = Conditions.YouControlAtLeast(5, GameObjectFilter.Land.untapped())

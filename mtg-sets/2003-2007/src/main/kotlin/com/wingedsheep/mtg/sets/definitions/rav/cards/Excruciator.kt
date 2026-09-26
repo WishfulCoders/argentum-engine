@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.DamageCantBePrevented
 import com.wingedsheep.sdk.scripting.EventPattern
-import com.wingedsheep.sdk.scripting.events.SourceFilter
 
 /**
  * Excruciator
@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.events.SourceFilter
  * Damage that would be dealt by this creature can't be prevented.
  *
  * The same [DamageCantBePrevented] replacement as Leyline of Punishment, *scoped to its own
- * source*: `EventPattern.DamageEvent(source = SourceFilter.Self)` is the "by this creature" half,
+ * source*: `EventPattern.DamageEvent(source = GameObjectFilter.Any.sourceItself())` is the "by this creature" half,
  * so every other source's damage on the battlefield stays preventable. Protection prevents damage
  * (CR 702.16e), which is why Excruciator can damage a creature with protection from red — while
  * still being unable to *block* one, since protection's other three letters are untouched.
@@ -33,7 +33,7 @@ val Excruciator = card("Excruciator") {
     oracleText = "Damage that would be dealt by this creature can't be prevented."
 
     replacementEffect(
-        DamageCantBePrevented(appliesTo = EventPattern.DamageEvent(source = SourceFilter.Self))
+        DamageCantBePrevented(appliesTo = EventPattern.DamageEvent(source = GameObjectFilter.Any.sourceItself()))
     )
 
     metadata {

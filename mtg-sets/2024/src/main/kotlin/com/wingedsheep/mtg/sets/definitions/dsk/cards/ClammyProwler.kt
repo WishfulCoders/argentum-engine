@@ -6,8 +6,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.targets.TargetOther
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Clammy Prowler
@@ -30,11 +30,8 @@ val ClammyProwler = card("Clammy Prowler") {
     toughness = 5
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val t = target(
-            "another target attacking creature",
-            TargetOther(baseRequirement = TargetCreature(filter = TargetFilter.AttackingCreature))
-        )
+        trigger = Triggers.self.attacks()
+        val t = target(TargetOther(baseRequirement = TargetObject(filter = TargetFilter.AttackingCreature)))
         effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, t)
     }
 

@@ -10,8 +10,6 @@ import com.wingedsheep.sdk.dsl.champion
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.TapUntapCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -26,7 +24,7 @@ import com.wingedsheep.sdk.scripting.references.Player
  * When a Faerie is championed with this creature, tap all lands target player controls.
  *
  * The follow-up is a real triggered ability keyed to the CR 702.72c "championed" event
- * ([Triggers.championedWith]), not a rider on the champion trigger itself. That is what makes the
+ * (`Triggers.self.champions()`), not a rider on the champion trigger itself. That is what makes the
  * printed line behave: it fires only when a Faerie was *actually* exiled (declining the champion
  * choice sacrifices the Clique and taps nothing), it is a separate object on the stack that can be
  * responded to, and its player target is chosen when it goes on the stack rather than when the
@@ -52,20 +50,17 @@ val MistbindClique = card("Mistbind Clique") {
     champion(Subtype.FAERIE)
 
     triggeredAbility {
-        trigger = Triggers.championedWith()
-        val player = target("target player", Targets.Player)
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.BattlefieldMatching(
-                        filter = GameObjectFilter.Land.targetPlayerControls(player),
-                        player = Player.Each
-                    ),
-                    storeAs = "mistbindClique_lands"
-                ),
-                TapUntapCollectionEffect("mistbindClique_lands", tap = true)
+        trigger = Triggers.self.champions()
+        val player = target(Targets.Player)
+        effect = Effects.Pipeline {
+            val mistbindCliqueLands = gather(
+                CardSource.BattlefieldMatching(
+                    filter = GameObjectFilter.Land.targetPlayerControls(player),
+                    player = Player.Each
+                )
             )
-        )
+            run(Effects.TapCollection(mistbindCliqueLands, tap = true))
+        }
         description = "When a Faerie is championed with this creature, tap all lands target " +
             "player controls."
     }

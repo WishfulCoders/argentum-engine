@@ -1,7 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.library
 
 import com.wingedsheep.engine.core.*
-import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PredicateContext
 import com.wingedsheep.engine.handlers.PredicateEvaluator
@@ -36,14 +35,14 @@ import kotlin.reflect.KClass
  * the player responds.
  */
 class SelectFromCollectionExecutor(
-    private val cardRegistry: CardRegistry
+    private val cardRegistry: CardRegistry,
+    private val predicateEvaluator: PredicateEvaluator
 ) : EffectExecutor<SelectFromCollectionEffect> {
+    private val amountEvaluator = predicateEvaluator.amounts
 
     override val effectType: KClass<SelectFromCollectionEffect> = SelectFromCollectionEffect::class
 
-    private val amountEvaluator = DynamicAmountEvaluator()
-    private val predicateEvaluator = PredicateEvaluator()
-    private val manaSolver by lazy { ManaSolver(cardRegistry) }
+    private val manaSolver by lazy { ManaSolver(cardRegistry, predicateEvaluator) }
 
     override fun execute(
         state: GameState,

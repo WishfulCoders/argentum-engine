@@ -1,17 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
 import com.wingedsheep.sdk.core.CounterType
-import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.PayManaCostEffect
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Grim Reaper, Lethal Legionnaire — Marvel Super Heroes #98
@@ -45,24 +41,25 @@ val GrimReaperLethalLegionnaire = card("Grim Reaper, Lethal Legionnaire") {
         "it instead.)"
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = ReflexiveTriggerEffect(
+        trigger = Triggers.self.attacks()
+        effect = Effects.ReflexiveTrigger(
             // "you may pay {3}{B}"
-            action = PayManaCostEffect(ManaCost.parse("{3}{B}")),
+            action = Effects.PayMana("{3}{B}"),
             optional = true,
-            // "When you do, return target creature card from your graveyard to the battlefield
-            // tapped and attacking with a finality counter on it."
-            reflexiveEffect = Effects.Move(
-                target = EffectTarget.ContextTarget(0),
-                destination = Zone.BATTLEFIELD,
-                placement = ZonePlacement.TappedAndAttacking,
-                addCounterType = CounterType.FINALITY,
-            ),
-            reflexiveTargetRequirements = listOf(Targets.CreatureCardInYourGraveyard),
             descriptionOverride = "You may pay {3}{B}. When you do, return target creature card " +
                 "from your graveyard to the battlefield tapped and attacking with a finality " +
                 "counter on it.",
-        )
+        ) {
+            // "When you do, return target creature card from your graveyard to the battlefield
+            // tapped and attacking with a finality counter on it."
+            val creatureCardInYourGraveyard = target(TargetFilter.CreatureInYourGraveyard)
+            effect = Effects.Move(
+                target = creatureCardInYourGraveyard,
+                destination = Zone.BATTLEFIELD,
+                placement = ZonePlacement.TappedAndAttacking,
+                addCounterType = CounterType.FINALITY,
+            )
+        }
         description = "Whenever Grim Reaper attacks, you may pay {3}{B}. When you do, return " +
             "target creature card from your graveyard to the battlefield tapped and attacking " +
             "with a finality counter on it."

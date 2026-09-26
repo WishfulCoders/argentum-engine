@@ -7,10 +7,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Hellish Sideswipe
@@ -43,15 +40,10 @@ val HellishSideswipe = card("Hellish Sideswipe") {
     )
 
     spell {
-        target(
-            "creature or Vehicle",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrVehicle)),
-        )
-        effect = Effects.Destroy(EffectTarget.ContextTarget(0)).then(
-            ConditionalEffect(
-                condition = Conditions.SacrificedHadSubtype(Subtype.VEHICLE.value),
-                effect = Effects.DrawCards(1),
-            )
+        val creatureOrVehicle = target(TargetFilter(GameObjectFilter.CreatureOrVehicle))
+        effect = Effects.Destroy(creatureOrVehicle) then Effects.If(
+            condition = Conditions.SacrificedHadSubtype(Subtype.VEHICLE.value),
+            then = Effects.DrawCards(1),
         )
     }
 

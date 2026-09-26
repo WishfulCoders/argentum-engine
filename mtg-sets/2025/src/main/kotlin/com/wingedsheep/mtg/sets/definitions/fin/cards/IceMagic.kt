@@ -1,10 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ice Magic
@@ -31,19 +30,19 @@ val IceMagic = card("Ice Magic") {
     spell {
         tiered {
             tier("Blizzard", "{0}", "Return target creature to its owner's hand.") {
-                effect = Effects.ReturnToHand(EffectTarget.ContextTarget(0))
-                target = Targets.Creature
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.ReturnToHand(creature)
             }
             tier(
                 "Blizzara", "{2}",
                 "Target creature's owner puts it on their choice of the top or bottom of their library."
             ) {
-                effect = Effects.PutOnTopOrBottomOfLibrary(EffectTarget.ContextTarget(0))
-                target = Targets.Creature
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.PutOnTopOrBottomOfLibrary(creature)
             }
             tier("Blizzaga", "{5}{U}", "Target creature's owner shuffles it into their library.") {
-                effect = Effects.ShuffleIntoLibrary(EffectTarget.ContextTarget(0))
-                target = Targets.Creature
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.ShuffleIntoLibrary(creature)
             }
         }
     }

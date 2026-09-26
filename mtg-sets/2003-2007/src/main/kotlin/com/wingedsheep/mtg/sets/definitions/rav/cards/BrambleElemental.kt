@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 
 /**
  * Bramble Elemental
@@ -33,11 +32,7 @@ val BrambleElemental = card("Bramble Elemental") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.becomesAttached(
-            attachmentFilter = GameObjectFilter.Enchantment.withSubtype("Aura"),
-            attachedToFilter = GameObjectFilter.Any.sourceItself(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Enchantment.withSubtype("Aura")).becomesAttached(GameObjectFilter.Any.sourceItself())
         effect = Effects.CreateToken(
             count = 2,
             power = 1,

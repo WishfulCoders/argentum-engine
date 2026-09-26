@@ -28,7 +28,7 @@ val Mawcor = card("Mawcor") {
 
     activatedAbility {
         cost = Costs.Tap
-        val victim = target("target", Targets.Any)
+        val victim = target(Targets.Any)
         effect = Effects.DealDamage(1, victim)
     }
 

@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.CREATED_TOKENS
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 
 /**
  * Retrieve the Esper
@@ -20,7 +19,7 @@ import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
  * Flashback {5}{U}
  *
  * The token-create atomic publishes its entity id under [CREATED_TOKENS]; the graveyard-cast rider
- * is a [ConditionalEffect] gated on [Conditions.WasCastFromGraveyard] that addresses that same token
+ * is a [Effects.If] gated on [Conditions.WasCastFromGraveyard] that addresses that same token
  * via [Effects.AddCountersToCollection] (the Incubate composition pattern).
  */
 val RetrieveTheEsper = card("Retrieve the Esper") {
@@ -32,20 +31,18 @@ val RetrieveTheEsper = card("Retrieve the Esper") {
         "Flashback {5}{U} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
 
     spell {
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                power = 3,
-                toughness = 3,
-                colors = setOf(Color.BLUE),
-                creatureTypes = setOf("Robot", "Warrior"),
-                artifactToken = true,
-                imageUri = "https://cards.scryfall.io/normal/front/c/2/c2b4e93b-6b27-4dd3-a6dd-a75d6fab14dc.jpg?1748704066",
-            ),
-            ConditionalEffect(
+        effect = Effects.CreateToken(
+            power = 3,
+            toughness = 3,
+            colors = setOf(Color.BLUE),
+            creatureTypes = setOf("Robot", "Warrior"),
+            artifactToken = true,
+            imageUri = "https://cards.scryfall.io/normal/front/c/2/c2b4e93b-6b27-4dd3-a6dd-a75d6fab14dc.jpg?1748704066",
+        ) then
+            Effects.If(
                 condition = Conditions.WasCastFromGraveyard,
-                effect = Effects.AddCountersToCollection(CREATED_TOKENS, Counters.PLUS_ONE_PLUS_ONE, 2),
-            ),
-        )
+                then = Effects.AddCountersToCollection(CREATED_TOKENS, CounterType.PLUS_ONE_PLUS_ONE, 2),
+            )
     }
 
     keywordAbility(KeywordAbility.flashback("{5}{U}"))

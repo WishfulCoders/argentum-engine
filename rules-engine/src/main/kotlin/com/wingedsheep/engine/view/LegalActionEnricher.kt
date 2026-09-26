@@ -113,6 +113,7 @@ class LegalActionEnricher(
             mandatoryBlockerAssignments = action.mandatoryBlockerAssignments,
             hasXCost = action.hasXCost,
             maxAffordableX = action.maxAffordableX,
+            maxAdditionalManaForCounters = action.maxAdditionalManaForCounters,
             minX = action.minX,
             isManaAbility = action.isManaAbility,
             requiresManaColorChoice = action.requiresManaColorChoice,
@@ -259,7 +260,8 @@ class LegalActionEnricher(
         xConstrainsManaValue = xConstrainsManaValue,
         xConstrainsManaValueExactly = xConstrainsManaValueExactly,
         xConstrainsPower = xConstrainsPower,
-        xConstrainsCount = xConstrainsCount
+        xConstrainsCount = xConstrainsCount,
+        mustDifferFromEarlier = mustDifferFromEarlier
     )
 
     private fun AdditionalCostData.toDto() = AdditionalCostInfo(

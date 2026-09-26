@@ -5,7 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Anchovy & Banana Pizza
@@ -22,8 +22,8 @@ val AnchovyAndBananaPizza = card("Anchovy & Banana Pizza") {
     oracleText = "When this artifact enters, destroy target creature.\n{2}, {T}, Sacrifice this artifact: You gain 3 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val target = target("target creature", TargetCreature())
+        trigger = Triggers.self.enters()
+        val target = target(TargetFilter.Creature)
         effect = Effects.Destroy(target)
     }
 

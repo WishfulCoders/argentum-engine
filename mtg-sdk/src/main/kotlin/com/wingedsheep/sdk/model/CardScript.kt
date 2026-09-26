@@ -64,7 +64,7 @@ data class ReturnTransformedFromGraveyard(
  *         TriggeredAbility.create(
  *             trigger = OnEnterBattlefield(),
  *             effect = DealDamageEffect(4, EffectTarget.ContextTarget(0)),
- *             targetRequirement = TargetCreature()
+ *             targetRequirement = TargetObject(filter = TargetFilter.Creature)
  *         )
  *     )
  * )
@@ -75,7 +75,7 @@ data class ReturnTransformedFromGraveyard(
  * CardScript(
  *     activatedAbilities = listOf(
  *         ActivatedAbility(
- *             id = AbilityId.generate(),
+ *             id = AbilityId.next(),
  *             cost = AbilityCost.Tap,
  *             effect = AddColorlessManaEffect(2),
  *             isManaAbility = true
@@ -166,9 +166,20 @@ data class CardScript(
     /**
      * For Aura spells, defines what the aura can enchant.
      * If set, this permanent is an Aura that attaches to valid targets.
-     * Example: TargetCreature() for "Enchant creature"
+     * Example: `TargetObject(filter = TargetFilter.Creature)` for "Enchant creature"
      */
     val auraTarget: TargetRequirement? = null,
+
+    /**
+     * A narrower requirement an Aura *spell's* target must meet **as it is cast** — and only then.
+     * Dream Leash: "Enchant permanent / You can't choose an untapped permanent as this spell's
+     * target as you cast it." The printed restriction applies to the choice only (its 2005-10-01
+     * ruling), so it is not what the spell re-checks on resolution (CR 608.2b re-checks [auraTarget]),
+     * not what the enchant state-based action reads, and not what an Aura put onto the battlefield
+     * without being cast checks. Null for every Aura whose cast target is just its enchant
+     * restriction. Read through [castAuraTarget].
+     */
+    val auraCastTarget: TargetRequirement? = null,
 
     /**
      * Timing and conditional restrictions on when this spell can be cast.
@@ -428,6 +439,15 @@ data class CardScript(
      */
     val isAura: Boolean
         get() = auraTarget != null
+
+    /**
+     * The requirement an Aura spell's target is chosen against while casting: [auraCastTarget]
+     * when the card narrows the choice, otherwise its [auraTarget]. Legal-action enumeration and
+     * cast validation read this; the requirement captured on the stack for resolution stays
+     * [auraTarget].
+     */
+    val castAuraTarget: TargetRequirement?
+        get() = auraCastTarget ?: auraTarget
 
     /**
      * Whether this spell requires targets when cast.

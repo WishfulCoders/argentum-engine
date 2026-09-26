@@ -216,6 +216,12 @@ kill-daemons MIN_AGE="60" *ARGS:
 check:
     ./gradlew check
 
+# Waits out subscription usage limits; stop with `touch .claude/loop-runs/<code>.stop`.
+# Implement a whole set with headless Claude Code, one fresh session per step (e.g. just set-loop ecl)
+[group: 'ai']
+set-loop CODE:
+    scripts/set-loop {{CODE}}
+
 # Report implemented vs missing cards for a set (e.g., just card-status --set BLB --list)
 [group: 'build']
 card-status *ARGS:
@@ -332,7 +338,7 @@ coverage-verify-all: _coverage-tool
     done
 
 # Build the Argentum Assay CLI once so the recipes below can call it (fast no-op when up to date).
-# Assay is the first-party Oracle-text parser (docs/oracle-assay.md); it depends on :mtg-sdk only.
+# Assay is the first-party Oracle-text parser (docs/oracle-assay.md); it depends on :mtg-sdk (and :mtg-sdk-tooling) only.
 _assay-tool:
     @scripts/gradle-locked -q --console=plain :oracle-assay:installDist
 

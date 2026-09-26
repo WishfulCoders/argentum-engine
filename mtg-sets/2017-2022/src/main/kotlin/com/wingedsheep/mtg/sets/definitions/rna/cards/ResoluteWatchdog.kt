@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.rna.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Resolute Watchdog — Ravnica Allegiance #19
@@ -26,7 +26,7 @@ val ResoluteWatchdog = card("Resolute Watchdog") {
     keywords(Keyword.DEFENDER)
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeSelf)
-        val creature = target("target", Targets.CreatureYouControl)
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, creature)
     }
 

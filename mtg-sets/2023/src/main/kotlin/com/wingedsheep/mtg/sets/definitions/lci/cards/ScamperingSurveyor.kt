@@ -27,7 +27,7 @@ val ScamperingSurveyor = card("Scampering Surveyor") {
     power = 3
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.BasicLand or GameObjectFilter.Land.withSubtype("Cave"),
             destination = SearchDestination.BATTLEFIELD,

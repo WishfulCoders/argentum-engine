@@ -5,13 +5,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.dsl.Effects
@@ -36,24 +31,15 @@ val TheMendingOfDominaria = card("The Mending of Dominaria") {
         "III — Return all land cards from your graveyard to the battlefield, then shuffle your graveyard into your library."
 
     // Chapter I & II: Mill 2, then may return a creature card from graveyard to hand
-    val chapterOneAndTwoEffect = Patterns.Library.mill(2) then Effects.Composite(
-        listOf(
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Creature),
-                storeAs = "graveyardCreatures"
-            ),
-            SelectFromCollectionEffect(
-                from = "graveyardCreatures",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "chosen",
-                prompt = "You may return a creature card from your graveyard to your hand"
-            ),
-            MoveCollectionEffect(
-                from = "chosen",
-                destination = CardDestination.ToZone(Zone.HAND)
-            )
+    val chapterOneAndTwoEffect = Patterns.Library.mill(2) then Effects.Pipeline {
+        val graveyardCreatures = gather(CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Creature))
+        val chosen = chooseUpTo(
+            1,
+            from = graveyardCreatures,
+            prompt = "You may return a creature card from your graveyard to your hand"
         )
-    )
+        toHand(chosen)
+    }
 
     sagaChapter(1) {
         effect = chapterOneAndTwoEffect
@@ -65,23 +51,11 @@ val TheMendingOfDominaria = card("The Mending of Dominaria") {
 
     // Chapter III: Return all land cards from graveyard to battlefield, then shuffle graveyard into library
     sagaChapter(3) {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Land),
-                    storeAs = "graveyardLands"
-                ),
-                SelectFromCollectionEffect(
-                    from = "graveyardLands",
-                    selection = SelectionMode.All,
-                    storeSelected = "allLands"
-                ),
-                MoveCollectionEffect(
-                    from = "allLands",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD)
-                )
-            )
-        ) then Patterns.Library.shuffleGraveyardIntoLibrary(EffectTarget.Controller)
+        effect = Effects.Pipeline {
+            val graveyardLands = gather(CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Land))
+            val allLands = selectAll(from = graveyardLands)
+            move(allLands, CardDestination.ToZone(Zone.BATTLEFIELD))
+        } then Patterns.Library.shuffleGraveyardIntoLibrary(EffectTarget.Controller)
     }
 
     metadata {

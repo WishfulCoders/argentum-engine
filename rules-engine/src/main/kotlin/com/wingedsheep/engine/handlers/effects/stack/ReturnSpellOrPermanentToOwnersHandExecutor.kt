@@ -1,9 +1,11 @@
 package com.wingedsheep.engine.handlers.effects.stack
 
+import com.wingedsheep.engine.handlers.TargetFinder
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.core.ZoneChangeEvent
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.handlers.effects.zones.MoveToZoneEffectExecutor
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
@@ -31,7 +33,9 @@ import kotlin.reflect.KClass
  * If the target is no longer in a valid zone at resolution, the effect does nothing.
  */
 class ReturnSpellOrPermanentToOwnersHandExecutor(
-    private val cardRegistry: CardRegistry
+    private val zones: ZoneTransitionService,
+    private val cardRegistry: CardRegistry,
+    private val targetFinder: TargetFinder
 ) : EffectExecutor<ReturnSpellOrPermanentToOwnersHandEffect> {
 
     override val effectType: KClass<ReturnSpellOrPermanentToOwnersHandEffect> =
@@ -40,12 +44,14 @@ class ReturnSpellOrPermanentToOwnersHandExecutor(
     // Bounce is always to hand, so the entering-permanent recursion can never fire. A throwing
     // stub rather than a real executor keeps that assumption honest: if this delegation ever
     // grows a battlefield destination, it fails here instead of silently skipping the entering
-    // permanent's OnEnterRunEffect replacement.
+    // permanent's OnEnterRun replacement.
     private val permanentBounce = MoveToZoneEffectExecutor(
+        zones,
         cardRegistry,
         effectExecutor = { _, _, _ ->
             error("ReturnSpellOrPermanentToOwnersHandExecutor bounces to hand; nothing enters the battlefield")
-        }
+        },
+        targetFinder = targetFinder
     )
 
     override fun execute(

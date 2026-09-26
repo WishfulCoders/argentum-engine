@@ -7,9 +7,7 @@ package com.wingedsheep.mtg.sets.definitions.por.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
-import com.wingedsheep.sdk.scripting.targets.TargetOpponentOrPlaneswalker
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -24,11 +22,8 @@ val VampiricTouch = card("Vampiric Touch") {
     typeLine = "Sorcery"
     oracleText = "Vampiric Touch deals 2 damage to target opponent or planeswalker and you gain 2 life."
     spell {
-        val t = target("target", TargetOpponentOrPlaneswalker())
-        effect = Effects.Composite(
-            DealDamageEffect(2, t),
-            GainLifeEffect(2)
-        )
+        val t = target(Targets.OpponentOrPlaneswalker)
+        effect = Effects.DealDamage(2, t) then Effects.GainLife(2)
     }
     metadata {
         rarity = Rarity.COMMON

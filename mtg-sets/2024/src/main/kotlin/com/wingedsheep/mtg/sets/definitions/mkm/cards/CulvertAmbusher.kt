@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Culvert Ambusher — Murders at Karlov Manor #158
@@ -48,17 +48,17 @@ val CulvertAmbusher = card("Culvert Ambusher") {
 
     // When this creature enters …
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = Targets.Creature
-        effect = Effects.MarkMustBlockThisTurn()
+        val creature = target(TargetFilter.Creature)
+        trigger = Triggers.self.enters()
+        effect = Effects.MarkMustBlockThisTurn(target = creature)
         description = "When this creature enters, target creature blocks this turn if able."
     }
 
     // … or is turned face up.
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
-        target = Targets.Creature
-        effect = Effects.MarkMustBlockThisTurn()
+        val creature = target(TargetFilter.Creature)
+        trigger = Triggers.self.turnedFaceUp()
+        effect = Effects.MarkMustBlockThisTurn(target = creature)
         description = "When this creature is turned face up, target creature blocks this turn if able."
     }
 

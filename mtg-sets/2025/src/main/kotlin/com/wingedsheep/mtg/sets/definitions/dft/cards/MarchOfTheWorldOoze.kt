@@ -58,7 +58,7 @@ val MarchOfTheWorldOoze = card("March of the World Ooze") {
     }
 
     triggeredAbility {
-        trigger = Triggers.OpponentCastsSpell
+        trigger = Triggers.anOpponent.casts()
         interveningIf = Conditions.Not(Conditions.IsPlayersTurn(Player.TriggeringPlayer))
         effect = Effects.CreateToken(
             power = 3,

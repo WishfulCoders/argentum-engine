@@ -27,7 +27,7 @@ val FleetingAven = card("Fleeting Aven") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.AnyPlayerCycles
+        trigger = Triggers.anyPlayer.cycles()
         effect = Effects.Move(EffectTarget.Self, Zone.HAND)
     }
 

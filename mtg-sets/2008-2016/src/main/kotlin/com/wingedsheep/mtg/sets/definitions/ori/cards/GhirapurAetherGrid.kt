@@ -24,7 +24,7 @@ val GhirapurAetherGrid = card("Ghirapur Aether Grid") {
 
     activatedAbility {
         cost = Costs.TapPermanents(2, GameObjectFilter.Artifact)
-        val t = target("any target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
     }
 

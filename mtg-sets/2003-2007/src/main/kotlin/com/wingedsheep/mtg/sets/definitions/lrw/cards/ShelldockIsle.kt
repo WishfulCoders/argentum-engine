@@ -2,7 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -11,22 +13,11 @@ import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.AddManaEffect
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.FaceDownMode
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
-import com.wingedsheep.sdk.scripting.effects.GrantPlayWithoutPayingCostEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Shelldock Isle
@@ -79,76 +70,54 @@ val ShelldockIsle = card("Shelldock Isle") {
     replacementEffect(EntersTapped())
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(
-                        count = DynamicAmount.Fixed(4),
-                        player = Player.You
-                    ),
-                    storeAs = "hideawayTop"
-                ),
-                SelectFromCollectionEffect(
-                    from = "hideawayTop",
-                    selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                    storeSelected = "hideawayPicked",
-                    storeRemainder = "hideawayRest",
-                    prompt = "Choose a card to exile face down",
-                    selectedLabel = "Exile face down",
-                    remainderLabel = "Put on bottom of library"
-                ),
-                MoveCollectionEffect(
-                    from = "hideawayPicked",
-                    destination = CardDestination.ToZone(Zone.EXILE),
-                    faceDown = FaceDownMode.HIDDEN,
-                    linkToSource = true
-                ),
-                MoveCollectionEffect(
-                    from = "hideawayRest",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
-                    order = CardOrder.Random
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val hideawayTop = gather(
+                CardSource.TopOfLibrary(
+                    count = 4,
+                    player = Player.You
                 )
             )
-        )
+            val (hideawayPicked, hideawayRest) = chooseExactlySplit(
+                1,
+                from = hideawayTop,
+                prompt = "Choose a card to exile face down",
+                selectedLabel = "Exile face down",
+                remainderLabel = "Put on bottom of library"
+            )
+            exile(hideawayPicked, faceDown = FaceDownMode.HIDDEN, linkToSource = true)
+            toLibraryBottom(hideawayRest, order = CardOrder.Random)
+        }
     }
 
     activatedAbility {
         cost = Costs.Tap
-        effect = AddManaEffect(Color.BLUE)
+        effect = Effects.AddMana(Color.BLUE)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{U}"), Costs.Tap)
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromLinkedExile(),
-                    storeAs = "hideawayLinked"
-                ),
-                GrantMayPlayFromExileEffect("hideawayLinked"),
-                GrantPlayWithoutPayingCostEffect("hideawayLinked")
-            )
-        )
+        effect = Effects.Pipeline {
+            val hideawayLinked = gather(CardSource.FromLinkedExile())
+            run(Effects.GrantMayPlayFromExile(hideawayLinked))
+            run(Effects.GrantPlayWithoutPayingCost(hideawayLinked))
+        }
         restrictions = listOf(
             ActivationRestriction.OnlyIfCondition(
-                Compare(
-                    DynamicAmount.GreatestAmongPlayers(
-                        players = Player.Each,
-                        inner = DynamicAmount.Conditional(
-                            condition = Compare(
-                                DynamicAmount.AggregateZone(Player.You, Zone.LIBRARY),
+                Conditions.CompareAmounts(
+                    DynamicAmounts.greatestAmongPlayers(DynamicAmounts.conditional(
+                            condition = Conditions.CompareAmounts(
+                                DynamicAmounts.zone(Player.You, Zone.LIBRARY).count(),
                                 ComparisonOperator.LTE,
-                                DynamicAmount.Fixed(20)
+                                20
                             ),
-                            ifTrue = DynamicAmount.Fixed(1),
-                            ifFalse = DynamicAmount.Fixed(0)
-                        )
-                    ),
+                            ifTrue = 1,
+                            ifFalse = 0
+                        ), players = Player.Each),
                     ComparisonOperator.GTE,
-                    DynamicAmount.Fixed(1)
+                    1
                 )
             )
         )

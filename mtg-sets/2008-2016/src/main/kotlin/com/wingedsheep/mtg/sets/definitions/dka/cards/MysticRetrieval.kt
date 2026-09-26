@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -28,13 +27,10 @@ val MysticRetrieval = card("Mystic Retrieval") {
     oracleText = "Return target instant or sorcery card from your graveyard to your hand.\nFlashback {2}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
     spell {
         val t = target(
-            "target",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.Instant.ownedByYou().or(GameObjectFilter.Sorcery.ownedByYou()),
-                    zone = Zone.GRAVEYARD
-                )
-            )
+            TargetFilter(
+                GameObjectFilter.Instant.ownedByYou().or(GameObjectFilter.Sorcery.ownedByYou()),
+                zone = Zone.GRAVEYARD
+            ),
         )
         effect = Effects.Move(t, Zone.HAND)
     }

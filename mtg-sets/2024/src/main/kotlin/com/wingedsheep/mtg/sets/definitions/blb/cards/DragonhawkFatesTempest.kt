@@ -3,22 +3,16 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.DealDamagePerEntityInZoneEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerTiming
 import com.wingedsheep.sdk.scripting.effects.Effect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -42,44 +36,40 @@ val DragonhawkFatesTempest = card("Dragonhawk, Fate's Tempest") {
 
     keywords(Keyword.FLYING)
 
-    val impulseDrawEffect: Effect = Effects.Composite(listOf(
-        GatherCardsEffect(
-            source = CardSource.TopOfLibrary(
-                DynamicAmount.AggregateBattlefield(
+    val impulseDrawEffect: Effect = Effects.Pipeline {
+        val exiledCards = gather(
+            CardSource.TopOfLibrary(
+                DynamicAmounts.battlefield(
                     Player.You,
                     GameObjectFilter.Creature.powerAtLeast(4)
-                )
-            ),
-            storeAs = "exiledCards"
-        ),
-        MoveCollectionEffect(
-            from = "exiledCards",
-            destination = CardDestination.ToZone(Zone.EXILE)
-        ),
-        GrantMayPlayFromExileEffect("exiledCards"),
-        CreateDelayedTriggerEffect(
+                ).count()
+            )
+        )
+        exile(exiledCards)
+        run(Effects.GrantMayPlayFromExile(exiledCards))
+        run(Effects.CreateDelayedTrigger(
             step = Step.END,
             fireOnPlayer = EffectTarget.PlayerRef(Player.You),
             timing = DelayedTriggerTiming.NEXT_END_STEP,
-            effect = DealDamagePerEntityInZoneEffect(
-                collectionName = "exiledCards",
+            effect = Effects.DealDamagePerCardStillIn(
+                collection = exiledCards,
                 zone = Zone.EXILE,
                 damagePerEntity = 2,
                 target = EffectTarget.PlayerRef(Player.EachOpponent),
                 damageSource = EffectTarget.Self
             )
-        )
-    ))
+        ))
+    }
 
     // When Dragonhawk enters the battlefield
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = impulseDrawEffect
     }
 
     // Whenever Dragonhawk attacks
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = impulseDrawEffect
     }
 

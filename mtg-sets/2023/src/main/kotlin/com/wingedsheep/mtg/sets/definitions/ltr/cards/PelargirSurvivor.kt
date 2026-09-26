@@ -37,7 +37,7 @@ val PelargirSurvivor = card("Pelargir Survivor") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{5}{U}"), Costs.Tap)
-        val player = target("target player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Patterns.Library.mill(3, player)
     }
 

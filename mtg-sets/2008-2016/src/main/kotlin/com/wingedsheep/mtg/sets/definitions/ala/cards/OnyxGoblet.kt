@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Onyx Goblet
@@ -24,7 +25,7 @@ val OnyxGoblet = card("Onyx Goblet") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", TargetPlayer())
+        val t = target(Targets.Player)
         effect = Effects.LoseLife(1, t)
     }
 

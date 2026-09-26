@@ -29,10 +29,8 @@ val Dreadwing = card("Dreadwing") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{U}{R}")
-        effect = Effects.Composite(
-            Effects.ModifyStats(3, 0, EffectTarget.Self),
+        effect = Effects.ModifyStats(3, 0, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
-        )
     }
 
     metadata {

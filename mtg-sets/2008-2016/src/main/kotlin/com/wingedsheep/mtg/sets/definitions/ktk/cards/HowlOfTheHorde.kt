@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 
 /**
  * Howl of the Horde
@@ -24,9 +23,9 @@ val HowlOfTheHorde = card("Howl of the Horde") {
     oracleText = "When you next cast an instant or sorcery spell this turn, copy that spell. You may choose new targets for the copy.\nRaid — If you attacked this turn, when you next cast an instant or sorcery spell this turn, copy that spell an additional time. You may choose new targets for the copy."
 
     spell {
-        effect = Effects.CopyNextSpellCast(1) then ConditionalEffect(
+        effect = Effects.CopyNextSpellCast(1) then Effects.If(
             condition = Conditions.YouAttackedThisTurn,
-            effect = Effects.CopyNextSpellCast(1)
+            then = Effects.CopyNextSpellCast(1)
         )
     }
 

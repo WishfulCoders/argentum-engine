@@ -16,7 +16,7 @@ import io.kotest.matchers.shouldBe
  *
  * Pins the composition over existing primitives (no new engine features):
  *  - The upkeep trigger sacrifices a land you choose (`Effects.Sacrifice(Land, Controller)`),
- *    and a `ConditionalEffect` gated on `SacrificedHadSubtype("Island")` reads the sacrificed
+ *    and a `Effects.If` gated on `SacrificedHadSubtype("Island")` reads the sacrificed
  *    permanent's snapshot to deal 3 damage to you only when the sacrificed land was an Island.
  *  - The "control no lands" clause is a state-triggered ability (CR 603.8) that sacrifices the
  *    Djinn, mirroring Dandân.

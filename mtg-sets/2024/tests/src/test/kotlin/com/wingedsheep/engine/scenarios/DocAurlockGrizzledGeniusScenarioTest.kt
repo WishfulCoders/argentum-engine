@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.mana.CostCalculator
 import com.wingedsheep.engine.mechanics.mana.PlotCostReducer
 import com.wingedsheep.engine.registry.CardRegistry
@@ -68,7 +69,7 @@ class DocAurlockGrizzledGeniusScenarioTest : FunSpec({
 
     test("spell cast from graveyard costs {2} less") {
         val reg = registry()
-        val calc = CostCalculator(reg)
+        val calc = CostCalculator(reg, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val (d, active) = setup()
         val spell = reg.requireCard("Doc Aurlock Test Spell")
         // {4}{R}{R} → −{2} generic → {2}{R}{R}
@@ -79,7 +80,7 @@ class DocAurlockGrizzledGeniusScenarioTest : FunSpec({
 
     test("spell cast from exile costs {2} less") {
         val reg = registry()
-        val calc = CostCalculator(reg)
+        val calc = CostCalculator(reg, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val (d, active) = setup()
         val spell = reg.requireCard("Doc Aurlock Test Spell")
         val cost = calc.calculateEffectiveCost(d.state, spell, active, fromZone = Zone.EXILE)
@@ -88,7 +89,7 @@ class DocAurlockGrizzledGeniusScenarioTest : FunSpec({
 
     test("spell cast from hand is NOT reduced") {
         val reg = registry()
-        val calc = CostCalculator(reg)
+        val calc = CostCalculator(reg, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val (d, active) = setup()
         val spell = reg.requireCard("Doc Aurlock Test Spell")
         val cost = calc.calculateEffectiveCost(d.state, spell, active, fromZone = Zone.HAND)
@@ -97,7 +98,7 @@ class DocAurlockGrizzledGeniusScenarioTest : FunSpec({
 
     test("spell cast with no fromZone is NOT reduced") {
         val reg = registry()
-        val calc = CostCalculator(reg)
+        val calc = CostCalculator(reg, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val (d, active) = setup()
         val spell = reg.requireCard("Doc Aurlock Test Spell")
         val cost = calc.calculateEffectiveCost(d.state, spell, active)
@@ -106,7 +107,7 @@ class DocAurlockGrizzledGeniusScenarioTest : FunSpec({
 
     test("opponent's graveyard cast is NOT reduced by my Doc Aurlock") {
         val reg = registry()
-        val calc = CostCalculator(reg)
+        val calc = CostCalculator(reg, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val (d, active) = setup()
         val opponent = d.state.turnOrder.first { it != active }
         val spell = reg.requireCard("Doc Aurlock Test Spell")

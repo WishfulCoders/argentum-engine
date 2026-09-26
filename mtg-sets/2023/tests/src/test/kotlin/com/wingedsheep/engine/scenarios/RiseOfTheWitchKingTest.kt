@@ -11,6 +11,7 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Rise of the Witch-king (LTR).
@@ -41,7 +42,7 @@ class RiseOfTheWitchKingTest : FunSpec({
         val oppBear = driver.putCreatureOnBattlefield(opp, "Grizzly Bears")
         // Pre-seed a permanent card in your graveyard for the rider to reanimate.
         val reanimatable = driver.putCreatureOnBattlefield(active, "Grizzly Bears")
-        val gv = com.wingedsheep.engine.handlers.effects.ZoneTransitionService.moveToZone(
+        val gv = driver.zones.moveToZone(
             state = driver.state,
             entityId = reanimatable,
             destinationZone = Zone.GRAVEYARD
@@ -53,7 +54,7 @@ class RiseOfTheWitchKingTest : FunSpec({
         driver.giveMana(active, Color.GREEN, 1)
         driver.giveColorlessMana(active, 2)
         // No target at cast time — the reanimation is resolution-time.
-        driver.castSpell(active, rise).isSuccess shouldBe true
+        driver.castSpell(active, rise).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         // After auto-sacrifice on both sides, the rider's SelectFromCollection pauses.
@@ -82,7 +83,7 @@ class RiseOfTheWitchKingTest : FunSpec({
         driver.putCreatureOnBattlefield(opp, "Grizzly Bears")
         // Stage a graveyard card so the SelectFromCollection prompt opens.
         val parked = driver.putCreatureOnBattlefield(active, "Grizzly Bears")
-        val gv = com.wingedsheep.engine.handlers.effects.ZoneTransitionService.moveToZone(
+        val gv = driver.zones.moveToZone(
             state = driver.state,
             entityId = parked,
             destinationZone = Zone.GRAVEYARD
@@ -93,7 +94,7 @@ class RiseOfTheWitchKingTest : FunSpec({
         driver.giveMana(active, Color.BLACK, 1)
         driver.giveMana(active, Color.GREEN, 1)
         driver.giveColorlessMana(active, 2)
-        driver.castSpell(active, rise).isSuccess shouldBe true
+        driver.castSpell(active, rise).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         val pending = driver.pendingDecision
@@ -121,7 +122,7 @@ class RiseOfTheWitchKingTest : FunSpec({
         // A DIFFERENT permanent already in your graveyard, so the SelectFromCollection
         // prompt still opens — proving the pool is non-empty yet excludes the sacrificed card.
         val other = driver.putCreatureOnBattlefield(active, "Grizzly Bears")
-        val gv = com.wingedsheep.engine.handlers.effects.ZoneTransitionService.moveToZone(
+        val gv = driver.zones.moveToZone(
             state = driver.state,
             entityId = other,
             destinationZone = Zone.GRAVEYARD
@@ -132,7 +133,7 @@ class RiseOfTheWitchKingTest : FunSpec({
         driver.giveMana(active, Color.BLACK, 1)
         driver.giveMana(active, Color.GREEN, 1)
         driver.giveColorlessMana(active, 2)
-        driver.castSpell(active, rise).isSuccess shouldBe true
+        driver.castSpell(active, rise).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         val pending = driver.pendingDecision
@@ -165,7 +166,7 @@ class RiseOfTheWitchKingTest : FunSpec({
         // Pre-seed a permanent in your graveyard: if the rider wrongly fired, it would be
         // offered for reanimation. It must stay put and no decision must open.
         val parked = driver.putCreatureOnBattlefield(active, "Grizzly Bears")
-        val gv = com.wingedsheep.engine.handlers.effects.ZoneTransitionService.moveToZone(
+        val gv = driver.zones.moveToZone(
             state = driver.state,
             entityId = parked,
             destinationZone = Zone.GRAVEYARD
@@ -176,7 +177,7 @@ class RiseOfTheWitchKingTest : FunSpec({
         driver.giveMana(active, Color.BLACK, 1)
         driver.giveMana(active, Color.GREEN, 1)
         driver.giveColorlessMana(active, 2)
-        driver.castSpell(active, rise).isSuccess shouldBe true
+        driver.castSpell(active, rise).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         // The intervening condition is false, so the rider never opens a selection.

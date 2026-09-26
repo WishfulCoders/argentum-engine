@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.EquipAbilitiesAtInstantSpeed
 import com.wingedsheep.sdk.scripting.FreeFirstEquipEachTurn
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Forge Anew
@@ -36,15 +35,12 @@ val ForgeAnew = card("Forge Anew") {
         "You may pay {0} rather than pay the equip cost of the first equip ability you activate during each of your turns."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val equipment = target(
-            "Equipment card in your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).ownedByYou(),
-                    zone = Zone.GRAVEYARD
-                )
-            )
+            TargetFilter(
+                baseFilter = GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).ownedByYou(),
+                zone = Zone.GRAVEYARD
+            ),
         )
         effect = Effects.PutOntoBattlefield(equipment)
     }

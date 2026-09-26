@@ -37,7 +37,7 @@ val AkromasVengeance = card("Akroma's Vengeance") {
                     )
                 )
             ),
-            effect = Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true)
+            effect = Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true)
         )
     }
 

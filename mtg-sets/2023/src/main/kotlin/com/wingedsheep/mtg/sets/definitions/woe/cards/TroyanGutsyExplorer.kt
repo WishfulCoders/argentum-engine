@@ -47,10 +47,8 @@ val TroyanGutsyExplorer = card("Troyan, Gutsy Explorer") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.Composite(
-            Effects.AddMana(Color.GREEN, 1, restriction = troyanManaRestriction),
-            Effects.AddMana(Color.BLUE, 1, restriction = troyanManaRestriction),
-        )
+        effect = Effects.AddMana(Color.GREEN, 1, restriction = troyanManaRestriction) then
+            Effects.AddMana(Color.BLUE, 1, restriction = troyanManaRestriction)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

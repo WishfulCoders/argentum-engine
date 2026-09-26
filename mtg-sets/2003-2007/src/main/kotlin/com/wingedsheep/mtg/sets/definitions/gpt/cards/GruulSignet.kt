@@ -22,10 +22,7 @@ val GruulSignet = card("Gruul Signet") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
-        effect = Effects.Composite(
-            Effects.AddMana(Color.RED),
-            Effects.AddMana(Color.GREEN),
-        )
+        effect = Effects.AddMana(Color.RED) then Effects.AddMana(Color.GREEN)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.tmp.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ForceSacrificeEffect
 
 /**
  * Diabolic Edict
@@ -19,8 +19,8 @@ val DiabolicEdict = card("Diabolic Edict") {
     oracleText = "Target player sacrifices a creature of their choice."
 
     spell {
-        val player = target("target player", Targets.Player)
-        effect = ForceSacrificeEffect(GameObjectFilter.Creature, 1, player)
+        val player = target(Targets.Player)
+        effect = Effects.Sacrifice(GameObjectFilter.Creature, 1, player)
     }
 
     metadata {

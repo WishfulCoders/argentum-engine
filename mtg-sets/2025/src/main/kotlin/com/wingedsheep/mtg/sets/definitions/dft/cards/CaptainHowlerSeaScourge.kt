@@ -1,19 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
 import com.wingedsheep.sdk.scripting.effects.WardCost
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.events.Recipient
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Captain Howler, Sea Scourge — Aetherdrift #194
@@ -27,7 +25,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * - Ward—{2}, Pay 2 life is one composite ward cost ([WardCost.Composite]); declining either
  *   half counters the targeting spell or ability (CR 702.21a). Same shape as Gisa, the
  *   Hellraiser.
- * - The payoff is batch-worded (CR 603.2c), so it uses [Triggers.YouDiscardOneOrMore]: one
+ * - The payoff is batch-worded (CR 603.2c), so it uses `Triggers.you.discards(batch = true)`: one
  *   trigger per discard *event*, however many cards it contained. The pump reads the batch
  *   size back through [ContextPropertyKey.TRIGGER_DISCARD_COUNT] and doubles it
  *   ([DynamicAmount.Multiply]) for the printed "+2/+0 ... for each card". Discarding three
@@ -54,31 +52,23 @@ val CaptainHowlerSeaScourge = card("Captain Howler, Sea Scourge") {
         "player this turn, you draw a card."
 
     keywordAbility(
-        KeywordAbility.wardComposite(WardCost.Mana("{2}"), WardCost.Life(2))
+        KeywordAbility.Ward(WardCost.Composite(listOf(WardCost.Mana("{2}"), WardCost.Life(2))))
     )
 
     triggeredAbility {
-        trigger = Triggers.YouDiscardOneOrMore
-        val creature = target("creature", Targets.Creature)
-        effect = Effects.Composite(listOf(
-            Effects.ModifyStats(
-                power = DynamicAmount.Multiply(
-                    DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_DISCARD_COUNT),
-                    2
-                ),
-                toughness = DynamicAmount.Fixed(0),
-                target = creature
-            ),
-            CreateDelayedTriggerEffect(
+        trigger = Triggers.you.discards(batch = true)
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(
+            power = DynamicAmounts.triggerDiscardCount() * 2,
+            toughness = DynamicAmounts.fixed(0),
+            target = creature
+        ) then
+            Effects.CreateDelayedTrigger(
                 effect = Effects.DrawCards(1),
-                trigger = Triggers.dealsDamage(
-                    damageType = DamageType.Combat,
-                    recipient = RecipientFilter.AnyPlayer
-                ),
+                trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer),
                 watchedTarget = creature,
                 expiry = DelayedTriggerExpiry.EndOfTurn
             )
-        ))
     }
 
     metadata {

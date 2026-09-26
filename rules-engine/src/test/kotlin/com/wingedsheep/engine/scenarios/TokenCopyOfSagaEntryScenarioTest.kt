@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
@@ -20,6 +19,8 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * CR 714.2b / 714.3a: a token that's a copy of a Saga enters the battlefield **as a Saga** — it
@@ -52,7 +53,7 @@ class TokenCopyOfSagaEntryScenarioTest : FunSpec({
         typeLine = "Instant"
         oracleText = "Create a token that's a copy of target enchantment you control."
         spell {
-            target = Targets.Enchantment
+            target = TargetObject(filter = TargetFilter.Enchantment)
             effect = Effects.CreateTokenCopyOfTarget(EffectTarget.ContextTarget(0))
         }
     }

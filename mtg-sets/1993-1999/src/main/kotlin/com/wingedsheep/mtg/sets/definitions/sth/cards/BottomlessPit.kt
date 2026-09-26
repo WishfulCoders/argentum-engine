@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Bottomless Pit
@@ -13,7 +14,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Enchantment
  * At the beginning of each player's upkeep, that player discards a card at random.
  *
- * Drafted by mtgish-tooling (Triggers.EachUpkeep — the each-player upkeep scope) and verified
+ * Drafted by mtgish-tooling (Triggers.anyPlayer.beginningOf(Step.UPKEEP) — the each-player upkeep scope) and verified
  * against Scryfall; behaviour pinned by BottomlessPitScenarioTest.
  */
 val BottomlessPit = card("Bottomless Pit") {
@@ -22,7 +23,7 @@ val BottomlessPit = card("Bottomless Pit") {
     typeLine = "Enchantment"
     oracleText = "At the beginning of each player's upkeep, that player discards a card at random."
     triggeredAbility {
-        trigger = Triggers.EachUpkeep
+        trigger = Triggers.anyPlayer.beginningOf(Step.UPKEEP)
         effect = Patterns.Hand.discardRandom(1, EffectTarget.PlayerRef(Player.TriggeringPlayer))
     }
     metadata {

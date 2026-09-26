@@ -28,18 +28,18 @@ val CarrotCake = card("Carrot Cake") {
         colors = setOf(Color.WHITE),
         creatureTypes = setOf("Rabbit"),
         imageUri = "https://cards.scryfall.io/normal/front/8/1/81de52ef-7515-4958-abea-fb8ebdcef93c.jpg?1721431122"
-    ).then(Patterns.Library.scry(1))
+    ) then Patterns.Library.scry(1)
 
     // When this artifact enters — create Rabbit token + scry 1
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = createRabbitAndScry
     }
 
     // When you sacrifice it — same effect (create Rabbit token + scry 1).
     // Sacrifice only: destruction or other battlefield→graveyard moves must not trigger this.
     triggeredAbility {
-        trigger = Triggers.Sacrificed
+        trigger = Triggers.self.isSacrificed()
         effect = createRabbitAndScry
     }
 

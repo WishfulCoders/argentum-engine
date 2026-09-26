@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -31,7 +30,7 @@ val ElvishSkysweeper = card("Elvish Skysweeper") {
     toughness = 1
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{4}{G}"), Costs.Sacrifice(GameObjectFilter.Creature))
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.withKeyword(Keyword.FLYING)))
+        val t = target(TargetFilter.Creature.withKeyword(Keyword.FLYING))
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     metadata {

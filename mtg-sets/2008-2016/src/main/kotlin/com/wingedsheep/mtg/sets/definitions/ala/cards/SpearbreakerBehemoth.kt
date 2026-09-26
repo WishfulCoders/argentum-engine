@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Spearbreaker Behemoth
@@ -35,7 +34,7 @@ val SpearbreakerBehemoth = card("Spearbreaker Behemoth") {
 
     activatedAbility {
         cost = Costs.Mana("{1}")
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.powerAtLeast(5)))
+        val t = target(TargetFilter.Creature.powerAtLeast(5))
         effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t)
     }
 

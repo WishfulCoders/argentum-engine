@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -27,14 +26,11 @@ val VictimOfNight = card("Victim of Night") {
     oracleText = "Destroy target non-Vampire, non-Werewolf, non-Zombie creature."
     spell {
         val t = target(
-            "target",
-            TargetCreature(
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.notSubtype(
-                        Subtype("Vampire")
-                    ).notSubtype(Subtype("Werewolf")).notSubtype(Subtype("Zombie"))
-                )
-            )
+            TargetFilter(
+                GameObjectFilter.Creature.notSubtype(
+                    Subtype("Vampire")
+                ).notSubtype(Subtype("Werewolf")).notSubtype(Subtype("Zombie"))
+            ),
         )
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }

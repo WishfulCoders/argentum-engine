@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 
@@ -34,14 +33,14 @@ val BladewingTheRisen = card("Bladewing the Risen") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
-        val t = target("target", TargetObject(
-            filter = TargetFilter(
+        val t = target(
+            TargetFilter(
                 GameObjectFilter.Permanent.withSubtype("Dragon").ownedByYou(),
                 zone = Zone.GRAVEYARD
-            )
-        ))
+            ),
+        )
         effect = Effects.Move(
             target = t,
             destination = Zone.BATTLEFIELD

@@ -27,7 +27,7 @@ val CodecrackerHound = card("Codecracker Hound") {
         "Warp {2}{U} (You may cast this card from your hand for its warp cost. Exile this creature at the beginning of the next end step, then you may cast it from exile on a later turn.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.lookAtTopAndKeep(count = 2, keepCount = 1)
     }
 

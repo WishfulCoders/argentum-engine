@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -25,10 +24,7 @@ val FaithlessLooting = card("Faithless Looting") {
     typeLine = "Sorcery"
     oracleText = "Draw two cards, then discard two cards.\nFlashback {2}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
     spell {
-        effect = Effects.Composite(
-            DrawCardsEffect(2),
-            Patterns.Hand.discardCards(2)
-        )
+        effect = Effects.DrawCards(2) then Patterns.Hand.discardCards(2)
     }
     keywordAbility(KeywordAbility.flashback("{2}{R}"))
     metadata {

@@ -37,7 +37,7 @@ val BranchOfVituGhazi = card("Branch of Vitu-Ghazi") {
     }
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
+        trigger = Triggers.self.turnedFaceUp()
         effect = Effects.AddManaOfChoice(amount = 2)
         description = "When this land is turned face up, add two mana of any one color. Until end " +
             "of turn, you don't lose this mana as steps and phases end."

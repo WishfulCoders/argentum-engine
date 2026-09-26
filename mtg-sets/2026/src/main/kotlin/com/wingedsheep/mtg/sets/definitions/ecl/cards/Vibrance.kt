@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Vibrance
@@ -35,15 +35,15 @@ val Vibrance = card("Vibrance") {
 
     // Red gate: deals 3 damage to any target
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.ManaSpentToCastIncludes(requiredRed = 2)
-        val damageTarget = target("any target", AnyTarget())
+        val damageTarget = target(Targets.Any)
         effect = Effects.DealDamage(3, damageTarget)
     }
 
     // Green gate: search library for a land, reveal, to hand, shuffle, gain 2 life
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.ManaSpentToCastIncludes(requiredGreen = 2)
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Land,
@@ -51,7 +51,7 @@ val Vibrance = card("Vibrance") {
             destination = SearchDestination.HAND,
             reveal = true,
             shuffleAfter = true
-        ).then(Effects.GainLife(2))
+        ) then Effects.GainLife(2)
     }
 
     metadata {

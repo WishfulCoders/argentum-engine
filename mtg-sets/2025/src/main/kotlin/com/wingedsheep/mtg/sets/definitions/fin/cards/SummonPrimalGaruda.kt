@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Summon: Primal Garuda
@@ -35,27 +34,18 @@ val SummonPrimalGaruda = card("Summon: Primal Garuda") {
 
     sagaChapter(1) {
         // "This creature deals 4 damage …" — the saga-creature itself is the damage source (Self).
-        val tapped = target(
-            "creature",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Creature.opponentControls().tapped())),
-        )
+        val tapped = target(TargetFilter(GameObjectFilter.Creature.opponentControls().tapped()))
         effect = Effects.DealDamage(4, tapped, damageSource = EffectTarget.Self)
     }
 
     sagaChapter(2) {
-        val ally = target("creature", TargetObject(filter = TargetFilter.OtherCreatureYouControl))
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 0, ally),
-            Effects.GrantKeyword(Keyword.FLYING, ally),
-        )
+        val ally = target(TargetFilter.OtherCreatureYouControl)
+        effect = Effects.ModifyStats(1, 0, ally) then Effects.GrantKeyword(Keyword.FLYING, ally)
     }
 
     sagaChapter(3) {
-        val ally = target("creature", TargetObject(filter = TargetFilter.OtherCreatureYouControl))
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 0, ally),
-            Effects.GrantKeyword(Keyword.FLYING, ally),
-        )
+        val ally = target(TargetFilter.OtherCreatureYouControl)
+        effect = Effects.ModifyStats(1, 0, ally) then Effects.GrantKeyword(Keyword.FLYING, ally)
     }
 
     metadata {

@@ -20,7 +20,7 @@ import io.kotest.matchers.shouldBe
  *
  * This is a *per-permanent* trigger (CR 603.2c): sacrificing several permanents simultaneously fires
  * it once per permanent, so it should add one counter each — not a single counter for the whole
- * batch. Uses `Triggers.YouSacrificeAnother` (OTHER binding), which also excludes Pirate Peddlers
+ * batch. Uses `Triggers.you.sacrificesAnother(filter)` (OTHER binding), which also excludes Pirate Peddlers
  * sacrificing itself.
  */
 class PiratePeddlersTest : FunSpec({

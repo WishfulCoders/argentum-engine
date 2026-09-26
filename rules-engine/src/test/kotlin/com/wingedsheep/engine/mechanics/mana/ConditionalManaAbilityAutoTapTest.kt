@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.mechanics.mana
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
@@ -13,7 +14,6 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldHaveSize
@@ -24,7 +24,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
  * source — Raucous Audience: "{T}: Add {G}. If you control a creature with power 4 or greater, add
  * {G}{G} instead."
  *
- * `ConditionalEffect` lowers to a [com.wingedsheep.sdk.scripting.effects.GatedEffect], which the
+ * `Effects.If` lowers to a [com.wingedsheep.sdk.scripting.effects.GatedEffect], which the
  * solver's effect-extraction did not handle — the gate fell through unread, the solver never saw
  * the green, and the source was silently skipped (player couldn't auto-tap it). The fix evaluates
  * the gate's condition against current state (stable during a payment) and reads the branch that
@@ -43,10 +43,10 @@ class ConditionalManaAbilityAutoTapTest : FunSpec({
 
         activatedAbility {
             cost = Costs.Tap
-            effect = ConditionalEffect(
+            effect = Effects.If(
                 condition = Conditions.YouControl(GameObjectFilter.Creature.powerAtLeast(4)),
-                effect = Effects.AddMana(Color.GREEN, 2),
-                elseEffect = Effects.AddMana(Color.GREEN),
+                then = Effects.AddMana(Color.GREEN, 2),
+                otherwise = Effects.AddMana(Color.GREEN),
             )
             manaAbility = true
             timing = TimingRule.ManaAbility
@@ -80,7 +80,7 @@ class ConditionalManaAbilityAutoTapTest : FunSpec({
         val src = driver.putCreatureOnBattlefield(player, "Raucous Tester")
         driver.removeSummoningSickness(src)
 
-        val solution = ManaSolver(createRegistry()).solve(driver.state, player, ManaCost.parse("{G}"))
+        val solution = ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null)).solve(driver.state, player, ManaCost.parse("{G}"))
 
         solution.shouldNotBeNull()
         solution.sources shouldHaveSize 1
@@ -97,7 +97,7 @@ class ConditionalManaAbilityAutoTapTest : FunSpec({
         // Controlling a 5/5 flips the condition → the ability now yields {G}{G} from one tap.
         driver.putCreatureOnBattlefield(player, "Big Bruiser")
 
-        val solution = ManaSolver(createRegistry()).solve(driver.state, player, ManaCost.parse("{G}{G}"))
+        val solution = ManaSolver(createRegistry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null)).solve(driver.state, player, ManaCost.parse("{G}{G}"))
 
         solution.shouldNotBeNull()
         // A single tap of Raucous Tester covers both green — no other green source needed.

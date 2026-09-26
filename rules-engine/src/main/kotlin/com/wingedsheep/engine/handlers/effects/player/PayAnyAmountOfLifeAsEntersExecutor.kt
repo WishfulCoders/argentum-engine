@@ -29,7 +29,7 @@ import kotlin.reflect.KClass
  * player can't pay life they don't have.
  */
 class PayAnyAmountOfLifeAsEntersExecutor(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<PayAnyAmountOfLifeAsEntersEffect> {
 
     override val effectType: KClass<PayAnyAmountOfLifeAsEntersEffect> =

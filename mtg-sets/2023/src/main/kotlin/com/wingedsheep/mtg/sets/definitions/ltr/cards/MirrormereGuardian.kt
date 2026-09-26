@@ -22,7 +22,7 @@ val MirrormereGuardian = card("Mirrormere Guardian") {
     oracleText = "When this creature dies, the Ring tempts you."
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.TheRingTemptsYou()
     }
 

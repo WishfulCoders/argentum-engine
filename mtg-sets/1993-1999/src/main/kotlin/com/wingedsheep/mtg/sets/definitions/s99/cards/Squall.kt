@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Squall deals 2 damage to each creature with flying.
  *
  * Hurricane without the player half: one [Effects.ForEachInGroup] over the flying creatures,
- * with `EffectTarget.Self` naming the current iteration entity.
+ * with `EffectTarget.IterationEntity` naming the current iteration entity.
  */
 val Squall = card("Squall") {
     manaCost = "{2}{G}"
@@ -25,7 +25,7 @@ val Squall = card("Squall") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreatures.withKeyword(Keyword.FLYING),
-            Effects.DealDamage(2, EffectTarget.Self)
+            Effects.DealDamage(2, EffectTarget.IterationEntity)
         )
     }
 

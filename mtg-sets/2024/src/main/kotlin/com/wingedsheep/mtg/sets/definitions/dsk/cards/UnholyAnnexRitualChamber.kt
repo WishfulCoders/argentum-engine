@@ -9,9 +9,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardLayout
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Unholy Annex // Ritual Chamber (DSK 118) — split-layout Room (CR 709.5).
@@ -37,12 +37,12 @@ val UnholyAnnexRitualChamber = card("Unholy Annex // Ritual Chamber") {
             "each opponent loses 2 life and you gain 2 life. Otherwise, you lose 2 life."
 
         triggeredAbility {
-            trigger = Triggers.YourEndStep
-            effect = Effects.DrawCards(1) then ConditionalEffect(
+            trigger = Triggers.you.beginningOf(Step.END)
+            effect = Effects.DrawCards(1) then Effects.If(
                 condition = Conditions.ControlCreatureOfType(Subtype.DEMON),
-                effect = Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent))
+                then = Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent))
                     then Effects.GainLife(2),
-                elseEffect = Effects.LoseLife(2, EffectTarget.PlayerRef(Player.You))
+                otherwise = Effects.LoseLife(2, EffectTarget.PlayerRef(Player.You))
             )
         }
     }
@@ -53,7 +53,7 @@ val UnholyAnnexRitualChamber = card("Unholy Annex // Ritual Chamber") {
         oracleText = "When you unlock this door, create a 6/6 black Demon creature token with flying."
 
         triggeredAbility {
-            trigger = Triggers.OnDoorUnlocked
+            trigger = Triggers.self.doorUnlocked()
             effect = Effects.CreateToken(
                 power = 6,
                 toughness = 6,

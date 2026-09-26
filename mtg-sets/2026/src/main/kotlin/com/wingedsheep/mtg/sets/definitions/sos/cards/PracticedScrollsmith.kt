@@ -6,15 +6,10 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Practiced Scrollsmith
@@ -38,29 +33,18 @@ val PracticedScrollsmith = card("Practiced Scrollsmith") {
     keywords(Keyword.FIRST_STRIKE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val card = target(
-            "target noncreature, nonland card from your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    baseFilter = (GameObjectFilter.Noncreature and GameObjectFilter.Nonland).ownedByYou(),
-                    zone = Zone.GRAVEYARD,
-                ),
+            TargetFilter(
+                baseFilter = (GameObjectFilter.Noncreature and GameObjectFilter.Nonland).ownedByYou(),
+                zone = Zone.GRAVEYARD,
             ),
         )
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.ChosenTargets,
-                    storeAs = "exiledCard",
-                ),
-                MoveCollectionEffect(
-                    from = "exiledCard",
-                    destination = CardDestination.ToZone(Zone.EXILE),
-                ),
-                GrantMayPlayFromExileEffect("exiledCard", MayPlayExpiry.UntilEndOfNextTurn),
-            ),
-        )
+        effect = Effects.Pipeline {
+            val exiledCard = gather(CardSource.ChosenTargets)
+            exile(exiledCard)
+            run(Effects.GrantMayPlayFromExile(exiledCard, MayPlayExpiry.UntilEndOfNextTurn))
+        }
     }
 
     metadata {

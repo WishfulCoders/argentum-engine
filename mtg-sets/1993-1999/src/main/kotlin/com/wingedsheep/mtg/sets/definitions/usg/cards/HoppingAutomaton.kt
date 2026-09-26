@@ -28,10 +28,8 @@ val HoppingAutomaton = card("Hopping Automaton") {
     toughness = 2
     activatedAbility {
         cost = Costs.Mana("{0}")
-        effect = Effects.Composite(
-            Effects.ModifyStats(-1, -1, EffectTarget.Self),
+        effect = Effects.ModifyStats(-1, -1, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.FLYING, EffectTarget.Self)
-        )
     }
     metadata {
         rarity = Rarity.UNCOMMON

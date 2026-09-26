@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Red Guardian, Super-Soldier
@@ -36,11 +35,8 @@ val RedGuardianSuperSoldier = card("Red Guardian, Super-Soldier") {
     toughness = 2
     keywords(Keyword.FLASH)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "target",
-            TargetCreature(filter = TargetFilter.Creature.hasDealtDamageThisTurn().opponentControls())
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature.hasDealtDamageThisTurn().opponentControls())
         effect = Effects.Destroy(t)
     }
     metadata {

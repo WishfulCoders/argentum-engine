@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Squad Rallier
@@ -27,7 +26,7 @@ val SquadRallier = card("Squad Rallier") {
     activatedAbility {
         cost = Costs.Mana("{2}{W}")
         effect = Patterns.Library.lookAtTopRevealMatchingToHand(
-            count = DynamicAmount.Fixed(4),
+            count = 4,
             filter = GameObjectFilter.Creature.powerAtMost(2),
             prompt = "You may reveal a creature card with power 2 or less to put into your hand"
         )

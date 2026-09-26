@@ -1,16 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Eastfarthing Farmer
@@ -29,19 +26,17 @@ val EastfarthingFarmer = card("Eastfarthing Farmer") {
     oracleText = "When this creature enters, create a Food token. When you do, target creature you control gets +1/+1 until end of turn for each Food you control. (A Food token is an artifact with \"{2}, {T}, Sacrifice this token: You gain 3 life.\")"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ReflexiveTriggerEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.ReflexiveTrigger(
             action = Effects.CreateFood(),
-            optional = false,
-            reflexiveEffect = Effects.ModifyStats(
-                DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Any.withSubtype("Food")),
-                DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Any.withSubtype("Food")),
-                EffectTarget.ContextTarget(0)
-            ),
-            reflexiveTargetRequirements = listOf(
-                TargetCreature(filter = TargetFilter.CreatureYouControl)
+            optional = false) {
+            val creatureYouControl = target(TargetFilter.CreatureYouControl)
+            effect = Effects.ModifyStats(
+                DynamicAmounts.battlefield(Player.You, GameObjectFilter.Any.withSubtype("Food")).count(),
+                DynamicAmounts.battlefield(Player.You, GameObjectFilter.Any.withSubtype("Food")).count(),
+                creatureYouControl
             )
-        )
+        }
     }
 
     metadata {

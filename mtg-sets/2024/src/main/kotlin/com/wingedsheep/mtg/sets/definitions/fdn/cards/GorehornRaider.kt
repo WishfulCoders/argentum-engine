@@ -30,9 +30,9 @@ val GorehornRaider = card("Gorehorn Raider") {
     oracleText = "Raid — When this creature enters, if you attacked this turn, this creature deals 2 damage to any target."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouAttackedThisTurn
-        val t = target("any target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(2, t)
     }
 

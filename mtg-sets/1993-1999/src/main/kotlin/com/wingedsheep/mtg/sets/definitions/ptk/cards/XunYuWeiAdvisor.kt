@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.ptk.cards
 
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.ActivationRestriction
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Xun Yu, Wei Advisor
@@ -27,7 +27,7 @@ val XunYuWeiAdvisor = card("Xun Yu, Wei Advisor") {
             ActivationRestriction.OnlyDuringYourTurn,
             ActivationRestriction.BeforeStep(Step.DECLARE_ATTACKERS)
         )
-        val creature = target("target", Targets.CreatureYouControl)
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.ModifyStats(2, 0, creature)
     }
 

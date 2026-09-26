@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.mkm.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 
@@ -39,13 +38,13 @@ val SurveillanceMonitor = card("Surveillance Monitor") {
         "with flying."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(Effects.CollectEvidence(4))
+        trigger = Triggers.self.enters()
+        effect = Effects.May(Effects.CollectEvidence(4))
         description = "When this creature enters, you may collect evidence 4."
     }
 
     triggeredAbility {
-        trigger = Triggers.WheneverYouCollectEvidence
+        trigger = Triggers.you.collectsEvidence()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

@@ -33,7 +33,7 @@ val LoanShark = card("Loan Shark") {
     keywordAbility(KeywordAbility.plot("{3}{U}"))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouCastSpellsThisTurn(atLeast = 2)
         effect = Effects.DrawCards(1)
         description = "When this creature enters, if you've cast two or more spells this turn, draw a card."

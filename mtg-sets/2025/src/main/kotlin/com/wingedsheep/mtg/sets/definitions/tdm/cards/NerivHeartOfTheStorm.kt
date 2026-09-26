@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.DoubleDamage
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.events.SourceFilter
 
 /**
  * Neriv, Heart of the Storm — Tarkir: Dragonstorm #210
@@ -38,9 +37,9 @@ val NerivHeartOfTheStorm = card("Neriv, Heart of the Storm") {
     replacementEffect(
         DoubleDamage(
             appliesTo = EventPattern.DamageEvent(
-                source = SourceFilter.Matching(
+                source = 
                     GameObjectFilter.Creature.youControl().enteredThisTurn()
-                )
+                
             )
         )
     )

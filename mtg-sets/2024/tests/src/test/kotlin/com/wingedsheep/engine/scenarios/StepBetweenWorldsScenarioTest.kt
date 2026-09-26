@@ -17,7 +17,7 @@ import io.kotest.matchers.shouldBe
  * "Each player may shuffle their hand and graveyard into their library. Each player who does draws
  * seven cards. Exile Step Between Worlds. Plot {4}{U}{U}."
  *
- * Exercises the per-player optional wheel (ForEachPlayer + MayEffect with decisionMaker = the
+ * Exercises the per-player optional wheel (ForEachPlayer + Effects.May with decisionMaker = the
  * iteration player) and the spell's selfExile() on resolution.
  */
 class StepBetweenWorldsScenarioTest : FunSpec({

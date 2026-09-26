@@ -23,8 +23,8 @@ import com.wingedsheep.sdk.scripting.TimingRule
  * is what makes it a sacrifice payoff and an artifact-recursion payoff at the same time. Its own
  * activated ability sacrifices it, so activating it collects the leave trigger too.
  *
- * "Enters **or** leaves" is written as two triggered abilities over [Triggers.EntersBattlefield]
- * and [Triggers.LeavesBattlefield]. The two events can never happen at once, so one ability with a
+ * "Enters **or** leaves" is written as two triggered abilities over `Triggers.self.enters()`
+ * and `Triggers.self.leaves()`. The two events can never happen at once, so one ability with a
  * two-event pattern and two abilities are the same card in play; two abilities is the shape the
  * corpus already uses for this wording (Cryogen Relic).
  *
@@ -41,12 +41,12 @@ val ExperimentalSynthesizer = card("Experimental Synthesizer") {
         "vigilance. Activate only as a sorcery."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Exile.impulse(1)
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Patterns.Exile.impulse(1)
     }
 

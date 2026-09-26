@@ -26,7 +26,7 @@ val GreyHavensNavigator = card("Grey Havens Navigator") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.scry(1)
     }
 

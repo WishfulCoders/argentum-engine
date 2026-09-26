@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Chainwhip Cyclops — War of the Spark #118 (canonical printing)
@@ -28,7 +29,7 @@ val ChainwhipCyclops = card("Chainwhip Cyclops") {
 
     activatedAbility {
         cost = Costs.Mana("{3}{R}")
-        val creature = target("target", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.CantBlock(creature)
     }
 

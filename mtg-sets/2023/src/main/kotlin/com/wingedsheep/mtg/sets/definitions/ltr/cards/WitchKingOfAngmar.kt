@@ -23,7 +23,7 @@ import com.wingedsheep.sdk.scripting.references.Player
  * Discard a card: Witch-king of Angmar gains indestructible until end of turn. Tap it.
  *
  * The triggered ability uses the defensive combat-damage batch trigger
- * `Triggers.OneOrMoreCreaturesDealCombatDamageToYou()` (fires once per combat regardless of how
+ * `Triggers.oneOrMore(GameObjectFilter.Creature).dealCombatDamageToYou()` (fires once per combat regardless of how
  * many creatures connected). The edict restricts each opponent's sacrifice to creatures matching
  * the new source-relative filter `dealtCombatDamageToSourceControllerThisTurn()` — i.e. creatures
  * that dealt combat damage to the Witch-king's controller this turn.
@@ -42,17 +42,17 @@ val WitchKingOfAngmar = card("Witch-king of Angmar") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.OneOrMoreCreaturesDealCombatDamageToYou()
+        trigger = Triggers.oneOrMore(GameObjectFilter.Creature).dealCombatDamageToYou()
         effect = Effects.Sacrifice(
             filter = GameObjectFilter.Creature.dealtCombatDamageToSourceControllerThisTurn(),
             target = EffectTarget.PlayerRef(Player.EachOpponent)
-        ).then(Effects.TheRingTemptsYou())
+        ) then Effects.TheRingTemptsYou()
     }
 
     activatedAbility {
         cost = Costs.DiscardCard
-        effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self, Duration.EndOfTurn)
-            .then(Effects.Tap(EffectTarget.Self))
+        effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self, Duration.EndOfTurn) then
+            Effects.Tap(EffectTarget.Self)
     }
 
     metadata {

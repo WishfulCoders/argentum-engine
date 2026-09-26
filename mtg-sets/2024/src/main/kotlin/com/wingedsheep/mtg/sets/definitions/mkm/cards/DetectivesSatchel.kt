@@ -38,7 +38,7 @@ val DetectivesSatchel = card("Detective's Satchel") {
         "if you've sacrificed an artifact this turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Investigate(2)
         description = "When this artifact enters, investigate twice."
     }

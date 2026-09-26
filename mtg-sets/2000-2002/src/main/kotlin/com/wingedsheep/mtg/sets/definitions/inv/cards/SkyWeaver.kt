@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Sky Weaver
@@ -28,10 +27,7 @@ val SkyWeaver = card("Sky Weaver") {
 
     activatedAbility {
         cost = Costs.Mana("{2}")
-        val t = target(
-            "target",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.withAnyColor(Color.WHITE, Color.BLACK)))
-        )
+        val t = target(TargetFilter(GameObjectFilter.Creature.withAnyColor(Color.WHITE, Color.BLACK)))
         effect = Effects.GrantKeyword(Keyword.FLYING, target = t)
         description = "{2}: Target white or black creature gains flying until end of turn."
     }

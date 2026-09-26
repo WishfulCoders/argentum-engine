@@ -26,7 +26,7 @@ val HarriedSpearguard = card("Harried Spearguard") {
     keywords(Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = woeRatToken()
     }
 

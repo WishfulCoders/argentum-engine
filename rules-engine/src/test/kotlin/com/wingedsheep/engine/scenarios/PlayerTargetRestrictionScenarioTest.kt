@@ -1,7 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.ActivateAbility
-import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.legalactions.utils.TargetEnumerationUtils
 import com.wingedsheep.engine.state.components.player.LifeLostThisTurnComponent
 import com.wingedsheep.engine.state.components.identity.LifeTotalComponent
@@ -50,13 +49,10 @@ class PlayerTargetRestrictionScenarioTest : ScenarioTestBase() {
         oracleText = "{B}: Target player who lost life this turn loses 1 life."
         activatedAbility {
             cost = com.wingedsheep.sdk.dsl.Costs.Mana("{B}")
-            val t = target(
-                "target player who lost life this turn",
-                TargetPlayer(
+            val t = target(TargetPlayer(
                     restriction = lostLifeRestriction,
                     descriptionOverride = "target player who lost life this turn"
-                )
-            )
+                ))
             effect = LoseLifeEffect(DynamicAmount.Fixed(1), t)
         }
     }
@@ -68,13 +64,10 @@ class PlayerTargetRestrictionScenarioTest : ScenarioTestBase() {
         typeLine = "Sorcery"
         oracleText = "Target player with 10 or less life loses 3 life."
         spell {
-            val t = target(
-                "target player with 10 or less life",
-                TargetPlayer(
+            val t = target(TargetPlayer(
                     restriction = lifeAtMostRestriction,
                     descriptionOverride = "target player with 10 or less life"
-                )
-            )
+                ))
             effect = LoseLifeEffect(DynamicAmount.Fixed(3), t)
         }
     }
@@ -83,7 +76,7 @@ class PlayerTargetRestrictionScenarioTest : ScenarioTestBase() {
 
     // Enumerate legal player targets the same way the legal-action layer does — through
     // TargetEnumerationUtils, the path that feeds the client's selectable-target list.
-    private val targetEnumerator = TargetEnumerationUtils(PredicateEvaluator())
+    private val targetEnumerator = TargetEnumerationUtils(services.predicateEvaluator)
 
     init {
         cardRegistry.register(drainer)

@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * {2}, Sacrifice another creature or a Blood token: Each opponent loses 2 life and you gain 2 life.
  *
  * The trigger is a batching "enters" ability that includes the source ("Anje and/or one or more
- * other Vampires"): [Triggers.OneOrMorePermanentsEnter] over your Vampires with `excludeSource =
+ * other Vampires"): `Triggers.oneOrMore(filter).enter()` over your Vampires with `excludeSource =
  * false`, so Anje's own entry counts. `oncePerTurn = true` implements "This ability triggers only
  * once each turn" — the batching trigger already fires once per simultaneous group, and the flag
  * caps it at one firing across the whole turn (reset each turn). The activated ability's additional
@@ -44,10 +44,7 @@ val AnjeMaidOfDishonor = card("Anje, Maid of Dishonor") {
     // Whenever Anje and/or one or more other Vampires you control enter, create a Blood token.
     // This ability triggers only once each turn.
     triggeredAbility {
-        trigger = Triggers.OneOrMorePermanentsEnter(
-            GameObjectFilter.Creature.withSubtype(Subtype.VAMPIRE).youControl(),
-            excludeSource = false
-        )
+        trigger = Triggers.oneOrMore(GameObjectFilter.Creature.withSubtype(Subtype.VAMPIRE).youControl()).enter()
         oncePerTurn = true
         effect = Effects.CreateBlood()
         description = "Whenever Anje and/or one or more other Vampires you control enter, create a " +
@@ -62,10 +59,7 @@ val AnjeMaidOfDishonor = card("Anje, Maid of Dishonor") {
                 GameObjectFilter.Creature or GameObjectFilter.Artifact.withSubtype("Blood")
             )
         )
-        effect = Effects.Composite(
-            Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent)),
-            Effects.GainLife(2)
-        )
+        effect = Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(2)
         description = "{2}, Sacrifice another creature or a Blood token: Each opponent loses 2 life " +
             "and you gain 2 life."
     }

@@ -13,7 +13,7 @@ import com.wingedsheep.sdk.scripting.LoseAllAbilities
 import com.wingedsheep.sdk.scripting.TransformPermanent
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Sugar Coat
@@ -34,8 +34,7 @@ val SugarCoat = card("Sugar Coat") {
     keywords(Keyword.FLASH)
 
     // Enchant creature or Food
-    auraTarget = TargetPermanent(
-        filter = TargetFilter(
+    auraTarget = TargetObject(filter = TargetFilter(
             GameObjectFilter(
                 cardPredicates = listOf(
                     CardPredicate.Or(
@@ -46,8 +45,7 @@ val SugarCoat = card("Sugar Coat") {
                     )
                 )
             )
-        )
-    )
+        ))
 
     // "is a colorless Food artifact" — Layer 4 (type) + Layer 5 (color)
     staticAbility {

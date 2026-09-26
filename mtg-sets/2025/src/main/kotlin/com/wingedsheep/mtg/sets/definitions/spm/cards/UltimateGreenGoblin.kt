@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.mayhem
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Ultimate Green Goblin — Marvel's Spider-Man #157
@@ -24,11 +25,8 @@ val UltimateGreenGoblin = card("Ultimate Green Goblin") {
         "this turn. Timing rules still apply.)"
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.Composite(
-            Effects.Discard(1),
-            Effects.CreateTreasure(1),
-        )
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.Discard(1) then Effects.CreateTreasure(1)
     }
     mayhem("{2}{B/R}")
 

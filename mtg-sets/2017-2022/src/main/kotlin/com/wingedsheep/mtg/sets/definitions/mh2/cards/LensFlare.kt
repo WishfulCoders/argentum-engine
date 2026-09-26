@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Lens Flare — Modern Horizons 2 #20
@@ -35,7 +34,7 @@ val LensFlare = card("Lens Flare") {
     keywordAbility(KeywordAbility.Affinity(CardType.ARTIFACT))
 
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.AttackingOrBlockingCreature))
+        val t = target(TargetFilter.AttackingOrBlockingCreature)
         effect = Effects.DealDamage(5, t)
     }
 

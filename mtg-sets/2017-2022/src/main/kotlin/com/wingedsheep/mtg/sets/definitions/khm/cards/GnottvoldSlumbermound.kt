@@ -4,10 +4,10 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Gnottvold Slumbermound
@@ -45,9 +45,8 @@ val GnottvoldSlumbermound = card("Gnottvold Slumbermound") {
             Costs.Tap,
             Costs.SacrificeSelf
         )
-        val victim = target("target land", Targets.Land)
-        effect = Effects.Composite(
-            Effects.Destroy(victim),
+        val victim = target(TargetFilter.Land)
+        effect = Effects.Destroy(victim) then
             Effects.CreateToken(
                 power = 4,
                 toughness = 4,
@@ -55,7 +54,6 @@ val GnottvoldSlumbermound = card("Gnottvold Slumbermound") {
                 creatureTypes = setOf("Troll", "Warrior"),
                 keywords = setOf(Keyword.TRAMPLE)
             )
-        )
     }
 
     metadata {

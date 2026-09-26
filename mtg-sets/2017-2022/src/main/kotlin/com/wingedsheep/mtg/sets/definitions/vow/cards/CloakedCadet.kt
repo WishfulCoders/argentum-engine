@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -22,7 +22,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  * Two independent pieces:
  *  - [training] gives the keyword + the attack trigger. Cadet is itself a Human, so the very
  *    +1/+1 counter Training places on it satisfies the draw watcher below.
- *  - A hand-written [Triggers.countersPlacedOn] watcher over "+1/+1 counters on Humans you
+ *  - A hand-written `Triggers.<subject>.getsCounters(type, by, firstTimeEachTurn, batch)` watcher over "+1/+1 counters on Humans you
  *    control". `firstTimeEachTurn = false` because the CR wording caps the *ability* at once per
  *    turn (`oncePerTurn = true`), not per-permanent — the once-per-turn gate belongs on the
  *    ability, and per-permanent first-time tracking would wrongly re-arm for a second Human.
@@ -43,11 +43,7 @@ val CloakedCadet = card("Cloaked Cadet") {
     training()
 
     triggeredAbility {
-        trigger = Triggers.countersPlacedOn(
-            filter = GameObjectFilter.Creature.withSubtype(Subtype.HUMAN).youControl(),
-            counterType = Counters.PLUS_ONE_PLUS_ONE,
-            firstTimeEachTurn = false,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.withSubtype(Subtype.HUMAN).youControl()).getsCounters(CounterType.PLUS_ONE_PLUS_ONE)
         oncePerTurn = true
         effect = Effects.DrawCards(1)
     }

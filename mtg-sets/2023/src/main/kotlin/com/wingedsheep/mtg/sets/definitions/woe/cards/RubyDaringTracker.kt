@@ -35,7 +35,7 @@ val RubyDaringTracker = card("Ruby, Daring Tracker") {
     toughness = 2
     keywords(Keyword.HASTE)
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         triggerRestriction = Conditions.YouControl(GameObjectFilter.Creature.powerAtLeast(4))
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
     }

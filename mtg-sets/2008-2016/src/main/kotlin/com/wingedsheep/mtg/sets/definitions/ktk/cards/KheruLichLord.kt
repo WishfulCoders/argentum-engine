@@ -12,16 +12,7 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Kheru Lich Lord
@@ -44,44 +35,26 @@ val KheruLichLord = card("Kheru Lich Lord") {
             "Exile that card at the beginning of your next end step. If it would leave the battlefield, " +
             "exile it instead of putting it anywhere else."
 
-    val returned = EffectTarget.PipelineTarget("returned")
-
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = MayPayManaEffect(
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{2}{B}"),
-            effect = Effects.Composite(
-                listOf(
-                    // Gather all creature cards from your graveyard
-                    GatherCardsEffect(
-                        source = CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Creature),
-                        storeAs = "creatures"
-                    ),
-                    // Select one at random
-                    SelectFromCollectionEffect(
-                        from = "creatures",
-                        selection = SelectionMode.Random(DynamicAmount.Fixed(1)),
-                        storeSelected = "chosen"
-                    ),
-                    // Move to battlefield
-                    MoveCollectionEffect(
-                        from = "chosen",
-                        destination = CardDestination.ToZone(Zone.BATTLEFIELD),
-                        storeMovedAs = "returned"
-                    ),
-                    // Grant flying, trample, and haste (permanent — no duration specified in oracle text)
-                    GrantKeywordEffect(Keyword.FLYING, returned, Duration.Permanent),
-                    GrantKeywordEffect(Keyword.TRAMPLE, returned, Duration.Permanent),
-                    GrantKeywordEffect(Keyword.HASTE, returned, Duration.Permanent),
-                    // Exile at the beginning of your next end step
-                    CreateDelayedTriggerEffect(
-                        step = Step.END,
-                        effect = Effects.Move(returned, Zone.EXILE)
-                    ),
-                    // If it would leave the battlefield, exile it instead
-                    Effects.GrantExileOnLeave(returned)
-                )
-            )
+            then = Effects.Pipeline {
+                // Gather all creature cards from your graveyard
+                val creatures = gather(CardSource.FromZone(Zone.GRAVEYARD, Player.You, GameObjectFilter.Creature))
+                // Select one at random
+                val chosen = chooseRandom(1, from = creatures)
+                // Move to battlefield
+                val returned = moveTracked(chosen, CardDestination.ToZone(Zone.BATTLEFIELD)).asTarget
+                // Grant flying, trample, and haste (permanent — no duration specified in oracle text)
+                run(Effects.GrantKeyword(Keyword.FLYING, returned, Duration.Permanent))
+                run(Effects.GrantKeyword(Keyword.TRAMPLE, returned, Duration.Permanent))
+                run(Effects.GrantKeyword(Keyword.HASTE, returned, Duration.Permanent))
+                // Exile at the beginning of your next end step
+                run(Effects.CreateDelayedTrigger(step = Step.END, effect = Effects.Move(returned, Zone.EXILE)))
+                // If it would leave the battlefield, exile it instead
+                run(Effects.GrantExileOnLeave(returned))
+            }
         )
     }
 

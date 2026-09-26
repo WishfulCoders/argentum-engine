@@ -35,15 +35,13 @@ val WisdomOfAges = card("Wisdom of Ages") {
 
     spell {
         selfExile()
-        effect = Effects.Composite(
-            Effects.Pipeline {
-                val cards = gather(
-                    CardSource.FromZone(Zone.GRAVEYARD, filter = GameObjectFilter.InstantOrSorcery)
-                )
-                toHand(cards)
-            },
-            Effects.RemoveMaximumHandSize(),
-        )
+        effect = Effects.Pipeline {
+            val cards = gather(
+                CardSource.FromZone(Zone.GRAVEYARD, filter = GameObjectFilter.InstantOrSorcery)
+            )
+            toHand(cards)
+        } then
+            Effects.RemoveMaximumHandSize()
     }
 
     metadata {

@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -31,8 +30,8 @@ val Nekrataal = card("Nekrataal") {
     toughness = 1
     keywords(Keyword.FIRST_STRIKE)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.nonartifact().notColor(Color.BLACK)))
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.Creature.nonartifact().notColor(Color.BLACK))
         effect = Effects.Destroy(t, noRegenerate = true)
     }
     metadata {

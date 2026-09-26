@@ -31,7 +31,7 @@ val InterfaceAce = card("Interface Ace") {
     }
 
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
+        trigger = Triggers.self.becomesTapped()
         triggerRestriction = Conditions.IsYourTurn
         oncePerTurn = true
         effect = Effects.Untap(EffectTarget.Self)

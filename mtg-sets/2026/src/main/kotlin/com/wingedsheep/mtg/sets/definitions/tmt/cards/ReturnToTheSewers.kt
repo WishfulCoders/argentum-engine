@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Return to the Sewers
@@ -20,9 +20,8 @@ val ReturnToTheSewers = card("Return to the Sewers") {
     oracleText = "Target creature's owner puts it on their choice of the top or bottom of their library. You create a Mutagen token. (It's an artifact with \"{1}, {T}, Sacrifice this token: Put a +1/+1 counter on target creature. Activate only as a sorcery.\")"
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.PutOnTopOrBottomOfLibrary(creature)
-            .then(Effects.CreateMutagenToken())
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.PutOnTopOrBottomOfLibrary(creature) then Effects.CreateMutagenToken()
     }
 
     metadata {

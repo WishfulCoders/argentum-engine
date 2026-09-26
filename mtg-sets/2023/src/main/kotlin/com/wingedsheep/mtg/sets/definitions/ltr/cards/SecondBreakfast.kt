@@ -3,7 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.ltr.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Second Breakfast
@@ -19,10 +19,10 @@ val SecondBreakfast = card("Second Breakfast") {
     oracleText = "Up to two target creatures each get +2/+1 until end of turn. Create a Food token. (It's an artifact with \"{2}, {T}, Sacrifice this token: You gain 3 life.\")"
 
     spell {
-        val (c1, c2) = targets("creature", TargetCreature(count = 2, optional = true))
-        effect = Effects.ModifyStats(2, 1, c1)
-            .then(Effects.ModifyStats(2, 1, c2))
-            .then(Effects.CreateFood())
+        val (c1, c2) = targets(TargetFilter.Creature, count = 2, optional = true)
+        effect = Effects.ModifyStats(2, 1, c1) then
+            Effects.ModifyStats(2, 1, c2) then
+            Effects.CreateFood()
     }
 
     metadata {

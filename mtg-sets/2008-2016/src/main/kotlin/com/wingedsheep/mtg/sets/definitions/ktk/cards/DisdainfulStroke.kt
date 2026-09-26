@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ktk.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Disdainful Stroke
@@ -18,7 +18,7 @@ val DisdainfulStroke = card("Disdainful Stroke") {
     oracleText = "Counter target spell with mana value 4 or greater."
 
     spell {
-        target = Targets.SpellWithManaValueAtLeast(4)
+        val spellWithManaValueAtLeast = target(TargetFilter.SpellOnStack.manaValueAtLeast(4))
         effect = Effects.CounterSpell()
     }
 

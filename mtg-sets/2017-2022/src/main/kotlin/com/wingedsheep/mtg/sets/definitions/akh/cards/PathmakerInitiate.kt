@@ -3,9 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.akh.cards
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Pathmaker Initiate
@@ -24,7 +24,7 @@ val PathmakerInitiate = card("Pathmaker Initiate") {
 
     activatedAbility {
         cost = Costs.Tap
-        val creature = target("target creature with power 2 or less", Targets.CreatureWithPowerAtMost(2))
+        val creature = target(TargetFilter.Creature.powerAtMost(2))
         effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, creature)
         description = "{T}: Target creature with power 2 or less can't be blocked this turn."
     }

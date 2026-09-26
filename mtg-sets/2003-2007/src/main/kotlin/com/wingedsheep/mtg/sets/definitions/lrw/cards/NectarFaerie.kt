@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Nectar Faerie
@@ -40,12 +39,7 @@ val NectarFaerie = card("Nectar Faerie") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{B}"), Costs.Tap)
         val t = target(
-            "target Faerie or Elf",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.Permanent.withAnySubtype(Subtype.FAERIE.value, Subtype.ELF.value)
-                )
-            )
+            TargetFilter(GameObjectFilter.Permanent.withAnySubtype(Subtype.FAERIE.value, Subtype.ELF.value)),
         )
         effect = Effects.GrantKeyword(Keyword.LIFELINK, t)
         description = "{B}, {T}: Target Faerie or Elf gains lifelink until end of turn."

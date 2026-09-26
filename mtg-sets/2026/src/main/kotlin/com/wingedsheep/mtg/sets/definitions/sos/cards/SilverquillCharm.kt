@@ -1,15 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Silverquill Charm
@@ -29,14 +27,11 @@ val SilverquillCharm = card("Silverquill Charm") {
     spell {
         modal(chooseCount = 1) {
             mode("Put two +1/+1 counters on target creature") {
-                val t = target("target creature", TargetCreature())
-                effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, t)
+                val t = target(TargetFilter.Creature)
+                effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, t)
             }
             mode("Exile target creature with power 2 or less") {
-                val t = target(
-                    "target creature with power 2 or less",
-                    TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.powerAtMost(2)))
-                )
+                val t = target(TargetFilter(GameObjectFilter.Creature.powerAtMost(2)))
                 effect = Effects.Exile(t)
             }
             mode("Each opponent loses 3 life and you gain 3 life") {

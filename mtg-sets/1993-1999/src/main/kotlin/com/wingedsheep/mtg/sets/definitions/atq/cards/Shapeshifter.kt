@@ -1,15 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.atq.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.minus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ChoiceSlot
 import com.wingedsheep.sdk.scripting.ChoiceType
 import com.wingedsheep.sdk.scripting.EntersWithChoice
 import com.wingedsheep.sdk.scripting.SetBasePowerToughnessDynamicStatic
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Shapeshifter
@@ -26,7 +28,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * permanent under [ChoiceSlot.CHOSEN_NUMBER] — once as it enters (a true as-enters replacement,
  * [EntersWithChoice]`(ChoiceType.NUMBER)`, CR 614.1c — chosen before it is on the battlefield, so
  * there is no priority window where it sits at its default) and again each upkeep (an optional
- * Triggers.YourUpkeep ability, the "you may", via [Effects.ChooseNumberForSource] into the same
+ * Triggers.you.beginningOf(Step.UPKEEP) ability, the "you may", via [Effects.ChooseNumberForSource] into the same
  * slot). The P/T is a [SetBasePowerToughnessDynamicStatic] characteristic-defining ability reading
  * that last choice: power = CHOSEN_NUMBER, toughness = 7 − CHOSEN_NUMBER, so they always sum to 7.
  */
@@ -51,7 +53,7 @@ val Shapeshifter = card("Shapeshifter") {
     // and none is needed — re-choosing the current number is equivalent to declining (the CDA reads
     // the last choice either way), so the prior P/T is retained.
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         optional = true
         effect = Effects.ChooseNumberForSource(minValue = 0, maxValue = 7, prompt = "Choose a number between 0 and 7")
     }
@@ -59,11 +61,8 @@ val Shapeshifter = card("Shapeshifter") {
     // CDA: power = last chosen number, toughness = 7 − it.
     staticAbility {
         ability = SetBasePowerToughnessDynamicStatic(
-            power = DynamicAmount.CastChoice(ChoiceSlot.CHOSEN_NUMBER),
-            toughness = DynamicAmount.Subtract(
-                DynamicAmount.Fixed(7),
-                DynamicAmount.CastChoice(ChoiceSlot.CHOSEN_NUMBER)
-            ),
+            power = DynamicAmounts.castChoice(ChoiceSlot.CHOSEN_NUMBER),
+            toughness = 7 - DynamicAmounts.castChoice(ChoiceSlot.CHOSEN_NUMBER),
             filter = GroupFilter.source()
         )
     }

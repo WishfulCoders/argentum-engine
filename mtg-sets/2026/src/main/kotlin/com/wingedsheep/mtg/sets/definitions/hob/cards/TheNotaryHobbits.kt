@@ -41,7 +41,7 @@ val TheNotaryHobbits = card("The Notary Hobbits") {
         "{T}: Add {C} for each Halfling you control."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.SourceMatches(GameObjectFilter.Any.nontoken())
         effect = Effects.CreateTokenCopyOfSelf(count = 2, removeLegendary = true)
         description = "When The Notary Hobbits enter, if they're not a token, create two tokens " +

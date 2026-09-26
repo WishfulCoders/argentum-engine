@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
@@ -36,7 +36,7 @@ val MoltenManInfernoIncarnate = card("Molten Man, Inferno Incarnate") {
         "When Molten Man leaves the battlefield, sacrifice a land."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.BasicLand.withSubtype(Subtype.MOUNTAIN),
             count = 1,
@@ -48,7 +48,7 @@ val MoltenManInfernoIncarnate = card("Molten Man, Inferno Incarnate") {
     }
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
             powerBonus = DynamicAmounts.battlefield(
                 Player.You,
@@ -62,7 +62,7 @@ val MoltenManInfernoIncarnate = card("Molten Man, Inferno Incarnate") {
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.Sacrifice(GameObjectFilter.Land, count = 1, target = EffectTarget.Controller)
         description = "When Molten Man leaves the battlefield, sacrifice a land."
     }

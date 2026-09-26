@@ -1,10 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.neo.cards
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Generous Visitor — Kamigawa: Neon Dynasty #185 (canonical printing)
@@ -24,9 +26,9 @@ val GenerousVisitor = card("Generous Visitor") {
     oracleText = "Whenever you cast an enchantment spell, put a +1/+1 counter on target creature."
 
     triggeredAbility {
-        trigger = Triggers.YouCastEnchantment
-        val t = target("creature to grow", TargetCreature())
-        effect = Effects.AddCounters("+1/+1", 1, t)
+        trigger = Triggers.you.casts(GameObjectFilter.Enchantment)
+        val t = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, t)
         description = "Whenever you cast an enchantment spell, put a +1/+1 counter on target creature."
     }
 

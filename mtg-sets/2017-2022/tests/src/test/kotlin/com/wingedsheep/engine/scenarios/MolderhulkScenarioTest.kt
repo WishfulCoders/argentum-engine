@@ -21,7 +21,7 @@ import io.kotest.matchers.shouldBe
  */
 class MolderhulkScenarioTest : ScenarioTestBase() {
 
-    private val costCalculator by lazy { CostCalculator(cardRegistry) }
+    private val costCalculator by lazy { CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator) }
 
     init {
         context("Molderhulk") {

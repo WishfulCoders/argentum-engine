@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -31,10 +30,7 @@ val RedrockSentinel = card("Redrock Sentinel") {
     keywords(Keyword.DEFENDER)
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap, Costs.Sacrifice(GameObjectFilter.Land))
-        effect = Effects.Composite(
-            DrawCardsEffect(1),
-            Effects.CreateTreasure(1)
-        )
+        effect = Effects.DrawCards(1) then Effects.CreateTreasure(1)
     }
     metadata {
         rarity = Rarity.UNCOMMON

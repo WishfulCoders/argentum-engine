@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 
 /**
  * Sunfire Balm
@@ -23,16 +22,16 @@ val SunfireBalm = card("Sunfire Balm") {
     oracleText = "Prevent the next 4 damage that would be dealt to any target this turn.\nCycling {1}{W}\nWhen you cycle Sunfire Balm, you may prevent the next 1 damage that would be dealt to any target this turn."
 
     spell {
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.PreventNextDamage(4, t)
     }
 
     keywordAbility(KeywordAbility.cycling("{1}{W}"))
 
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
-        val t = target("target", Targets.Any)
-        effect = MayEffect(Effects.PreventNextDamage(1, t))
+        trigger = Triggers.self.isCycled()
+        val t = target(Targets.Any)
+        effect = Effects.May(Effects.PreventNextDamage(1, t))
     }
 
     metadata {

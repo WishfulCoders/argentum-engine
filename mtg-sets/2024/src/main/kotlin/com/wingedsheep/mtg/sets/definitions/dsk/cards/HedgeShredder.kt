@@ -3,14 +3,14 @@ package com.wingedsheep.mtg.sets.definitions.dsk.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.CardDestination
-import com.wingedsheep.sdk.scripting.effects.IterationSpace
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Hedge Shredder
@@ -44,20 +44,16 @@ val HedgeShredder = card("Hedge Shredder") {
         "becomes an artifact creature until end of turn.)"
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         optional = true
         effect = Patterns.Library.mill(2)
     }
 
     triggeredAbility {
-        trigger = Triggers.LandsPutIntoGraveyardFromLibrary
-        effect = MoveCollectionEffect(
-            from = IterationSpace.TRIGGER_CAPTURED_COLLECTION,
-            destination = CardDestination.ToZone(
-                zone = Zone.BATTLEFIELD,
-                placement = ZonePlacement.Tapped
-            )
-        )
+        trigger = Triggers.oneOrMore(GameObjectFilter.Land).putIntoYourGraveyard(fromLibrary = true)
+        effect = Effects.Pipeline {
+            move(triggerCaptured, CardDestination.ToZone(zone = Zone.BATTLEFIELD, placement = ZonePlacement.Tapped))
+        }
     }
 
     keywordAbility(KeywordAbility.Numeric(Keyword.CREW, 1))

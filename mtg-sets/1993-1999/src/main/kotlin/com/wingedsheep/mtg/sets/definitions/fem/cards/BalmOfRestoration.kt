@@ -4,10 +4,10 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Balm of Restoration
@@ -34,11 +34,10 @@ val BalmOfRestoration = card("Balm of Restoration") {
                 Effects.GainLife(2),
                 "You gain 2 life"
             ),
-            Mode.withTarget(
-                Effects.PreventNextDamage(2, EffectTarget.ContextTarget(0)),
-                Targets.Any,
-                "Prevent the next 2 damage that would be dealt to any target this turn"
-            ),
+            mode("Prevent the next 2 damage that would be dealt to any target this turn") {
+                val anyTarget = target(Targets.Any)
+                effect = Effects.PreventNextDamage(2, anyTarget)
+            },
             countsAsModalSpell = false
         )
         description = "{1}, {T}, Sacrifice this artifact: Choose one — You gain 2 life; or " +

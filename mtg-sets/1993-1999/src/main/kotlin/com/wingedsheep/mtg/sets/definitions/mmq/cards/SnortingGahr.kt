@@ -23,7 +23,7 @@ val SnortingGahr = card("Snorting Gahr") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
+        trigger = Triggers.self.becomesBlocked()
         effect = Effects.ModifyStats(2, 2, EffectTarget.Self)
     }
 

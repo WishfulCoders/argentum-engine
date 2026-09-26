@@ -24,7 +24,7 @@ val LothoCorruptShirriff = card("Lotho, Corrupt Shirriff") {
         "(It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")"
 
     triggeredAbility {
-        trigger = Triggers.NthSpellCast(2)
+        trigger = Triggers.anyPlayer.castsNth(2)
         effect = Effects.LoseLife(1, EffectTarget.Controller) then Effects.CreateTreasure(1)
     }
 

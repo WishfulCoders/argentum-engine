@@ -31,7 +31,7 @@ val GnarledProfessor = card("Gnarled Professor") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Mechanic.learn()
     }
 

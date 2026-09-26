@@ -4,10 +4,11 @@
 
 package com.wingedsheep.mtg.sets.definitions.lea.cards
 
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ControlEnchantedPermanent
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -22,7 +23,7 @@ val ControlMagic = card("Control Magic") {
     colorIdentity = "U"
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature\nYou control enchanted creature."
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
     staticAbility {
         ability = ControlEnchantedPermanent
     }

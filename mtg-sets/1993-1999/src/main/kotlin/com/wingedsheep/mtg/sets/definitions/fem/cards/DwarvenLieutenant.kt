@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Dwarven Lieutenant
@@ -27,10 +26,7 @@ val DwarvenLieutenant = card("Dwarven Lieutenant") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{R}")
-        val t = target(
-            "target Dwarf creature",
-            TargetCreature(filter = TargetFilter.Creature.withSubtype(Subtype.DWARF))
-        )
+        val t = target(TargetFilter.Creature.withSubtype(Subtype.DWARF))
         effect = Effects.ModifyStats(1, 0, t)
     }
 

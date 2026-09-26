@@ -41,7 +41,7 @@ val DarlingOfTheMasses = card("Darling of the Masses") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

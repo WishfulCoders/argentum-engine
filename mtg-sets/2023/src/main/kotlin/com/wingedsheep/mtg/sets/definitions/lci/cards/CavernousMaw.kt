@@ -3,8 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.lci.cards
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.Duration
@@ -13,8 +15,6 @@ import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.Aggregation
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Cavernous Maw
@@ -37,7 +37,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *   - **Cave cards in your graveyard** — [DynamicAmount.Count] over [Zone.GRAVEYARD]
  *     ([GameObjectFilter.Any] with the Cave subtype, since graveyard cards aren't restricted to lands).
  * The activation-restriction check evaluates the condition with the Maw as the effect source
- * (`CastPermissionUtils.checkActivationRestriction`), so `excludeSelf` resolves against the Maw.
+ * (`LegalityKernel.activationRestrictionFailure`), so `excludeSelf` resolves against the Maw.
  */
 val CavernousMaw = card("Cavernous Maw") {
     manaCost = ""
@@ -67,23 +67,20 @@ val CavernousMaw = card("Cavernous Maw") {
         restrictions = listOf(
             ActivationRestriction.OnlyIfCondition(
                 Conditions.CompareAmounts(
-                    DynamicAmount.Add(
-                        // other Caves you control (exclude this land itself)
-                        DynamicAmount.AggregateBattlefield(
-                            player = Player.You,
-                            filter = GameObjectFilter.Land.withSubtype("Cave"),
-                            aggregation = Aggregation.COUNT,
-                            excludeSelf = true,
-                        ),
+                    // other Caves you control (exclude this land itself)
+                    DynamicAmounts.battlefield(
+                        Player.You,
+                        GameObjectFilter.Land.withSubtype("Cave"),
+                        excludeSelf = true,
+                    ).count() +
                         // Cave cards in your graveyard
-                        DynamicAmount.Count(
-                            player = Player.You,
-                            zone = Zone.GRAVEYARD,
-                            filter = GameObjectFilter.Any.withSubtype("Cave"),
+                        DynamicAmounts.count(
+                            Player.You,
+                            Zone.GRAVEYARD,
+                            GameObjectFilter.Any.withSubtype("Cave"),
                         ),
-                    ),
                     ComparisonOperator.GTE,
-                    DynamicAmount.Fixed(3),
+                    3,
                 )
             )
         )

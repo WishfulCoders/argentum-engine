@@ -31,7 +31,7 @@ import io.kotest.matchers.shouldBe
 class TheScarletWitchScenarioTest : ScenarioTestBase() {
 
     private fun costOf(game: TestGame, spellName: String, playerNumber: Int = 1) =
-        CostCalculator(cardRegistry).calculateEffectiveCost(
+        CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
             game.state,
             cardRegistry.requireCard(spellName),
             if (playerNumber == 1) game.player1Id else game.player2Id,

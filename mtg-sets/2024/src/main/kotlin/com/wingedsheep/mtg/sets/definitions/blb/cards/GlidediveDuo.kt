@@ -5,11 +5,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Glidedive Duo
@@ -31,13 +28,9 @@ val GlidediveDuo = card("Glidedive Duo") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            listOf(
-                LoseLifeEffect(DynamicAmount.Fixed(2), EffectTarget.PlayerRef(Player.EachOpponent)),
-                GainLifeEffect(DynamicAmount.Fixed(2), EffectTarget.Controller)
-            )
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent)) then
+            Effects.GainLife(2, EffectTarget.Controller)
     }
 
     metadata {

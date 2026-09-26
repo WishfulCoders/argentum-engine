@@ -7,8 +7,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Pestbrood Sloth
@@ -21,7 +19,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * "Whenever this token attacks, you gain 1 life."
  *
  * The dies trigger creates two Pest tokens, each carrying its own self-attack life-gain trigger via
- * [CreateTokenEffect.triggeredAbilities] (`Triggers.Attacks` SELF binding → `Effects.GainLife(1)`).
+ * [CreateTokenEffect.triggeredAbilities] (`Triggers.self.attacks()` SELF binding → `Effects.GainLife(1)`).
  */
 val PestbroodSloth = card("Pestbrood Sloth") {
     manaCost = "{3}{G}"
@@ -36,17 +34,16 @@ val PestbroodSloth = card("Pestbrood Sloth") {
     keywords(Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        effect = CreateTokenEffect(
-            count = DynamicAmount.Fixed(2),
+        trigger = Triggers.self.dies()
+        effect = Effects.CreateToken(
+            count = 2,
             power = 1,
             toughness = 1,
             colors = setOf(Color.BLACK, Color.GREEN),
             creatureTypes = setOf("Pest"),
             triggeredAbilities = listOf(
                 TriggeredAbility.create(
-                    trigger = Triggers.Attacks.event,
-                    binding = Triggers.Attacks.binding,
+                    trigger = Triggers.self.attacks(),
                     effect = Effects.GainLife(1)
                 )
             ),

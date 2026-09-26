@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -27,7 +26,7 @@ val AuraFracture = card("Aura Fracture") {
     oracleText = "Sacrifice a land: Destroy target enchantment."
     activatedAbility {
         cost = Costs.Sacrifice(GameObjectFilter.Land)
-        val t = target("target", TargetPermanent(filter = TargetFilter.Enchantment))
+        val t = target(TargetFilter.Enchantment)
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
     metadata {

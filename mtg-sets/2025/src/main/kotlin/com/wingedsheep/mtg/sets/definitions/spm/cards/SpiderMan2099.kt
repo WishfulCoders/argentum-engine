@@ -9,6 +9,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Spider-Man 2099 — Marvel's Spider-Man #150
@@ -44,12 +45,12 @@ val SpiderMan2099 = card("Spider-Man 2099") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.Any(
             Conditions.YouPlayedLandFromNonHandThisTurn,
             Conditions.YouCastSpellsThisTurn(atLeast = 1, fromZoneOtherThan = Zone.HAND)
         )
-        val target = target("any target", Targets.Any)
+        val target = target(Targets.Any)
         effect = Effects.DealDamage(DynamicAmounts.sourcePower(), target)
     }
 

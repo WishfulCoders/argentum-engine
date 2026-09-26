@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Ghitu Fire
@@ -25,8 +24,8 @@ val GhituFire = card("Ghitu Fire") {
     keywordAbility(KeywordAbility.flashKicker("{2}"))
 
     spell {
-        target = Targets.Any
-        effect = Effects.DealXDamage(EffectTarget.ContextTarget(0))
+        val anyTarget = target(Targets.Any)
+        effect = Effects.DealXDamage(anyTarget)
     }
 
     metadata {

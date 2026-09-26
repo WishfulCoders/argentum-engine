@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantAttack
 import com.wingedsheep.sdk.scripting.CantBlock
 import com.wingedsheep.sdk.scripting.TransformPermanent
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Fog on the Barrow-Downs
@@ -22,7 +23,7 @@ val FogOnTheBarrowDowns = card("Fog on the Barrow-Downs") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature\nEnchanted creature is a Spirit and can't attack or block. (It loses all other creature types.)"
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     // "Enchanted creature is a Spirit. (It loses all other creature types.)"
     // Only replace creature subtypes — keep card types/colors/abilities intact.

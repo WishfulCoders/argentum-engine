@@ -7,10 +7,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.PlayAdditionalLandsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Kellan, Inquisitive Prodigy // Tail the Suspect — Murders at Karlov Manor #212
@@ -34,15 +31,12 @@ val KellanInquisitiveProdigy = card("Kellan, Inquisitive Prodigy") {
     keywords(Keyword.FLYING, Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val artifact = target(
-            "up to one target artifact",
-            TargetObject(filter = TargetFilter.Artifact, optional = true),
-        )
-        effect = ConditionalEffect(
-            condition = Conditions.TargetMatchesFilter(GameObjectFilter.Artifact.youControl()),
-            effect = Effects.Destroy(artifact).then(Effects.DrawCards(1)),
-            elseEffect = Effects.Destroy(artifact),
+        trigger = Triggers.self.attacks()
+        val artifact = target(TargetFilter.Artifact, optional = true)
+        effect = Effects.If(
+            condition = Conditions.TargetMatchesFilter(GameObjectFilter.Artifact.youControl(), artifact),
+            then = Effects.Destroy(artifact) then Effects.DrawCards(1),
+            otherwise = Effects.Destroy(artifact),
         )
         description = "Whenever Kellan attacks, destroy up to one target artifact. If you " +
             "controlled that permanent, draw a card."
@@ -54,7 +48,7 @@ val KellanInquisitiveProdigy = card("Kellan, Inquisitive Prodigy") {
         oracleText = "Investigate. You may play an additional land this turn. (Then exile this " +
             "card. You may cast the creature later from exile.)"
         spell {
-            effect = Effects.Investigate().then(PlayAdditionalLandsEffect(count = 1))
+            effect = Effects.Investigate() then Effects.PlayAdditionalLands(count = 1)
         }
     }
 

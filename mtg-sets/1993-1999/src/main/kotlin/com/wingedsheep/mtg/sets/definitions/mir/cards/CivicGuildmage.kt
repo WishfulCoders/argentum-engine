@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Civic Guildmage
@@ -28,16 +27,13 @@ val CivicGuildmage = card("Civic Guildmage") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{G}"), Costs.Tap)
-        val t = target("target creature", TargetCreature())
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(0, 1, t)
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{U}"), Costs.Tap)
-        val t = target(
-            "target creature you control",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.youControl()))
-        )
+        val t = target(TargetFilter(GameObjectFilter.Creature.youControl()))
         effect = Effects.PutOnTopOfLibrary(t)
     }
 

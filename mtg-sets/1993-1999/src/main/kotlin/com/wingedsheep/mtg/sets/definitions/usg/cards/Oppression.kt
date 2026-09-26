@@ -24,7 +24,7 @@ val Oppression = card("Oppression") {
     typeLine = "Enchantment"
     oracleText = "Whenever a player casts a spell, that player discards a card."
     triggeredAbility {
-        trigger = Triggers.AnyPlayerCastsSpell
+        trigger = Triggers.anyPlayer.casts()
         effect = Patterns.Hand.discardCards(1, EffectTarget.PlayerRef(Player.TriggeringPlayer))
     }
     metadata {

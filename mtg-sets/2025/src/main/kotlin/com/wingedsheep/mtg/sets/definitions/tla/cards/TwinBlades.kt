@@ -9,8 +9,6 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Twin Blades
@@ -36,14 +34,10 @@ val TwinBlades = card("Twin Blades") {
     keywords(Keyword.FLASH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = TargetCreature(
-            filter = TargetFilter(GameObjectFilter.Creature.youControl())
-        )
-        effect = Effects.Composite(
-            Effects.AttachEquipment(EffectTarget.ContextTarget(0)),
-            Effects.GrantKeyword(Keyword.DOUBLE_STRIKE, EffectTarget.ContextTarget(0), Duration.EndOfTurn)
-        )
+        val creature = target(TargetFilter(GameObjectFilter.Creature.youControl()))
+        trigger = Triggers.self.enters()
+        effect = Effects.AttachEquipment(creature) then
+            Effects.GrantKeyword(Keyword.DOUBLE_STRIKE, creature, Duration.EndOfTurn)
     }
 
     staticAbility {

@@ -24,10 +24,7 @@ val ElementalBond = card("Elemental Bond") {
     oracleText = "Whenever a creature you control with power 3 or greater enters, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.powerAtLeast(3).youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.powerAtLeast(3).youControl()).enters()
         effect = Effects.DrawCards(1)
     }
 

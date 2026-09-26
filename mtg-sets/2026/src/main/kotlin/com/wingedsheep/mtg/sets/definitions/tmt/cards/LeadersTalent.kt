@@ -1,16 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Leader's Talent
@@ -35,19 +34,16 @@ val LeadersTalent = card("Leader's Talent") {
 
     // Level 1: Whenever you attack, put a +1/+1 counter on target attacking creature.
     triggeredAbility {
-        trigger = Triggers.YouAttack
-        val attacker = target("target attacking creature", Targets.AttackingCreature)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, attacker)
+        trigger = Triggers.you.attacks()
+        val attacker = target(TargetFilter.AttackingCreature)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, attacker)
     }
 
     // Level 2: Whenever a creature you control leaves the battlefield, if it had a counter
     // on it, you gain 2 life.
     classLevel(2, "{2}{W}") {
         triggeredAbility {
-            trigger = Triggers.leavesBattlefield(
-                filter = GameObjectFilter.Creature.youControl(),
-                binding = TriggerBinding.ANY
-            )
+            trigger = Triggers.a(GameObjectFilter.Creature.youControl()).leaves()
             interveningIf = Conditions.TriggeringEntityHadCounters
             effect = Effects.GainLife(2)
         }
@@ -56,10 +52,10 @@ val LeadersTalent = card("Leader's Talent") {
     // Level 3: Whenever you cast a spell, put a +1/+1 counter on each creature you control.
     classLevel(3, "{3}{W}") {
         triggeredAbility {
-            trigger = Triggers.YouCastSpell
+            trigger = Triggers.you.casts()
             effect = Effects.ForEachInGroup(
                 filter = GroupFilter(GameObjectFilter.Creature.youControl()),
-                effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+                effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity)
             )
         }
     }

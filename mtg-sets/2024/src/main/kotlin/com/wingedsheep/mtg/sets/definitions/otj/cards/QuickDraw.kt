@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Quick Draw
@@ -26,20 +26,18 @@ val QuickDraw = card("Quick Draw") {
         "Creatures target opponent controls lose first strike and double strike until end of turn."
 
     spell {
-        val creature = target("target creature you control", Targets.CreatureYouControl)
-        val opponent = target("target opponent", TargetOpponent())
-        effect = Effects.Composite(
-            Effects.ModifyStats(power = 1, toughness = 1, target = creature),
-            Effects.GrantKeyword(Keyword.FIRST_STRIKE, target = creature),
+        val creature = target(TargetFilter.CreatureYouControl)
+        val opponent = target(Targets.Opponent)
+        effect = Effects.ModifyStats(power = 1, toughness = 1, target = creature) then
+            Effects.GrantKeyword(Keyword.FIRST_STRIKE, target = creature) then
             Patterns.Group.removeKeywordFromAll(
                 keyword = Keyword.FIRST_STRIKE,
                 filter = GroupFilter(GameObjectFilter.Creature.targetPlayerControls(opponent))
-            ),
+            ) then
             Patterns.Group.removeKeywordFromAll(
                 keyword = Keyword.DOUBLE_STRIKE,
                 filter = GroupFilter(GameObjectFilter.Creature.targetPlayerControls(opponent))
             )
-        )
     }
 
     metadata {

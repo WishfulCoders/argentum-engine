@@ -7,11 +7,8 @@ import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 
 /**
  * The First Eruption
@@ -41,8 +38,8 @@ val TheFirstEruption = card("The First Eruption") {
     }
 
     sagaChapter(3) {
-        effect = ReflexiveTriggerEffect(
-            action = SacrificeEffect(Filters.MountainCard),
+        effect = Effects.ReflexiveTrigger(
+            action = Effects.SacrificeOwn(Filters.MountainCard),
             optional = false,
             reflexiveEffect = Patterns.Group.dealDamageToAll(3, GroupFilter.AllCreatures)
         )

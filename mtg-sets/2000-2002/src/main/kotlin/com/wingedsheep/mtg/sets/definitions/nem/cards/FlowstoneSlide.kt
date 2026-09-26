@@ -4,13 +4,14 @@
 
 package com.wingedsheep.mtg.sets.definitions.nem.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.unaryMinus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -28,9 +29,9 @@ val FlowstoneSlide = card("Flowstone Slide") {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature),
             Effects.ModifyStats(
-                DynamicAmount.XValue,
-                DynamicAmount.Multiply(DynamicAmount.XValue, -1),
-                EffectTarget.Self
+                DynamicAmounts.xValue(),
+                -DynamicAmounts.xValue(),
+                EffectTarget.IterationEntity
             )
         )
     }

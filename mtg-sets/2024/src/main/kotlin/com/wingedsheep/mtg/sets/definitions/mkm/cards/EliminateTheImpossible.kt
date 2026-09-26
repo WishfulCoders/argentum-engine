@@ -41,19 +41,15 @@ val EliminateTheImpossible = card("Eliminate the Impossible") {
         "token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")"
 
     spell {
-        effect = Effects.Investigate()
-            .then(
-                Patterns.Group.modifyStatsForAll(
-                    power = -2,
-                    toughness = 0,
-                    filter = GroupFilter.AllCreaturesOpponentsControl
-                )
-            )
-            .then(
-                Effects.ForEachInGroup(
-                    GroupFilter(GameObjectFilter.Creature.opponentControls().suspected()),
-                    Effects.NoLongerSuspected(EffectTarget.Self)
-                )
+        effect = Effects.Investigate() then
+            Patterns.Group.modifyStatsForAll(
+                power = -2,
+                toughness = 0,
+                filter = GroupFilter.AllCreaturesOpponentsControl
+            ) then
+            Effects.ForEachInGroup(
+                GroupFilter(GameObjectFilter.Creature.opponentControls().suspected()),
+                Effects.NoLongerSuspected(EffectTarget.IterationEntity)
             )
     }
 

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
@@ -8,10 +8,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Sandbender Scavengers
@@ -48,32 +46,31 @@ val SandbenderScavengers = card("Sandbender Scavengers") {
 
     // Whenever you sacrifice another permanent, put a +1/+1 counter on this creature.
     triggeredAbility {
-        trigger = Triggers.YouSacrificeAnother(GameObjectFilter.Permanent)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.sacrificesAnother(GameObjectFilter.Permanent)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Whenever you sacrifice another permanent, put a +1/+1 counter on this creature."
     }
 
     // When this creature dies, you may exile it. When you do, return target creature card with
     // mana value less than or equal to this creature's power from your graveyard to the battlefield.
     triggeredAbility {
-        trigger = Triggers.Dies
-        effect = ReflexiveTriggerEffect(
+        trigger = Triggers.self.dies()
+        effect = Effects.ReflexiveTrigger(
             action = Effects.Exile(EffectTarget.Self),
             optional = true,
-            reflexiveEffect = Effects.PutOntoBattlefield(EffectTarget.ContextTarget(0)),
-            reflexiveTargetRequirements = listOf(
-                TargetObject(
-                    filter = TargetFilter(
-                        baseFilter = GameObjectFilter.Creature.ownedByYou()
-                            .manaValueAtMostDynamic(DynamicAmounts.sourcePower()),
-                        zone = Zone.GRAVEYARD
-                    )
-                )
-            ),
             descriptionOverride = "You may exile this creature. When you do, return target creature " +
                 "card with mana value less than or equal to this creature's power from your " +
                 "graveyard to the battlefield."
-        )
+        ) {
+            val creature = target(
+                TargetFilter(
+                    baseFilter = GameObjectFilter.Creature.ownedByYou()
+                        .manaValueAtMostDynamic(DynamicAmounts.sourcePower()),
+                    zone = Zone.GRAVEYARD
+                ),
+            )
+            effect = Effects.PutOntoBattlefield(creature)
+        }
         description = "When this creature dies, you may exile it. When you do, return target creature " +
             "card with mana value less than or equal to this creature's power from your graveyard " +
             "to the battlefield."

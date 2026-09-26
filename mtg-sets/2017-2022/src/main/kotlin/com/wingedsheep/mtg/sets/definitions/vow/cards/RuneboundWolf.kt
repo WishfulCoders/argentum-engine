@@ -3,13 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Runebound Wolf
@@ -31,9 +31,9 @@ val RuneboundWolf = card("Runebound Wolf") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}{R}"), Costs.Tap)
-        val t = target("target opponent", Targets.Opponent)
+        val t = target(Targets.Opponent)
         effect = Effects.DealDamage(
-            DynamicAmount.Count(
+            DynamicAmounts.count(
                 Player.You,
                 Zone.BATTLEFIELD,
                 GameObjectFilter.Creature.withSubtype(Subtype.WOLF) or

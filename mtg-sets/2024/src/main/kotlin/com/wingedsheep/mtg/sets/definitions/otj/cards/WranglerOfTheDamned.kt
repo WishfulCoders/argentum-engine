@@ -12,6 +12,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.core.Step
 
 
 /**
@@ -31,7 +32,7 @@ val WranglerOfTheDamned = card("Wrangler of the Damned") {
     toughness = 4
     keywords(Keyword.FLASH)
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.Not(Conditions.YouCastSpellsThisTurn(1, fromZone = Zone.HAND))
         effect = Effects.CreateToken(
             power = 2,

@@ -27,7 +27,7 @@ val SellSwordBrute = card("Sell-Sword Brute") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.You))
     }
 

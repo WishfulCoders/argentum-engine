@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Vial of Poison
@@ -22,7 +21,7 @@ val VialOfPoison = card("Vial of Poison") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeSelf)
-        val recipient = target("target", TargetCreature(filter = TargetFilter.Creature))
+        val recipient = target(TargetFilter.Creature)
         effect = Effects.GrantKeyword(Keyword.DEATHTOUCH, recipient)
         description = "{1}, Sacrifice this artifact: Target creature gains deathtouch until end of turn."
     }

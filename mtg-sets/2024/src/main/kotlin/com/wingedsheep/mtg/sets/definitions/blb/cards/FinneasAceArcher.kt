@@ -1,22 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.Aggregation
-import com.wingedsheep.sdk.scripting.values.CardNumericProperty
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -41,7 +36,7 @@ val FinneasAceArcher = card("Finneas, Ace Archer") {
     keywords(Keyword.REACH, Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
 
         // Put a +1/+1 counter on each other creature you control that's a token or a Rabbit
         // Then if creatures you control have total power 10 or greater, draw a card
@@ -53,27 +48,21 @@ val FinneasAceArcher = card("Finneas, Ace Archer") {
             excludeSelf = true
         )
 
-        effect = Effects.Composite(
-            listOf(
-                Effects.ForEachInGroup(
-                    filter = otherTokenOrRabbitYouControl,
-                    effect = AddCountersEffect(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        effect = Effects.ForEachInGroup(
+            filter = otherTokenOrRabbitYouControl,
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.IterationEntity)
+        ) then
+            Effects.If(
+                condition = Conditions.CompareAmounts(
+                    left = DynamicAmounts.battlefield(
+                        Player.You,
+                        GameObjectFilter.Creature
+                    ).sumPower(),
+                    operator = ComparisonOperator.GTE,
+                    right = 10
                 ),
-                ConditionalEffect(
-                    condition = Compare(
-                        left = DynamicAmount.AggregateBattlefield(
-                            player = Player.You,
-                            filter = GameObjectFilter.Creature,
-                            aggregation = Aggregation.SUM,
-                            property = CardNumericProperty.POWER
-                        ),
-                        operator = ComparisonOperator.GTE,
-                        right = DynamicAmount.Fixed(10)
-                    ),
-                    effect = DrawCardsEffect(DynamicAmount.Fixed(1), EffectTarget.Controller)
-                )
+                then = Effects.DrawCards(1, EffectTarget.Controller)
             )
-        )
     }
 
     metadata {

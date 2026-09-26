@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Desert
@@ -31,10 +30,7 @@ val Desert = card("Desert") {
 
     activatedAbility {
         cost = Costs.Tap
-        val creature = target(
-            "target attacking creature",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Creature.attacking()))
-        )
+        val creature = target(TargetFilter(GameObjectFilter.Creature.attacking()))
         effect = Effects.DealDamage(1, creature)
         restrictions = listOf(ActivationRestriction.DuringStep(Step.END_COMBAT))
     }

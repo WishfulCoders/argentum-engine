@@ -21,7 +21,7 @@ val GeologicalAppraiser = card("Geological Appraiser") {
     toughness = 2
     oracleText = "When this creature enters, if you cast it, discover 3."
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.WasCast
         effect = Effects.Discover(3)
     }

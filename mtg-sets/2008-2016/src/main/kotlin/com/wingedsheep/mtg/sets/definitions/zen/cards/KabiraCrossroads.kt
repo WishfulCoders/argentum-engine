@@ -32,7 +32,7 @@ val KabiraCrossroads = card("Kabira Crossroads") {
     replacementEffect(EntersTapped())
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(2)
     }
 

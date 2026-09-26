@@ -1,18 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Chalice of the Void
@@ -33,17 +30,17 @@ val ChaliceOfTheVoid = card("Chalice of the Void") {
 
     replacementEffect(
         EntersWithDynamicCounters(
-            counterType = CounterTypeFilter.Named(Counters.CHARGE),
-            count = DynamicAmount.CastX
+            counterType = CounterType.CHARGE,
+            count = DynamicAmounts.castX()
         )
     )
 
     triggeredAbility {
-        trigger = Triggers.AnyPlayerCastsSpell
-        triggerRestriction = Compare(
-            DynamicAmount.EntityProperty(EntityReference.Triggering, EntityNumericProperty.ManaValue),
+        trigger = Triggers.anyPlayer.casts()
+        triggerRestriction = Conditions.CompareAmounts(
+            DynamicAmounts.triggeringManaValue(),
             ComparisonOperator.EQ,
-            DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.CHARGE))
+            DynamicAmounts.countersOnSelf(CounterType.CHARGE)
         )
         effect = Effects.CounterTriggeringSpell()
     }

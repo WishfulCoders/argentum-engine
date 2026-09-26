@@ -47,7 +47,7 @@ val LordOfTheAccursed = card("Lord of the Accursed") {
         cost = Costs.Composite(Costs.Mana("{1}{B}"), Costs.Tap)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Permanent.withSubtype(Subtype.ZOMBIE)),
-            Effects.GrantKeyword(Keyword.MENACE, EffectTarget.Self)
+            Effects.GrantKeyword(Keyword.MENACE, EffectTarget.IterationEntity)
         )
     }
 

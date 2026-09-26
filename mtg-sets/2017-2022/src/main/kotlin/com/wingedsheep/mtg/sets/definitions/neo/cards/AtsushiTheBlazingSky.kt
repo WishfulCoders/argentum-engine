@@ -38,7 +38,7 @@ val AtsushiTheBlazingSky = card("Atsushi, the Blazing Sky") {
     keywords(Keyword.FLYING, Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = ModalEffect.chooseOne(
             Mode.noTarget(
                 Patterns.Exile.impulse(2, MayPlayExpiry.UntilEndOfNextTurn),

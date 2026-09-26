@@ -3,6 +3,7 @@ package com.wingedsheep.engine.state.components.stack
 import com.wingedsheep.engine.state.Component
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
@@ -30,6 +31,20 @@ data class SpellOnStackComponent(
     val declaredCostSlot: ChoiceSlot? = null,
     val wasBlightPaid: Boolean = false,  // For BlightOrPay additional cost — true if blight path was taken
     val wasWaterbendPaid: Boolean = false,  // For optional spell waterbend additional cost (Avatar) — true if "you may waterbend {N}" was paid; readable via WaterbendWasPaid
+    /**
+     * Extra counters owed to the permanent this spell becomes, bought with the optional "pay any
+     * amount of mana" additional cost of an `AdditionalManaForEntryCounters` static (Chorus of the
+     * Conclave). Fixed when the cost is paid, so the counters arrive even if the granting permanent
+     * has left the battlefield before the spell resolves. Null when nothing was paid.
+     */
+    val additionalEntryCounters: AdditionalEntryCounters? = null,
+    /**
+     * Keywords the permanent this spell becomes gains with no end date, frozen at payment time by a
+     * `ManaSpellRider.GrantsKeywordWhenSpent` with `Duration.Permanent` (Hall of the Bandit Lord's
+     * "it gains haste"). Granted as the permanent enters; kept here on the stack object rather than
+     * as a floating effect so a spell that never resolves carries nothing into its next zone.
+     */
+    val entryKeywordGrants: List<String> = emptyList(),
     /**
      * The opponent promised this spell's gift additional cost (CR 702.174a), or null when the gift
      * wasn't promised. A resolving permanent carries the fact onward in its cast-choices bag
@@ -135,7 +150,7 @@ data class SpellOnStackComponent(
      * when an [com.wingedsheep.sdk.scripting.AdditionalCost.ChooseEntity] step
      * has `captureSnapshot = true` — freezes the chosen entity's projected
      * power / toughness / subtypes / controller so downstream effects (e.g.
-     * `DynamicAmount.EntityProperty(EntityReference.FromCostStorage(…), …)`)
+     * `DynamicAmount.EntityProperty(EffectTarget.PipelineTarget(…), …)`)
      * can read "values as they last existed on the battlefield" at resolution.
      */
     val chosenEntitySnapshots: List<EntitySnapshot> = emptyList(),
@@ -178,6 +193,16 @@ data class SpellOnStackComponent(
 ) : Component
 
 /**
+ * [count] counters of [counterType] a resolving permanent spell enters with, bought as an additional
+ * cost while casting (see [SpellOnStackComponent.additionalEntryCounters]).
+ */
+@Serializable
+data class AdditionalEntryCounters(
+    val counterType: com.wingedsheep.sdk.core.CounterType,
+    val count: Int
+)
+
+/**
  * Marks an entity as a triggered ability on the stack.
  */
 @Serializable
@@ -197,49 +222,27 @@ data class TriggeredAbilityOnStackComponent(
     /** Optional human-readable description from `TriggeredAbility.descriptionOverride`,
      *  used when displaying the ability on the stack instead of the auto-generated effect text. */
     val descriptionOverride: String? = null,
-    val triggerDamageAmount: Int? = null,
-    val triggeringEntityId: EntityId? = null,
-    val triggeringPlayerId: EntityId? = null,
+    /**
+     * Everything the trigger event said about why this ability fired (CR 603.2 / 603.10) — the
+     * triggering entity and player, the damage amount, last-known power / counters / types, the
+     * scry count, the clash outcome, the captured batch, … — carried whole. One record, not one
+     * field per fact: a new trigger fact is a field on [com.wingedsheep.engine.event.TriggerContext]
+     * and reaches resolution through here without touching this class. The last-known facts are
+     * on the stack object (not just at detection) because CR 603.4's second check reads the same
+     * intervening-"if" at resolution — Tom, Bert, and William's "if they were a creature" is the
+     * worked example. Null for synthesized abilities (spell copies, chain copies) that no event fired.
+     */
+    val triggerContext: com.wingedsheep.engine.event.TriggerContext? = null,
+    /**
+     * The resolving ability's own X: the trigger's X ([com.wingedsheep.engine.event.TriggerContext.xValue]
+     * — an `{X}` cycling cost, a megamorph turn-up) or, failing that, the X computed for display as
+     * the ability went on the stack. Kept apart from [triggerContext] because it is not purely a
+     * trigger fact.
+     */
     val xValue: Int? = null,
-    val triggerCounterCount: Int? = null,
-    val triggerTotalCounterCount: Int? = null,
-    /** Last-known counter map (counter-type-string → count) of the trigger's source on leave-battlefield. */
-    val triggerLastKnownCounters: Map<String, Int>? = null,
-    /**
-     * Projected subtypes and card types the triggering permanent had the moment it left the
-     * battlefield (CR 603.10). Trigger detection has always had these; they are on the stack object
-     * too because CR 603.4's second check reads the *same* condition at resolution, and a
-     * last-known-info condition that answered at trigger time and not at resolution would fizzle
-     * every such ability — Tom, Bert, and William's "if they were a creature" is the worked example,
-     * and it is a loop guard, so answering wrong makes the pair recur or never return at all.
-     */
-    val triggerLastKnownSubtypes: Set<String>? = null,
-    val triggerLastKnownCardTypes: Set<String>? = null,
-    /** Per-player damage dealt to the trigger's source this turn, captured at LTB time (Grothama). */
-    val triggerLastKnownDamageDealtByPlayers: Map<EntityId, Int>? = null,
-    /** Creatures blocking/blocked by the trigger's source on leave-battlefield (CR 509 LKI, Abu Ja'far). */
-    val triggerLastKnownBlockingOrBlockedByIds: List<EntityId>? = null,
-    val targetingSourceEntityId: EntityId? = null,  // The spell/ability that targeted this permanent (for ward)
-    /**
-     * The host an attachment came *off*, captured when a "becomes unattached" trigger fired.
-     * Resolves [com.wingedsheep.sdk.scripting.targets.EffectTarget.AttachedToTriggeringPermanent]
-     * there, where the live link is by resolution either gone or already re-pointed at a new host
-     * (Stitcher's Graft's "sacrifice that permanent"). Null for every other trigger.
-     */
-    val triggerUnattachedFromEntityId: EntityId? = null,
-    val damageDistribution: Map<EntityId, Int>? = null,  // For DividedDamageEffect - pre-chosen damage allocation
+    val damageDistribution: Map<EntityId, Int>? = null,  // Division announced as it went on the stack (CR 603.3d) — damage for DividedDamageEffect, counters for DistributeCountersAmongTargetsEffect
     val copyIndex: Int? = null,    // Which copy number this is (1, 2, 3...) for storm/copy effects
     val copyTotal: Int? = null,    // Total number of copies being created
-    val lastKnownPower: Int? = null,    // Power at the moment the triggering entity left the battlefield (dies/leaves)
-    val lastKnownToughness: Int? = null, // Toughness at the moment the triggering entity left the battlefield (dies/leaves)
-    /** Total last-known power of a creatures-died batch (CR 603.2c). Read via
-     *  `ContextPropertyKey.DIED_BATCH_TOTAL_POWER` (The Skullspore Nexus). Null for non-batch triggers. */
-    val diedBatchTotalPower: Int? = null,
-    /** Number of mode picks recorded by the spell-cast that fired this trigger (Riku of Many Paths). */
-    val triggerModesChosenCount: Int? = null,
-    /** Power of the aura/equipment's attached creature, captured at trigger time; LKI for
-     *  "enchanted creature ... its power" reads when the creature has left (CR 608.2h). */
-    val enchantedCreatureLastKnownPower: Int? = null,
     /**
      * The permanent whose `GrantTriggeredAbility` static granted this triggered ability (an
      * Equipment/Aura granting the ability to the attached creature). Read at resolution into
@@ -248,33 +251,6 @@ data class TriggeredAbilityOnStackComponent(
      * Blunderbuss". Null for the source's own printed abilities.
      */
     val granterId: EntityId? = null,
-    /** Cards looked at by the scry that fired this trigger (CR 701.22). Null for non-scry triggers. */
-    val triggerScryCount: Int? = null,
-    /** Whether this trigger's controller won the clash that fired it (CR 701.30d). Read via
-     *  `Conditions.YouWonTheClash` (Entangling Trap). Null for non-clash triggers. */
-    val triggerClashWon: Boolean? = null,
-    /** Cards discarded in the batch that fired this trigger (CR 603.2c). Read via
-     *  `ContextPropertyKey.TRIGGER_DISCARD_COUNT` (Magmakin Artillerist). Null for non-discard triggers. */
-    val triggerDiscardCount: Int? = null,
-    /** Discover value N of the discover that fired this trigger (CR 701.57). Null for non-discover triggers. */
-    val triggerDiscoverValue: Int? = null,
-    /** Damage past lethal dealt to the trigger's creature recipient (CR 120.4a). Null for non-damage triggers. */
-    val triggerExcessDamageAmount: Int? = null,
-    /** Recipient creature's toughness when the triggering damage was dealt (CR 603.10 LKI). Read via
-     *  `ContextPropertyKey.TRIGGER_RECIPIENT_TOUGHNESS` (Taii Wakeen). Null for non-creature recipients. */
-    val triggerRecipientToughness: Int? = null,
-    /** Total mana spent to cast the spell that fired this trigger (Aberrant Manawurm, Expressive
-     *  Firedancer). Read via `ContextPropertyKey.MANA_SPENT_ON_TRIGGERING_SPELL`. Null for non-cast triggers. */
-    val triggerManaSpentOnTriggeringSpell: Int? = null,
-    /** Distinct colors of mana spent to cast the spell that fired this trigger (Magmablood Archaic).
-     *  Read via `ContextPropertyKey.COLORS_SPENT_ON_TRIGGERING_SPELL`. Null for non-cast triggers. */
-    val triggerColorsSpentOnTriggeringSpell: Int? = null,
-    /** Mana value (CR 202.3) of the spell that fired this trigger (Kellan, the Kid). Read via
-     *  `ContextPropertyKey.TRIGGERING_SPELL_MANA_VALUE`. Null for non-cast triggers. */
-    val triggerManaValueOfTriggeringSpell: Int? = null,
-    /** Value chosen for {X} on the spell that fired this trigger (Geometer's Arthropod). Read via
-     *  `ContextPropertyKey.X_VALUE_OF_TRIGGERING_SPELL`. Null for non-cast / no-{X} triggers. */
-    val triggerXValueOfTriggeringSpell: Int? = null,
     // Modal fields — populated when this triggered ability is a copy of a modal spell (700.2g).
     // Copies inherit the original's chosen modes; targets either inherit too (StormCopy default)
     // or are re-chosen by the copy controller while modes stay fixed.
@@ -282,11 +258,6 @@ data class TriggeredAbilityOnStackComponent(
     val modeTargetsOrdered: List<List<ChosenTarget>> = emptyList(),
     val modeTargetRequirements: Map<Int, List<TargetRequirement>> = emptyMap(),
     val modeDamageDistribution: Map<Int, Map<EntityId, Int>> = emptyMap(),
-    /** Entities a batch trigger captured (the matching permanents in a `PermanentsEnteredEvent`
-     *  batch). Seeded into the resolving ability's pipeline under
-     *  `PipelineState.TRIGGER_CAPTURED_COLLECTION` so a `ForEachInCollectionEffect` payoff can
-     *  iterate them ("for each of them, create a tapped copy" — Kambal). Empty for non-batch triggers. */
-    val capturedEntityIds: List<EntityId> = emptyList(),
     /** Set when this triggered ability is a Saga chapter ability; on resolution the engine emits a
      *  SagaChapterResolvedEvent so "final chapter of a Saga resolves" triggers (Tom Bombadil) can fire. */
     val sagaChapterInfo: com.wingedsheep.engine.event.SagaChapterInfo? = null,
@@ -347,17 +318,29 @@ data class ActivatedAbilityOnStackComponent(
      */
     val exiledAsCostCards: List<EntityId> = emptyList(),
     /**
-     * Counters (counter-type-string → count) the source had the moment a self-exile /
+     * Cards discarded to pay this activation's cost, carried to resolution for
+     * [com.wingedsheep.sdk.scripting.targets.EffectTarget.DiscardedAsCost] ("the discarded card").
+     * The activated-ability counterpart of [SpellOnStackComponent.discardedAsCostCards].
+     */
+    val discardedAsCostCards: List<EntityId> = emptyList(),
+    /**
+     * How many counters this activation's costs removed, read at resolution as
+     * [com.wingedsheep.sdk.scripting.values.DynamicAmount.CountersRemovedAsCost] ("the number of
+     * aim counters removed this way", Hankyu). Zero when the costs removed none.
+     */
+    val countersRemovedAsCost: Int = 0,
+    /**
+     * Counters (kind → count) the source had the moment a self-exile /
      * self-sacrifice cost was paid (CR 113.7a). Captured before the cost wipes them so the
      * resolving effect can read the pre-cost count via
      * [com.wingedsheep.sdk.scripting.values.DynamicAmount.LastKnownSourceCounters] (Lost Isle Calling).
      */
-    val lastKnownSourceCounters: Map<String, Int> = emptyMap(),
+    val lastKnownSourceCounters: Map<CounterType, Int> = emptyMap(),
     /**
      * Frozen projected P/T of the source captured before a self-exile / self-sacrifice cost moved
      * it off the battlefield (CR 113.7a). Mirrors [lastKnownSourceCounters]; read at resolution via
      * [com.wingedsheep.engine.handlers.EffectContext.lastKnownSourceSnapshot] so an
-     * `EntityProperty(Source, Power)` read (Ghitu Fire-Eater / Blazing Bomb's Blow Up) sees the
+     * `EntityProperty(Self, Power)` read (Ghitu Fire-Eater / Blazing Bomb's Blow Up) sees the
      * pre-sacrifice power. Null when the cost did not sacrifice/exile the source.
      */
     val lastKnownSourceSnapshot: EntitySnapshot? = null,

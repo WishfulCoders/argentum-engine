@@ -1,14 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Ill-Timed Explosion — Murders at Karlov Manor #207
@@ -28,27 +26,23 @@ val IllTimedExplosion = card("Ill-Timed Explosion") {
         "cards discarded this way."
 
     spell {
-        effect = Effects.Composite(
-            Effects.DrawCards(2),
-            ReflexiveTriggerEffect(
+        effect = Effects.DrawCards(2) then
+            Effects.ReflexiveTrigger(
                 action = Patterns.Hand.discardCards(2),
                 optional = true,
-                reflexiveEffect = Effects.Composite(
-                    FilterCollectionEffect(
-                        from = "discarded",
-                        filter = CollectionFilter.GreatestManaValue,
-                        storeMatching = "greatestDiscarded",
-                    ),
-                    Patterns.Group.dealDamageToAll(
-                        amount = DynamicAmount.StoredCardManaValue("greatestDiscarded"),
-                        filter = GroupFilter.AllCreatures,
-                    ),
-                ),
+                reflexiveEffect = Effects.Pipeline {
+                    val greatestDiscarded = filter(Patterns.Hand.discarded, CollectionFilter.GreatestManaValue)
+                    run(
+                        Patterns.Group.dealDamageToAll(
+                            amount = DynamicAmounts.manaValueOf(greatestDiscarded),
+                            filter = GroupFilter.AllCreatures,
+                        )
+                    )
+                },
                 descriptionOverride = "You may discard two cards. When you do, Ill-Timed " +
                     "Explosion deals damage to each creature equal to the greatest mana value " +
                     "among cards discarded this way.",
-            ),
-        )
+            )
     }
 
     metadata {

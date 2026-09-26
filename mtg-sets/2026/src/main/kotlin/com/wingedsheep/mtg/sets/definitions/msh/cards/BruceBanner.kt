@@ -1,9 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -11,10 +12,7 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Bruce Banner // The Incredible Hulk — Marvel Super Heroes #49 (mythic)
@@ -43,13 +41,13 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *    nothing. "Activate only as a sorcery" is [TimingRule.SorcerySpeed].
  *
  *  - **Enrage** is an ability word — flavor only, no rules meaning — over an ordinary
- *    [Triggers.TakesDamage] trigger bound to the source. It fires on *any* damage (combat or not,
+ *    `Triggers.self.isDealtDamage()` trigger bound to the source. It fires on *any* damage (combat or not,
  *    from any source, including damage that is lethal: the trigger still goes on the stack even
  *    though the Hulk may already be in the graveyard when it resolves, in which case the counter
  *    has nowhere to go).
  *
  *  - **"If he's attacking, untap him and there is an additional combat phase after this phase"** is
- *    checked when the trigger *resolves*, not when it fires — so it is a [ConditionalEffect] over
+ *    checked when the trigger *resolves*, not when it fires — so it is a [Effects.If] over
  *    [Conditions.SourceIsAttacking], not an intervening-if `interveningIf`. The body is the
  *    Combat Celebrant / Genji Glove pair: [Effects.Untap] on the source so he can attack again,
  *    then [Effects.AddCombatPhase], which inserts one extra combat phase (no trailing main phase)
@@ -70,7 +68,7 @@ private val BruceBannerFront = card("Bruce Banner") {
     // {X}{X}, {T}: Draw X cards. Activate only as a sorcery.
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{X}{X}"), Costs.Tap)
-        effect = Effects.DrawCards(DynamicAmount.XValue)
+        effect = Effects.DrawCards(DynamicAmounts.xValue())
         timing = TimingRule.SorcerySpeed
         description = "{X}{X}, {T}: Draw X cards. Activate only as a sorcery."
     }
@@ -78,7 +76,7 @@ private val BruceBannerFront = card("Bruce Banner") {
     // {2}{R}{R}{G}{G}: Transform Bruce Banner. Activate only as a sorcery.
     activatedAbility {
         cost = Costs.Mana("{2}{R}{R}{G}{G}")
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
         timing = TimingRule.SorcerySpeed
         description = "Transform Bruce Banner. Activate only as a sorcery."
     }
@@ -107,10 +105,9 @@ private val TheIncredibleHulkBack = card("The Incredible Hulk") {
     // Enrage — Whenever The Incredible Hulk is dealt damage, put a +1/+1 counter on him. If he's
     // attacking, untap him and there is an additional combat phase after this phase.
     triggeredAbility {
-        trigger = Triggers.TakesDamage
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
-            ConditionalEffect(
+        trigger = Triggers.self.isDealtDamage()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self) then
+            Effects.If(
                 // "If he's attacking" — a *live* check, hence the `onBattlefield()` conjunct.
                 // Bare `SourceIsAttacking` resolves through PredicateEvaluator, whose IsAttacking
                 // arm falls back to `LastKnownPermanentComponent.snapshot.wasAttacking` for any
@@ -120,14 +117,11 @@ private val TheIncredibleHulkBack = card("The Incredible Hulk") {
                 condition = Conditions.SourceMatches(
                     GameObjectFilter.Any.onBattlefield().attacking(),
                 ),
-                effect = Effects.Composite(
-                    // "untap him"
-                    Effects.Untap(EffectTarget.Self),
+                // "untap him"
+                then = Effects.Untap(EffectTarget.Self) then
                     // "there is an additional combat phase after this phase" (combat only — no main)
                     Effects.AddCombatPhase,
-                ),
-            ),
-        )
+            )
         description = "Enrage — Whenever The Incredible Hulk is dealt damage, put a +1/+1 counter " +
             "on him. If he's attacking, untap him and there is an additional combat phase after " +
             "this phase."

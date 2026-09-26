@@ -46,7 +46,7 @@ class CastXDurableValueTest : ScenarioTestBase() {
                 power = 2
                 toughness = 2
                 triggeredAbility {
-                    trigger = Triggers.EntersBattlefield
+                    trigger = Triggers.self.enters()
                     effect = Effects.DrawCards(DynamicAmount.CastX)
                 }
             }
@@ -75,7 +75,7 @@ class CastXDurableValueTest : ScenarioTestBase() {
                 power = 0
                 toughness = 0
                 triggeredAbility {
-                    trigger = Triggers.Dies
+                    trigger = Triggers.self.dies()
                     effect = Effects.GainLife(DynamicAmount.CastX)
                 }
             }

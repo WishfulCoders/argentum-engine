@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Magnetic Snuffler — Murders at Karlov Manor #254
@@ -37,8 +36,8 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  * or is undone by the CR 704.5n state-based action, leaving it on the battlefield unattached. That
  * is what the ruling prescribes, and it falls out of the composite without a special case.
  *
- * **The counter half** is [Triggers.YouSacrificeA] — the per-permanent shape, not the batched
- * [Triggers.YouSacrificeOneOrMore] — because "whenever you sacrifice an artifact" fires once per
+ * **The counter half** is `Triggers.you.sacrifices(filter)` — the per-permanent shape, not the batched
+ * `Triggers.you.sacrifices(filter, batch = true)` — because "whenever you sacrifice an artifact" fires once per
  * artifact, so sacrificing three Clues to one effect puts three counters on. `YouSacrificeA` counts
  * the source sacrificing itself, which is correct here: the Snuffler is itself an artifact, and
  * sacrificing it does trigger the ability (the counter is simply moot, since the permanent that
@@ -54,32 +53,27 @@ val MagneticSnuffler = card("Magnetic Snuffler") {
         "Whenever you sacrifice an artifact, put a +1/+1 counter on this creature."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val equipment = target(
-            "target Equipment card from your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter.Artifact
-                        .withSubtype(Subtype.EQUIPMENT)
-                        .ownedByYou(),
-                    zone = Zone.GRAVEYARD
-                )
-            )
+            TargetFilter(
+                baseFilter = GameObjectFilter.Artifact
+                    .withSubtype(Subtype.EQUIPMENT)
+                    .ownedByYou(),
+                zone = Zone.GRAVEYARD
+            ),
         )
-        effect = Effects.PutOntoBattlefieldUnderYourControl(equipment)
-            .then(
-                Effects.AttachTargetEquipmentToCreature(
-                    equipmentTarget = equipment,
-                    creatureTarget = EffectTarget.Self
-                )
+        effect = Effects.PutOntoBattlefieldUnderYourControl(equipment) then
+            Effects.AttachTargetEquipmentToCreature(
+                equipmentTarget = equipment,
+                creatureTarget = EffectTarget.Self
             )
         description = "When this creature enters, return target Equipment card from your " +
             "graveyard to the battlefield attached to this creature."
     }
 
     triggeredAbility {
-        trigger = Triggers.YouSacrificeA(GameObjectFilter.Artifact)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.sacrifices(GameObjectFilter.Artifact)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Whenever you sacrifice an artifact, put a +1/+1 counter on this creature."
     }
 

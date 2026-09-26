@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Gideon's Reproach
@@ -22,7 +21,7 @@ val GideonsReproach = card("Gideon's Reproach") {
     oracleText = "Gideon's Reproach deals 4 damage to target attacking or blocking creature."
 
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter.AttackingOrBlockingCreature))
+        val t = target(TargetFilter.AttackingOrBlockingCreature)
         effect = Effects.DealDamage(4, t)
     }
 

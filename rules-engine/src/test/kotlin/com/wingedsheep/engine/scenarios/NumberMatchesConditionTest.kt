@@ -1,6 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.handlers.ConditionEvaluator
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
@@ -28,7 +28,7 @@ class NumberMatchesConditionTest : FunSpec({
 
     fun GameTestDriver.eval(n: Int, property: NumberProperty): Boolean {
         val context = EffectContext(sourceId = null, controllerId = activePlayer!!, xValue = 0)
-        return ConditionEvaluator().evaluate(state, NumberMatches(DynamicAmount.Fixed(n), property), context)
+        return PredicateEvaluator(cardRegistry = null).conditions.evaluate(state, NumberMatches(DynamicAmount.Fixed(n), property), context)
     }
 
     test("Prime: 0 and 1 are not prime; 2, 3, 5, 7, 11 are; 4, 6, 9 are not") {

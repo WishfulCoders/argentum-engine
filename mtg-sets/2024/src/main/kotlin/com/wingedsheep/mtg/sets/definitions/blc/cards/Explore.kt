@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.blc.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.PlayAdditionalLandsEffect
 
 /**
  * Explore {1}{G}
@@ -19,12 +18,7 @@ val Explore = card("Explore") {
     oracleText = "You may play an additional land this turn.\nDraw a card."
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                PlayAdditionalLandsEffect(count = 1),
-                Effects.DrawCards(1),
-            )
-        )
+        effect = Effects.PlayAdditionalLands(count = 1) then Effects.DrawCards(1)
     }
 
     metadata {

@@ -74,7 +74,7 @@ class PipelineDescriptionLeakTest : DescribeSpec({
                 MoveCollectionEffect(key, CardDestination.ToZone(Zone.GRAVEYARD)).description,
                 GatherSubtypesEffect(key, "out").description,
                 CaptureControllersEffect(key, "out").description,
-                FilterCollectionEffect(key, CollectionFilter.MatchesFilter(GameObjectFilter.Any), "out").description,
+                FilterCollectionEffect(key, storeMatching = "out").description,
                 StoreCardNameEffect(key).description,
             ).forEach { it shouldNotContain key }
         }

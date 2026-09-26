@@ -6,6 +6,7 @@ import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
+import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.TriggeredAbility
@@ -35,6 +36,7 @@ class ConditionalTriggerIfACreatureDiedThisTurnTest : FunSpec({
     fun injectEndStepAbility(driver: GameTestDriver): GameTestDriver {
         val you = driver.player1
         val ability = TriggeredAbility.create(
+            id = AbilityId("ConditionalTriggerIfACreatureDiedThisTurnTest_1"),
             trigger = EventPattern.StepEvent(Step.END, Player.You),
             effect = GainLifeEffect(1),
             interveningIf = CreatureDiedThisTurnCondition

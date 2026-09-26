@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Tombstone, Career Criminal
@@ -30,14 +29,11 @@ val TombstoneCareerCriminal = card("Tombstone, Career Criminal") {
         "Villain spells you cast cost {1} less to cast."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val villainCard = target(
-            "target Villain card from your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter.Any.withSubtype("Villain").ownedByYou(),
-                    zone = Zone.GRAVEYARD,
-                ),
+            TargetFilter(
+                baseFilter = GameObjectFilter.Any.withSubtype("Villain").ownedByYou(),
+                zone = Zone.GRAVEYARD,
             ),
         )
         effect = Effects.ReturnToHand(villainCard)

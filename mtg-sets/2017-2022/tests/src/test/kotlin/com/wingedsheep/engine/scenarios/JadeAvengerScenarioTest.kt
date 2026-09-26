@@ -17,8 +17,8 @@ import io.kotest.matchers.shouldBe
  *
  * **The first bushido card in the corpus.** `Keyword.BUSHIDO` is display-only vocabulary — nothing
  * in `rules-engine` reads it — so the ability CR 702.45a spells out is lowered by hand on the card
- * as two triggers over the two distinct events (`Triggers.Blocks` and `Triggers.BecomesBlocked`),
- * each pumping `EffectTarget.Self`. These tests pin that lowering end to end, because a card that
+ * as two triggers over the two distinct events (`Triggers.self.blocks()` and `Triggers.self.becomesBlocked()`),
+ * each pumping `EffectTarget.IterationEntity`. These tests pin that lowering end to end, because a card that
  * carried only the keyword would compile, read correctly in the client, and do nothing.
  *
  * Covered:

@@ -34,15 +34,12 @@ val TheSpiritOasis = card("The Spirit Oasis") {
         .count()
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(shrinesYouControl)
     }
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Any.withSubtype("Shrine").youControl(),
-            binding = TriggerBinding.OTHER,
-        )
+        trigger = Triggers.another(GameObjectFilter.Any.withSubtype("Shrine").youControl()).enters()
         effect = Effects.DrawCards(1)
     }
 

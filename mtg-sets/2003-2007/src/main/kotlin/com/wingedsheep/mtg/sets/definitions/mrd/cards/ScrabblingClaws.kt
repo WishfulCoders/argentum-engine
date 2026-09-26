@@ -8,9 +8,9 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.TargetObject
 import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Scrabbling Claws — Mirrodin #237
@@ -41,32 +41,27 @@ val ScrabblingClaws = card("Scrabbling Claws") {
         "{1}, Sacrifice this artifact: Exile target card from a graveyard. Draw a card."
 
     activatedAbility {
+        val player = target(Targets.Player)
         cost = Costs.Tap
-        target = TargetPlayer()
         effect = Effects.Pipeline {
             val graveyard = gather(
-                CardSource.FromZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
-                name = "clawsGraveyard"
+                CardSource.FromZone(Zone.GRAVEYARD, player.asPlayer)
             )
             val chosen = chooseExactly(
                 1,
                 from = graveyard,
                 chooser = Chooser.TargetPlayer,
-                prompt = "Exile a card from your graveyard",
-                name = "clawsExiled"
+                prompt = "Exile a card from your graveyard"
             )
-            exile(chosen, owner = Player.ContextPlayer(0))
+            exile(chosen, owner = player.asPlayer)
         }
         description = "{T}: Target player exiles a card from their graveyard."
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeSelf)
-        val exiled = target("target card in a graveyard", TargetObject(filter = TargetFilter.CardInGraveyard))
-        effect = Effects.Composite(
-            Effects.Move(exiled, Zone.EXILE),
-            Effects.DrawCards(1)
-        )
+        val exiled = target(TargetFilter.CardInGraveyard)
+        effect = Effects.Move(exiled, Zone.EXILE) then Effects.DrawCards(1)
         description = "{1}, Sacrifice this artifact: Exile target card from a graveyard. Draw a card."
     }
 

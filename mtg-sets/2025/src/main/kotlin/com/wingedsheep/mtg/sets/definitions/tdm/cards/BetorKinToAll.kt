@@ -1,23 +1,19 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.Condition
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
-import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.Aggregation
-import com.wingedsheep.sdk.scripting.values.CardNumericProperty
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Betor, Kin to All — Tarkir: Dragonstorm #172
@@ -44,32 +40,28 @@ val BetorKinToAll = card("Betor, Kin to All") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         // Intervening "if" (CR 603.4): the 10-toughness gate is checked both as the trigger
         // would go on the stack and again on resolution.
         interveningIf = totalToughnessAtLeast(10)
-        effect = Effects.DrawCards(1)
+        effect = Effects.DrawCards(1) then
             // "Then if ... 20 or greater, untap each creature you control."
-            .then(
-                ConditionalEffect(
-                    condition = totalToughnessAtLeast(20),
-                    effect = Effects.ForEachInGroup(
-                        filter = GroupFilter.AllCreaturesYouControl,
-                        effect = TapUntapEffect(EffectTarget.Self, tap = false)
-                    )
+            Effects.If(
+                condition = totalToughnessAtLeast(20),
+                then = Effects.ForEachInGroup(
+                    filter = GroupFilter.AllCreaturesYouControl,
+                    effect = Effects.Untap(EffectTarget.IterationEntity)
                 )
-            )
+            ) then
             // "Then if ... 40 or greater, each opponent loses half their life, rounded up."
             // Iterated per opponent so each loses half of *their own* life total — the
             // loop rebinds the controller, so the LoseHalfLife defaults (target =
             // Controller, lifePlayer = You) read the iterated opponent.
-            .then(
-                ConditionalEffect(
-                    condition = totalToughnessAtLeast(40),
-                    effect = ForEachPlayerEffect(
-                        players = Player.EachOpponent,
-                        effects = listOf(Effects.LoseHalfLife(roundUp = true))
-                    )
+            Effects.If(
+                condition = totalToughnessAtLeast(40),
+                then = Effects.ForEachPlayer(
+                    players = Player.EachOpponent,
+                    effect = Effects.LoseHalfLife(roundUp = true)
                 )
             )
     }
@@ -83,13 +75,11 @@ val BetorKinToAll = card("Betor, Kin to All") {
 }
 
 /** "Creatures you control have total toughness [threshold] or greater." */
-private fun totalToughnessAtLeast(threshold: Int): Condition = Compare(
-    DynamicAmount.AggregateBattlefield(
-        player = Player.You,
-        filter = GameObjectFilter.Creature,
-        aggregation = Aggregation.SUM,
-        property = CardNumericProperty.TOUGHNESS
-    ),
+private fun totalToughnessAtLeast(threshold: Int): Condition = Conditions.CompareAmounts(
+    DynamicAmounts.battlefield(
+        Player.You,
+        GameObjectFilter.Creature
+    ).sumToughness(),
     ComparisonOperator.GTE,
-    DynamicAmount.Fixed(threshold)
+    threshold
 )

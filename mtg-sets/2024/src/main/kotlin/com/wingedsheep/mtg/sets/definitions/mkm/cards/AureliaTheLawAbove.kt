@@ -4,12 +4,10 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.AttackEvent
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.events.AttackPredicate
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Aurelia, the Law Above
@@ -39,31 +37,19 @@ val AureliaTheLawAbove = card("Aurelia, the Law Above") {
     keywords(Keyword.FLYING, Keyword.VIGILANCE, Keyword.HASTE)
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = AttackEvent(
-                requires = setOf(AttackPredicate.AttackerCountAtLeast(3))
-            ),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a().attacks(setOf(AttackPredicate.AttackerCountAtLeast(3)))
         effect = Effects.DrawCards(1)
         description = "Whenever a player attacks with three or more creatures, you draw a card."
     }
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = AttackEvent(
-                requires = setOf(AttackPredicate.AttackerCountAtLeast(5))
-            ),
-            binding = TriggerBinding.ANY
-        )
-        effect = Effects.Composite(
-            Effects.DealDamage(
-                3,
-                EffectTarget.PlayerRef(Player.EachOpponent),
-                damageSource = EffectTarget.Self
-            ),
+        trigger = Triggers.a().attacks(setOf(AttackPredicate.AttackerCountAtLeast(5)))
+        effect = Effects.DealDamage(
+            3,
+            EffectTarget.PlayerRef(Player.EachOpponent),
+            damageSource = EffectTarget.Self
+        ) then
             Effects.GainLife(3)
-        )
         description = "Whenever a player attacks with five or more creatures, Aurelia deals 3 " +
             "damage to each of your opponents and you gain 3 life."
     }

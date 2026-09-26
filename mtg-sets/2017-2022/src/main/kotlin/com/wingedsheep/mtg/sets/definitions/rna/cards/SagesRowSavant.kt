@@ -21,7 +21,7 @@ val SagesRowSavant = card("Sage's Row Savant") {
     oracleText = "When this creature enters, scry 2."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.scry(2)
         description = "When this creature enters, scry 2."
     }

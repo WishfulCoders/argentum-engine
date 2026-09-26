@@ -38,9 +38,7 @@ val DiamondMare = card("Diamond Mare") {
     replacementEffect(EntersWithChoice(ChoiceType.COLOR))
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.Any.sharingChosenColorWithSource()
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.Any.sharingChosenColorWithSource())
         effect = Effects.GainLife(1)
         description = "Whenever you cast a spell of the chosen color, you gain 1 life."
     }

@@ -5,7 +5,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ControlEnchantedPermanent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Domineer — Mirrodin #33
@@ -32,7 +33,7 @@ val Domineer = card("Domineer") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant artifact creature\nYou control enchanted artifact creature."
 
-    auraTarget = TargetCreature(filter = TargetFilter(GameObjectFilter.ArtifactCreature))
+    auraTarget = TargetObject(filter = TargetFilter(GameObjectFilter.ArtifactCreature))
 
     staticAbility {
         ability = ControlEnchantedPermanent

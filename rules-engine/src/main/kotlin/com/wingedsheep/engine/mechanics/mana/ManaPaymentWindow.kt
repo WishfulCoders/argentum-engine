@@ -10,7 +10,7 @@ import com.wingedsheep.engine.core.TappedEvent
 import com.wingedsheep.engine.core.ReopenManaPaymentDecisionContinuation
 import com.wingedsheep.engine.core.SelectManaSourcesDecision
 import com.wingedsheep.engine.core.GameEvent
-import com.wingedsheep.engine.registry.CardRegistry
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.sdk.model.EntityId
 
@@ -71,9 +71,9 @@ object ManaPaymentWindow {
         prompt: String,
         context: com.wingedsheep.engine.core.DecisionContext,
         canDecline: Boolean,
-        cardRegistry: CardRegistry
+        manaSolver: ManaSolver
     ): SelectManaSourcesDecision {
-        val solver = ManaSolver(cardRegistry)
+        val solver = manaSolver
         val options = solver.findAvailableManaSources(state, playerId)
             .filter { it.tapPermanentsSubCost == null }
             .map { source ->
@@ -120,6 +120,7 @@ object ManaPaymentWindow {
      * its "didn't pay" branch either way.
      */
     fun floatSelectedMana(
+        zones: ZoneTransitionService,
         state: GameState,
         playerId: EntityId,
         cost: com.wingedsheep.sdk.core.ManaCost,
@@ -136,7 +137,7 @@ object ManaPaymentWindow {
         var produced = ManaPool()
 
         if (response.autoPay) {
-            val solution = ManaSolver(services.cardRegistry).solve(current, playerId, remaining)
+            val solution = services.manaSolver.solve(current, playerId, remaining)
                 ?: return FloatResult(state, emptyList(), paid = false)
             val (afterTaps, tapEvents) = services.manaAbilitySideEffectExecutor
                 .tapSourcesWithSideEffects(current, solution, playerId)
@@ -157,7 +158,7 @@ object ManaPaymentWindow {
             val byId = availableSources.associateBy { it.entityId }
             for (sourceId in response.selectedSources) {
                 val source = byId[sourceId] ?: return FloatResult(state, emptyList(), paid = false)
-                val tapped = tapOrSacrifice(current, sourceId, source, playerId)
+                val tapped = tapOrSacrifice(zones, current, sourceId, source, playerId)
                 current = tapped.first
                 events.addAll(tapped.second)
                 produced = when {
@@ -177,14 +178,14 @@ object ManaPaymentWindow {
      * either way so "becomes tapped" triggers see the tap sub-cost.
      */
     private fun tapOrSacrifice(
+        zones: ZoneTransitionService,
         state: GameState,
         sourceId: EntityId,
         source: ManaSourceOption,
         fallbackControllerId: EntityId
     ): Pair<GameState, List<GameEvent>> {
         if (!source.requiresSacrifice) {
-            val (tapped, event) = com.wingedsheep.engine.core.tap(state, sourceId)
-            return tapped to listOfNotNull(event)
+            return com.wingedsheep.engine.core.tapForMana(state, sourceId, fallbackControllerId)
         }
         val controller = state.getEntity(sourceId)
             ?.get<com.wingedsheep.engine.state.components.identity.ControllerComponent>()?.playerId
@@ -198,8 +199,7 @@ object ManaPaymentWindow {
         )
         val preState = com.wingedsheep.engine.handlers.effects.ZoneTransitionService
             .trackPermanentSacrifice(state, listOf(sourceId), controller)
-        val transition = com.wingedsheep.engine.handlers.effects.ZoneTransitionService
-            .moveToZone(preState, sourceId, com.wingedsheep.sdk.core.Zone.GRAVEYARD)
+        val transition = zones.moveToZone(preState, sourceId, com.wingedsheep.sdk.core.Zone.GRAVEYARD)
         events.add(com.wingedsheep.engine.core.PermanentsSacrificedEvent(controller, listOf(sourceId)))
         events.addAll(transition.events)
         return transition.state to events
@@ -260,11 +260,11 @@ object ManaPaymentWindow {
     fun resumeIfPending(
         state: GameState,
         events: List<GameEvent>,
-        cardRegistry: CardRegistry
+        manaSolver: ManaSolver
     ): ExecutionResult? {
         val frame = state.peekContinuation() as? ReopenManaPaymentDecisionContinuation ?: return null
         val (_, popped) = state.popContinuation()
-        return reopen(popped, frame.suspension, events, cardRegistry)
+        return reopen(popped, frame.suspension, events, manaSolver)
     }
 
     /** Restores the same suspension, with its question refreshed against the current board. */
@@ -272,10 +272,10 @@ object ManaPaymentWindow {
         state: GameState,
         suspension: Suspension,
         events: List<GameEvent>,
-        cardRegistry: CardRegistry
+        manaSolver: ManaSolver
     ): ExecutionResult {
         val decision = suspension.question as SelectManaSourcesDecision
-        val refreshed = refresh(state, decision, cardRegistry)
+        val refreshed = refresh(state, decision, manaSolver)
         return ExecutionResult.propagatePause(
             state.restoreSuspension(suspension.copy(question = refreshed)), events
         )
@@ -293,9 +293,9 @@ object ManaPaymentWindow {
     fun refresh(
         state: GameState,
         decision: SelectManaSourcesDecision,
-        cardRegistry: CardRegistry
+        manaSolver: ManaSolver
     ): SelectManaSourcesDecision {
-        val solver = ManaSolver(cardRegistry)
+        val solver = manaSolver
         val stillAvailable = solver.findAvailableManaSources(state, decision.playerId)
             .map { source ->
                 ManaSourceOption(

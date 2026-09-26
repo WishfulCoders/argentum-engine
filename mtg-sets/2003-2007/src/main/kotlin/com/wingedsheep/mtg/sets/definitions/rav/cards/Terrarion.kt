@@ -22,7 +22,7 @@ import com.wingedsheep.sdk.scripting.TimingRule
  * printed ordering the rulings call out: you choose the colours and get the mana first, and the
  * card is drawn afterwards when the trigger resolves.
  *
- * The trigger is [Triggers.Dies] — battlefield-to-graveyard on the source. It is not creature-only
+ * The trigger is `Triggers.self.dies()` — battlefield-to-graveyard on the source. It is not creature-only
  * despite the name, which is exactly the "no matter how it's put into a graveyard" the rulings want:
  * self-sacrifice, destruction and any other route to the graveyard all fire it.
  */
@@ -44,7 +44,7 @@ val Terrarion = card("Terrarion") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.DrawCards(1)
         description = "When this artifact is put into a graveyard from the battlefield, draw a card."
     }

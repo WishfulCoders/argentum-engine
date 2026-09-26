@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -9,10 +10,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Wildwood Mentor
@@ -30,7 +27,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * Role tokens all feed it).
  *
  * The attack trigger's +X/+X reads Wildwood Mentor's power *as the ability resolves* via
- * [EntityReference.Source] — which is after the counter triggers from the same combat have already
+ * [EffectTarget.Self] — which is after the counter triggers from the same combat have already
  * resolved, and after any pump in response. It resolves to a fixed +X/+X modification at that
  * moment, so it does not re-scale if the Mentor grows or dies later in the turn. `.other()` on the
  * target filter is the printed "another": the Mentor can't pump itself, and with no other attacker
@@ -47,24 +44,15 @@ val WildwoodMentor = card("Wildwood Mentor") {
         "of turn, where X is this creature's power."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Any.youControl().token(),
-            binding = TriggerBinding.ANY
-        )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.a(GameObjectFilter.Any.youControl().token()).enters()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Whenever a token you control enters, put a +1/+1 counter on this creature."
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val ally = target(
-            "another target attacking creature",
-            TargetCreature(filter = TargetFilter.Creature.attacking().other())
-        )
-        val sourcePower = DynamicAmount.EntityProperty(
-            EntityReference.Source,
-            EntityNumericProperty.Power
-        )
+        trigger = Triggers.self.attacks()
+        val ally = target(TargetFilter.Creature.attacking().other())
+        val sourcePower = DynamicAmounts.sourcePower()
         effect = Effects.ModifyStats(power = sourcePower, toughness = sourcePower, target = ally)
         description = "Whenever this creature attacks, another target attacking creature gets " +
             "+X/+X until end of turn, where X is this creature's power."

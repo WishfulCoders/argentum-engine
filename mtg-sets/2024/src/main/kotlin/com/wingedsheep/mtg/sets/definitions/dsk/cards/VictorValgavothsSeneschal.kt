@@ -9,18 +9,11 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.Effect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.IncrementAbilityResolutionCountEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Victor, Valgavoth's Seneschal — Duskmourn: House of Horror #238
@@ -60,10 +53,7 @@ val VictorValgavothsSeneschal = card("Victor, Valgavoth's Seneschal") {
 
     // Eerie — part 1: whenever an enchantment you control enters.
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Enchantment.youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Enchantment.youControl()).enters()
         effect = eerieEscalation()
         description = "Eerie — Whenever an enchantment you control enters, surveil 2 if this is the " +
             "first time this ability has resolved this turn. If it's the second time, each opponent " +
@@ -73,7 +63,7 @@ val VictorValgavothsSeneschal = card("Victor, Valgavoth's Seneschal") {
 
     // Eerie — part 2: whenever you fully unlock a Room.
     triggeredAbility {
-        trigger = Triggers.RoomFullyUnlocked
+        trigger = Triggers.you.fullyUnlocksARoom()
         effect = eerieEscalation()
         description = "Eerie — Whenever you fully unlock a Room, surveil 2 if this is the first time " +
             "this ability has resolved this turn. If it's the second time, each opponent discards a " +
@@ -93,37 +83,30 @@ val VictorValgavothsSeneschal = card("Victor, Valgavoth's Seneschal") {
  * The shared Eerie payoff: increment the source's per-turn resolution count, then run exactly one
  * tier based on whether this is the 1st / 2nd / 3rd resolution this turn.
  */
-private fun eerieEscalation(): Effect = Effects.Composite(
-    IncrementAbilityResolutionCountEffect,
+private fun eerieEscalation(): Effect = IncrementAbilityResolutionCountEffect then
     // 1st time — surveil 2.
-    ConditionalEffect(
+    Effects.If(
         condition = Conditions.SourceAbilityResolvedNTimes(1),
-        effect = Patterns.Library.surveil(2),
-    ),
+        then = Patterns.Library.surveil(2),
+    ) then
     // 2nd time — each opponent discards a card.
-    ConditionalEffect(
+    Effects.If(
         condition = Conditions.SourceAbilityResolvedNTimes(2),
-        effect = Effects.EachOpponentDiscards(1),
-    ),
+        then = Effects.EachOpponentDiscards(1),
+    ) then
     // 3rd time — put a creature card from a graveyard onto the battlefield under your control.
-    ConditionalEffect(
+    Effects.If(
         condition = Conditions.SourceAbilityResolvedNTimes(3),
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.GRAVEYARD, Player.Each, GameObjectFilter.Creature),
-                storeAs = "victorReanimatable",
-            ),
-            SelectFromCollectionEffect(
-                from = "victorReanimatable",
-                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
-                storeSelected = "victorReanimated",
+        then = Effects.Pipeline {
+            val victorReanimatable = gather(
+                CardSource.FromZone(Zone.GRAVEYARD, Player.Each, GameObjectFilter.Creature)
+            )
+            val victorReanimated = chooseExactly(
+                1,
+                from = victorReanimatable,
                 showAllCards = true,
-                prompt = "Put a creature card from a graveyard onto the battlefield under your control",
-            ),
-            MoveCollectionEffect(
-                from = "victorReanimated",
-                destination = CardDestination.ToZone(Zone.BATTLEFIELD),
-            ),
-        ),
-    ),
-)
+                prompt = "Put a creature card from a graveyard onto the battlefield under your control"
+            )
+            move(victorReanimated, CardDestination.ToZone(Zone.BATTLEFIELD))
+        },
+    )

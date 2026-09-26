@@ -26,10 +26,7 @@
                 {
                     "type": "FilterCollection",
                     "from": "looked",
-                    "filter": {
-                        "type": "MatchesFilter",
-                        "filter": "creature"
-                    },
+                    "filter": "creature",
                     "storeMatching": "kept",
                     "storeNonMatching": "rest"
                 },

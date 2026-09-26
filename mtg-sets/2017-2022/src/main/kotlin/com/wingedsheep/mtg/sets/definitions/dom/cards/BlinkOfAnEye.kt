@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Blink of an Eye
@@ -25,13 +24,11 @@ val BlinkOfAnEye = card("Blink of an Eye") {
     keywordAbility(KeywordAbility.kicker("{1}{U}"))
 
     spell {
-        val t = target("target", Targets.NonlandPermanent)
-        effect = Effects.ReturnToHand(t)
-            .then(
-                ConditionalEffect(
-                    condition = WasKicked,
-                    effect = Effects.DrawCards(1)
-                )
+        val t = target(TargetFilter.NonlandPermanent)
+        effect = Effects.ReturnToHand(t) then
+            Effects.If(
+                condition = WasKicked,
+                then = Effects.DrawCards(1)
             )
     }
 

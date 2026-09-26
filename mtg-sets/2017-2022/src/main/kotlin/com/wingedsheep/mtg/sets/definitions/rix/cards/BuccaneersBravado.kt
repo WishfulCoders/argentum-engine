@@ -3,12 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.rix.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Buccaneer's Bravado
@@ -33,19 +31,12 @@ val BuccaneersBravado = card("Buccaneer's Bravado") {
     spell {
         modal {
             mode("Target creature gets +1/+1 and gains first strike until end of turn") {
-                val creature = target("target creature", Targets.Creature)
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.ModifyStats(1, 1, creature) then
                     Effects.GrantKeyword(Keyword.FIRST_STRIKE, creature)
             }
             mode("Target Pirate gets +1/+1 and gains double strike until end of turn") {
-                val pirate = target(
-                    "target Pirate",
-                    TargetPermanent(
-                        filter = TargetFilter(
-                            GameObjectFilter.Permanent.withSubtype(Subtype.PIRATE)
-                        )
-                    )
-                )
+                val pirate = target(TargetFilter(GameObjectFilter.Permanent.withSubtype(Subtype.PIRATE)))
                 effect = Effects.ModifyStats(1, 1, pirate) then
                     Effects.GrantKeyword(Keyword.DOUBLE_STRIKE, pirate)
             }

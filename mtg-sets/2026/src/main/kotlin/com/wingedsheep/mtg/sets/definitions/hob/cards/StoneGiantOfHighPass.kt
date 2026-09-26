@@ -7,8 +7,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Stone-Giant of High Pass
@@ -27,7 +26,7 @@ import com.wingedsheep.sdk.scripting.targets.AnyTarget
  * [CreateTokenEffect] rather than the `Effects.CreateToken` facade — the facade names tokens
  * "<Type> Token" and can't express "Stone Boulder".
  */
-private fun stoneBoulderToken() = CreateTokenEffect(
+private fun stoneBoulderToken() = Effects.CreateToken(
     power = 3,
     toughness = 1,
     colors = emptySet(),
@@ -48,14 +47,14 @@ val StoneGiantOfHighPass = card("Stone-Giant of High Pass") {
     toughness = 7
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = stoneBoulderToken()
         description = "Whenever this creature enters, create a 3/1 colorless Wall artifact " +
             "creature token with defender named Stone Boulder."
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = stoneBoulderToken()
         description = "Whenever this creature attacks, create a 3/1 colorless Wall artifact " +
             "creature token with defender named Stone Boulder."
@@ -63,7 +62,7 @@ val StoneGiantOfHighPass = card("Stone-Giant of High Pass") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{R}"), Costs.Sacrifice(GameObjectFilter.Artifact))
-        val t = target("any target", AnyTarget())
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(4, t)
         description = "{2}{R}, Sacrifice an artifact: This creature deals 4 damage to any target."
     }

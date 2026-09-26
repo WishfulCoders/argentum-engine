@@ -3,12 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.leg.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Horror of Horrors
@@ -26,11 +25,8 @@ val HorrorOfHorrors = card("Horror of Horrors") {
 
     activatedAbility {
         cost = Costs.Sacrifice(GameObjectFilter.Land.withSubtype(Subtype.SWAMP))
-        val creature = target(
-            "target black creature",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.withColor(Color.BLACK))),
-        )
-        effect = RegenerateEffect(creature)
+        val creature = target(TargetFilter(GameObjectFilter.Creature.withColor(Color.BLACK)))
+        effect = Effects.Regenerate(creature)
     }
 
     metadata {

@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Grave Robbers
@@ -30,14 +29,8 @@ val GraveRobbers = card("Grave Robbers") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{B}"), Costs.Tap)
-        val artifact = target(
-            "target artifact card from a graveyard",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Artifact, zone = Zone.GRAVEYARD))
-        )
-        effect = Effects.Composite(
-            Effects.Exile(artifact, fromZone = Zone.GRAVEYARD),
-            Effects.GainLife(2)
-        )
+        val artifact = target(TargetFilter(GameObjectFilter.Artifact, zone = Zone.GRAVEYARD))
+        effect = Effects.Exile(artifact, fromZone = Zone.GRAVEYARD) then Effects.GainLife(2)
     }
 
     metadata {

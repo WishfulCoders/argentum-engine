@@ -4,11 +4,10 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Thwip!
@@ -23,16 +22,12 @@ val Thwip = card("Thwip!") {
     oracleText = "Target creature gets +2/+2 and gains flying until end of turn. If it's a Spider, you gain 2 life."
 
     spell {
-        val t = target("target creature", Targets.Creature)
-        effect = Effects.ModifyStats(2, 2, t)
-            .then(Effects.GrantKeyword(Keyword.FLYING, t))
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.TargetMatchesFilter(
-                        GameObjectFilter.Creature.withSubtype(Subtype.SPIDER), targetIndex = 0
-                    ),
-                    effect = Effects.GainLife(2)
-                )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(2, 2, t) then
+            Effects.GrantKeyword(Keyword.FLYING, t) then
+            Effects.If(
+                condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.withSubtype(Subtype.SPIDER), t),
+                then = Effects.GainLife(2)
             )
     }
 

@@ -30,9 +30,8 @@ val AlpharaelDreamingAcolyte = card("Alpharael, Dreaming Acolyte") {
 
     // ETB: draw two cards, then discard two cards unless you discard an artifact card
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.DrawCards(2)
-            .then(Effects.DiscardUnlessMatching(2, GameObjectFilter.Artifact))
+        trigger = Triggers.self.enters()
+        effect = Effects.DrawCards(2) then Effects.DiscardUnlessMatching(2, GameObjectFilter.Artifact)
     }
 
     // Conditional deathtouch during your turn

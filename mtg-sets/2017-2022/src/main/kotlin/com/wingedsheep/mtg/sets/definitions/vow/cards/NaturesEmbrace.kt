@@ -13,7 +13,7 @@ import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Nature's Embrace
@@ -39,7 +39,7 @@ val NaturesEmbrace = card("Nature's Embrace") {
         "As long as enchanted permanent is a creature, it gets +2/+2.\n" +
         "As long as enchanted permanent is a land, it has \"{T}: Add two mana of any one color.\""
 
-    auraTarget = TargetPermanent(filter = TargetFilter.CreatureOrLandPermanent)
+    auraTarget = TargetObject(filter = TargetFilter.CreatureOrLandPermanent)
 
     // As long as enchanted permanent is a creature, it gets +2/+2.
     staticAbility {
@@ -52,7 +52,7 @@ val NaturesEmbrace = card("Nature's Embrace") {
         condition = Conditions.EnchantedPermanentMatches(GameObjectFilter.Land)
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Tap,
                 effect = Effects.AddAnyColorMana(2),
                 isManaAbility = true,

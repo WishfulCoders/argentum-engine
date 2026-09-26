@@ -1,9 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.core.Subtype
 
 /**
  * Shoot the Sheriff {1}{B}
@@ -20,7 +21,7 @@ val ShootTheSheriff = card("Shoot the Sheriff") {
     oracleText = "Destroy target non-outlaw creature. (Assassins, Mercenaries, Pirates, Rogues, and Warlocks are outlaws. Everyone else is fair game.)"
 
     spell {
-        val creature = target("non-outlaw creature", Targets.NonOutlawCreature)
+        val creature = target(TargetFilter.Creature.notAnyOfSubtypes(Subtype.OUTLAW_TYPES))
         effect = Effects.Destroy(creature)
     }
 

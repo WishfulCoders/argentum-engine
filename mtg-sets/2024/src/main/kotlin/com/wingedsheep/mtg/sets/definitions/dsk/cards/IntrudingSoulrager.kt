@@ -35,10 +35,7 @@ val IntrudingSoulrager = card("Intruding Soulrager") {
             Costs.Tap,
             Costs.Sacrifice(GameObjectFilter.Permanent.withSubtype("Room")),
         )
-        effect = Effects.Composite(
-            Effects.DealDamage(2, EffectTarget.PlayerRef(Player.EachOpponent)),
-            Effects.DrawCards(1),
-        )
+        effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.DrawCards(1)
     }
 
     metadata {

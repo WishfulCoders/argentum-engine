@@ -23,7 +23,7 @@ val PrinceImrahilTheFair = card("Prince Imrahil the Fair") {
     oracleText = "Whenever you draw your second card each turn, create a 1/1 white Human Soldier creature token."
 
     triggeredAbility {
-        trigger = Triggers.NthCardDrawn(2)
+        trigger = Triggers.you.drawsNth(2)
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

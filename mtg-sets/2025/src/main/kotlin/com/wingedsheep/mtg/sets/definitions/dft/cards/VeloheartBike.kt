@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -31,8 +30,8 @@ val VeloheartBike = card("Veloheart Bike") {
     power = 4
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = GainLifeEffect(2)
+        trigger = Triggers.self.enters()
+        effect = Effects.GainLife(2)
     }
     activatedAbility {
         cost = Costs.Tap

@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.tmp.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Elite Javelineer
@@ -22,8 +22,8 @@ val EliteJavelineer = card("Elite Javelineer") {
     oracleText = "Whenever this creature blocks, it deals 1 damage to target attacking creature."
 
     triggeredAbility {
-        trigger = Triggers.Blocks
-        val attacker = target("target", Targets.AttackingCreature)
+        trigger = Triggers.self.blocks()
+        val attacker = target(TargetFilter.AttackingCreature)
         effect = Effects.DealDamage(1, attacker)
     }
 

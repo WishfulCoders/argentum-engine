@@ -2,10 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.p02.cards
 
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.conditions.YouWereAttackedThisStep
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Just Fate
@@ -28,7 +28,7 @@ val JustFate = card("Just Fate") {
     spell {
         castOnlyDuring(Step.DECLARE_ATTACKERS)
         castOnlyIf(YouWereAttackedThisStep)
-        val victim = target("target", Targets.AttackingCreature)
+        val victim = target(TargetFilter.AttackingCreature)
         effect = Effects.Destroy(victim)
     }
 

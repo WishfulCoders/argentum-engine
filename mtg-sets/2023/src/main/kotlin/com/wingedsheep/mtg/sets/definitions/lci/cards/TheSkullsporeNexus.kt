@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -14,8 +13,8 @@ import com.wingedsheep.sdk.scripting.CostReductionSource
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * The Skullspore Nexus {6}{G}{G}
@@ -32,7 +31,7 @@ import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
  *    dynamic source over creatures you
  *    control. Read from projected state, so a creature whose power is defined by another value
  *    (e.g. cards in hand) contributes its current power. Cannot reduce the {G}{G} pips or go below 0.
- *  - Death trigger: a batched [Triggers.OneOrMoreCreaturesYouControlDie] over *nontoken* creatures
+ *  - Death trigger: a batched `Triggers.oneOrMore(filter).die()` over *nontoken* creatures
  *    (CR 603.2c — fires once per death batch, not once per creature). The token's base power and
  *    toughness are both [DynamicAmounts.diedBatchTotalPower], the summed *last-known* power of the
  *    nontoken creatures that died (ruling 2023-11-10: "as they last existed on the battlefield").
@@ -64,7 +63,7 @@ val TheSkullsporeNexus = card("The Skullspore Nexus") {
     // "Whenever one or more nontoken creatures you control die, create a green Fungus Dinosaur
     //  creature token with base power and toughness each equal to the total power of those creatures."
     triggeredAbility {
-        trigger = Triggers.OneOrMoreCreaturesYouControlDie(GameObjectFilter.Creature.nontoken())
+        trigger = Triggers.oneOrMore(GameObjectFilter.Creature.nontoken()).die()
         effect = Effects.CreateDynamicToken(
             dynamicPower = DynamicAmounts.diedBatchTotalPower(),
             dynamicToughness = DynamicAmounts.diedBatchTotalPower(),
@@ -77,10 +76,10 @@ val TheSkullsporeNexus = card("The Skullspore Nexus") {
     // "{2}, {T}: Double target creature's power until end of turn."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        val creature = target("creature whose power to double", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(
-            power = DynamicAmounts.targetPower(0),
-            toughness = DynamicAmount.Fixed(0),
+            power = DynamicAmounts.powerOf(creature),
+            toughness = DynamicAmounts.fixed(0),
             target = creature
         )
     }

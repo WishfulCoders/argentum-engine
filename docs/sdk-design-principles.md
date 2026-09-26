@@ -16,7 +16,7 @@ The strongest version of a feature is usually **not a new type at all**. Before 
 | Zone / library manipulation | The Gather → Select → Move pipeline (`architecture-principles.md` §1.5) — covers almost all of it with zero new executors |
 | A number that changes with game state | A `DynamicAmount` composition (`Add`, `Subtract`, `Multiply`, `Min`, `Max`, `EntityProperty`, counts over a filter) |
 | "Which objects" | A `GameObjectFilter` composition of `CardPredicate` / `StatePredicate` / `ControllerPredicate` |
-| A continuous stat/keyword/type change | An existing static ability (`GrantDynamicStatsEffect`, `ModifyStatsForCreatureGroup`) fed a `DynamicAmount` / `GameObjectFilter` |
+| A continuous stat/keyword/type change | An existing static ability (`GrantDynamicStats`, `ModifyStatsForCreatureGroup`) fed a `DynamicAmount` / `GameObjectFilter` |
 | "Does X match a filter?" | `Conditions.EntityMatches(entity, filter)` and its `SourceMatches` / `EnchantedPermanentMatches` / `TargetMatchesFilter` / `TriggeringSpellMatches` facades — name the entity role via `EffectTarget` |
 | "You did/gained/cast N this turn" | `Compare` over a tracked `DynamicAmount` (e.g. `TurnTracking`). Missing tracker → add the *enum value* (data), not a condition class |
 

@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever you sacrifice another creature, you gain 1 life and scry 1.
  * {1}, Sacrifice another creature: This creature gets +2/+2 until end of turn.
  *
- * The sacrifice trigger is the per-permanent [Triggers.YouSacrificeAnother] over creatures (the
+ * The sacrifice trigger is the per-permanent `Triggers.you.sacrificesAnother(filter)` over creatures (the
  * per-permanent multiplicity CR 603.2c gives the singular wording: sacrificing two creatures to
  * one cost fires it twice), gaining 1 life then scrying 1. The activated pump costs {1} plus sacrificing another creature
  * ([Costs.SacrificeAnother]).
@@ -32,8 +32,8 @@ val Fleshtaker = card("Fleshtaker") {
         "{1}, Sacrifice another creature: This creature gets +2/+2 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.YouSacrificeAnother(GameObjectFilter.Creature)
-        effect = Effects.GainLife(1).then(Effects.Scry(1))
+        trigger = Triggers.you.sacrificesAnother(GameObjectFilter.Creature)
+        effect = Effects.GainLife(1) then Effects.Scry(1)
         description = "Whenever you sacrifice another creature, you gain 1 life and scry 1."
     }
 

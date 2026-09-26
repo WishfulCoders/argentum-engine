@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
 
 /**
@@ -56,8 +55,8 @@ val PublicThoroughfare = card("Public Thoroughfare") {
     replacementEffect(EntersTapped())
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = PayOrSufferEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.PayOrSuffer(
             cost = Costs.pay.Tap(GameObjectFilter.ArtifactOrLand),
             suffer = SacrificeSelfEffect
         )

@@ -1,7 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.wwk.cards
 
 import com.wingedsheep.sdk.core.ManaCost
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
@@ -9,7 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -26,7 +24,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * "This creature or another Vampire you control" is exactly "a Vampire you control" — the source is
  * itself a Vampire — so the trigger is a Vampire-filtered dies event with [TriggerBinding.ANY], which
  * fires off the source's own death via last-known information. The target player is chosen when the
- * ability goes on the stack; the {B} payment is the resolution-time gate ([MayPayManaEffect]) for the
+ * ability goes on the stack; the {B} payment is the resolution-time gate ([Effects.MayPay]) for the
  * drain.
  */
 val KalastriaHighborn = card("Kalastria Highborn") {
@@ -39,18 +37,11 @@ val KalastriaHighborn = card("Kalastria Highborn") {
         "If you do, target player loses 2 life and you gain 2 life."
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Permanent.withSubtype("Vampire").youControl(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY,
-        )
-        val player = target("target player", Targets.Player)
-        effect = MayPayManaEffect(
+        trigger = Triggers.a(GameObjectFilter.Permanent.withSubtype("Vampire").youControl()).dies()
+        val player = target(Targets.Player)
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{B}"),
-            effect = Effects.Composite(
-                Effects.LoseLife(2, player),
-                Effects.GainLife(2, EffectTarget.Controller),
-            ),
+            then = Effects.LoseLife(2, player) then Effects.GainLife(2, EffectTarget.Controller),
         )
     }
 

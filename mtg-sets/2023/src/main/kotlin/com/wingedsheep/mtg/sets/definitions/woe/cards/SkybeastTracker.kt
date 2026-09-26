@@ -33,7 +33,7 @@ val SkybeastTracker = card("Skybeast Tracker") {
     keywords(Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(GameObjectFilter.Any.manaValueAtLeast(5))
+        trigger = Triggers.you.casts(GameObjectFilter.Any.manaValueAtLeast(5))
         effect = Effects.CreateFood()
     }
 

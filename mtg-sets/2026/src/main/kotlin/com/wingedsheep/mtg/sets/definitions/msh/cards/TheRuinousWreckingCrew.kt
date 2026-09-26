@@ -1,10 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -13,8 +15,6 @@ import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * The Ruinous Wrecking Crew
@@ -64,30 +64,28 @@ val TheRuinousWreckingCrew = card("The Ruinous Wrecking Crew") {
         "• Each player sacrifices a creature of their choice."
 
     // The Ruinous Wrecking Crew enters with X +1/+1 counters on it.
-    replacementEffect(EntersWithDynamicCounters(count = DynamicAmount.CastX))
+    replacementEffect(EntersWithDynamicCounters(count = DynamicAmounts.castX()))
 
     // When The Ruinous Wrecking Crew enters, choose up to X — …
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseUpToDynamic(
-            dynamicMax = DynamicAmount.CastX,
+            dynamicMax = DynamicAmounts.castX(),
             // Mode 1 — rummage, unconditionally ("then", not "if you do").
             Mode.noTarget(
-                Patterns.Hand.discardCards(1).then(Effects.DrawCards(1)),
+                Patterns.Hand.discardCards(1) then Effects.DrawCards(1),
                 description = "Discard a card, then draw a card."
             ),
             // Mode 2 — target opponent loses 2 life.
-            Mode.withTarget(
-                Effects.LoseLife(2, EffectTarget.ContextTarget(0)),
-                Targets.Opponent,
-                description = "Target opponent loses 2 life."
-            ),
+            mode("Target opponent loses 2 life.") {
+                val opponent = target(Targets.Opponent)
+                effect = Effects.LoseLife(2, opponent)
+            },
             // Mode 3 — destroy target token (any token permanent).
-            Mode.withTarget(
-                Effects.Destroy(EffectTarget.ContextTarget(0)),
-                TargetObject(filter = TargetFilter(GameObjectFilter.Permanent.token())),
-                description = "Destroy target token."
-            ),
+            mode("Destroy target token.") {
+                val permanent = target(TargetFilter(GameObjectFilter.Permanent.token()))
+                effect = Effects.Destroy(permanent)
+            },
             // Mode 4 — edict on every player, each choosing their own creature.
             Mode.noTarget(
                 Effects.Sacrifice(

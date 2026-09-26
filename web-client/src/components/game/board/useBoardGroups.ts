@@ -1,13 +1,14 @@
 import { useMemo } from 'react'
+import { useGameStore } from '@/store/gameStore.ts'
 import {
   groupCards,
   useBattlefieldCards,
   useSplitOutTargetIds,
-  visibleStackDepth,
   type GroupedCard,
 } from '@/store/selectors.ts'
 import type { EntityId } from '@/types'
-import type { BoardStats, RowStats } from './battlefieldLayout'
+import type { BoardStats } from './battlefieldLayout'
+import { rowStats } from './rowStats'
 
 /** One battlefield's permanents grouped into rendered stacks, plus the footprint stats the sizing solver needs. */
 export interface BoardGroups {
@@ -16,36 +17,6 @@ export interface BoardGroups {
   planeswalkers: readonly GroupedCard[]
   other: readonly GroupedCard[]
   stats: BoardStats
-}
-
-/**
- * Per-row footprint stats for the fit constraints in `battlefieldLayout.ts`.
- *
- * Tapped stacks are rotated 90° on the battlefield — their horizontal footprint
- * is cardHeight (≈1.4 × cardWidth) rather than cardWidth — and every card
- * stacked behind a group's first adds a fixed peek offset. Counted per row so
- * the horizontal-fit constraint reserves the true width; otherwise a crowded
- * row on a narrow viewport overflows into an unbudgeted wrap line, which pushes
- * the row up into the center HUD.
- *
- * Counts are *rendered stacks* (after `groupCards`), not raw cards: a collapsed
- * horde paints at most MAX_VISUAL_STACK_DEPTH cards, so the footprint uses the
- * capped depth (`visibleStackDepth`), not the raw count.
- */
-export function rowStats(...groupLists: (readonly GroupedCard[])[]): RowStats {
-  let count = 0
-  let tapped = 0
-  let stackedExtra = 0
-  for (const groups of groupLists) {
-    for (const group of groups) {
-      count++
-      // Every member of a group shares its tapped state (it's part of the
-      // group key), so the representative answers for the whole stack.
-      if (group.card.isTapped) tapped++
-      stackedExtra += visibleStackDepth(group.count) - 1
-    }
-  }
-  return { count, tapped, stackedExtra }
 }
 
 /**
@@ -74,6 +45,7 @@ export function useBoardGroups(isOpponent: boolean, playerId?: EntityId): BoardG
   const other = isOpponent ? cards.opponentOther : cards.playerOther
 
   const splitOutIds = useSplitOutTargetIds()
+  const expanded = useGameStore((state) => state.expandedStackCardIds)
   const groupedLands = useMemo(() => groupCards(lands, splitOutIds), [lands, splitOutIds])
   const groupedCreatures = useMemo(() => groupCards(creatures, splitOutIds), [creatures, splitOutIds])
   const groupedPlaneswalkers = useMemo(() => groupCards(planeswalkers, splitOutIds), [planeswalkers, splitOutIds])
@@ -81,10 +53,10 @@ export function useBoardGroups(isOpponent: boolean, playerId?: EntityId): BoardG
 
   const stats = useMemo<BoardStats>(
     () => ({
-      front: rowStats(groupedCreatures, groupedPlaneswalkers),
-      back: rowStats(groupedLands, groupedOther),
+      front: rowStats(expanded, groupedCreatures, groupedPlaneswalkers),
+      back: rowStats(expanded, groupedLands, groupedOther),
     }),
-    [groupedCreatures, groupedPlaneswalkers, groupedLands, groupedOther],
+    [expanded, groupedCreatures, groupedPlaneswalkers, groupedLands, groupedOther],
   )
 
   return useMemo(

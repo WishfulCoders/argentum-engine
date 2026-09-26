@@ -19,7 +19,7 @@ import io.kotest.matchers.shouldBe
  * "Whenever you're dealt damage, put that many charge counters on this artifact. At the beginning
  * of each upkeep, you may remove a charge counter from this artifact. If you do, you gain 1 life."
  *
- * Covers the source-blind damage-to-you trigger ([com.wingedsheep.sdk.dsl.Triggers.YouAreDealtDamage]):
+ * Covers the source-blind damage-to-you trigger (`Triggers.you.isDealtDamage()`):
  * a burn spell is a noncreature source, which the old damage-to-you detector silently ignored.
  */
 class SunDropletScenarioTest : FunSpec({

@@ -4,13 +4,13 @@ import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Bitter Chill
@@ -26,7 +26,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * The lock half is Charmed Sleep's shape (tap on entry + [AbilityFlag.DOESNT_UNTAP] granted to the
  * enchanted creature). The refund half fires on *any* trip from battlefield to graveyard — the Aura
  * being destroyed, sacrificed, or falling off as a state-based action when its creature leaves —
- * which is exactly [Triggers.PutIntoGraveyardFromBattlefield].
+ * which is exactly `Triggers.self.dies()`.
  */
 val BitterChill = card("Bitter Chill") {
     manaCost = "{1}{U}"
@@ -38,10 +38,10 @@ val BitterChill = card("Bitter Chill") {
         "When this Aura is put into a graveyard from the battlefield, you may pay {1}. " +
         "If you do, scry 1, then draw a card."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Tap(EffectTarget.EnchantedCreature)
     }
 
@@ -50,10 +50,10 @@ val BitterChill = card("Bitter Chill") {
     }
 
     triggeredAbility {
-        trigger = Triggers.PutIntoGraveyardFromBattlefield
-        effect = MayPayManaEffect(
+        trigger = Triggers.self.dies()
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{1}"),
-            effect = Patterns.Library.scry(1).then(Effects.DrawCards(1))
+            then = Patterns.Library.scry(1) then Effects.DrawCards(1)
         )
     }
 

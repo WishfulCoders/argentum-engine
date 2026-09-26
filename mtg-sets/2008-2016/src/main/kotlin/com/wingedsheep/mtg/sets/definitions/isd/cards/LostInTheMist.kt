@@ -8,9 +8,7 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CounterEffect
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 
 /**
@@ -25,12 +23,9 @@ val LostInTheMist = card("Lost in the Mist") {
     typeLine = "Instant"
     oracleText = "Counter target spell. Return target permanent to its owner's hand."
     spell {
-        val t1 = target("t1", TargetSpell())
-        val t2 = target("t2", TargetPermanent())
-        effect = Effects.Composite(
-            CounterEffect(),
-            Effects.Move(t2, Zone.HAND)
-        )
+        val t1 = target(TargetFilter.SpellOnStack)
+        val t2 = target(TargetFilter.Permanent)
+        effect = Effects.CounterSpell() then Effects.Move(t2, Zone.HAND)
     }
     metadata {
         rarity = Rarity.COMMON

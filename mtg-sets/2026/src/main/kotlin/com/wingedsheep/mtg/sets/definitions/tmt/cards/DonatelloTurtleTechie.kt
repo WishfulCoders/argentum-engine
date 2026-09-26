@@ -23,7 +23,7 @@ val DonatelloTurtleTechie = card("Donatello, Turtle Techie") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.ControlArtifact
         effect = Effects.DrawCards(1)
     }

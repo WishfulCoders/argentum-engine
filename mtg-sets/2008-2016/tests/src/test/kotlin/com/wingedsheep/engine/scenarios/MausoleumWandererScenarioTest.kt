@@ -14,6 +14,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Mausoleum Wanderer (EMN) — {U} Creature — Spirit 1/1
@@ -24,7 +25,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  *  where X is this creature's power."
  *
  * The load-bearing detail is that X is read *after* the Wanderer has already been sacrificed to pay
- * the cost. `EntityReference.Source` resolves with last-known information (CR 112.7a / 608.2h), so
+ * the cost. `EffectTarget.Self` resolves with last-known information (CR 112.7a / 608.2h), so
  * the pre-sacrifice snapshot must supply the pumped power. These tests pin X to 1 unpumped and 2
  * after one Spirit has entered, by giving the opposing spell's controller exactly one mana: at X=1
  * they get a real pay-or-be-countered choice, at X=2 they simply can't pay.
@@ -53,7 +54,7 @@ class MausoleumWandererScenarioTest : FunSpec({
         val shepherd = driver.putCardInHand(me, "Spectral Shepherd")
         driver.giveMana(me, Color.WHITE, 1)
         driver.giveColorlessMana(me, 2)
-        driver.castSpell(me, shepherd).isSuccess shouldBe true
+        driver.castSpell(me, shepherd).outcome shouldBe Outcome.Done
         driver.bothPass() // Shepherd enters
         driver.bothPass() // the +1/+1 trigger resolves
 
@@ -112,7 +113,7 @@ class MausoleumWandererScenarioTest : FunSpec({
         val shepherd = driver.putCardInHand(me, "Spectral Shepherd")
         driver.giveMana(me, Color.WHITE, 1)
         driver.giveColorlessMana(me, 2)
-        driver.castSpell(me, shepherd).isSuccess shouldBe true
+        driver.castSpell(me, shepherd).outcome shouldBe Outcome.Done
         driver.bothPass()
         driver.bothPass()
         driver.state.projectedState.getPower(wanderer) shouldBe 2

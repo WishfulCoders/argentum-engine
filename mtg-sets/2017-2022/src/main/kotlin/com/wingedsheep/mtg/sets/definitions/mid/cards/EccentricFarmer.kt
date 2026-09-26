@@ -35,7 +35,7 @@ val EccentricFarmer = card("Eccentric Farmer") {
         "into your graveyard.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Pipeline {
             run(Patterns.Library.mill(3))
             val lands = gather(CardSource.FromZone(Zone.GRAVEYARD, Player.You, Filters.Land))

@@ -31,7 +31,7 @@ val DoomskarTitan = card("Doomskar Titan") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Group.pumpAndGrantToAll(
             power = 1,
             toughness = 0,

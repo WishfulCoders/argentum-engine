@@ -32,13 +32,13 @@ val GandalfWhiteRider = card("Gandalf, White Rider") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.YouCastSpell
-        effect = Patterns.Group.modifyStatsForAll(1, 0, Filters.Group.creaturesYouControl)
-            .then(Patterns.Library.scry(1))
+        trigger = Triggers.you.casts()
+        effect = Patterns.Group.modifyStatsForAll(1, 0, Filters.Group.creaturesYouControl) then
+            Patterns.Library.scry(1)
     }
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         optional = true
         effect = Effects.PutIntoLibraryNthFromTop(EffectTarget.Self, positionFromTop = 4)
     }

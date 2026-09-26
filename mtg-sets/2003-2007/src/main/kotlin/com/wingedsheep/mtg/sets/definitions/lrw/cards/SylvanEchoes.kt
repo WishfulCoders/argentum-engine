@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.model.Rarity
  * that makes load-bearing, and both are in its ruling ("if you win a clash initiated by a spell or
  * ability an opponent controls, the ability will still trigger"):
  *
- *  - The trigger is [Triggers.WheneverYouClashAndWin], which watches the `ClashedEvent` emitted for
+ *  - The trigger is `Triggers.you.clashes(true)`, which watches the `ClashedEvent` emitted for
  *    *you as a participant*. An opponent's Adder-Staff Boggart makes you clash too, and if your
  *    revealed card is the bigger one you drew from their trigger.
  *  - The win is on the trigger, not inside the effect, because the printed wording is "clash **and
@@ -28,7 +28,7 @@ val SylvanEchoes = card("Sylvan Echoes") {
     oracleText = "Whenever you clash and win, you may draw a card."
 
     triggeredAbility {
-        trigger = Triggers.WheneverYouClashAndWin
+        trigger = Triggers.you.clashes(true)
         effect = Effects.DrawCards(1)
         optional = true
         description = "you may draw a card."

@@ -32,7 +32,7 @@ val TreetopDefense = card("Treetop Defense") {
         castOnlyIf(YouWereAttackedThisStep)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.GrantKeyword(Keyword.REACH, EffectTarget.Self)
+            Effects.GrantKeyword(Keyword.REACH, EffectTarget.IterationEntity)
         )
     }
     metadata {

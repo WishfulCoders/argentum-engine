@@ -32,7 +32,7 @@ val BilboBagginsBurglar = card("Bilbo Baggins, Burglar") {
     oracleText = "When Bilbo Baggins enters, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1)
         description = "When Bilbo Baggins enters, draw a card."
     }

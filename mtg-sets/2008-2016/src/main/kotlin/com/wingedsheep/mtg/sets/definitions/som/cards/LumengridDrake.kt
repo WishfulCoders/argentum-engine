@@ -3,11 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.som.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Lumengrid Drake
@@ -35,9 +35,9 @@ val LumengridDrake = card("Lumengrid Drake") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouControlAtLeast(3, GameObjectFilter.Artifact)
-        val victim = target("target creature", Targets.Creature)
+        val victim = target(TargetFilter.Creature)
         effect = Effects.ReturnToHand(victim)
         description = "Metalcraft — When this creature enters, if you control three or more artifacts, " +
             "return target creature to its owner's hand."

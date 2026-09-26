@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Fabrication Foundry — {1}{W}
@@ -74,13 +73,10 @@ val FabricationFoundry = card("Fabrication Foundry") {
             Costs.ExilePermanents(GameObjectFilter.Artifact, minCount = 1, excludeSelf = true)
         )
         val t = target(
-            "target artifact card with mana value X or less from your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    baseFilter = GameObjectFilter.Artifact.ownedByYou().manaValueAtMostX(),
-                    zone = Zone.GRAVEYARD
-                )
-            )
+            TargetFilter(
+                baseFilter = GameObjectFilter.Artifact.ownedByYou().manaValueAtMostX(),
+                zone = Zone.GRAVEYARD
+            ),
         )
         // The graveyard guard is the facade's whole point (CR 608.2b): if the targeted card has left
         // the graveyard by resolution the move is skipped, rather than dragging it back from wherever

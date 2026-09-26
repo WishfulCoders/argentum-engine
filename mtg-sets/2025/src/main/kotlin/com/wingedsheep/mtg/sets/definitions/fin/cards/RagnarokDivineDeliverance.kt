@@ -3,13 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Ragnarok, Divine Deliverance
@@ -46,19 +44,10 @@ val RagnarokDivineDeliverance = card("Ragnarok, Divine Deliverance") {
     keywords(Keyword.VIGILANCE, Keyword.MENACE, Keyword.TRAMPLE, Keyword.REACH, Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val permanent = target("permanent", Targets.Permanent)
-        val reanimate = target(
-            "nonlegendary permanent card from your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.Permanent.ownedByYou().nonlegendary(),
-                    zone = Zone.GRAVEYARD,
-                ),
-            ),
-        )
-        effect = Effects.Destroy(permanent)
-            .then(Effects.PutOntoBattlefield(reanimate))
+        trigger = Triggers.self.dies()
+        val permanent = target(TargetFilter.Permanent)
+        val reanimate = target(TargetFilter(GameObjectFilter.Permanent.ownedByYou().nonlegendary(), zone = Zone.GRAVEYARD))
+        effect = Effects.Destroy(permanent) then Effects.PutOntoBattlefield(reanimate)
     }
 
     metadata {

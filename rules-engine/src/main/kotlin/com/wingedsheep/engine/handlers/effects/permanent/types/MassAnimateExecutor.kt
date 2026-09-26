@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.permanent.types
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.BattlefieldFilterUtils
@@ -29,7 +30,9 @@ import kotlin.reflect.KClass
  * continuous group statics (GrantCardType + LoseAllAbilities + SetBasePowerToughnessDynamicStatic)
  * used while the generating permanent (e.g. Titania's Song) is on the battlefield.
  */
-class MassAnimateExecutor : EffectExecutor<MassAnimateEffect> {
+class MassAnimateExecutor(
+    private val predicateEvaluator: PredicateEvaluator
+) : EffectExecutor<MassAnimateEffect> {
 
     override val effectType: KClass<MassAnimateEffect> = MassAnimateEffect::class
 
@@ -39,7 +42,8 @@ class MassAnimateExecutor : EffectExecutor<MassAnimateEffect> {
         context: EffectContext
     ): EffectResult {
         val affectedEntities = BattlefieldFilterUtils.findMatchingOnBattlefield(
-            state, effect.filter, context
+            state, effect.filter, context,
+            predicateEvaluator = predicateEvaluator
         ).toSet()
 
         if (affectedEntities.isEmpty()) {

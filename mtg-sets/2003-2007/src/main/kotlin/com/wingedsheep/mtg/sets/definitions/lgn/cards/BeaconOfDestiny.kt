@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.lgn.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.RedirectNextDamageEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -24,7 +24,7 @@ val BeaconOfDestiny = card("Beacon of Destiny") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = RedirectNextDamageEffect(
+        effect = Effects.RedirectNextDamage(
             protectedTargets = listOf(EffectTarget.Controller),
             redirectTo = EffectTarget.Self
         )

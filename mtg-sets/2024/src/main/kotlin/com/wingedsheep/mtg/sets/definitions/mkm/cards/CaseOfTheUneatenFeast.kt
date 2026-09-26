@@ -12,10 +12,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.MayCastFromGraveyard
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -57,10 +54,7 @@ val CaseOfTheUneatenFeast = card("Case of the Uneaten Feast") {
         "card from your graveyard\" until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.youControl(),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).enters()
         effect = Effects.GainLife(1)
         description = "Whenever a creature you control enters, you gain 1 life."
     }
@@ -69,24 +63,23 @@ val CaseOfTheUneatenFeast = card("Case of the Uneaten Feast") {
 
     solvedActivatedAbility {
         cost = Costs.SacrificeSelf
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.FromZone(
+        effect = Effects.Pipeline {
+            val creatures = gather(
+                CardSource.FromZone(
                     zone = Zone.GRAVEYARD,
                     player = Player.You,
                     filter = GameObjectFilter.Creature
-                ),
-                storeAs = "uneatenFeast.creatures"
-            ),
-            ForEachInCollectionEffect(
-                collection = "uneatenFeast.creatures",
-                effect = Effects.GrantStaticAbility(
-                    ability = MayCastFromGraveyard(filter = GameObjectFilter.Creature),
-                    target = EffectTarget.Self,
-                    duration = Duration.EndOfTurn
                 )
             )
-        )
+            run(Effects.ForEachInCollection(
+                creatures,
+                Effects.GrantStaticAbility(
+                    ability = MayCastFromGraveyard(filter = GameObjectFilter.Creature),
+                    target = EffectTarget.IterationEntity,
+                    duration = Duration.EndOfTurn
+                )
+            ))
+        }
         description = "Sacrifice this Case: Creature cards in your graveyard gain \"You may cast " +
             "this card from your graveyard\" until end of turn."
     }

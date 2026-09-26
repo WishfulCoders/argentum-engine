@@ -9,13 +9,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CastFromCollectionWithoutPayingCostEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Sunforger — Ravnica: City of Guilds #272
@@ -69,27 +63,25 @@ val Sunforger = card("Sunforger") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{R}{W}"), Costs.Unattach)
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.FromZone(
+        effect = Effects.Pipeline {
+            val sunforgerSearch = gather(
+                CardSource.FromZone(
                     Zone.LIBRARY,
                     Player.You,
                     GameObjectFilter.Instant
                         .withAnyColor(Color.RED, Color.WHITE)
                         .manaValueAtMost(4)
-                ),
-                storeAs = "sunforgerSearch"
-            ),
-            SelectFromCollectionEffect(
-                from = "sunforgerSearch",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                storeSelected = "sunforgerFound",
+                )
+            )
+            val sunforgerFound = chooseUpTo(
+                1,
+                from = sunforgerSearch,
                 prompt = "Search for a red or white instant card with mana value 4 or less to " +
                     "cast without paying its mana cost"
-            ),
-            ShuffleLibraryEffect(),
-            CastFromCollectionWithoutPayingCostEffect(from = "sunforgerFound")
-        )
+            )
+            run(Effects.ShuffleLibrary())
+            run(Effects.CastFromCollectionWithoutPayingCost(from = sunforgerFound))
+        }
     }
 
     equipAbility("{3}")

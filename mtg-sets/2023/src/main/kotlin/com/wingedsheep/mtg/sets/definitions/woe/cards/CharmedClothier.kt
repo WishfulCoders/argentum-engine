@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Charmed Clothier
@@ -36,8 +37,8 @@ val CharmedClothier = card("Charmed Clothier") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", Targets.OtherCreatureYouControl)
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.OtherCreatureYouControl)
         effect = Effects.CreateRoleToken("Royal Role", t)
     }
 

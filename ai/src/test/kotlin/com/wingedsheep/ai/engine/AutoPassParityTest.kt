@@ -1,5 +1,6 @@
 package com.wingedsheep.ai.engine
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActionProcessor
 import com.wingedsheep.engine.core.GameConfig
 import com.wingedsheep.engine.core.GameInitializer
@@ -49,7 +50,7 @@ class AutoPassParityTest : FunSpec({
         register(draftableCards(set))
         register(set.basicLands)
     }
-    val enricher = LegalActionEnricher(ManaSolver(registry), registry)
+    val enricher = LegalActionEnricher(ManaSolver(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null)), registry)
 
     /** One captured priority window: the state, whose priority it is, and what they may do. */
     data class Window(val state: GameState, val playerId: EntityId, val actions: List<LegalAction>)

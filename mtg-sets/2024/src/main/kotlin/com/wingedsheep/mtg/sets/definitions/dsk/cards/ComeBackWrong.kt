@@ -3,20 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.dsk.cards
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Come Back Wrong
@@ -49,38 +42,24 @@ val ComeBackWrong = card("Come Back Wrong") {
         "return it to the battlefield under your control. Sacrifice it at the beginning of your " +
         "next end step."
 
-    val reanimated = EffectTarget.PipelineTarget("comeBackWrong")
-
     spell {
-        target("target creature", Targets.Creature)
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(source = CardSource.ChosenTargets, storeAs = "comeBackTargets"),
-                MoveCollectionEffect(
-                    from = "comeBackTargets",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD),
-                    moveType = MoveType.Destroy,
-                    storeMovedAs = "died"
-                ),
-                // "If a creature card is put into a graveyard this way" — tokens cease to exist, so
-                // only a nontoken creature card remains to be reanimated.
-                SelectFromCollectionEffect(
-                    from = "died",
-                    selection = SelectionMode.All,
-                    filter = GameObjectFilter.Creature.nontoken(),
-                    storeSelected = "toReanimate"
-                ),
-                MoveCollectionEffect(
-                    from = "toReanimate",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD),
-                    storeMovedAs = "comeBackWrong"
-                ),
-                CreateDelayedTriggerEffect(
-                    step = Step.END,
-                    effect = Effects.SacrificeTarget(reanimated)
-                )
+        target(TargetFilter.Creature)
+        effect = Effects.Pipeline {
+            val comeBackTargets = gather(CardSource.ChosenTargets)
+            val died = moveTracked(
+                comeBackTargets,
+                CardDestination.ToZone(Zone.GRAVEYARD),
+                moveType = MoveType.Destroy
             )
-        )
+            // "If a creature card is put into a graveyard this way" — tokens cease to exist, so
+            // only a nontoken creature card remains to be reanimated.
+            val toReanimate = selectAll(from = died, filter = GameObjectFilter.Creature.nontoken())
+            val reanimated = moveTracked(toReanimate, CardDestination.ToZone(Zone.BATTLEFIELD))
+            run(Effects.CreateDelayedTrigger(
+                step = Step.END,
+                effect = Effects.SacrificeTarget(reanimated.asTarget)
+            ))
+        }
     }
 
     metadata {

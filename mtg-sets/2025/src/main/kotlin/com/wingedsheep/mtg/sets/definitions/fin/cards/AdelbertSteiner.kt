@@ -3,13 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Adelbert Steiner
@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * Adelbert Steiner gets +1/+1 for each Equipment you control.
  *
  * Modeling: lifelink is an intrinsic keyword; the self-buff is a continuous static
- * ([GrantDynamicStatsEffect] scoped to [GroupFilter.source]) whose bonus recomputes
+ * ([GrantDynamicStats] scoped to [GroupFilter.source]) whose bonus recomputes
  * from a live count of Equipment you control ([DynamicAmount.Count]).
  */
 val AdelbertSteiner = card("Adelbert Steiner") {
@@ -34,17 +34,17 @@ val AdelbertSteiner = card("Adelbert Steiner") {
     keywords(Keyword.LIFELINK)
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
-            powerBonus = DynamicAmount.Count(
-                player = Player.You,
-                zone = Zone.BATTLEFIELD,
-                filter = GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl()
+            powerBonus = DynamicAmounts.count(
+                Player.You,
+                Zone.BATTLEFIELD,
+                GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl()
             ),
-            toughnessBonus = DynamicAmount.Count(
-                player = Player.You,
-                zone = Zone.BATTLEFIELD,
-                filter = GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl()
+            toughnessBonus = DynamicAmounts.count(
+                Player.You,
+                Zone.BATTLEFIELD,
+                GameObjectFilter.Artifact.withSubtype(Subtype.EQUIPMENT).youControl()
             )
         )
     }

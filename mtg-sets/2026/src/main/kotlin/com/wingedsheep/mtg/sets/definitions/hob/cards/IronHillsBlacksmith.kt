@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreatePredefinedTokenEffect
 
 /**
  * Iron Hills Blacksmith — The Hobbit #16
@@ -33,8 +33,8 @@ val IronHillsBlacksmith = card("Iron Hills Blacksmith") {
     keywords(Keyword.DOUBLE_STRIKE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreatePredefinedTokenEffect("Axe")
+        trigger = Triggers.self.enters()
+        effect = Effects.CreatePredefinedToken("Axe")
         description = "When this creature enters, create a colorless Equipment artifact token named " +
             "Axe with \"Equipped creature gets +1/+0\" and equip {2}."
     }

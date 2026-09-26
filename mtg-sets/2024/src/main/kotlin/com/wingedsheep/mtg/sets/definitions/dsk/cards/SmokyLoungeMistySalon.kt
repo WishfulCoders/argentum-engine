@@ -9,6 +9,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardLayout
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.ManaRestriction
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Smoky Lounge // Misty Salon (DSK 235) — split-layout Room (CR 709.5).
@@ -43,7 +44,7 @@ val SmokyLoungeMistySalon = card("Smoky Lounge // Misty Salon") {
             "to cast Room spells and unlock doors."
 
         triggeredAbility {
-            trigger = Triggers.FirstMainPhase
+            trigger = Triggers.you.beginningOf(Step.PRECOMBAT_MAIN)
             effect = Effects.AddMana(
                 color = Color.RED,
                 amount = 2,
@@ -66,7 +67,7 @@ val SmokyLoungeMistySalon = card("Smoky Lounge // Misty Salon") {
             "flying, where X is the number of unlocked doors among Rooms you control."
 
         triggeredAbility {
-            trigger = Triggers.OnDoorUnlocked
+            trigger = Triggers.self.doorUnlocked()
             effect = Effects.CreateDynamicToken(
                 dynamicPower = DynamicAmounts.unlockedDoors(),
                 dynamicToughness = DynamicAmounts.unlockedDoors(),

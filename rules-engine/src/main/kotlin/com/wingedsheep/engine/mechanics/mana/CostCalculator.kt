@@ -38,7 +38,6 @@ import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.filters.unified.Scope
-import com.wingedsheep.engine.handlers.ConditionEvaluator
 import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.PredicateEvaluator
@@ -61,10 +60,10 @@ import com.wingedsheep.sdk.scripting.predicates.CardPredicate
  */
 class CostCalculator(
     private val cardRegistry: CardRegistry,
-    private val predicateEvaluator: PredicateEvaluator = PredicateEvaluator(),
-    private val conditionEvaluator: ConditionEvaluator = ConditionEvaluator(),
-    private val dynamicAmountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val predicateEvaluator: PredicateEvaluator
 ) {
+    private val conditionEvaluator = predicateEvaluator.conditions
+    private val dynamicAmountEvaluator = predicateEvaluator.amounts
 
     /**
      * Calculate the effective cost of casting a spell after applying all cost reductions.
@@ -243,6 +242,7 @@ class CostCalculator(
                     matchesCardDefinition(cardDef, target.filter, sourceId, state, state.projectedState)
             }
             is SpellCostTarget.AnyCaster -> matchesCardDefinition(cardDef, target.filter, sourceId, state, state.projectedState)
+            is SpellCostTarget.OpponentsCast -> opponentsCastMatches(target, cardDef, casterId, sourceId, state)
             is SpellCostTarget.OpponentsCastTargeting ->
                 opponentsCastTargetingMatches(state, casterId, sourceId, target.targetFilter, chosenTargets)
             is SpellCostTarget.OpponentsCastFromZones -> {
@@ -267,6 +267,22 @@ class CostCalculator(
             SpellCostTarget.FaceDownYouCast -> false
             SpellCostTarget.MorphActivation -> false
         }
+    }
+
+    /**
+     * [SpellCostTarget.OpponentsCast]: the source is controlled by an opponent of the caster and
+     * the card matches the filter. Shared by the ordinary and the alternative-base cost paths.
+     */
+    private fun opponentsCastMatches(
+        target: SpellCostTarget.OpponentsCast,
+        cardDef: CardDefinition,
+        casterId: EntityId,
+        sourceId: EntityId,
+        state: GameState,
+    ): Boolean {
+        val sourceController = state.projectedState.getController(sourceId) ?: return false
+        if (sourceController == casterId) return false
+        return matchesCardDefinition(cardDef, target.filter, sourceId, state, state.projectedState)
     }
 
     /**
@@ -344,6 +360,7 @@ class CostCalculator(
     private fun filterForGating(target: SpellCostTarget) = when (target) {
         is SpellCostTarget.YouCast -> target.filter
         is SpellCostTarget.AnyCaster -> target.filter
+        is SpellCostTarget.OpponentsCast -> target.filter
         else -> null  // Gating requires a filter to know what "of type" means.
     }
 
@@ -642,16 +659,14 @@ class CostCalculator(
         filter: GameObjectFilter,
         property: EntityNumericProperty
     ): Int {
-        val projectedState = state.projectedState
+        val projected = state.projectedState
+        val context = PredicateContext(controllerId = playerId)
         var maxValue = 0
-        for (entityId in state.getBattlefield(playerId)) {
+        for (entityId in state.controlledBattlefield(playerId)) {
+            if (!predicateEvaluator.matches(state, projected, entityId, filter, context)) continue
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
             val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
-            val matches = filter.cardPredicates.all { predicate ->
-                matchesBattlefieldPredicate(entityId, cardDef, predicate, projectedState)
-            }
-            if (!matches) continue
-            val value = numericProperty(projectedState, entityId, card, cardDef, property)
+            val value = numericProperty(projected, entityId, card, cardDef, property)
             if (value > maxValue) maxValue = value
         }
         return maxValue
@@ -722,7 +737,7 @@ class CostCalculator(
      * carries the cost modifier (The Scarlet Witch's "where X is The Scarlet Witch's power").
      *
      * Delegates to [DynamicAmountEvaluator] rather than re-deriving the reads here, so
-     * `EntityReference.Source` and the rest of the [DynamicAmount] vocabulary behave exactly as they
+     * `EffectTarget.Self` and the rest of the [DynamicAmount] vocabulary behave exactly as they
      * do everywhere else — power/toughness come from projected state (CR 613: counters, Auras, and
      * anthems on the source count), base P/T and mana value come from the printed card, and counter
      * counts read the source's [CountersComponent].
@@ -973,13 +988,10 @@ class CostCalculator(
      * Uses projected state for type/subtype matching to account for continuous effects.
      */
     private fun controlsMatchingPermanent(state: GameState, playerId: EntityId, filter: GameObjectFilter): Boolean {
-        val projectedState = state.projectedState
-        return state.getBattlefield(playerId).any { entityId ->
-            val card = state.getEntity(entityId)?.get<CardComponent>() ?: return@any false
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: return@any false
-            filter.cardPredicates.all { predicate ->
-                matchesBattlefieldPredicate(entityId, cardDef, predicate, projectedState)
-            }
+        val projected = state.projectedState
+        val context = PredicateContext(controllerId = playerId)
+        return state.controlledBattlefield(playerId).any { entityId ->
+            predicateEvaluator.matches(state, projected, entityId, filter, context)
         }
     }
 
@@ -1035,27 +1047,6 @@ class CostCalculator(
     }
 
     /**
-     * Match a battlefield permanent against a card predicate.
-     * Uses projected state when available for type/subtype checks.
-     */
-    private fun matchesBattlefieldPredicate(
-        entityId: EntityId,
-        cardDef: CardDefinition,
-        predicate: CardPredicate,
-        projectedState: com.wingedsheep.engine.mechanics.layers.ProjectedState?
-    ): Boolean {
-        return when (predicate) {
-            is CardPredicate.IsCreature -> projectedState?.isCreature(entityId) ?: cardDef.typeLine.isCreature
-            is CardPredicate.IsArtifact -> projectedState?.hasType(entityId, "ARTIFACT") ?: cardDef.typeLine.isArtifact
-            is CardPredicate.IsEnchantment -> projectedState?.hasType(entityId, "ENCHANTMENT") ?: cardDef.typeLine.isEnchantment
-            is CardPredicate.IsLand -> projectedState?.hasType(entityId, "LAND") ?: cardDef.typeLine.isLand
-            is CardPredicate.IsPermanent -> cardDef.typeLine.isPermanent
-            is CardPredicate.HasSubtype -> projectedState?.hasSubtype(entityId, predicate.subtype.value) ?: (predicate.subtype in cardDef.typeLine.subtypes)
-            else -> false
-        }
-    }
-
-    /**
      * Count permanents matching a filter that have a specific counter type.
      * Uses projected state for type/subtype checks.
      */
@@ -1063,20 +1054,14 @@ class CostCalculator(
         state: GameState,
         playerId: EntityId,
         filter: GameObjectFilter,
-        counterType: String
+        counterType: CounterType
     ): Int {
-        val projectedState = state.projectedState
-        val ct = CounterType.entries.find { it.name.equals(counterType, ignoreCase = true) }
-            ?: return 0
-        return state.getBattlefield(playerId).count { entityId ->
-            val container = state.getEntity(entityId) ?: return@count false
-            val card = container.get<CardComponent>() ?: return@count false
-            val counters = container.get<CountersComponent>()
-            if ((counters?.getCount(ct) ?: 0) <= 0) return@count false
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: return@count false
-            filter.cardPredicates.all { predicate ->
-                matchesBattlefieldPredicate(entityId, cardDef, predicate, projectedState)
-            }
+        val projected = state.projectedState
+        val context = PredicateContext(controllerId = playerId)
+        return state.controlledBattlefield(playerId).count { entityId ->
+            val counters = state.getEntity(entityId)?.get<CountersComponent>()
+            if ((counters?.getCount(counterType) ?: 0) <= 0) return@count false
+            predicateEvaluator.matches(state, projected, entityId, filter, context)
         }
     }
 
@@ -1107,15 +1092,13 @@ class CostCalculator(
         playerId: EntityId,
         filter: GameObjectFilter
     ): Int {
-        val projectedState = state.projectedState
+        val projected = state.projectedState
+        val context = PredicateContext(controllerId = playerId)
         val names = mutableSetOf<String>()
-        for (entityId in state.getBattlefield(playerId)) {
+        for (entityId in state.controlledBattlefield(playerId)) {
+            if (!predicateEvaluator.matches(state, projected, entityId, filter, context)) continue
             val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
-            val matches = filter.cardPredicates.all { predicate ->
-                matchesBattlefieldPredicate(entityId, cardDef, predicate, projectedState)
-            }
-            if (matches) names.add(card.name)
+            names.add(card.name)
         }
         return names.size
     }
@@ -1220,6 +1203,27 @@ class CostCalculator(
         return true
     }
 
+    /**
+     * Resolve [amount] for a card-definition filter owned by the permanent [sourceEntityId], with
+     * "you" bound to that permanent's (projected) controller. Null when there is no source or state
+     * to resolve against — callers then treat the predicate as unmatched (fail closed).
+     */
+    private fun sourceDynamicValue(
+        state: GameState?,
+        sourceEntityId: EntityId?,
+        amount: DynamicAmount
+    ): Int? {
+        if (state == null || sourceEntityId == null) return null
+        val controllerId = state.projectedState.getController(sourceEntityId)
+            ?: state.getEntity(sourceEntityId)?.get<com.wingedsheep.engine.state.components.identity.ControllerComponent>()?.playerId
+            ?: return null
+        return dynamicAmountEvaluator.evaluate(
+            state,
+            amount,
+            EffectContext(sourceId = sourceEntityId, controllerId = controllerId),
+        )
+    }
+
     private fun matchesCardPredicate(
         cardDef: CardDefinition,
         predicate: CardPredicate,
@@ -1289,12 +1293,21 @@ class CostCalculator(
             is CardPredicate.ManaValueAtMostEntity -> false
             is CardPredicate.ManaValueAtMostEntityManaSpent -> false
             is CardPredicate.ManaValueAtMostColorsSpent -> false
-            is CardPredicate.ManaValueAtMostDynamic -> false
-        is CardPredicate.ManaValueEqualsDynamic -> false
+            // A dynamic cap/target is resolved against the source permanent's controller at the
+            // moment the filter is checked (Omnipresence: "mana value less than or equal to the
+            // number of creatures you control"). With no source or state there is nothing to
+            // resolve "you" against, so the predicate stays closed.
+            is CardPredicate.ManaValueAtMostDynamic ->
+                sourceDynamicValue(state, sourceEntityId, predicate.amount)
+                    ?.let { cardDef.manaCost.cmc <= it } ?: false
+        is CardPredicate.ManaValueEqualsDynamic ->
+            sourceDynamicValue(state, sourceEntityId, predicate.amount)
+                ?.let { cardDef.manaCost.cmc == it } ?: false
         is CardPredicate.PowerEqualsDynamic -> false
         is CardPredicate.ToughnessEqualsDynamic -> false
             is CardPredicate.PowerGreaterThanEntity -> false
             is CardPredicate.PowerAtMostEntity -> false
+            is CardPredicate.CouldEnchant -> false
             is CardPredicate.PowerLessThanEntity -> false
             // A printed card's power never exceeds its own base power statically (they're equal).
             CardPredicate.PowerGreaterThanBase -> false
@@ -1305,6 +1318,8 @@ class CostCalculator(
                 cardDef.manaCost.coloredSymbolCount(predicate.colors.toSet()) >= predicate.min
 
             is CardPredicate.PowerEquals -> cardDef.creatureStats?.basePower == predicate.value
+            is CardPredicate.BasePowerEquals -> cardDef.creatureStats?.basePower == predicate.value
+            is CardPredicate.BaseToughnessEquals -> cardDef.creatureStats?.baseToughness == predicate.value
             // CostCalculator has no X context; predicate has no static answer here.
             CardPredicate.PowerEqualsX -> false
             is CardPredicate.PowerAtMost -> (cardDef.creatureStats?.basePower ?: 0) <= predicate.max
@@ -1599,6 +1614,9 @@ class CostCalculator(
                 // zone is unknown (a coarse "any free-cast source?" probe), such a source doesn't
                 // count toward a hand cast — require an explicit EXILE zone.
                 if (ability.fromExileOnly && castFromZone != com.wingedsheep.sdk.core.Zone.EXILE) continue
+                // `fromHandOnly` (Omnipresence — "from your hand") frees only hand casts. The coarse
+                // probe (unknown zone) still counts it, since a matching card may be in hand.
+                if (ability.fromHandOnly && castFromZone != null && castFromZone != com.wingedsheep.sdk.core.Zone.HAND) continue
                 if (ability.controllerOnly) {
                     val controllerId = state.projectedState.getController(entityId) ?: continue
                     if (controllerId != casterId) continue
@@ -1696,6 +1714,7 @@ class CostCalculator(
                 if (ability !is MayCastWithoutPayingManaCost) continue
                 if (ability.firstSpellOfTurnOnly || ability.oncePerTurn) continue
                 if (ability.fromExileOnly && castFromZone != com.wingedsheep.sdk.core.Zone.EXILE) continue
+                if (ability.fromHandOnly && castFromZone != null && castFromZone != com.wingedsheep.sdk.core.Zone.HAND) continue
                 if (ability.controllerOnly && emblemController != casterId) continue
                 if (spellCardDef != null && ability.spellFilter != GameObjectFilter.Any &&
                     !matchesCardDefinition(spellCardDef, ability.spellFilter, entityId, state, state.projectedState)
@@ -1736,6 +1755,7 @@ class CostCalculator(
                 // A `fromExileOnly` source (Warped Space) is only a candidate for an exile cast, so
                 // it isn't burned by a free hand cast granted by a different source.
                 if (ability.fromExileOnly && castFromZone != com.wingedsheep.sdk.core.Zone.EXILE) continue
+                if (ability.fromHandOnly && castFromZone != null && castFromZone != com.wingedsheep.sdk.core.Zone.HAND) continue
                 if (ability.controllerOnly) {
                     val controllerId = state.projectedState.getController(entityId) ?: continue
                     if (controllerId != casterId) continue
@@ -1764,35 +1784,35 @@ class CostCalculator(
      *
      * Note: Self-reduction (`SpellCostTarget.SelfCast`) and Affinity are NOT applied to
      * alternative costs, since those modify the card's own mana cost. Only
-     * battlefield-sourced AnyCaster increases apply.
+     * battlefield-sourced AnyCaster and OpponentsCast increases apply (CR 118.9d).
      */
     fun calculateEffectiveCostWithAlternativeBase(
         state: GameState,
         cardDef: CardDefinition,
         alternativeCost: ManaCost,
-        casterId: EntityId? = null
+        casterId: EntityId,
     ): ManaCost {
         var totalIncrease = 0
         for ((sourceId, ability) in scanBattlefieldModifySpellCost(state)) {
-            val target = ability.target
-            if (target !is SpellCostTarget.AnyCaster) continue
-            if (!matchesCardDefinition(cardDef, target.filter, sourceId, state, state.projectedState)) continue
+            val applies = when (val target = ability.target) {
+                is SpellCostTarget.AnyCaster ->
+                    matchesCardDefinition(cardDef, target.filter, sourceId, state, state.projectedState)
+                is SpellCostTarget.OpponentsCast ->
+                    opponentsCastMatches(target, cardDef, casterId, sourceId, state)
+                else -> false
+            }
+            if (!applies) continue
             when (val mod = ability.modification) {
                 is CostModification.IncreaseGeneric -> totalIncrease += mod.amount
-                is CostModification.IncreaseGenericBy -> {
-                    if (casterId != null) {
-                        totalIncrease += evaluateReduction(
-                            state, mod.source, casterId, abilitySourceId = sourceId
-                        )
-                    }
-                }
+                is CostModification.IncreaseGenericBy ->
+                    totalIncrease += evaluateReduction(
+                        state, mod.source, casterId, abilitySourceId = sourceId
+                    )
                 is CostModification.IncreaseGenericPerOtherSpellThisTurn -> {
-                    if (casterId != null) {
-                        val spellsCast = state.playerSpellsCastThisTurn[casterId] ?: 0
-                        totalIncrease += spellsCast * mod.amountPerSpell
-                    }
+                    val spellsCast = state.playerSpellsCastThisTurn[casterId] ?: 0
+                    totalIncrease += spellsCast * mod.amountPerSpell
                 }
-                else -> { /* AnyCaster reductions don't apply to alternative casting costs. */ }
+                else -> { /* Battlefield reductions don't apply to alternative casting costs. */ }
             }
         }
         return increaseGenericCost(alternativeCost, totalIncrease)

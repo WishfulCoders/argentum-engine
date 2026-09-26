@@ -2,12 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Wash Away
@@ -40,13 +39,13 @@ val WashAway = card("Wash Away") {
     keywordAbility(KeywordAbility.cleave("{1}{U}{U}"))
 
     spell {
+        val spell = target(TargetFilter.SpellOnStack.notCastFromZone(Zone.HAND))
         // Printed (brackets present): counter target spell that wasn't cast from its owner's hand.
-        target = TargetSpell(filter = TargetFilter.SpellOnStack.notCastFromZone(Zone.HAND))
         effect = Effects.CounterSpell()
 
         // Cleaved (brackets removed): counter target spell. CounterSpell counters the first
         // chosen target, so an unnamed cleave target requirement is all that's needed.
-        cleaveTarget = Targets.Spell
+        cleaveTarget = TargetObject(filter = TargetFilter.SpellOnStack)
         cleaveEffect = Effects.CounterSpell()
     }
 

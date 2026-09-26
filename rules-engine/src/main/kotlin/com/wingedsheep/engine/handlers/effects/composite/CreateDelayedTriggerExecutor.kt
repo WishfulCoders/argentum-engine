@@ -30,6 +30,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.effects.MoveToZoneEffect
 import com.wingedsheep.sdk.scripting.effects.MoveTrackedBattlefieldObjectEffect
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -48,11 +49,11 @@ import kotlin.reflect.KClass
  *
  * Used for Astral Slide-style exile-until-end-step patterns.
  */
-class CreateDelayedTriggerExecutor : EffectExecutor<CreateDelayedTriggerEffect> {
+class CreateDelayedTriggerExecutor(
+    private val dynamicAmountEvaluator: DynamicAmountEvaluator
+) : EffectExecutor<CreateDelayedTriggerEffect> {
 
     override val effectType: KClass<CreateDelayedTriggerEffect> = CreateDelayedTriggerEffect::class
-
-    private val dynamicAmountEvaluator = DynamicAmountEvaluator()
 
     override fun execute(
         state: GameState,
@@ -147,8 +148,11 @@ class CreateDelayedTriggerExecutor : EffectExecutor<CreateDelayedTriggerEffect> 
             effect = resolvedEffect,
             fireAtStep = effect.step,
             sourceId = sourceId,
-            objectReferences = context.objectReferences.copy(selfBinding = context.objectReferences.selfBinding
-                ?: context.pipeline.iterationTarget?.let { com.wingedsheep.engine.handlers.CapturedObjectBinding(it, state.objectRef(it)) }),
+            // Carries the enclosing loop's iteration binding, if any: a delayed trigger created in a
+            // ForEach body still refers to *that* object — "exile each creature; return it at the
+            // next end step" — and, having captured its identity, stops affecting it once it is in
+            // a zone the trigger didn't expect (CR 603.7c).
+            objectReferences = context.objectReferences,
             sourceName = sourceName,
             controllerId = context.controllerId,
             trigger = resolvedTrigger,
@@ -160,7 +164,12 @@ class CreateDelayedTriggerExecutor : EffectExecutor<CreateDelayedTriggerEffect> 
             notBeforeTurn = notBeforeTurn,
             targetRequirement = effect.targetRequirement,
             additionalTargetRequirements = effect.additionalTargetRequirements,
-            fireOnPlayerId = fireOnPlayerId
+            fireOnPlayerId = fireOnPlayerId,
+            carriedCollections = effect.carryCollections.associateWith { name ->
+                (context.pipeline.storedCollections[name] ?: emptyList()).map { id ->
+                    com.wingedsheep.engine.handlers.CapturedObjectBinding(id, state.objectRef(id))
+                }
+            }
         )
 
         return EffectResult.success(stateWithRoutingId.addDelayedTrigger(delayedTrigger))
@@ -283,21 +292,75 @@ class CreateDelayedTriggerExecutor : EffectExecutor<CreateDelayedTriggerEffect> 
         is DynamicAmount.Multiply -> readsPipeline(amount.amount)
         is DynamicAmount.IfPositive -> readsPipeline(amount.amount)
         is DynamicAmount.Power -> readsPipeline(amount.exponent)
+        is DynamicAmount.Divide -> readsPipeline(amount.numerator) || readsPipeline(amount.denominator)
         is DynamicAmount.Conditional -> readsPipeline(amount.ifTrue) || readsPipeline(amount.ifFalse)
-        else -> false
+        is DynamicAmount.GreatestAmongPlayers -> readsPipeline(amount.inner)
+
+        // Leaves that read game state or the resolution context, never a pipeline slot. A new
+        // leaf that reads a stored collection or number belongs in the `true` group above.
+        is DynamicAmount.AggregateBattlefield,
+        is DynamicAmount.AggregateZone,
+        is DynamicAmount.CastChoice,
+        DynamicAmount.CastX,
+        is DynamicAmount.ContextProperty,
+        is DynamicAmount.Count,
+        is DynamicAmount.CountPlayersWith,
+        DynamicAmount.CraftedMaterialsColorCount,
+        DynamicAmount.CraftedMaterialsTotalManaValue,
+        DynamicAmount.CraftedMaterialsTotalPower,
+        DynamicAmount.CreaturesThatCrewedOrSaddledThisTurn,
+        is DynamicAmount.DevotionTo,
+        DynamicAmount.DistinctColorsManaSpent,
+        is DynamicAmount.EntityProperty,
+        is DynamicAmount.Fixed,
+        is DynamicAmount.LargestSharedCreatureTypeCount,
+        DynamicAmount.LastKnownDamageDealtToSource,
+        is DynamicAmount.LastKnownSourceCounters,
+        is DynamicAmount.LifeTotal,
+        is DynamicAmount.ManaSpentFromSubtype,
+        is DynamicAmount.ManaSpentOnX,
+        DynamicAmount.PermanentsSacrificedThisWay,
+        DynamicAmount.CountersRemovedAsCost,
+        is DynamicAmount.PlayerCount,
+        is DynamicAmount.PlayerCounterCount,
+        is DynamicAmount.Speed,
+        DynamicAmount.SpellsCastLastTurn,
+        is DynamicAmount.SpellsCastThisTurn,
+        is DynamicAmount.StartingLifeTotal,
+        DynamicAmount.StationCharge,
+        is DynamicAmount.SubtypeEnteredUnderControlThisTurn,
+        is DynamicAmount.CreaturesWithSubtypeDiedThisTurn,
+        DynamicAmount.TotalManaSpent,
+        DynamicAmount.TotalPowerSacrificedThisWay,
+        is DynamicAmount.TurnTracking,
+        is DynamicAmount.UnlockedDoors,
+        is DynamicAmount.UnspentMana,
+        DynamicAmount.XValue,
+        DynamicAmount.YourLifeTotal -> false
     }
+
+    /**
+     * The entity [target] names now, to bake into the delayed trigger — or null for the references
+     * that stay symbolic: the source and a loop's current object travel with the trigger's object
+     * references, identity included, so the trigger stops affecting either once it has become a new
+     * object (CR 603.7c). A baked id would follow the new object instead.
+     */
+    private fun bakedId(target: EffectTarget, context: EffectContext): EntityId? =
+        if (target == EffectTarget.Self || target == EffectTarget.IterationEntity) null
+        else context.resolveTarget(target)
 
     /**
      * Recursively substitute context-dependent target references with concrete SpecificEntity
      * references using the current execution context.
      *
-     * This covers ContextTarget(n), Self, TriggeringEntity, and any other non-persistent
-     * target types that won't be resolvable when the delayed trigger fires later.
+     * This covers ContextTarget(n), TriggeringEntity, and any other non-persistent target types
+     * that won't be resolvable when the delayed trigger fires later; see [bakedId] for the two
+     * that stay symbolic.
      */
     private fun resolveContextTargets(effect: Effect, context: EffectContext, state: GameState): Effect {
         return when (effect) {
             is MoveToZoneEffect -> {
-                val resolvedId = if (effect.target == EffectTarget.Self) null else context.resolveTarget(effect.target)
+                val resolvedId = bakedId(effect.target, context)
                 val resolvedController = effect.controllerOverride?.let { co ->
                     context.resolveTarget(co)?.let { EffectTarget.SpecificEntity(it) }
                 }
@@ -307,15 +370,15 @@ class CreateDelayedTriggerExecutor : EffectExecutor<CreateDelayedTriggerEffect> 
                 )
             }
             is SacrificeTargetEffect -> {
-                val resolvedId = if (effect.target == EffectTarget.Self) null else context.resolveTarget(effect.target)
+                val resolvedId = bakedId(effect.target, context)
                 if (resolvedId != null) effect.copy(target = EffectTarget.SpecificEntity(resolvedId)) else effect
             }
             is DestroyAllEquipmentOnTargetEffect -> {
-                val resolvedId = if (effect.target == EffectTarget.Self) null else context.resolveTarget(effect.target)
+                val resolvedId = bakedId(effect.target, context)
                 if (resolvedId != null) effect.copy(target = EffectTarget.SpecificEntity(resolvedId)) else effect
             }
             is WarpExileEffect -> {
-                val resolvedId = if (effect.target == EffectTarget.Self) null else context.resolveTarget(effect.target)
+                val resolvedId = bakedId(effect.target, context)
                 if (resolvedId != null) {
                     // Snapshot the tracked object's entry stamp NOW (CR 603.7c), mirroring the
                     // StackResolver warp path — a permanent that leaves and re-enters before
@@ -329,7 +392,7 @@ class CreateDelayedTriggerExecutor : EffectExecutor<CreateDelayedTriggerEffect> 
                 } else effect
             }
             is MoveTrackedBattlefieldObjectEffect -> {
-                val resolvedId = if (effect.target == EffectTarget.Self) null else context.resolveTarget(effect.target)
+                val resolvedId = bakedId(effect.target, context)
                 if (resolvedId != null) {
                     val entryTimestamp = state.getEntity(resolvedId)
                         ?.get<BattlefieldEntryTimestampComponent>()?.timestamp
@@ -340,7 +403,7 @@ class CreateDelayedTriggerExecutor : EffectExecutor<CreateDelayedTriggerEffect> 
                 } else effect
             }
             is AddCountersEffect -> {
-                val resolvedId = if (effect.target == EffectTarget.Self) null else context.resolveTarget(effect.target)
+                val resolvedId = bakedId(effect.target, context)
                 if (resolvedId != null) effect.copy(target = EffectTarget.SpecificEntity(resolvedId)) else effect
             }
             // Same as AddCountersEffect, plus: the count is context-derived, and the context that
@@ -348,7 +411,7 @@ class CreateDelayedTriggerExecutor : EffectExecutor<CreateDelayedTriggerEffect> 
             // "return it with one fewer revival counter" from its *dies* trigger — the last-known
             // counter snapshot lives on that trigger's context only — so snapshot the amount NOW.
             is AddDynamicCountersEffect -> {
-                val resolvedId = if (effect.target == EffectTarget.Self) null else context.resolveTarget(effect.target)
+                val resolvedId = bakedId(effect.target, context)
                 effect.copy(
                     target = if (resolvedId != null) EffectTarget.SpecificEntity(resolvedId) else effect.target,
                     amount = snapshotAmount(effect.amount, context, state)
@@ -361,7 +424,7 @@ class CreateDelayedTriggerExecutor : EffectExecutor<CreateDelayedTriggerEffect> 
             // from the captured entity's CardComponent (last-known information), matching the rule
             // that the token copies what was printed on the original (Esoteric Duplicator).
             is CreateTokenCopyOfTargetEffect -> {
-                val resolvedId = if (effect.target == EffectTarget.Self) null else context.resolveTarget(effect.target)
+                val resolvedId = bakedId(effect.target, context)
                 if (resolvedId != null) effect.copy(target = EffectTarget.SpecificEntity(resolvedId)) else effect
             }
             // A delayed trigger that adds mana "equal to" a value read from a context entity
@@ -415,8 +478,8 @@ class CreateDelayedTriggerExecutor : EffectExecutor<CreateDelayedTriggerEffect> 
                 lostEffect = effect.lostEffect?.let { resolveContextTargets(it, context, state) },
             )
             is GatedEffect -> {
-                // Former MayEffect shape: resolve ContextTargets inside the optional `then` payoff,
-                // exactly as MayEffect did. Other gate shapes (MayPay / WhenCondition) were never
+                // Former Effects.May shape: resolve ContextTargets inside the optional `then` payoff,
+                // exactly as Effects.May did. Other gate shapes (MayPay / WhenCondition) were never
                 // resolved here, so leave them untouched.
                 if (effect.gate is Gate.MayDecide && effect.otherwise == null) {
                     val inner = resolveContextTargets(effect.then, context, state)

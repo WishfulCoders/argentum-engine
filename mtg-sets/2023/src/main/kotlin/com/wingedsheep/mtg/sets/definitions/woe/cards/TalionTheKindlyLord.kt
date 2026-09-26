@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -12,7 +13,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Talion, the Kindly Lord
@@ -55,29 +55,25 @@ val TalionTheKindlyLord = card("Talion, the Kindly Lord") {
     )
 
     triggeredAbility {
-        trigger = Triggers.opponentCasts(
-            GameObjectFilter.Any.copy(
+        trigger = Triggers.anOpponent.casts(GameObjectFilter.Any.copy(
                 cardPredicates = listOf(
                     CardPredicate.Or(
                         listOf(
                             CardPredicate.ManaValueEqualsDynamic(
-                                DynamicAmount.CastChoice(ChoiceSlot.CHOSEN_NUMBER)
+                                DynamicAmounts.castChoice(ChoiceSlot.CHOSEN_NUMBER)
                             ),
                             CardPredicate.PowerEqualsDynamic(
-                                DynamicAmount.CastChoice(ChoiceSlot.CHOSEN_NUMBER)
+                                DynamicAmounts.castChoice(ChoiceSlot.CHOSEN_NUMBER)
                             ),
                             CardPredicate.ToughnessEqualsDynamic(
-                                DynamicAmount.CastChoice(ChoiceSlot.CHOSEN_NUMBER)
+                                DynamicAmounts.castChoice(ChoiceSlot.CHOSEN_NUMBER)
                             )
                         )
                     )
                 )
-            )
-        )
-        effect = Effects.Composite(
-            Effects.LoseLife(2, EffectTarget.PlayerRef(Player.TriggeringPlayer)),
+            ))
+        effect = Effects.LoseLife(2, EffectTarget.PlayerRef(Player.TriggeringPlayer)) then
             Effects.DrawCards(1)
-        )
         description = "Whenever an opponent casts a spell with mana value, power, or toughness " +
             "equal to the chosen number, that player loses 2 life and you draw a card."
     }

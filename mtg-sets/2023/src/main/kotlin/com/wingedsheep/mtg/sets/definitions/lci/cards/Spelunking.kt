@@ -2,15 +2,15 @@ package com.wingedsheep.mtg.sets.definitions.lci.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersUntapped
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalOnCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
+import com.wingedsheep.sdk.scripting.effects.CardDestination
+import com.wingedsheep.sdk.scripting.effects.CardSource
+import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -43,15 +43,16 @@ val Spelunking = card("Spelunking") {
     // When this enchantment enters, draw a card, then you may put a land card from your hand onto
     // the battlefield. If you put a Cave onto the battlefield this way, you gain 4 life.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = DrawCardsEffect(1, EffectTarget.Controller) then
-            Patterns.Hand.putFromHand(filter = GameObjectFilter.Land, count = 1).then(
-                ConditionalOnCollectionEffect(
-                    collection = "putting",
-                    filter = GameObjectFilter.Land.withSubtype("Cave"),
-                    ifNotEmpty = Effects.GainLife(4)
-                )
-            )
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            run(Effects.DrawCards(1, EffectTarget.Controller))
+            val landsInHand = gather(CardSource.FromZone(Zone.HAND, Player.You, GameObjectFilter.Land))
+            val putting = chooseUpTo(1, from = landsInHand)
+            move(putting, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You))
+            ifNotEmpty(putting, filter = GameObjectFilter.Land.withSubtype("Cave")) {
+                run(Effects.GainLife(4))
+            }
+        }
         description = "When this enchantment enters, draw a card, then you may put a land card " +
             "from your hand onto the battlefield. If you put a Cave onto the battlefield this " +
             "way, you gain 4 life."

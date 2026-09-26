@@ -23,7 +23,7 @@ val CivicStalwart = card("Civic Stalwart") {
     oracleText = "When this creature enters, creatures you control get +1/+1 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Group.modifyStatsForAll(1, 1, GroupFilter.AllCreaturesYouControl)
     }
 

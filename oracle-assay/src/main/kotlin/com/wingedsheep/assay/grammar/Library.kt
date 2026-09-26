@@ -5,6 +5,7 @@ import com.wingedsheep.assay.syntax.alternate
 import com.wingedsheep.assay.syntax.bind
 import com.wingedsheep.assay.syntax.phrase
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -14,7 +15,6 @@ import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Effect
 import com.wingedsheep.sdk.scripting.effects.CompositeEffect
 import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
@@ -108,14 +108,14 @@ object Library {
     /**
      * "You may shuffle." — the optional shuffle Omen ends on.
      *
-     * `MayEffect` is the SDK's spelling of a player-chosen action inside a spell's effect. Note the
+     * `Effects.May` is the SDK's spelling of a player-chosen action inside a spell's effect. Note the
      * deliberate asymmetry with [Triggers]: on a *triggered ability* the same English lowers to the
      * ability's `optional` flag instead, because that is the field the hand-written cards set and
      * the one the trigger's own sentence introduces. Two SDK spellings of "you may", each canonical
      * in the sentence context that owns it, and [Triggers.abilityFor] is the lowering between them.
      */
     private val mayShuffle: Phrase<CardScript> = run {
-        val script = CardScript(spellEffect = MayEffect(ShuffleLibraryEffect()))
+        val script = CardScript(spellEffect = Effects.May(ShuffleLibraryEffect()))
         phrase("you may shuffle", name = "you may shuffle") {
             build { script }
             match { if (it == script) bind() else null }

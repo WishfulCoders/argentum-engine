@@ -3,13 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.drk.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * War Barge
@@ -38,17 +37,15 @@ val WarBarge = card("War Barge") {
         "player controls an Island.)"
 
     activatedAbility {
+        val creature = target(TargetFilter.Creature)
         cost = Costs.Mana("{3}")
-        target = Targets.Creature
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.ISLANDWALK, EffectTarget.ContextTarget(0)),
-            CreateDelayedTriggerEffect(
-                trigger = Triggers.LeavesBattlefield,
+        effect = Effects.GrantKeyword(Keyword.ISLANDWALK, creature) then
+            Effects.CreateDelayedTrigger(
+                trigger = Triggers.self.leaves(),
                 watchedTarget = EffectTarget.Self,
-                effect = Effects.Destroy(EffectTarget.ContextTarget(0), noRegenerate = true),
+                effect = Effects.Destroy(creature, noRegenerate = true),
                 expiry = DelayedTriggerExpiry.EndOfTurn,
-            ),
-        )
+            )
         description = "{3}: Target creature gains islandwalk until end of turn. When this " +
             "artifact leaves the battlefield this turn, destroy that creature. A creature " +
             "destroyed this way can't be regenerated."

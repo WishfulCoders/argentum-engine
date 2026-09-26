@@ -1,18 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Elrond, Master of Healing
@@ -37,24 +33,16 @@ val ElrondMasterOfHealing = card("Elrond, Master of Healing") {
         "or ability an opponent controls, you may draw a card."
 
     triggeredAbility {
-        trigger = Triggers.WheneverYouScry
-        target(
-            "up to X target creatures",
-            TargetCreature(
-                optional = true,
-                dynamicMaxCount = DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_SCRY_COUNT)
-            )
-        )
-        effect = ForEachTargetEffect(
-            listOf(Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0)))
+        trigger = Triggers.you.scries()
+        targets(TargetFilter.Creature, optional = true, dynamicMaxCount = DynamicAmounts.triggerScryCount())
+        effect = Effects.ForEachTarget(
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0))
         )
     }
 
     triggeredAbility {
-        trigger = Triggers.CreatureYouControlBecomesTargetByOpponent(
-            GameObjectFilter.Creature.withCounter(Counters.PLUS_ONE_PLUS_ONE)
-        )
-        effect = MayEffect(Effects.DrawCards(1))
+        trigger = Triggers.a(GameObjectFilter.Creature.withCounter(CounterType.PLUS_ONE_PLUS_ONE).youControl()).becomesTarget(byOpponent = true)
+        effect = Effects.May(Effects.DrawCards(1))
     }
 
     metadata {

@@ -8,15 +8,9 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.MayCastWithoutPayingManaCost
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
-import com.wingedsheep.sdk.scripting.events.DamageType
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Tamiyo, Field Researcher — Eldritch Moon #190
@@ -69,15 +63,13 @@ val TamiyoFieldResearcher = card("Tamiyo, Field Researcher") {
     // +1: Choose up to two target creatures. Until your next turn, whenever either of those
     //     creatures deals combat damage, you draw a card.
     loyaltyAbility(+1) {
-        target("up to two target creatures", TargetCreature(count = 2, optional = true))
-        effect = ForEachTargetEffect(
-            listOf(
-                CreateDelayedTriggerEffect(
-                    effect = Effects.DrawCards(1),
-                    trigger = Triggers.dealsDamage(damageType = DamageType.Combat),
-                    watchedTarget = EffectTarget.ContextTarget(0),
-                    expiry = DelayedTriggerExpiry.UntilControllersNextTurn
-                )
+        targets(TargetFilter.Creature, count = 2, optional = true)
+        effect = Effects.ForEachTarget(
+            Effects.CreateDelayedTrigger(
+                effect = Effects.DrawCards(1),
+                trigger = Triggers.self.dealsCombatDamage(),
+                watchedTarget = EffectTarget.ContextTarget(0),
+                expiry = DelayedTriggerExpiry.UntilControllersNextTurn
             )
         )
         description = "Choose up to two target creatures. Until your next turn, whenever either " +
@@ -87,22 +79,13 @@ val TamiyoFieldResearcher = card("Tamiyo, Field Researcher") {
     // −2: Tap up to two target nonland permanents. They don't untap during their controller's
     //     next untap step.
     loyaltyAbility(-2) {
-        target(
-            "up to two target nonland permanents",
-            TargetPermanent(
-                count = 2,
-                optional = true,
-                filter = TargetFilter(GameObjectFilter.NonlandPermanent)
-            )
-        )
-        effect = ForEachTargetEffect(
-            listOf(
-                Effects.Tap(EffectTarget.ContextTarget(0)),
-                GrantKeywordEffect(
-                    AbilityFlag.DOESNT_UNTAP.name,
-                    EffectTarget.ContextTarget(0),
-                    Duration.UntilAfterAffectedControllersNextUntap
-                )
+        targets(TargetFilter(GameObjectFilter.NonlandPermanent), count = 2, optional = true)
+        effect = Effects.ForEachTarget(
+            Effects.Tap(EffectTarget.ContextTarget(0)),
+            Effects.GrantKeyword(
+                AbilityFlag.DOESNT_UNTAP,
+                EffectTarget.ContextTarget(0),
+                Duration.UntilAfterAffectedControllersNextUntap
             )
         )
         description = "Tap up to two target nonland permanents. They don't untap during their " +
@@ -113,7 +96,7 @@ val TamiyoFieldResearcher = card("Tamiyo, Field Researcher") {
     //     paying their mana costs."
     loyaltyAbility(-7) {
         effect = Effects.DrawCards(3) then Effects.CreatePermanentEmblem(
-            ownedStaticAbilities = listOf(MayCastWithoutPayingManaCost(controllerOnly = true)),
+            ownedStaticAbilities = listOf(MayCastWithoutPayingManaCost(controllerOnly = true, fromHandOnly = true)),
             emblemDescription = "You may cast spells from your hand without paying their mana costs."
         )
     }

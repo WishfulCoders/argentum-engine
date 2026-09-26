@@ -6,8 +6,10 @@ import com.wingedsheep.assay.syntax.alternate
 import com.wingedsheep.assay.syntax.bind
 import com.wingedsheep.assay.syntax.oneOf
 import com.wingedsheep.assay.syntax.phrase
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.events.SpellCastPredicate
 import com.wingedsheep.sdk.model.CardScript
 import com.wingedsheep.sdk.scripting.AbilityId
@@ -16,7 +18,6 @@ import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.Gate
 import com.wingedsheep.sdk.scripting.effects.GatedEffect
 import com.wingedsheep.sdk.scripting.TriggerSpec
@@ -49,7 +50,7 @@ import com.wingedsheep.sdk.dsl.Triggers as SdkTriggers
  *
  * ### `AbilityId` is arbitrary, in exactly the way a target slot's name is
  *
- * `CardDefinition`s carry generated ids — Kavu Climber's golden says `"ability_1"` — that no printed
+ * `CardDefinition`s carry generated ids — Kavu Climber's golden says `"Kavu Climber:1"` — that no printed
  * text determines. The grammar mints one fixed id and the differential normalizes both sides by
  * position, the same treatment target slot names get. A rule that tried to reproduce the id would be
  * reading a counter, not a card.
@@ -130,7 +131,7 @@ object Triggers {
      *
      * **"You may …" needs nothing done to it here, and that is new.** A triggered ability used to
      * spell the controller's choice with an `optional` flag of its own while a spell spelled the
-     * identical English as a `MayEffect`, so this function had to lower one into the other — one
+     * identical English as a `Effects.May`, so this function had to lower one into the other — one
      * sentence, two SDK spellings, and a rule per spelling would have been two readings of one text.
      * `TriggeredAbility.optional` is gone; the gate the engine always built from it is the model
      * now, and a trigger's effect clause is the same value a spell's clause is. The lowering, its
@@ -223,7 +224,7 @@ object Triggers {
         // card's trigger-time-only gate as a condition the engine re-checks on resolution — the
         // reversible-but-wrong class this module's fail-closed matching exists to catch.
         spellEffect = ability.interveningIf
-            ?.let { ConditionalEffect(condition = it, effect = ability.effect) }
+            ?.let { Effects.If(condition = it, then = ability.effect) }
             ?: ability.effect,
         targetRequirements = listOfNotNull(ability.targetRequirement) +
             ability.additionalTargetRequirements,
@@ -246,7 +247,7 @@ object Triggers {
      *
      * What changed is the prefix. It used to be thirteen frozen surfaces, one per printed sentence,
      * each naming one of `dsl.Triggers`' constants — and those constants are calls to
-     * `Triggers.phase(step, player, binding)` with every argument frozen. So the prefix is a
+     * `Triggers.<player>.beginningOf(step)` with every argument frozen. So the prefix is a
      * [Phases] slot now, and "at the beginning of each opponent's end step" stopped being a rule
      * nobody had written. Everything the family can say lives in that file; this is the one place it
      * meets an effect clause.
@@ -421,14 +422,14 @@ object Triggers {
     private val castPrefixes: List<Prefix> = listOf(
         filteredTriggerRule(
             "whenever you cast {filter}", "whenever you cast a spell", Spells.indefinite,
-        ) { SdkTriggers.youCastSpell(it) },
+        ) { SdkTriggers.you.casts(it) },
         filteredTriggerRule(
             "whenever an opponent casts {filter}", "whenever an opponent casts a spell", Spells.indefinite,
-        ) { SdkTriggers.opponentCasts(it) },
+        ) { SdkTriggers.anOpponent.casts(it) },
         filteredTriggerRule(
             "whenever a player casts {filter}", "whenever a player casts a spell", Spells.indefinite,
-        ) { SdkTriggers.anyPlayerCasts(it) },
-        triggerRule("when you cast this spell", SdkTriggers.WhenYouCastThisSpell()),
+        ) { SdkTriggers.anyPlayer.casts(it) },
+        triggerRule("when you cast this spell", SdkTriggers.self.isCast()),
         // "Adventure" is the one word in the spell noun's subtype slot that is not a
         // characteristic — CR 715.3 makes an Adventure spell one *cast as* an Adventure, which is
         // `SpellCastPredicate.CastAsAdventure` and not a subtype on the object. So the phrase is a
@@ -436,7 +437,7 @@ object Triggers {
         // printed form from having two models. See the leaf's KDoc for what the differential found.
         triggerRule(
             "whenever you cast an Adventure spell",
-            SdkTriggers.youCastSpell(requires = setOf(SpellCastPredicate.CastAsAdventure)),
+            SdkTriggers.you.casts(requires = setOf(SpellCastPredicate.CastAsAdventure)),
             effect = Steps.triggeredStep,
         ),
         nthCastRule("whenever you cast your", "whenever you cast your nth spell", Player.You),
@@ -465,11 +466,7 @@ object Triggers {
             slot("filter", Spells.spell)
             build { bindings ->
                 val filter = bindings.value<GameObjectFilter>("filter")
-                SdkTriggers.NthSpellCast(
-                    n = bindings.int("ordinal"),
-                    player = player,
-                    spellFilter = filter.takeIf { it != GameObjectFilter.Any },
-                )
+                SdkTriggers.player(player).castsNth(bindings.int("ordinal"), filter.takeIf { it != GameObjectFilter.Any })
             }
             match { spec ->
                 val event = spec.event as? EventPattern.NthSpellCastEvent ?: return@match null
@@ -477,11 +474,7 @@ object Triggers {
                 // Rebuilt through the *build* half's mapping, not through `event.spellFilter`:
                 // that is what makes an event carrying `Any` refuse to print rather than printing
                 // the bare noun that means `null`.
-                val rebuilt = SdkTriggers.NthSpellCast(
-                    event.nthSpell,
-                    player,
-                    filter.takeIf { it != GameObjectFilter.Any },
-                )
+                val rebuilt = SdkTriggers.player(player).castsNth(event.nthSpell, filter.takeIf { it != GameObjectFilter.Any })
                 if (rebuilt != spec) return@match null
                 bind("ordinal" to event.nthSpell, "filter" to filter)
             }
@@ -627,13 +620,7 @@ object Triggers {
         recipient: Phrase<GameObjectFilter>?,
         placedBy: Player?,
     ): Prefix {
-        fun spec(kind: String, filter: GameObjectFilter) = SdkTriggers.countersPlacedOn(
-            filter = filter,
-            counterType = kind,
-            firstTimeEachTurn = false,
-            binding = if (recipient == null) TriggerBinding.SELF else TriggerBinding.ANY,
-            placedBy = placedBy,
-        )
+        fun spec(kind: CounterType, filter: GameObjectFilter) = (if (recipient == null) SdkTriggers.self else SdkTriggers.a(filter)).getsCounters(kind, by = placedBy)
         return Prefix(
             phrase(surface, name = name) {
                 slot("kind", Primitives.counterKind)
@@ -644,25 +631,30 @@ object Triggers {
                 }
                 match { triggerSpec ->
                     val event = triggerSpec.event as? EventPattern.CountersPlacedEvent ?: return@match null
-                    if (spec(event.counterType, event.filter) != triggerSpec) return@match null
-                    bind("kind" to event.counterType, "recipient" to event.filter)
+                    val kind = event.counterType ?: return@match null
+                    if (spec(kind, event.filter) != triggerSpec) return@match null
+                    bind("kind" to kind, "recipient" to event.filter)
                 }
             },
             Steps.step,
         )
     }
 
+    /** "one or more [filter]" / "one or more other [filter]" — the batch subject for [other]. */
+    private fun batchSubject(filter: GameObjectFilter, other: Boolean) =
+        if (other) SdkTriggers.oneOrMoreOther(filter) else SdkTriggers.oneOrMore(filter)
+
     private val batchPrefixes: List<Prefix> =
         batchProduct(
             verb = "enter",
             noun = "permanents",
             reader = { (it as? EventPattern.PermanentsEnteredEvent)?.let { e -> e.filter to e.excludeSource } },
-        ) { filter, other -> SdkTriggers.OneOrMorePermanentsEnter(filter, excludeSource = other) } +
+        ) { filter, other -> batchSubject(filter, other).enter() } +
         batchProduct(
             verb = "die",
             noun = "creatures",
             reader = { (it as? EventPattern.CreaturesYouControlDiedEvent)?.let { e -> e.filter to e.excludeSelf } },
-        ) { filter, other -> SdkTriggers.OneOrMoreCreaturesYouControlDie(filter, excludeSelf = other) } +
+        ) { filter, other -> batchSubject(filter, other).die() } +
         listOf(
             // The one row whose event has no facade; see this family's KDoc.
             batchRule(
@@ -671,29 +663,26 @@ object Triggers {
                 Filters.pluralSubject,
                 { (it as? EventPattern.OneOrMoreDealCombatDamageToPlayerEvent)?.sourceFilter },
             ) {
-                TriggerSpec(
-                    event = EventPattern.OneOrMoreDealCombatDamageToPlayerEvent(sourceFilter = it),
-                    binding = TriggerBinding.ANY,
-                )
+                SdkTriggers.oneOrMore(it).dealCombatDamageToAPlayer()
             },
             batchRule(
                 "whenever one or more {filter} deal combat damage to you",
                 "whenever one or more creatures deal combat damage to you",
                 Filters.pluralSubject,
                 { (it as? EventPattern.OneOrMoreDealCombatDamageToYouEvent)?.sourceFilter },
-            ) { SdkTriggers.OneOrMoreCreaturesDealCombatDamageToYou(it) },
+            ) { SdkTriggers.oneOrMore(it).dealCombatDamageToYou() },
             batchRule(
                 "whenever one or more {filter} leave your graveyard",
                 "whenever one or more cards leave your graveyard",
                 Filters.pluralCards,
                 { (it as? EventPattern.CardsLeftYourGraveyardEvent)?.filter },
-            ) { SdkTriggers.CardsLeaveYourGraveyard(it) },
+            ) { SdkTriggers.oneOrMore(it).leaveYourGraveyard() },
             batchRule(
                 "whenever one or more {filter} are put into your graveyard from anywhere",
                 "whenever one or more cards are put into your graveyard from anywhere",
                 Filters.pluralCards,
                 { (it as? EventPattern.CardsPutIntoYourGraveyardEvent)?.filter },
-            ) { SdkTriggers.CardsPutIntoYourGraveyard(it) },
+            ) { SdkTriggers.oneOrMore(it).putIntoYourGraveyard() },
             // The library variant publishes only two fixed vals rather than a function of the
             // filter, so this row writes the `TriggerSpec` the way the two hand-written cards do.
             batchRule(
@@ -702,10 +691,7 @@ object Triggers {
                 Filters.pluralCards,
                 { (it as? EventPattern.CardsPutIntoGraveyardFromLibraryEvent)?.filter },
             ) {
-                TriggerSpec(
-                    event = EventPattern.CardsPutIntoGraveyardFromLibraryEvent(filter = it),
-                    binding = TriggerBinding.ANY,
-                )
+                SdkTriggers.oneOrMore(it).putIntoYourGraveyard(fromLibrary = true)
             },
             countersPlacedRule(
                 "whenever one or more {kind} counters are put on ${Normalizer.SELF}",
@@ -728,10 +714,10 @@ object Triggers {
                 recipient = Filters.indefinite,
                 placedBy = Player.You,
             ),
-            triggerRule("whenever one or more creatures attack you", SdkTriggers.CreaturesAttackYou),
+            triggerRule("whenever one or more creatures attack you", SdkTriggers.you.isAttacked()),
             triggerRule(
                 "whenever one or more of your opponents are attacked",
-                SdkTriggers.CreaturesAttackYourOpponent,
+                SdkTriggers.anOpponent.isAttacked(),
             ),
         ) +
         listOf(false, true).map { other ->
@@ -745,36 +731,36 @@ object Triggers {
                         ?.takeIf { it.excludeSelf == other }
                         ?.filter
                 },
-            ) { SdkTriggers.OneOrMoreLeaveWithoutDying(it, excludeSelf = other) }
+            ) { batchSubject(it, other).leaveWithoutDying() }
         }
 
     private val eventPrefixes: List<Prefix> = listOf(
-        triggerRule("when ${Normalizer.SELF} enters", SdkTriggers.EntersBattlefield),
-        triggerRule("when ${Normalizer.SELF} dies", SdkTriggers.Dies),
-        triggerRule("when ${Normalizer.SELF} leaves the battlefield", SdkTriggers.LeavesBattlefield),
-        triggerRule("whenever ${Normalizer.SELF} attacks", SdkTriggers.Attacks),
-        triggerRule("whenever ${Normalizer.SELF} blocks", SdkTriggers.Blocks),
-        triggerRule("whenever ${Normalizer.SELF} becomes blocked", SdkTriggers.BecomesBlocked),
+        triggerRule("when ${Normalizer.SELF} enters", SdkTriggers.self.enters()),
+        triggerRule("when ${Normalizer.SELF} dies", SdkTriggers.self.dies()),
+        triggerRule("when ${Normalizer.SELF} leaves the battlefield", SdkTriggers.self.leaves()),
+        triggerRule("whenever ${Normalizer.SELF} attacks", SdkTriggers.self.attacks()),
+        triggerRule("whenever ${Normalizer.SELF} blocks", SdkTriggers.self.blocks()),
+        triggerRule("whenever ${Normalizer.SELF} becomes blocked", SdkTriggers.self.becomesBlocked()),
         // "Whenever this creature becomes tapped, …" — Fallowsage, Veteran of the Depths, Chrome
         // Companion. Cause-agnostic by construction: `TapEvent`'s `reason` is null here, so the
         // trigger fires however the permanent became tapped — attacking, a cost, crew, or an
         // opponent's effect. The narrowed sibling (`BecomesTappedForTeamwork`) prints a clause of
         // its own ("to pay a teamwork cost") and becomes a row of its own the day a card needs it,
         // rather than a flag this surface has no words for.
-        triggerRule("whenever ${Normalizer.SELF} becomes tapped", SdkTriggers.BecomesTapped),
-        triggerRule("whenever ${Normalizer.SELF} becomes untapped", SdkTriggers.BecomesUntapped),
+        triggerRule("whenever ${Normalizer.SELF} becomes tapped", SdkTriggers.self.becomesTapped()),
+        triggerRule("whenever ${Normalizer.SELF} becomes untapped", SdkTriggers.self.becomesUntapped()),
         // The four outgoing-damage prefixes take [Steps.damageStep] rather than [Steps.step]: their
         // event reports how much damage was dealt, which is the antecedent of "that many" in the
         // payoff. See [Tokens.damageClauses] for why that phrase is scoped to these positions and
         // not registered as a count anywhere a count can appear.
         triggerRule(
             "whenever ${Normalizer.SELF} deals combat damage to a player",
-            SdkTriggers.DealsCombatDamageToPlayer,
+            SdkTriggers.self.dealsCombatDamage(Recipient.AnyPlayer),
             effect = Steps.damageStep,
         ),
         triggerRule(
             "whenever ${Normalizer.SELF} deals combat damage to a creature",
-            SdkTriggers.DealsCombatDamageToCreature,
+            SdkTriggers.self.dealsCombatDamage(Recipient.AnyCreature),
             effect = Steps.damageStep,
         ),
         // "Whenever this creature deals combat damage, …" — no recipient clause at all, which is a
@@ -782,7 +768,7 @@ object Triggers {
         // triggers on damage to anything.
         triggerRule(
             "whenever ${Normalizer.SELF} deals combat damage",
-            SdkTriggers.dealsDamage(damageType = DamageType.Combat),
+            SdkTriggers.self.dealsCombatDamage(),
             effect = Steps.damageStep,
         ),
         // …and the widest of the four: any damage, of any type, to any recipient. A fourth event
@@ -791,12 +777,12 @@ object Triggers {
         // between it and the combat row.
         triggerRule(
             "whenever ${Normalizer.SELF} deals damage",
-            SdkTriggers.DealsDamage,
+            SdkTriggers.self.dealsDamage(),
             effect = Steps.damageStep,
         ),
         // "Whenever this creature deals damage to a Vampire, …" — the *recipient* as a noun phrase
         // rather than one of the two nouns the three constants above freeze ("a player", "a
-        // creature"). `RecipientFilter.Matching` is the SDK's own slot for it, so this is one
+        // creature"). `Recipient.Object` is the SDK's own slot for it, so this is one
         // [slottedTriggerRule] over the whole filter vocabulary and not a row per tribe: Vampire
         // Slayer, Dinosaur Hunter, Spider-Slayer and East-Mark Cavalier's "a Goblin or Orc" are four
         // values of one slot.
@@ -815,14 +801,14 @@ object Triggers {
             noun = Filters.indefinite,
             effect = Steps.triggeredStep,
             valueOf = { spec ->
-                ((spec.event as? EventPattern.DealsDamageEvent)?.recipient as? RecipientFilter.Matching)
+                ((spec.event as? EventPattern.DealsDamageEvent)?.recipient as? Recipient.Object)
                     ?.filter
             },
-            spec = { SdkTriggers.dealsDamage(recipient = RecipientFilter.Matching(it)) },
+            spec = { SdkTriggers.self.dealsDamage(Recipient.Object(it)) },
         ),
-        triggerRule("whenever ${Normalizer.SELF} is dealt damage", SdkTriggers.TakesDamage),
+        triggerRule("whenever ${Normalizer.SELF} is dealt damage", SdkTriggers.self.isDealtDamage()),
         // Valiant, and one row rather than a shape over `BecomesTargetEvent`'s six flags: the SDK
-        // publishes the whole configuration as `Triggers.Valiant`, which is the lowering this file's
+        // publishes the whole configuration as `Triggers.self.becomesTarget(byYou = true, firstTimeEachTurn = true)`, which is the lowering this file's
         // rule says to call rather than restate. The other flag combinations (by an opponent, a
         // filtered target, spells only) are separate printed sentences and become rows of their own
         // when a card needs them — not a template with the flags as slots, which would print
@@ -830,7 +816,7 @@ object Triggers {
         triggerRule(
             "whenever ${Normalizer.SELF} becomes the target of a spell or ability you control " +
                 "for the first time each turn",
-            SdkTriggers.Valiant,
+            SdkTriggers.self.becomesTarget(byYou = true, firstTimeEachTurn = true),
         ),
         // The second row of the family the note above predicted, and the shape it predicted:
         // Stormchaser Drake prints a different sentence, so it gets a different constant rather than
@@ -838,28 +824,28 @@ object Triggers {
         // no field to decide.
         triggerRule(
             "whenever ${Normalizer.SELF} becomes the target of a spell you control",
-            SdkTriggers.BecomesTargetOfYourSpell,
+            SdkTriggers.self.becomesTarget(byYou = true, spellsOnly = true),
         ),
         // Morph's payoff. "Is turned face up" is a `When` rather than a `Whenever` because it can
         // happen once to a permanent, which is the property that decides the word (see [rules]).
-        triggerRule("when ${Normalizer.SELF} is turned face up", SdkTriggers.TurnedFaceUp),
+        triggerRule("when ${Normalizer.SELF} is turned face up", SdkTriggers.self.turnedFaceUp()),
         // Cycling's two triggers. `YouCycleThis` is the card's own cycling ("When you cycle this
         // card, …") and `AnyPlayerCycles` watches the table, so they are separate specs rather than
         // one with a player field — which is what the SDK says too.
-        triggerRule("when you cycle ${Normalizer.SELF}", SdkTriggers.YouCycleThis),
-        triggerRule("whenever a player cycles a card", SdkTriggers.AnyPlayerCycles),
+        triggerRule("when you cycle ${Normalizer.SELF}", SdkTriggers.self.isCycled()),
+        triggerRule("whenever a player cycles a card", SdkTriggers.anyPlayer.cycles()),
         // Gift's payoff trigger (CR 702.174c) — Jolly Gerbils. `YouGiveAGift` is a whole
         // `TriggerSpec` the SDK publishes, so there is nothing to slot; the giver is baked into the
         // event as `Player.You` and no card prints another one.
-        triggerRule("whenever you give a gift", SdkTriggers.YouGiveAGift),
+        triggerRule("whenever you give a gift", SdkTriggers.you.givesAGift()),
         // The life-change triggers. `YouGainLife` / `YouLoseLife` are whole specs the SDK publishes,
         // so these are constants beside the events above rather than a shape over a player field —
         // "whenever an opponent gains life" is a different event and becomes its own row when a card
         // needs one. Their "during your turn" siblings (Wax-Wane Witness, Moonstone Harbinger) are
         // *not* here: that clause is a `triggerRestriction`, which [abilityFor] deliberately never
         // writes, and reading it as an intervening-if would mean a different card.
-        triggerRule("whenever you gain life", SdkTriggers.YouGainLife),
-        triggerRule("whenever you lose life", SdkTriggers.YouLoseLife),
+        triggerRule("whenever you gain life", SdkTriggers.you.gainsLife()),
+        triggerRule("whenever you lose life", SdkTriggers.you.losesLife()),
         // The discard batch (CR 603.2c). `YouDiscardOneOrMore` is a whole spec the SDK publishes, so
         // this is a constant beside the life triggers rather than a shape — and it is the *batch*
         // reading rather than a plural spelling of the per-card `YouDiscard`: a resolution that
@@ -869,11 +855,11 @@ object Triggers {
         // because "one or more" is the constant English uses for *every* batch and carries no count.
         // The batch also binds no discarded card, which is why the effect stays on the source cascade:
         // there is no single "it" for one-or-more, so the third anaphor is unreachable and must be.
-        triggerRule("whenever you discard one or more cards", SdkTriggers.YouDiscardOneOrMore),
+        triggerRule("whenever you discard one or more cards", SdkTriggers.you.discards(batch = true)),
         // Expend — "you spend your Nth total mana to cast spells this turn". A trigger event with
         // a number in it, so it is the [slottedTriggerRule] shape rather than a constant per
         // threshold: the corpus prints 4 and 8 and nothing in the sentence says those are the only
-        // two. `Triggers.Expend(n)` freezes the watched player at `Player.You`, which is the only
+        // two. `Triggers.you.expends(n)` freezes the watched player at `Player.You`, which is the only
         // subject Oracle prints, so the threshold is the rule's one slot — and it is [Primitives.cardinal] rather than
         // [Cardinals.word] because Oracle writes it as a numeral: "Whenever you expend **4**".
         slottedTriggerRule(
@@ -882,15 +868,15 @@ object Triggers {
             noun = Primitives.cardinal,
             effect = Steps.step,
             valueOf = { (it.event as? EventPattern.ExpendEvent)?.threshold },
-            spec = { SdkTriggers.Expend(it) },
+            spec = { SdkTriggers.you.expends(it) },
             slotName = "n",
         ),
         filteredTriggerRule(
             "whenever {filter} enters", "whenever a permanent enters", Filters.indefinite,
-        ) { SdkTriggers.entersBattlefield(it, TriggerBinding.ANY) },
+        ) { SdkTriggers.a(it).enters() },
         filteredTriggerRule(
             "whenever another {filter} enters", "whenever another permanent enters", Filters.filter,
-        ) { SdkTriggers.entersBattlefield(it, TriggerBinding.OTHER) },
+        ) { SdkTriggers.another(it).enters() },
         // "Whenever this creature or another Zombie enters" — Noxious Ghoul, Goblin Assassin. The
         // source is *in* the watched class, so the model is the plain `ANY` binding and the printed
         // "~ or another" is how Oracle spells that when the source matches the filter. It is a row
@@ -900,10 +886,10 @@ object Triggers {
             "whenever ${Normalizer.SELF} or another {filter} enters",
             "whenever the source or another permanent enters",
             Filters.filter,
-        ) { SdkTriggers.entersBattlefield(it, TriggerBinding.ANY) },
+        ) { SdkTriggers.a(it).enters() },
         filteredTriggerRule(
             "whenever {filter} becomes blocked", "whenever a creature becomes blocked", Filters.indefinite,
-        ) { SdkTriggers.becomesBlocked(it, TriggerBinding.ANY) },
+        ) { SdkTriggers.a(it).becomesBlocked() },
         // "Whenever a Merfolk you control becomes tapped, …" — Judge of Currents, and the filtered
         // half of the pair above. It is the **per-permanent** reading (CR 603.2c): attacking with
         // three Merfolk gives three triggers, which is a different event from the batch
@@ -914,7 +900,7 @@ object Triggers {
         // spec carrying one of them from printing as this sentence.
         filteredTriggerRule(
             "whenever {filter} becomes tapped", "whenever a permanent becomes tapped", Filters.indefinite,
-        ) { SdkTriggers.becomesTapped(binding = TriggerBinding.ANY, filter = it) },
+        ) { SdkTriggers.a(it).becomesTapped() },
         // "Whenever you sacrifice a Blood token, …" — Sanguine Statuette, Gluttonous Guest, and 100
         // printed lines. `YouSacrificeA` / `YouSacrificeAnother` are the **per-permanent** specs
         // (CR 603.2c): two Bloods sacrificed to one cost give two triggers, which is a different
@@ -926,13 +912,13 @@ object Triggers {
             "whenever you sacrifice {filter}", "whenever you sacrifice a permanent",
             Filters.indefinite, Steps.triggeredStep,
             { (it.event as? EventPattern.PermanentsSacrificedEvent)?.filter },
-            { SdkTriggers.YouSacrificeA(it) },
+            { SdkTriggers.you.sacrifices(it) },
         ),
         slottedTriggerRule(
             "whenever you sacrifice another {filter}", "whenever you sacrifice another permanent",
             Filters.filter, Steps.triggeredStep,
             { (it.event as? EventPattern.PermanentsSacrificedEvent)?.filter },
-            { SdkTriggers.YouSacrificeAnother(it) },
+            { SdkTriggers.you.sacrificesAnother(it) },
         ),
         // "Whenever ~ or another creature dies, …" — Blood Artist, Skirk Drill Sergeant. One
         // ability with an `ANY` binding covers both halves, because the source is itself a member of
@@ -943,7 +929,7 @@ object Triggers {
             "whenever ${Normalizer.SELF} or another {filter} dies",
             "whenever the source or another permanent dies",
             Filters.filter,
-        ) { SdkTriggers.leavesBattlefield(filter = it, to = Zone.GRAVEYARD, binding = TriggerBinding.ANY) },
+        ) { SdkTriggers.a(it).dies() },
     )
 
     /**
@@ -1179,12 +1165,12 @@ object Triggers {
         Contraction(
             "whenever ${Normalizer.SELF} enters or attacks",
             "whenever the source enters or attacks",
-            listOf(SdkTriggers.EntersBattlefield, SdkTriggers.Attacks),
+            listOf(SdkTriggers.self.enters(), SdkTriggers.self.attacks()),
         ),
         Contraction(
             "whenever ${Normalizer.SELF} attacks or blocks",
             "whenever the source attacks or blocks",
-            listOf(SdkTriggers.Attacks, SdkTriggers.Blocks),
+            listOf(SdkTriggers.self.attacks(), SdkTriggers.self.blocks()),
             // Fourteen older cards spell the same two events with "When" — Mardu Blazebringer,
             // Windscouter, Ceremonial Guard. One model, so one of the two prints.
             alsoSpelled = listOf("when ${Normalizer.SELF} attacks or blocks"),
@@ -1192,7 +1178,7 @@ object Triggers {
         Contraction(
             "when ${Normalizer.SELF} enters or dies",
             "when the source enters or dies",
-            listOf(SdkTriggers.EntersBattlefield, SdkTriggers.Dies),
+            listOf(SdkTriggers.self.enters(), SdkTriggers.self.dies()),
             // CR 700.4 defines "dies" as exactly this, and the artifact cycle that predates the
             // word spells it out — Ichor Wellspring, Mycosynth Wellspring, Prized Statue.
             alsoSpelled = listOf(
@@ -1202,12 +1188,12 @@ object Triggers {
         Contraction(
             "when ${Normalizer.SELF} enters or leaves the battlefield",
             "when the source enters or leaves the battlefield",
-            listOf(SdkTriggers.EntersBattlefield, SdkTriggers.LeavesBattlefield),
+            listOf(SdkTriggers.self.enters(), SdkTriggers.self.leaves()),
         ),
         Contraction(
             "when ${Normalizer.SELF} enters or is turned face up",
             "when the source enters or is turned face up",
-            listOf(SdkTriggers.EntersBattlefield, SdkTriggers.TurnedFaceUp),
+            listOf(SdkTriggers.self.enters(), SdkTriggers.self.turnedFaceUp()),
         ),
         // The two joins whose halves are not *self* events — a land play and a spell cast, which
         // the Crimson Vow cemetery cycle prints together. They belong in this table for the same
@@ -1221,12 +1207,12 @@ object Triggers {
         Contraction(
             "whenever a player plays a land or casts a spell",
             "whenever a player plays a land or casts a spell",
-            listOf(SdkTriggers.anyPlayerPlaysLand(), SdkTriggers.AnyPlayerCastsSpell),
+            listOf(SdkTriggers.anyPlayer.playsLand(), SdkTriggers.anyPlayer.casts()),
         ),
         Contraction(
             "whenever you play a land or cast a spell",
             "whenever you play a land or cast a spell",
-            listOf(SdkTriggers.youPlayLand(), SdkTriggers.YouCastSpell),
+            listOf(SdkTriggers.you.playsLand(), SdkTriggers.you.casts()),
         ),
     )
 

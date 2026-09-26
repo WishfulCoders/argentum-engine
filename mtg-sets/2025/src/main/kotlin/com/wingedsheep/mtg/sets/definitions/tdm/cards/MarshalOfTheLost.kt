@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.tdm.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Marshal of the Lost
@@ -34,8 +34,8 @@ val MarshalOfTheLost = card("Marshal of the Lost") {
     val attackerCount = DynamicAmounts.attackingCreaturesYouControl()
 
     triggeredAbility {
-        trigger = Triggers.YouAttack
-        val t = target("target creature", Targets.Creature)
+        trigger = Triggers.you.attacks()
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(
             power = attackerCount,
             toughness = attackerCount,

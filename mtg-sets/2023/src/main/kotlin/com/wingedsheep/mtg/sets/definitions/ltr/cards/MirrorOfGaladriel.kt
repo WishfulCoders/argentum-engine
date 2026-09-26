@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Mirror of Galadriel
@@ -24,12 +23,9 @@ val MirrorOfGaladriel = card("Mirror of Galadriel") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{5}"), Costs.Tap)
-        effect = Patterns.Library.scry(1).then(Effects.DrawCards(1))
+        effect = Patterns.Library.scry(1) then Effects.DrawCards(1)
         // "costs {1} less to activate for each legendary creature you control"
-        genericCostReduction = DynamicAmount.AggregateBattlefield(
-            player = Player.You,
-            filter = GameObjectFilter.Creature.legendary()
-        )
+        genericCostReduction = DynamicAmounts.legendaryCreaturesYouControl()
     }
 
     metadata {

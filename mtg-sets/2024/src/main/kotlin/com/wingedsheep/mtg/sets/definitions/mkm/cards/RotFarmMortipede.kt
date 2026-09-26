@@ -15,7 +15,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever one or more creature cards leave your graveyard, this creature gets +1/+0 and gains
  * menace and lifelink until end of turn.
  *
- * A *batching* trigger ([Triggers.CardsLeaveYourGraveyard]): it fires at most once per batch no
+ * A *batching* trigger (`Triggers.oneOrMore(filter).leaveYourGraveyard()`): it fires at most once per batch no
  * matter how many creature cards left at once and no matter where they went — cast, exiled to pay
  * for collect evidence, reanimated, or returned to hand. Escaping three creature cards in one event
  * grows the Mortipede by +1/+0, not +3/+0.
@@ -34,12 +34,10 @@ val RotFarmMortipede = card("Rot Farm Mortipede") {
         "+1/+0 and gains menace and lifelink until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.CardsLeaveYourGraveyard(GameObjectFilter.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(1, 0, EffectTarget.Self),
-            Effects.GrantKeyword(Keyword.MENACE, EffectTarget.Self),
-            Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self),
-        )
+        trigger = Triggers.oneOrMore(GameObjectFilter.Creature).leaveYourGraveyard()
+        effect = Effects.ModifyStats(1, 0, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.MENACE, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.LIFELINK, EffectTarget.Self)
         description = "Whenever one or more creature cards leave your graveyard, this creature " +
             "gets +1/+0 and gains menace and lifelink until end of turn."
     }

@@ -1,16 +1,16 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.dsl.div
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetPlayer
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Singularity Rupture
@@ -26,19 +26,13 @@ val SingularityRupture = card("Singularity Rupture") {
 
     spell {
         target = TargetPlayer(unlimited = true)
-        effect = Effects.Composite(listOf(
-            Effects.DestroyAll(GameObjectFilter.Creature),
-            ForEachTargetEffect(
+        effect = Effects.DestroyAll(GameObjectFilter.Creature) then
+            Effects.ForEachTarget(
                 Patterns.Library.mill(
-                    DynamicAmount.Divide(
-                        DynamicAmount.Count(Player.ContextPlayer(0), Zone.LIBRARY),
-                        DynamicAmount.Fixed(2),
-                        roundUp = false
-                    ),
+                    DynamicAmounts.count(Player.ContextPlayer(0), Zone.LIBRARY) / 2,
                     EffectTarget.ContextTarget(0)
                 ).effects
             )
-        ))
     }
 
     metadata {

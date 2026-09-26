@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Avatar's Wrath
@@ -46,22 +46,18 @@ val AvatarsWrath = card("Avatar's Wrath") {
         "Exile Avatar's Wrath."
 
     spell {
-        target("up to one target creature", Targets.UpToCreatures(1))
-        effect = Effects.Composite(
-            listOf(
-                // Airbend every creature except the chosen (up to one) target.
-                Effects.AirbendAll(
-                    filter = GameObjectFilter.Creature,
-                    excludeSelf = false,
-                    excludeChosenTargets = true
-                ),
-                // Your opponents can't cast spells from non-hand zones until your next turn.
-                Effects.CantCastSpellsFromNonHandZones(
-                    target = EffectTarget.PlayerRef(Player.EachOpponent),
-                    duration = Duration.UntilYourNextTurn
-                )
+        target(TargetFilter.Creature, optional = true)
+        // Airbend every creature except the chosen (up to one) target.
+        effect = Effects.AirbendAll(
+            filter = GameObjectFilter.Creature,
+            excludeSelf = false,
+            excludeChosenTargets = true
+        ) then
+            // Your opponents can't cast spells from non-hand zones until your next turn.
+            Effects.CantCastSpellsFromNonHandZones(
+                target = EffectTarget.PlayerRef(Player.EachOpponent),
+                duration = Duration.UntilYourNextTurn
             )
-        )
         // "Exile Avatar's Wrath." — the resolved sorcery is exiled instead of going to the
         // graveyard (engine-honored via CardScript.selfExileOnResolve in StackResolver).
         selfExile()

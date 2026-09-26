@@ -5,10 +5,10 @@
 package com.wingedsheep.mtg.sets.definitions.mir.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CounterEffect
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 
 /**
@@ -27,8 +27,8 @@ val DaringApprentice = card("Daring Apprentice") {
     toughness = 1
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.SacrificeSelf)
-        val t = target("target", TargetSpell())
-        effect = CounterEffect()
+        val t = target(TargetFilter.SpellOnStack)
+        effect = Effects.CounterSpell()
     }
     metadata {
         rarity = Rarity.RARE

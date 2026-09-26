@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Decree of Pain
@@ -25,19 +24,18 @@ val DecreeOfPain = card("Decree of Pain") {
     oracleText = "Destroy all creatures. They can't be regenerated. Draw a card for each creature destroyed this way.\nCycling {3}{B}{B}\nWhen you cycle Decree of Pain, all creatures get -2/-2 until end of turn."
 
     spell {
-        effect = Effects.DestroyAll(
-            filter = GameObjectFilter.Creature,
-            noRegenerate = true,
-            storeDestroyedAs = "destroyed"
-        ).then(
-            Effects.DrawCards(DynamicAmount.VariableReference("destroyed_count"))
-        )
+        effect = Effects.Pipeline {
+            val destroyed = runStoringCollection {
+                Effects.DestroyAll(GameObjectFilter.Creature, noRegenerate = true, storeDestroyedAs = it)
+            }
+            run(Effects.DrawCards(destroyed.count))
+        }
     }
 
     keywordAbility(KeywordAbility.cycling("{3}{B}{B}"))
 
     triggeredAbility {
-        trigger = Triggers.YouCycleThis
+        trigger = Triggers.self.isCycled()
         effect = Patterns.Group.modifyStatsForAll(-2, -2, GroupFilter.AllCreatures)
     }
 

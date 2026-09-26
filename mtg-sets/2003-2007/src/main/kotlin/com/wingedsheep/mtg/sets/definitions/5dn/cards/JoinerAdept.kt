@@ -32,7 +32,7 @@ val JoinerAdept = card("Joiner Adept") {
     toughness = 1
     staticAbility {
         ability = GrantActivatedAbility(
-            ability = ActivatedAbility(id = AbilityId.generate(), cost = Costs.Tap, effect = Effects.AddManaOfChoice(), isManaAbility = true, timing = TimingRule.ManaAbility),
+            ability = ActivatedAbility(id = AbilityId.next(), cost = Costs.Tap, effect = Effects.AddManaOfChoice(), isManaAbility = true, timing = TimingRule.ManaAbility),
             filter = GroupFilter(GameObjectFilter.Land.youControl())
         )
     }

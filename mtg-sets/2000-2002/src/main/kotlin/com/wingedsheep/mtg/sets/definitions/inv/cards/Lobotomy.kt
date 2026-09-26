@@ -7,12 +7,8 @@ import com.wingedsheep.sdk.dsl.namedFromVariable
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.RevealHandEffect
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Lobotomy
@@ -40,36 +36,35 @@ val Lobotomy = card("Lobotomy") {
         "and exile them. Then that player shuffles."
 
     spell {
-        val player = target("player", TargetPlayer())
+        val player = target(Targets.Player)
         effect = Effects.Pipeline {
             // 1. Target player reveals their hand.
-            run(RevealHandEffect(player))
+            run(Effects.RevealHand(player))
             // 2. Gather their hand so the controller can choose a card.
-            val hand = gather(CardSource.FromZone(Zone.HAND, Player.ContextPlayer(0)), name = "hand")
+            val hand = gather(CardSource.FromZone(Zone.HAND, player.asPlayer))
             // 3. You choose a card other than a basic land card.
             val chosen = chooseExactly(
                 1, from = hand,
                 filter = GameObjectFilter(cardPredicates = listOf(CardPredicate.Not(CardPredicate.IsBasicLand))),
                 prompt = "Choose a card other than a basic land card",
                 alwaysPrompt = true,
-                showAllCards = true,
-                name = "chosen"
+                showAllCards = true
             )
             // 4. Record the chosen card's name.
-            val chosenName = storeCardName(chosen, name = "chosenName")
+            val chosenName = storeCardName(chosen)
             // 5. Find every card of that name across their graveyard, hand, and library.
             val toExile = gather(
                 CardSource.FromMultipleZones(
                     zones = listOf(Zone.GRAVEYARD, Zone.HAND, Zone.LIBRARY),
-                    player = Player.ContextPlayer(0),
+                    player = player.asPlayer,
                     filter = GameObjectFilter.Any.namedFromVariable(chosenName)
                 ),
-                name = "toExile"
+                search = true
             )
             // 6. Exile them.
-            exile(toExile, owner = Player.ContextPlayer(0))
+            exile(toExile, owner = player.asPlayer)
             // 7. That player shuffles.
-            run(ShuffleLibraryEffect(target = EffectTarget.ContextTarget(0)))
+            run(Effects.ShuffleLibrary(target = player))
         }
     }
 

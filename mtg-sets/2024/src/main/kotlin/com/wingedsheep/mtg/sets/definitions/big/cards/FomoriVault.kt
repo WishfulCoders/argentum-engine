@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.big.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
@@ -12,7 +13,6 @@ import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Fomori Vault
@@ -47,8 +47,8 @@ val FomoriVault = card("Fomori Vault") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap, Costs.DiscardCard)
         effect = Patterns.Library.lookAtTopAndKeep(
-            count = DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Artifact),
-            keepCount = DynamicAmount.Fixed(1),
+            count = DynamicAmounts.battlefield(Player.You, GameObjectFilter.Artifact).count(),
+            keepCount = DynamicAmounts.fixed(1),
             keepDestination = CardDestination.ToZone(Zone.HAND),
             restDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
             restOrder = CardOrder.Random

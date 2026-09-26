@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
 
 /**
  * Izoni, Center of the Web
@@ -23,7 +22,7 @@ import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
  * Sacrifice four tokens: Surveil 2, then draw two cards. You gain 2 life.
  *
  * "Enters or attacks" is represented by two triggered abilities sharing the same immutable payoff.
- * The ordinary, non-reflexive "if you do" clause is an [OptionalCostEffect]: collecting evidence is
+ * The ordinary, non-reflexive "if you do" clause is an [Effects.MayPay]: collecting evidence is
  * the optional payment, and the tokens are created only after that payment completes. The activated
  * ability pays its four-token sacrifice before resolving the surveil, draw, and life-gain sequence.
  */
@@ -40,9 +39,9 @@ val IzoniCenterOfTheWeb = card("Izoni, Center of the Web") {
 
     keywords(Keyword.MENACE)
 
-    val collectAndCreateSpiders = OptionalCostEffect(
+    val collectAndCreateSpiders = Effects.MayPay(
         cost = Effects.CollectEvidence(4),
-        ifPaid = Effects.CreateToken(
+        then = Effects.CreateToken(
             power = 2,
             toughness = 1,
             colors = setOf(Color.BLACK, Color.GREEN),
@@ -54,14 +53,14 @@ val IzoniCenterOfTheWeb = card("Izoni, Center of the Web") {
     )
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = collectAndCreateSpiders
         description = "Whenever Izoni enters or attacks, you may collect evidence 4. If you do, " +
             "create two 2/1 black and green Spider creature tokens with reach and menace."
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = collectAndCreateSpiders
         description = "Whenever Izoni enters or attacks, you may collect evidence 4. If you do, " +
             "create two 2/1 black and green Spider creature tokens with reach and menace."
@@ -69,11 +68,9 @@ val IzoniCenterOfTheWeb = card("Izoni, Center of the Web") {
 
     activatedAbility {
         cost = Costs.SacrificeMultiple(4, GameObjectFilter.Token)
-        effect = Effects.Composite(
-            Patterns.Library.surveil(2),
-            Effects.DrawCards(2),
+        effect = Patterns.Library.surveil(2) then
+            Effects.DrawCards(2) then
             Effects.GainLife(2)
-        )
         description = "Sacrifice four tokens: Surveil 2, then draw two cards. You gain 2 life."
     }
 

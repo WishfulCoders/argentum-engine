@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -27,7 +26,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * are noncreature artifacts but still get hexproof, so the filter is `Any` (not `Creature`).
  *
  * The attack trigger fires for any Mount or Vehicle you control declaring as an attacker
- * ([Triggers.attacks] with ANY binding) and puts a +1/+1 counter on that attacker via
+ * (`Triggers.<subject>.attacks(requires)` with ANY binding) and puts a +1/+1 counter on that attacker via
  * [EffectTarget.TriggeringEntity]. Only crewed Vehicles / Mounts can actually attack, so the trigger's
  * filter and the attack rules naturally agree.
  */
@@ -49,11 +48,8 @@ val MiriamHerdWhisperer = card("Miriam, Herd Whisperer") {
     }
 
     triggeredAbility {
-        trigger = Triggers.attacks(
-            filter = GameObjectFilter.Any.withAnySubtype("Mount", "Vehicle").youControl(),
-            binding = TriggerBinding.ANY
-        )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.TriggeringEntity)
+        trigger = Triggers.a(GameObjectFilter.Any.withAnySubtype("Mount", "Vehicle").youControl()).attacks()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.TriggeringEntity)
         description = "Whenever a Mount or Vehicle you control attacks, put a +1/+1 counter on it."
     }
 

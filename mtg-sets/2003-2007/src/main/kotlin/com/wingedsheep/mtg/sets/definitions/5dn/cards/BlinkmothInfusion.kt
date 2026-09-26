@@ -37,7 +37,7 @@ val BlinkmothInfusion = card("Blinkmoth Infusion") {
         )
     }
     spell {
-        effect = Effects.ForEachInGroup(GroupFilter(GameObjectFilter.Artifact), Effects.Untap(EffectTarget.Self))
+        effect = Effects.ForEachInGroup(GroupFilter(GameObjectFilter.Artifact), Effects.Untap(EffectTarget.IterationEntity))
     }
     metadata {
         rarity = Rarity.RARE

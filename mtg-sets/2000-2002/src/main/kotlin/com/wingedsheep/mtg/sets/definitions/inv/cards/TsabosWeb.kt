@@ -31,7 +31,7 @@ val TsabosWeb = card("Tsabo's Web") {
         "during its controller's untap step."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(1)
     }
 

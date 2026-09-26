@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Crashing Wave
@@ -40,17 +40,15 @@ val CrashingWave = card("Crashing Wave") {
         target = TargetObject(
             optional = true,
             filter = TargetFilter.Creature,
-            dynamicMaxCount = DynamicAmount.XValue,
+            dynamicMaxCount = DynamicAmounts.xValue(),
         )
-        effect = Effects.Composite(
-            Effects.TapEachTarget(),
+        effect = Effects.TapEachTarget() then
             Effects.DistributeCountersAmongFiltered(
                 totalCounters = 3,
-                counterType = Counters.STUN,
+                counterType = CounterType.STUN,
                 filter = Filters.Creature.tapped().opponentControls(),
                 minPerTarget = 0,
-            ),
-        )
+            )
     }
 
     metadata {

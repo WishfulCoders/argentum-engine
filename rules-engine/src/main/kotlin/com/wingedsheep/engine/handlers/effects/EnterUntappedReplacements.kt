@@ -27,8 +27,6 @@ import com.wingedsheep.sdk.scripting.EventPattern
  */
 object EnterUntappedReplacements {
 
-    private val predicateEvaluator = PredicateEvaluator()
-
     /**
      * True if any battlefield permanent grants an [EntersUntapped] replacement whose `appliesTo`
      * filter matches [enteringEntityId] (controlled by [enteringControllerId]). The entering
@@ -39,6 +37,7 @@ object EnterUntappedReplacements {
         state: GameState,
         enteringEntityId: EntityId,
         enteringControllerId: EntityId,
+        predicateEvaluator: PredicateEvaluator
     ): Boolean {
         for (sourceId in state.getBattlefield()) {
             if (sourceId == enteringEntityId) continue
@@ -47,7 +46,7 @@ object EnterUntappedReplacements {
             val sourceControllerId = container.get<ControllerComponent>()?.playerId ?: continue
             for (effect in replacementComponent.replacementEffects) {
                 if (effect !is EntersUntapped) continue
-                if (matchesEnterFilter(effect.appliesTo, enteringEntityId, sourceId, sourceControllerId, state)) {
+                if (matchesEnterFilter(effect.appliesTo, enteringEntityId, sourceId, sourceControllerId, state, predicateEvaluator = predicateEvaluator)) {
                     return true
                 }
             }
@@ -68,6 +67,7 @@ object EnterUntappedReplacements {
         replacementSourceId: EntityId,
         sourceControllerId: EntityId,
         state: GameState,
+        predicateEvaluator: PredicateEvaluator
     ): Boolean {
         if (event !is EventPattern.ZoneChangeEvent) return false
         if (event.to != Zone.BATTLEFIELD) return false

@@ -10,13 +10,13 @@ import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Crime Novelist (MKM) — {2}{R} 1/3 Goblin Bard.
@@ -62,7 +62,7 @@ class CrimeNovelistScenarioTest : ScenarioTestBase() {
         typeLine = "Sorcery"
         oracleText = "Sacrifice target creature you control."
         spell {
-            val victim = target("target creature you control", Targets.CreatureYouControl)
+            val victim = target(TargetFilter.CreatureYouControl)
             effect = Effects.SacrificeTarget(victim)
         }
     }

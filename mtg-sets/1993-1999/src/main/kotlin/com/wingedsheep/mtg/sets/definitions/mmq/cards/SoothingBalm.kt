@@ -18,7 +18,7 @@ val SoothingBalm = card("Soothing Balm") {
     oracleText = "Target player gains 5 life."
 
     spell {
-        val player = target("target", Targets.Player)
+        val player = target(Targets.Player)
         effect = Effects.GainLife(5, player)
     }
 

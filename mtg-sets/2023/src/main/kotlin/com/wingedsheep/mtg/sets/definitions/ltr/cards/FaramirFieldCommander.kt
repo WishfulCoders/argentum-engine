@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Faramir, Field Commander
@@ -27,13 +28,13 @@ val FaramirFieldCommander = card("Faramir, Field Commander") {
         "Whenever the Ring tempts you, if you chose a creature other than Faramir as your Ring-bearer, create a 1/1 white Human Soldier creature token."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.ControlledCreatureDiedThisTurn
         effect = Effects.DrawCards(1)
     }
 
     triggeredAbility {
-        trigger = Triggers.RingTemptsYou
+        trigger = Triggers.you.isTemptedByTheRing()
         interveningIf = Conditions.YouChoseOtherCreatureAsRingBearer
         effect = Effects.CreateToken(
             power = 1,

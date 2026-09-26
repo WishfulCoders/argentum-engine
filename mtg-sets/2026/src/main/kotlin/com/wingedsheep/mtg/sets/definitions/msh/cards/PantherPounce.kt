@@ -5,8 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Panther Pounce
@@ -24,14 +23,12 @@ val PantherPounce = card("Panther Pounce") {
     typeLine = "Instant"
     oracleText = "Target player investigates. Target creature gets +1/+0 and gains flying until end of turn. Untap it. (To investigate, create a Clue token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")"
     spell {
-        val player = target("player", TargetPlayer())
-        val creature = target("creature", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.Investigate(1, controller = player),
-            Effects.ModifyStats(1, 0, creature),
-            Effects.GrantKeyword(Keyword.FLYING, creature),
-            Effects.Untap(creature),
-        )
+        val player = target(Targets.Player)
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.Investigate(1, controller = player) then
+            Effects.ModifyStats(1, 0, creature) then
+            Effects.GrantKeyword(Keyword.FLYING, creature) then
+            Effects.Untap(creature)
     }
     metadata {
         rarity = Rarity.COMMON

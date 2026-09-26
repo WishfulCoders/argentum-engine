@@ -1,6 +1,8 @@
 package com.wingedsheep.mtg.sets.definitions.blc.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -8,15 +10,9 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
 
 /**
  * Beastmaster Ascension
@@ -35,12 +31,9 @@ val BeastmasterAscension = card("Beastmaster Ascension") {
         "As long as Beastmaster Ascension has seven or more quest counters on it, creatures you control get +5/+5."
 
     triggeredAbility {
-        trigger = Triggers.attacks(
-            filter = GameObjectFilter.Creature.youControl(),
-            binding = TriggerBinding.ANY,
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).attacks()
         optional = true
-        effect = Effects.AddCounters(Counters.QUEST, 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.QUEST, 1, EffectTarget.Self)
     }
 
     staticAbility {
@@ -50,13 +43,10 @@ val BeastmasterAscension = card("Beastmaster Ascension") {
                 toughnessBonus = 5,
                 filter = GroupFilter.AllCreaturesYouControl
             ),
-            condition = Compare(
-                DynamicAmount.EntityProperty(
-                    EntityReference.Source,
-                    EntityNumericProperty.CounterCount(CounterTypeFilter.Named("quest"))
-                ),
+            condition = Conditions.CompareAmounts(
+                DynamicAmounts.countersOnSelf(CounterType.QUEST),
                 ComparisonOperator.GTE,
-                DynamicAmount.Fixed(7)
+                7
             )
         )
     }

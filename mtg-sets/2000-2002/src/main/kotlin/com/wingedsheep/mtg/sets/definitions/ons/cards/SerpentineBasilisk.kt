@@ -4,9 +4,9 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Serpentine Basilisk
@@ -26,8 +26,8 @@ val SerpentineBasilisk = card("Serpentine Basilisk") {
     oracleText = "Whenever Serpentine Basilisk deals combat damage to a creature, destroy that creature at end of combat.\nMorph {1}{G}{G}"
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToCreature
-        effect = CreateDelayedTriggerEffect(
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyCreature)
+        effect = Effects.CreateDelayedTrigger(
                 step = Step.END_COMBAT,
                 effect = Effects.Destroy(EffectTarget.TriggeringEntity)
             )

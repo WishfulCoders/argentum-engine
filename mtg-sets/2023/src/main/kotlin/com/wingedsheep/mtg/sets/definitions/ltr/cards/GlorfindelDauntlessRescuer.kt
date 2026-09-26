@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.MustBeBlockedEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -39,28 +38,20 @@ val GlorfindelDauntlessRescuer = card("Glorfindel, Dauntless Rescuer") {
     // Folding the +1/+1 into each mode (rather than Composite(pump, modal)) keeps it on the
     // engine's modal-decision path.
     triggeredAbility {
-        trigger = Triggers.WheneverYouScry
+        trigger = Triggers.you.scries()
         effect = ModalEffect.chooseOne(
             Mode.noTarget(
-                Effects.Composite(
-                    listOf(
-                        Effects.ModifyStats(1, 1, EffectTarget.Self),
-                        MustBeBlockedEffect(EffectTarget.Self, allCreatures = false)
-                    )
-                ),
+                Effects.ModifyStats(1, 1, EffectTarget.Self) then
+                    Effects.MustBeBlocked(EffectTarget.Self, allCreatures = false),
                 "Glorfindel gets +1/+1 until end of turn and must be blocked this turn if able"
             ),
             Mode.noTarget(
-                Effects.Composite(
-                    listOf(
-                        Effects.ModifyStats(1, 1, EffectTarget.Self),
-                        Effects.GrantKeyword(
-                            AbilityFlag.CANT_BE_BLOCKED_BY_MORE_THAN_ONE,
-                            EffectTarget.Self,
-                            Duration.EndOfTurn
-                        )
-                    )
-                ),
+                Effects.ModifyStats(1, 1, EffectTarget.Self) then
+                    Effects.GrantKeyword(
+                        AbilityFlag.CANT_BE_BLOCKED_BY_MORE_THAN_ONE,
+                        EffectTarget.Self,
+                        Duration.EndOfTurn
+                    ),
                 "Glorfindel gets +1/+1 until end of turn and can't be blocked by more than one creature each combat this turn"
             )
         )

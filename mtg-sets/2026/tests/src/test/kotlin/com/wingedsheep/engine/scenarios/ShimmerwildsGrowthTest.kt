@@ -1,4 +1,5 @@
 package com.wingedsheep.engine.scenarios
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.state.components.battlefield.chosenColor
 
 import com.wingedsheep.engine.core.ActivateAbility
@@ -20,6 +21,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Tests for Shimmerwilds Growth.
@@ -124,7 +126,7 @@ class ShimmerwildsGrowthTest : FunSpec({
                 abilityId = manaAbilityId
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         // Forest's base {G} is swapped to {U} + 1 extra {U} from the bonus trigger.
         val pool = driver.state.getEntity(activePlayer)!!.get<ManaPoolComponent>()!!
@@ -164,7 +166,7 @@ class ShimmerwildsGrowthTest : FunSpec({
                 sourceId = mountain,
                 abilityId = mountainManaAbilityId
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
 
         val pool = driver.state.getEntity(activePlayer)!!.get<ManaPoolComponent>()!!
         pool.red shouldBe 0
@@ -229,7 +231,7 @@ class ShimmerwildsGrowthTest : FunSpec({
                 sourceId = forest,
                 abilityId = manaAbilityId
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
 
         val pool = driver.state.getEntity(activePlayer)!!.get<ManaPoolComponent>()!!
         pool.green shouldBe 2
@@ -257,7 +259,7 @@ class ShimmerwildsGrowthTest : FunSpec({
         val decision = driver.pendingDecision as ChooseColorDecision
         driver.submitDecision(activePlayer, ColorChosenResponse(decision.id, Color.BLUE))
 
-        val view = ClientStateTransformer(cardRegistry = driver.cardRegistry)
+        val view = ClientStateTransformer(cardRegistry = driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .transform(driver.state, viewingPlayerId = activePlayer)
 
         // The land carries the chosen color so the client can render a pip on it.

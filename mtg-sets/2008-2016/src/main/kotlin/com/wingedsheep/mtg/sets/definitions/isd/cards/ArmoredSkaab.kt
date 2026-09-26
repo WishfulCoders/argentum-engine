@@ -25,7 +25,7 @@ val ArmoredSkaab = card("Armored Skaab") {
     power = 1
     toughness = 4
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.mill(4)
     }
     metadata {

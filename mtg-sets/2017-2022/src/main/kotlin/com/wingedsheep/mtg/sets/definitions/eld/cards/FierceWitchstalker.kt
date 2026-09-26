@@ -25,7 +25,7 @@ val FierceWitchstalker = card("Fierce Witchstalker") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateFood()
     }
 

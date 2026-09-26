@@ -11,12 +11,6 @@ import com.wingedsheep.sdk.scripting.GrantAdditionalLandDrop
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Loot, Exuberant Explorer
@@ -60,38 +54,25 @@ val LootExuberantExplorer = card("Loot, Exuberant Explorer") {
             Costs.Mana("{4}{G}{G}"),
             Costs.Tap,
         )
-        effect = Effects.Composite(
+        effect = Effects.Pipeline {
             // Look at the top six cards of your library.
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(DynamicAmount.Fixed(6)),
-                storeAs = "lootLooked",
-            ),
+            val lootLooked = gather(CardSource.TopOfLibrary(6))
             // You may reveal a creature card with mana value <= the number of lands you control.
-            SelectFromCollectionEffect(
-                from = "lootLooked",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
+            val (lootKept, lootRest) = chooseUpToSplit(
+                1,
+                from = lootLooked,
                 filter = GameObjectFilter.Creature.manaValueAtMostDynamic(
                     DynamicAmounts.landsYouControl(),
                 ),
-                storeSelected = "lootKept",
-                storeRemainder = "lootRest",
                 prompt = "You may put a creature card with mana value ≤ lands you control " +
                     "onto the battlefield",
-                showAllCards = true,
-            ),
+                showAllCards = true
+            )
             // ... and put it onto the battlefield (revealed as it goes).
-            MoveCollectionEffect(
-                from = "lootKept",
-                destination = CardDestination.ToZone(Zone.BATTLEFIELD),
-                revealed = true,
-            ),
+            move(lootKept, CardDestination.ToZone(Zone.BATTLEFIELD), revealed = true)
             // Put the rest on the bottom in a random order.
-            MoveCollectionEffect(
-                from = "lootRest",
-                destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
-                order = CardOrder.Random,
-            ),
-        )
+            toLibraryBottom(lootRest, order = CardOrder.Random)
+        }
     }
 
     metadata {

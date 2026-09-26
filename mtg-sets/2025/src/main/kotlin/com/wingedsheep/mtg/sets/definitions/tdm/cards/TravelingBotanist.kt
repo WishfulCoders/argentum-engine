@@ -7,13 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.dsl.Effects
 
 /**
@@ -47,56 +40,33 @@ val TravelingBotanist = card("Traveling Botanist") {
         "card into your hand, you may put it into your graveyard."
 
     triggeredAbility {
-        trigger = Triggers.BecomesTapped
-        effect = Effects.Composite(
-            listOf(
-                // Look at the top card of your library (private peek).
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1)),
-                    storeAs = "looked"
-                ),
-                // Only a land card may be put into hand.
-                FilterCollectionEffect(
-                    from = "looked",
-                    filter = CollectionFilter.MatchesFilter(GameObjectFilter.Land),
-                    storeMatching = "landCard"
-                ),
-                // You may reveal the land and put it into your hand.
-                SelectFromCollectionEffect(
-                    from = "landCard",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    storeSelected = "toHand",
-                    selectedLabel = "Reveal and put into your hand",
-                    remainderLabel = "Leave on top of your library"
-                ),
-                MoveCollectionEffect(
-                    from = "toHand",
-                    destination = CardDestination.ToZone(Zone.HAND),
-                    revealed = true,
-                    revealToSelf = false
-                ),
-                // "the card" you didn't put into your hand = the looked-at top card minus whatever
-                // went to hand. This is any top card (land or not), not just a declined land.
-                FilterCollectionEffect(
-                    from = "looked",
-                    filter = CollectionFilter.ExcludeOtherCollection("toHand"),
-                    storeMatching = "notInHand"
-                ),
-                // If you didn't put the card into your hand, you may put it into your graveyard.
-                SelectFromCollectionEffect(
-                    from = "notInHand",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    storeSelected = "toGraveyard",
-                    selectedLabel = "Put into your graveyard",
-                    remainderLabel = "Leave on top of your library"
-                ),
-                MoveCollectionEffect(
-                    from = "toGraveyard",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD)
-                )
-                // A card declined at both steps stays on top of the library (never gathered out).
+        trigger = Triggers.self.becomesTapped()
+        effect = Effects.Pipeline {
+            // Look at the top card of your library (private peek).
+            val looked = gather(CardSource.TopOfLibrary(1))
+            // Only a land card may be put into hand.
+            val landCard = filter(looked, GameObjectFilter.Land)
+            // You may reveal the land and put it into your hand.
+            val toHandCards = chooseUpTo(
+                1,
+                from = landCard,
+                selectedLabel = "Reveal and put into your hand",
+                remainderLabel = "Leave on top of your library"
             )
-        )
+            move(toHandCards, CardDestination.ToZone(Zone.HAND), revealed = true, revealToSelf = false)
+            // "the card" you didn't put into your hand = the looked-at top card minus whatever
+            // went to hand. This is any top card (land or not), not just a declined land.
+            val notInHand = exclude(looked, minus = toHandCards)
+            // If you didn't put the card into your hand, you may put it into your graveyard.
+            val toGraveyardCards = chooseUpTo(
+                1,
+                from = notInHand,
+                selectedLabel = "Put into your graveyard",
+                remainderLabel = "Leave on top of your library"
+            )
+            toGraveyard(toGraveyardCards)
+            // A card declined at both steps stays on top of the library (never gathered out).
+        }
         description = "look at the top card of your library. If it's a land card, you may reveal it " +
             "and put it into your hand. If you don't put the card into your hand, you may put it " +
             "into your graveyard."

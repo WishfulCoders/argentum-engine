@@ -24,11 +24,11 @@ val HealingLeaves = card("Healing Leaves") {
     spell {
         modal(chooseCount = 1) {
             mode("Target player gains 3 life") {
-                val p = target("target", Targets.Player)
+                val p = target(Targets.Player)
                 effect = Effects.GainLife(3, p)
             }
             mode("Prevent the next 3 damage that would be dealt to any target this turn") {
-                val t = target("target", Targets.Any)
+                val t = target(Targets.Any)
                 effect = Effects.PreventNextDamage(3, t)
             }
         }

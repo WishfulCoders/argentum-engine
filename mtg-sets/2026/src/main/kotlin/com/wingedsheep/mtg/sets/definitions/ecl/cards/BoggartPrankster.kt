@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Boggart Prankster
@@ -25,11 +24,8 @@ val BoggartPrankster = card("Boggart Prankster") {
     oracleText = "Whenever you attack, target attacking Goblin you control gets +1/+0 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.YouAttack
-        val goblin = target(
-            "attacking Goblin you control",
-            TargetCreature(filter = TargetFilter.AttackingCreature.withSubtype(Subtype.GOBLIN).youControl())
-        )
+        trigger = Triggers.you.attacks()
+        val goblin = target(TargetFilter.AttackingCreature.withSubtype(Subtype.GOBLIN).youControl())
         effect = Effects.ModifyStats(1, 0, goblin)
     }
 

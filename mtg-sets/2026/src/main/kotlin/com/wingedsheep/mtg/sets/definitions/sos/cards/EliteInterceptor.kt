@@ -2,13 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Elite Interceptor // Rejoinder — Secrets of Strixhaven #12
@@ -25,7 +23,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * [com.wingedsheep.sdk.model.CardLayout.PREPARE] + the `prepare(name) { }` DSL.
  *
  * "You may tap or untap target creature" — the target is chosen at cast time; at resolution the
- * controller may decline ([MayEffect]) or choose one of two modes ([ModalEffect.chooseOne]) that
+ * controller may decline ([Effects.May]) or choose one of two modes ([ModalEffect.chooseOne]) that
  * both act on the already-chosen target ([EffectTarget.ContextTarget]). The draw is unconditional,
  * outside the may-clause.
  */
@@ -45,24 +43,22 @@ val EliteInterceptor = card("Elite Interceptor") {
         typeLine = "Sorcery"
         oracleText = "You may tap or untap target creature.\nDraw a card."
         spell {
-            target = Targets.Creature
-            effect = Effects.Composite(
-                MayEffect(
-                    ModalEffect.chooseOne(
-                        Mode.noTarget(
-                            Effects.Tap(EffectTarget.ContextTarget(0)),
-                            "Tap that creature"
-                        ),
-                        Mode.noTarget(
-                            Effects.Untap(EffectTarget.ContextTarget(0)),
-                            "Untap that creature"
-                        ),
-                        countsAsModalSpell = false
+            val creature = target(TargetFilter.Creature)
+            effect = Effects.May(
+                ModalEffect.chooseOne(
+                    Mode.noTarget(
+                        Effects.Tap(creature),
+                        "Tap that creature"
                     ),
-                    descriptionOverride = "You may tap or untap target creature."
+                    Mode.noTarget(
+                        Effects.Untap(creature),
+                        "Untap that creature"
+                    ),
+                    countsAsModalSpell = false
                 ),
+                descriptionOverride = "You may tap or untap target creature."
+            ) then
                 Effects.DrawCards(1)
-            )
         }
     }
 

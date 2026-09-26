@@ -7,8 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Twinmaw Stormbrood // Charring Bite — Tarkir: Dragonstorm #232
@@ -36,7 +34,7 @@ val TwinmawStormbrood = card("Twinmaw Stormbrood") {
 
     // ETB: you gain 5 life.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.GainLife(5)
     }
 
@@ -47,10 +45,7 @@ val TwinmawStormbrood = card("Twinmaw Stormbrood") {
         oracleText = "Charring Bite deals 5 damage to target creature without flying. " +
             "(Then shuffle this card into its owner's library.)"
         spell {
-            val creature = target(
-                "creature without flying",
-                TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.withoutKeyword(Keyword.FLYING)))
-            )
+            val creature = target(TargetFilter(GameObjectFilter.Creature.withoutKeyword(Keyword.FLYING)))
             effect = Effects.DealDamage(5, creature)
         }
     }

@@ -128,11 +128,11 @@ internal fun BridgeBuilder.keywords() {
     // Ward (CR 702.21) — a PARAMETERIZED keyword ability: the cost rides in the rule's args
     // (`Ward—Discard a card`, `Ward {2}`, `Ward—Pay N life`, `Ward—Sacrifice <filter>`). Like Saddle,
     // it must be `supported`, not `keyword`: a bare `keywords(Keyword.WARD)` would drop the cost. The
-    // emitter's `rname == "Ward"` branch renders `keywordAbility(KeywordAbility.ward(...)/wardDiscard()/
-    // wardLife(N)/wardLife(DynamicAmounts.sourcePower())/wardSacrifice(filter))` for the cost shapes it
+    // emitter's `rname == "Ward"` branch renders `keywordAbility(KeywordAbility.Ward(WardCost.<cost>))` —
+    // Mana, Discard, Life, DynamicLife(DynamicAmounts.sourcePower()), Sacrifice, Choice — for the cost shapes it
     // can express ("Ward—Pay life equal to ~'s power", Raubahn, renders the dynamic form); richer/compound
     // costs decline -> SCAFFOLD. This entry only marks the capability covered (never blocking).
-    supported("Ward", "keyword ability: Ward—<cost> (CR 702.21) -> keywordAbility(KeywordAbility.ward(...)/wardDiscard()/wardLife(N)/wardSacrifice(filter))")
+    supported("Ward", "keyword ability: Ward—<cost> (CR 702.21) -> keywordAbility(KeywordAbility.Ward(WardCost.<cost>))")
     // Madness [cost] (CR 702.35) — a PARAMETERIZED keyword whose whole mechanic (the discard →
     // exile replacement plus the "may cast it for [cost]" trigger the engine synthesizes on that
     // exile) hangs off the cost. `supported`, not `keyword`: `Keyword.MADNESS` exists, so the

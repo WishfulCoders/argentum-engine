@@ -32,7 +32,7 @@ val AlabasterDragon = card("Alabaster Dragon") {
     toughness = 4
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.Move(EffectTarget.Self, Zone.LIBRARY, ZonePlacement.Shuffled)
     }
     metadata {
@@ -294,7 +294,7 @@ val Armageddon = card("Armageddon") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Land),
-            Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true),
+            Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true),
             noRegenerate = false
         )
     }
@@ -660,7 +660,7 @@ val BlindingLight = card("Blinding Light") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.notColor(Color.WHITE)),
-            Effects.Tap(EffectTarget.Self)
+            Effects.Tap(EffectTarget.IterationEntity)
         )
     }
     metadata {
@@ -811,7 +811,7 @@ val BoilingSeas = card("Boiling Seas") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Land.withSubtype(Subtype.ISLAND)),
-            Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true),
+            Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true),
             noRegenerate = false
         )
     }
@@ -1047,7 +1047,7 @@ val ChargingBandits = card("Charging Bandits") {
     power = 3
     toughness = 3
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ModifyStats(2, 0, EffectTarget.Self)
     }
     metadata {
@@ -1088,7 +1088,7 @@ val ChargingPaladin = card("Charging Paladin") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.ModifyStats(0, 3, EffectTarget.Self)
     }
     metadata {
@@ -1629,7 +1629,9 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.YouWereAttackedThisStep
+import com.wingedsheep.sdk.scripting.effects.PreventionSourceFilter
 
 
 /**
@@ -1647,7 +1649,10 @@ val DeepWood = card("Deep Wood") {
     spell {
         castOnlyDuring(Step.DECLARE_ATTACKERS)
         castOnlyIf(YouWereAttackedThisStep)
-        effect = Effects.PreventDamageFromAttackingCreatures()
+        effect = Effects.PreventDamage(
+            alsoToYou = true,
+            sources = PreventionSourceFilter.Matching(GameObjectFilter.Creature.attacking())
+        )
     }
     metadata {
         rarity = Rarity.UNCOMMON
@@ -1807,7 +1812,7 @@ val Devastation = card("Devastation") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.CreatureOrLand),
-            Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true),
+            Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true),
             noRegenerate = false
         )
     }
@@ -1961,7 +1966,7 @@ val DreadReaper = card("Dread Reaper") {
     toughness = 5
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = LoseLifeEffect(5, EffectTarget.Controller)
     }
     metadata {
@@ -2003,7 +2008,10 @@ val DrySpell = card("Dry Spell") {
     oracleText = "Dry Spell deals 1 damage to each creature and each player."
     spell {
         effect = Effects.Composite(
-            Effects.ForEachInGroup(GroupFilter(GameObjectFilter.Creature), DealDamageEffect(1, EffectTarget.Self)),
+            Effects.ForEachInGroup(
+                GroupFilter(GameObjectFilter.Creature),
+                DealDamageEffect(1, EffectTarget.IterationEntity)
+            ),
             ForEachPlayerEffect(Player.Each, listOf(DealDamageEffect(1, EffectTarget.Controller)))
         )
     }
@@ -2094,7 +2102,7 @@ val Earthquake = card("Earthquake") {
         effect = Effects.Composite(
             Effects.ForEachInGroup(
                 GroupFilter(GameObjectFilter.Creature.withoutKeyword(Keyword.FLYING)),
-                DealDamageEffect(DynamicAmount.XValue, EffectTarget.Self)
+                DealDamageEffect(DynamicAmount.XValue, EffectTarget.IterationEntity)
             ),
             ForEachPlayerEffect(Player.Each, listOf(DealDamageEffect(DynamicAmount.XValue, EffectTarget.Controller)))
         )
@@ -2139,7 +2147,7 @@ val EbonDragon = card("Ebon Dragon") {
     toughness = 4
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         val t = target("target", TargetOpponent())
         effect = Patterns.Hand.discardCards(1, t)
@@ -2293,7 +2301,7 @@ val EndlessCockroaches = card("Endless Cockroaches") {
     power = 1
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.Move(EffectTarget.Self, Zone.HAND)
     }
     metadata {
@@ -2491,7 +2499,7 @@ val FireDragon = card("Fire Dragon") {
     toughness = 6
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val t = target("target", TargetCreature(filter = TargetFilter.Creature))
         effect = DealDamageEffect(
             DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land.withSubtype(Subtype.MOUNTAIN)),
@@ -2536,7 +2544,7 @@ val FireImp = card("Fire Imp") {
     power = 2
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val t = target("target", TargetCreature(filter = TargetFilter.Creature))
         effect = DealDamageEffect(2, t)
     }
@@ -2579,7 +2587,7 @@ val FireSnake = card("Fire Snake") {
     power = 3
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         val t = target("target", TargetPermanent(filter = TargetFilter.Land))
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
     }
@@ -2623,7 +2631,10 @@ val FireTempest = card("Fire Tempest") {
     oracleText = "Fire Tempest deals 6 damage to each creature and each player."
     spell {
         effect = Effects.Composite(
-            Effects.ForEachInGroup(GroupFilter(GameObjectFilter.Creature), DealDamageEffect(6, EffectTarget.Self)),
+            Effects.ForEachInGroup(
+                GroupFilter(GameObjectFilter.Creature),
+                DealDamageEffect(6, EffectTarget.IterationEntity)
+            ),
             ForEachPlayerEffect(Player.Each, listOf(DealDamageEffect(6, EffectTarget.Controller)))
         )
     }
@@ -2666,7 +2677,7 @@ val Flashfires = card("Flashfires") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Land.withSubtype(Subtype.PLAINS)),
-            Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true),
+            Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true),
             noRegenerate = false
         )
     }
@@ -3098,7 +3109,7 @@ val Gravedigger = card("Gravedigger") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         val t = target("target", TargetObject(filter = TargetFilter.CreatureInYourGraveyard))
         effect = Effects.Move(t, Zone.HAND)
@@ -3467,7 +3478,7 @@ val Hurricane = card("Hurricane") {
         effect = Effects.Composite(
             Effects.ForEachInGroup(
                 GroupFilter(GameObjectFilter.Creature.withKeyword(Keyword.FLYING)),
-                DealDamageEffect(DynamicAmount.XValue, EffectTarget.Self)
+                DealDamageEffect(DynamicAmount.XValue, EffectTarget.IterationEntity)
             ),
             ForEachPlayerEffect(Player.Each, listOf(DealDamageEffect(DynamicAmount.XValue, EffectTarget.Controller)))
         )
@@ -3512,7 +3523,7 @@ val IngeniousThief = card("Ingenious Thief") {
     toughness = 1
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val t = target("target", TargetPlayer())
         effect = LookAtTargetHandEffect(t)
     }
@@ -3882,7 +3893,7 @@ val ManOWar = card("Man-o'-War") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val t = target("target", TargetCreature(filter = TargetFilter.Creature))
         effect = Effects.Move(t, Zone.HAND)
     }
@@ -3925,7 +3936,7 @@ val MercenaryKnight = card("Mercenary Knight") {
     power = 4
     toughness = 4
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = PayOrSufferEffect(
             cost = Costs.pay.Discard(filter = GameObjectFilter.Creature),
             suffer = SacrificeSelfEffect
@@ -4105,7 +4116,7 @@ val Mobilize = card("Mobilize") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.Untap(EffectTarget.Self)
+            Effects.Untap(EffectTarget.IterationEntity)
         )
     }
     metadata {
@@ -4436,7 +4447,7 @@ val NaturesCloak = card("Nature's Cloak") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withColor(Color.GREEN).youControl()),
-            Effects.GrantKeyword(Keyword.FORESTWALK, EffectTarget.Self)
+            Effects.GrantKeyword(Keyword.FORESTWALK, EffectTarget.IterationEntity)
         )
     }
     metadata {
@@ -4519,7 +4530,7 @@ val NaturesRuin = card("Nature's Ruin") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withColor(Color.GREEN)),
-            Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true),
+            Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true),
             noRegenerate = false
         )
     }
@@ -4563,7 +4574,7 @@ val NeedleStorm = card("Needle Storm") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withKeyword(Keyword.FLYING)),
-            DealDamageEffect(4, EffectTarget.Self)
+            DealDamageEffect(4, EffectTarget.IterationEntity)
         )
     }
     metadata {
@@ -4602,7 +4613,7 @@ val NoxiousToad = card("Noxious Toad") {
     power = 1
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Patterns.Hand.eachOpponentDiscards(1)
     }
     metadata {
@@ -4625,7 +4636,6 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 
 
@@ -4644,7 +4654,7 @@ val Omen = card("Omen") {
     spell {
         effect = Effects.Composite(
             Patterns.Library.lookAtTopAndReorder(count = 3),
-            MayEffect(ShuffleLibraryEffect()),
+            Effects.May(ShuffleLibraryEffect()),
             DrawCardsEffect(1)
         )
     }
@@ -4689,7 +4699,7 @@ val OwlFamiliar = card("Owl Familiar") {
     toughness = 1
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Composite(
             DrawCardsEffect(1),
             Patterns.Hand.discardCards(1)
@@ -4884,7 +4894,7 @@ val PillagingHorde = card("Pillaging Horde") {
     power = 5
     toughness = 5
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = PayOrSufferEffect(cost = Costs.pay.Discard(random = true), suffer = SacrificeSelfEffect)
     }
     metadata {
@@ -4956,7 +4966,7 @@ val PlantElemental = card("Plant Elemental") {
     power = 3
     toughness = 4
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = PayOrSufferEffect(
             cost = Costs.pay.Sacrifice(GameObjectFilter.Land.withSubtype(Subtype.FOREST)),
             suffer = SacrificeSelfEffect
@@ -5002,7 +5012,7 @@ val PrimevalForce = card("Primeval Force") {
     power = 8
     toughness = 8
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = PayOrSufferEffect(
             cost = Costs.pay.Sacrifice(GameObjectFilter.Land.withSubtype(Subtype.FOREST), count = 3),
             suffer = SacrificeSelfEffect
@@ -5079,7 +5089,10 @@ val Pyroclasm = card("Pyroclasm") {
     typeLine = "Sorcery"
     oracleText = "Pyroclasm deals 2 damage to each creature."
     spell {
-        effect = Effects.ForEachInGroup(GroupFilter(GameObjectFilter.Creature), DealDamageEffect(2, EffectTarget.Self))
+        effect = Effects.ForEachInGroup(
+            GroupFilter(GameObjectFilter.Creature),
+            DealDamageEffect(2, EffectTarget.IterationEntity)
+        )
     }
     metadata {
         rarity = Rarity.RARE
@@ -5643,7 +5656,7 @@ val ScorchingWinds = card("Scorching Winds") {
         castOnlyIf(YouWereAttackedThisStep)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.attacking()),
-            DealDamageEffect(1, EffectTarget.Self)
+            DealDamageEffect(1, EffectTarget.IterationEntity)
         )
     }
     metadata {
@@ -5684,7 +5697,7 @@ val SeasonedMarshal = card("Seasoned Marshal") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         optional = true
         val t = target("target", TargetCreature(filter = TargetFilter.Creature))
         effect = Effects.Tap(t)
@@ -5729,7 +5742,7 @@ val SerpentAssassin = card("Serpent Assassin") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         optional = true
         val t = target("target", TargetCreature(filter = TargetFilter.Creature.notColor(Color.BLACK)))
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
@@ -5771,7 +5784,7 @@ val SerpentWarrior = card("Serpent Warrior") {
     power = 3
     toughness = 3
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = LoseLifeEffect(3, EffectTarget.Controller)
     }
     metadata {
@@ -6029,7 +6042,7 @@ val SpiritualGuardian = card("Spiritual Guardian") {
     power = 3
     toughness = 4
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = GainLifeEffect(4)
     }
     metadata {
@@ -6273,7 +6286,7 @@ val Steadfastness = card("Steadfastness") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(0, 3, EffectTarget.Self)
+            Effects.ModifyStats(0, 3, EffectTarget.IterationEntity)
         )
     }
     metadata {
@@ -6700,7 +6713,7 @@ val ThingFromTheDeep = card("Thing from the Deep") {
     power = 9
     toughness = 9
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = PayOrSufferEffect(
             cost = Costs.pay.Sacrifice(GameObjectFilter.Land.withSubtype(Subtype.ISLAND)),
             suffer = SacrificeSelfEffect
@@ -6746,7 +6759,7 @@ val ThunderingWurm = card("Thundering Wurm") {
     power = 4
     toughness = 4
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = PayOrSufferEffect(
             cost = Costs.pay.Discard(filter = GameObjectFilter.Land),
             suffer = SacrificeSelfEffect
@@ -6794,10 +6807,10 @@ val Thundermare = card("Thundermare") {
     toughness = 5
     keywords(Keyword.HASTE)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature, excludeSelf = true),
-            Effects.Tap(EffectTarget.Self)
+            Effects.Tap(EffectTarget.IterationEntity)
         )
     }
     metadata {
@@ -6960,7 +6973,7 @@ val TreetopDefense = card("Treetop Defense") {
         castOnlyIf(YouWereAttackedThisStep)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.GrantKeyword(Keyword.REACH, EffectTarget.Self)
+            Effects.GrantKeyword(Keyword.REACH, EffectTarget.IterationEntity)
         )
     }
     metadata {
@@ -7002,7 +7015,7 @@ val UndyingBeast = card("Undying Beast") {
     power = 3
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.Move(EffectTarget.Self, Zone.LIBRARY, ZonePlacement.Top)
     }
     metadata {
@@ -7082,7 +7095,7 @@ val ValorousCharge = card("Valorous Charge") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withColor(Color.WHITE)),
-            Effects.ModifyStats(2, 0, EffectTarget.Self)
+            Effects.ModifyStats(2, 0, EffectTarget.IterationEntity)
         )
     }
     metadata {
@@ -7206,7 +7219,7 @@ val VenerableMonk = card("Venerable Monk") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = GainLifeEffect(2)
     }
     metadata {
@@ -7288,7 +7301,7 @@ val VirtuesRuin = card("Virtue's Ruin") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withColor(Color.WHITE)),
-            Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true),
+            Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true),
             noRegenerate = false
         )
     }
@@ -7475,7 +7488,7 @@ val WarriorsCharge = card("Warrior's Charge") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(1, 1, EffectTarget.Self)
+            Effects.ModifyStats(1, 1, EffectTarget.IterationEntity)
         )
     }
     metadata {
@@ -7796,7 +7809,7 @@ val WoodElves = card("Wood Elves") {
     power = 1
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Land.withSubtype(Subtype.FOREST),
             destination = SearchDestination.BATTLEFIELD
@@ -7840,7 +7853,7 @@ val WrathOfGod = card("Wrath of God") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature),
-            Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, byDestruction = true),
+            Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, byDestruction = true),
             noRegenerate = true
         )
     }

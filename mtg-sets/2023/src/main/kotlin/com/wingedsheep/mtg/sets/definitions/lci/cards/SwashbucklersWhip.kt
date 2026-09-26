@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedActivatedAbility
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.ActivatedAbility
@@ -12,8 +13,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantActivatedAbility
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Swashbuckler's Whip
@@ -39,15 +38,12 @@ val SwashbucklersWhip = card("Swashbuckler's Whip") {
 
     staticAbility {
         ability = GrantActivatedAbility(
-            ability = ActivatedAbility(
-                id = AbilityId.generate(),
-                cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap),
-                effect = Effects.Tap(EffectTarget.ContextTarget(0)),
-                targetRequirements = listOf(
-                    TargetPermanent(filter = TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Creature))
-                ),
-                descriptionOverride = "{2}, {T}: Tap target artifact or creature."
-            ),
+            ability = grantedActivatedAbility {
+                cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
+                val artifact = target(TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Creature))
+                effect = Effects.Tap(artifact)
+                description = "{2}, {T}: Tap target artifact or creature."
+            },
             filter = Filters.EquippedCreature
         )
     }
@@ -55,7 +51,7 @@ val SwashbucklersWhip = card("Swashbuckler's Whip") {
     staticAbility {
         ability = GrantActivatedAbility(
             ability = ActivatedAbility(
-                id = AbilityId.generate(),
+                id = AbilityId.next(),
                 cost = Costs.Composite(Costs.Mana("{8}"), Costs.Tap),
                 effect = Effects.Discover(10),
                 descriptionOverride = "{8}, {T}: Discover 10."

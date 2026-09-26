@@ -7,10 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -57,54 +53,38 @@ val WorldsWithinWorlds = card("Worlds Within Worlds") {
 
     spell {
         selfExile()
-        effect = Effects.Composite(
-            listOf(
-                // 1. Exile all creatures.
-                GatherCardsEffect(
-                    source = CardSource.BattlefieldMatching(
-                        filter = GameObjectFilter.Creature,
-                        player = Player.Each
-                    ),
-                    storeAs = "worldsToExile"
-                ),
-                MoveCollectionEffect(
-                    from = "worldsToExile",
-                    destination = CardDestination.ToZone(Zone.EXILE),
-                    storeMovedAs = "worldsExiled"
-                ),
-                // 2. Each player may put any number of creature cards from their hand onto the
-                //    battlefield, in APNAP order.
-                Effects.ForEachPlayer(
-                    Player.ActivePlayerFirst,
-                    listOf(
-                        GatherCardsEffect(
-                            source = CardSource.FromZone(
-                                Zone.HAND,
-                                Player.You,
-                                GameObjectFilter.Creature
-                            ),
-                            storeAs = "worldsHandCandidates"
-                        ),
-                        SelectFromCollectionEffect(
-                            from = "worldsHandCandidates",
-                            selection = SelectionMode.ChooseAnyNumber,
-                            storeSelected = "worldsHandChosen",
-                            prompt = "You may put any number of creature cards from your hand " +
-                                "onto the battlefield."
-                        ),
-                        MoveCollectionEffect(
-                            from = "worldsHandChosen",
-                            destination = CardDestination.ToZone(Zone.BATTLEFIELD)
-                        )
-                    )
-                ),
-                // 3. Then put all cards exiled this way into their owners' hands.
-                MoveCollectionEffect(
-                    from = "worldsExiled",
-                    destination = CardDestination.ToZone(Zone.HAND)
+        effect = Effects.Pipeline {
+            // 1. Exile all creatures.
+            val worldsToExile = gather(
+                CardSource.BattlefieldMatching(
+                    filter = GameObjectFilter.Creature,
+                    player = Player.Each
                 )
             )
-        )
+            val worldsExiled = moveTracked(worldsToExile, CardDestination.ToZone(Zone.EXILE))
+            // 2. Each player may put any number of creature cards from their hand onto the
+            //    battlefield, in APNAP order.
+            run(Effects.ForEachPlayer(
+                Player.ActivePlayerFirst,
+                Effects.Pipeline {
+                    val worldsHandCandidates = gather(
+                        CardSource.FromZone(
+                            Zone.HAND,
+                            Player.You,
+                            GameObjectFilter.Creature
+                        )
+                    )
+                    val worldsHandChosen = chooseAnyNumber(
+                        from = worldsHandCandidates,
+                        prompt = "You may put any number of creature cards from your hand " +
+                            "onto the battlefield."
+                    )
+                    move(worldsHandChosen, CardDestination.ToZone(Zone.BATTLEFIELD))
+                }
+            ))
+            // 3. Then put all cards exiled this way into their owners' hands.
+            toHand(worldsExiled)
+        }
     }
 
     metadata {

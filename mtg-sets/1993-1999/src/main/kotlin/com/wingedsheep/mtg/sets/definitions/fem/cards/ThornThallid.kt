@@ -1,13 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.fem.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Thorn Thallid
@@ -27,14 +28,14 @@ val ThornThallid = card("Thorn Thallid") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.AddCounters(Counters.SPORE, 1, EffectTarget.Self)
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.AddCounters(CounterType.SPORE, 1, EffectTarget.Self)
         description = "At the beginning of your upkeep, put a spore counter on this creature."
     }
 
     activatedAbility {
-        cost = Costs.RemoveCounterFromSelf(Counters.SPORE, 3)
-        val t = target("any target", AnyTarget())
+        cost = Costs.RemoveCounterFromSelf(CounterType.SPORE, 3)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(1, t)
         description = "Remove three spore counters from this creature: It deals 1 damage to any target."
     }

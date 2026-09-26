@@ -10,12 +10,10 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.StateTriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.GrantStateTriggeredAbilityEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Olivia, Crimson Bride
@@ -61,19 +59,15 @@ val OliviaCrimsonBride = card("Olivia, Crimson Bride") {
     keywords(Keyword.FLYING, Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val creature = target(
-            "creature card from your graveyard",
-            TargetObject(filter = TargetFilter.CreatureInYourGraveyard)
-        )
-        effect = Effects.Composite(
-            Effects.Move(
-                target = creature,
-                destination = Zone.BATTLEFIELD,
-                placement = ZonePlacement.TappedAndAttacking,
-                fromZone = Zone.GRAVEYARD
-            ),
-            GrantStateTriggeredAbilityEffect(
+        trigger = Triggers.self.attacks()
+        val creature = target(TargetFilter.CreatureInYourGraveyard)
+        effect = Effects.Move(
+            target = creature,
+            destination = Zone.BATTLEFIELD,
+            placement = ZonePlacement.TappedAndAttacking,
+            fromZone = Zone.GRAVEYARD
+        ) then
+            Effects.GrantStateTriggeredAbility(
                 ability = StateTriggeredAbility.create(
                     condition = Conditions.YouControl(
                         GameObjectFilter.Creature.legendary().withSubtype(Subtype.VAMPIRE),
@@ -86,7 +80,6 @@ val OliviaCrimsonBride = card("Olivia, Crimson Bride") {
                 target = creature,
                 duration = Duration.Permanent
             )
-        )
         description = "Whenever Olivia attacks, return target creature card from your graveyard " +
             "to the battlefield tapped and attacking. It gains \"When you don't control a " +
             "legendary Vampire, exile this creature.\""

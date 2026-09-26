@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
@@ -8,8 +8,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Ascendant Dustspeaker
@@ -35,18 +34,15 @@ val AscendantDustspeaker = card("Ascendant Dustspeaker") {
 
     // When this creature enters, put a +1/+1 counter on another target creature you control.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target(
-            "another target creature you control",
-            TargetCreature(filter = TargetFilter.OtherCreatureYouControl),
-        )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, creature)
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.OtherCreatureYouControl)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature)
     }
 
     // At the beginning of combat on your turn, exile up to one target card from a graveyard.
     triggeredAbility {
-        trigger = Triggers.BeginCombat
-        val t = target("target card from a graveyard", TargetObject(optional = true, filter = TargetFilter.CardInGraveyard))
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
+        val t = target(TargetFilter.CardInGraveyard, optional = true)
         effect = Effects.Move(t, Zone.EXILE)
     }
 

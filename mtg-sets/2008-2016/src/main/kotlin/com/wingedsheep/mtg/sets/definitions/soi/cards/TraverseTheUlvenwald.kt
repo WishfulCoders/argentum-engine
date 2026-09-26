@@ -5,11 +5,11 @@
 package com.wingedsheep.mtg.sets.definitions.soi.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 
 
@@ -26,14 +26,14 @@ val TraverseTheUlvenwald = card("Traverse the Ulvenwald") {
     typeLine = "Sorcery"
     oracleText = "Search your library for a basic land card, reveal it, put it into your hand, then shuffle.\nDelirium — If there are four or more card types among cards in your graveyard, instead search your library for a creature or land card, reveal it, put it into your hand, then shuffle."
     spell {
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.Delirium(4),
-            effect = Patterns.Library.searchLibrary(
+            then = Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.CreatureOrLand,
                 destination = SearchDestination.HAND,
                 reveal = true
             ),
-            elseEffect = Patterns.Library.searchLibrary(
+            otherwise = Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.BasicLand,
                 destination = SearchDestination.HAND,
                 reveal = true

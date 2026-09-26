@@ -5,9 +5,9 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -23,7 +23,7 @@ val TowerOfFortunes = card("Tower of Fortunes") {
     oracleText = "{8}, {T}: Draw four cards."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{8}"), Costs.Tap)
-        effect = DrawCardsEffect(4)
+        effect = Effects.DrawCards(4)
     }
     metadata {
         rarity = Rarity.RARE

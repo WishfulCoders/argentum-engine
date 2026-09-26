@@ -6,11 +6,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Coalition Victory
@@ -31,18 +28,18 @@ val CoalitionVictory = card("Coalition Victory") {
     oracleText = "You win the game if you control a land of each basic land type and a creature of each color."
 
     spell {
-        effect = ConditionalEffect(
+        effect = Effects.If(
             condition = Conditions.All(
                 // A land of each basic land type (domain = 5).
                 Conditions.BasicLandTypesAtLeast(5),
                 // A creature of each color (5 distinct colors among creatures you control).
-                Compare(
+                Conditions.CompareAmounts(
                     DynamicAmounts.colorsAmongPermanents(Player.You, GameObjectFilter.Creature),
                     ComparisonOperator.GTE,
-                    DynamicAmount.Fixed(5)
+                    5
                 )
             ),
-            effect = Effects.WinGame(
+            then = Effects.WinGame(
                 message = "Coalition Victory: controlled a land of each basic land type and a creature of each color."
             )
         )

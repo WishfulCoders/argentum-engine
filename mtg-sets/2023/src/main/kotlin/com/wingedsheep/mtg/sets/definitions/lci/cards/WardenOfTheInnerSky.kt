@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Costs
@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -30,7 +29,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * through the layer system.
  *
  * The oracle text counts counters of *any* kind, so the threshold is gated on
- * [CounterTypeFilter.Any], which sums every counter kind on the source — a stun counter placed by
+ * `null`, which sums every counter kind on the source — a stun counter placed by
  * an opponent counts toward the three just like the +1/+1 counters from its own ability.
  *
  * The activation cost reuses the [Costs.TapPermanents] primitive (same shape as Sunshot Militia,
@@ -50,11 +49,11 @@ val WardenOfTheInnerSky = card("Warden of the Inner Sky") {
         "creature. Scry 1. Activate only as a sorcery."
 
     staticAbility {
-        condition = Conditions.SourceCounterCountAtLeast(CounterTypeFilter.Any, 3)
+        condition = Conditions.SourceCounterCountAtLeast(null, 3)
         ability = GrantKeyword(Keyword.FLYING, Filters.Self)
     }
     staticAbility {
-        condition = Conditions.SourceCounterCountAtLeast(CounterTypeFilter.Any, 3)
+        condition = Conditions.SourceCounterCountAtLeast(null, 3)
         ability = GrantKeyword(Keyword.VIGILANCE, Filters.Self)
     }
 
@@ -63,10 +62,7 @@ val WardenOfTheInnerSky = card("Warden of the Inner Sky") {
             count = 3,
             filter = GameObjectFilter.Artifact or GameObjectFilter.Creature,
         )
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self),
-            Effects.Scry(1),
-        )
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self) then Effects.Scry(1)
         timing = TimingRule.SorcerySpeed
     }
 

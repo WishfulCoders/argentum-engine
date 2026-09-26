@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.model.Rarity
  * When this creature dies, you gain 4 life.
  *
  * Modeling notes:
- *  - [Triggers.Dies] is precisely the battlefield → graveyard zone change Assay compiles this line
+ *  - `Triggers.self.dies()` is precisely the battlefield → graveyard zone change Assay compiles this line
  *    to (`ZoneChangeEvent` from Battlefield to Graveyard) with the default `SELF` binding, so no
  *    filter and no binding override are needed.
  *  - No `triggerZone` override: on a dies trigger, setting `triggerZone = GRAVEYARD` *replaces* the
@@ -33,7 +33,7 @@ val EnatuGolem = card("Enatu Golem") {
     oracleText = "When this creature dies, you gain 4 life."
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.GainLife(4)
     }
 

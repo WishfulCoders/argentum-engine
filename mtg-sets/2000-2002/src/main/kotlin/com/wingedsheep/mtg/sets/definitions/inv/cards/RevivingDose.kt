@@ -18,7 +18,7 @@ val RevivingDose = card("Reviving Dose") {
     oracleText = "You gain 3 life.\nDraw a card."
 
     spell {
-        effect = Effects.GainLife(3).then(Effects.DrawCards(1))
+        effect = Effects.GainLife(3) then Effects.DrawCards(1)
     }
 
     metadata {

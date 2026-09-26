@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.MayCastFromGraveyard
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 
 /**
  * Noctis, Prince of Lucis — Final Fantasy #235
@@ -54,7 +53,7 @@ val NoctisPrinceOfLucis = card("Noctis, Prince of Lucis") {
     // targets the *other* artifact; appliesTo is overridden to artifacts (the default is creatures).
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.Named(Counters.FINALITY),
+            counterType = CounterType.FINALITY,
             count = 1,
             selfOnly = false,
             condition = Conditions.WasCastFromGraveyard,

@@ -3,7 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.ptk.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Fire Ambush
@@ -18,7 +18,7 @@ val FireAmbush = card("Fire Ambush") {
     oracleText = "Fire Ambush deals 3 damage to any target."
 
     spell {
-        val t = target("target", AnyTarget())
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(3, t)
     }
 

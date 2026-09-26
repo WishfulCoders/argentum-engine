@@ -5,10 +5,10 @@
 package com.wingedsheep.mtg.sets.definitions.por.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GrantCantBeBlockedExceptByColorEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
 
@@ -24,7 +24,7 @@ val DreadCharge = card("Dread Charge") {
     typeLine = "Sorcery"
     oracleText = "Black creatures you control can't be blocked this turn except by black creatures."
     spell {
-        effect = GrantCantBeBlockedExceptByColorEffect(
+        effect = Effects.GrantCantBeBlockedExceptByColor(
             filter = GroupFilter(GameObjectFilter.Creature.withColor(Color.BLACK).youControl()),
             canOnlyBeBlockedByColor = Color.BLACK
         )

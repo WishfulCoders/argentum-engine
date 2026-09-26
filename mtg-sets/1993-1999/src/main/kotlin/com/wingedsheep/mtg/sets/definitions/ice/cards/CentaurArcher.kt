@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Centaur Archer
@@ -29,7 +30,7 @@ val CentaurArcher = card("Centaur Archer") {
 
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", Targets.CreatureWithKeyword(Keyword.FLYING))
+        val t = target(TargetFilter.Creature.withKeyword(Keyword.FLYING))
         effect = Effects.DealDamage(1, t)
     }
 

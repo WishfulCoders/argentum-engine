@@ -1,13 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Dismantling Blow
@@ -26,10 +24,10 @@ val DismantlingBlow = card("Dismantling Blow") {
     keywordAbility(KeywordAbility.kicker("{2}{U}"))
 
     spell {
-        target = Targets.ArtifactOrEnchantment
-        effect = Effects.Destroy(EffectTarget.ContextTarget(0)) then ConditionalEffect(
+        val artifactOrEnchantment = target(TargetFilter.ArtifactOrEnchantment)
+        effect = Effects.Destroy(artifactOrEnchantment) then Effects.If(
             condition = WasKicked,
-            effect = Effects.DrawCards(2)
+            then = Effects.DrawCards(2)
         )
     }
 

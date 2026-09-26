@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 
 /**
  * Hero in Training
@@ -17,7 +16,7 @@ import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
  * When this creature enters, draw a card. If you control another Hero, you gain 2 life.
  *
  * Implementation note: one enters trigger whose body is a composite — the unconditional draw
- * followed by a [ConditionalEffect] (lowers to `Gate.WhenCondition`) gated on
+ * followed by a [Effects.If] (lowers to `Gate.WhenCondition`) gated on
  * `Conditions.YouControl(..., excludeSelf = true)`, so the source itself (a Hero) doesn't
  * satisfy its own "another Hero" clause. The condition is checked on resolution, per the
  * card's wording (no intervening-if).
@@ -30,17 +29,15 @@ val HeroInTraining = card("Hero in Training") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Effects.DrawCards(1),
-            ConditionalEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.DrawCards(1) then
+            Effects.If(
                 condition = Conditions.YouControl(
                     GameObjectFilter.Permanent.withSubtype(Subtype.HERO),
                     excludeSelf = true,
                 ),
-                effect = Effects.GainLife(2),
-            ),
-        )
+                then = Effects.GainLife(2),
+            )
     }
     metadata {
         rarity = Rarity.COMMON

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fdn.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
@@ -15,6 +15,7 @@ import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.scripting.predicates.ControllerPredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Alesha, Who Laughs at Fate
@@ -51,28 +52,25 @@ val AleshaWhoLaughsAtFate = card("Alesha, Who Laughs at Fate") {
     keywords(Keyword.FIRST_STRIKE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.self.attacks()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Whenever Alesha attacks, put a +1/+1 counter on it."
     }
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.YouAttackedThisTurn
         val t = target(
-            "target creature card with mana value less than or equal to Alesha's power in your graveyard",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter(
-                        cardPredicates = listOf(
-                            CardPredicate.IsCreature,
-                            CardPredicate.ManaValueAtMostDynamic(DynamicAmounts.sourcePower())
-                        ),
-                        controllerPredicate = ControllerPredicate.OwnedByYou
+            TargetFilter(
+                GameObjectFilter(
+                    cardPredicates = listOf(
+                        CardPredicate.IsCreature,
+                        CardPredicate.ManaValueAtMostDynamic(DynamicAmounts.sourcePower())
                     ),
-                    zone = Zone.GRAVEYARD
-                )
-            )
+                    controllerPredicate = ControllerPredicate.OwnedByYou
+                ),
+                zone = Zone.GRAVEYARD
+            ),
         )
         effect = Effects.PutOntoBattlefield(t)
         description = "Raid — At the beginning of your end step, if you attacked this turn, return " +

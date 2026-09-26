@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -28,11 +27,8 @@ val TrustyPackbeast = card("Trusty Packbeast") {
     power = 2
     toughness = 3
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "target",
-            TargetObject(filter = TargetFilter.ArtifactInYourGraveyard)
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.ArtifactInYourGraveyard)
         effect = Effects.Move(t, Zone.HAND)
     }
     metadata {

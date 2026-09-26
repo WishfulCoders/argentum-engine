@@ -1,19 +1,17 @@
 package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.DoubleDamage
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.SourceFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * The Rollercrusher Ride — Duskmourn: House of Horror #155
@@ -56,7 +54,7 @@ val TheRollercrusherRide = card("The Rollercrusher Ride") {
         DoubleDamage(
             restrictions = listOf(Conditions.Delirium(4)),
             appliesTo = EventPattern.DamageEvent(
-                source = SourceFilter.Matching(GameObjectFilter.Any.youControl()),
+                source = GameObjectFilter.Any.youControl(),
                 damageType = DamageType.NonCombat,
             ),
         )
@@ -64,13 +62,10 @@ val TheRollercrusherRide = card("The Rollercrusher Ride") {
 
     // When The Rollercrusher Ride enters, it deals X damage to each of up to X target creatures.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target(
-            "up to X target creatures",
-            TargetCreature(optional = true, dynamicMaxCount = DynamicAmount.CastX),
-        )
-        effect = ForEachTargetEffect(
-            listOf(DealDamageEffect(DynamicAmount.CastX, EffectTarget.ContextTarget(0)))
+        trigger = Triggers.self.enters()
+        targets(TargetFilter.Creature, optional = true, dynamicMaxCount = DynamicAmounts.castX())
+        effect = Effects.ForEachTarget(
+            Effects.DealDamage(DynamicAmounts.castX(), EffectTarget.ContextTarget(0))
         )
         description = "When The Rollercrusher Ride enters, it deals X damage to each of up to X " +
             "target creatures."

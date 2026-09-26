@@ -36,7 +36,7 @@ val GraveTitan = card("Grave Titan") {
         "Zombie creature tokens."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 2,
             toughness = 2,
@@ -48,7 +48,7 @@ val GraveTitan = card("Grave Titan") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.CreateToken(
             power = 2,
             toughness = 2,

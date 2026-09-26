@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever you cast a black spell, this creature gets +1/+1 until end of turn.
  * Whenever you cast a red spell, this creature gains first strike until end of turn.
  *
- * - Both triggers are `Triggers.youCastSpell(spellFilter = GameObjectFilter.Any.withColor(...))`:
+ * - Both triggers are `Triggers.you.casts(GameObjectFilter.Any.withColor(...))`:
  *   the spell filter matches *any* card type, since "a black spell" is not restricted to creatures.
  * - The colour test is on the spell itself, so a hybrid or multicoloured spell that is (say) both
  *   black and red triggers *both* abilities — that is correct for the Duo cycle.
@@ -35,13 +35,13 @@ val EmberstrikeDuo = card("Emberstrike Duo") {
 
     // Whenever you cast a black spell, this creature gets +1/+1 until end of turn.
     triggeredAbility {
-        trigger = Triggers.youCastSpell(spellFilter = GameObjectFilter.Any.withColor(Color.BLACK))
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withColor(Color.BLACK))
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }
 
     // Whenever you cast a red spell, this creature gains first strike until end of turn.
     triggeredAbility {
-        trigger = Triggers.youCastSpell(spellFilter = GameObjectFilter.Any.withColor(Color.RED))
+        trigger = Triggers.you.casts(GameObjectFilter.Any.withColor(Color.RED))
         effect = Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.Self)
     }
 

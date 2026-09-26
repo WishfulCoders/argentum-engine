@@ -31,7 +31,7 @@ val WaterTribeCaptain = card("Water Tribe Captain") {
         cost = Costs.Mana("{5}")
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(1, 1, EffectTarget.Self)
+            Effects.ModifyStats(1, 1, EffectTarget.IterationEntity)
         )
     }
     metadata {

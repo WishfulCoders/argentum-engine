@@ -25,10 +25,7 @@ val PristineTalisman = card("Pristine Talisman") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.Composite(
-            Effects.AddColorlessMana(1),
-            Effects.GainLife(1)
-        )
+        effect = Effects.AddColorlessMana(1) then Effects.GainLife(1)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

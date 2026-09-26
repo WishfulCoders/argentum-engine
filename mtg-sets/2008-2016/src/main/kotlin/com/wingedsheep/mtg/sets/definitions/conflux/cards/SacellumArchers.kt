@@ -30,10 +30,7 @@ val SacellumArchers = card("Sacellum Archers") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{R}{W}"), Costs.Tap)
-        val creature = target(
-            "target",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Creature.attackingOrBlocking()))
-        )
+        val creature = target(TargetFilter(GameObjectFilter.Creature.attackingOrBlocking()))
         effect = Effects.DealDamage(2, creature)
     }
 

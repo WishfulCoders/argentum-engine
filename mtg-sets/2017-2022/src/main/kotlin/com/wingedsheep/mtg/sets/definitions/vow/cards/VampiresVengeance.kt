@@ -23,13 +23,11 @@ val VampiresVengeance = card("Vampires' Vengeance") {
         "token. (It's an artifact with \"{1}, {T}, Discard a card, Sacrifice this token: Draw a card.\")"
 
     spell {
-        effect = Effects.Composite(
-            Patterns.Group.dealDamageToAll(
-                2,
-                GroupFilter(GameObjectFilter.Creature.notSubtype(Subtype.VAMPIRE))
-            ),
+        effect = Patterns.Group.dealDamageToAll(
+            2,
+            GroupFilter(GameObjectFilter.Creature.notSubtype(Subtype.VAMPIRE))
+        ) then
             Effects.CreateBlood(1)
-        )
     }
 
     metadata {

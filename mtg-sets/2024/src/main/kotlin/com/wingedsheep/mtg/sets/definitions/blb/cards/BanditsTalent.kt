@@ -1,19 +1,18 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Bandit's Talent
@@ -41,12 +40,10 @@ val BanditsTalent = card("Bandit's Talent") {
 
     // Level 1: When this Class enters, each opponent discards two cards unless they discard a nonland card.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ForEachPlayerEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.ForEachPlayer(
             players = Player.EachOpponent,
-            effects = listOf(
-                Patterns.Hand.discardCardsUnlessMatching(2, GameObjectFilter.Nonland)
-            )
+            effect = Patterns.Hand.discardCardsUnlessMatching(2, GameObjectFilter.Nonland)
         )
     }
 
@@ -54,14 +51,14 @@ val BanditsTalent = card("Bandit's Talent") {
     // cards in hand, they lose 2 life.
     classLevel(2, "{B}") {
         triggeredAbility {
-            trigger = Triggers.EachOpponentUpkeep
-            interveningIf = Compare(
-                left = DynamicAmount.Count(Player.TriggeringPlayer, Zone.HAND),
+            trigger = Triggers.anOpponent.beginningOf(Step.UPKEEP)
+            interveningIf = Conditions.CompareAmounts(
+                left = DynamicAmounts.count(Player.TriggeringPlayer, Zone.HAND),
                 operator = ComparisonOperator.LTE,
-                right = DynamicAmount.Fixed(1)
+                right = 1
             )
-            effect = LoseLifeEffect(
-                amount = DynamicAmount.Fixed(2),
+            effect = Effects.LoseLife(
+                amount = 2,
                 target = EffectTarget.PlayerRef(Player.TriggeringPlayer)
             )
         }
@@ -71,14 +68,14 @@ val BanditsTalent = card("Bandit's Talent") {
     // who has one or fewer cards in hand.
     classLevel(3, "{3}{B}") {
         triggeredAbility {
-            trigger = Triggers.YourDrawStep
-            effect = DrawCardsEffect(
-                count = DynamicAmount.CountPlayersWith(
+            trigger = Triggers.you.beginningOf(Step.DRAW)
+            effect = Effects.DrawCards(
+                count = DynamicAmounts.countPlayersWith(
                     scope = Player.EachOpponent,
-                    condition = Compare(
-                        left = DynamicAmount.Count(Player.You, Zone.HAND),
+                    condition = Conditions.CompareAmounts(
+                        left = DynamicAmounts.cardsInYourHand(),
                         operator = ComparisonOperator.LTE,
-                        right = DynamicAmount.Fixed(1)
+                        right = 1
                     )
                 )
             )

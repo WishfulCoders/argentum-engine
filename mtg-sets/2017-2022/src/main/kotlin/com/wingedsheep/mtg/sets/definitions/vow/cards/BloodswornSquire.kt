@@ -9,8 +9,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.SetBasePowerToughnessDynamicStatic
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -29,7 +27,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *   {1}{B}, Discard a card: This creature gains indestructible until end of turn. Tap it.
  *
  * The front's activated ability pays `{1}{B}` plus discarding a card ([Costs.Composite]) for a
- * [Effects.Composite] of grant-indestructible-until-EOT, tap itself, and a [ConditionalEffect] gated
+ * [Effects.Composite] of grant-indestructible-until-EOT, tap itself, and a [Effects.If] gated
  * on [Conditions.CreatureCardsInGraveyardAtLeast] 4 that transforms it (Immersturm Predator's
  * indestructible-then-tap idiom). The back's characteristic-defining P/T is a self-referential
  * [SetBasePowerToughnessDynamicStatic] CDA counting creature cards in your graveyard, and it repeats
@@ -51,14 +49,12 @@ private val BloodswornSquireFront = card("Bloodsworn Squire") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{B}"), Costs.Discard())
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self),
-            Effects.Tap(EffectTarget.Self),
-            ConditionalEffect(
+        effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self) then
+            Effects.Tap(EffectTarget.Self) then
+            Effects.If(
                 condition = Conditions.CreatureCardsInGraveyardAtLeast(4),
-                effect = TransformEffect(EffectTarget.Self),
-            ),
-        )
+                then = Effects.Transform(EffectTarget.Self),
+            )
         description = "This creature gains indestructible until end of turn. Tap it. Then if there " +
             "are four or more creature cards in your graveyard, transform this creature."
     }
@@ -92,10 +88,8 @@ private val BloodswornKnight = card("Bloodsworn Knight") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{B}"), Costs.Discard())
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self),
-            Effects.Tap(EffectTarget.Self),
-        )
+        effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self) then
+            Effects.Tap(EffectTarget.Self)
         description = "This creature gains indestructible until end of turn. Tap it."
     }
 

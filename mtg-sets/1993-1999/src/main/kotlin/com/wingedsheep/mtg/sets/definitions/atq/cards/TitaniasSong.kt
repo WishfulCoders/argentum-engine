@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.atq.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -8,11 +9,9 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantCardType
 import com.wingedsheep.sdk.scripting.LoseAllAbilities
 import com.wingedsheep.sdk.scripting.SetBasePowerToughnessDynamicStatic
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Titania's Song
@@ -26,7 +25,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  *  - Layer 4 (TYPE): GrantCardType("CREATURE") — makes them creatures (already artifacts).
  *  - Layer 6 (ABILITY): LoseAllAbilities.
  *  - Layer 7b (POWER_TOUGHNESS, SET_VALUES): SetBasePowerToughnessDynamicStatic with each
- *    permanent's own mana value (EntityReference.AffectedEntity → ManaValue).
+ *    permanent's own mana value (EffectTarget.AffectedEntity → ManaValue).
  *
  * The "noncreature artifact" filter (`Artifact.notCreature()`) is locked in at effect-collection
  * time — it is not a [com.wingedsheep.sdk.scripting.predicates.CardPredicate.IsCreature]-keyed
@@ -47,10 +46,7 @@ val TitaniasSong = card("Titania's Song") {
         "battlefield, this effect continues until end of turn."
 
     val noncreatureArtifacts = GroupFilter(GameObjectFilter.Artifact.notCreature())
-    val manaValue: DynamicAmount = DynamicAmount.EntityProperty(
-        entity = EntityReference.AffectedEntity,
-        numericProperty = EntityNumericProperty.ManaValue
-    )
+    val manaValue: DynamicAmount = DynamicAmounts.manaValueOf(EffectTarget.AffectedEntity)
 
     staticAbility { ability = GrantCardType(cardType = "CREATURE", filter = noncreatureArtifacts) }
     staticAbility { ability = LoseAllAbilities(filter = noncreatureArtifacts) }
@@ -64,7 +60,7 @@ val TitaniasSong = card("Titania's Song") {
 
     // "If this enchantment leaves the battlefield, this effect continues until end of turn."
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(binding = TriggerBinding.SELF)
+        trigger = Triggers.self.leaves()
         effect = Effects.MassAnimate(
             filter = GameObjectFilter.Artifact.notCreature(),
             power = manaValue,

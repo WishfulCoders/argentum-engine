@@ -31,14 +31,14 @@ import kotlin.reflect.KClass
  * 4. Present a selection decision to the controller
  * 5. Push ChangeSpellTargetContinuation (reused)
  */
-class ChangeTargetExecutor : EffectExecutor<ChangeTargetEffect> {
+class ChangeTargetExecutor(
+    private val predicateEvaluator: PredicateEvaluator,
+    private val targetFinder: TargetFinder
+) : EffectExecutor<ChangeTargetEffect> {
 
     override val effectType: KClass<ChangeTargetEffect> = ChangeTargetEffect::class
 
     private val decisionHandler = DecisionHandler()
-    private val predicateEvaluator = PredicateEvaluator()
-    private val targetFinder = TargetFinder()
-
     override fun execute(
         state: GameState,
         effect: ChangeTargetEffect,

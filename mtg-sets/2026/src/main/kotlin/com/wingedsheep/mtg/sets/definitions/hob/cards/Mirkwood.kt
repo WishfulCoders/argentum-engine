@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
@@ -10,7 +10,6 @@ import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Mirkwood — The Hobbit #188
@@ -50,15 +49,8 @@ val Mirkwood = card("Mirkwood") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{B}{G}"), Costs.Tap, Costs.SacrificeSelf)
-        val beast = target(
-            "target Bear, Spider, or Wolf you control",
-            TargetCreature(
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.youControl().withAnySubtype("Bear", "Spider", "Wolf")
-                )
-            )
-        )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, beast)
+        val beast = target(TargetFilter(GameObjectFilter.Creature.youControl().withAnySubtype("Bear", "Spider", "Wolf")))
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, beast)
         timing = TimingRule.SorcerySpeed
         description = "Put two +1/+1 counters on target Bear, Spider, or Wolf you control."
     }

@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Demolish
@@ -22,7 +23,7 @@ val Demolish = card("Demolish") {
     oracleText = "Destroy target artifact or land."
 
     spell {
-        val t = target("target", Targets.ArtifactOrLand)
+        val t = target(TargetFilter.ArtifactOrLand)
         effect = Effects.Destroy(t)
     }
 

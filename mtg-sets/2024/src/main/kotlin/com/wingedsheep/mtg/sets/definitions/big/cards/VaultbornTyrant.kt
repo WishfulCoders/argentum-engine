@@ -1,17 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.big.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.effects.CreateTokenCopyOfSourceEffect
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 
 /**
@@ -40,26 +35,17 @@ val VaultbornTyrant = card("Vaultborn Tyrant") {
 
     // "This or another creature you control with power 4+ enters" — ANY binding so self counts.
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = ZoneChangeEvent(
-                filter = GameObjectFilter.Creature.youControl().powerAtLeast(4),
-                to = Zone.BATTLEFIELD
-            ),
-            binding = TriggerBinding.ANY
-        )
-        effect = Effects.Composite(listOf(
-            Effects.GainLife(3),
-            Effects.DrawCards(1)
-        ))
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl().powerAtLeast(4)).enters()
+        effect = Effects.GainLife(3) then Effects.DrawCards(1)
     }
 
     // When this dies, if it's not a token, create an artifact copy of it.
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         interveningIf = Conditions.SourceMatches(
             GameObjectFilter(cardPredicates = listOf(CardPredicate.IsNontoken))
         )
-        effect = CreateTokenCopyOfSourceEffect(
+        effect = Effects.CreateTokenCopyOfSelf(
             addCardTypes = setOf("ARTIFACT")
         )
     }

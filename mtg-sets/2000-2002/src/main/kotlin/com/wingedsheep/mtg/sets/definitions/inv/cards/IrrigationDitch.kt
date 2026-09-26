@@ -31,10 +31,7 @@ val IrrigationDitch = card("Irrigation Ditch") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Tap, Costs.SacrificeSelf)
-        effect = Effects.Composite(
-            Effects.AddMana(Color.GREEN),
-            Effects.AddMana(Color.BLUE),
-        )
+        effect = Effects.AddMana(Color.GREEN) then Effects.AddMana(Color.BLUE)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

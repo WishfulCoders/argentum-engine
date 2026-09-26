@@ -15,7 +15,7 @@ import io.kotest.matchers.shouldBe
  * "{3}{G} Enchantment. At the beginning of your end step, untap all lands you control."
  *
  * Exercises the mtgish-tooling `AtTheBeginningOfAPlayersEndStep` (You scope) mapping ->
- * `Triggers.YourEndStep`. The trigger must:
+ * `Triggers.you.beginningOf(Step.END)`. The trigger must:
  *   - untap the controller's tapped lands when their end step begins,
  *   - leave the OPPONENT's lands alone (the "you control" filter), and
  *   - NOT fire on the opponent's end step ("your" scope, not "each").

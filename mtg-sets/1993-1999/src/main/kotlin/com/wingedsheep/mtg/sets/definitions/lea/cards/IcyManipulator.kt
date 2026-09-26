@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Icy Manipulator
@@ -22,14 +21,7 @@ val IcyManipulator = card("Icy Manipulator") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
-        val permanent = target(
-            "artifact, creature, or land",
-            TargetObject(
-                filter = TargetFilter(
-                    GameObjectFilter.Artifact or GameObjectFilter.Creature or GameObjectFilter.Land
-                )
-            )
-        )
+        val permanent = target(TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Creature or GameObjectFilter.Land))
         effect = Effects.Tap(permanent)
     }
 

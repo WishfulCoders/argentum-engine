@@ -1,13 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.RemoveCountersEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -29,7 +27,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * that counter with the second ability before the life is counted.
  *
  * **The life loss is read at resolution, not at activation.** [DynamicAmounts.countersOnSelf] over
- * [Counters.BLOOD] resolves against the Quill's counters at the moment the draw resolves — which is
+ * [CounterType.BLOOD] resolves against the Quill's counters at the moment the draw resolves — which is
  * exactly what makes the response window in that ruling meaningful.
  *
  * **The second ability removes the counter as its *effect*, not as a cost.** Its printed cost is
@@ -37,7 +35,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * the removal as a cost would make it unactivatable with no counters on the Quill — harmless in
  * practice, but wrong, and it would also let the removal happen before the mana was even paid.
  *
- * The blood counter ([Counters.BLOOD]) is a passive storage counter with no inherent rule; the
+ * The blood counter ([CounterType.BLOOD]) is a passive storage counter with no inherent rule; the
  * card's own two abilities are the only things that write and read it. It is unrelated to the
  * Innistrad Blood *token*.
  */
@@ -53,13 +51,11 @@ val BloodletterQuill = card("Bloodletter Quill") {
         cost = Costs.Composite(
             Costs.Mana("{2}"),
             Costs.Tap,
-            Costs.PutCounterOnSelf(Counters.BLOOD),
+            Costs.PutCounterOnSelf(CounterType.BLOOD),
         )
-        effect = Effects.DrawCards(1).then(
-            Effects.LoseLife(
-                DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.BLOOD)),
-                EffectTarget.Controller,
-            )
+        effect = Effects.DrawCards(1) then Effects.LoseLife(
+            DynamicAmounts.countersOnSelf(CounterType.BLOOD),
+            EffectTarget.Controller,
         )
         description = "{2}, {T}, Put a blood counter on this artifact: Draw a card, then you lose " +
             "1 life for each blood counter on this artifact."
@@ -67,7 +63,7 @@ val BloodletterQuill = card("Bloodletter Quill") {
 
     activatedAbility {
         cost = Costs.Mana("{U}{B}")
-        effect = RemoveCountersEffect(Counters.BLOOD, 1, EffectTarget.Self)
+        effect = Effects.RemoveCounters(CounterType.BLOOD, 1, EffectTarget.Self)
         description = "{U}{B}: Remove a blood counter from this artifact."
     }
 

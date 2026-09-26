@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Divine Arrow
@@ -19,10 +18,7 @@ val DivineArrow = card("Divine Arrow") {
     oracleText = "Divine Arrow deals 4 damage to target attacking or blocking creature."
 
     spell {
-        val t = target(
-            "target attacking or blocking creature",
-            TargetCreature(filter = TargetFilter.AttackingOrBlockingCreature)
-        )
+        val t = target(TargetFilter.AttackingOrBlockingCreature)
         effect = Effects.DealDamage(4, t)
     }
 

@@ -1,12 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Shifting Grift
@@ -42,38 +40,38 @@ val ShiftingGrift = card("Shifting Grift") {
         "+ {1} — Exchange control of two target enchantments."
 
     spell {
-        effect = ModalEffect(
+        effect = Effects.Modal(
             modes = listOf(
                 // + {2} — Exchange control of two target creatures.
-                Mode(
-                    effect = Effects.ExchangeControl(
-                        EffectTarget.ContextTarget(0),
-                        EffectTarget.ContextTarget(1)
-                    ),
-                    targetRequirements = listOf(Targets.Creature, Targets.Creature),
-                    description = "+ {2} — Exchange control of two target creatures.",
+                mode("+ {2} — Exchange control of two target creatures.") {
+                    val firstCreature = target(TargetFilter.Creature)
+                    val secondCreature = target(TargetFilter.Creature)
                     additionalManaCost = "{2}"
-                ),
+                    effect = Effects.ExchangeControl(
+                        firstCreature,
+                        secondCreature
+                    )
+                },
                 // + {1} — Exchange control of two target artifacts.
-                Mode(
-                    effect = Effects.ExchangeControl(
-                        EffectTarget.ContextTarget(0),
-                        EffectTarget.ContextTarget(1)
-                    ),
-                    targetRequirements = listOf(Targets.Artifact, Targets.Artifact),
-                    description = "+ {1} — Exchange control of two target artifacts.",
+                mode("+ {1} — Exchange control of two target artifacts.") {
+                    val firstArtifact = target(TargetFilter.Artifact)
+                    val secondArtifact = target(TargetFilter.Artifact)
                     additionalManaCost = "{1}"
-                ),
+                    effect = Effects.ExchangeControl(
+                        firstArtifact,
+                        secondArtifact
+                    )
+                },
                 // + {1} — Exchange control of two target enchantments.
-                Mode(
-                    effect = Effects.ExchangeControl(
-                        EffectTarget.ContextTarget(0),
-                        EffectTarget.ContextTarget(1)
-                    ),
-                    targetRequirements = listOf(Targets.Enchantment, Targets.Enchantment),
-                    description = "+ {1} — Exchange control of two target enchantments.",
+                mode("+ {1} — Exchange control of two target enchantments.") {
+                    val firstEnchantment = target(TargetFilter.Enchantment)
+                    val secondEnchantment = target(TargetFilter.Enchantment)
                     additionalManaCost = "{1}"
-                )
+                    effect = Effects.ExchangeControl(
+                        firstEnchantment,
+                        secondEnchantment
+                    )
+                }
             ),
             chooseCount = 3,
             minChooseCount = 1

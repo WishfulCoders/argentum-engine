@@ -29,7 +29,7 @@ val Blistergrub = card("Blistergrub") {
     keywords(Keyword.SWAMPWALK)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.LoseLife(2, EffectTarget.PlayerRef(Player.EachOpponent))
     }
 

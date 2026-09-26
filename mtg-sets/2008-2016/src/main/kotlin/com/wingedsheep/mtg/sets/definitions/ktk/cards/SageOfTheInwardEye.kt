@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Sage of the Inward Eye
@@ -26,7 +27,7 @@ val SageOfTheInwardEye = card("Sage of the Inward Eye") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
         effect = Patterns.Group.grantKeywordToAll(
             keyword = Keyword.LIFELINK,
             filter = GroupFilter.AllCreaturesYouControl

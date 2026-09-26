@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.EffectChoice
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Fatespinner — Mirrodin #36 (canonical printing)
@@ -43,7 +44,7 @@ val Fatespinner = card("Fatespinner") {
         "phase this turn."
 
     triggeredAbility {
-        trigger = Triggers.EachOpponentUpkeep
+        trigger = Triggers.anOpponent.beginningOf(Step.UPKEEP)
         effect = Effects.ChooseAction(
             player = EffectTarget.PlayerRef(Player.TriggeringPlayer),
             choices = listOf(

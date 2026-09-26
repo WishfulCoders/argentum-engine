@@ -1,7 +1,5 @@
 package com.wingedsheep.engine.scenarios
 
-import com.wingedsheep.engine.handlers.ConditionEvaluator
-import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.legalactions.utils.CastPermissionUtils
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
@@ -32,9 +30,7 @@ class BootleggersStashTest : FunSpec({
     }
 
     fun makeCastPermissionUtils(driver: GameTestDriver): CastPermissionUtils {
-        val predicateEvaluator = PredicateEvaluator()
-        val conditionEvaluator = ConditionEvaluator()
-        return CastPermissionUtils(driver.cardRegistry, predicateEvaluator, conditionEvaluator)
+        return driver.services.castPermissionUtils
     }
 
     test("granted '{T}: Create a Treasure token' only attaches to lands the granter's controller controls") {

@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.conditions.WasKicked
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Urborg Emissary
@@ -28,9 +28,9 @@ val UrborgEmissary = card("Urborg Emissary") {
     keywordAbility(KeywordAbility.kicker("{1}{U}"))
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = WasKicked
-        val t = target("permanent", Targets.Permanent)
+        val t = target(TargetFilter.Permanent)
         effect = Effects.ReturnToHand(t)
     }
 

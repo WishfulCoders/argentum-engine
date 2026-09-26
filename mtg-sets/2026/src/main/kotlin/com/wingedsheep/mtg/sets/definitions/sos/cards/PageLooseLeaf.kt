@@ -8,9 +8,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
-import com.wingedsheep.sdk.scripting.effects.GatherUntilMatchEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.RevealCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
 import com.wingedsheep.sdk.core.Zone
@@ -56,31 +53,23 @@ val PageLooseLeaf = card("Page, Loose Leaf") {
     // Grandeur — Discard another card named Page, Loose Leaf: reveal until an instant/sorcery, take it.
     activatedAbility {
         cost = Costs.Discard(GameObjectFilter.Any.named("Page, Loose Leaf"))
-        effect = Effects.Composite(
-            GatherUntilMatchEffect(
-                filter = GameObjectFilter.InstantOrSorcery,
-                storeMatch = "spell",
-                storeRevealed = "revealed",
-            ),
-            RevealCollectionEffect(from = "revealed"),
+        effect = Effects.Pipeline {
+            val (_, revealed) = gatherUntilMatch(GameObjectFilter.InstantOrSorcery)
+            reveal(revealed)
             // The matched instant/sorcery goes to hand.
-            MoveCollectionEffect(
-                from = "revealed",
-                filter = GameObjectFilter.InstantOrSorcery,
-                destination = CardDestination.ToZone(Zone.HAND),
-            ),
+            move(revealed, CardDestination.ToZone(Zone.HAND), filter = GameObjectFilter.InstantOrSorcery)
             // The rest go on the bottom of the library in a random order.
-            MoveCollectionEffect(
-                from = "revealed",
+            move(
+                revealed,
+                CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
                 filter = GameObjectFilter(
                     cardPredicates = listOf(
                         CardPredicate.Not(CardPredicate.Or(listOf(CardPredicate.IsInstant, CardPredicate.IsSorcery)))
                     )
                 ),
-                destination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
-                order = CardOrder.Random,
-            ),
-        )
+                order = CardOrder.Random
+            )
+        }
     }
 
     metadata {

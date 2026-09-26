@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Dromoka Dunecaster
@@ -31,7 +30,7 @@ val DromokaDunecaster = card("Dromoka Dunecaster") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{W}"), Costs.Tap)
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.withoutKeyword(Keyword.FLYING)))
+        val t = target(TargetFilter.Creature.withoutKeyword(Keyword.FLYING))
         effect = Effects.Tap(t)
     }
 

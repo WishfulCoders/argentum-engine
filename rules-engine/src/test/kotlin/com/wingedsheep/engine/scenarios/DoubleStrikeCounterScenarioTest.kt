@@ -1,16 +1,16 @@
 package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.support.ScenarioTestBase
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Feature test for the **double strike keyword counter** (CR 122.1b / 702.4d).
@@ -27,8 +27,8 @@ class DoubleStrikeCounterScenarioTest : ScenarioTestBase() {
         typeLine = "Sorcery"
         oracleText = "Put a double strike counter on target creature."
         spell {
-            val t = target("target creature", Targets.Creature)
-            effect = Effects.AddCounters(Counters.DOUBLE_STRIKE, 1, t)
+            val t = target(TargetFilter.Creature)
+            effect = Effects.AddCounters(CounterType.DOUBLE_STRIKE, 1, t)
         }
     }
 

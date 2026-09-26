@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.predicates.StatePredicate
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -18,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * When this creature enters, draw a card if you control a creature with a counter on it.
  * If you don't draw a card this way, put a +1/+1 counter on this creature.
  *
- * Modeled as a single ETB [ConditionalEffect]: if you control a creature with any counter
+ * Modeled as a single ETB [Effects.If]: if you control a creature with any counter
  * ([Conditions.YouControl] over a creature filter carrying [StatePredicate.HasAnyCounter]),
  * draw a card; otherwise put a +1/+1 counter on Trade Route Envoy itself. The condition is
  * checked at resolution, so this creature's own counter (e.g. one it gained earlier) counts.
@@ -33,15 +32,15 @@ val TradeRouteEnvoy = card("Trade Route Envoy") {
         "If you don't draw a card this way, put a +1/+1 counter on this creature."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ConditionalEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.If(
             condition = Conditions.YouControl(
                 GameObjectFilter.Creature.copy(
                     statePredicates = listOf(StatePredicate.HasAnyCounter)
                 )
             ),
-            effect = Effects.DrawCards(1),
-            elseEffect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+            then = Effects.DrawCards(1),
+            otherwise = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         )
         description = "When this creature enters, draw a card if you control a creature with a counter on it. " +
             "If you don't draw a card this way, put a +1/+1 counter on this creature."

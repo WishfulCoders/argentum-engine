@@ -3,6 +3,7 @@ package com.wingedsheep.assay.grammar
 import com.wingedsheep.assay.syntax.parseText
 import com.wingedsheep.assay.syntax.ParseOutcome
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.scripting.GameObjectFilter
@@ -185,9 +186,9 @@ class FiltersTest : StringSpec({
     // grammatical number of the noun it modifies rather than registered as two readings.
     "the counter quality agrees with its noun" {
         read(Filters.filter, "creature with a +1/+1 counter on it") shouldBe
-            GameObjectFilter.Creature.withCounter("+1/+1")
+            GameObjectFilter.Creature.withCounter(CounterType.PLUS_ONE_PLUS_ONE)
         read(Filters.plural, "creatures with +1/+1 counters on them") shouldBe
-            GameObjectFilter.Creature.withCounter("+1/+1")
+            GameObjectFilter.Creature.withCounter(CounterType.PLUS_ONE_PLUS_ONE)
         roundTrips(Filters.filter, "creature with a +1/+1 counter on it")
         roundTrips(Filters.filter, "artifact with a charge counter on it")
         roundTrips(Filters.plural, "creatures with +1/+1 counters on them")
@@ -196,7 +197,7 @@ class FiltersTest : StringSpec({
     // …and it sits outside the controller clause, which is where Oracle writes it.
     "the counter quality composes with the controller clause" {
         read(Filters.plural, "creatures you control with +1/+1 counters on them") shouldBe
-            GameObjectFilter.Creature.youControl().withCounter("+1/+1")
+            GameObjectFilter.Creature.youControl().withCounter(CounterType.PLUS_ONE_PLUS_ONE)
         roundTrips(Filters.plural, "creatures you control with +1/+1 counters on them")
     }
 

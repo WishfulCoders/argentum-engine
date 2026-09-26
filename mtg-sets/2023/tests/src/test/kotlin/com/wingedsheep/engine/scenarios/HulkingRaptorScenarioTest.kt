@@ -22,7 +22,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  *
  * Covered:
  *  1. First-main trigger: when HulkingRaptor is on the battlefield under the active player's
- *     control, the precombat main phase fires [Triggers.FirstMainPhase], adding two unrestricted
+ *     control, the precombat main phase fires `Triggers.you.beginningOf(Step.PRECOMBAT_MAIN)`, adding two unrestricted
  *     green mana to the controller's pool.
  *  2. Ward {2}: when an opponent targets HulkingRaptor with a spell and has enough mana to pay,
  *     the engine presents a [SelectManaSourcesDecision] for the {2} ward cost.

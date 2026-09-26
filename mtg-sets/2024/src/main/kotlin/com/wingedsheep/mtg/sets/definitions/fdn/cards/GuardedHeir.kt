@@ -29,7 +29,7 @@ val GuardedHeir = card("Guarded Heir") {
     toughness = 1
     keywords(Keyword.LIFELINK)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 3,
             toughness = 3,

@@ -36,7 +36,7 @@ val TemurMonument = card("Temur Monument") {
         "Activate only as a sorcery."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.BasicLand.withAnyOfSubtypes(
                 listOf(Subtype.FOREST, Subtype.ISLAND, Subtype.MOUNTAIN)

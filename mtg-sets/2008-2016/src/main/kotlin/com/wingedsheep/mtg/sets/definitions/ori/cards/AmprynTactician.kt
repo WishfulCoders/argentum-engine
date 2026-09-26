@@ -26,7 +26,7 @@ val AmprynTactician = card("Ampryn Tactician") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Group.modifyStatsForAll(1, 1, Filters.Group.creaturesYouControl)
     }
 

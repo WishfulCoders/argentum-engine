@@ -14,7 +14,7 @@ import io.kotest.matchers.shouldBe
  * Stormshriek Feral — {4}{R} Dragon, 3/3, Flying, haste; {1}{R}: +1/+0 until end of turn.
  * Flush Out — {1}{R} Sorcery — Omen: "Discard a card. If you do, draw two cards."
  *
- * Exercises the Omen face: the mandatory discard then a conditional draw two ([IfYouDoEffect]),
+ * Exercises the Omen face: the mandatory discard then a conditional draw two ([Effects.IfYouDo]),
  * and the Omen-specific shuffle-back (the card returns to its owner's library on resolution, not
  * the graveyard).
  */

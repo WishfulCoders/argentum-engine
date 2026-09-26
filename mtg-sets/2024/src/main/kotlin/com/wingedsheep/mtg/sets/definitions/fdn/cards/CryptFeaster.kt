@@ -35,7 +35,7 @@ val CryptFeaster = card("Crypt Feaster") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         interveningIf = Conditions.CardsInGraveyardAtLeast(7)
         effect = Effects.ModifyStats(power = 2, toughness = 0, target = EffectTarget.Self)
     }

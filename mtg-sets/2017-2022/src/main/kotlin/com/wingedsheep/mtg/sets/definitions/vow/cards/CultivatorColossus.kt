@@ -2,16 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.RepeatCondition
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Cultivator Colossus — Innistrad: Crimson Vow #195
@@ -42,25 +40,23 @@ val CultivatorColossus = card("Cultivator Colossus") {
         "When this creature enters, you may put a land card from your hand onto the battlefield " +
         "tapped. If you do, draw a card and repeat this process."
 
-    dynamicStats(DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Land))
+    dynamicStats(DynamicAmounts.landsYouControl())
 
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.RepeatWhile(
-            body = Effects.Composite(
-                // "you may put a land card from your hand onto the battlefield tapped"
-                Patterns.Hand.putFromHand(GameObjectFilter.Land, count = 1, entersTapped = true),
+            // "you may put a land card from your hand onto the battlefield tapped"
+            body = Patterns.Hand.putFromHand(GameObjectFilter.Land, count = 1, entersTapped = true) then
                 // "If you do, draw a card"
-                ConditionalEffect(
-                    condition = Conditions.CollectionContainsMatch("putting", GameObjectFilter.Land),
-                    effect = Effects.DrawCards(1)
-                )
-            ),
+                Effects.If(
+                    condition = Conditions.CollectionContainsMatch(Patterns.Hand.putFromHandCards, GameObjectFilter.Land),
+                    then = Effects.DrawCards(1)
+                ),
             // "and repeat this process" — continue only while a land was put this pass.
             repeatCondition = RepeatCondition.WhileCondition(
-                Conditions.CollectionContainsMatch("putting", GameObjectFilter.Land)
+                Conditions.CollectionContainsMatch(Patterns.Hand.putFromHandCards, GameObjectFilter.Land)
             )
         )
         description = "When this creature enters, you may put a land card from your hand onto the " +

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.mechanics.sba.player
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ExecutionResult
 import com.wingedsheep.engine.core.GameEndReason
 import com.wingedsheep.engine.core.PlayerLostEvent
@@ -16,7 +17,9 @@ import com.wingedsheep.engine.state.components.player.PlayerLostComponent
  * team loses when its members' combined poison reaches 15. Both values come from the format, so
  * non-2HG games keep the plain per-player 10.
  */
-class PoisonLossCheck : StateBasedActionCheck {
+class PoisonLossCheck(
+    private val predicateEvaluator: PredicateEvaluator
+) : StateBasedActionCheck {
     override val name = "704.5c Poison Loss"
     override val order = SbaOrder.POISON_LOSS
 
@@ -29,7 +32,7 @@ class PoisonLossCheck : StateBasedActionCheck {
         for (playerId in state.turnOrder) {
             val container = state.getEntity(playerId) ?: continue
             if (container.has<PlayerLostComponent>()) continue
-            if (playerCantLoseGame(state, playerId)) continue
+            if (playerCantLoseGame(state, playerId, predicateEvaluator = predicateEvaluator)) continue
 
             // CR 810.10a — an individual player's poison count uses the team's pooled total.
             if (state.teamPoison(playerId) >= threshold) {

@@ -28,10 +28,8 @@ val DwarvenStrikeForce = card("Dwarven Strike Force") {
     toughness = 3
     activatedAbility {
         cost = Costs.DiscardAtRandom(1)
-        effect = Effects.Composite(
-            Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.Self),
+        effect = Effects.GrantKeyword(Keyword.FIRST_STRIKE, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.HASTE, EffectTarget.Self)
-        )
     }
     metadata {
         rarity = Rarity.UNCOMMON

@@ -38,7 +38,7 @@ val HighNoon = card("High Noon") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{4}{R}"), Costs.SacrificeSelf)
-        val anyTarget = target("any target", Targets.Any)
+        val anyTarget = target(Targets.Any)
         effect = Effects.DealDamage(5, anyTarget, damageSource = EffectTarget.Self)
         description = "{4}{R}, Sacrifice this enchantment: It deals 5 damage to any target."
     }

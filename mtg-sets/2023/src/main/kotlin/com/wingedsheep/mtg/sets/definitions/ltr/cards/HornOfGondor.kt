@@ -4,15 +4,14 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Horn of Gondor
@@ -28,7 +27,7 @@ val HornOfGondor = card("Horn of Gondor") {
     oracleText = "When Horn of Gondor enters, create a 1/1 white Human Soldier creature token.\n{3}, {T}: Create X 1/1 white Human Soldier creature tokens, where X is the number of Humans you control."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,
@@ -45,8 +44,8 @@ val HornOfGondor = card("Horn of Gondor") {
                 AbilityCost.Tap
             )
         )
-        effect = CreateTokenEffect(
-            count = DynamicAmount.Count(
+        effect = Effects.CreateToken(
+            count = DynamicAmounts.count(
                 Player.You,
                 Zone.BATTLEFIELD,
                 GameObjectFilter.Creature.withSubtype("Human")

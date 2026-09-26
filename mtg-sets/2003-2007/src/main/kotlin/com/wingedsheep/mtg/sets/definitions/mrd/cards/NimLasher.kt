@@ -4,10 +4,9 @@ import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Nim Lasher — Mirrodin #71
@@ -15,7 +14,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *
  * This creature gets +1/+0 for each artifact you control.
  *
- * A continuously recomputed [GrantDynamicStatsEffect] on the Nim itself ([GroupFilter.source]):
+ * A continuously recomputed [GrantDynamicStats] on the Nim itself ([GroupFilter.source]):
  * power tracks the controller's artifact count in real time, so an artifact entering or leaving
  * moves the Nim's power immediately rather than snapshotting on entry. Toughness is untouched
  * ([DynamicAmount.Fixed] 0).
@@ -32,10 +31,10 @@ val NimLasher = card("Nim Lasher") {
     oracleText = "This creature gets +1/+0 for each artifact you control."
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
             powerBonus = DynamicAmounts.battlefield(Player.You, GameObjectFilter.Artifact).count(),
-            toughnessBonus = DynamicAmount.Fixed(0)
+            toughnessBonus = DynamicAmounts.fixed(0)
         )
     }
 

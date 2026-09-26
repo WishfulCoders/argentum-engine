@@ -26,7 +26,7 @@ val RootElemental = card("Root Elemental") {
     morph = "{5}{G}{G}"
 
     triggeredAbility {
-        trigger = Triggers.TurnedFaceUp
+        trigger = Triggers.self.turnedFaceUp()
         effect = Patterns.Hand.putFromHand(
             filter = GameObjectFilter.Creature
         )

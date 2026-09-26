@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.tla.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
@@ -11,6 +10,8 @@ import com.wingedsheep.sdk.scripting.CantAttack
 import com.wingedsheep.sdk.scripting.CantBlock
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Path to Redemption
@@ -27,7 +28,7 @@ val PathToRedemption = card("Path to Redemption") {
     typeLine = "Enchantment — Aura"
     oracleText = "Enchant creature\nEnchanted creature can't attack or block.\n{5}, Sacrifice this Aura: Exile enchanted creature. Create a 1/1 white Ally creature token. Activate only during your turn."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = CantAttack(filter = GroupFilter.attachedCreature())
@@ -39,15 +40,13 @@ val PathToRedemption = card("Path to Redemption") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{5}"), Costs.SacrificeSelf)
-        effect = Effects.Composite(
-            Effects.Exile(EffectTarget.EnchantedCreature),
+        effect = Effects.Exile(EffectTarget.EnchantedCreature) then
             Effects.CreateToken(
                 power = 1,
                 toughness = 1,
                 colors = setOf(Color.WHITE),
                 creatureTypes = setOf("Ally")
             )
-        )
         restrictions = listOf(ActivationRestriction.OnlyDuringYourTurn)
     }
 

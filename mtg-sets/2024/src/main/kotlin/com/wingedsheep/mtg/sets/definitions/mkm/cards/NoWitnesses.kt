@@ -5,8 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -20,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * ahead — with a Clue apiece.
  *
  * "Each player who controls the most creatures" is the Outpace Oblivion shape: one
- * [ForEachPlayerEffect] over [Player.Each] whose body is a [ConditionalEffect]. Inside the loop
+ * [ForEachPlayerEffect] over [Player.Each] whose body is a [Effects.If]. Inside the loop
  * the controller is rebound to the iterated player, so
  * [Conditions.PlayerControlsMostPermanents] asks about *that* player and the Clue lands in front
  * of them. Ties all qualify (the condition is "most, or tied for most"), which is why this can
@@ -42,21 +40,17 @@ val NoWitnesses = card("No Witnesses") {
         "this token: Draw a card.\")"
 
     spell {
-        effect = Effects.Composite(
-            ForEachPlayerEffect(
-                players = Player.Each,
-                effects = listOf(
-                    ConditionalEffect(
-                        condition = Conditions.PlayerControlsMostPermanents(
-                            Player.You,
-                            GameObjectFilter.Creature,
-                        ),
-                        effect = Effects.Investigate(controller = EffectTarget.Controller),
-                    ),
+        effect = Effects.ForEachPlayer(
+            players = Player.Each,
+            effect = Effects.If(
+                condition = Conditions.PlayerControlsMostPermanents(
+                    Player.You,
+                    GameObjectFilter.Creature,
                 ),
+                then = Effects.Investigate(controller = EffectTarget.Controller),
             ),
-            Effects.DestroyAll(GameObjectFilter.Creature),
-        )
+        ) then
+            Effects.DestroyAll(GameObjectFilter.Creature)
     }
 
     metadata {

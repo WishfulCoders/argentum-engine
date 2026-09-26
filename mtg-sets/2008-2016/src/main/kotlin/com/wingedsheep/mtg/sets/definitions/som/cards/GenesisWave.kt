@@ -1,18 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.som.cards
 
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Genesis Wave
@@ -42,32 +38,22 @@ val GenesisWave = card("Genesis Wave") {
         "cards revealed this way that weren't put onto the battlefield into your graveyard."
 
     spell {
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(count = DynamicAmount.XValue, player = Player.You),
-                storeAs = "genesisWave_revealed",
+        effect = Effects.Pipeline {
+            val genesisWaveRevealed = gather(
+                CardSource.TopOfLibrary(count = DynamicAmounts.xValue(), player = Player.You),
                 revealed = true
-            ),
-            SelectFromCollectionEffect(
-                from = "genesisWave_revealed",
-                selection = SelectionMode.ChooseAnyNumber,
+            )
+            val (genesisWaveToBattlefield, genesisWaveToGraveyard) = chooseAnyNumberSplit(
+                from = genesisWaveRevealed,
                 filter = GameObjectFilter.Permanent.manaValueAtMostX(),
                 showAllCards = true,
-                storeSelected = "genesisWave_toBattlefield",
-                storeRemainder = "genesisWave_toGraveyard",
                 prompt = "Put any number of permanent cards with mana value X or less onto the battlefield",
                 selectedLabel = "Put onto the battlefield",
                 remainderLabel = "Put into your graveyard"
-            ),
-            MoveCollectionEffect(
-                from = "genesisWave_toBattlefield",
-                destination = CardDestination.ToZone(Zone.BATTLEFIELD, Player.You)
-            ),
-            MoveCollectionEffect(
-                from = "genesisWave_toGraveyard",
-                destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.You)
             )
-        )
+            move(genesisWaveToBattlefield, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You))
+            toGraveyard(genesisWaveToGraveyard)
+        }
     }
 
     metadata {

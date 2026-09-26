@@ -7,8 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Scrap Compactor — Aetherdrift #242
@@ -37,17 +35,14 @@ val ScrapCompactor = card("Scrap Compactor") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap, Costs.SacrificeSelf)
-        val t = target("target creature", TargetCreature())
+        val t = target(TargetFilter.Creature)
         effect = Effects.DealDamage(3, t)
         description = "{3}, {T}, Sacrifice this artifact: It deals 3 damage to target creature."
     }
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{6}"), Costs.Tap, Costs.SacrificeSelf)
-        val t = target(
-            "target creature or Vehicle",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrVehicle))
-        )
+        val t = target(TargetFilter(GameObjectFilter.CreatureOrVehicle))
         effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
         description = "{6}, {T}, Sacrifice this artifact: Destroy target creature or Vehicle."
     }

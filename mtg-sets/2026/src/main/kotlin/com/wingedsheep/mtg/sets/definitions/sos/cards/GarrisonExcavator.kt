@@ -10,6 +10,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 
 /**
@@ -29,7 +30,7 @@ val GarrisonExcavator = card("Garrison Excavator") {
     toughness = 4
     keywords(Keyword.MENACE)
     triggeredAbility {
-        trigger = Triggers.CardsLeaveYourGraveyard()
+        trigger = Triggers.oneOrMore(GameObjectFilter.Any).leaveYourGraveyard()
         effect = Effects.CreateToken(
             power = 2,
             toughness = 2,

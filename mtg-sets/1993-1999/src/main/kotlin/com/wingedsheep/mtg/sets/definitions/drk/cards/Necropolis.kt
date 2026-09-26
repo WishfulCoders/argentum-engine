@@ -1,16 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.drk.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Necropolis
@@ -43,14 +42,14 @@ val Necropolis = card("Necropolis") {
 
     activatedAbility {
         cost = Costs.ExileFromGraveyard(1, GameObjectFilter.Creature)
-        effect = Effects.Composite(
-            GatherCardsEffect(source = CardSource.ExiledAsCost, storeAs = "necropolisFuel"),
-            Effects.AddDynamicCounters(
-                Counters.PLUS_ZERO_PLUS_ONE,
-                DynamicAmount.ManaValueSumOfCollection("necropolisFuel"),
+        effect = Effects.Pipeline {
+            val necropolisFuel = gather(CardSource.ExiledAsCost)
+            run(Effects.AddDynamicCounters(
+                CounterType.PLUS_ZERO_PLUS_ONE,
+                DynamicAmounts.manaValueSumOf(necropolisFuel),
                 EffectTarget.Self,
-            ),
-        )
+            ))
+        }
         description = "Exile a creature card from your graveyard: Put X +0/+1 counters on this " +
             "creature, where X is the exiled card's mana value."
     }

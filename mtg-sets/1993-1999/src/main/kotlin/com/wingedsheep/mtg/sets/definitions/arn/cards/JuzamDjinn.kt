@@ -5,6 +5,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Juzám Djinn
@@ -22,7 +23,7 @@ val JuzamDjinn = card("Juzám Djinn") {
     oracleText = "At the beginning of your upkeep, this creature deals 1 damage to you."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         effect = Effects.DealDamage(1, EffectTarget.Controller)
     }
 

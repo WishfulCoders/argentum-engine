@@ -30,7 +30,7 @@ val SecretPlans = card("Secret Plans") {
     }
 
     triggeredAbility {
-        trigger = Triggers.CreatureTurnedFaceUp()
+        trigger = Triggers.you.permanentTurnedFaceUp()
         effect = Effects.DrawCards(1)
     }
 

@@ -4,10 +4,10 @@
 
 package com.wingedsheep.mtg.sets.definitions.usg.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -23,7 +23,7 @@ val Rejuvenate = card("Rejuvenate") {
     typeLine = "Sorcery"
     oracleText = "You gain 6 life.\nCycling {2} ({2}, Discard this card: Draw a card.)"
     spell {
-        effect = GainLifeEffect(6)
+        effect = Effects.GainLife(6)
     }
     keywordAbility(KeywordAbility.cycling("{2}"))
     metadata {

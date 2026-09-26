@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -32,7 +31,7 @@ val KrosanConstrictor = card("Krosan Constrictor") {
     keywords(Keyword.SWAMPWALK)
     activatedAbility {
         cost = Costs.Tap
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature.withColor(Color.BLACK)))
+        val t = target(TargetFilter.Creature.withColor(Color.BLACK))
         effect = Effects.ModifyStats(-2, 0, t)
     }
     metadata {

@@ -5,10 +5,10 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -28,8 +28,8 @@ val ShopkeepersBane = card("Shopkeeper's Bane") {
     toughness = 2
     keywords(Keyword.TRAMPLE)
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = GainLifeEffect(2)
+        trigger = Triggers.self.attacks()
+        effect = Effects.GainLife(2)
     }
     metadata {
         rarity = Rarity.COMMON

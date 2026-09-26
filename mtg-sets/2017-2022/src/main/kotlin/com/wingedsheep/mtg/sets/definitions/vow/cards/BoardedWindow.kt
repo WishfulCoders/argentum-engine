@@ -1,18 +1,18 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.TurnTracker
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Boarded Window
@@ -41,11 +41,11 @@ val BoardedWindow = card("Boarded Window") {
     }
 
     triggeredAbility {
-        trigger = Triggers.EachEndStep
-        interveningIf = Compare(
-            DynamicAmount.TurnTracking(Player.You, TurnTracker.DAMAGE_RECEIVED),
+        trigger = Triggers.anyPlayer.beginningOf(Step.END)
+        interveningIf = Conditions.CompareAmounts(
+            DynamicAmounts.damageReceivedThisTurn(Player.You),
             ComparisonOperator.GTE,
-            DynamicAmount.Fixed(4)
+            4
         )
         effect = Effects.Exile(EffectTarget.Self)
     }

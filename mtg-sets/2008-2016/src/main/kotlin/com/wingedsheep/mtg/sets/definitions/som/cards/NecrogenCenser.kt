@@ -1,13 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.som.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 
 /**
  * Necrogen Censer
@@ -26,7 +25,7 @@ val NecrogenCenser = card("Necrogen Censer") {
 
     replacementEffect(
         EntersWithCounters(
-            counterType = CounterTypeFilter.Named(Counters.CHARGE),
+            counterType = CounterType.CHARGE,
             count = 2,
             selfOnly = true
         )
@@ -35,9 +34,9 @@ val NecrogenCenser = card("Necrogen Censer") {
     activatedAbility {
         cost = Costs.Composite(
             Costs.Tap,
-            Costs.RemoveCounterFromSelf(Counters.CHARGE)
+            Costs.RemoveCounterFromSelf(CounterType.CHARGE)
         )
-        val victim = target("target player", Targets.Player)
+        val victim = target(Targets.Player)
         effect = Effects.LoseLife(2, victim)
         description = "{T}, Remove a charge counter from this artifact: Target player loses 2 life."
     }

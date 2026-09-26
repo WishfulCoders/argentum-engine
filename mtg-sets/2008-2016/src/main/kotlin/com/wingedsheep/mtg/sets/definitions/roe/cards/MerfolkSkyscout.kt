@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Merfolk Skyscout
@@ -18,8 +19,8 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * Modeling notes:
  *  - "Attacks or blocks" is **two** triggered abilities sharing one effect. Attacking and blocking
- *    are separate events, and the SDK has no combined `AttacksOrBlocks` trigger — [Triggers.Attacks]
- *    and [Triggers.Blocks] are the two spellings, the Daemogoth Titan / Hamlet Captain / Elder
+ *    are separate events, and the SDK has no combined `AttacksOrBlocks` trigger — `Triggers.self.attacks()`
+ *    and `Triggers.self.blocks()` are the two spellings, the Daemogoth Titan / Hamlet Captain / Elder
  *    Gargaroth shape. Assay's own JSON compiles this sentence into exactly two `triggeredAbilities`
  *    (`AttackEvent` and `BlockEvent`), so the pair is authoring to the model, not a workaround.
  *    Two abilities is also rules-correct: a creature that attacks and is later blocked triggers
@@ -43,14 +44,14 @@ val MerfolkSkyscout = card("Merfolk Skyscout") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        val permanent = target("target permanent", Targets.Permanent)
+        trigger = Triggers.self.attacks()
+        val permanent = target(TargetFilter.Permanent)
         effect = Effects.Untap(permanent)
     }
 
     triggeredAbility {
-        trigger = Triggers.Blocks
-        val permanent = target("target permanent", Targets.Permanent)
+        trigger = Triggers.self.blocks()
+        val permanent = target(TargetFilter.Permanent)
         effect = Effects.Untap(permanent)
     }
 

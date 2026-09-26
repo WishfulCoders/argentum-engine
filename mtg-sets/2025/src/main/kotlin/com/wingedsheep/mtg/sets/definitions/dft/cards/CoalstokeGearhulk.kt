@@ -9,12 +9,10 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerTiming
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Coalstoke Gearhulk
@@ -52,28 +50,23 @@ val CoalstokeGearhulk = card("Coalstoke Gearhulk") {
     keywords(Keyword.MENACE, Keyword.DEATHTOUCH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val reanimated = target(
-            "target creature card with mana value 4 or less in a graveyard",
-            TargetObject(filter = TargetFilter.CreatureInGraveyard.manaValueAtMost(4))
-        )
-        effect = Effects.Composite(
-            Effects.Move(
-                reanimated,
-                Zone.BATTLEFIELD,
-                controllerOverride = EffectTarget.Controller,
-                addCounterType = CounterType.FINALITY
-            ),
-            Effects.GrantKeyword(Keyword.MENACE, reanimated, Duration.Permanent),
-            Effects.GrantKeyword(Keyword.DEATHTOUCH, reanimated, Duration.Permanent),
-            Effects.GrantKeyword(Keyword.HASTE, reanimated, Duration.Permanent),
-            CreateDelayedTriggerEffect(
+        trigger = Triggers.self.enters()
+        val reanimated = target(TargetFilter.CreatureInGraveyard.manaValueAtMost(4))
+        effect = Effects.Move(
+            reanimated,
+            Zone.BATTLEFIELD,
+            controllerOverride = EffectTarget.Controller,
+            addCounterType = CounterType.FINALITY
+        ) then
+            Effects.GrantKeyword(Keyword.MENACE, reanimated, Duration.Permanent) then
+            Effects.GrantKeyword(Keyword.DEATHTOUCH, reanimated, Duration.Permanent) then
+            Effects.GrantKeyword(Keyword.HASTE, reanimated, Duration.Permanent) then
+            Effects.CreateDelayedTrigger(
                 step = Step.END,
                 effect = Effects.Exile(reanimated),
                 timing = DelayedTriggerTiming.NEXT_END_STEP,
                 fireOnPlayer = EffectTarget.PlayerRef(Player.You)
             )
-        )
         description = "When this creature enters, put target creature card with mana value 4 or " +
             "less from a graveyard onto the battlefield under your control with a finality " +
             "counter on it. That creature gains menace, deathtouch, and haste. At the beginning " +

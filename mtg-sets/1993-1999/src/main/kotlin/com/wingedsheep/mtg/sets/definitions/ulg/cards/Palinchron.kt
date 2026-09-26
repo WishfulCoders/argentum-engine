@@ -13,7 +13,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -34,8 +33,8 @@ val Palinchron = card("Palinchron") {
     toughness = 5
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target", TargetPermanent(optional = true, count = 7, filter = TargetFilter.Land))
+        trigger = Triggers.self.enters()
+        targets(TargetFilter.Land, count = 7, optional = true)
         effect = Effects.UntapEachTarget()
     }
     activatedAbility {

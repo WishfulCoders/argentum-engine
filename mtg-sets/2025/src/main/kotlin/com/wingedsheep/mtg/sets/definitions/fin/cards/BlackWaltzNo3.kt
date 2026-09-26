@@ -5,12 +5,13 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 
 /**
@@ -30,8 +31,8 @@ val BlackWaltzNo3 = card("Black Waltz No. 3") {
     toughness = 2
     keywords(Keyword.FLYING, Keyword.DEATHTOUCH)
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
-        effect = DealDamageEffect(2, EffectTarget.PlayerRef(Player.EachOpponent))
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
+        effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.EachOpponent))
     }
     metadata {
         rarity = Rarity.UNCOMMON

@@ -1,17 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.mh3.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Malevolent Rumble
@@ -38,35 +31,21 @@ val MalevolentRumble = card("Malevolent Rumble") {
         "Eldrazi Spawn creature token with \"Sacrifice this token: Add {C}.\""
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(4)),
-                    storeAs = "revealed",
-                    revealed = true
-                ),
-                SelectFromCollectionEffect(
-                    from = "revealed",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    filter = GameObjectFilter.Permanent,
-                    storeSelected = "toHand",
-                    storeRemainder = "toGraveyard",
-                    showAllCards = true,
-                    prompt = "You may put a permanent card into your hand",
-                    selectedLabel = "Put into hand",
-                    remainderLabel = "Put into graveyard"
-                ),
-                MoveCollectionEffect(
-                    from = "toHand",
-                    destination = CardDestination.ToZone(Zone.HAND)
-                ),
-                MoveCollectionEffect(
-                    from = "toGraveyard",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD)
-                ),
-                Effects.CreateEldraziSpawn()
+        effect = Effects.Pipeline {
+            val revealed = gather(CardSource.TopOfLibrary(4), revealed = true)
+            val (toHandCards, toGraveyardCards) = chooseUpToSplit(
+                1,
+                from = revealed,
+                filter = GameObjectFilter.Permanent,
+                showAllCards = true,
+                prompt = "You may put a permanent card into your hand",
+                selectedLabel = "Put into hand",
+                remainderLabel = "Put into graveyard"
             )
-        )
+            toHand(toHandCards)
+            toGraveyard(toGraveyardCards)
+            run(Effects.CreateEldraziSpawn())
+        }
     }
 
     metadata {

@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.msh.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.teamwork
 import com.wingedsheep.sdk.dsl.teamworkModal
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Widow's Bite — Marvel Super Heroes #122
@@ -41,11 +41,11 @@ val WidowsBite = card("Widow's Bite") {
     spell {
         teamworkModal {
             mode("Target creature gains deathtouch until end of turn") {
-                val creature = target("target creature", Targets.Creature)
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.GrantKeyword(Keyword.DEATHTOUCH, creature)
             }
             mode("Target creature gets -2/-2 until end of turn") {
-                val creature = target("target creature", Targets.Creature)
+                val creature = target(TargetFilter.Creature)
                 effect = Effects.ModifyStats(-2, -2, creature)
             }
         }

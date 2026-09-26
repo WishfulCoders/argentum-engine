@@ -1,11 +1,13 @@
 package com.wingedsheep.engine.multiplayer
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.ActionProcessor
 import com.wingedsheep.engine.core.DeclareAttackers
 import com.wingedsheep.engine.core.DeclareBlockers
 import com.wingedsheep.engine.core.GameConfig
 import com.wingedsheep.engine.core.GameInitializer
 import com.wingedsheep.engine.core.PlayerConfig
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.mechanics.StateBasedActionChecker
 import com.wingedsheep.engine.mechanics.combat.CombatDefenders
 import com.wingedsheep.engine.registry.CardRegistry
@@ -31,6 +33,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Two-Headed Giant — Phase 5: combined combat (CR 805.10).
@@ -55,6 +58,7 @@ class TwoHeadedGiantCombatTest : FunSpec({
     )
 
     fun registry() = CardRegistry().also { it.register(bear) }
+    val zones = ZoneTransitionService(registry(), predicateEvaluator = PredicateEvaluator(cardRegistry = null))
 
     fun init2hg(): Pair<GameState, List<EntityId>> {
         val deck = Deck(cards = List(40) { bear.name })
@@ -98,9 +102,9 @@ class TwoHeadedGiantCombatTest : FunSpec({
         val proc = ActionProcessor(registry())
 
         // Attacking the teammate (p1) is illegal.
-        proc.process(state, DeclareAttackers(p[0], mapOf(atk to p[1]))).result.isSuccess.shouldBeFalse()
+        (proc.process(state, DeclareAttackers(p[0], mapOf(atk to p[1]))).result.outcome is Outcome.Done).shouldBeFalse()
         // Attacking an opposing-team player (p2) is legal.
-        proc.process(state, DeclareAttackers(p[0], mapOf(atk to p[2]))).result.isSuccess.shouldBeTrue()
+        (proc.process(state, DeclareAttackers(p[0], mapOf(atk to p[2]))).result.outcome is Outcome.Done).shouldBeTrue()
     }
 
     test("the combined attack may include creatures controlled by BOTH active-team members (CR 805.10b)") {
@@ -114,7 +118,7 @@ class TwoHeadedGiantCombatTest : FunSpec({
         val result = proc.process(
             state, DeclareAttackers(p[0], mapOf(atk0 to p[2], atk1 to p[3]))
         ).result
-        result.isSuccess.shouldBeTrue()
+        (result.outcome is Outcome.Done).shouldBeTrue()
         result.newState.getEntity(atk1)!!.get<AttackingComponent>()!!.defenderId shouldBe p[3]
     }
 
@@ -127,16 +131,16 @@ class TwoHeadedGiantCombatTest : FunSpec({
 
         // p0 attacks with their own bear only; p1's bear stays home.
         val declared = proc.process(state, DeclareAttackers(p[0], mapOf(atk0 to p[2]))).result
-        declared.isSuccess.shouldBeTrue()
+        (declared.outcome is Outcome.Done).shouldBeTrue()
         // The declaration is recorded on BOTH heads …
         declared.newState.getEntity(p[1])?.has<AttackersDeclaredThisCombatComponent>() shouldBe true
         // … so p1 is not made to declare before passing …
         val afterP0Pass = proc.process(declared.newState, com.wingedsheep.engine.core.PassPriority(p[0])).result.newState
         afterP0Pass.priorityPlayerId shouldBe p[1]
-        proc.process(afterP0Pass, com.wingedsheep.engine.core.PassPriority(p[1])).result.isSuccess.shouldBeTrue()
+        (proc.process(afterP0Pass, com.wingedsheep.engine.core.PassPriority(p[1])).result.outcome is Outcome.Done).shouldBeTrue()
         // … and can't send a second wave in after the fact.
         val secondWave = proc.process(afterP0Pass, DeclareAttackers(p[1], mapOf(atk1 to p[3]))).result
-        secondWave.isSuccess.shouldBeFalse()
+        (secondWave.outcome is Outcome.Done).shouldBeFalse()
         secondWave.newState.getEntity(atk1)?.has<AttackingComponent>() shouldBe false
     }
 
@@ -160,7 +164,7 @@ class TwoHeadedGiantCombatTest : FunSpec({
 
         // p3 blocks an attacker that is attacking p2 — legal in 2HG (would be illegal in FFA, 509.1b).
         val result = proc.process(state, DeclareBlockers(p[3], mapOf(blkP3 to listOf(atk)))).result
-        result.isSuccess.shouldBeTrue()
+        (result.outcome is Outcome.Done).shouldBeTrue()
     }
 
     test("a member of the attacking team cannot declare blockers (CR 805.10a)") {
@@ -172,7 +176,7 @@ class TwoHeadedGiantCombatTest : FunSpec({
         val proc = ActionProcessor(registry())
 
         // p1 is on the attacking team, so it may not block (the active team never blocks).
-        proc.process(state, DeclareBlockers(p[1], mapOf(blkP1 to listOf(atk)))).result.isSuccess.shouldBeFalse()
+        (proc.process(state, DeclareBlockers(p[1], mapOf(blkP1 to listOf(atk)))).result.outcome is Outcome.Done).shouldBeFalse()
     }
     /*
      * CR 506.4 removes a permanent from combat when its controller changes. The engine names one
@@ -188,7 +192,7 @@ class TwoHeadedGiantCombatTest : FunSpec({
         val (s2, atkTeammate) = s1.withBear(p[1], attacking = p[3]) // the NON-active teammate's
         val state = s2.copy(step = Step.DECLARE_ATTACKERS, phase = Phase.COMBAT)
 
-        val after = StateBasedActionChecker(cardRegistry = registry()).checkAndApply(state).newState
+        val after = StateBasedActionChecker(zones, cardRegistry = registry()).checkAndApply(state).newState
 
         after.getEntity(atkActive)!!.has<AttackingComponent>().shouldBeTrue()
         after.getEntity(atkTeammate)!!.has<AttackingComponent>().shouldBeTrue()
@@ -204,7 +208,7 @@ class TwoHeadedGiantCombatTest : FunSpec({
             .updateEntity(blkP3) { it.with(BlockingComponent(listOf(atk))) }
             .copy(step = Step.DECLARE_BLOCKERS, phase = Phase.COMBAT)
 
-        val after = StateBasedActionChecker(cardRegistry = registry()).checkAndApply(state).newState
+        val after = StateBasedActionChecker(zones, cardRegistry = registry()).checkAndApply(state).newState
 
         after.getEntity(blkP2)!!.has<BlockingComponent>().shouldBeTrue()
         after.getEntity(blkP3)!!.has<BlockingComponent>().shouldBeTrue()
@@ -218,7 +222,7 @@ class TwoHeadedGiantCombatTest : FunSpec({
             .updateEntity(atk) { it.with(ControllerComponent(p[2])) }
             .copy(step = Step.DECLARE_ATTACKERS, phase = Phase.COMBAT)
 
-        val after = StateBasedActionChecker(cardRegistry = registry()).checkAndApply(state).newState
+        val after = StateBasedActionChecker(zones, cardRegistry = registry()).checkAndApply(state).newState
 
         after.getEntity(atk)!!.has<AttackingComponent>().shouldBeFalse()
     }

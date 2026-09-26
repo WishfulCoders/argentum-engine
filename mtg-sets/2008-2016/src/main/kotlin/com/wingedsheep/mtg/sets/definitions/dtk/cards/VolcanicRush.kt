@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * "Attacking creatures" is an unqualified group, not a target — every attacker on the battlefield,
  * whoever controls it — so this is [Effects.ForEachInGroup] over [GroupFilter.AttackingCreatures]
- * with [EffectTarget.Self] naming the current iteration's creature. The group is snapshotted before
+ * with [EffectTarget.IterationEntity] naming the current iteration's creature. The group is snapshotted before
  * the first iteration, so a creature that leaves combat mid-resolution still gets its bonus.
  */
 val VolcanicRush = card("Volcanic Rush") {
@@ -28,10 +28,8 @@ val VolcanicRush = card("Volcanic Rush") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter.AttackingCreatures,
-            Effects.Composite(
-                Effects.ModifyStats(2, 0, EffectTarget.Self),
-                Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
-            )
+            Effects.ModifyStats(2, 0, EffectTarget.IterationEntity) then
+                Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.IterationEntity)
         )
     }
 

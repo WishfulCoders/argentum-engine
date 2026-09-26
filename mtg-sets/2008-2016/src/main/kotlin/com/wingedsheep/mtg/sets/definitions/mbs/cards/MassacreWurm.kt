@@ -1,12 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.mbs.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
@@ -21,9 +19,9 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever a creature an opponent controls dies, that player loses 2 life.
  *
  *  - **ETB** — a per-creature -2/-2 floating effect over every creature an opponent controls at
- *    resolution ([Effects.ForEachInGroup] with the iterated creature as [EffectTarget.Self]).
+ *    resolution ([Effects.ForEachInGroup] with the iterated creature as [EffectTarget.IterationEntity]).
  *    Creatures that enter later are unaffected; the set is fixed when the ability resolves.
- *  - **Death drain** — a [Triggers.leavesBattlefield]-to-graveyard trigger filtered to
+ *  - **Death drain** — a `Triggers.<subject>.leaves(to, excludeTo, excludeSacrifice)`-to-graveyard trigger filtered to
  *    opponent-controlled creatures (fires once per death). [Player.TriggeringPlayer] resolves to
  *    the dying creature's controller, so "that player" loses 2 life.
  *
@@ -41,20 +39,16 @@ val MassacreWurm = card("Massacre Wurm") {
 
     // When this creature enters, creatures your opponents control get -2/-2 until end of turn.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.ForEachInGroup(
             GroupFilter.AllCreaturesOpponentsControl,
-            Effects.ModifyStats(power = -2, toughness = -2, target = EffectTarget.Self)
+            Effects.ModifyStats(power = -2, toughness = -2, target = EffectTarget.IterationEntity)
         )
     }
 
     // Whenever a creature an opponent controls dies, that player loses 2 life.
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.opponentControls(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.a(GameObjectFilter.Creature.opponentControls()).dies()
         effect = Effects.LoseLife(2, EffectTarget.PlayerRef(Player.TriggeringPlayer))
     }
 

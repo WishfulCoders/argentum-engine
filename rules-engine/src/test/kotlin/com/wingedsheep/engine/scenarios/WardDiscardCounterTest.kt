@@ -19,6 +19,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Tests for discard-cost ward: Ward—Discard a card.
@@ -35,7 +36,7 @@ class WardDiscardCounterTest : FunSpec({
         power = 2
         toughness = 2
         keywords(Keyword.WARD)
-        keywordAbility(KeywordAbility.wardDiscard())
+        keywordAbility(KeywordAbility.Ward(WardCost.Discard()))
     }
 
     val randomDiscardWardedBear = card("Random-Discard-Warded Bear") {
@@ -44,7 +45,7 @@ class WardDiscardCounterTest : FunSpec({
         power = 2
         toughness = 2
         keywords(Keyword.WARD)
-        keywordAbility(KeywordAbility.wardDiscard(count = 1, random = true))
+        keywordAbility(KeywordAbility.Ward(WardCost.Discard(count = 1, random = true)))
     }
 
     fun createDriver(): GameTestDriver {

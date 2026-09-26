@@ -1,5 +1,7 @@
 package com.wingedsheep.engine.handlers.effects.token
 
+import com.wingedsheep.engine.state.components.identity.copiableCardComponent
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.core.ZoneChangeEvent
 import com.wingedsheep.engine.handlers.EffectContext
@@ -32,7 +34,8 @@ import kotlin.reflect.KClass
  */
 class CreateTokenCopyOfEquippedCreatureExecutor(
     private val cardRegistry: CardRegistry,
-    private val staticAbilityHandler: StaticAbilityHandler? = null
+    private val staticAbilityHandler: StaticAbilityHandler? = null,
+    private val predicateEvaluator: PredicateEvaluator
 ) : EffectExecutor<CreateTokenCopyOfEquippedCreatureEffect> {
 
     override val effectType: KClass<CreateTokenCopyOfEquippedCreatureEffect> =
@@ -57,7 +60,7 @@ class CreateTokenCopyOfEquippedCreatureExecutor(
         val equippedContainer = state.getEntity(equippedId)
             ?: return EffectResult.success(state)
 
-        val equippedCard = equippedContainer.get<CardComponent>()
+        val equippedCard = equippedContainer.copiableCardComponent()
             ?: return EffectResult.success(state)
 
         val controllerId = context.controllerId
@@ -117,13 +120,13 @@ class CreateTokenCopyOfEquippedCreatureExecutor(
         // A token copy honors global "[filter] enter tapped" replacements (Authority of the
         // Consuls / Dauntless Dismantler on an opponent's token copy).
         newState = com.wingedsheep.engine.handlers.effects.EnterTappedReplacements
-            .applyCreatedTokenEntryTap(newState, tokenId, controllerId)
+            .applyCreatedTokenEntryTap(newState, tokenId, controllerId, predicateEvaluator = predicateEvaluator)
 
         // As-enters "enters with counters" (CR 614.1c): the copied creature's own EntersWithCounters
         // (a copy of a creature that "enters with a +1/+1 counter") plus global grants from other
         // permanents (Gev, Scaled Scorch). BattlefieldEntry.place skips this, so apply it here.
         val (afterCounters, counterEvents) = com.wingedsheep.engine.handlers.effects.EntersWithReplacements
-            .applyOnEntry(newState, tokenId, controllerId, cardRegistry)
+            .applyOnEntry(newState, tokenId, controllerId, cardRegistry, predicateEvaluator = predicateEvaluator)
         newState = afterCounters
 
         // As-enters "choose X as this enters" (CR 614.12) + granted riot (CR 702.136): pause for the
@@ -131,7 +134,7 @@ class CreateTokenCopyOfEquippedCreatureExecutor(
         // ZoneChangeEvent is omitted on a pause (the choice resumer synthesizes it after the choice
         // resolves so ETB triggers fire once). Counters ride along as carryEvents.
         val choicePlan = com.wingedsheep.engine.handlers.effects.token.TokenEntryReplacements
-            .firstEntersWithChoice(newState, tokenId, cardRegistry)
+            .firstEntersWithChoice(newState, tokenId, cardRegistry, predicateEvaluator = predicateEvaluator)
         if (choicePlan != null) {
             val paused = com.wingedsheep.engine.handlers.effects.PermanentEntryReplacements
                 .pauseForEntersWithChoice(
@@ -171,7 +174,7 @@ class CreateTokenCopyOfEquippedCreatureExecutor(
         // values, CR 707.2) but not the animation, so it needs its loyalty counters or state-based
         // actions (CR 704.5i) bin it on arrival. No-op for non-planeswalkers.
         val (loyaltyState, loyaltyEvents) = com.wingedsheep.engine.handlers.effects.ZoneMovementUtils
-            .applyIntrinsicEntryCountersIfNeeded(sagaState, tokenId, controllerId, cardRegistry)
+            .applyIntrinsicEntryCountersIfNeeded(sagaState, tokenId, controllerId, cardRegistry, predicateEvaluator = predicateEvaluator)
 
         return EffectResult.success(loyaltyState, events + sagaEvents + loyaltyEvents)
     }

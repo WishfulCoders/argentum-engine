@@ -6,8 +6,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.AddColorlessManaEffect
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Sandstorm Verge
@@ -24,7 +23,7 @@ val SandstormVerge = card("Sandstorm Verge") {
 
     activatedAbility {
         cost = AbilityCost.Tap
-        effect = AddColorlessManaEffect(1)
+        effect = Effects.AddColorlessMana(1)
         manaAbility = true
         timing = TimingRule.ManaAbility
     }
@@ -32,7 +31,7 @@ val SandstormVerge = card("Sandstorm Verge") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}"), Costs.Tap)
         timing = TimingRule.SorcerySpeed
-        val creature = target("creature", TargetCreature())
+        val creature = target(TargetFilter.Creature)
         effect = Effects.CantBlock(creature)
         description = "{3}, {T}: Target creature can't block this turn. Activate only as a sorcery."
     }

@@ -3,6 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
@@ -12,10 +13,9 @@ import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.conditions.Exists
-import com.wingedsheep.sdk.scripting.effects.AnyPlayerMayPayEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Innocent Traveler // Malicious Invader (Innistrad: Crimson Vow)
@@ -52,10 +52,10 @@ private val InnocentTravelerFront = card("Innocent Traveler") {
         "choice. If no one does, transform this creature."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = AnyPlayerMayPayEffect(
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.UnlessAnyPlayerPays(
             cost = Costs.pay.Sacrifice(GameObjectFilter.Creature, count = 1),
-            consequenceIfNonePaid = TransformEffect(EffectTarget.Self),
+            effect = Effects.Transform(EffectTarget.Self),
             eligiblePlayers = Player.EachOpponent
         )
         description = "At the beginning of your upkeep, any opponent may sacrifice a creature of " +

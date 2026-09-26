@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Emeria Angel
@@ -15,7 +16,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Flying
  * Landfall — Whenever a land you control enters, you may create a 1/1 white Bird creature token with flying.
  *
- * Landfall is [Triggers.LandYouControlEnters] — the `ZoneChangeEvent` over
+ * Landfall is `Triggers.a(GameObjectFilter.Land.youControl()).enters()` — the `ZoneChangeEvent` over
  * `GameObjectFilter.Land.youControl()` with `TriggerBinding.ANY`.
  */
 val EmeriaAngel = card("Emeria Angel") {
@@ -30,7 +31,7 @@ val EmeriaAngel = card("Emeria Angel") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         optional = true
         effect = Effects.CreateToken(
             power = 1,

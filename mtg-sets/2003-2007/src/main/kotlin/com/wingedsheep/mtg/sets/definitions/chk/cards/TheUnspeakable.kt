@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * The Unspeakable
@@ -39,12 +39,9 @@ val TheUnspeakable = card("The Unspeakable") {
     keywords(Keyword.FLYING, Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         optional = true
-        val t = target(
-            "target",
-            TargetObject(filter = TargetFilter.CardInGraveyard.withSubtype(Subtype.ARCANE).ownedByYou())
-        )
+        val t = target(TargetFilter.CardInGraveyard.withSubtype(Subtype.ARCANE).ownedByYou())
         effect = Effects.Move(t, Zone.HAND)
         description = "Whenever The Unspeakable deals combat damage to a player, you may return " +
             "target Arcane card from your graveyard to your hand."

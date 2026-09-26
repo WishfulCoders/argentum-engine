@@ -1,8 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -10,7 +11,6 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ReduceActivatedAbilityCost
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Boom Scholar — Aetherdrift #189
@@ -45,7 +45,7 @@ val BoomScholar = card("Boom Scholar") {
     staticAbility {
         ability = ReduceActivatedAbilityCost(
             filter = GroupFilter(GameObjectFilter.Permanent.youControl(), excludeSelf = true),
-            amount = DynamicAmount.Fixed(2),
+            amount = DynamicAmounts.fixed(2),
             exhaustOnly = true
         )
     }
@@ -53,15 +53,13 @@ val BoomScholar = card("Boom Scholar") {
     activatedAbility {
         cost = Costs.Mana("{4}{R}{G}")
         isExhaust = true
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(
-                GroupFilter(
-                    (GameObjectFilter.Creature or GameObjectFilter.Any.withSubtype("Vehicle")).youControl()
-                ),
-                Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.Self)
+        effect = Effects.ForEachInGroup(
+            GroupFilter(
+                (GameObjectFilter.Creature or GameObjectFilter.Any.withSubtype("Vehicle")).youControl()
             ),
-            Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
-        )
+            Effects.GrantKeyword(Keyword.TRAMPLE, EffectTarget.IterationEntity)
+        ) then
+            Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
         description = "Creatures and Vehicles you control gain trample until end of turn. Put two " +
             "+1/+1 counters on this creature."
     }

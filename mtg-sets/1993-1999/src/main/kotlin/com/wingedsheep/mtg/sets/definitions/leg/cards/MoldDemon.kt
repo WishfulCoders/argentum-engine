@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.leg.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.effects.SacrificeSelfEffect
 
 /**
@@ -26,8 +26,8 @@ val MoldDemon = card("Mold Demon") {
     oracleText = "When this creature enters, sacrifice it unless you sacrifice two Swamps."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = PayOrSufferEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.PayOrSuffer(
             cost = Costs.pay.Sacrifice(GameObjectFilter.Land.withSubtype(Subtype.SWAMP), count = 2),
             suffer = SacrificeSelfEffect,
         )

@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.fem.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Subtype
@@ -12,7 +12,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -47,8 +46,8 @@ val EbonPraetor = card("Ebon Praetor") {
     keywords(Keyword.FIRST_STRIKE, Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.AddCounters(Counters.MINUS_TWO_MINUS_TWO, 1, EffectTarget.Self)
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.AddCounters(CounterType.MINUS_TWO_MINUS_TWO, 1, EffectTarget.Self)
         description = "At the beginning of your upkeep, put a -2/-2 counter on this creature."
     }
 
@@ -61,12 +60,10 @@ val EbonPraetor = card("Ebon Praetor") {
                 ActivationRestriction.OncePerTurn
             )
         )
-        effect = Effects.RemoveCounters(Counters.MINUS_TWO_MINUS_TWO, 1, EffectTarget.Self)
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.SacrificedHadSubtype(Subtype.THRULL.value),
-                    effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ZERO, 1, EffectTarget.Self)
-                )
+        effect = Effects.RemoveCounters(CounterType.MINUS_TWO_MINUS_TWO, 1, EffectTarget.Self) then
+            Effects.If(
+                condition = Conditions.SacrificedHadSubtype(Subtype.THRULL.value),
+                then = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ZERO, 1, EffectTarget.Self)
             )
         description = "Sacrifice a creature: Remove a -2/-2 counter from this creature. If the sacrificed creature was a Thrull, put a +1/+0 counter on this creature. Activate only during your upkeep and only once each turn."
     }

@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.xln.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Crash the Ramparts
@@ -20,9 +20,8 @@ val CrashTheRamparts = card("Crash the Ramparts") {
     oracleText = "Target creature gets +3/+3 and gains trample until end of turn."
 
     spell {
-        val boosted = target("target", Targets.Creature)
-        effect = Effects.ModifyStats(3, 3, boosted) then
-            Effects.GrantKeyword(Keyword.TRAMPLE, boosted)
+        val boosted = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(3, 3, boosted) then Effects.GrantKeyword(Keyword.TRAMPLE, boosted)
     }
 
     metadata {

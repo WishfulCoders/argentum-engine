@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.avr.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Vanishment
@@ -27,7 +27,7 @@ val Vanishment = card("Vanishment") {
         "card you drew this turn.)"
 
     spell {
-        val permanent = target("target", Targets.NonlandPermanent)
+        val permanent = target(TargetFilter.NonlandPermanent)
         effect = Effects.PutOnTopOfLibrary(permanent)
     }
 

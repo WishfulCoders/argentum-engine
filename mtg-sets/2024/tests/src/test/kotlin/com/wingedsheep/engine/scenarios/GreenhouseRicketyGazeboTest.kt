@@ -2,7 +2,6 @@ package com.wingedsheep.engine.scenarios
 
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.UnlockRoomDoor
-import com.wingedsheep.engine.handlers.ConditionEvaluator
 import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.legalactions.utils.CastPermissionUtils
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
@@ -95,11 +94,11 @@ class GreenhouseRicketyGazeboTest : FunSpec({
         room!!.unlocked shouldBe setOf(RoomFaceId("Greenhouse"))
 
         // Site 3 (auto-payer): the Forest can now pay an off-color cost via the granted ability.
-        val manaSolver = ManaSolver(d.cardRegistry)
+        val manaSolver = ManaSolver(d.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         manaSolver.canPay(d.state, p1, ManaCost.parse("{U}")).shouldBeTrue()
 
         // Site 2 (clickable ability): the Forest is offered the granted mana ability.
-        val cpu = CastPermissionUtils(d.cardRegistry, PredicateEvaluator(), ConditionEvaluator())
+        val cpu = CastPermissionUtils(d.cardRegistry, PredicateEvaluator(cardRegistry = null), PredicateEvaluator(cardRegistry = null).conditions)
         cpu.getStaticGrantedActivatedAbilities(forest, d.state)
             .any { it.isManaAbility }
             .shouldBeTrue()
@@ -123,7 +122,7 @@ class GreenhouseRicketyGazeboTest : FunSpec({
         d.state.getEntity(roomId)!!.get<RoomComponent>()!!.unlocked shouldBe
             setOf(RoomFaceId("Rickety Gazebo"))
 
-        val manaSolver = ManaSolver(d.cardRegistry)
+        val manaSolver = ManaSolver(d.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         // Greenhouse locked: no any-color grant, so the lone Forest can't pay {U} …
         manaSolver.canPay(d.state, p1, ManaCost.parse("{U}")).shouldBeFalse()
         // … but it still makes its own green.

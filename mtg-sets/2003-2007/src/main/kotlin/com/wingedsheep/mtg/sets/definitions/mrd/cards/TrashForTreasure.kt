@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 
 /**
@@ -28,10 +27,7 @@ val TrashForTreasure = card("Trash for Treasure") {
     oracleText = "As an additional cost to cast this spell, sacrifice an artifact.\nReturn target artifact card from your graveyard to the battlefield."
     additionalCost(Costs.additional.SacrificePermanent(GameObjectFilter.Artifact))
     spell {
-        val t = target(
-            "target",
-            TargetObject(filter = TargetFilter.ArtifactInYourGraveyard)
-        )
+        val t = target(TargetFilter.ArtifactInYourGraveyard)
         // `fromZone` because the printed line names the graveyard: without the guard, an artifact
         // card exiled in response to this spell still returns — from exile.
         effect = Effects.Move(t, Zone.BATTLEFIELD, fromZone = Zone.GRAVEYARD)

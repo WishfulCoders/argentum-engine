@@ -1,6 +1,8 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CostGating
@@ -8,10 +10,8 @@ import com.wingedsheep.sdk.scripting.CostModification
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Lashwhip Predator
@@ -36,10 +36,10 @@ val LashwhipPredator = card("Lashwhip Predator") {
             target = SpellCostTarget.SelfCast,
             modification = CostModification.ReduceGeneric(2),
             gating = CostGating.OnlyIf(
-                Compare(
-                    DynamicAmount.AggregateBattlefield(Player.EachOpponent, GameObjectFilter.Creature),
+                Conditions.CompareAmounts(
+                    DynamicAmounts.battlefield(Player.EachOpponent, GameObjectFilter.Creature).count(),
                     ComparisonOperator.GTE,
-                    DynamicAmount.Fixed(3),
+                    3,
                 ),
             ),
         )

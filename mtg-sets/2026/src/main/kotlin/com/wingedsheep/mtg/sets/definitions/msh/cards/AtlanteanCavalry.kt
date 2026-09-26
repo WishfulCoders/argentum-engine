@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Vigilance
  * Whenever you draw your second card each turn, put a +1/+1 counter on this creature.
  *
- * The draw trigger is [Triggers.NthCardDrawn] (CR 121.2) — it fires exactly once per turn, on the
+ * The draw trigger is `Triggers.<player>.drawsNth(n)` (CR 121.2) — it fires exactly once per turn, on the
  * crossing into the second draw, so a single two-card draw fires it once rather than twice.
  */
 val AtlanteanCavalry = card("Atlantean Cavalry") {
@@ -32,8 +32,8 @@ val AtlanteanCavalry = card("Atlantean Cavalry") {
     keywords(Keyword.VIGILANCE)
 
     triggeredAbility {
-        trigger = Triggers.NthCardDrawn(2)
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.drawsNth(2)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     metadata {

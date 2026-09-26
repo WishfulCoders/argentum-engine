@@ -1,18 +1,18 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.plus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CREATED_TOKENS
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Slime Against Humanity — Murders at Karlov Manor #177
@@ -39,13 +39,8 @@ val SlimeAgainstHumanity = card("Slime Against Humanity") {
             GameObjectFilter.Any.withSubtype("Ooze") or
                 GameObjectFilter.Any.named("Slime Against Humanity")
             ).faceUp()
-        val counterCount = DynamicAmount.Add(
-            DynamicAmount.Fixed(2),
-            DynamicAmount.Add(
-                DynamicAmounts.zone(Player.You, Zone.EXILE, matchingSlimes).count(),
-                DynamicAmounts.zone(Player.You, Zone.GRAVEYARD, matchingSlimes).count(),
-            ),
-        )
+        val counterCount = 2 + (DynamicAmounts.zone(Player.You, Zone.EXILE, matchingSlimes).count() +
+            DynamicAmounts.zone(Player.You, Zone.GRAVEYARD, matchingSlimes).count())
 
         effect = Effects.CreateToken(
             power = 0,
@@ -54,12 +49,10 @@ val SlimeAgainstHumanity = card("Slime Against Humanity") {
             creatureTypes = setOf("Ooze"),
             keywords = setOf(Keyword.TRAMPLE),
             imageUri = "https://cards.scryfall.io/normal/front/5/4/54b37032-9660-4dfb-9629-c4e8eddc43b0.jpg?1783912608",
-        ).then(
-            Effects.AddDynamicCounters(
-                Counters.PLUS_ONE_PLUS_ONE,
-                counterCount,
-                EffectTarget.PipelineTarget(CREATED_TOKENS, 0),
-            ),
+        ) then Effects.AddDynamicCounters(
+            CounterType.PLUS_ONE_PLUS_ONE,
+            counterCount,
+            EffectTarget.PipelineTarget(CREATED_TOKENS, 0),
         )
     }
 

@@ -2,25 +2,15 @@ package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Bruse Tarl, Roving Rancher
@@ -48,38 +38,25 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
 private const val OX_TOKEN_IMAGE =
     "https://cards.scryfall.io/normal/front/c/e/cee3ecef-4566-4164-af39-89cb0bbbffeb.jpg?1712316060"
 
-private val bruseTarlBody = Effects.Composite(
-    listOf(
-        GatherCardsEffect(
-            source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1)),
-            storeAs = "exiledCard",
+private val bruseTarlBody = Effects.Pipeline {
+    val exiledCard = gather(CardSource.TopOfLibrary(1))
+    exile(exiledCard)
+    // Split the exiled card into land vs. non-land.
+    val (landCards, nonLandCards) = filterSplit(exiledCard, GameObjectFilter.Land)
+    // Land: create a 2/2 white Ox token (the land stays in exile, unused).
+    run(Effects.If(
+        condition = whenMatches(landCards, GameObjectFilter.Land),
+        then = Effects.CreateToken(
+            power = 2,
+            toughness = 2,
+            colors = setOf(Color.WHITE),
+            creatureTypes = setOf("Ox"),
+            imageUri = OX_TOKEN_IMAGE,
         ),
-        MoveCollectionEffect(
-            from = "exiledCard",
-            destination = CardDestination.ToZone(Zone.EXILE),
-        ),
-        // Split the exiled card into land vs. non-land.
-        FilterCollectionEffect(
-            from = "exiledCard",
-            filter = CollectionFilter.MatchesFilter(GameObjectFilter.Land),
-            storeMatching = "landCards",
-            storeNonMatching = "nonLandCards",
-        ),
-        // Land: create a 2/2 white Ox token (the land stays in exile, unused).
-        ConditionalEffect(
-            condition = Conditions.CollectionContainsMatch("landCards", GameObjectFilter.Land),
-            effect = Effects.CreateToken(
-                power = 2,
-                toughness = 2,
-                colors = setOf(Color.WHITE),
-                creatureTypes = setOf("Ox"),
-                imageUri = OX_TOKEN_IMAGE,
-            ),
-        ),
-        // Otherwise: you may cast the non-land card until the end of your next turn.
-        GrantMayPlayFromExileEffect("nonLandCards", MayPlayExpiry.UntilEndOfNextTurn),
-    )
-)
+    ))
+    // Otherwise: you may cast the non-land card until the end of your next turn.
+    run(Effects.GrantMayPlayFromExile(nonLandCards, MayPlayExpiry.UntilEndOfNextTurn))
+}
 
 val BruseTarlRovingRancher = card("Bruse Tarl, Roving Rancher") {
     manaCost = "{2}{R}{W}"
@@ -101,12 +78,12 @@ val BruseTarlRovingRancher = card("Bruse Tarl, Roving Rancher") {
     }
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = bruseTarlBody
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = bruseTarlBody
     }
 

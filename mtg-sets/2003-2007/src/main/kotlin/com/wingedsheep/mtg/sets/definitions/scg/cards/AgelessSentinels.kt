@@ -31,7 +31,7 @@ val AgelessSentinels = card("Ageless Sentinels") {
     keywords(Keyword.DEFENDER, Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         effect = Effects.SetCreatureSubtypes(setOf("Bird", "Giant"), EffectTarget.Self, Duration.Permanent) then
                 Effects.RemoveKeyword(Keyword.DEFENDER, EffectTarget.Self, Duration.Permanent)
     }

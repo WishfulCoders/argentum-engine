@@ -2,12 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.zen.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Grim Discovery
@@ -31,14 +29,11 @@ val GrimDiscovery = card("Grim Discovery") {
     spell {
         modal(chooseCount = 2, minChooseCount = 1) {
             mode("Return target creature card from your graveyard to your hand") {
-                val t = target("target", Targets.CreatureCardInYourGraveyard)
+                val t = target(TargetFilter.CreatureInYourGraveyard)
                 effect = Effects.ReturnToHand(t)
             }
             mode("Return target land card from your graveyard to your hand") {
-                val t = target(
-                    "target",
-                    TargetObject(filter = TargetFilter(GameObjectFilter.Land.ownedByYou(), zone = Zone.GRAVEYARD)),
-                )
+                val t = target(TargetFilter(GameObjectFilter.Land.ownedByYou(), zone = Zone.GRAVEYARD))
                 effect = Effects.ReturnToHand(t)
             }
         }

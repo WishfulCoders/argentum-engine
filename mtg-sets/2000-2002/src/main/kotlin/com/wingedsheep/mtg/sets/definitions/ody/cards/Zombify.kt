@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ody.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Zombify
@@ -19,7 +19,7 @@ val Zombify = card("Zombify") {
     oracleText = "Return target creature card from your graveyard to the battlefield."
 
     spell {
-        val creature = target("target creature card from your graveyard", Targets.CreatureCardInYourGraveyard)
+        val creature = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.PutOntoBattlefieldFromGraveyard(creature)
     }
 

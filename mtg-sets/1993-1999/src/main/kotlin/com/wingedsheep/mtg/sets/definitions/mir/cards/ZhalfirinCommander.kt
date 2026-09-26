@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -32,7 +31,7 @@ val ZhalfirinCommander = card("Zhalfirin Commander") {
     keywords(Keyword.FLANKING)
     activatedAbility {
         cost = Costs.Mana("{1}{W}{W}")
-        val t = target("target", TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.withSubtype("Knight"))))
+        val t = target(TargetFilter(GameObjectFilter.Creature.withSubtype("Knight")))
         effect = Effects.ModifyStats(1, 1, t)
     }
     metadata {

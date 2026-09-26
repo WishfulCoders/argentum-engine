@@ -3,14 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.big.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Oltec Matterweaver
@@ -33,11 +31,11 @@ val OltecMatterweaver = card("Oltec Matterweaver") {
         "• Create a token that's a copy of target artifact token you control."
 
     triggeredAbility {
-        trigger = Triggers.YouCastCreature
+        trigger = Triggers.you.casts(GameObjectFilter.Creature)
         effect = ModalEffect.chooseOne(
             Mode.noTarget(
                 // 1/1 colorless (emptySet colors) Gnome artifact creature token.
-                CreateTokenEffect(
+                Effects.CreateToken(
                     power = 1,
                     toughness = 1,
                     colors = emptySet(),
@@ -47,13 +45,10 @@ val OltecMatterweaver = card("Oltec Matterweaver") {
                 ),
                 "Create a 1/1 colorless Gnome artifact creature token"
             ),
-            Mode.withTarget(
-                Effects.CreateTokenCopyOfTarget(target = EffectTarget.ContextTarget(0)),
-                TargetPermanent(
-                    filter = TargetFilter(GameObjectFilter.Artifact.token().youControl())
-                ),
-                "Create a token that's a copy of target artifact token you control"
-            )
+            mode("Create a token that's a copy of target artifact token you control") {
+                val artifact = target(TargetFilter(GameObjectFilter.Artifact.token().youControl()))
+                effect = Effects.CreateTokenCopyOfTarget(target = artifact)
+            }
         )
     }
 

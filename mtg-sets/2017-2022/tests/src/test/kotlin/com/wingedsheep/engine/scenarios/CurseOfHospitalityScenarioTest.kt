@@ -20,7 +20,7 @@ import io.kotest.matchers.shouldBe
  *
  * Both new pieces of vocabulary here scope a *player* by the source Aura's **attachment**, where
  * every pre-existing sibling scopes it by the ability's **controller** —
- * `StatePredicate.IsAttackingEnchantedPlayer` for the static and `RecipientFilter.EnchantedPlayer`
+ * `StatePredicate.IsAttackingEnchantedPlayer` for the static and `Recipient.EnchantedPlayer`
  * for the trigger. The self-curse test below is what separates the two readings: with the Curse on
  * its own controller, a controller-scoped predicate goes quiet and an attachment-scoped one fires.
  */

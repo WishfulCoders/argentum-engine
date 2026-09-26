@@ -1,4 +1,5 @@
 package com.wingedsheep.engine.handlers.actions.ability
+import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.sdk.dsl.Patterns
 
 import com.wingedsheep.engine.core.CardCycledEvent
@@ -7,12 +8,9 @@ import com.wingedsheep.engine.core.ExecutionResult
 import com.wingedsheep.engine.core.GameEvent
 import com.wingedsheep.engine.core.ManaSpentEvent
 import com.wingedsheep.engine.core.PaymentStrategy
-import com.wingedsheep.engine.core.tap
+import com.wingedsheep.engine.core.tapForMana
 import com.wingedsheep.engine.core.TypecycleCard
-import com.wingedsheep.engine.core.TypecycleSearchContinuation
 import com.wingedsheep.engine.core.ZoneChangeEvent
-import com.wingedsheep.engine.event.TriggerDetector
-import com.wingedsheep.engine.event.TriggerProcessor
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.core.EngineServices
 import com.wingedsheep.engine.handlers.actions.ActionHandler
@@ -31,6 +29,7 @@ import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.PreventCycling
 import kotlin.reflect.KClass
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Handler for the TypecycleCard action.
@@ -40,12 +39,12 @@ import kotlin.reflect.KClass
  * then shuffle. Typecycling triggers cycling abilities per MTG rules.
  */
 class TypecycleCardHandler(
+    private val zones: ZoneTransitionService,
     private val cardRegistry: CardRegistry,
     private val manaSolver: ManaSolver,
-    private val triggerDetector: TriggerDetector,
-    private val triggerProcessor: TriggerProcessor,
     private val effectExecutorRegistry: EffectExecutorRegistry,
-    private val manaAbilitySideEffectExecutor: com.wingedsheep.engine.mechanics.mana.ManaAbilitySideEffectExecutor
+    private val manaAbilitySideEffectExecutor: com.wingedsheep.engine.mechanics.mana.ManaAbilitySideEffectExecutor,
+    private val castPermissionUtils: com.wingedsheep.engine.legalactions.utils.CastPermissionUtils? = null
 ) : ActionHandler<TypecycleCard> {
     override val actionType: KClass<TypecycleCard> = TypecycleCard::class
 
@@ -57,6 +56,12 @@ class TypecycleCardHandler(
         // Check if cycling is prevented by any permanent on the battlefield (e.g., Stabilizer)
         if (isCyclingPrevented(state)) {
             return "Cycling is prevented"
+        }
+
+        // Typecycling is an activated ability of the card in hand (CR 702.29e): an any-zone
+        // "players can't activate abilities" (Yuriko, Blade of the Mighty) forbids it.
+        if (castPermissionUtils?.isActivationPreventedForPlayer(state, action.cardId, action.playerId) == true) {
+            return "An effect prevents you from activating that ability right now"
         }
 
         val container = state.getEntity(action.cardId)
@@ -149,9 +154,9 @@ class TypecycleCardHandler(
         if (!remainingCost.isEmpty()) {
             if (action.paymentStrategy is PaymentStrategy.Explicit) {
                 for (sourceId in action.paymentStrategy.manaAbilitiesToActivate) {
-                    val (tappedState, tapEvent) = tap(currentState, sourceId)
+                    val (tappedState, tapEvents) = tapForMana(currentState, sourceId, action.playerId)
                     currentState = tappedState
-                    tapEvent?.let(events::add)
+                    events.addAll(tapEvents)
                 }
             } else {
                 val solution = manaSolver.solve(currentState, action.playerId, remainingCost, 0)
@@ -193,8 +198,7 @@ class TypecycleCardHandler(
         // card-intrinsic discard replacement applies (madness, CR 702.35a). Both events land
         // before CardCycledEvent, so a card that triggers on both (CR 702.29d) sees them in the
         // order they happened.
-        val discardResult = com.wingedsheep.engine.handlers.effects.ZoneTransitionService
-            .discardCards(currentState, action.playerId, listOf(action.cardId), asCyclingCost = true)
+        val discardResult = zones.discardCards(currentState, action.playerId, listOf(action.cardId), asCyclingCost = true)
         currentState = discardResult.state
         events.addAll(discardResult.events)
 
@@ -202,35 +206,6 @@ class TypecycleCardHandler(
         events.add(CardCycledEvent(action.playerId, action.cardId, cardComponent.name))
 
         currentState = currentState.tick()
-
-        // Detect and process triggers from discard + cycling events before search
-        val preTriggers = triggerDetector.detectTriggers(currentState, events)
-        if (preTriggers.isNotEmpty()) {
-            // Push search continuation BEFORE processing triggers, so it ends up below
-            // any trigger continuations on the stack. After all triggers resolve,
-            // checkForMoreContinuations() will find this and execute the search.
-            val stateWithSearchContinuation = currentState.pushContinuation(
-                TypecycleSearchContinuation(
-                    playerId = action.playerId,
-                    cardId = action.cardId,
-                    searchFilter = variant.searchFilter,
-                    abilityDescription = variant.description
-                )
-            )
-            val triggerResult = triggerProcessor.processTriggers(stateWithSearchContinuation, preTriggers)
-
-            if (triggerResult.isPaused) {
-                return ExecutionResult.propagatePause(
-                    triggerResult.state,
-                    events + triggerResult.events
-                )
-            }
-
-            // Triggers resolved synchronously — pop the search continuation and search inline
-            val (_, stateAfterPop) = triggerResult.newState.popContinuation()
-            currentState = stateAfterPop
-            events.addAll(triggerResult.events)
-        }
 
         // Search library for a card matching the typecycling variant's filter
         val searchEffect = Patterns.Library.searchLibrary(
@@ -245,7 +220,7 @@ class TypecycleCardHandler(
         )
 
         val searchResult = effectExecutorRegistry.execute(currentState, searchEffect, effectContext)
-        if (searchResult.isPaused) {
+        if (searchResult.outcome is Outcome.Paused) {
             return ExecutionResult.propagatePause(
                 searchResult.state,
                 events + searchResult.events
@@ -295,12 +270,12 @@ class TypecycleCardHandler(
     companion object {
         fun create(services: EngineServices): TypecycleCardHandler {
             return TypecycleCardHandler(
+                services.zones,
                 services.cardRegistry,
                 services.manaSolver,
-                services.triggerDetector,
-                services.triggerProcessor,
                 services.effectExecutorRegistry,
-                services.manaAbilitySideEffectExecutor
+                services.manaAbilitySideEffectExecutor,
+                services.castPermissionUtils
             )
         }
     }

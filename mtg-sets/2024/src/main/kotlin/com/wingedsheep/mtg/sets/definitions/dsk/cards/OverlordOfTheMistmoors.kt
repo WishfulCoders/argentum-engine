@@ -55,13 +55,13 @@ val OverlordOfTheMistmoors = card("Overlord of the Mistmoors") {
     )
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = createInsects
         description = "Whenever this permanent enters, create two 2/1 white Insect creature tokens with flying."
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = createInsects
         description = "Whenever this permanent attacks, create two 2/1 white Insect creature tokens with flying."
     }

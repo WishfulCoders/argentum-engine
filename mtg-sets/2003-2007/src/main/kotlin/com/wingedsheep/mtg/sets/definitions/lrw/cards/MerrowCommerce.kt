@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Merrow Commerce
@@ -15,7 +16,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Kindred Enchantment — Merfolk
  * At the beginning of your end step, untap all Merfolk you control.
  *
- * A group untap, not a targeted one: [Effects.ForEachInGroup] rebinds [EffectTarget.Self] to each
+ * A group untap, not a targeted one: [Effects.ForEachInGroup] binds [EffectTarget.IterationEntity] to each
  * iterated permanent, so nothing is targeted. The group is *Merfolk permanents*, not Merfolk
  * creatures — Merrow Commerce is itself a Merfolk (a Kindred enchantment), and so is any other
  * non-creature Merfolk permanent on the battlefield.
@@ -27,10 +28,10 @@ val MerrowCommerce = card("Merrow Commerce") {
     oracleText = "At the beginning of your end step, untap all Merfolk you control."
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Permanent.withSubtype(Subtype.MERFOLK)).youControl(),
-            Effects.Untap(EffectTarget.Self)
+            Effects.Untap(EffectTarget.IterationEntity)
         )
         description = "At the beginning of your end step, untap all Merfolk you control."
     }

@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Svogthos, the Restless Tomb
@@ -54,8 +53,8 @@ val SvogthosTheRestlessTomb = card("Svogthos, the Restless Tomb") {
         cost = Costs.Mana("{3}{B}{G}")
         effect = Effects.BecomeCreature(
             target = EffectTarget.Self,
-            power = DynamicAmount.Fixed(0),
-            toughness = DynamicAmount.Fixed(0),
+            power = DynamicAmounts.fixed(0),
+            toughness = DynamicAmounts.fixed(0),
             creatureTypes = setOf(Subtype.PLANT.value, Subtype.ZOMBIE.value),
             colors = setOf(Color.BLACK.name, Color.GREEN.name),
             duration = Duration.EndOfTurn,

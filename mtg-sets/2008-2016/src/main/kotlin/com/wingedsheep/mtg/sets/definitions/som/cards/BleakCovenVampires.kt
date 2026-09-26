@@ -28,13 +28,10 @@ val BleakCovenVampires = card("Bleak Coven Vampires") {
     oracleText = "Metalcraft — When this creature enters, if you control three or more artifacts, target player loses 4 life and you gain 4 life."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.YouControlAtLeast(3, GameObjectFilter.Artifact)
-        val victim = target("target player", Targets.Player)
-        effect = Effects.Composite(
-            Effects.LoseLife(4, victim),
-            Effects.GainLife(4),
-        )
+        val victim = target(Targets.Player)
+        effect = Effects.LoseLife(4, victim) then Effects.GainLife(4)
         description = "Metalcraft — When this creature enters, if you control three or more " +
             "artifacts, target player loses 4 life and you gain 4 life."
     }

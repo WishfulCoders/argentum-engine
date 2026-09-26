@@ -1,24 +1,20 @@
 package com.wingedsheep.mtg.sets.definitions.dom.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.RedirectZoneChangeWithEffect
-import com.wingedsheep.sdk.scripting.conditions.Compare
+import com.wingedsheep.sdk.scripting.RedirectZoneChangeWith
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.AddCountersEffect
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.RemoveCountersEffect
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Darigaaz Reincarnated
@@ -42,9 +38,9 @@ val DarigaazReincarnated = card("Darigaaz Reincarnated") {
 
     // If Darigaaz would die, instead exile it with three egg counters
     replacementEffect(
-        RedirectZoneChangeWithEffect(
+        RedirectZoneChangeWith(
             newDestination = Zone.EXILE,
-            additionalEffect = AddCountersEffect(Counters.EGG, 3, EffectTarget.Self),
+            additionalEffect = Effects.AddCounters(CounterType.EGG, 3, EffectTarget.Self),
             selfOnly = true,
             appliesTo = EventPattern.ZoneChangeEvent(
                 filter = GameObjectFilter.Any,
@@ -57,21 +53,21 @@ val DarigaazReincarnated = card("Darigaaz Reincarnated") {
     // At the beginning of your upkeep, if exiled with an egg counter,
     // remove an egg counter. Then if no egg counters, return to battlefield.
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
         triggerZone = Zone.EXILE
-        interveningIf = Compare(
-            DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.EGG)),
+        interveningIf = Conditions.CompareAmounts(
+            DynamicAmounts.countersOnSelf(CounterType.EGG),
             ComparisonOperator.GTE,
-            DynamicAmount.Fixed(1)
+            1
         )
-        effect = RemoveCountersEffect(Counters.EGG, 1, EffectTarget.Self) then
-            ConditionalEffect(
-                condition = Compare(
-                    DynamicAmounts.countersOnSelf(CounterTypeFilter.Named(Counters.EGG)),
+        effect = Effects.RemoveCounters(CounterType.EGG, 1, EffectTarget.Self) then
+            Effects.If(
+                condition = Conditions.CompareAmounts(
+                    DynamicAmounts.countersOnSelf(CounterType.EGG),
                     ComparisonOperator.EQ,
-                    DynamicAmount.Fixed(0)
+                    0
                 ),
-                effect = Effects.Move(EffectTarget.Self, Zone.BATTLEFIELD)
+                then = Effects.Move(EffectTarget.Self, Zone.BATTLEFIELD)
             )
     }
 

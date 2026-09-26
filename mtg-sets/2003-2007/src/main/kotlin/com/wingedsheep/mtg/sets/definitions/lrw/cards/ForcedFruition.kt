@@ -24,7 +24,7 @@ val ForcedFruition = card("Forced Fruition") {
     oracleText = "Whenever an opponent casts a spell, that player draws seven cards."
 
     triggeredAbility {
-        trigger = Triggers.OpponentCastsSpell
+        trigger = Triggers.anOpponent.casts()
         effect = Effects.DrawCards(7, EffectTarget.PlayerRef(Player.TriggeringPlayer))
         description = "Whenever an opponent casts a spell, that player draws seven cards."
     }

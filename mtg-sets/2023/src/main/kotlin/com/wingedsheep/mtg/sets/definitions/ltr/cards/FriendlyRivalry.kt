@@ -1,15 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.ltr.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.scripting.targets.TargetOther
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Friendly Rivalry
@@ -27,32 +24,24 @@ val FriendlyRivalry = card("Friendly Rivalry") {
 
     spell {
         // Target 0: creature you control
-        val myCreature = target("creature you control", Targets.CreatureYouControl)
+        val myCreature = target(TargetFilter.CreatureYouControl)
         // Target 1: up to one *other* legendary creature you control. Wrapped in TargetOther so
         // "other" means "other than the index-0 creature" (CR 601.2c) — the same permanent can't
         // fill both slots and deal its power twice.
-        val legendary = target(
-            "up to one other legendary creature you control",
-            TargetOther(
-                baseRequirement = TargetCreature(
-                    optional = true,
-                    filter = TargetFilter.CreatureYouControl.legendary()
-                )
-            )
-        )
+        val legendary = target(TargetOther(
+                baseRequirement = TargetObject(filter = TargetFilter.CreatureYouControl.legendary(), optional = true)
+            ))
         // Target 2: creature you don't control
-        val theirCreature = target("creature you don't control", Targets.CreatureOpponentControls)
+        val theirCreature = target(TargetFilter.CreatureOpponentControls)
 
         effect = Effects.DealDamage(
-            amount = DynamicAmount.EntityProperty(EntityReference.Target(0), EntityNumericProperty.Power),
+            amount = DynamicAmounts.powerOf(myCreature),
             target = theirCreature,
             damageSource = myCreature
-        ).then(
-            Effects.DealDamage(
-                amount = DynamicAmount.EntityProperty(EntityReference.Target(1), EntityNumericProperty.Power),
-                target = theirCreature,
-                damageSource = legendary
-            )
+        ) then Effects.DealDamage(
+            amount = DynamicAmounts.powerOf(legendary),
+            target = theirCreature,
+            damageSource = legendary
         )
     }
 

@@ -220,6 +220,7 @@ export function ZonePile({
       <div style={styles.zoneStack}>
         <div
           data-zone={isOpponent ? 'opponent-library' : 'player-library'}
+          data-zone-owner={player.playerId}
           title={deckPileTitle(canBrowseDeck, isOwnDeck, showsTopLibraryCard ? topLibraryCard : null)}
           style={{
             ...styles.deckPile,

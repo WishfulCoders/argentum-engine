@@ -3,12 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.scg.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AnimateLandGroup
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ambush Commander
@@ -41,7 +41,7 @@ val AmbushCommander = card("Ambush Commander") {
             Costs.Mana("{1}{G}"),
             Costs.Sacrifice(GameObjectFilter.Creature.withSubtype("Elf"))
         )
-        val t = target("target creature", Targets.Creature)
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(3, 3, t)
         description = "{1}{G}, Sacrifice an Elf: Target creature gets +3/+3 until end of turn."
     }

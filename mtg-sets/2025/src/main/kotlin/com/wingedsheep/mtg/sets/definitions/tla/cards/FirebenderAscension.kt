@@ -1,7 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.core.Color
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
@@ -9,9 +9,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.firebending
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -29,15 +26,15 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *    makes: the [firebending] DSL on the inline token def ([firebendingSoldierToken]) grants
  *    [Keyword.FIREBENDING] plus the attack-triggered "add {R} until end of combat" ability, and
  *    both the keyword and that ability are copied onto the created token.
- *  - The payoff trigger is the new [Triggers.AttackCausesYourCreaturesTriggeredAbility]: it fires
+ *  - The payoff trigger is the new `Triggers.you.attackTriggersAbility()`: it fires
  *    when a creature you control's *own* "whenever this creature attacks" ability (a SELF-bound
  *    attacks trigger — e.g. the token's firebending mana ability) is put on the stack. The engine
  *    stamps `causedByAttack` on that `AbilityTriggeredEvent`, so unrelated in-combat triggers
  *    (deals damage, dies) never fire this.
  *  - Putting the quest counter is mandatory; only if the enchantment then has four or more quest
- *    counters does the copy happen — sequenced as `AddCounters` then [ConditionalEffect] gated on
+ *    counters does the copy happen — sequenced as `AddCounters` then [Effects.If] gated on
  *    the live count ([Conditions.SourceCounterCountAtLeast]`(QUEST, 4)`), exactly like the sibling
- *    Ascensions. The copy is optional ("you may copy") via [MayEffect] and reuses the shared
+ *    Ascensions. The copy is optional ("you may copy") via [Effects.May] and reuses the shared
  *    [Effects.CopyTargetTriggeredAbility] machinery against [EffectTarget.TriggeringEntity] — the
  *    firebending ability still on the stack beneath this one — which prompts for new targets per
  *    CR 707.10c. Per the printed ruling this ability sits on top of the ability that caused it, so
@@ -62,8 +59,8 @@ val FirebenderAscension = card("Firebender Ascension") {
 
     // When this enchantment enters, create a 2/2 red Soldier creature token with firebending 1.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreateTokenEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateToken(
             power = 2,
             toughness = 2,
             colors = setOf(Color.RED),
@@ -79,17 +76,15 @@ val FirebenderAscension = card("Firebender Ascension") {
     // trigger, put a quest counter on this enchantment. Then if it has four or more quest counters
     // on it, you may copy that ability. You may choose new targets for the copy.
     triggeredAbility {
-        trigger = Triggers.AttackCausesYourCreaturesTriggeredAbility
-        effect = Effects.Composite(
-            Effects.AddCounters(Counters.QUEST, 1, EffectTarget.Self),
-            ConditionalEffect(
-                condition = Conditions.SourceCounterCountAtLeast(Counters.QUEST, 4),
-                effect = MayEffect(
+        trigger = Triggers.you.attackTriggersAbility()
+        effect = Effects.AddCounters(CounterType.QUEST, 1, EffectTarget.Self) then
+            Effects.If(
+                condition = Conditions.SourceCounterCountAtLeast(CounterType.QUEST, 4),
+                then = Effects.May(
                     effect = Effects.CopyTargetTriggeredAbility(EffectTarget.TriggeringEntity),
                     descriptionOverride = "Copy that triggered ability? You may choose new targets for the copy."
                 )
             )
-        )
         description = "Whenever a creature you control attacking causes a triggered ability of that creature to trigger, put a quest counter on this enchantment. Then if it has four or more quest counters on it, you may copy that ability. You may choose new targets for the copy."
     }
 

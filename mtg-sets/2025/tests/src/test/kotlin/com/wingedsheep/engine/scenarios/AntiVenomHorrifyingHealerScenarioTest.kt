@@ -17,13 +17,14 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Anti-Venom, Horrifying Healer (SPM) — a 5/5 with two abilities:
  *  - "When Anti-Venom enters, if he was cast, return target creature card from your graveyard to
  *    the battlefield." (an intervening-"if" `Conditions.WasCast` ETB reanimation), and
  *  - "If damage would be dealt to Anti-Venom, prevent that damage and put that many +1/+1 counters
- *    on him." — the `RecipientFilter.Self` `ReplaceDamageWithCounters` wired on both creature-damage
+ *    on him." — the `Recipient.Self` `ReplaceDamageWithCounters` wired on both creature-damage
  *    paths: `DamageUtils.applyDamage` (noncombat) and `CombatDamageManager.applyDamageToCreature`
  *    (combat).
  */
@@ -97,7 +98,7 @@ class AntiVenomHorrifyingHealerScenarioTest : FunSpec({
 
         driver.submit(
             CastSpell(playerId = you, cardId = av, paymentStrategy = PaymentStrategy.AutoPay),
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass() // resolve Anti-Venom; the was-cast ETB trigger goes on the stack, wants a target
 
         val courser = driver.getGraveyard(you).first {

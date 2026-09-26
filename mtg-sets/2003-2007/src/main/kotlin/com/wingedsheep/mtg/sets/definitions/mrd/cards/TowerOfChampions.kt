@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -25,7 +24,7 @@ val TowerOfChampions = card("Tower of Champions") {
     oracleText = "{8}, {T}: Target creature gets +6/+6 until end of turn."
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{8}"), Costs.Tap)
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
+        val t = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(6, 6, t)
     }
     metadata {

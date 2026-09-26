@@ -27,11 +27,9 @@ val DarigaazsAttendant = card("Darigaaz's Attendant") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.SacrificeSelf)
-        effect = Effects.Composite(
-            Effects.AddMana(Color.BLACK),
-            Effects.AddMana(Color.RED),
+        effect = Effects.AddMana(Color.BLACK) then
+            Effects.AddMana(Color.RED) then
             Effects.AddMana(Color.GREEN)
-        )
         manaAbility = true
         timing = TimingRule.ManaAbility
     }

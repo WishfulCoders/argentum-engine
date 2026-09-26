@@ -7,11 +7,11 @@ package com.wingedsheep.mtg.sets.definitions.lci.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -33,7 +33,7 @@ val SeismicMonstrosaur = card("Seismic Monstrosaur") {
     keywords(Keyword.TRAMPLE)
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{R}"), Costs.Sacrifice(GameObjectFilter.Land))
-        effect = DrawCardsEffect(1)
+        effect = Effects.DrawCards(1)
     }
     keywordAbility(KeywordAbility.typecycling("Mountain", ManaCost.parse("{2}")))
     metadata {

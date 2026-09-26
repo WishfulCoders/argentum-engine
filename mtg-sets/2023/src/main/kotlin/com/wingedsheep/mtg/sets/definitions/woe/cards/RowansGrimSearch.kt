@@ -6,9 +6,7 @@ import com.wingedsheep.sdk.dsl.bargain
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Rowan's Grim Search
@@ -21,7 +19,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * You draw two cards and you lose 2 life.
  *
  * The spell-rider shape of bargain (CR 702.166c) like [CandyGrapple]: the bargained fact is read
- * off the spell while it's still on the stack, so the dig is a [ConditionalEffect] gated on
+ * off the spell while it's still on the stack, so the dig is a [Effects.If] gated on
  * [Conditions.WasBargained] wrapping the whole clause — an unbargained cast is just "draw two,
  * lose 2".
  *
@@ -53,25 +51,23 @@ val RowansGrimSearch = card("Rowan's Grim Search") {
     bargain()
 
     spell {
-        effect = Effects.Composite(
-            ConditionalEffect(
-                condition = Conditions.WasBargained,
-                effect = Effects.Pipeline {
-                    val looked = gather(CardSource.TopOfLibrary(DynamicAmount.Fixed(4)))
-                    val (kept, rest) = chooseUpToSplit(
-                        2,
-                        from = looked,
-                        prompt = "Put up to two cards back on top of your library",
-                        selectedLabel = "Put on top",
-                        remainderLabel = "Put in graveyard",
-                    )
-                    toLibraryTop(kept)
-                    toGraveyard(rest)
-                },
-            ),
-            Effects.DrawCards(2),
-            Effects.LoseLife(2, EffectTarget.Controller),
-        )
+        effect = Effects.If(
+            condition = Conditions.WasBargained,
+            then = Effects.Pipeline {
+                val looked = gather(CardSource.TopOfLibrary(4))
+                val (kept, rest) = chooseUpToSplit(
+                    2,
+                    from = looked,
+                    prompt = "Put up to two cards back on top of your library",
+                    selectedLabel = "Put on top",
+                    remainderLabel = "Put in graveyard",
+                )
+                toLibraryTop(kept)
+                toGraveyard(rest)
+            },
+        ) then
+            Effects.DrawCards(2) then
+            Effects.LoseLife(2, EffectTarget.Controller)
     }
 
     metadata {

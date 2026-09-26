@@ -4,14 +4,14 @@ import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Nightmare Lash — Mirrodin #219
@@ -20,7 +20,7 @@ import com.wingedsheep.sdk.scripting.references.Player
  * Equipped creature gets +1/+1 for each Swamp you control.
  * Equip—Pay 3 life.
  *
- * The bonus is a Layer 7c dynamic bonus ([GrantDynamicStatsEffect]), recomputed at projection, so
+ * The bonus is a Layer 7c dynamic bonus ([GrantDynamicStats]), recomputed at projection, so
  * a Swamp entering or leaving moves the equipped creature's stats immediately. "Swamp" is the land
  * *subtype*, not the card name — a Bad River or an animated dual counts, which is why the filter is
  * `Land.withSubtype(SWAMP)` rather than a name match. "You control" scopes to the Equipment's
@@ -44,7 +44,7 @@ val NightmareLash = card("Nightmare Lash") {
             Player.You,
             GameObjectFilter.Land.withSubtype(Subtype.SWAMP)
         ).count()
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.attachedCreature(),
             powerBonus = swamps,
             toughnessBonus = swamps
@@ -54,7 +54,7 @@ val NightmareLash = card("Nightmare Lash") {
     activatedAbility {
         isEquipAbility = true
         cost = Costs.PayLife(3)
-        val creature = target("target creature you control", Targets.CreatureYouControl)
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.AttachEquipment(creature)
         timing = TimingRule.SorcerySpeed
     }

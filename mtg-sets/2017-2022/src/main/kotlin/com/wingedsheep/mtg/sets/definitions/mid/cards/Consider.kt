@@ -19,10 +19,7 @@ val Consider = card("Consider") {
     oracleText = "Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)\nDraw a card."
 
     spell {
-        effect = Effects.Composite(
-            Patterns.Library.surveil(1),
-            Effects.DrawCards(1)
-        )
+        effect = Patterns.Library.surveil(1) then Effects.DrawCards(1)
     }
 
     metadata {

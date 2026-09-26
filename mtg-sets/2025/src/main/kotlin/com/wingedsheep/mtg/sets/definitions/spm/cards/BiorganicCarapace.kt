@@ -13,7 +13,7 @@ import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.StatePredicate
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Biorganic Carapace
@@ -42,11 +42,8 @@ val BiorganicCarapace = card("Biorganic Carapace") {
     }
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target(
-            "target creature you control",
-            TargetCreature(filter = TargetFilter.CreatureYouControl)
-        )
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.AttachEquipment(creature)
     }
 
@@ -57,8 +54,7 @@ val BiorganicCarapace = card("Biorganic Carapace") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.DealsCombatDamageToPlayer.event,
-                binding = Triggers.DealsCombatDamageToPlayer.binding,
+                trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer),
                 effect = Effects.DrawCards(
                     DynamicAmounts.battlefield(Player.You, modifiedCreatureYouControl).count()
                 ),

@@ -3,16 +3,13 @@ package com.wingedsheep.mtg.sets.definitions.drk.cards
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.RedirectZoneChange
-import com.wingedsheep.sdk.scripting.effects.CantBeRegeneratedEffect
-import com.wingedsheep.sdk.scripting.effects.DamageToTargetCantBePreventedThisTurnEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Whippoorwill
@@ -48,11 +45,10 @@ val Whippoorwill = card("Whippoorwill") {
         "permanent or player. When the creature dies this turn, exile the creature."
 
     activatedAbility {
+        val creature = target(TargetFilter.Creature)
         cost = Costs.Composite(Costs.Mana("{G}{G}"), Costs.Tap)
-        target = Targets.Creature
-        effect = Effects.Composite(
-            CantBeRegeneratedEffect(EffectTarget.ContextTarget(0)),
-            DamageToTargetCantBePreventedThisTurnEffect(EffectTarget.ContextTarget(0)),
+        effect = Effects.CantBeRegenerated(creature) then
+            Effects.DamageCantBePreventedThisTurn(creature) then
             Effects.GrantReplacementEffect(
                 replacement = RedirectZoneChange(
                     newDestination = Zone.EXILE,
@@ -62,10 +58,9 @@ val Whippoorwill = card("Whippoorwill") {
                         to = Zone.GRAVEYARD,
                     ),
                 ),
-                target = EffectTarget.ContextTarget(0),
+                target = creature,
                 duration = Duration.EndOfTurn,
-            ),
-        )
+            )
         description = "{G}{G}, {T}: Target creature can't be regenerated this turn. Damage that " +
             "would be dealt to that creature this turn can't be prevented or dealt instead to " +
             "another permanent or player. When the creature dies this turn, exile the creature."

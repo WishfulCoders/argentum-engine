@@ -46,7 +46,7 @@ val RegalCaracal = card("Regal Caracal") {
         )
     }
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

@@ -16,7 +16,7 @@ import io.kotest.matchers.shouldBe
  *   Whenever this creature or another creature you control dies, target opponent loses 1 life
  *   and you gain 1 life.
  *
- * Proves the Blood Artist shape via [com.wingedsheep.sdk.dsl.Triggers.YourCreatureDies]:
+ * Proves the Blood Artist shape via `Triggers.a(GameObjectFilter.Creature.youControl()).dies()`:
  *  - another creature you control dying drains the chosen opponent,
  *  - the witch's OWN death also drains (the "this creature or" clause).
  */

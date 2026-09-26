@@ -34,13 +34,13 @@ val SyrVondamTheLucent = card("Syr Vondam, the Lucent") {
     val pumpDescription = "other creatures you control get +1/+0 and gain deathtouch until end of turn"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = pumpOtherCreatures
         description = pumpDescription
     }
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = pumpOtherCreatures
         description = pumpDescription
     }

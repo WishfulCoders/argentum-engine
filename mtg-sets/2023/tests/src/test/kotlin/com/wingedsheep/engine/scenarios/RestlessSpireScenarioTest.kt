@@ -9,11 +9,11 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.Duration
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Restless Spire (WOE #260) — the Izzet creature-land.
@@ -48,7 +48,7 @@ class RestlessSpireScenarioTest : ScenarioTestBase() {
                 manaCost = "{U}"
                 typeLine = "Instant"
                 spell {
-                    val stolen = target("target permanent", Targets.Permanent)
+                    val stolen = target(TargetFilter.Permanent)
                     effect = Effects.GainControl(stolen, Duration.Permanent)
                 }
             }

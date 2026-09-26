@@ -28,8 +28,8 @@ val HolyCow = card("Holy Cow") {
     keywords(Keyword.FLASH, Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.GainLife(2).then(Patterns.Library.scry(1))
+        trigger = Triggers.self.enters()
+        effect = Effects.GainLife(2) then Patterns.Library.scry(1)
         description = "you gain 2 life and scry 1."
     }
 

@@ -7,9 +7,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Ancient Cornucopia
@@ -27,16 +26,14 @@ val AncientCornucopia = card("Ancient Cornucopia") {
 
     // Whenever you cast a colored spell, you may gain 1 life per color. Once each turn.
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter(cardPredicates = listOf(CardPredicate.IsColored))
-        )
+        trigger = Triggers.you.casts(GameObjectFilter(cardPredicates = listOf(CardPredicate.IsColored)))
         // "Do this only once each turn." — CR 603.2h, keyed to the *action*, not the trigger:
         // "Once you choose to gain life using Ancient Cornucopia's triggered ability, that
         // ability won't trigger again that turn" (Scryfall ruling). Declining leaves the turn's
         // use unspent, so a later colored spell still offers it.
         effectOncePerTurn = true
         // "you may gain 1 life for each of that spell's colors" — resolution-time yes/no.
-        effect = MayEffect(Effects.GainLife(DynamicAmounts.colorCountOf(EntityReference.Triggering)))
+        effect = Effects.May(Effects.GainLife(DynamicAmounts.colorCountOf(EffectTarget.TriggeringEntity)))
     }
 
     // {T}: Add one mana of any color.

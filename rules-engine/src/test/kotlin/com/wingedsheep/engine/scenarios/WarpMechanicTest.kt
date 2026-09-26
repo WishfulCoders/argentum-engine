@@ -6,7 +6,6 @@ import com.wingedsheep.engine.core.PaymentStrategy
 import com.wingedsheep.engine.state.components.battlefield.WarpedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.WarpExiledComponent
-import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
 import com.wingedsheep.engine.legalactions.LegalActionEnumerator
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
@@ -18,7 +17,6 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
@@ -27,6 +25,8 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 class WarpMechanicTest : FunSpec({
 
@@ -56,9 +56,8 @@ class WarpMechanicTest : FunSpec({
         manaCost = "{R}"
         typeLine = "Sorcery"
         spell {
-            val creature = target("creature you control", Targets.CreatureYouControl)
-            effect = Effects.Move(creature, Zone.EXILE)
-                .then(Effects.Move(creature, Zone.BATTLEFIELD))
+            val creature = target(TargetFilter.CreatureYouControl)
+            effect = Effects.Move(creature, Zone.EXILE) then Effects.Move(creature, Zone.BATTLEFIELD)
         }
     }
 
@@ -89,7 +88,7 @@ class WarpMechanicTest : FunSpec({
                 paymentStrategy = PaymentStrategy.FromPool
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         driver.stackSize shouldBe 1
     }
 
@@ -186,7 +185,7 @@ class WarpMechanicTest : FunSpec({
                 targets = listOf(ChosenTarget.Permanent(warped)),
                 paymentStrategy = PaymentStrategy.FromPool
             )
-        ).isSuccess shouldBe true
+        ).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         val returned = driver.findPermanent(player, "Warp Test Creature")
@@ -246,7 +245,7 @@ class WarpMechanicTest : FunSpec({
                 paymentStrategy = PaymentStrategy.FromPool
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         driver.bothPass()
         driver.findPermanent(player, "Warp Test Creature") shouldNotBe null
@@ -509,14 +508,14 @@ class WarpMechanicTest : FunSpec({
                 paymentStrategy = PaymentStrategy.FromPool
             )
         )
-        recastResult.isSuccess shouldBe true
+        recastResult.outcome shouldBe Outcome.Done
         driver.bothPass()
 
         val permanent = driver.findPermanent(player, "Warp Test Creature")
         permanent shouldNotBe null
 
         // Step 5: kill the creature (send it directly to the graveyard)
-        val transitionResult = ZoneTransitionService.moveToZone(
+        val transitionResult = driver.zones.moveToZone(
             state = driver.state,
             entityId = permanent!!,
             destinationZone = Zone.GRAVEYARD
@@ -578,7 +577,7 @@ class WarpMechanicTest : FunSpec({
                 paymentStrategy = PaymentStrategy.FromPool
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
         driver.bothPass()
 
         val permanent = driver.findPermanent(player, "Warp X Creature")

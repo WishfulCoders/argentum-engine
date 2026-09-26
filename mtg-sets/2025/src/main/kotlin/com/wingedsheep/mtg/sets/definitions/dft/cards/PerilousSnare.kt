@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Perilous Snare — Aetherdrift #23
@@ -46,29 +45,23 @@ val PerilousSnare = card("Perilous Snare") {
     startYourEngines()
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val exiled = target(
-            "exiled",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.NonlandPermanent.opponentControls()))
-        )
+        trigger = Triggers.self.enters()
+        val exiled = target(TargetFilter(GameObjectFilter.NonlandPermanent.opponentControls()))
         effect = Effects.ExileUntilLeaves(exiled)
         description = "When this artifact enters, exile target nonland permanent an opponent " +
             "controls until this artifact leaves the battlefield."
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 
     maxSpeed {
         activatedAbility {
             cost = Costs.Tap
-            val boosted = target(
-                "boosted",
-                TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrVehicle.youControl()))
-            )
-            effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, boosted)
+            val boosted = target(TargetFilter(GameObjectFilter.CreatureOrVehicle.youControl()))
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, boosted)
             timing = TimingRule.SorcerySpeed
             description = "Put a +1/+1 counter on target creature or Vehicle you control."
         }

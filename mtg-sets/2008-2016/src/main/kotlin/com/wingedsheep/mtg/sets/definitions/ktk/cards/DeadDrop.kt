@@ -23,7 +23,7 @@ val DeadDrop = card("Dead Drop") {
     keywords(Keyword.DELVE)
 
     spell {
-        val t = target("target", Targets.Player)
+        val t = target(Targets.Player)
         effect = Effects.Sacrifice(GameObjectFilter.Creature, count = 2, target = t)
     }
 

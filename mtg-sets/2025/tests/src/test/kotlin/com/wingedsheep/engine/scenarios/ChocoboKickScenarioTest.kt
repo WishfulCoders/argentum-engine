@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * Chocobo Kick (FIN #178) — {1}{G} Sorcery.
@@ -17,7 +18,7 @@ import io.kotest.matchers.shouldBe
  *  instead."
  *
  * Tests the unkicked one-sided "fight": the controlled creature deals damage equal to its power to
- * the opposing creature, and the dealer takes none back. Composes ConditionalEffect(WasKicked, …)
+ * the opposing creature, and the dealer takes none back. Composes Effects.If(WasKicked, …)
  * + DealDamage(targetPower(0), source = controlled creature); no new SDK.
  */
 class ChocoboKickScenarioTest : FunSpec({
@@ -38,7 +39,7 @@ class ChocoboKickScenarioTest : FunSpec({
         val kick = driver.putCardInHand(driver.player1, "Chocobo Kick")
         driver.giveMana(driver.player1, Color.GREEN, 1)
         driver.giveColorlessMana(driver.player1, 1)
-        driver.castSpell(driver.player1, kick, listOf(yours, theirs)).isSuccess shouldBe true
+        driver.castSpell(driver.player1, kick, listOf(yours, theirs)).outcome shouldBe Outcome.Done
         driver.bothPass()
 
         // 3 damage to a 2/2 is lethal; the 3/3 dealer takes nothing back and survives.

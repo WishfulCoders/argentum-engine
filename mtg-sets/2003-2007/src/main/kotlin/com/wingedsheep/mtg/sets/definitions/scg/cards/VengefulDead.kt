@@ -1,17 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.scg.cards
 
 import com.wingedsheep.sdk.core.Subtype
-import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 
 /**
  * Vengeful Dead
@@ -30,21 +26,14 @@ val VengefulDead = card("Vengeful Dead") {
 
     // When Vengeful Dead itself dies
     triggeredAbility {
-        trigger = Triggers.Dies
-        effect = LoseLifeEffect(1, EffectTarget.PlayerRef(Player.EachOpponent))
+        trigger = Triggers.self.dies()
+        effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent))
     }
 
     // When another Zombie dies (any controller)
     triggeredAbility {
-        trigger = TriggerSpec(
-            ZoneChangeEvent(
-                filter = GameObjectFilter.Creature.withSubtype(Subtype("Zombie")),
-                from = Zone.BATTLEFIELD,
-                to = Zone.GRAVEYARD
-            ),
-            TriggerBinding.OTHER
-        )
-        effect = LoseLifeEffect(1, EffectTarget.PlayerRef(Player.EachOpponent))
+        trigger = Triggers.another(GameObjectFilter.Creature.withSubtype(Subtype("Zombie"))).dies()
+        effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent))
     }
 
     metadata {

@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Necromantic Thirst
@@ -33,16 +32,12 @@ val NecromanticThirst = card("Necromantic Thirst") {
         "Whenever enchanted creature deals combat damage to a player, you may return target " +
         "creature card from your graveyard to your hand."
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            damageType = DamageType.Combat,
-            recipient = RecipientFilter.AnyPlayer,
-            binding = TriggerBinding.ATTACHED,
-        )
-        val t = target("target creature card in your graveyard", Targets.CreatureCardInYourGraveyard)
-        effect = MayEffect(Effects.ReturnToHandFromGraveyard(t))
+        trigger = Triggers.attached.dealsCombatDamage(Recipient.AnyPlayer)
+        val t = target(TargetFilter.CreatureInYourGraveyard)
+        effect = Effects.May(Effects.ReturnToHandFromGraveyard(t))
     }
 
     metadata {

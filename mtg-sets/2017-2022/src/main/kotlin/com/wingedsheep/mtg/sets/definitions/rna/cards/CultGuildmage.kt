@@ -28,13 +28,13 @@ val CultGuildmage = card("Cult Guildmage") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}{B}"), Costs.Tap)
-        val player = target("target", Targets.Player)
+        val player = target(Targets.Player)
         effect = Patterns.Hand.discardCards(1, player)
         timing = TimingRule.SorcerySpeed
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{R}"), Costs.Tap)
-        val victim = target("target", Targets.OpponentOrPlaneswalker)
+        val victim = target(Targets.OpponentOrPlaneswalker)
         effect = Effects.DealDamage(1, victim)
     }
 

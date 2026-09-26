@@ -29,7 +29,7 @@ val DenizenOfTheDeep = card("Denizen of the Deep") {
     oracleText = "When this creature enters, return each other creature you control to its owner's hand."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Group.returnAllToHand(GroupFilter.OtherCreaturesYouControl)
     }
 

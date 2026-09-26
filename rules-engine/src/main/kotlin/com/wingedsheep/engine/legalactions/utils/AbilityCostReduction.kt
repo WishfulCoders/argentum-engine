@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.legalactions.utils
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.state.GameState
@@ -48,10 +49,11 @@ object AbilityCostReduction {
         state: GameState,
         sourceId: EntityId,
         controllerId: EntityId,
-        targetUtils: TargetEnumerationUtils
+        targetUtils: TargetEnumerationUtils,
+        predicateEvaluator: PredicateEvaluator
     ): AbilityCost {
         val reduction = ability.genericCostReduction ?: return cost
-        val evaluator = DynamicAmountEvaluator()
+        val evaluator = predicateEvaluator.amounts
         val amount = if (ability.targetRequirements.isNotEmpty()) {
             maxReductionOverLegalTargets(reduction, ability, state, sourceId, controllerId, targetUtils, evaluator)
         } else {

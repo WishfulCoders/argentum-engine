@@ -16,6 +16,7 @@ import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.CardType
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
@@ -38,8 +39,10 @@ private val CARD_TYPE_NAMES: Set<String> = CardType.entries.mapTo(mutableSetOf()
  *
  * Uses PredicateEvaluator to match unified filters against game state.
  */
-class TargetValidator {
-    private val predicateEvaluator = PredicateEvaluator()
+class TargetValidator(
+    private val predicateEvaluator: PredicateEvaluator
+) {
+    private val amountEvaluator: DynamicAmountEvaluator = predicateEvaluator.amounts
 
     /**
      * Validate all targets for a spell/ability against their requirements.
@@ -98,7 +101,7 @@ class TargetValidator {
                             controllerId = casterId,
                             xValue = xValue
                         )
-                        DynamicAmountEvaluator().evaluate(state, dyn, context).coerceAtLeast(0)
+                        amountEvaluator.evaluate(state, dyn, context).coerceAtLeast(0)
                     } catch (_: Exception) {
                         unboundedFallback
                     }
@@ -188,18 +191,23 @@ class TargetValidator {
                 }
             }
 
-            // "... that share a creature type" — every chosen permanent target must hold at least
-            // one creature type in common with all the others (Secret Tunnel). Uses projected
-            // subtypes so granted/changed types count. No-op for single-target requirements; a
-            // target with no creature types (or one off the battlefield) can never share, so the
-            // set is rejected.
+            // "... that share a creature type" — every chosen target must hold at least one
+            // creature type in common with all the others. A permanent (Secret Tunnel) reads its
+            // projected subtypes, so granted/changed types count; a card in another zone (Unbury's
+            // "two target creature cards that share a creature type", Aphetto Dredging) reads its
+            // printed creature types, and a changeling card has every one of them (CR 702.73a).
+            // No-op for single-target requirements; a target with no creature types can never
+            // share, so the set is rejected.
             if (requirement is TargetObject && requirement.sameCreatureType && targetsForReq.size > 1) {
                 val projected = state.projectedState
                 val subtypeSets = targetsForReq.map { target ->
-                    (target as? ChosenTarget.Permanent)
-                        ?.takeIf { it.entityId in state.getBattlefield() }
-                        ?.let { projected.getSubtypes(it.entityId) }
-                        ?: emptySet()
+                    when (target) {
+                        is ChosenTarget.Permanent -> target.takeIf { it.entityId in state.getBattlefield() }
+                            ?.let { projected.getSubtypes(it.entityId) }
+                        is ChosenTarget.Card -> state.getEntity(target.cardId)?.get<CardComponent>()
+                            ?.let(::printedCreatureTypes)
+                        else -> null
+                    } ?: emptySet()
                 }
                 val shared = subtypeSets.reduce { acc, next -> acc intersect next }
                 if (shared.isEmpty()) {
@@ -233,7 +241,7 @@ class TargetValidator {
             val totalManaCap = (requirement as? TargetObject)?.totalManaValueAtMost
             if (totalManaCap != null && targetsForReq.isNotEmpty()) {
                 val cap = try {
-                    DynamicAmountEvaluator().evaluate(
+                    amountEvaluator.evaluate(
                         state,
                         totalManaCap,
                         EffectContext(sourceId = sourceId, controllerId = casterId, xValue = xValue)
@@ -282,10 +290,26 @@ class TargetValidator {
                     return "Targets must be controlled by different players"
                 }
             }
+
+            // "Up to one target ... of each card type" — each chosen object must fill a different
+            // card-type slot it qualifies for (Uldaros Theorix). CR 115.3 / CR 205.2a.
+            if (requirement is TargetObject && requirement.onePerCardType && targetsForReq.size > 1) {
+                val ids = targetsForReq.mapNotNull { target ->
+                    (target as? ChosenTarget.Permanent)?.entityId ?: (target as? ChosenTarget.Card)?.cardId
+                }
+                if (!OnePerCardType.isSatisfied(state, ids)) {
+                    return "Targets must be at most one of each card type"
+                }
+            }
         }
 
         return null
     }
+
+    /** A card's printed creature types; a changeling card has every creature type (CR 702.73a). */
+    private fun printedCreatureTypes(card: CardComponent): Set<String> =
+        if (Keyword.CHANGELING in card.baseKeywords) Subtype.ALL_CREATURE_TYPES.toSet()
+        else card.typeLine.subtypes.map { it.value }.filterTo(mutableSetOf()) { it in Subtype.ALL_CREATURE_TYPES }
 
     /**
      * Validate a single target against a requirement.
@@ -339,7 +363,7 @@ class TargetValidator {
         // Check player-level protection, e.g. The One Ring's "protection from everything" (Rule 702.16).
         // A protected player can't be the target of a source matching one of its protection scopes.
         if (target is ChosenTarget.Player &&
-            PlayerProtectionRules.isProtectedFromSource(state, target.playerId, sourceId, casterId)
+            PlayerProtectionRules.isProtectedFromSource(state, target.playerId, sourceId, casterId, predicateEvaluator = predicateEvaluator)
         ) {
             return "Target player has protection from this source"
         }
@@ -494,7 +518,7 @@ class TargetValidator {
             return "$cardName has shroud"
         }
         if (projected.hasKeyword(entityId, Keyword.HEXPROOF) && entityController != casterId &&
-            !HexproofSuppression.isSuppressedForCaster(state, projected, entityId, casterId)
+            !HexproofSuppression.isSuppressedForCaster(state, projected, entityId, casterId, predicateEvaluator = predicateEvaluator)
         ) {
             val cardName = state.getEntity(entityId)?.get<CardComponent>()?.name ?: "target"
             return "$cardName has hexproof"
@@ -553,7 +577,7 @@ class TargetValidator {
         if (entityController == casterId) return null
 
         val projected = state.projectedState
-        val hexproofSuppressed = HexproofSuppression.isSuppressedForCaster(state, projected, entityId, casterId)
+        val hexproofSuppressed = HexproofSuppression.isSuppressedForCaster(state, projected, entityId, casterId, predicateEvaluator = predicateEvaluator)
         if (!hexproofSuppressed) {
             for (color in sourceColors) {
                 if (projected.hasKeyword(entityId, "HEXPROOF_FROM_${color.name}")) {
@@ -602,7 +626,7 @@ class TargetValidator {
         if (entityController == casterId) return null
 
         val projected = state.projectedState
-        if (HexproofSuppression.isSuppressedForCaster(state, projected, entityId, casterId)) return null
+        if (HexproofSuppression.isSuppressedForCaster(state, projected, entityId, casterId, predicateEvaluator = predicateEvaluator)) return null
 
         for (cardType in SourceTypeTargeting.sourceCardTypes(state, sourceId)) {
             if (projected.hasKeyword(entityId, "HEXPROOF_FROM_CARDTYPE_${cardType.uppercase()}")) {
@@ -734,7 +758,7 @@ class TargetValidator {
         }
         // CR 608.2b: a target illegal at resolution is removed. Re-checking the restriction
         // here covers both cast-time validation and the resolution-time re-validation.
-        if (!PlayerTargetRestriction.isSatisfied(state, requirement.restriction, target.playerId, casterId, sourceId)) {
+        if (!PlayerTargetRestriction.isSatisfied(state, requirement.restriction, target.playerId, casterId, sourceId, predicateEvaluator = predicateEvaluator)) {
             return "Target player does not match: ${requirement.description}"
         }
         return null
@@ -762,7 +786,7 @@ class TargetValidator {
         if (playerHasHexproof(state, target.playerId)) {
             return "Target player has hexproof"
         }
-        if (!PlayerTargetRestriction.isSatisfied(state, requirement.restriction, target.playerId, casterId, sourceId)) {
+        if (!PlayerTargetRestriction.isSatisfied(state, requirement.restriction, target.playerId, casterId, sourceId, predicateEvaluator = predicateEvaluator)) {
             return "Target player does not match: ${requirement.description}"
         }
         return null
@@ -1102,10 +1126,10 @@ class TargetValidator {
      * or Gilded Light's "You gain shroud until end of turn").
      */
     private fun playerHasShroud(state: GameState, playerId: EntityId): Boolean =
-        ControllerShroud.appliesTo(state, playerId)
+        ControllerShroud.appliesTo(state, playerId, predicateEvaluator = predicateEvaluator)
 
     private fun playerHasHexproof(state: GameState, playerId: EntityId): Boolean =
-        ControllerHexproof.appliesTo(state, playerId)
+        ControllerHexproof.appliesTo(state, playerId, predicateEvaluator = predicateEvaluator)
 
     private fun playerHasHexproofAgainst(state: GameState, playerId: EntityId, casterId: EntityId): Boolean {
         return playerId != casterId && playerHasHexproof(state, playerId)

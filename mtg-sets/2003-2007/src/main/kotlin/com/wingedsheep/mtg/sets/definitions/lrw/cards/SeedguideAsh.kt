@@ -18,7 +18,7 @@ import com.wingedsheep.sdk.scripting.effects.SearchDestination
  *
  * "Forest cards" — not *basic* Forest cards — so the filter is any land with the Forest subtype;
  * a dual such as Stomping Ground qualifies. The whole-trigger "you may" is `optional = true`
- * rather than a wrapped `MayEffect`, and `SelectionMode.ChooseUpTo` is what `searchLibrary`'s
+ * rather than a wrapped `Effects.May`, and `SelectionMode.ChooseUpTo` is what `searchLibrary`'s
  * `count` already means, so "up to three" needs nothing extra.
  */
 val SeedguideAsh = card("Seedguide Ash") {
@@ -31,7 +31,7 @@ val SeedguideAsh = card("Seedguide Ash") {
         "put them onto the battlefield tapped, then shuffle."
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         optional = true
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.Land.withSubtype(Subtype.FOREST),

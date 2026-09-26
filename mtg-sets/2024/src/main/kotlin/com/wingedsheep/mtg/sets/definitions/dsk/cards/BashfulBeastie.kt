@@ -27,7 +27,7 @@ val BashfulBeastie = card("Bashful Beastie") {
     toughness = 4
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Patterns.Library.manifestDread()
     }
 

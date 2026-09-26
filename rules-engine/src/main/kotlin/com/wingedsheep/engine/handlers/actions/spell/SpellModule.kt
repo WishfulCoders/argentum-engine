@@ -9,6 +9,6 @@ import com.wingedsheep.engine.handlers.actions.ActionHandlerModule
  */
 class SpellModule(private val services: EngineServices) : ActionHandlerModule {
     override fun handlers(): List<ActionHandler<*>> = listOf(
-        CastSpellHandler.create(services)
+        services.castSpellHandler
     )
 }

@@ -1,12 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * The Witch's Vanity
@@ -40,12 +38,7 @@ val TheWitchsVanity = card("The Witch's Vanity") {
         "III — Create a Wicked Role token attached to target creature you control."
 
     sagaChapter(1) {
-        val creature = target(
-            "target creature an opponent controls with mana value 2 or less",
-            TargetCreature(
-                filter = TargetFilter(GameObjectFilter.Creature.opponentControls().manaValueAtMost(2)),
-            ),
-        )
+        val creature = target(TargetFilter(GameObjectFilter.Creature.opponentControls().manaValueAtMost(2)))
         effect = Effects.Destroy(creature)
     }
 
@@ -54,7 +47,7 @@ val TheWitchsVanity = card("The Witch's Vanity") {
     }
 
     sagaChapter(3) {
-        val creature = target("target creature you control", Targets.CreatureYouControl)
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.CreateRoleToken("Wicked Role", creature)
     }
 

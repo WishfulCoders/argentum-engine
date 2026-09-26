@@ -27,7 +27,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * mutually exclusive in any one combat — Konda either declares a block or is blocked, never both —
  * so the +5/+5 never doubles.
  *
- * The pump targets [EffectTarget.Self] rather than `TriggeringEntity` because [Triggers.Blocks] fires
+ * The pump targets [EffectTarget.Self] rather than `TriggeringEntity` because `Triggers.self.blocks()` fires
  * off a block event that does not bind the source as the triggering entity.
  */
 val KondaLordOfEiganjo = card("Konda, Lord of Eiganjo") {
@@ -44,14 +44,14 @@ val KondaLordOfEiganjo = card("Konda, Lord of Eiganjo") {
 
     // Bushido 5, half one: "Whenever this creature blocks …"
     triggeredAbility {
-        trigger = Triggers.Blocks
+        trigger = Triggers.self.blocks()
         effect = Effects.ModifyStats(5, 5, EffectTarget.Self)
         description = "Bushido 5"
     }
 
     // Bushido 5, half two: "… or becomes blocked, it gets +5/+5 until end of turn."
     triggeredAbility {
-        trigger = Triggers.BecomesBlocked
+        trigger = Triggers.self.becomesBlocked()
         effect = Effects.ModifyStats(5, 5, EffectTarget.Self)
         description = "Bushido 5"
     }

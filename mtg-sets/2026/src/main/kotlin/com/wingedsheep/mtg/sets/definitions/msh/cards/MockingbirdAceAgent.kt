@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.SpellCastPredicate
 
 /**
  * Mockingbird, Ace Agent — Marvel Super Heroes #22 (uncommon)
@@ -17,7 +18,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Whenever you cast a spell that targets a creature you control, put a +1/+1 counter on
  * Mockingbird.
  *
- * The trigger is the existing [Triggers.youCastSpellTargeting] facade — a `SpellCastEvent` with
+ * The trigger is the existing `Triggers.you.casts(requires = setOf(SpellCastPredicate.TargetsMatching(filter)))` facade — a `SpellCastEvent` with
  * `SpellCastPredicate.TargetsMatching(Creature.youControl())`, evaluated against the spell's
  * chosen targets relative to Mockingbird's controller. It fires once per qualifying spell no
  * matter how many of your creatures it targets, and Mockingbird itself counts as "a creature you
@@ -36,8 +37,8 @@ val MockingbirdAceAgent = card("Mockingbird, Ace Agent") {
     keywords(Keyword.DOUBLE_STRIKE)
 
     triggeredAbility {
-        trigger = Triggers.youCastSpellTargeting(GameObjectFilter.Creature.youControl())
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.you.casts(requires = setOf(SpellCastPredicate.TargetsMatching(GameObjectFilter.Creature.youControl())))
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "Whenever you cast a spell that targets a creature you control, put a " +
             "+1/+1 counter on Mockingbird."
     }

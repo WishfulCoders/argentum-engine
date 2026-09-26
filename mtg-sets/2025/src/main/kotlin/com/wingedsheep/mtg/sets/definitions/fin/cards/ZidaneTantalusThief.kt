@@ -2,11 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
+import com.wingedsheep.sdk.scripting.ControlChangeDirection
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Zidane, Tantalus Thief
@@ -18,7 +19,7 @@ import com.wingedsheep.sdk.scripting.Duration
  * Untap it. It gains lifelink and haste until end of turn.
  * Whenever an opponent gains control of a permanent from you, you create a Treasure token.
  *
- * The second ability uses [Triggers.OpponentGainsControlOfYourPermanent] — a resident, battlefield-
+ * The second ability uses `Triggers.a().controlChanges(ControlChangeDirection.LOST, toOpponent = true)` — a resident, battlefield-
  * wide control-change watcher that fires once for each permanent an opponent takes from you. Per the
  * official ruling it fires for each such permanent (creating one Treasure each), including Zidane
  * itself when it is the permanent being stolen (the trigger still resolves for its old controller).
@@ -31,17 +32,15 @@ val ZidaneTantalusThief = card("Zidane, Tantalus Thief") {
     power = 3
     toughness = 3
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target("target creature an opponent controls", Targets.CreatureOpponentControls)
-        effect = Effects.Composite(
-            Effects.GainControl(t, Duration.EndOfTurn),
-            Effects.Untap(t),
-            Effects.GrantKeyword(Keyword.LIFELINK, t),
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter.CreatureOpponentControls)
+        effect = Effects.GainControl(t, Duration.EndOfTurn) then
+            Effects.Untap(t) then
+            Effects.GrantKeyword(Keyword.LIFELINK, t) then
             Effects.GrantKeyword(Keyword.HASTE, t)
-        )
     }
     triggeredAbility {
-        trigger = Triggers.OpponentGainsControlOfYourPermanent
+        trigger = Triggers.a().controlChanges(ControlChangeDirection.LOST, toOpponent = true)
         effect = Effects.CreateTreasure(1)
     }
     metadata {

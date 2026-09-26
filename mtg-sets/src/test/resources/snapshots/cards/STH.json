@@ -12,7 +12,7 @@
                     "type": "PreventDamageShield",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     },
                     "amount": {
                         "type": "Fixed",
@@ -31,7 +31,7 @@
         "targetRequirements": [
             {
                 "type": "AnyTarget",
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -55,7 +55,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Bottomless Pit:1",
                 "trigger": {
                     "type": "StepEvent",
                     "step": "UPKEEP",
@@ -187,7 +187,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Hermit Druid:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -217,10 +217,7 @@
                         {
                             "type": "FilterCollection",
                             "from": "revealed",
-                            "filter": {
-                                "type": "MatchesFilter",
-                                "filter": "basicland"
-                            },
+                            "filter": "basicland",
                             "storeMatching": "matchedToHand",
                             "storeNonMatching": "rest"
                         },
@@ -271,7 +268,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Honor Guard:1",
                 "cost": {
                     "type": "CostAtomWrapper",
                     "atom": {
@@ -333,10 +330,7 @@
                 {
                     "type": "FilterCollection",
                     "from": "looked",
-                    "filter": {
-                        "type": "MatchesFilter",
-                        "filter": "land"
-                    },
+                    "filter": "land",
                     "storeMatching": "kept",
                     "storeNonMatching": "rest"
                 },
@@ -455,13 +449,13 @@
             },
             "target": {
                 "type": "BoundVariable",
-                "name": "target"
+                "name": "t0"
             }
         },
         "targetRequirements": [
             {
                 "type": "AnyTarget",
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -542,6 +536,56 @@
     ]
 }
 
+// Smite
+{
+    "name": "Smite",
+    "manaCost": "{W}",
+    "typeLine": "Instant",
+    "oracleText": "Destroy target blocked creature.",
+    "script": {
+        "spellEffect": {
+            "type": "MoveToZone",
+            "target": {
+                "type": "BoundVariable",
+                "name": "t0"
+            },
+            "destination": "Graveyard",
+            "byDestruction": true
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": {
+                        "cardPredicates": [
+                            "IsCreature"
+                        ],
+                        "statePredicates": [
+                            "IsBlocked"
+                        ]
+                    }
+                },
+                "id": "t0"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "17",
+        "artist": "Daren Bader",
+        "flavorText": "\"You've got your childhood wish at last. Now you get to die.\"\n—Gerrard, to Volrath",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/4/14f165ad-cfe6-4a5d-8073-a70969494855.jpg?1783946572",
+        "rulings": [
+            {
+                "date": "2010-06-15",
+                "text": "A \"blocked creature\" is an attacking creature that has been blocked by a creature this combat, or has become blocked as the result of a spell or ability this combat. Unless the attacking creature leaves combat, it continues to be a blocked creature through the end of combat step, even if the creature or creatures that blocked it are no longer on the battlefield or have otherwise left combat by then."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Stronghold Assassin
 {
     "name": "Stronghold Assassin",
@@ -555,7 +599,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Stronghold Assassin:1",
                 "cost": {
                     "type": "CostComposite",
                     "costs": [
@@ -573,7 +617,7 @@
                     "type": "MoveToZone",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     },
                     "destination": "Graveyard",
                     "byDestruction": true
@@ -592,7 +636,7 @@
                                 ]
                             }
                         },
-                        "id": "target"
+                        "id": "t0"
                     }
                 ]
             }
@@ -626,7 +670,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Wall of Blossoms:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"

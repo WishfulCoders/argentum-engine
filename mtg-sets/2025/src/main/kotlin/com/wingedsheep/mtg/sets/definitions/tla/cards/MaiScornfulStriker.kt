@@ -4,12 +4,10 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.SpellCastEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Triggers
 
 val MaiScornfulStriker = card("Mai, Scornful Striker") {
     manaCost = "{1}{B}"
@@ -22,10 +20,7 @@ val MaiScornfulStriker = card("Mai, Scornful Striker") {
     keywords(Keyword.FIRST_STRIKE)
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            event = SpellCastEvent(spellFilter = GameObjectFilter.Noncreature, player = Player.Each),
-            binding = TriggerBinding.ANY
-        )
+        trigger = Triggers.anyPlayer.casts(GameObjectFilter.Noncreature)
         effect = Effects.LoseLife(2, EffectTarget.PlayerRef(Player.TriggeringPlayer))
     }
 

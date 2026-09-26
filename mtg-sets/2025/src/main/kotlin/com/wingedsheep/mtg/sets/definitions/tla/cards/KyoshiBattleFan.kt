@@ -33,16 +33,14 @@ val KyoshiBattleFan = card("Kyoshi Battle Fan") {
         "Equip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)"
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                power = 1,
-                toughness = 1,
-                colors = setOf(Color.WHITE),
-                creatureTypes = setOf("Ally")
-            ),
+        trigger = Triggers.self.enters()
+        effect = Effects.CreateToken(
+            power = 1,
+            toughness = 1,
+            colors = setOf(Color.WHITE),
+            creatureTypes = setOf("Ally")
+        ) then
             Effects.AttachEquipment(EffectTarget.PipelineTarget(CREATED_TOKENS, 0))
-        )
     }
 
     staticAbility {

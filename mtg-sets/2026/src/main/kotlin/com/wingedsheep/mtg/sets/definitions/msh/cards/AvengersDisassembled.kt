@@ -2,25 +2,17 @@ package com.wingedsheep.mtg.sets.definitions.msh.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.DealDamageEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Avengers Disassembled
@@ -50,42 +42,35 @@ val AvengersDisassembled = card("Avengers Disassembled") {
             mode("Avengers Disassembled deals 3 damage to each creature") {
                 effect = Effects.ForEachInGroup(
                     filter = GroupFilter.AllCreatures,
-                    effect = DealDamageEffect(3, EffectTarget.Self),
+                    effect = Effects.DealDamage(3, EffectTarget.IterationEntity),
                 )
             }
             mode(
                 "Destroy target land. Its controller may search their library for a basic land " +
                     "card, put it onto the battlefield tapped, then shuffle."
             ) {
-                val land = target("target land", Targets.Land)
-                effect = Effects.Destroy(land) then MayEffect(
-                    effect = Effects.Composite(
-                        listOf(
-                            GatherCardsEffect(
-                                source = CardSource.FromZone(
-                                    zone = Zone.LIBRARY,
-                                    player = Player.ControllerOf("target"),
-                                    filter = GameObjectFilter.BasicLand,
-                                ),
-                                storeAs = "searchable",
+                val land = target(TargetFilter.Land)
+                effect = Effects.Destroy(land) then Effects.May(
+                    effect = Effects.Pipeline {
+                        val searchable = gather(
+                            CardSource.FromZone(
+                                zone = Zone.LIBRARY,
+                                player = Player.ControllerOf("target"),
+                                filter = GameObjectFilter.BasicLand,
                             ),
-                            SelectFromCollectionEffect(
-                                from = "searchable",
-                                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                                chooser = Chooser.ControllerOfTarget,
-                                storeSelected = "found",
-                            ),
-                            MoveCollectionEffect(
-                                from = "found",
-                                destination = CardDestination.ToZone(
-                                    zone = Zone.BATTLEFIELD,
-                                    player = Player.ControllerOf("target"),
-                                    placement = ZonePlacement.Tapped,
-                                ),
-                            ),
-                            ShuffleLibraryEffect(target = EffectTarget.TargetController),
-                        ),
-                    ),
+                            search = true
+                        )
+                        val found = chooseUpTo(1, from = searchable, chooser = Chooser.ControllerOfTarget)
+                        move(
+                            found,
+                            CardDestination.ToZone(
+                                zone = Zone.BATTLEFIELD,
+                                player = Player.ControllerOf("target"),
+                                placement = ZonePlacement.Tapped,
+                            )
+                        )
+                        run(Effects.ShuffleLibrary(target = EffectTarget.TargetController))
+                    },
                     decisionMaker = EffectTarget.TargetController,
                     // The Gather/Select/Move/Shuffle pipeline's auto-composed description reads
                     // poorly as a yes/no prompt (each sub-effect's .description concatenated

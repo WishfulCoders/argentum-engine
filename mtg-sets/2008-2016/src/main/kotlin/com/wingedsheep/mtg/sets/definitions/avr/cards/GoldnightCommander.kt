@@ -28,10 +28,7 @@ val GoldnightCommander = card("Goldnight Commander") {
     oracleText = "Whenever another creature you control enters, creatures you control get +1/+1 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Creature.youControl(),
-            binding = TriggerBinding.OTHER
-        )
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
         effect = Patterns.Group.modifyStatsForAll(1, 1, GroupFilter.AllCreaturesYouControl)
     }
 

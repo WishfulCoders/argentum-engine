@@ -30,7 +30,7 @@ val CorsairCaptain = card("Corsair Captain") {
     power = 2
     toughness = 2
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateTreasure()
     }
     staticAbility {

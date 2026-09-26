@@ -37,7 +37,7 @@ class ToothOfChissGoriaScenarioTest : ScenarioTestBase() {
                     .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
                     .build()
 
-                val calculator = CostCalculator(cardRegistry)
+                val calculator = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator)
                 val tooth = cardRegistry.requireCard("Tooth of Chiss-Goria")
 
                 withClue("nothing on the battlefield — the printed {3}") {
@@ -59,7 +59,7 @@ class ToothOfChissGoriaScenarioTest : ScenarioTestBase() {
                     .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
                     .build()
 
-                val cost = CostCalculator(cardRegistry).calculateEffectiveCost(
+                val cost = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator).calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Tooth of Chiss-Goria"),
                     game.player1Id,

@@ -9,9 +9,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.dsl.Effects
 
@@ -47,43 +44,35 @@ val BringerOfTheLastGift = card("Bringer of the Last Gift") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.WasCast
-        effect = Effects.Composite(
-            listOf(
-                // Snapshot every creature card already in a graveyard, before the sacrifice.
-                // These are the cards "not put there this way" that will be returned.
-                GatherCardsEffect(
-                    source = CardSource.FromZone(
-                        zone = Zone.GRAVEYARD,
-                        player = Player.Each,
-                        filter = GameObjectFilter.Creature
-                    ),
-                    storeAs = "graveyardCreaturesBeforeSacrifice"
-                ),
-                // Each player sacrifices all OTHER creatures they control (excludes this creature).
-                GatherCardsEffect(
-                    source = CardSource.BattlefieldMatching(
-                        filter = GameObjectFilter.Creature,
-                        player = Player.Each,
-                        excludeSelf = true
-                    ),
-                    storeAs = "creaturesToSacrifice"
-                ),
-                MoveCollectionEffect(
-                    from = "creaturesToSacrifice",
-                    destination = CardDestination.ToZone(Zone.GRAVEYARD),
-                    moveType = MoveType.Sacrifice
-                ),
-                // Return the pre-existing graveyard creatures to the battlefield under their
-                // owners' control. The just-sacrificed creatures are not in this snapshot.
-                MoveCollectionEffect(
-                    from = "graveyardCreaturesBeforeSacrifice",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD),
-                    underOwnersControl = true
+        effect = Effects.Pipeline {
+            // Snapshot every creature card already in a graveyard, before the sacrifice.
+            // These are the cards "not put there this way" that will be returned.
+            val graveyardCreaturesBeforeSacrifice = gather(
+                CardSource.FromZone(
+                    zone = Zone.GRAVEYARD,
+                    player = Player.Each,
+                    filter = GameObjectFilter.Creature
                 )
             )
-        )
+            // Each player sacrifices all OTHER creatures they control (excludes this creature).
+            val creaturesToSacrifice = gather(
+                CardSource.BattlefieldMatching(
+                    filter = GameObjectFilter.Creature,
+                    player = Player.Each,
+                    excludeSelf = true
+                )
+            )
+            sacrifice(creaturesToSacrifice)
+            // Return the pre-existing graveyard creatures to the battlefield under their
+            // owners' control. The just-sacrificed creatures are not in this snapshot.
+            move(
+                graveyardCreaturesBeforeSacrifice,
+                CardDestination.ToZone(Zone.BATTLEFIELD),
+                underOwnersControl = true
+            )
+        }
     }
 
     metadata {

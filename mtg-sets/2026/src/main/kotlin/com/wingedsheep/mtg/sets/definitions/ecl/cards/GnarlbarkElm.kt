@@ -1,14 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.ecl.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithCounters
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Gnarlbark Elm
@@ -31,7 +30,7 @@ val GnarlbarkElm = card("Gnarlbark Elm") {
         "until end of turn. Activate only as a sorcery."
 
     replacementEffect(EntersWithCounters(
-        counterType = CounterTypeFilter.MinusOneMinusOne,
+        counterType = CounterType.MINUS_ONE_MINUS_ONE,
         count = 2,
         selfOnly = true
     ))
@@ -39,9 +38,9 @@ val GnarlbarkElm = card("Gnarlbark Elm") {
     activatedAbility {
         cost = Costs.Composite(
             Costs.Mana("{2}{B}"),
-            Costs.RemoveCounterFromSelf(Counters.MINUS_ONE_MINUS_ONE, count = 2)
+            Costs.RemoveCounterFromSelf(CounterType.MINUS_ONE_MINUS_ONE, count = 2)
         )
-        val creature = target("target creature to weaken", TargetCreature())
+        val creature = target(TargetFilter.Creature)
         effect = Effects.ModifyStats(-2, -2, creature)
         timing = TimingRule.SorcerySpeed
     }

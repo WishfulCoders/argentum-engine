@@ -3,11 +3,8 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.EventPattern.SpellCastEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.references.Player
+import com.wingedsheep.sdk.dsl.Triggers
 
 /**
  * Tanufel Rimespeaker
@@ -25,13 +22,7 @@ val TanufelRimespeaker = card("Tanufel Rimespeaker") {
     oracleText = "Whenever you cast a spell with mana value 4 or greater, draw a card."
 
     triggeredAbility {
-        trigger = TriggerSpec(
-            SpellCastEvent(
-                spellFilter = GameObjectFilter.Any.manaValueAtLeast(4),
-                player = Player.You
-            ),
-            TriggerBinding.ANY
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.Any.manaValueAtLeast(4))
         effect = Effects.DrawCards(1)
     }
 

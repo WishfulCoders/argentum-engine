@@ -25,8 +25,8 @@ val CoriMountainStalwart = card("Cori Mountain Stalwart") {
     oracleText = "Flurry — Whenever you cast your second spell each turn, this creature deals 2 damage to each opponent and you gain 2 life."
 
     flurry {
-        effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.EachOpponent), damageSource = EffectTarget.Self)
-            .then(Effects.GainLife(2))
+        effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.EachOpponent), damageSource = EffectTarget.Self) then
+            Effects.GainLife(2)
     }
 
     metadata {

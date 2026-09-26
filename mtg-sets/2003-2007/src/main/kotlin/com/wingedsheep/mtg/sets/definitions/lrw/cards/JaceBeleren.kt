@@ -40,13 +40,13 @@ val JaceBeleren = card("Jace Beleren") {
 
     // −1: Target player draws a card.
     loyaltyAbility(-1) {
-        val player = target("target player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Effects.DrawCards(1, player)
     }
 
     // −10: Target player mills twenty cards.
     loyaltyAbility(-10) {
-        val player = target("target player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Patterns.Library.mill(20, player)
     }
 

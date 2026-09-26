@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.LookAtTopOfLibrary
 import com.wingedsheep.sdk.scripting.PlayLandsAndCastFilteredFromTopOfLibrary
-import com.wingedsheep.sdk.scripting.effects.CreatePredefinedTokenEffect
 
 /**
  * Ka-Zar of the Savage Land (MSH #174) — {4}{G} Legendary Creature — Human Barbarian Hero · 3/2
@@ -44,8 +44,8 @@ val KaZarOfTheSavageLand = card("Ka-Zar of the Savage Land") {
     }
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = CreatePredefinedTokenEffect("Zabu")
+        trigger = Triggers.self.enters()
+        effect = Effects.CreatePredefinedToken("Zabu")
         description = "When Ka-Zar enters, create Zabu, a legendary 2/2 green Cat creature token " +
             "with \"Landfall — Whenever a land you control enters, put a +1/+1 counter on Zabu.\""
     }

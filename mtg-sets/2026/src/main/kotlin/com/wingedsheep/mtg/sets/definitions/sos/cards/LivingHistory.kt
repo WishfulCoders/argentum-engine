@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.sos.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Living History
@@ -31,7 +31,7 @@ val LivingHistory = card("Living History") {
         "creature gets +2/+0 until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 2,
             toughness = 2,
@@ -42,9 +42,9 @@ val LivingHistory = card("Living History") {
     }
 
     triggeredAbility {
-        trigger = Triggers.YouAttack
+        trigger = Triggers.you.attacks()
         interveningIf = Conditions.CardsLeftGraveyardThisTurn(1)
-        val attacker = target("attacking creature", Targets.AttackingCreature)
+        val attacker = target(TargetFilter.AttackingCreature)
         effect = Effects.ModifyStats(2, 0, attacker)
     }
 

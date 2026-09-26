@@ -7,6 +7,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Lightning, Army of One
@@ -41,7 +42,7 @@ val LightningArmyOfOne = card("Lightning, Army of One") {
     keywords(Keyword.FIRST_STRIKE, Keyword.TRAMPLE, Keyword.LIFELINK)
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         effect = Effects.DoubleDamageToPlayer(EffectTarget.PlayerRef(Player.TriggeringPlayer))
     }
 

@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 
 /**
  * Drainpipe Vermin
@@ -25,11 +24,11 @@ val DrainpipeVermin = card("Drainpipe Vermin") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        val player = target("target player", Targets.Player)
-        effect = MayPayManaEffect(
+        trigger = Triggers.self.dies()
+        val player = target(Targets.Player)
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{B}"),
-            effect = Effects.Discard(1, player),
+            then = Effects.Discard(1, player),
         )
         description = "When this creature dies, you may pay {B}. If you do, target player discards a card."
     }

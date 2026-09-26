@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -11,12 +10,9 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantWard
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.effects.WardCost
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.events.DamageType
 import com.wingedsheep.sdk.scripting.effects.DelayedTriggerExpiry
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Long River Lurker
@@ -42,7 +38,7 @@ val LongRiverLurker = card("Long River Lurker") {
     toughness = 3
     oracleText = "Ward {1}\nOther Frogs you control have ward {1}.\nWhen this creature enters, target creature you control can't be blocked this turn. Whenever that creature deals combat damage this turn, you may exile it. If you do, return it to the battlefield under its owner's control."
 
-    keywordAbility(KeywordAbility.ward("{1}"))
+    keywordAbility(KeywordAbility.Ward(WardCost.Mana("{1}")))
 
     // Other Frogs you control have ward {1}
     staticAbility {
@@ -55,23 +51,18 @@ val LongRiverLurker = card("Long River Lurker") {
     // ETB: target creature you control can't be blocked this turn, and whenever that
     // creature deals combat damage this turn, you may exile it and return it.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("creature you control", Targets.CreatureYouControl)
-        effect = Effects.Composite(listOf(
-            Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, creature),
-            CreateDelayedTriggerEffect(
-                effect = MayEffect(
-                    effect = Effects.Composite(listOf(
-                        Effects.Move(EffectTarget.ContextTarget(0), Zone.EXILE),
-                        Effects.Move(EffectTarget.ContextTarget(0), Zone.BATTLEFIELD)
-                    )),
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, creature) then
+            Effects.CreateDelayedTrigger(
+                effect = Effects.May(
+                    effect = Effects.Move(creature, Zone.EXILE) then Effects.Move(creature, Zone.BATTLEFIELD),
                     descriptionOverride = "You may exile that creature. If you do, return it to the battlefield under its owner's control."
                 ),
-                trigger = Triggers.dealsDamage(damageType = DamageType.Combat),
-                watchedTarget = EffectTarget.ContextTarget(0),
+                trigger = Triggers.self.dealsCombatDamage(),
+                watchedTarget = creature,
                 expiry = DelayedTriggerExpiry.EndOfTurn
             )
-        ))
     }
 
     metadata {

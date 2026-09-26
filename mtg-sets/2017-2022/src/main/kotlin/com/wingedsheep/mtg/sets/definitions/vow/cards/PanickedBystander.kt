@@ -8,8 +8,9 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Panicked Bystander // Cackling Culprit (Innistrad: Crimson Vow)
@@ -24,7 +25,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *   Whenever this creature or another creature you control dies, you gain 1 life.
  *   {1}{B}: This creature gains deathtouch until end of turn.
  *
- * "This creature or another creature you control dies" is exactly [Triggers.YourCreatureDies], which
+ * "This creature or another creature you control dies" is exactly `Triggers.a(GameObjectFilter.Creature.youControl()).dies()`, which
  * includes the source itself. The transform is an intervening-if end-step trigger gated on
  * [Conditions.YouGainedLifeThisTurnAtLeast] 3. The back is a transformed face with no mana cost, so
  * its color comes from a color indicator (CR 204): `colorIndicator = "B"`.
@@ -41,15 +42,15 @@ private val PanickedBystanderFront = card("Panicked Bystander") {
         "creature."
 
     triggeredAbility {
-        trigger = Triggers.YourCreatureDies
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).dies()
         effect = Effects.GainLife(1)
         description = "Whenever this creature or another creature you control dies, you gain 1 life."
     }
 
     triggeredAbility {
-        trigger = Triggers.YourEndStep
+        trigger = Triggers.you.beginningOf(Step.END)
         interveningIf = Conditions.YouGainedLifeThisTurnAtLeast(3)
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
         description = "At the beginning of your end step, if you gained 3 or more life this turn, " +
             "transform this creature."
     }
@@ -73,7 +74,7 @@ private val CacklingCulprit = card("Cackling Culprit") {
         "{1}{B}: This creature gains deathtouch until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.YourCreatureDies
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).dies()
         effect = Effects.GainLife(1)
         description = "Whenever this creature or another creature you control dies, you gain 1 life."
     }

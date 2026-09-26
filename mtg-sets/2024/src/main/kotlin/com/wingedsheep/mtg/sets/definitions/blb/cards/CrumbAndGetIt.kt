@@ -2,13 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.blb.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Crumb and Get It
@@ -31,25 +31,23 @@ val CrumbAndGetIt = card("Crumb and Get It") {
     typeLine = "Instant"
     oracleText = "Gift a Food (You may promise an opponent a gift as you cast this spell. If you do, they create a Food token before its other effects. It's an artifact with \"{2}, {T}, Sacrifice this artifact: You gain 3 life.\")\nTarget creature you control gets +2/+2 until end of turn. If the gift was promised, that creature also gains indestructible until end of turn."
 
-    val baseEffect = Effects.ModifyStats(2, 2, EffectTarget.ContextTarget(0))
+    fun pump(creature: EffectTarget) = Effects.ModifyStats(2, 2, creature)
 
     spell {
         effect = Patterns.Mechanic.giftSpell(
             // Mode 1: No gift — +2/+2 until end of turn
-            Mode.withTarget(
-                baseEffect,
-                Targets.CreatureYouControl,
-                "Don't promise a gift — target creature you control gets +2/+2 until end of turn"
-            ),
+            mode("Don't promise a gift — target creature you control gets +2/+2 until end of turn") {
+                val creatureYouControl = target(TargetFilter.CreatureYouControl)
+                effect = pump(creatureYouControl)
+            },
             // Mode 2: Gift a Food — opponent creates Food, +2/+2 and indestructible until end of turn
-            Mode.withTarget(
-                Effects.CreateFood(1, EffectTarget.PlayerRef(Player.ChosenOpponent))
-                    .then(baseEffect)
-                    .then(Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.ContextTarget(0)))
-                    .then(Effects.GiftGiven()),
-                Targets.CreatureYouControl,
-                "Promise a gift — opponent creates a Food token, target creature you control gets +2/+2 and gains indestructible until end of turn"
-            )
+            mode("Promise a gift — opponent creates a Food token, target creature you control gets +2/+2 and gains indestructible until end of turn") {
+                val creatureYouControl = target(TargetFilter.CreatureYouControl)
+                effect = Effects.CreateFood(1, EffectTarget.PlayerRef(Player.ChosenOpponent)) then
+                    pump(creatureYouControl) then
+                    Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, creatureYouControl) then
+                    Effects.GiftGiven()
+            }
         )
     }
 

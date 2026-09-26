@@ -14,7 +14,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Ancestor Dragon:1",
                 "trigger": "YouAttackEvent",
                 "binding": "ANY",
                 "effect": {

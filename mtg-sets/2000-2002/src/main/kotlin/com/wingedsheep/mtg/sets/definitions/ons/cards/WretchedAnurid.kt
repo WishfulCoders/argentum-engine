@@ -1,14 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.effects.LoseLifeEffect
 import com.wingedsheep.sdk.dsl.Triggers
-import com.wingedsheep.sdk.scripting.TriggerSpec
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.core.Zone
-import com.wingedsheep.sdk.scripting.EventPattern.ZoneChangeEvent
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
@@ -27,8 +23,8 @@ val WretchedAnurid = card("Wretched Anurid") {
     oracleText = "Whenever a creature enters the battlefield, you lose 1 life."
 
     triggeredAbility {
-        trigger = TriggerSpec(ZoneChangeEvent(filter = GameObjectFilter.Creature, to = Zone.BATTLEFIELD), TriggerBinding.OTHER)
-        effect = LoseLifeEffect(1, EffectTarget.Controller)
+        trigger = Triggers.another(GameObjectFilter.Creature).enters()
+        effect = Effects.LoseLife(1, EffectTarget.Controller)
     }
 
     metadata {

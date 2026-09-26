@@ -5,11 +5,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
-import com.wingedsheep.sdk.scripting.effects.PayLifeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Moonlight Bargain — Ravnica: City of Guilds #95
@@ -20,7 +16,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  *
  * The look is a top-of-library gather (a private look, so the five are revealed to you and the
  * client can show each one as it comes up), and "for each card … unless you pay 2 life" is one
- * [OptionalCostEffect] per card inside a [ForEachInCollectionEffect]: `PayLifeEffect(2)` is the
+ * [Effects.MayPay] per card inside a [ForEachInCollectionEffect]: `PayLifeEffect(2)` is the
  * cost, so a player at 1 life cannot pay (CR 119.4) and the card goes to the graveyard; the
  * prompt carries the card being decided as its subject. Each payment is its own decision, made
  * in library order — five separate "pay 2 life?" questions, exactly as the card is played.
@@ -42,14 +38,14 @@ val MoonlightBargain = card("Moonlight Bargain") {
 
     spell {
         effect = Effects.Pipeline {
-            val looked = gather(CardSource.TopOfLibrary(DynamicAmount.Fixed(5)), name = "looked")
+            val looked = gather(CardSource.TopOfLibrary(5))
             run(
-                ForEachInCollectionEffect(
-                    collection = looked.key,
-                    effect = OptionalCostEffect(
-                        cost = PayLifeEffect(2),
-                        ifPaid = Effects.Move(EffectTarget.Self, Zone.HAND, fromZone = Zone.LIBRARY),
-                        ifNotPaid = Effects.Move(EffectTarget.Self, Zone.GRAVEYARD, fromZone = Zone.LIBRARY),
+                Effects.ForEachInCollection(
+                    looked,
+                    Effects.MayPay(
+                        cost = Effects.PayLife(2),
+                        then = Effects.Move(EffectTarget.IterationEntity, Zone.HAND, fromZone = Zone.LIBRARY),
+                        otherwise = Effects.Move(EffectTarget.IterationEntity, Zone.GRAVEYARD, fromZone = Zone.LIBRARY),
                         descriptionOverride = "Pay 2 life to put this card into your hand? " +
                             "If you don't, it goes to your graveyard.",
                     ),

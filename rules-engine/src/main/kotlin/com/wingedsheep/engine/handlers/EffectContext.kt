@@ -8,6 +8,7 @@ import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.state.components.stack.EntitySnapshot
 import com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.ChoiceSlot
@@ -85,6 +86,8 @@ data class EffectContext(
      */
     val sourceReferenceLost: Boolean = false,
     val triggeringReferenceLost: Boolean = false,
+    /** The loop's current object ([iterationEntityId]) has changed zones since the loop bound it. */
+    val iterationReferenceLost: Boolean = false,
     val objectReferences: ObjectReferenceEnvironment = ObjectReferenceEnvironment(),
     val targets: List<ChosenTarget> = emptyList(),
     /**
@@ -93,13 +96,13 @@ data class EffectContext(
      * validation (CR 608.2b). Populated on the spell-resolution path (and copied through
      * composite/iteration sub-effects); empty elsewhere, where it coincides with [targets].
      *
-     * Positional target references — [EffectTarget.ContextTarget], [EntityReference.Target],
+     * Positional target references — [EffectTarget.ContextTarget],
      * [com.wingedsheep.sdk.scripting.references.Player.ContextPlayer], and indexed conditions —
      * MUST resolve through [positionalTarget] so a now-illegal slot reads `null` (and the
      * sub-effect fizzles, CR 608.2b) instead of silently consuming the next still-legal target
      * whose position shifted forward in the compacted [targets] list. Diplomatic Relations is
      * the canonical case: "creature you control" dies in response, and without this the damage
-     * amount's `Target(0)` power read would land on the surviving opponent's creature.
+     * amount's `ContextTarget(0)` power read would land on the surviving opponent's creature.
      */
     val alignedTargets: List<ChosenTarget?> = emptyList(),
     /**
@@ -155,13 +158,21 @@ data class EffectContext(
     val sacrificedPermanents: List<EntitySnapshot> = emptyList(),
     /**
      * Entity ids of cards discarded to pay this spell's additional discard cost
-     * (`Costs.additional.DiscardCards(...)`). By resolution these cards live in their owner's
-     * graveyard (CR 608.2), so [EffectTarget.DiscardedAsCost] resolves to the id and an
-     * `EntityMatches` reads the card's graveyard characteristics (Grab the Prize). Empty when the
-     * spell carried no discard cost.
+     * (`Costs.additional.DiscardCards(...)`) or this activated ability's discard cost. By
+     * resolution these cards live in their owner's graveyard (CR 608.2), so
+     * [EffectTarget.DiscardedAsCost] resolves to the id and an `EntityMatches` reads the card's
+     * graveyard characteristics (Grab the Prize, Hisoka, Minamo Sensei). Empty when the spell or
+     * ability carried no discard cost.
      */
     val discardedAsCostCards: List<EntityId> = emptyList(),
-    /** Pre-chosen damage distribution for DividedDamageEffect spells (target ID -> damage amount) */
+    /**
+     * How many counters the resolving activated ability's costs removed — read by
+     * [com.wingedsheep.sdk.scripting.values.DynamicAmount.CountersRemovedAsCost] ("the number of
+     * aim counters removed this way", Hankyu). Zero for spells and triggered abilities.
+     */
+    val countersRemovedAsCost: Int = 0,
+    /** Division announced as the spell/ability went on the stack (CR 601.2d), target ID -> share: damage for
+     *  a DividedDamageEffect, counters for a triggered DistributeCountersAmongTargetsEffect. */
     val damageDistribution: Map<EntityId, Int>? = null,
     /**
      * Pre-chosen modes for modal spells/abilities (700.2). Populated at stack resolution
@@ -200,18 +211,18 @@ data class EffectContext(
     /** LKI snapshots for [tappedPermanents] (Rule 113.7a). See [EntitySnapshot]. */
     val tappedEntitySnapshots: List<EntitySnapshot> = emptyList(),
     /**
-     * Counters (counter-type-string → count) the source had the moment a self-exile /
+     * Counters (kind → count) the source had the moment a self-exile /
      * self-sacrifice cost wiped them (CR 113.7a). Read by
      * [com.wingedsheep.sdk.scripting.values.DynamicAmount.LastKnownSourceCounters] so an effect
      * like "Draw a card for each verse counter on this. If it had seven or more..." (Lost Isle
      * Calling) sees the pre-cost count rather than zero.
      */
-    val lastKnownSourceCounters: Map<String, Int> = emptyMap(),
+    val lastKnownSourceCounters: Map<CounterType, Int> = emptyMap(),
     /**
      * Frozen projected P/T (and subtypes/supertypes) the source had the moment a self-exile /
      * self-sacrifice cost moved it off the battlefield (CR 113.7a / 608.2h — "as it last existed
      * on the battlefield"). Mirrors [lastKnownSourceCounters]. Read by [DynamicAmountEvaluator]
-     * when an `EntityProperty(EntityReference.Source, …)` power/toughness read resolves after the
+     * when an `EntityProperty(EffectTarget.Self, …)` power/toughness read resolves after the
      * source is gone, so "Sacrifice this creature: it deals damage equal to its power" reads the
      * pre-sacrifice power rather than zero (Blazing Bomb's Blow Up, Cinder Shade, Ghitu Fire-Eater).
      * Null when the cost did not sacrifice/exile the source.
@@ -233,47 +244,30 @@ data class EffectContext(
      * with `captureSnapshot = true`. Indexed by entity id via
      * [com.wingedsheep.engine.state.components.stack.snapshotFor]. Read by
      * [DynamicAmountEvaluator] when the `EntityProperty` path resolves an
-     * [com.wingedsheep.sdk.scripting.values.EntityReference.FromCostStorage].
+     * [com.wingedsheep.sdk.scripting.targets.EffectTarget.PipelineTarget].
      */
     val chosenEntitySnapshots: List<EntitySnapshot> = emptyList(),
     // --- Trigger state ---
-    /** Amount of damage from a trigger context (e.g., "Whenever ~ is dealt damage") */
-    val triggerDamageAmount: Int? = null,
     /**
-     * Counter count from the triggering event payload.
-     * - Death triggers: last-known +1/+1 counter count when the source left the battlefield (Hooded Hydra).
-     * - CountersPlacedEvent triggers: number of counters placed in the triggering event (Simic Ascendancy).
+     * Everything the trigger event said about why the resolving ability fired — damage amount,
+     * counter counts, last-known power / toughness / types / counters, the scry count, the clash
+     * outcome, the triggering spell's mana spent, the host an attachment came off, the spell that
+     * targeted a warded permanent, … — as one record copied from the stack object
+     * ([TriggeredAbilityOnStackComponent.triggerContext]) or the pending trigger. Readers go
+     * through it (`context.triggerContext?.scryCount`) rather than a field per fact, so a new
+     * trigger fact is one field on [com.wingedsheep.engine.event.TriggerContext], its producer, and
+     * its reader. Null for spell resolution and every other non-triggered context.
+     *
+     * [triggeringEntityId], [triggeringPlayerId] and [xValue] stay separate slots: iteration,
+     * spell resolution, delayed triggers and cast-time copies write them without any trigger
+     * record, so they are rebindable context rather than trigger facts. The record's own copies
+     * of those three are the as-fired values and are only read to rebuild a reflexive trigger.
      */
-    val triggerCounterCount: Int? = null,
-    /** Last known total counter count (all types) from a death trigger context (e.g., Shadow Urchin) */
-    val triggerTotalCounterCount: Int? = null,
-    /** Last known -1/-1 counter count from a death trigger context (e.g., Retched Wretch) */
-    val triggerMinusOneMinusOneCounterCount: Int? = null,
-    /**
-     * Last-known projected subtypes from a dies/leaves trigger context (CR 603.10). Read by
-     * `TriggeringEntityHadSubtype` as an intervening-if — e.g. Infernal Vessel's "if it wasn't a
-     * Demon". Null when the trigger wasn't driven by a permanent leaving the battlefield.
-     */
-    val triggerLastKnownSubtypes: Set<String>? = null,
-    /**
-     * Last-known projected card types from a dies/leaves trigger context (CR 603.10). Read by
-     * `TriggeringEntityHadCardType` as an intervening-if — e.g. Tom, Bert, and William's "if they
-     * were a creature". Null when the trigger wasn't driven by a permanent leaving the battlefield.
-     */
-    val triggerLastKnownCardTypes: Set<String>? = null,
+    val triggerContext: com.wingedsheep.engine.event.TriggerContext? = null,
     /** The entity that caused the trigger to fire (e.g., creature that dealt damage for Aurification) */
     val triggeringEntityId: EntityId? = null,
     /** The player associated with the trigger event (e.g., the player who cast a spell for SpellCastEvent) */
     val triggeringPlayerId: EntityId? = null,
-    /** The spell or ability that targeted a permanent (for ward triggers) */
-    val targetingSourceEntityId: EntityId? = null,
-    /**
-     * The host an attachment came *off*, captured when a "becomes unattached" trigger fired. Backs
-     * [com.wingedsheep.sdk.scripting.targets.EffectTarget.AttachedToTriggeringPermanent] there,
-     * where the live `AttachedToComponent` is by resolution either gone or already re-pointed at a
-     * new host — Stitcher's Graft's "sacrifice that permanent". Null for every other trigger.
-     */
-    val triggerUnattachedFromEntityId: EntityId? = null,
     /**
      * The defending player for a per-defender combat legality check (CR 508.1 attack
      * declaration). Bound by [com.wingedsheep.engine.mechanics.combat.rules.CantAttackUnlessDefenderRule]
@@ -283,105 +277,6 @@ data class EffectContext(
      * supply it.
      */
     val defendingPlayerId: EntityId? = null,
-    /** Power of the triggering entity the moment it left the battlefield (dies/leaves triggers) */
-    val triggerLastKnownPower: Int? = null,
-    /** Toughness of the triggering entity the moment it left the battlefield (dies/leaves triggers) */
-    val triggerLastKnownToughness: Int? = null,
-    /** Total last-known power of a creatures-died batch (CR 603.2c). Read via
-     *  `ContextPropertyKey.DIED_BATCH_TOTAL_POWER` (The Skullspore Nexus). Null for non-batch triggers. */
-    val triggerDiedBatchTotalPower: Int? = null,
-    /**
-     * Power of the creature an Aura/Equipment was attached to, captured when its triggered
-     * ability fired. Read by [EntityReference.EnchantedCreature] power reads as last-known
-     * information (CR 608.2h) when the attached creature — and the aura — have left the
-     * battlefield before the ability resolves (e.g. the creature is removed in response to
-     * the aura's enters-the-battlefield trigger). Null for non-attached sources.
-     */
-    val enchantedCreatureLastKnownPower: Int? = null,
-    /**
-     * Last-known counter map (counter-type-string → count) of the trigger's source the
-     * moment it left the battlefield. Read by `MoveAllLastKnownCountersEffect` when a
-     * dies/leaves trigger needs to put every counter — not just +1/+1 — onto another
-     * permanent (e.g., Essence Channeler).
-     */
-    val triggerLastKnownCounters: Map<String, Int>? = null,
-    /**
-     * Per-player damage dealt to the trigger's source the moment it left the battlefield.
-     * Read by Grothama's LTB effect: "each player draws cards equal to the damage dealt
-     * to ~ this turn by sources they controlled."
-     */
-    val triggerLastKnownDamageDealtByPlayers: Map<EntityId, Int>? = null,
-    /**
-     * Creatures that were blocking, or blocked by, the trigger's source when it left the
-     * battlefield (CR 509 combat pairing), captured as last-known information. Resolved by
-     * `CardSource.LastKnownCombatPairedWithSource` for "destroy all creatures blocking or
-     * blocked by it" (Abu Ja'far). Null when the source never left combat.
-     */
-    val triggerLastKnownBlockingOrBlockedByIds: List<EntityId>? = null,
-    /**
-     * Number of mode picks the triggering spell-cast recorded. Read by
-     * `ContextPropertyKey.MODES_CHOSEN_ON_TRIGGERING_SPELL` (Riku of Many Paths).
-     */
-    val triggerModesChosenCount: Int? = null,
-    /**
-     * Total mana spent to cast the spell that fired this trigger. Read by
-     * `ContextPropertyKey.MANA_SPENT_ON_TRIGGERING_SPELL` (Aberrant Manawurm, Expressive
-     * Firedancer). Distinct from [totalManaSpent], which is the *resolving object's own* cast.
-     */
-    val triggerManaSpentOnTriggeringSpell: Int? = null,
-    /**
-     * Number of distinct colors of mana spent to cast the spell that fired this trigger. Read by
-     * `ContextPropertyKey.COLORS_SPENT_ON_TRIGGERING_SPELL` (Magmablood Archaic). Distinct from
-     * [com.wingedsheep.sdk.scripting.values.DynamicAmount.DistinctColorsManaSpent] (Converge),
-     * which reads the *resolving object's own* cast.
-     */
-    val triggerColorsSpentOnTriggeringSpell: Int? = null,
-    /**
-     * Mana value (CR 202.3) of the spell that fired this trigger. Read by
-     * `ContextPropertyKey.TRIGGERING_SPELL_MANA_VALUE` (Kellan, the Kid). Distinct from
-     * [triggerManaSpentOnTriggeringSpell], which is the mana actually paid.
-     */
-    val triggerManaValueOfTriggeringSpell: Int? = null,
-    /**
-     * The value chosen for `{X}` on the spell that fired this trigger (CR 601.2b). Read by
-     * `ContextPropertyKey.X_VALUE_OF_TRIGGERING_SPELL` (Geometer's Arthropod). Distinct from
-     * [triggerManaValueOfTriggeringSpell] (printed mana value, where {X} counts as 0) and
-     * [triggerManaSpentOnTriggeringSpell] (total mana paid).
-     */
-    val triggerXValueOfTriggeringSpell: Int? = null,
-    /**
-     * Number of cards actually looked at by the scry that fired this trigger. Read by
-     * `ContextPropertyKey.TRIGGER_SCRY_COUNT` (Celeborn the Wise, Elrond Master of Healing).
-     */
-    val triggerScryCount: Int? = null,
-    /**
-     * Whether the clash that fired this trigger was won by its controller (CR 701.30d). Read by
-     * [com.wingedsheep.sdk.scripting.conditions.YouWonTheClash] as the "if you won" rider on a
-     * "Whenever you clash" ability (Entangling Trap, Rebellion of the Flamekin). `null` when the
-     * trigger was not driven by a clash, which reads as "did not win".
-     */
-    val triggerClashWon: Boolean? = null,
-    /**
-     * Number of cards discarded in the batch that fired this trigger (CR 603.2c). Read by
-     * `ContextPropertyKey.TRIGGER_DISCARD_COUNT` (Magmakin Artillerist).
-     */
-    val triggerDiscardCount: Int? = null,
-    /**
-     * Discover value N of the discover that fired this trigger (CR 701.57). Read by
-     * `ContextPropertyKey.TRIGGER_DISCOVER_VALUE` (Curator of Sun's Creation).
-     */
-    val triggerDiscoverValue: Int? = null,
-    /**
-     * Damage past lethal dealt to the trigger's creature recipient (CR 120.4a). Read by
-     * `ContextPropertyKey.TRIGGER_EXCESS_DAMAGE_AMOUNT` (Fall of Cair Andros).
-     */
-    val triggerExcessDamageAmount: Int? = null,
-    /**
-     * The damage recipient creature's toughness at the instant the triggering damage was dealt
-     * (CR 603.10 LKI). Read by `ContextPropertyKey.TRIGGER_RECIPIENT_TOUGHNESS` (Taii Wakeen,
-     * Perfect Shot — "damage equal to that creature's toughness"). `null` for non-creature recipients.
-     */
-    val triggerRecipientToughness: Int? = null,
     // --- Choice state ---
     /** Color chosen for "add one mana of any color" abilities */
     val manaColorChoice: Color? = null,
@@ -391,6 +286,12 @@ data class EffectContext(
      * "...FromChosenColor" executors.
      */
     val chosenColor: Color? = null,
+    /**
+     * Every color picked by a multi-color [com.wingedsheep.sdk.scripting.effects.ChooseColorThenEffect]
+     * ("the color or colors of your choice" — Quickchange). Empty for a single-color choice, where
+     * [chosenColor] is the whole answer; when non-empty it contains [chosenColor].
+     */
+    val chosenColors: Set<Color> = emptySet(),
     /** Creature type chosen during casting (e.g., Aphetto Dredging) */
     val chosenCreatureType: String? = null,
     /**
@@ -429,6 +330,13 @@ data class EffectContext(
 ) {
     val activatedAbilityId: com.wingedsheep.sdk.scripting.AbilityId?
         get() = activatedAbility?.id
+
+    /**
+     * The object an enclosing `ForEach` loop over a group or a collection is visiting —
+     * [EffectTarget.IterationEntity]. Null outside such a loop.
+     */
+    val iterationEntityId: EntityId?
+        get() = objectReferences.iteration?.entityId
 
     /**
      * Resolve a symbolic effect target to a concrete entity id using just the context.
@@ -479,11 +387,13 @@ data class EffectContext(
 
     /** Recheck on every instruction/resume; an unrelated move while paused cannot be followed. */
     fun withCurrentObjectReferences(state: GameState): EffectContext = copy(
-        sourceReferenceLost = if (objectReferences.captured || objectReferences.selfBinding != null) {
-            !objectReferences.isSelfCurrent(state)
+        sourceReferenceLost = if (objectReferences.captured) {
+            !objectReferences.isCurrent(objectReferences.source, state)
         } else sourceReferenceLost,
         triggeringReferenceLost = triggeringEntityId !in state.turnOrder &&
             !objectReferences.isCurrent(objectReferences.triggering, state),
+        iterationReferenceLost = objectReferences.iteration != null &&
+            !objectReferences.isIterationCurrent(state),
     )
 
     fun authorizeObjectMoves(events: List<com.wingedsheep.engine.core.GameEvent>): EffectContext =
@@ -495,11 +405,17 @@ data class EffectContext(
                 ?.let { state.getEntity(it)?.chosenOpponent() }
 
 
-    /** Battlefield-only instructions cannot affect a source that has left or already returned. */
-    fun isUnavailableBattlefieldSource(target: EffectTarget, state: GameState): Boolean =
-        target == EffectTarget.Self &&
-            (sourceReferenceLost || ((objectReferences.selfBinding != null || sourceBattlefieldTimestamp != null) &&
-                (pipeline.iterationTarget ?: objectReferences.selfBinding?.entityId ?: sourceId) !in state.getBattlefield()))
+    /**
+     * Battlefield-only instructions cannot affect a source — or a loop's current object — that has
+     * left the battlefield or already returned as a new object.
+     */
+    fun isUnavailableBattlefieldSource(target: EffectTarget, state: GameState): Boolean = when (target) {
+        EffectTarget.Self -> sourceReferenceLost ||
+            (sourceBattlefieldTimestamp != null && sourceId !in state.getBattlefield())
+        EffectTarget.IterationEntity -> objectReferences.iteration != null &&
+            (iterationReferenceLost || iterationEntityId !in state.getBattlefield())
+        else -> false
+    }
 
     fun resolveTarget(target: EffectTarget): EntityId? =
         TargetResolutionUtils.resolveTarget(target, this)
@@ -612,33 +528,9 @@ data class EffectContext(
             sourceBattlefieldTimestamp = ability.sourceBattlefieldTimestamp,
             objectReferences = ability.objectReferences,
             targets = targets,
-            triggerDamageAmount = ability.triggerDamageAmount,
-            triggerCounterCount = ability.triggerCounterCount,
-            triggerTotalCounterCount = ability.triggerTotalCounterCount,
-            triggerLastKnownCounters = ability.triggerLastKnownCounters,
-            triggerLastKnownSubtypes = ability.triggerLastKnownSubtypes,
-            triggerLastKnownCardTypes = ability.triggerLastKnownCardTypes,
-            triggerLastKnownDamageDealtByPlayers = ability.triggerLastKnownDamageDealtByPlayers,
-            triggerLastKnownBlockingOrBlockedByIds = ability.triggerLastKnownBlockingOrBlockedByIds,
-            triggeringEntityId = ability.triggeringEntityId,
-            triggeringPlayerId = ability.triggeringPlayerId,
-            targetingSourceEntityId = ability.targetingSourceEntityId,
-            triggerUnattachedFromEntityId = ability.triggerUnattachedFromEntityId,
-            triggerLastKnownPower = ability.lastKnownPower,
-            triggerLastKnownToughness = ability.lastKnownToughness,
-            triggerDiedBatchTotalPower = ability.diedBatchTotalPower,
-            enchantedCreatureLastKnownPower = ability.enchantedCreatureLastKnownPower,
-            triggerModesChosenCount = ability.triggerModesChosenCount,
-            triggerScryCount = ability.triggerScryCount,
-            triggerClashWon = ability.triggerClashWon,
-            triggerDiscardCount = ability.triggerDiscardCount,
-            triggerDiscoverValue = ability.triggerDiscoverValue,
-            triggerExcessDamageAmount = ability.triggerExcessDamageAmount,
-            triggerRecipientToughness = ability.triggerRecipientToughness,
-            triggerManaSpentOnTriggeringSpell = ability.triggerManaSpentOnTriggeringSpell,
-            triggerColorsSpentOnTriggeringSpell = ability.triggerColorsSpentOnTriggeringSpell,
-            triggerManaValueOfTriggeringSpell = ability.triggerManaValueOfTriggeringSpell,
-            triggerXValueOfTriggeringSpell = ability.triggerXValueOfTriggeringSpell,
+            triggerContext = ability.triggerContext,
+            triggeringEntityId = ability.triggerContext?.triggeringEntityId,
+            triggeringPlayerId = ability.triggerContext?.triggeringPlayerId,
             xValue = ability.xValue,
             damageDistribution = ability.damageDistribution,
             chosenModes = ability.chosenModes,
@@ -651,9 +543,9 @@ data class EffectContext(
                 // PermanentsEnteredEvent batch) so a ForEachInCollectionEffect payoff can iterate
                 // them — "for each of them, create a tapped copy of it" (Kambal). The copy executor
                 // reads each entity at resolution, so any that left the battlefield meanwhile no-op.
-                storedCollections = (if (ability.capturedEntityIds.isNotEmpty()) {
-                    mapOf(PipelineState.TRIGGER_CAPTURED_COLLECTION to ability.capturedEntityIds)
-                } else emptyMap()) + (ability.carriedPipeline?.storedCollections ?: emptyMap()),
+                storedCollections = (ability.triggerContext?.capturedEntityIds?.takeIf { it.isNotEmpty() }
+                    ?.let { mapOf(PipelineState.TRIGGER_CAPTURED_COLLECTION to it) }
+                    ?: emptyMap()) + (ability.carriedPipeline?.storedCollections ?: emptyMap()),
                 // A `ReflexiveTriggerEffect`'s action half (e.g. `Amass`, a discard) may have stashed
                 // subtype groups or scalar values the reflexive effect reads (CR 603.12) — carried
                 // across the stack round-trip since this ability builds a fresh context on resolve.

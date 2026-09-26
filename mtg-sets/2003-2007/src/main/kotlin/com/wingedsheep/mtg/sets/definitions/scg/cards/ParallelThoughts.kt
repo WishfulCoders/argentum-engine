@@ -6,18 +6,12 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.ReplaceDrawWithEffect
+import com.wingedsheep.sdk.scripting.ReplaceDrawWith
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.effects.FaceDownMode
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 // Oracle errata: Original text used "remove from the game" (now "exile").
 // Rulings:
@@ -33,30 +27,26 @@ val ParallelThoughts = card("Parallel Thoughts") {
         "If you would draw a card, you may instead put the top card of the pile you exiled into your hand."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(listOf(
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.Any),
-                storeAs = "searchable"
-            ),
-            SelectFromCollectionEffect(
-                from = "searchable",
-                selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(7)),
-                storeSelected = "found"
-            ),
-            MoveCollectionEffect(
-                from = "found",
-                destination = CardDestination.ToZone(Zone.EXILE),
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val searchable = gather(
+                CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.Any),
+                search = true
+            )
+            val found = chooseUpTo(7, from = searchable)
+            move(
+                found,
+                CardDestination.ToZone(Zone.EXILE),
                 order = CardOrder.Random,
                 linkToSource = true,
                 faceDown = FaceDownMode.HIDDEN
-            ),
-            ShuffleLibraryEffect()
-        ))
+            )
+            run(Effects.ShuffleLibrary())
+        }
     }
 
     replacementEffect(
-        ReplaceDrawWithEffect(
+        ReplaceDrawWith(
             replacementEffect = Effects.TakeFromLinkedExile(),
             optional = true
         )

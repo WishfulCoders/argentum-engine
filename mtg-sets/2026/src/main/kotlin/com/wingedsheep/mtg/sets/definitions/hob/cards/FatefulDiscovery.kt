@@ -4,12 +4,11 @@
 
 package com.wingedsheep.mtg.sets.definitions.hob.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -24,11 +23,8 @@ val FatefulDiscovery = card("Fateful Discovery") {
     typeLine = "Enchantment"
     oracleText = "Whenever an artifact you control enters, draw a card."
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Artifact.youControl(),
-            binding = TriggerBinding.ANY
-        )
-        effect = DrawCardsEffect(1)
+        trigger = Triggers.a(GameObjectFilter.Artifact.youControl()).enters()
+        effect = Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.MYTHIC

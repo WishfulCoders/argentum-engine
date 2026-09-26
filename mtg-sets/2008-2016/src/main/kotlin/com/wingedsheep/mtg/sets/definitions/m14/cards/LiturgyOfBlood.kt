@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Liturgy of Blood
@@ -20,11 +19,8 @@ val LiturgyOfBlood = card("Liturgy of Blood") {
     oracleText = "Destroy target creature. Add {B}{B}{B}."
 
     spell {
-        val victim = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.Destroy(victim),
-            Effects.AddMana(Color.BLACK, 3)
-        )
+        val victim = target(TargetFilter.Creature)
+        effect = Effects.Destroy(victim) then Effects.AddMana(Color.BLACK, 3)
     }
 
     metadata {

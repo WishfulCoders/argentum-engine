@@ -6,8 +6,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 
@@ -29,17 +27,15 @@ val SultaiCharm = card("Sultai Charm") {
     spell {
         modal(chooseCount = 1) {
             mode("Destroy target monocolored creature") {
-                val t = target("target", TargetCreature(
-                    filter = TargetFilter(
+                val t = target(
+                    TargetFilter(
                         GameObjectFilter(cardPredicates = listOf(CardPredicate.IsCreature, CardPredicate.IsMonocolored))
-                    )
-                ))
+                    ),
+                )
                 effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
             }
             mode("Destroy target artifact or enchantment") {
-                val t = target("target", TargetPermanent(
-                    filter = TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Enchantment)
-                ))
+                val t = target(TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Enchantment))
                 effect = Effects.Move(t, Zone.GRAVEYARD, byDestruction = true)
             }
             mode("Draw two cards, then discard a card") {

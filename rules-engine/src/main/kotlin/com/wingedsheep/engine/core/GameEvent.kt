@@ -1,6 +1,7 @@
 package com.wingedsheep.engine.core
 
 import com.wingedsheep.sdk.core.BendType
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.TypeLine
@@ -136,21 +137,18 @@ data class DamageDealtEvent(
     val targetIsPlayer: Boolean = false,
     val targetWasFaceDown: Boolean = false,
     /**
-     * The recipient's controller at the instant the damage was dealt (CR 603.10 last-known
-     * information). Lets recipient-based damage triggers ("whenever a creature you control / an
-     * opponent controls is dealt damage") still match a recipient that left the battlefield to
-     * the same damage event — combat-damage state-based actions strip the dead creature's
-     * `ControllerComponent` before trigger detection runs. `null` for players and for events
-     * emitted before this was captured.
+     * The recipient permanent as it was at the instant the damage was dealt (CR 603.10). Lets
+     * recipient-based damage triggers ("whenever a creature you control / an opponent controls is
+     * dealt damage") still match a recipient that left the battlefield to the same damage event —
+     * combat-damage state-based actions move the dead creature (and sweep a dead token out of
+     * existence) before trigger detection runs. `null` for players.
      */
-    val targetControllerId: EntityId? = null,
-    /** Whether the recipient was a creature when the damage was dealt (LKI, see [targetControllerId]). */
-    val targetWasCreature: Boolean = false,
+    val targetLastKnown: com.wingedsheep.engine.state.components.stack.EntitySnapshot? = null,
     /**
-     * Damage in excess of what the creature target needed to be destroyed (CR 120.4a) —
-     * i.e. `max(0, amount - max(0, projectedToughness - markedDamageBeforeThisHit))`, or
-     * `max(0, amount - 1)` if the source has deathtouch. Always 0 for non-creature targets
-     * (planeswalkers, players). Used by triggers like
+     * Excess damage (CR 120.4a). For a creature: damage in excess of what it needed to be
+     * destroyed — `max(0, amount - max(0, projectedToughness - markedDamageBeforeThisHit))`, or
+     * `max(0, amount - 1)` if the source has deathtouch. For a planeswalker / battle: damage in
+     * excess of its loyalty / defense before the hit. Always 0 for players. Used by triggers like
      * Fall of Cair Andros that fire on "excess [non]combat damage" via
      * `DealsDamageEvent(requireExcess = true)` and by payoffs that read
      * `ContextPropertyKey.TRIGGER_EXCESS_DAMAGE_AMOUNT`.
@@ -548,7 +546,7 @@ data class PermanentConnivedEvent(
  * A player just performed one of the four elemental bending keyword actions (CR 701.65b Airbend /
  * 701.66b Earthbend / 701.67c Waterbend / 702.189b Firebending). Fires once per bend so
  * [com.wingedsheep.sdk.scripting.EventPattern.BendPerformedEvent] triggers
- * ([com.wingedsheep.sdk.dsl.Triggers.YouBend]) match. Emitted alongside a fold of [bendType] into
+ * (`Triggers.you.bends(types)`) match. Emitted alongside a fold of [bendType] into
  * the player's `BendsThisTurnComponent` (see `BendEvents.record`). Internal-only: dropped from the
  * client log (`ClientEventTransformer`).
  *
@@ -692,7 +690,7 @@ data class SpellCastEvent(
     /**
      * Producing-source subtypes of the mana spent on this cast (`Subtype.TREASURE` when any came
      * from a Treasure, `Subtype.CAVE` from a Cave, …). Drives SDK triggers built with
-     * `Triggers.youCastSpell(requires = setOf(SpellCastPredicate.PaidWithManaFromSubtype(subtype)))`.
+     * `Triggers.you.casts(requires = setOf(SpellCastPredicate.PaidWithManaFromSubtype(subtype)))`.
      * See [com.wingedsheep.engine.state.components.player.ManaPoolComponent.manaBySubtype].
      */
     val spentManaSubtypes: Set<com.wingedsheep.sdk.core.Subtype> = emptySet(),
@@ -755,7 +753,9 @@ data class SpellCastEvent(
  * mana abilities (CR 605.1). These let triggers distinguish the two "activates an ability" wordings:
  * "isn't a mana ability" (Flamescroll Celebrant — fired only for non-mana abilities, which use the
  * stack) versus "without {T} in its activation cost" (Antiquities Haunting Wind / Powerleech /
- * Artifact Possession — fired for any ability, mana or not, whose cost lacks {T}).
+ * Artifact Possession — fired for any ability, mana or not, whose cost lacks {T}). [isLoyalty] marks
+ * a planeswalker's loyalty ability (CR 606) for "whenever an opponent activates a loyalty ability"
+ * (Gideon the Oathless).
  */
 @Serializable
 @SerialName("AbilityActivatedEvent")
@@ -767,6 +767,14 @@ data class AbilityActivatedEvent(
     val costsTap: Boolean = false,
     val isManaAbility: Boolean = false,
     val isExhaust: Boolean = false,
+    /** True for a loyalty ability (CR 606) — "whenever you activate a loyalty ability". */
+    val isLoyalty: Boolean = false,
+    /**
+     * How many loyalty counters the activation's cost removed (CR 606.4): N for a [−N] cost, the
+     * chosen X for [−X], 0 for [+N] / [0] and for every non-loyalty ability. Read by "if you
+     * removed two or more loyalty counters to activate it" (Way of the Mind Sculptor).
+     */
+    val loyaltyCountersRemoved: Int = 0,
 ) : GameEvent
 
 /**
@@ -915,7 +923,7 @@ data class SagaChapterResolvedEvent(
  * priority round before it resolves — instead of resolving inline/atomically with no response window.
  *
  * @property carriedPipeline Pipeline state the action produced (e.g. `Amass`'s army reference, a
- * discard's resolved count) that the reflexive effect may read via `EntityReference`/
+ * discard's resolved count) that the reflexive effect may read via `EffectTarget.SingleEntity`/
  * `VariableReference` — carried across the stack round-trip since the reflexive ability builds a
  * fresh [com.wingedsheep.engine.handlers.EffectContext] when it resolves.
  */
@@ -1122,6 +1130,18 @@ data class StepChangedEvent(
 ) : GameEvent
 
 /**
+ * An effect ended the turn (CR 724.1 — Ultima, Time Stop). Emitted once the expedited process has
+ * reached the cleanup step, just before the next turn begins. Triggered abilities that triggered
+ * before this point never go on the stack (CR 724.1a), so [com.wingedsheep.engine.core.Settler]
+ * detects triggers only from the events after the last one of these.
+ */
+@Serializable
+@SerialName("TurnEndedByEffectEvent")
+data class TurnEndedByEffectEvent(
+    val activePlayerId: EntityId
+) : GameEvent
+
+/**
  * The turn changed.
  */
 @Serializable
@@ -1275,7 +1295,7 @@ data class BecameRenownedEvent(
 ) : GameEvent
 
 /**
- * An Aura, Equipment, or Fortification became attached to a permanent (CR 603.2e). Emitted only
+ * An Aura, Equipment, or Fortification became attached to a permanent (CR 603.2f). Emitted only
  * at the moment of attaching — when the attachment moves onto a new host — not when an
  * already-attached state persists, and not on phasing in/out (CR 702.26j). Emitted from every
  * attach site: aura ETB onto its enchant target (StackResolver), equip resolution
@@ -1336,9 +1356,9 @@ data class PermanentUnattachedEvent(
  * A player tapped a land for mana (a land's mana ability resolved).
  *
  * Drives the "Whenever a player taps a land for mana" trigger family
- * ([com.wingedsheep.sdk.scripting.EventPattern.LandTappedForMana]). Emitted only on the manual
- * mana-ability activation path; automatic cost payment adds mana via the solver without emitting
- * this event.
+ * ([com.wingedsheep.sdk.scripting.EventPattern.LandTappedForMana]). Emitted by the manual
+ * mana-ability pipeline and, through [tapForMana], by every auto-pay / explicit-source path, so the
+ * trigger fires however the player paid.
  */
 @Serializable
 @SerialName("LandTappedForManaEvent")
@@ -1412,7 +1432,7 @@ data class PhasedInEvent(
 @SerialName("CountersAddedEvent")
 data class CountersAddedEvent(
     val entityId: EntityId,
-    val counterType: String,
+    val counterType: CounterType,
     val amount: Int,
     val entityName: String = "",
     /**
@@ -1449,7 +1469,7 @@ data class CountersAddedEvent(
 @SerialName("CountersRemovedEvent")
 data class CountersRemovedEvent(
     val entityId: EntityId,
-    val counterType: String,
+    val counterType: CounterType,
     val amount: Int,
     val entityName: String = "",
     val remainingCount: Int? = null,
@@ -1953,6 +1973,19 @@ data class TransformedEvent(
     val entityId: EntityId,
     val intoBackFace: Boolean,
     val newFaceName: String,
+    val controllerId: EntityId
+) : GameEvent
+
+/**
+ * A flip-card permanent flipped (CR 710) — it now has its flip half's characteristics, [newName].
+ * Not a [TransformedEvent]: flipping is a different action, so "whenever this transforms" never
+ * sees it.
+ */
+@Serializable
+@SerialName("FlippedEvent")
+data class FlippedEvent(
+    val entityId: EntityId,
+    val newName: String,
     val controllerId: EntityId
 ) : GameEvent
 

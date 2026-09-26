@@ -2,11 +2,10 @@ package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Desculpting Blast
@@ -23,15 +22,13 @@ val DesculptingBlast = card("Desculpting Blast") {
     oracleText = "Return target nonland permanent to its owner's hand. If it was attacking, create a 1/1 colorless Drone artifact creature token with flying and \"This token can block only creatures with flying.\""
 
     spell {
-        val permanent = target("target nonland permanent", Targets.NonlandPermanent)
+        val permanent = target(TargetFilter.NonlandPermanent)
         // Check attacking status before the return so the permanent is still on the battlefield
-        effect = Effects.Composite(
-            ConditionalEffect(
-                condition = Conditions.TargetMatchesFilter(GameObjectFilter.Permanent.attacking()),
-                effect = Effects.CreateDroneToken()
-            ),
+        effect = Effects.If(
+            condition = Conditions.TargetMatchesFilter(GameObjectFilter.Permanent.attacking(), permanent),
+            then = Effects.CreateDroneToken()
+        ) then
             Effects.ReturnToHand(permanent)
-        )
     }
 
     metadata {

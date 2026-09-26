@@ -9,6 +9,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Tithing Blade // Consuming Sepulcher (CR 702.167, The Lost Caverns of Ixalan)
@@ -25,7 +26,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *   At the beginning of your upkeep, each opponent loses 1 life and you gain 1 life.
  *
  * Implementation:
- *  - ETB edict: [Triggers.EntersBattlefield] + `Effects.Sacrifice` aimed at
+ *  - ETB edict: `Triggers.self.enters()` + `Effects.Sacrifice` aimed at
  *    [Player.EachOpponent] — each opponent chooses their own creature to sacrifice
  *    (same shape as Susurian Dirgecraft / Cabal Executioner).
  *  - Craft: the `craft(...)` DSL helper wires the activated ability with an
@@ -34,7 +35,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *    and/or creature cards in your graveyard per CR 702.167b) plus the {4}{B} mana
  *    portion; resolution returns the card transformed via
  *    [com.wingedsheep.sdk.scripting.effects.ReturnSelfFromExileTransformedEffect].
- *  - Back-face drain: [Triggers.YourUpkeep] + composite of `Effects.LoseLife(1)` on
+ *  - Back-face drain: `Triggers.you.beginningOf(Step.UPKEEP)` + composite of `Effects.LoseLife(1)` on
  *    [Player.EachOpponent] and `Effects.GainLife(1)` for the controller.
  */
 
@@ -47,7 +48,7 @@ private val TithingBladeFront = card("Tithing Blade") {
 
     // ETB: each opponent sacrifices a creature of their choice.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Sacrifice(
             GameObjectFilter.Creature,
             target = EffectTarget.PlayerRef(Player.EachOpponent)
@@ -79,11 +80,8 @@ private val ConsumingSepulcher = card("Consuming Sepulcher") {
 
     // At the beginning of your upkeep: drain each opponent for 1.
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.Composite(
-            Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)),
-            Effects.GainLife(1)
-        )
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(1)
     }
 
     metadata {

@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -24,12 +23,10 @@ val AimHigh = card("Aim High") {
     typeLine = "Instant"
     oracleText = "Untap target creature. It gets +2/+2 and gains reach until end of turn."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.Untap(t),
-            Effects.ModifyStats(2, 2, t),
+        val t = target(TargetFilter.Creature)
+        effect = Effects.Untap(t) then
+            Effects.ModifyStats(2, 2, t) then
             Effects.GrantKeyword(Keyword.REACH, t)
-        )
     }
     metadata {
         rarity = Rarity.COMMON

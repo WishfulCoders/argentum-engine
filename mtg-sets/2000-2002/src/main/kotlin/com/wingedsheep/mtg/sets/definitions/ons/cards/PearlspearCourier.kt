@@ -3,14 +3,12 @@ package com.wingedsheep.mtg.sets.definitions.ons.cards
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Pearlspear Courier
@@ -32,11 +30,9 @@ val PearlspearCourier = card("Pearlspear Courier") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{W}"), Costs.Tap)
-        val t = target("target", TargetPermanent(
-            filter = TargetFilter(GameObjectFilter.Creature.withSubtype("Soldier"))
-        ))
-        effect = ModifyStatsEffect(2, 2, t, Duration.WhileSourceTapped()) then
-                GrantKeywordEffect(Keyword.VIGILANCE, t, Duration.WhileSourceTapped())
+        val t = target(TargetFilter(GameObjectFilter.Creature.withSubtype("Soldier")))
+        effect = Effects.ModifyStats(2, 2, t, Duration.WhileSourceTapped()) then
+                Effects.GrantKeyword(Keyword.VIGILANCE, t, Duration.WhileSourceTapped())
     }
 
     metadata {

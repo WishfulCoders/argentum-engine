@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Old Fat Spider Can't See Me — The Hobbit #50
@@ -42,10 +41,7 @@ val OldFatSpiderCantSeeMe = card("Old Fat Spider Can't See Me") {
     // I — Target creature you control gains hexproof for as long as this Saga remains on the
     //     battlefield.
     sagaChapter(1) {
-        val creature = target(
-            "target creature you control",
-            TargetCreature(filter = TargetFilter.CreatureYouControl)
-        )
+        val creature = target(TargetFilter.CreatureYouControl)
         effect = Effects.GrantKeyword(
             Keyword.HEXPROOF,
             creature,
@@ -56,10 +52,7 @@ val OldFatSpiderCantSeeMe = card("Old Fat Spider Can't See Me") {
     // II — Prevent all damage that would be dealt by up to one target creature for as long as this
     //      Saga remains on the battlefield.
     sagaChapter(2) {
-        val creature = target(
-            "up to one target creature",
-            TargetCreature(optional = true)
-        )
+        val creature = target(TargetFilter.Creature, optional = true)
         effect = Effects.PreventAllDamageDealtBy(
             creature,
             Duration.WhileSourceOnBattlefield("this Saga")

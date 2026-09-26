@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.handlers.effects.composite
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.core.ForEachContinuation
 import com.wingedsheep.engine.core.ForEachItem
@@ -22,6 +23,7 @@ import com.wingedsheep.sdk.scripting.effects.ForEachEffect
 import com.wingedsheep.sdk.scripting.effects.IterationSpace
 import com.wingedsheep.sdk.scripting.references.Player
 import kotlin.reflect.KClass
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * The single executor behind [ForEachEffect]: enumerate the iteration space once
@@ -41,12 +43,14 @@ import kotlin.reflect.KClass
  *   storedCollections wiped.
  * - Players: `controllerId` rebound to the current player
  *   relative to them, storedCollections wiped.
- * - Collection / Group: `pipeline.iterationTarget` set so `EffectTarget.Self` resolves
- *   to the current entity; outer collections preserved.
+ * - Collection / Group: the current entity bound, with its identity, as the context's
+ *   iteration object — what `EffectTarget.IterationEntity` names (`Self` stays the source);
+ *   outer collections preserved.
  * - ColorsOf: `chosenColor` set — the same channel `ChooseColorThen` feeds.
  */
 class ForEachExecutor(
-    private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult
+    private val effectExecutor: (GameState, Effect, EffectContext) -> EffectResult,
+    private val predicateEvaluator: PredicateEvaluator
 ) : EffectExecutor<ForEachEffect> {
 
     override val effectType: KClass<ForEachEffect> = ForEachEffect::class
@@ -117,7 +121,7 @@ class ForEachExecutor(
 
             val result = effectExecutor(stateForExecution, effect.body, iterationContext)
 
-            if (result.isPaused) {
+            if (result.outcome is Outcome.Paused) {
                 // The body needs a decision; our ForEachContinuation is beneath its
                 // frames and resumes the remaining items once the body completes.
                 return EffectResult.propagatePause(
@@ -189,7 +193,7 @@ class ForEachExecutor(
             resolveGroup(state, space, context).map { ForEachItem.OfEntity(it) }
 
         is IterationSpace.ColorsOf -> {
-            val sourceId = TargetResolutionUtils.resolveEntityReference(space.source, context, state)
+            val sourceId = TargetResolutionUtils.resolveEntity(space.source, context, state)
             if (sourceId == null) {
                 emptyList()
             } else {
@@ -229,9 +233,9 @@ class ForEachExecutor(
         )
 
         is ForEachItem.OfEntity -> outerContext.copy(
-            objectReferences = outerContext.objectReferences.copy(selfBinding =
+            objectReferences = outerContext.objectReferences.copy(iteration =
                 com.wingedsheep.engine.handlers.CapturedObjectBinding(item.entityId, state.objectRef(item.entityId))),
-            pipeline = outerContext.pipeline.copy(iterationTarget = item.entityId)
+            iterationReferenceLost = false,
         )
 
         is ForEachItem.OfColor -> outerContext.copy(chosenColor = item.color)
@@ -254,6 +258,11 @@ class ForEachExecutor(
             // "those players" — iterate every player among the chosen targets. Needs its own arm:
             // the `else` below routes through the single-player resolver, which deliberately
             // returns null for plural references, so a ForEach over them would silently do nothing.
+            // "those players" — the players a `StorePlayer` step recorded earlier in this
+            // resolution (tempting offer's accepters, Plaguecrafter's "each player who can't"),
+            // in APNAP order and skipping anyone who has left the game. A missing collection is
+            // nobody, not everybody.
+            is Player.InCollection -> TargetResolutionUtils.playersInCollection(state, context, player.collection)
             Player.EachTargetedPlayer -> context.targets
                 .filterIsInstance<com.wingedsheep.engine.state.components.stack.ChosenTarget.Player>()
                 .map { it.playerId }
@@ -297,7 +306,7 @@ class ForEachExecutor(
                 else -> null
             }
         } else null
-        val matched = BattlefieldFilterUtils.findMatchingOnBattlefield(state, filter.baseFilter, context, excludeSelfId)
+        val matched = BattlefieldFilterUtils.findMatchingOnBattlefield(state, filter.baseFilter, context, excludeSelfId, predicateEvaluator = predicateEvaluator)
             .filter { excludeTargetId == null || it != excludeTargetId }
 
         // Additionally filter by chosen subtype if specified

@@ -11,9 +11,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.BecomeArtifactEffect
-import com.wingedsheep.sdk.scripting.effects.MayPayManaEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -56,23 +53,18 @@ val VraskaTheSilencer = card("Vraska, the Silencer") {
     )
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature.nontoken().opponentControls(),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.ANY
-        )
-        effect = MayPayManaEffect(
+        trigger = Triggers.a(GameObjectFilter.Creature.nontoken().opponentControls()).dies()
+        effect = Effects.MayPay(
             cost = ManaCost.parse("{1}"),
-            effect = Effects.Composite(
-                // Return that card to the battlefield tapped under your control.
-                Effects.Move(
-                    target = EffectTarget.TriggeringEntity,
-                    destination = Zone.BATTLEFIELD,
-                    placement = ZonePlacement.Tapped,
-                    controllerOverride = EffectTarget.Controller
-                ),
+            // Return that card to the battlefield tapped under your control.
+            then = Effects.Move(
+                target = EffectTarget.TriggeringEntity,
+                destination = Zone.BATTLEFIELD,
+                placement = ZonePlacement.Tapped,
+                controllerOverride = EffectTarget.Controller
+            ) then
                 // It's a colorless Treasure artifact with the mana ability, losing all other types.
-                BecomeArtifactEffect(
+                Effects.BecomeArtifact(
                     target = EffectTarget.TriggeringEntity,
                     cardTypes = setOf("ARTIFACT"),
                     subtypes = setOf("Treasure"),
@@ -81,7 +73,6 @@ val VraskaTheSilencer = card("Vraska, the Silencer") {
                     grantedAbility = treasureManaAbility,
                     duration = Duration.Permanent
                 )
-            )
         )
     }
 

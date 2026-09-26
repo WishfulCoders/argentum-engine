@@ -5,13 +5,10 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
-import com.wingedsheep.sdk.scripting.effects.CreateDelayedTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
-import com.wingedsheep.sdk.scripting.effects.PreventDamageEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import com.wingedsheep.sdk.dsl.Effects
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Morningtide's Light
@@ -32,26 +29,19 @@ val MorningtidesLight = card("Morningtide's Light") {
     spell {
         selfExile()
 
-        target("any number of target creatures", TargetCreature(unlimited = true))
+        targets(TargetFilter.Creature, unlimited = true)
 
-        effect = ForEachTargetEffect(
-            effects = listOf(
-                Effects.Move(EffectTarget.ContextTarget(0), Zone.EXILE),
-                CreateDelayedTriggerEffect(
-                    step = Step.END,
-                    effect = Effects.Move(
-                        target = EffectTarget.ContextTarget(0),
-                        destination = Zone.BATTLEFIELD,
-                        placement = ZonePlacement.Tapped
-                    )
+        effect = Effects.ForEachTarget(
+            Effects.Move(EffectTarget.ContextTarget(0), Zone.EXILE),
+            Effects.CreateDelayedTrigger(
+                step = Step.END,
+                effect = Effects.Move(
+                    target = EffectTarget.ContextTarget(0),
+                    destination = Zone.BATTLEFIELD,
+                    placement = ZonePlacement.Tapped
                 )
             )
-        ).then(
-            PreventDamageEffect(
-                target = EffectTarget.Controller,
-                duration = Duration.UntilYourNextTurn
-            )
-        )
+        ) then Effects.PreventDamage(duration = Duration.UntilYourNextTurn)
     }
 
     metadata {

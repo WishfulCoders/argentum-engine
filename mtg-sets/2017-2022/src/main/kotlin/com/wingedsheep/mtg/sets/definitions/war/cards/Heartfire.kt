@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Heartfire
@@ -25,8 +24,8 @@ val Heartfire = card("Heartfire") {
     additionalCost(Costs.additional.SacrificePermanent(GameObjectFilter.CreatureOrPlaneswalker))
 
     spell {
-        target = Targets.Any
-        effect = Effects.DealDamage(4, EffectTarget.ContextTarget(0))
+        val anyTarget = target(Targets.Any)
+        effect = Effects.DealDamage(4, anyTarget)
     }
 
     metadata {

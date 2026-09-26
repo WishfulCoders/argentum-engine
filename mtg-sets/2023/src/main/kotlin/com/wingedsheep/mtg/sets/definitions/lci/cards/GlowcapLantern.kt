@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Implementation notes:
  * - "Whenever this creature attacks, it explores" is granted to the equipped creature via
- *   [GrantTriggeredAbility] + [Triggers.attacks] (SELF binding). The [Effects.Explore] targets
+ *   [GrantTriggeredAbility] + `Triggers.<subject>.attacks(requires)` (SELF binding). The [Effects.Explore] targets
  *   [EffectTarget.Self] — the granted ability's source, i.e. the equipped creature — so "it"
  *   explores and any +1/+1 counter lands on that creature.
  * - "You may look at the top card of your library any time" is the filterless player-permission
@@ -52,8 +52,7 @@ val GlowcapLantern = card("Glowcap Lantern") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.attacks().event,
-                binding = Triggers.attacks().binding,
+                trigger = Triggers.self.attacks(),
                 effect = Effects.Explore(EffectTarget.Self)
             ),
             filter = Filters.EquippedCreature

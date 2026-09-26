@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * Evoke is the first-class [card] field `evoke` (cf. Mulldrifter) — the engine supplies the
  * "sacrificed when it enters" trigger itself, so none is written here. The token rider is a
- * [Triggers.LeavesBattlefield] trigger (not a dies trigger — it also fires on exile and bounce)
+ * `Triggers.self.leaves()` trigger (not a dies trigger — it also fires on exile and bounce)
  * whose effect is a single [Effects.CreateToken] at the default count of one.
  */
 val WalkerOfTheGrove = card("Walker of the Grove") {
@@ -31,7 +31,7 @@ val WalkerOfTheGrove = card("Walker of the Grove") {
     evoke = "{4}{G}"
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.CreateToken(
             power = 4,
             toughness = 4,

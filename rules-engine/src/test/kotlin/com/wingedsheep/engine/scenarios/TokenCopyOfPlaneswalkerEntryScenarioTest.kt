@@ -9,12 +9,13 @@ import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * CR 306.5b for token copies: a token that's a copy of a planeswalker enters with that
@@ -37,7 +38,7 @@ class TokenCopyOfPlaneswalkerEntryScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Create a token that's a copy of target planeswalker."
         spell {
-            target = Targets.Planeswalker
+            target = TargetObject(filter = TargetFilter.Planeswalker)
             effect = Effects.CreateTokenCopyOfTarget(EffectTarget.ContextTarget(0))
         }
     }

@@ -1,5 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.blb.cards
 
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -34,7 +35,7 @@ val TenderWildguide = card("Tender Wildguide") {
 
     // Offspring ETB: create token copy when kicked
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = WasKicked
         effect = Effects.CreateTokenCopyOfSelf(overridePower = 1, overrideToughness = 1)
     }
@@ -50,7 +51,7 @@ val TenderWildguide = card("Tender Wildguide") {
     // {T}: Put a +1/+1 counter on this creature
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.AddCounters("PLUS_ONE_PLUS_ONE", 1, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
         description = "{T}: Put a +1/+1 counter on this creature"
     }
 

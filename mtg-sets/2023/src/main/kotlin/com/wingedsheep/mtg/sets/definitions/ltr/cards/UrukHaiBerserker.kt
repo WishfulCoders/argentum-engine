@@ -22,7 +22,7 @@ val UrukHaiBerserker = card("Uruk-hai Berserker") {
     oracleText = "When this creature enters, the Ring tempts you."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.TheRingTemptsYou()
     }
 

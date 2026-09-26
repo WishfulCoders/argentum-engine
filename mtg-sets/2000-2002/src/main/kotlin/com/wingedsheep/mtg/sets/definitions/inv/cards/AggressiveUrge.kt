@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Aggressive Urge
@@ -20,9 +19,8 @@ val AggressiveUrge = card("Aggressive Urge") {
     oracleText = "Target creature gets +1/+1 until end of turn.\nDraw a card."
 
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.ModifyStats(power = 1, toughness = 1, target = t)
-            .then(Effects.DrawCards(1))
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(power = 1, toughness = 1, target = t) then Effects.DrawCards(1)
     }
 
     metadata {

@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.akh.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Electrify
@@ -18,7 +18,7 @@ val Electrify = card("Electrify") {
     oracleText = "Electrify deals 4 damage to target creature."
 
     spell {
-        val creature = target("target creature", Targets.Creature)
+        val creature = target(TargetFilter.Creature)
         effect = Effects.DealDamage(4, creature)
     }
 

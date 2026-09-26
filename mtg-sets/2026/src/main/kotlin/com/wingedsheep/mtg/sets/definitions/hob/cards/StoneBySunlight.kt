@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Stone by Sunlight — The Hobbit #27
@@ -36,15 +35,13 @@ val StoneBySunlight = card("Stone by Sunlight") {
     spell {
         modal(chooseCount = 1) {
             mode("Destroy target creature with power 4 or greater") {
-                val t = target("target", TargetCreature(filter = TargetFilter.Creature.powerAtLeast(4)))
+                val t = target(TargetFilter.Creature.powerAtLeast(4))
                 effect = Effects.Destroy(t)
             }
             mode("Target creature becomes an artifact and gains indestructible until end of turn") {
-                val t = target("target", TargetCreature())
-                effect = Effects.Composite(
-                    Effects.AddCardType("ARTIFACT", t, Duration.EndOfTurn),
+                val t = target(TargetFilter.Creature)
+                effect = Effects.AddCardType("ARTIFACT", t, Duration.EndOfTurn) then
                     Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, t, Duration.EndOfTurn)
-                )
             }
         }
     }

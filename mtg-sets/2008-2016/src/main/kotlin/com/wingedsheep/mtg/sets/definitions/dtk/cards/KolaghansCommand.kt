@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Kolaghan's Command
@@ -40,19 +41,19 @@ val KolaghansCommand = card("Kolaghan's Command") {
     spell {
         modal(chooseCount = 2) {
             mode("Return target creature card from your graveyard to your hand") {
-                val creatureCard = target("creature card in your graveyard", Targets.CreatureCardInYourGraveyard)
+                val creatureCard = target(TargetFilter.CreatureInYourGraveyard)
                 effect = Effects.ReturnToHand(creatureCard)
             }
             mode("Target player discards a card") {
-                val player = target("target player", Targets.Player)
+                val player = target(Targets.Player)
                 effect = Effects.Discard(1, player)
             }
             mode("Destroy target artifact") {
-                val artifact = target("target artifact", Targets.Artifact)
+                val artifact = target(TargetFilter.Artifact)
                 effect = Effects.Destroy(artifact)
             }
             mode("Kolaghan's Command deals 2 damage to any target") {
-                val victim = target("any target", Targets.Any)
+                val victim = target(Targets.Any)
                 effect = Effects.DealDamage(2, victim)
             }
         }

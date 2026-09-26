@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Case of the Gateway Express — Murders at Karlov Manor #8
@@ -24,8 +23,8 @@ import com.wingedsheep.sdk.scripting.targets.TargetCreature
  *
  * The ETB is a group ping, and *who* deals the damage matters: each creature you control is its own
  * damage source, so a deathtouch or lifelink creature in the group applies its own keyword to its
- * own point. That is [Effects.ForEachInGroup] with `damageSource = EffectTarget.Self` — inside a
- * group iteration `Self` binds to the iterated creature, not to the Case — rather than one lump of
+ * own point. That is [Effects.ForEachInGroup] with `damageSource = EffectTarget.IterationEntity` — inside a
+ * group iteration `IterationEntity` binds to the iterated creature, not to the Case — rather than one lump of
  * damage from the enchantment.
  *
  * "Three or more creatures attacked this turn" names no player, so it is
@@ -46,14 +45,14 @@ val CaseOfTheGatewayExpress = card("Case of the Gateway Express") {
         "Solved — Creatures you control get +1/+0."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = TargetCreature(filter = TargetFilter.Creature.opponentControls())
+        val creature = target(TargetFilter.Creature.opponentControls())
+        trigger = Triggers.self.enters()
         effect = Effects.ForEachInGroup(
             filter = Filters.AllControlledCreatures,
             effect = Effects.DealDamage(
                 amount = 1,
-                target = EffectTarget.ContextTarget(0),
-                damageSource = EffectTarget.Self
+                target = creature,
+                damageSource = EffectTarget.IterationEntity
             )
         )
     }

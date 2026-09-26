@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Inevitable Defeat
@@ -27,7 +27,7 @@ val InevitableDefeat = card("Inevitable Defeat") {
         "Exile target nonland permanent. Its controller loses 3 life and you gain 3 life."
 
     spell {
-        val permanent = target("nonland permanent", Targets.NonlandPermanent)
+        val permanent = target(TargetFilter.NonlandPermanent)
         effect = Effects.LoseLife(3, EffectTarget.TargetController) then
             Effects.GainLife(3, EffectTarget.Controller) then
             Effects.Exile(permanent)

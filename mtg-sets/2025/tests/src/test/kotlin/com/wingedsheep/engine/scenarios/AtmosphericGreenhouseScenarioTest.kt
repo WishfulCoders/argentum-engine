@@ -14,7 +14,7 @@ import io.kotest.matchers.shouldBe
  * Regression for a bug found by the card linter (sdk-analysis §1.1): the ETB's
  * `ForEachInGroup` inner effect targeted `ContextTarget(0)` — which reads the (empty)
  * cast-time target list, not the iterated creature — so the trigger silently did nothing.
- * The iteration entity is addressed with `EffectTarget.Self`.
+ * The iteration entity is addressed with `EffectTarget.IterationEntity`.
  */
 class AtmosphericGreenhouseScenarioTest : ScenarioTestBase() {
 

@@ -22,8 +22,7 @@ val ThirstForKnowledge = card("Thirst for Knowledge") {
     oracleText = "Draw three cards. Then discard two cards unless you discard an artifact card."
 
     spell {
-        effect = Effects.DrawCards(3)
-            .then(Effects.DiscardUnlessMatching(2, GameObjectFilter.Artifact))
+        effect = Effects.DrawCards(3) then Effects.DiscardUnlessMatching(2, GameObjectFilter.Artifact)
     }
 
     metadata {

@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Gather the White Lotus
@@ -30,20 +30,18 @@ val GatherTheWhiteLotus = card("Gather the White Lotus") {
         "and the rest on top in any order.)"
 
     spell {
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                count = DynamicAmount.Count(
-                    player = Player.You,
-                    zone = Zone.BATTLEFIELD,
-                    filter = GameObjectFilter.Land.withSubtype("Plains"),
-                ),
-                power = 1,
-                toughness = 1,
-                colors = setOf(Color.WHITE),
-                creatureTypes = setOf("Ally"),
+        effect = Effects.CreateToken(
+            count = DynamicAmounts.count(
+                Player.You,
+                Zone.BATTLEFIELD,
+                GameObjectFilter.Land.withSubtype("Plains"),
             ),
-            Effects.Scry(2),
-        )
+            power = 1,
+            toughness = 1,
+            colors = setOf(Color.WHITE),
+            creatureTypes = setOf("Ally"),
+        ) then
+            Effects.Scry(2)
     }
 
     metadata {

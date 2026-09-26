@@ -1,21 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Extraordinary Journey
@@ -53,35 +47,23 @@ val ExtraordinaryJourney = card("Extraordinary Journey") {
         "or was cast from exile, you draw a card. This ability triggers only once each turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        target = TargetPermanent(
-            optional = true,
-            filter = TargetFilter.Creature,
-            dynamicMaxCount = DynamicAmount.CastX
-        )
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.ChosenTargets,
-                storeAs = "extraordinaryJourney_exiled"
-            ),
-            MoveCollectionEffect(
-                from = "extraordinaryJourney_exiled",
-                destination = CardDestination.ToZone(Zone.EXILE)
-            ),
-            GrantMayPlayFromExileEffect(
-                from = "extraordinaryJourney_exiled",
+        targets(TargetFilter.Creature, optional = true, dynamicMaxCount = DynamicAmounts.castX())
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val extraordinaryJourneyExiled = gather(CardSource.ChosenTargets)
+            exile(extraordinaryJourneyExiled)
+            run(Effects.GrantMayPlayFromExile(
+                from = extraordinaryJourneyExiled,
                 expiry = MayPlayExpiry.Permanent,
                 ownerControls = true
-            )
-        )
+            ))
+        }
         description = "When this enchantment enters, exile up to X target creatures. For each of " +
             "those cards, its owner may play it for as long as it remains exiled."
     }
 
     triggeredAbility {
-        trigger = Triggers.OneOrMorePermanentsEnter(
-            GameObjectFilter.Creature.nontoken().anyController()
-        )
+        trigger = Triggers.oneOrMore(GameObjectFilter.Creature.nontoken().anyController()).enter()
         interveningIf = Conditions.AnyEnteredOrWasCastFromExile
         oncePerTurn = true
         effect = Effects.DrawCards(1)

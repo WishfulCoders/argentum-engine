@@ -9,8 +9,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -30,11 +28,8 @@ val InspiringOverseer = card("Inspiring Overseer") {
     toughness = 1
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            GainLifeEffect(1),
-            DrawCardsEffect(1)
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.GainLife(1) then Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.COMMON

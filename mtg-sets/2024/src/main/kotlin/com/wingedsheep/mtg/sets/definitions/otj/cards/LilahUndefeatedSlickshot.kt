@@ -46,10 +46,7 @@ val LilahUndefeatedSlickshot = card("Lilah, Undefeated Slickshot") {
     prowess()
 
     triggeredAbility {
-        trigger = Triggers.youCastSpell(
-            spellFilter = GameObjectFilter.InstantOrSorcery and GameObjectFilter.Multicolored,
-            requires = setOf(SpellCastPredicate.CastFromZone(Zone.HAND)),
-        )
+        trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery and GameObjectFilter.Multicolored, requires = setOf(SpellCastPredicate.CastFromZone(Zone.HAND)))
         effect = Effects.MarkSpellPlotOnResolve(target = EffectTarget.TriggeringEntity)
         description = "Whenever you cast a multicolored instant or sorcery spell from your hand, " +
             "exile that spell instead of putting it into your graveyard as it resolves. It becomes plotted."

@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.woe.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Monstrous Rage
@@ -25,11 +25,8 @@ val MonstrousRage = card("Monstrous Rage") {
         "(If you control another Role on it, put that one into the graveyard. Enchanted creature gets +1/+1 and has trample.)"
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.ModifyStats(+2, 0, t),
-            Effects.CreateRoleToken("Monster Role", t)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(+2, 0, t) then Effects.CreateRoleToken("Monster Role", t)
     }
 
     metadata {

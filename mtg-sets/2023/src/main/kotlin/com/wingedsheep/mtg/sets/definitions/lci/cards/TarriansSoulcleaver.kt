@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
@@ -24,7 +24,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Implementation notes:
  * - Vigilance is a static [GrantKeyword] scoped to [Filters.EquippedCreature] (standard
  *   equipment keyword grant, à la Sword of Vengeance).
- * - The death payoff is a [Triggers.leavesBattlefield] trigger with `to = Zone.GRAVEYARD`
+ * - The death payoff is a `Triggers.<subject>.leaves(to, excludeTo, excludeSacrifice)` trigger with `to = Zone.GRAVEYARD`
  *   over the union filter `Artifact or Creature` (any controller — no controller predicate),
  *   bound [TriggerBinding.OTHER] so the Soulcleaver itself (an artifact) never counts
  *   ("another"). The counter lands on [EffectTarget.EquippedCreature]; if the Equipment is
@@ -45,12 +45,8 @@ val TarriansSoulcleaver = card("Tarrian's Soulcleaver") {
     }
 
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Artifact.or(GameObjectFilter.Creature),
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.OTHER,
-        )
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.EquippedCreature)
+        trigger = Triggers.another(GameObjectFilter.Artifact.or(GameObjectFilter.Creature)).dies()
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.EquippedCreature)
     }
 
     equipAbility("{2}")

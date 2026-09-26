@@ -3,7 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.eoe.cards
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Honor
@@ -20,9 +20,9 @@ val Honor = card("Honor") {
 
     // Spell effect: put +1/+1 counter on target creature and draw a card
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.AddCounters(com.wingedsheep.sdk.core.Counters.PLUS_ONE_PLUS_ONE, 1, creature)
-            .then(Effects.DrawCards(1))
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(com.wingedsheep.sdk.core.CounterType.PLUS_ONE_PLUS_ONE, 1, creature) then
+            Effects.DrawCards(1)
     }
 
     metadata {

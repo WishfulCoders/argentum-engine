@@ -5,8 +5,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Esper Charm
@@ -35,14 +34,14 @@ val EsperCharm = card("Esper Charm") {
     spell {
         modal(chooseCount = 1) {
             mode("Destroy target enchantment") {
-                val t = target("target", TargetPermanent(filter = TargetFilter.Enchantment))
+                val t = target(TargetFilter.Enchantment)
                 effect = Effects.Destroy(t)
             }
             mode("Draw two cards") {
                 effect = Effects.DrawCards(2)
             }
             mode("Target player discards two cards") {
-                val t = target("target", TargetPlayer())
+                val t = target(Targets.Player)
                 effect = Patterns.Hand.discardCards(2, t)
             }
         }

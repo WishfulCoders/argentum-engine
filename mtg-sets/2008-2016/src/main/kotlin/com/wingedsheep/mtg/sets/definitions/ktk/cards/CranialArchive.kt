@@ -8,9 +8,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
 import com.wingedsheep.sdk.scripting.references.Player
 
@@ -29,20 +26,12 @@ val CranialArchive = card("Cranial Archive") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.ExileSelf)
-        target("player", Targets.Player)
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromZone(Zone.GRAVEYARD, Player.TargetPlayer),
-                    storeAs = "graveyardCards"
-                ),
-                MoveCollectionEffect(
-                    from = "graveyardCards",
-                    destination = CardDestination.ToZone(Zone.LIBRARY, Player.TargetPlayer, ZonePlacement.Shuffled)
-                ),
-                DrawCardsEffect(1)
-            )
-        )
+        target(Targets.Player)
+        effect = Effects.Pipeline {
+            val graveyardCards = gather(CardSource.FromZone(Zone.GRAVEYARD, Player.TargetPlayer))
+            move(graveyardCards, CardDestination.ToZone(Zone.LIBRARY, Player.TargetPlayer, ZonePlacement.Shuffled))
+            run(Effects.DrawCards(1))
+        }
     }
 
     metadata {

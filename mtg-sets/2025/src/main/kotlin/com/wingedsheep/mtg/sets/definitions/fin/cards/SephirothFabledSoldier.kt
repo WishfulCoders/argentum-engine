@@ -1,24 +1,18 @@
 package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.grantedTriggeredAbility
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.IncrementAbilityResolutionCountEffect
-import com.wingedsheep.sdk.scripting.effects.OptionalCostEffect
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -67,22 +61,16 @@ private val SephirothOneWingedAngel = card("Sephiroth, One-Winged Angel") {
 
     // Super Nova — As this creature transforms into Sephiroth, One-Winged Angel, you get an emblem.
     triggeredAbility {
-        trigger = Triggers.TransformsToBack
+        trigger = Triggers.self.transforms(true)
         effect = Effects.CreateGlobalTriggeredAbility(
             duration = Duration.Permanent,
-            ability = TriggeredAbility.create(
-                trigger = Triggers.AnyCreatureDies.event,
-                binding = Triggers.AnyCreatureDies.binding,
-                effect = Effects.Composite(
-                    listOf(
-                        Effects.LoseLife(1, EffectTarget.ContextTarget(0)),
-                        Effects.GainLife(1),
-                    )
-                ),
-                targetRequirement = Targets.Opponent,
-                descriptionOverride = "Whenever a creature dies, target opponent loses 1 life and " +
-                    "you gain 1 life.",
-            ),
+            ability = grantedTriggeredAbility {
+                trigger = Triggers.a(GameObjectFilter.Creature).dies()
+                val opponent = target(Targets.Opponent)
+                effect = Effects.LoseLife(1, opponent) then Effects.GainLife(1)
+                description = "Whenever a creature dies, target opponent loses 1 life and " +
+                    "you gain 1 life."
+            },
             descriptionOverride = "Whenever a creature dies, target opponent loses 1 life and you " +
                 "gain 1 life.",
         )
@@ -94,12 +82,11 @@ private val SephirothOneWingedAngel = card("Sephiroth, One-Winged Angel") {
     // Whenever Sephiroth attacks, you may sacrifice any number of other creatures. If you do, draw
     // that many cards.
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = SacrificeEffect(
+        trigger = Triggers.self.attacks()
+        effect = Effects.SacrificeAnyNumber(
             filter = GameObjectFilter.Creature,
-            any = true,
             excludeSource = true,
-        ).then(Effects.DrawCards(DynamicAmounts.permanentsSacrificedThisWay()))
+        ) then Effects.DrawCards(DynamicAmounts.permanentsSacrificedThisWay())
         description = "Whenever Sephiroth attacks, you may sacrifice any number of other creatures. " +
             "If you do, draw that many cards."
     }
@@ -126,27 +113,27 @@ private val SephirothFabledSoldierFrontFace = card("Sephiroth, Fabled SOLDIER") 
     // Whenever Sephiroth enters or attacks, you may sacrifice another creature. If you do, draw a
     // card. — modeled as two sibling triggers sharing one body.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = OptionalCostEffect(
-            cost = SacrificeEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.MayPay(
+            cost = Effects.SacrificeOwn(
                 filter = GameObjectFilter.Creature,
                 count = 1,
                 excludeSource = true,
             ),
-            ifPaid = Effects.DrawCards(1),
+            then = Effects.DrawCards(1),
         )
         description = "Whenever Sephiroth enters, you may sacrifice another creature. If you do, " +
             "draw a card."
     }
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = OptionalCostEffect(
-            cost = SacrificeEffect(
+        trigger = Triggers.self.attacks()
+        effect = Effects.MayPay(
+            cost = Effects.SacrificeOwn(
                 filter = GameObjectFilter.Creature,
                 count = 1,
                 excludeSource = true,
             ),
-            ifPaid = Effects.DrawCards(1),
+            then = Effects.DrawCards(1),
         )
         description = "Whenever Sephiroth attacks, you may sacrifice another creature. If you do, " +
             "draw a card."
@@ -155,23 +142,13 @@ private val SephirothFabledSoldierFrontFace = card("Sephiroth, Fabled SOLDIER") 
     // Whenever another creature dies, target opponent loses 1 life and you gain 1 life. If this is
     // the fourth time this ability has resolved this turn, transform Sephiroth.
     triggeredAbility {
-        trigger = Triggers.leavesBattlefield(
-            filter = GameObjectFilter.Creature,
-            to = Zone.GRAVEYARD,
-            binding = TriggerBinding.OTHER,
-        )
-        val opponent = target("target opponent", Targets.Opponent)
-        effect = Effects.Composite(
-            listOf(
-                Effects.LoseLife(1, opponent),
-                Effects.GainLife(1),
-            )
-        ).then(IncrementAbilityResolutionCountEffect)
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.SourceAbilityResolvedNTimes(4),
-                    effect = TransformEffect(EffectTarget.Self),
-                )
+        trigger = Triggers.another(GameObjectFilter.Creature).dies()
+        val opponent = target(Targets.Opponent)
+        effect = (Effects.LoseLife(1, opponent) then
+            Effects.GainLife(1)) then IncrementAbilityResolutionCountEffect then
+            Effects.If(
+                condition = Conditions.SourceAbilityResolvedNTimes(4),
+                then = Effects.Transform(EffectTarget.Self),
             )
         description = "Whenever another creature dies, target opponent loses 1 life and you gain 1 " +
             "life. If this is the fourth time this ability has resolved this turn, transform Sephiroth."

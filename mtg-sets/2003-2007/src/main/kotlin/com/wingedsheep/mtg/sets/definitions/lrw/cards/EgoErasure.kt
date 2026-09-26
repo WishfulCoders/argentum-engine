@@ -21,7 +21,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * so a creature that arrives after the spell was cast is still hit. `targetPlayerControls` binds
  * the group's controller predicate to that target rather than to the spell's controller.
  *
- * Both riders land on each member with [EffectTarget.Self] inside the iteration — the same shape
+ * Both riders land on each member with [EffectTarget.IterationEntity] inside the iteration — the same shape
  * Surge of Thoughtweft uses — so a creature that leaves mid-resolution simply drops out.
  *
  * Note: "Tribal" was errata'd to "Kindred" in 2024.
@@ -36,13 +36,11 @@ val EgoErasure = card("Ego Erasure") {
     keywords(Keyword.CHANGELING)
 
     spell {
-        val player = target("target player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.targetPlayerControls(player)),
-            Effects.Composite(
-                Effects.ModifyStats(-2, 0, EffectTarget.Self),
-                Effects.LoseAllCreatureTypes(EffectTarget.Self)
-            )
+            Effects.ModifyStats(-2, 0, EffectTarget.IterationEntity) then
+                Effects.LoseAllCreatureTypes(EffectTarget.IterationEntity)
         )
     }
 

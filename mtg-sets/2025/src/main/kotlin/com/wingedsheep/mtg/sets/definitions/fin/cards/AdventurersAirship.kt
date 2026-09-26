@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -28,11 +27,8 @@ val AdventurersAirship = card("Adventurer's Airship") {
     toughness = 2
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(
-            DrawCardsEffect(1),
-            Patterns.Hand.discardCards(1)
-        )
+        trigger = Triggers.self.attacks()
+        effect = Effects.DrawCards(1) then Patterns.Hand.discardCards(1)
     }
     keywordAbility(KeywordAbility.crew(2))
     metadata {

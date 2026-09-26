@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  * gathered once from the battlefield and moved as one collection, so every permanent leaves
  * simultaneously and none of them sees the others go. `noRegenerate = true` is the printed "they
  * can't be regenerated" — the flag rides on the collection move rather than needing its own
- * `CantBeRegenerated` shield per permanent. [Triggers.Dies] is the plain battlefield → graveyard
+ * `CantBeRegenerated` shield per permanent. `Triggers.self.dies()` is the plain battlefield → graveyard
  * self-trigger; the sweep reads nothing off the dying Child, so no last-known information is
  * involved.
  */
@@ -35,7 +35,7 @@ val ChildOfAlara = card("Child of Alara") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Patterns.Group.destroyAllPipeline(
             filter = GameObjectFilter.NonlandPermanent,
             noRegenerate = true

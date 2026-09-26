@@ -2,12 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.firebending
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.CreateTokenEffect
 
 /**
  * Fire Nation Attacks
@@ -42,8 +41,8 @@ val FireNationAttacks = card("Fire Nation Attacks") {
         "Flashback {8}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
 
     spell {
-        effect = CreateTokenEffect(
-            count = DynamicAmount.Fixed(2),
+        effect = Effects.CreateToken(
+            count = 2,
             power = 2,
             toughness = 2,
             colors = setOf(Color.RED),

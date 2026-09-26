@@ -4,11 +4,11 @@ import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantMayCastFromLinkedExile
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Intrepid Paleontologist
@@ -45,7 +45,7 @@ val IntrepidPaleontologist = card("Intrepid Paleontologist") {
     // permission below can find it.
     activatedAbility {
         cost = Costs.Mana("{2}")
-        val graveyardTarget = target("target card in a graveyard", Targets.CardInGraveyard)
+        val graveyardTarget = target(TargetFilter.CardInGraveyard)
         effect = Effects.Move(
             target = graveyardTarget,
             destination = Zone.EXILE,

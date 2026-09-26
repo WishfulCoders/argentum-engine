@@ -18,11 +18,8 @@ val StolenGrain = card("Stolen Grain") {
     oracleText = "Stolen Grain deals 5 damage to target opponent or planeswalker. You gain 5 life."
 
     spell {
-        val t = target("target", Targets.OpponentOrPlaneswalker)
-        effect = Effects.Composite(
-            Effects.DealDamage(5, t),
-            Effects.GainLife(5)
-        )
+        val t = target(Targets.OpponentOrPlaneswalker)
+        effect = Effects.DealDamage(5, t) then Effects.GainLife(5)
     }
 
     metadata {

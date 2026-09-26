@@ -23,7 +23,7 @@ val FlamekinSpitfire = card("Flamekin Spitfire") {
 
     activatedAbility {
         cost = Costs.Mana("{3}{R}")
-        val recipient = target("any target", Targets.Any)
+        val recipient = target(Targets.Any)
         effect = Effects.DealDamage(1, recipient)
         description = "{3}{R}: This creature deals 1 damage to any target."
     }

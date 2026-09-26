@@ -31,7 +31,7 @@ val StarfieldShepherd = card("Starfield Shepherd") {
 
     // When this creature enters, search your library for a basic Plains card or a creature card with mana value 1 or less, reveal it, put it into your hand, then shuffle.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val searchFilter = GameObjectFilter.BasicLand.withSubtype(Subtype.PLAINS) or GameObjectFilter.Creature.manaValueAtMost(1)
         effect = Patterns.Library.searchLibrary(
             filter = searchFilter,

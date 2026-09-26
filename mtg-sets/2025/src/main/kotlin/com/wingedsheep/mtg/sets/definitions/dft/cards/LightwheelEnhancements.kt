@@ -11,7 +11,7 @@ import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.MayCastSelfFromZones
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Lightwheel Enhancements — Aetherdrift #20
@@ -50,7 +50,7 @@ val LightwheelEnhancements = card("Lightwheel Enhancements") {
         "Enchanted permanent gets +1/+1 and has vigilance.\n" +
         "Max speed — You may cast this card from your graveyard."
 
-    auraTarget = TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrVehicle))
+    auraTarget = TargetObject(filter = TargetFilter(GameObjectFilter.CreatureOrVehicle))
 
     startYourEngines()
 

@@ -2,6 +2,7 @@ package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Triggers
@@ -12,10 +13,8 @@ import com.wingedsheep.sdk.scripting.GrantKeyword
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TriggerBinding
 import com.wingedsheep.sdk.scripting.effects.ChooseCreatureTypeEffect
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Orcrist, Goblin-cleaver — The Hobbit #177
@@ -56,21 +55,15 @@ val OrcristGoblinCleaver = card("Orcrist, Goblin-cleaver") {
     }
 
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            DamageType.Combat,
-            RecipientFilter.AnyPlayer,
-            binding = TriggerBinding.ATTACHED
-        )
-        effect = Effects.Composite(
-            ChooseCreatureTypeEffect,
+        trigger = Triggers.attached.dealsCombatDamage(Recipient.AnyPlayer)
+        effect = ChooseCreatureTypeEffect then
             Effects.CreateTreasure(
-                count = DynamicAmount.Count(
+                count = DynamicAmounts.count(
                     Player.You,
                     Zone.BATTLEFIELD,
                     GameObjectFilter.Creature.withSubtypeFromVariable("chosenCreatureType")
                 )
             )
-        )
         description = "Whenever equipped creature deals combat damage to a player, choose a " +
             "creature type. Create a Treasure token for each creature you control of that type."
     }

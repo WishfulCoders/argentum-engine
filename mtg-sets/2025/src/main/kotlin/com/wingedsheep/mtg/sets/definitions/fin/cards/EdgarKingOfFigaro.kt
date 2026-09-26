@@ -35,7 +35,7 @@ val EdgarKingOfFigaro = card("Edgar, King of Figaro") {
 
     // When Edgar enters, draw a card for each artifact you control.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.DrawCards(
             DynamicAmounts.battlefield(Player.You, GameObjectFilter.Artifact).count()
         )

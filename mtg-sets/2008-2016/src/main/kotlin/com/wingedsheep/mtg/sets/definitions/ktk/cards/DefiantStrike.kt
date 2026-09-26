@@ -3,7 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.ktk.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Defiant Strike
@@ -18,9 +18,8 @@ val DefiantStrike = card("Defiant Strike") {
     oracleText = "Target creature gets +1/+0 until end of turn. Draw a card."
 
     spell {
-        val t = target("target", TargetCreature())
-        effect = Effects.ModifyStats(1, 0, t)
-            .then(Effects.DrawCards(1))
+        val t = target(TargetFilter.Creature)
+        effect = Effects.ModifyStats(1, 0, t) then Effects.DrawCards(1)
     }
 
     metadata {

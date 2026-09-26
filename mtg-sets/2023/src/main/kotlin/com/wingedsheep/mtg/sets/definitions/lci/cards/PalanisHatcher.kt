@@ -9,10 +9,10 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantKeyword
-import com.wingedsheep.sdk.scripting.effects.ForceSacrificeEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Palani's Hatcher
@@ -46,7 +46,7 @@ val PalanisHatcher = card("Palani's Hatcher") {
     }
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 0,
             toughness = 1,
@@ -58,14 +58,13 @@ val PalanisHatcher = card("Palani's Hatcher") {
     }
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
         interveningIf = Conditions.YouControl(GameObjectFilter.Creature.withSubtype("Egg"))
-        effect = Effects.Composite(listOf(
-            ForceSacrificeEffect(
-                filter = GameObjectFilter.Creature.withSubtype("Egg"),
-                count = 1,
-                target = EffectTarget.PlayerRef(Player.You)
-            ),
+        effect = Effects.Sacrifice(
+            filter = GameObjectFilter.Creature.withSubtype("Egg"),
+            count = 1,
+            target = EffectTarget.PlayerRef(Player.You)
+        ) then
             Effects.CreateToken(
                 power = 3,
                 toughness = 3,
@@ -74,7 +73,6 @@ val PalanisHatcher = card("Palani's Hatcher") {
                 count = 1,
                 imageUri = "https://cards.scryfall.io/normal/front/2/b/2bbb7151-cf71-49bc-8d99-b0230d5465e5.jpg?1699017364"
             )
-        ))
     }
 
     metadata {

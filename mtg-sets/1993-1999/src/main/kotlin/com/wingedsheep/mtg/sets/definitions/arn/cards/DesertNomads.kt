@@ -6,8 +6,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.PreventDamage
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
-import com.wingedsheep.sdk.scripting.events.SourceFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Desert Nomads
@@ -20,7 +19,7 @@ import com.wingedsheep.sdk.scripting.events.SourceFilter
  * [com.wingedsheep.sdk.core.Subtype.DESERT]).
  *
  * The Desert damage-prevention clause is a continuous [PreventDamage] replacement (CR 615):
- *  - recipient filter = [RecipientFilter.Self] (only Desert Nomads itself),
+ *  - recipient filter = [Recipient.Self] (only Desert Nomads itself),
  *  - source filter = any Desert (a permanent with the Desert land subtype).
  */
 val DesertNomads = card("Desert Nomads") {
@@ -38,8 +37,8 @@ val DesertNomads = card("Desert Nomads") {
     replacementEffect(
         PreventDamage(
             appliesTo = EventPattern.DamageEvent(
-                recipient = RecipientFilter.Self,
-                source = SourceFilter.Matching(GameObjectFilter.Land.withSubtype("Desert"))
+                recipient = Recipient.Self,
+                source = GameObjectFilter.Land.withSubtype("Desert")
             )
         )
     )

@@ -1,13 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.ori.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TriggeredAbility
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Infernal Scarring
@@ -28,7 +29,7 @@ val InfernalScarring = card("Infernal Scarring") {
     oracleText = "Enchant creature\n" +
         "Enchanted creature gets +2/+0 and has \"When this creature dies, draw a card.\""
 
-    auraTarget = Targets.Creature
+    auraTarget = TargetObject(filter = TargetFilter.Creature)
 
     staticAbility {
         ability = ModifyStats(2, 0)
@@ -37,8 +38,7 @@ val InfernalScarring = card("Infernal Scarring") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.Dies.event,
-                binding = Triggers.Dies.binding,
+                trigger = Triggers.self.dies(),
                 effect = Effects.DrawCards(1)
             )
         )

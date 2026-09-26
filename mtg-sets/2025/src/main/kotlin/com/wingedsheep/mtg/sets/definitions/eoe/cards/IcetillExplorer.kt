@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GrantAdditionalLandDrop
 import com.wingedsheep.sdk.scripting.MayPlayLandsFromGraveyard
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Icetill Explorer
@@ -33,7 +34,7 @@ val IcetillExplorer = card("Icetill Explorer") {
     }
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = Patterns.Library.mill(1)
         description = "Landfall — Whenever a land you control enters, mill a card."
     }

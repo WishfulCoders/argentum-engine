@@ -4,7 +4,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Blade Banish — Ikoria: Lair of Behemoths #4
@@ -24,7 +23,7 @@ val BladeBanish = card("Blade Banish") {
     oracleText = "Exile target creature with power 4 or greater."
 
     spell {
-        val creature = target("target", TargetCreature(filter = TargetFilter.Creature.powerAtLeast(4)))
+        val creature = target(TargetFilter.Creature.powerAtLeast(4))
         effect = Effects.Exile(creature)
     }
 

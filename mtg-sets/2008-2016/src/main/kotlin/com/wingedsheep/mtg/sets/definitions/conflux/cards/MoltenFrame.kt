@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Molten Frame
@@ -28,7 +27,7 @@ val MoltenFrame = card("Molten Frame") {
         "Cycling {2} ({2}, Discard this card: Draw a card.)"
 
     spell {
-        val t = target("target", TargetPermanent(filter = TargetFilter(GameObjectFilter.ArtifactCreature)))
+        val t = target(TargetFilter(GameObjectFilter.ArtifactCreature))
         effect = Effects.Destroy(t)
     }
 

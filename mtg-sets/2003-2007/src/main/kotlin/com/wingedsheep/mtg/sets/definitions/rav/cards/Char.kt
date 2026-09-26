@@ -4,8 +4,8 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.AnyTarget
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Char
@@ -25,9 +25,8 @@ val Char = card("Char") {
     oracleText = "Char deals 4 damage to any target and 2 damage to you."
 
     spell {
-        val victim = target("any target", AnyTarget())
-        effect = Effects.DealDamage(4, victim) then
-            Effects.DealDamage(2, EffectTarget.PlayerRef(Player.You))
+        val victim = target(Targets.Any)
+        effect = Effects.DealDamage(4, victim) then Effects.DealDamage(2, EffectTarget.PlayerRef(Player.You))
     }
 
     metadata {

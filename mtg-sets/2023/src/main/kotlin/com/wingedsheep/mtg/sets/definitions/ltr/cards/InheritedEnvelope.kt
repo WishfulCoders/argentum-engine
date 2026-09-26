@@ -21,7 +21,7 @@ val InheritedEnvelope = card("Inherited Envelope") {
     oracleText = "When this artifact enters, the Ring tempts you.\n{T}: Add one mana of any color."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.TheRingTemptsYou()
     }
 

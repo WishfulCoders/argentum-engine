@@ -1,9 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.inv.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -23,7 +23,7 @@ val LlanowarVanguard = card("Llanowar Vanguard") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = ModifyStatsEffect(0, 4, EffectTarget.Self)
+        effect = Effects.ModifyStats(0, 4, EffectTarget.Self)
     }
 
     metadata {

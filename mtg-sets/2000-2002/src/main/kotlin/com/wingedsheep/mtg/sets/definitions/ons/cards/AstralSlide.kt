@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
-import com.wingedsheep.sdk.dsl.Targets
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.Patterns
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Astral Slide
@@ -22,9 +22,9 @@ val AstralSlide = card("Astral Slide") {
     oracleText = "Whenever a player cycles a card, you may exile target creature. If you do, return that card to the battlefield under its owner's control at the beginning of the next end step."
 
     triggeredAbility {
-        trigger = Triggers.AnyPlayerCycles
-        val t = target("target", Targets.Creature)
-        effect = MayEffect(Patterns.Exile.exileUntilEndStep(t))
+        trigger = Triggers.anyPlayer.cycles()
+        val t = target(TargetFilter.Creature)
+        effect = Effects.May(Patterns.Exile.exileUntilEndStep(t))
     }
 
     metadata {

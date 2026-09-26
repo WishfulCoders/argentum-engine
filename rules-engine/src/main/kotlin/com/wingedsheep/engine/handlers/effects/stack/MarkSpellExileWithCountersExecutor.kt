@@ -3,7 +3,6 @@ package com.wingedsheep.engine.handlers.effects.stack
 import com.wingedsheep.engine.core.EffectResult
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.handlers.effects.EffectExecutor
-import com.wingedsheep.engine.handlers.effects.permanent.counters.resolveCounterType
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.identity.AfterResolveDestinationComponent
 import com.wingedsheep.sdk.scripting.effects.MarkSpellExileWithCountersEffect
@@ -32,7 +31,7 @@ class MarkSpellExileWithCountersExecutor : EffectExecutor<MarkSpellExileWithCoun
         context: EffectContext
     ): EffectResult {
         val targetId = context.resolveTarget(effect.target) ?: return EffectResult.success(state)
-        val counterType = resolveCounterType(effect.counterType)
+        val counterType = effect.counterType
         val counters = List(effect.count.coerceAtLeast(0)) { counterType }
 
         val sourceId = context.sourceId

@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.shm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Scar
@@ -13,7 +13,7 @@ import com.wingedsheep.sdk.model.Rarity
  *
  * Put a -1/-1 counter on target creature.
  *
- * - [Counters.MINUS_ONE_MINUS_ONE] is the canonical `-1/-1` string constant; spelling the
+ * - [CounterType.MINUS_ONE_MINUS_ONE] is the canonical `-1/-1` string constant; spelling the
  *   counter type by hand is the classic way to end up with a counter the engine treats as a
  *   bespoke named counter instead of the real one.
  * - The counter is a permanent stat change, not a until-end-of-turn pump, so no duration is
@@ -25,8 +25,8 @@ val Scar = card("Scar") {
     oracleText = "Put a -1/-1 counter on target creature."
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = Effects.AddCounters(Counters.MINUS_ONE_MINUS_ONE, 1, t)
+        val t = target(TargetFilter.Creature)
+        effect = Effects.AddCounters(CounterType.MINUS_ONE_MINUS_ONE, 1, t)
     }
 
     metadata {

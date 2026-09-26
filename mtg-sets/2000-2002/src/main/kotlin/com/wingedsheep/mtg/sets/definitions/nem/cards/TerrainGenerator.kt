@@ -11,8 +11,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-
 
 /**
  * Terrain Generator
@@ -33,7 +31,7 @@ val TerrainGenerator = card("Terrain Generator") {
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap)
-        effect = MayEffect(Patterns.Hand.putFromHand(filter = GameObjectFilter.BasicLand, entersTapped = true))
+        effect = Effects.May(Patterns.Hand.putFromHand(filter = GameObjectFilter.BasicLand, entersTapped = true))
     }
     metadata {
         rarity = Rarity.UNCOMMON

@@ -2,11 +2,11 @@ package com.wingedsheep.mtg.sets.definitions.hob.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.storied
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AttackTax
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Dáin, Lord of the Iron Hills
@@ -43,7 +43,7 @@ val DainLordOfTheIronHills = card("Dáin, Lord of the Iron Hills") {
 
     staticAbility {
         ability = AttackTax(
-            amountPerAttacker = DynamicAmount.Fixed(1),
+            amountPerAttacker = DynamicAmounts.fixed(1),
             condition = Conditions.YouHaveEnduringStory
         )
     }

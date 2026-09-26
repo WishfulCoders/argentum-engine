@@ -67,10 +67,10 @@ class DeepfathomEchoScenarioTest : FunSpec({
 
         // Advance to player 1's begin-of-combat step. The trigger fires and goes on the stack;
         // no decision is pending yet (no target is declared at stack-placement time — target
-        // selection is embedded inside the MayEffect and runs only at resolution if yes).
+        // selection is embedded inside the Effects.May and runs only at resolution if yes).
         driver.advanceToPlayer1BeginCombat()
 
-        // Resolve the trigger: Explore runs (Forest → hand, no pause) → MayEffect → YesNoDecision.
+        // Resolve the trigger: Explore runs (Forest → hand, no pause) → Effects.May → YesNoDecision.
         driver.bothPass()
 
         // The "you may have it become a copy" prompt should be pending.
@@ -116,7 +116,7 @@ class DeepfathomEchoScenarioTest : FunSpec({
 
         driver.advanceToPlayer1BeginCombat()
 
-        // Resolve the trigger: explore (Forest → hand) → MayEffect → YesNoDecision.
+        // Resolve the trigger: explore (Forest → hand) → Effects.May → YesNoDecision.
         driver.bothPass()
 
         (driver.pendingDecision is YesNoDecision) shouldBe true

@@ -3,18 +3,19 @@ package com.wingedsheep.mtg.sets.definitions.inv.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.ConditionalStaticAbility
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.PayOrSufferEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Essence Leak
@@ -28,7 +29,7 @@ import com.wingedsheep.sdk.dsl.Costs
  * attached permanent ([GroupFilter.attachedCreature], which is scope-by-attachment and
  * works for any permanent type). The condition [Conditions.EnchantedPermanentMatches]
  * checks the enchanted permanent's color in projected state. The granted upkeep trigger
- * fires on the enchanted permanent's controller ([Triggers.YourUpkeep]) and uses a
+ * fires on the enchanted permanent's controller (`Triggers.you.beginningOf(Step.UPKEEP)`) and uses a
  * [PayOrSufferEffect] with [Costs.pay.OwnManaCost] — "pay its mana cost" reads the enchanted
  * permanent's own mana cost — otherwise that permanent ([EffectTarget.Self]) is sacrificed.
  */
@@ -40,15 +41,14 @@ val EssenceLeak = card("Essence Leak") {
         "As long as enchanted permanent is red or green, it has \"At the beginning of your " +
         "upkeep, sacrifice this permanent unless you pay its mana cost.\""
 
-    auraTarget = Targets.Permanent
+    auraTarget = TargetObject(filter = TargetFilter.Permanent)
 
     staticAbility {
         ability = ConditionalStaticAbility(
             ability = GrantTriggeredAbility(
                 ability = TriggeredAbility.create(
-                    trigger = Triggers.YourUpkeep.event,
-                    binding = Triggers.YourUpkeep.binding,
-                    effect = PayOrSufferEffect(
+                    trigger = Triggers.you.beginningOf(Step.UPKEEP),
+                    effect = Effects.PayOrSuffer(
                         cost = Costs.pay.OwnManaCost,
                         suffer = Effects.SacrificeTarget(EffectTarget.Self)
                     )

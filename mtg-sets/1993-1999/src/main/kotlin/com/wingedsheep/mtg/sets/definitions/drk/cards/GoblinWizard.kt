@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Goblin Wizard
@@ -47,9 +46,9 @@ val GoblinWizard = card("Goblin Wizard") {
     }
 
     activatedAbility {
+        val target = target(TargetFilter.Permanent.withSubtype(Subtype.GOBLIN))
         cost = Costs.Mana("{R}")
-        target = TargetObject(filter = TargetFilter.Permanent.withSubtype(Subtype.GOBLIN))
-        effect = Effects.GrantProtectionFromColor(Color.WHITE)
+        effect = Effects.GrantProtectionFromColor(Color.WHITE, target = target)
         description = "{R}: Target Goblin gains protection from white until end of turn."
     }
 

@@ -36,7 +36,7 @@ class TerrificTeamUpScenarioTest : ScenarioTestBase() {
                     .withCardOnBattlefield(1, "Hill Giant")
                     .build()
 
-                val calculator = CostCalculator(cardRegistry)
+                val calculator = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator)
                 val cost = calculator.calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Terrific Team-Up"),
@@ -56,7 +56,7 @@ class TerrificTeamUpScenarioTest : ScenarioTestBase() {
                     .withCardOnBattlefield(1, "Grizzly Bears")
                     .build()
 
-                val calculator = CostCalculator(cardRegistry)
+                val calculator = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator)
                 val cost = calculator.calculateEffectiveCost(
                     game.state,
                     cardRegistry.requireCard("Terrific Team-Up"),

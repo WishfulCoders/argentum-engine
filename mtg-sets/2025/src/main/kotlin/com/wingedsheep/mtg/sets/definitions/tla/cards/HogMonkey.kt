@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.tla.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
@@ -10,7 +10,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Hog-Monkey
@@ -37,10 +37,9 @@ val HogMonkey = card("Hog-Monkey") {
         "Exhaust — {5}: Put two +1/+1 counters on this creature. (Activate each exhaust ability only once.)"
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
         val creature = target(
-            "target creature you control with a +1/+1 counter on it",
-            TargetCreature(filter = TargetFilter(GameObjectFilter.Creature.youControl().withCounter(Counters.PLUS_ONE_PLUS_ONE)))
+            TargetFilter(GameObjectFilter.Creature.youControl().withCounter(CounterType.PLUS_ONE_PLUS_ONE)),
         )
         effect = Effects.GrantKeyword(Keyword.MENACE, creature)
         description = "At the beginning of combat on your turn, target creature you control with a +1/+1 counter on it gains menace until end of turn."
@@ -49,7 +48,7 @@ val HogMonkey = card("Hog-Monkey") {
     activatedAbility {
         isExhaust = true
         cost = Costs.Mana("{5}")
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
     }
 
     metadata {

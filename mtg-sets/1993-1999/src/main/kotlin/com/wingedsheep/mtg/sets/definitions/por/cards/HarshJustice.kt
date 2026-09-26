@@ -5,10 +5,10 @@
 package com.wingedsheep.mtg.sets.definitions.por.cards
 
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.conditions.YouWereAttackedThisStep
-import com.wingedsheep.sdk.scripting.effects.ReflectCombatDamageEffect
 
 
 /**
@@ -26,7 +26,7 @@ val HarshJustice = card("Harsh Justice") {
     spell {
         castOnlyDuring(Step.DECLARE_ATTACKERS)
         castOnlyIf(YouWereAttackedThisStep)
-        effect = ReflectCombatDamageEffect()
+        effect = Effects.ReflectCombatDamage()
     }
     metadata {
         rarity = Rarity.RARE

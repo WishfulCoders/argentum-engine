@@ -5,9 +5,9 @@
 package com.wingedsheep.mtg.sets.definitions.ulg.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
 
 
 /**
@@ -26,7 +26,7 @@ val Archivist = card("Archivist") {
     toughness = 1
     activatedAbility {
         cost = Costs.Tap
-        effect = DrawCardsEffect(1)
+        effect = Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.RARE

@@ -36,10 +36,7 @@ val SoratamiCloudskater = card("Soratami Cloudskater") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.ReturnToHand(GameObjectFilter.Land))
-        effect = Effects.Composite(
-            Effects.DrawCards(1),
-            Patterns.Hand.discardCards(1)
-        )
+        effect = Effects.DrawCards(1) then Patterns.Hand.discardCards(1)
     }
 
     metadata {

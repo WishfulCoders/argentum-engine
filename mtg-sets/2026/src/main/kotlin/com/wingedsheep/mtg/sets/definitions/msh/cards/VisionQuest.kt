@@ -1,28 +1,20 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.AddCountersToCollectionEffect
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.EmitLibrarySearchedEventEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Vision Quest — Marvel Super Heroes #237 (rare)
@@ -64,50 +56,42 @@ val VisionQuest = card("Vision Quest") {
         "way, shuffle."
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.FromMultipleZones(
-                        zones = listOf(Zone.LIBRARY, Zone.GRAVEYARD),
-                        player = Player.You,
-                        filter = GameObjectFilter.ArtifactCreature
-                            .manaValueAtMostDynamic(DynamicAmount.XValue)
-                    ),
-                    storeAs = "visionQuestSearchable"
-                ),
-                SelectFromCollectionEffect(
-                    from = "visionQuestSearchable",
-                    selection = SelectionMode.ChooseUpTo(DynamicAmount.Fixed(1)),
-                    storeSelected = "visionQuestFound",
-                    prompt = "Search your library and/or graveyard for an artifact creature card " +
-                        "with mana value X or less."
-                ),
-                MoveCollectionEffect(
-                    from = "visionQuestFound",
-                    destination = CardDestination.ToZone(Zone.BATTLEFIELD),
-                    storeMovedAs = "visionQuestCreature"
-                ),
-                AddCountersToCollectionEffect(
-                    collectionName = "visionQuestCreature",
-                    counterType = Counters.PLUS_ONE_PLUS_ONE,
-                    amount = DynamicAmount.XValue
-                ),
-                ConditionalEffect(
-                    condition = Conditions.CompareAmounts(
-                        DynamicAmount.XValue,
-                        ComparisonOperator.GTE,
-                        DynamicAmount.Fixed(4)
-                    ),
-                    effect = Effects.GrantKeyword(
-                        Keyword.HASTE,
-                        EffectTarget.PipelineTarget("visionQuestCreature"),
-                        Duration.EndOfTurn
-                    )
-                ),
-                ShuffleLibraryEffect(),
-                EmitLibrarySearchedEventEffect
+        effect = Effects.Pipeline {
+            val visionQuestSearchable = gather(
+                CardSource.FromMultipleZones(
+                    zones = listOf(Zone.LIBRARY, Zone.GRAVEYARD),
+                    player = Player.You,
+                    filter = GameObjectFilter.ArtifactCreature
+                        .manaValueAtMostDynamic(DynamicAmounts.xValue())
+                )
             )
-        )
+            val visionQuestFound = chooseUpTo(
+                1,
+                from = visionQuestSearchable,
+                prompt = "Search your library and/or graveyard for an artifact creature card " +
+                    "with mana value X or less."
+            )
+            val visionQuestCreature = moveTracked(visionQuestFound, CardDestination.ToZone(Zone.BATTLEFIELD))
+            run(Effects.AddCountersToCollection(
+                collection = visionQuestCreature,
+                counterType = CounterType.PLUS_ONE_PLUS_ONE,
+                amount = DynamicAmounts.xValue()
+            ))
+            run(Effects.If(
+                condition = Conditions.CompareAmounts(
+                    DynamicAmounts.xValue(),
+                    ComparisonOperator.GTE,
+                    4
+                ),
+                then = Effects.GrantKeyword(
+                    Keyword.HASTE,
+                    visionQuestCreature.asTarget,
+                    Duration.EndOfTurn
+                )
+            ))
+            run(Effects.ShuffleLibrary())
+            run(EmitLibrarySearchedEventEffect)
+        }
     }
 
     metadata {

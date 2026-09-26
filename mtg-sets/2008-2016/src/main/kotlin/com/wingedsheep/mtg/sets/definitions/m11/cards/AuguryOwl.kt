@@ -14,7 +14,7 @@ import com.wingedsheep.sdk.model.Rarity
  * Flying
  * When this creature enters, scry 3. (Look at the top three cards of your library, then put any number of them on the bottom and the rest on top in any order.)
  *
- * [Triggers.EntersBattlefield] plus the compact [Effects.Scry] macro — the engine expands it to the
+ * `Triggers.self.enters()` plus the compact [Effects.Scry] macro — the engine expands it to the
  * look/bottom/top pipeline.
  */
 val AuguryOwl = card("Augury Owl") {
@@ -28,7 +28,7 @@ val AuguryOwl = card("Augury Owl") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Scry(3)
     }
 

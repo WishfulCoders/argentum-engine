@@ -1,6 +1,5 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
@@ -8,15 +7,10 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CantBlock
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Voltaic Visionary // Volt-Charged Berserker (Innistrad: Crimson Vow #183)
@@ -63,27 +57,19 @@ private val VoltaicVisionaryFront = card("Voltaic Visionary") {
 
     activatedAbility {
         cost = Costs.Tap
-        effect = Effects.Composite(
-            listOf(
-                Effects.DealDamage(
-                    2,
-                    EffectTarget.PlayerRef(Player.You),
-                    damageSource = EffectTarget.Self
-                ),
-                GatherCardsEffect(
-                    source = CardSource.TopOfLibrary(DynamicAmount.Fixed(1)),
-                    storeAs = "voltaicExiled"
-                ),
-                MoveCollectionEffect(
-                    from = "voltaicExiled",
-                    destination = CardDestination.ToZone(Zone.EXILE)
-                ),
-                Effects.GrantMayPlayFromExile(
-                    from = "voltaicExiled",
-                    onPlayRider = TransformEffect(EffectTarget.Self)
-                ),
-            )
-        )
+        effect = Effects.Pipeline {
+            run(Effects.DealDamage(
+                2,
+                EffectTarget.PlayerRef(Player.You),
+                damageSource = EffectTarget.Self
+            ))
+            val voltaicExiled = gather(CardSource.TopOfLibrary(1))
+            exile(voltaicExiled)
+            run(Effects.GrantMayPlayFromExile(
+                from = voltaicExiled,
+                onPlayRider = Effects.Transform(EffectTarget.Self)
+            ))
+        }
         timing = TimingRule.SorcerySpeed
         description = "This creature deals 2 damage to you. Exile the top card of your library. " +
             "You may play that card this turn. When you play a card exiled this way, transform " +

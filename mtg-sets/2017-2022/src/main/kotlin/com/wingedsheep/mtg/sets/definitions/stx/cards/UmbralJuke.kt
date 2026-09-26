@@ -33,7 +33,7 @@ val UmbralJuke = card("Umbral Juke") {
     spell {
         modal(chooseCount = 1) {
             mode("Target player sacrifices a creature or planeswalker of their choice.") {
-                val player = target("target", Targets.Player)
+                val player = target(Targets.Player)
                 effect = Effects.Sacrifice(GameObjectFilter.CreatureOrPlaneswalker, target = player)
             }
             mode("Create a 2/1 white and black Inkling creature token with flying.") {

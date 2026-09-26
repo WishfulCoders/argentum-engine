@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.tmt.cards
 
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.sneak
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Leonardo, Big Brother
@@ -31,14 +31,14 @@ val LeonardoBigBrother = card("Leonardo, Big Brother") {
     sneak("{W}")
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
-            powerBonus = DynamicAmount.AggregateBattlefield(
+            powerBonus = DynamicAmounts.battlefield(
                 Player.You,
                 GameObjectFilter.Creature,
                 excludeSelf = true
-            ),
-            toughnessBonus = DynamicAmount.Fixed(0)
+            ).count(),
+            toughnessBonus = DynamicAmounts.fixed(0)
         )
     }
 

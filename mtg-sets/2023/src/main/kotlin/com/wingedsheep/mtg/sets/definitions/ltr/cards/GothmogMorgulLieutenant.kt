@@ -29,7 +29,7 @@ val GothmogMorgulLieutenant = card("Gothmog, Morgul Lieutenant") {
         "Creature tokens you control have deathtouch."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Amass(1, "Orc")
     }
 

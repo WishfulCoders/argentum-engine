@@ -23,7 +23,7 @@ val DireFleetHoarder = card("Dire Fleet Hoarder") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateTreasure()
     }
 

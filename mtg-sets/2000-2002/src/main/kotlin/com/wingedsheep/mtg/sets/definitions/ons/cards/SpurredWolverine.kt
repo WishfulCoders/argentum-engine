@@ -2,12 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Spurred Wolverine
@@ -26,8 +26,8 @@ val SpurredWolverine = card("Spurred Wolverine") {
 
     activatedAbility {
         cost = Costs.TapPermanents(2, GameObjectFilter.Permanent.withSubtype("Beast"))
-        val t = target("target", TargetCreature())
-        effect = GrantKeywordEffect(Keyword.FIRST_STRIKE, t)
+        val t = target(TargetFilter.Creature)
+        effect = Effects.GrantKeyword(Keyword.FIRST_STRIKE, t)
     }
 
     metadata {

@@ -6,7 +6,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
-import com.wingedsheep.sdk.scripting.targets.TargetOpponent
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Neutralize the Guards
@@ -29,15 +29,13 @@ val NeutralizeTheGuards = card("Neutralize the Guards") {
         "graveyard and the rest on top of your library in any order.)"
 
     spell {
-        val opponent = target("target opponent", TargetOpponent())
-        effect = Effects.Composite(
-            Patterns.Group.modifyStatsForAll(
-                power = -1,
-                toughness = -1,
-                filter = GroupFilter(GameObjectFilter.Creature.targetPlayerControls(opponent))
-            ),
+        val opponent = target(Targets.Opponent)
+        effect = Patterns.Group.modifyStatsForAll(
+            power = -1,
+            toughness = -1,
+            filter = GroupFilter(GameObjectFilter.Creature.targetPlayerControls(opponent))
+        ) then
             Patterns.Library.surveil(2)
-        )
     }
 
     metadata {

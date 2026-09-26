@@ -2,17 +2,16 @@ package com.wingedsheep.mtg.sets.definitions.thb.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Thassa's Oracle
@@ -48,37 +47,35 @@ val ThassasOracle = card("Thassa's Oracle") {
         "cards in your library, you win the game."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = Effects.Composite(
-            Effects.Pipeline {
-                val looked = gather(
-                    CardSource.TopOfLibrary(
-                        count = DynamicAmount.DevotionTo(listOf(Color.BLUE)),
-                        player = Player.You
-                    )
+        trigger = Triggers.self.enters()
+        effect = Effects.Pipeline {
+            val looked = gather(
+                CardSource.TopOfLibrary(
+                    count = DynamicAmounts.devotionTo(Color.BLUE),
+                    player = Player.You
                 )
-                val split = chooseUpToSplit(
-                    count = 1,
-                    from = looked,
-                    prompt = "Put up to one card on top of your library",
-                    selectedLabel = "Put on top of library",
-                    remainderLabel = "Put on the bottom in a random order"
-                )
-                toLibraryTop(split.selected)
-                toLibraryBottom(split.remainder, order = CardOrder.Random)
-            },
-            ConditionalEffect(
-                condition = Compare(
-                    DynamicAmount.DevotionTo(listOf(Color.BLUE)),
+            )
+            val split = chooseUpToSplit(
+                count = 1,
+                from = looked,
+                prompt = "Put up to one card on top of your library",
+                selectedLabel = "Put on top of library",
+                remainderLabel = "Put on the bottom in a random order"
+            )
+            toLibraryTop(split.selected)
+            toLibraryBottom(split.remainder, order = CardOrder.Random)
+        } then
+            Effects.If(
+                condition = Conditions.CompareAmounts(
+                    DynamicAmounts.devotionTo(Color.BLUE),
                     ComparisonOperator.GTE,
-                    DynamicAmount.AggregateZone(Player.You, Zone.LIBRARY)
+                    DynamicAmounts.zone(Player.You, Zone.LIBRARY).count()
                 ),
-                effect = Effects.WinGame(
+                then = Effects.WinGame(
                     message = "Thassa's Oracle: devotion to blue was at least the number of cards " +
                         "in your library."
                 )
             )
-        )
     }
 
     metadata {

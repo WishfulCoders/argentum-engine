@@ -6,11 +6,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.CollectionFilter
-import com.wingedsheep.sdk.scripting.effects.FilterCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.RetargetChooser
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Psychic Battle
@@ -47,22 +43,15 @@ val PsychicBattle = card("Psychic Battle") {
         "permanents named Psychic Battle."
 
     triggeredAbility {
-        trigger = Triggers.AnyPlayerChoosesTargets
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(count = DynamicAmount.Fixed(1), player = Player.Each),
-                storeAs = "revealed",
+        trigger = Triggers.anyPlayer.choosesTargets()
+        effect = Effects.Pipeline {
+            val revealed = gather(
+                CardSource.TopOfLibrary(count = 1, player = Player.Each),
                 revealed = true
-            ),
-            FilterCollectionEffect(
-                from = "revealed",
-                filter = CollectionFilter.GreatestManaValue,
-                storeMatching = "greatestManaValue"
-            ),
-            Effects.ChangeTriggeringObjectTargets(
-                chooser = RetargetChooser.OwnerOfStored("greatestManaValue")
             )
-        )
+            val greatestManaValue = filter(revealed, CollectionFilter.GreatestManaValue)
+            run(Effects.ChangeTriggeringObjectTargets(chooserOwnerOf = greatestManaValue))
+        }
     }
 
     metadata {

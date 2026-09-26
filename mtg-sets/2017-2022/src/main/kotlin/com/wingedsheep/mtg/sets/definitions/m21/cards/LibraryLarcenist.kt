@@ -21,7 +21,7 @@ val LibraryLarcenist = card("Library Larcenist") {
     oracleText = "Whenever this creature attacks, draw a card."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Effects.DrawCards(1)
         description = "Whenever this creature attacks, draw a card."
     }

@@ -2,13 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardLayout
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.NoMaximumHandSize
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Roaring Furnace // Steaming Sauna (DSK 230) — split-layout Room (CR 709.5).
@@ -23,7 +23,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *
  * Cast each half separately; the cast face enters unlocked, the other locked. Pay the locked
  * face's printed mana cost as a sorcery-speed special action to unlock it (CR 709.5e). The
- * Roaring Furnace door-unlock trigger ([Triggers.OnDoorUnlocked]) targets a creature an opponent
+ * Roaring Furnace door-unlock trigger (`Triggers.self.doorUnlocked()`) targets a creature an opponent
  * controls and deals damage equal to [DynamicAmounts.cardsInYourHand]; the Room itself is the
  * damage source (the default when no explicit `damageSource` is given to [Effects.DealDamage]).
  * Steaming Sauna pairs the [NoMaximumHandSize] static with an end-step draw.
@@ -39,9 +39,9 @@ val RoaringFurnaceSteamingSauna = card("Roaring Furnace // Steaming Sauna") {
             "cards in your hand to target creature an opponent controls."
 
         triggeredAbility {
-            trigger = Triggers.OnDoorUnlocked
-            target = Targets.CreatureOpponentControls
-            effect = Effects.DealDamage(DynamicAmounts.cardsInYourHand(), EffectTarget.ContextTarget(0))
+            val creatureOpponentControls = target(TargetFilter.CreatureOpponentControls)
+            trigger = Triggers.self.doorUnlocked()
+            effect = Effects.DealDamage(DynamicAmounts.cardsInYourHand(), creatureOpponentControls)
             description = "When you unlock this door, this Room deals damage equal to the number " +
                 "of cards in your hand to target creature an opponent controls."
         }
@@ -57,7 +57,7 @@ val RoaringFurnaceSteamingSauna = card("Roaring Furnace // Steaming Sauna") {
         }
 
         triggeredAbility {
-            trigger = Triggers.YourEndStep
+            trigger = Triggers.you.beginningOf(Step.END)
             effect = Effects.DrawCards(1)
             description = "At the beginning of your end step, draw a card."
         }

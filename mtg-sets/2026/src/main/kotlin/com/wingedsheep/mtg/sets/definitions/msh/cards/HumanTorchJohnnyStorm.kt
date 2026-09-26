@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.msh.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
@@ -49,13 +49,13 @@ val HumanTorchJohnnyStorm = card("Human Torch, Johnny Storm") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YouDraw
+        val opponent = target(Targets.Opponent)
+        trigger = Triggers.you.draws()
         interveningIf = Conditions.YouControl(
             GameObjectFilter.Any.withSubtype(Subtype.HERO.value),
             excludeSelf = true
         )
-        target = Targets.Opponent
-        effect = Effects.DealDamage(1, EffectTarget.ContextTarget(0))
+        effect = Effects.DealDamage(1, opponent)
         description = "Whenever you draw a card, if you control another Hero, Human Torch deals " +
             "1 damage to target opponent."
     }
@@ -63,7 +63,7 @@ val HumanTorchJohnnyStorm = card("Human Torch, Johnny Storm") {
     activatedAbility {
         isPowerUp = true
         cost = Costs.Mana("{6}{R}")
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 3, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 3, EffectTarget.Self)
     }
 
     metadata {

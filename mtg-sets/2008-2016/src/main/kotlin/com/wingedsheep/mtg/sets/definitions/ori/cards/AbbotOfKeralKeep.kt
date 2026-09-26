@@ -30,7 +30,7 @@ val AbbotOfKeralKeep = card("Abbot of Keral Keep") {
     prowess()
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Exile.impulse(1)
     }
 

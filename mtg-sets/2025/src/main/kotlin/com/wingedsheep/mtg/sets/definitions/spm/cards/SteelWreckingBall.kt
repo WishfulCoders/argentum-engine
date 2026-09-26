@@ -3,10 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.spm.cards
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Steel Wrecking Ball
@@ -30,8 +30,8 @@ val SteelWreckingBall = card("Steel Wrecking Ball") {
 
     // When this artifact enters, it deals 5 damage to target creature.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val creature = target("target creature", Targets.Creature)
+        trigger = Triggers.self.enters()
+        val creature = target(TargetFilter.Creature)
         effect = Effects.DealDamage(5, creature)
     }
 
@@ -39,7 +39,7 @@ val SteelWreckingBall = card("Steel Wrecking Ball") {
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}{R}"), Costs.DiscardSelf)
         activateFromZone = Zone.HAND
-        val artifact = target("target artifact", Targets.Artifact)
+        val artifact = target(TargetFilter.Artifact)
         effect = Effects.Destroy(artifact)
     }
 

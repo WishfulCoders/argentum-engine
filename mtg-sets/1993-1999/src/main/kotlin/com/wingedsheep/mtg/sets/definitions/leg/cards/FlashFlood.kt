@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Flash Flood
@@ -29,17 +28,11 @@ val FlashFlood = card("Flash Flood") {
     spell {
         modal(chooseCount = 1) {
             mode("Destroy target red permanent") {
-                val permanent = target(
-                    "target red permanent",
-                    TargetPermanent(filter = TargetFilter(GameObjectFilter.Permanent.withColor(Color.RED))),
-                )
+                val permanent = target(TargetFilter(GameObjectFilter.Permanent.withColor(Color.RED)))
                 effect = Effects.Destroy(permanent)
             }
             mode("Return target Mountain to its owner's hand") {
-                val land = target(
-                    "target Mountain",
-                    TargetPermanent(filter = TargetFilter(GameObjectFilter.Land.withSubtype(Subtype.MOUNTAIN))),
-                )
+                val land = target(TargetFilter(GameObjectFilter.Land.withSubtype(Subtype.MOUNTAIN)))
                 effect = Effects.ReturnToHand(land)
             }
         }

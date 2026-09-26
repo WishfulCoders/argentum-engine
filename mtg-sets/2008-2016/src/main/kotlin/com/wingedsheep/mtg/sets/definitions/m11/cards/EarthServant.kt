@@ -1,13 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.m11.cards
 
 import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.GrantDynamicStatsEffect
+import com.wingedsheep.sdk.scripting.GrantDynamicStats
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Earth Servant
@@ -29,13 +29,13 @@ val EarthServant = card("Earth Servant") {
     oracleText = "This creature gets +0/+1 for each Mountain you control."
 
     staticAbility {
-        ability = GrantDynamicStatsEffect(
+        ability = GrantDynamicStats(
             filter = GroupFilter.source(),
-            powerBonus = DynamicAmount.Fixed(0),
-            toughnessBonus = DynamicAmount.AggregateBattlefield(
+            powerBonus = DynamicAmounts.fixed(0),
+            toughnessBonus = DynamicAmounts.battlefield(
                 Player.You,
                 GameObjectFilter.Land.withSubtype(Subtype.MOUNTAIN)
-            ),
+            ).count(),
         )
     }
 

@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Social Climber
@@ -12,7 +13,7 @@ import com.wingedsheep.sdk.model.Rarity
  * 3 / 2
  * Alliance — Whenever another creature you control enters, you gain 1 life.
  *
- * "Alliance" is a pure ability word, so this is the plain [Triggers.OtherCreatureEnters] (OTHER
+ * "Alliance" is a pure ability word, so this is the plain `Triggers.another(GameObjectFilter.Creature.youControl()).enters()` (OTHER
  * binding over creatures you control); the ability word lives only in the printed text.
  */
 val SocialClimber = card("Social Climber") {
@@ -24,7 +25,7 @@ val SocialClimber = card("Social Climber") {
     toughness = 2
 
     triggeredAbility {
-        trigger = Triggers.OtherCreatureEnters
+        trigger = Triggers.another(GameObjectFilter.Creature.youControl()).enters()
         effect = Effects.GainLife(1)
         description = "Alliance — Whenever another creature you control enters, you gain 1 life."
     }

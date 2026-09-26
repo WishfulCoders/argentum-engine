@@ -3,16 +3,15 @@ package com.wingedsheep.mtg.sets.definitions.khc.cards
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 
 /**
@@ -39,9 +38,9 @@ val LathrilBladeOfTheElves = card("Lathril, Blade of the Elves") {
     toughness = 3
     keywords(Keyword.MENACE)
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
         effect = Effects.CreateToken(
-            count = DynamicAmount.ContextProperty(ContextPropertyKey.TRIGGER_DAMAGE_AMOUNT),
+            count = DynamicAmounts.triggerDamageAmount(),
             power = 1,
             toughness = 1,
             colors = setOf(Color.GREEN),
@@ -60,10 +59,7 @@ val LathrilBladeOfTheElves = card("Lathril, Blade of the Elves") {
                 excludeSelf = true
             )
         )
-        effect = Effects.Composite(
-            Effects.LoseLife(10, EffectTarget.PlayerRef(Player.EachOpponent)),
-            GainLifeEffect(10)
-        )
+        effect = Effects.LoseLife(10, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(10)
         description = "Each opponent loses 10 life and you gain 10 life."
     }
     metadata {

@@ -28,7 +28,7 @@ val TalasLookout = card("Talas Lookout") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Patterns.Library.lookAtTopAndKeep(count = 2, keepCount = 1)
     }
 

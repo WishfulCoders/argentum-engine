@@ -39,12 +39,11 @@ import kotlin.reflect.KClass
  * resolves itself, so a board with one permanent per type asks nothing at all.
  */
 class ChooseOnePerCategoryExecutor(
+    private val predicateEvaluator: PredicateEvaluator,
     private val decisionHandler: DecisionHandler = DecisionHandler()
 ) : EffectExecutor<ChooseOnePerCategoryEffect> {
 
     override val effectType: KClass<ChooseOnePerCategoryEffect> = ChooseOnePerCategoryEffect::class
-
-    private val predicateEvaluator = PredicateEvaluator()
 
     override fun execute(
         state: GameState,

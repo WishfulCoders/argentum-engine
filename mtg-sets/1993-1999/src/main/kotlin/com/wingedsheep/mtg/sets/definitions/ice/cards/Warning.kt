@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.ice.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.PreventionScope
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Warning
@@ -24,7 +24,7 @@ val Warning = card("Warning") {
     oracleText = "Prevent all combat damage that would be dealt by target attacking creature this turn."
 
     spell {
-        val t = target("target", Targets.AttackingCreature)
+        val t = target(TargetFilter.AttackingCreature)
         effect = Effects.PreventAllDamageDealtBy(t, scope = PreventionScope.CombatOnly)
     }
 

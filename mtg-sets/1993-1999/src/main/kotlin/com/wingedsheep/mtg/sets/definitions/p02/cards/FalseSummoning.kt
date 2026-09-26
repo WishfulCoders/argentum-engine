@@ -4,6 +4,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * False Summoning
@@ -21,7 +22,7 @@ val FalseSummoning = card("False Summoning") {
     oracleText = "Counter target creature spell."
 
     spell {
-        target("target", Targets.CreatureSpell)
+        target(TargetFilter.CreatureSpellOnStack)
         effect = Effects.CounterSpell()
     }
 

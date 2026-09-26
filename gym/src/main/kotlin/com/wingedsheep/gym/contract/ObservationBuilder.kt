@@ -1,5 +1,6 @@
 package com.wingedsheep.gym.contract
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.core.AssignDamageDecision
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.BatchYesNoDecision
@@ -108,7 +109,7 @@ class ObservationBuilder(
     cardRegistry: CardRegistry,
     private val schemaHash: String = SchemaHash.CURRENT
 ) {
-    private val visibility = Visibility(cardRegistry)
+    private val visibility = Visibility(cardRegistry, conditionEvaluator = PredicateEvaluator(cardRegistry = null).conditions)
 
     fun build(
         state: GameState,

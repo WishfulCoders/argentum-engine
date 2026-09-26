@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.sos.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
@@ -36,8 +36,8 @@ val TackleArtist = card("Tackle Artist") {
     keywords(Keyword.TRAMPLE)
 
     opus {
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
-        insteadIfFiveOrMore = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        insteadIfFiveOrMore = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self)
         description = "Opus — Whenever you cast an instant or sorcery spell, put a +1/+1 counter on " +
             "this creature. If five or more mana was spent to cast that spell, put two +1/+1 counters " +
             "on this creature instead."

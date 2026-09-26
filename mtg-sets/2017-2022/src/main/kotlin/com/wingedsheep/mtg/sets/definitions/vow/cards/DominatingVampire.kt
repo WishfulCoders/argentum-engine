@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Dominating Vampire — Innistrad: Crimson Vow #154
@@ -40,25 +39,20 @@ val DominatingVampire = card("Dominating Vampire") {
         "creature. It gains haste until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         val creature = target(
-            "target creature",
-            TargetCreature(
-                filter = TargetFilter(
-                    GameObjectFilter.Creature.manaValueAtMostDynamic(
-                        DynamicAmounts.battlefield(
-                            Player.You,
-                            GameObjectFilter.Creature.withSubtype(Subtype.VAMPIRE)
-                        ).count()
-                    )
+            TargetFilter(
+                GameObjectFilter.Creature.manaValueAtMostDynamic(
+                    DynamicAmounts.battlefield(
+                        Player.You,
+                        GameObjectFilter.Creature.withSubtype(Subtype.VAMPIRE)
+                    ).count()
                 )
-            )
+            ),
         )
-        effect = Effects.Composite(
-            Effects.GainControl(creature, Duration.EndOfTurn),
-            Effects.Untap(creature),
+        effect = Effects.GainControl(creature, Duration.EndOfTurn) then
+            Effects.Untap(creature) then
             Effects.GrantKeyword(Keyword.HASTE, creature)
-        )
         description = "When this creature enters, gain control of target creature with mana value " +
             "less than or equal to the number of Vampires you control until end of turn. Untap " +
             "that creature. It gains haste until end of turn."

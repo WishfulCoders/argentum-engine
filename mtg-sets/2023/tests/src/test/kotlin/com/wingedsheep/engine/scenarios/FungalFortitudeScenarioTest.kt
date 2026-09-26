@@ -6,9 +6,9 @@ import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Scenario tests for Fungal Fortitude (LCI #106):
@@ -33,7 +33,7 @@ class FungalFortitudeScenarioTest : ScenarioTestBase() {
         typeLine = "Sorcery"
         oracleText = "Destroy target creature."
         spell {
-            val c = target("target creature", Targets.Creature)
+            val c = target(TargetFilter.Creature)
             effect = Effects.Destroy(c)
         }
     }

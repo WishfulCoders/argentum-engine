@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AdditionalSourceTriggers
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Splinter, Radical Rat
@@ -45,10 +44,7 @@ val SplinterRadicalRat = card("Splinter, Radical Rat") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{U}")
-        val ninja = target(
-            "target Ninja",
-            TargetCreature(filter = TargetFilter.Creature.withSubtype("Ninja"))
-        )
+        val ninja = target(TargetFilter.Creature.withSubtype("Ninja"))
         effect = Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED, ninja)
     }
 

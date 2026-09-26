@@ -3,11 +3,10 @@ package com.wingedsheep.mtg.sets.definitions.eoe.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Full Bore
@@ -24,17 +23,12 @@ val FullBore = card("Full Bore") {
         "If that creature was cast for its warp cost, it also gains trample and haste until end of turn."
 
     spell {
-        val creature = target("target creature you control", Targets.CreatureYouControl)
-        effect = Effects.ModifyStats(3, 2, creature)
-            .then(
-                ConditionalEffect(
-                    condition = Conditions.TargetMatchesFilter(
-                        GameObjectFilter.Creature.castForWarp(),
-                        targetIndex = 0
-                    ),
-                    effect = Effects.GrantKeyword(Keyword.TRAMPLE, creature)
-                        .then(Effects.GrantKeyword(Keyword.HASTE, creature))
-                )
+        val creature = target(TargetFilter.CreatureYouControl)
+        effect = Effects.ModifyStats(3, 2, creature) then
+            Effects.If(
+                condition = Conditions.TargetMatchesFilter(GameObjectFilter.Creature.castForWarp(), creature),
+                then = Effects.GrantKeyword(Keyword.TRAMPLE, creature) then
+                    Effects.GrantKeyword(Keyword.HASTE, creature)
             )
     }
 

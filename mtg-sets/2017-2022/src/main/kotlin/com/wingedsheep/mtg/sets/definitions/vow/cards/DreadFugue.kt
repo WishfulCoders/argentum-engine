@@ -6,18 +6,9 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.KeywordAbility
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.Chooser
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.MoveType
-import com.wingedsheep.sdk.scripting.effects.RevealHandEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Dread Fugue
@@ -53,55 +44,39 @@ val DreadFugue = card("Dread Fugue") {
     keywordAbility(KeywordAbility.cleave("{2}{B}"))
 
     spell {
-        target = TargetPlayer()
+        val player = target(Targets.Player)
 
         // Printed (brackets present): choose a nonland card with mana value 2 or less to discard.
-        effect = Effects.Composite(
-            RevealHandEffect(),
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.HAND, Player.ContextPlayer(0)),
-                storeAs = "revealedHand",
-            ),
-            SelectFromCollectionEffect(
-                from = "revealedHand",
-                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
+        effect = Effects.Pipeline {
+            run(Effects.RevealHand(player))
+            val revealedHand = gather(CardSource.FromZone(Zone.HAND, player.asPlayer))
+            val toDiscard = chooseExactly(
+                1,
+                from = revealedHand,
                 chooser = Chooser.Controller,
                 filter = GameObjectFilter.Nonland.manaValueAtMost(2),
-                storeSelected = "toDiscard",
                 prompt = "Choose a nonland card with mana value 2 or less to discard",
                 alwaysPrompt = true,
-                showAllCards = true,
-            ),
-            MoveCollectionEffect(
-                from = "toDiscard",
-                destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
-                moveType = MoveType.Discard,
-            ),
-        )
+                showAllCards = true
+            )
+            discard(toDiscard, player.asPlayer)
+        }
 
         // Cleaved (brackets removed): choose any nonland card to discard (no mana-value cap).
-        cleaveEffect = Effects.Composite(
-            RevealHandEffect(),
-            GatherCardsEffect(
-                source = CardSource.FromZone(Zone.HAND, Player.ContextPlayer(0)),
-                storeAs = "revealedHand",
-            ),
-            SelectFromCollectionEffect(
-                from = "revealedHand",
-                selection = SelectionMode.ChooseExactly(DynamicAmount.Fixed(1)),
+        cleaveEffect = Effects.Pipeline {
+            run(Effects.RevealHand(player))
+            val revealedHand = gather(CardSource.FromZone(Zone.HAND, player.asPlayer))
+            val toDiscard = chooseExactly(
+                1,
+                from = revealedHand,
                 chooser = Chooser.Controller,
                 filter = GameObjectFilter.Nonland,
-                storeSelected = "toDiscard",
                 prompt = "Choose a nonland card to discard",
                 alwaysPrompt = true,
-                showAllCards = true,
-            ),
-            MoveCollectionEffect(
-                from = "toDiscard",
-                destination = CardDestination.ToZone(Zone.GRAVEYARD, Player.ContextPlayer(0)),
-                moveType = MoveType.Discard,
-            ),
-        )
+                showAllCards = true
+            )
+            discard(toDiscard, player.asPlayer)
+        }
     }
 
     metadata {

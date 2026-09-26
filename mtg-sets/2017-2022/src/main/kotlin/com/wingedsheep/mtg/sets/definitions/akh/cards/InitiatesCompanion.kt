@@ -6,7 +6,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.events.Recipient
 
 /**
  * Initiate's Companion
@@ -25,11 +25,8 @@ val InitiatesCompanion = card("Initiate's Companion") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.DealsCombatDamageToPlayer
-        val permanent = target(
-            "target creature or land",
-            TargetPermanent(filter = TargetFilter(GameObjectFilter.CreatureOrLand)),
-        )
+        trigger = Triggers.self.dealsCombatDamage(Recipient.AnyPlayer)
+        val permanent = target(TargetFilter(GameObjectFilter.CreatureOrLand))
         effect = Effects.Untap(permanent)
         description = "Whenever this creature deals combat damage to a player, untap target creature or land."
     }

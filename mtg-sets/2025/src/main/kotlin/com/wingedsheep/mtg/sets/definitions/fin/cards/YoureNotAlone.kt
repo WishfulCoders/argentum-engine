@@ -2,10 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * You're Not Alone
@@ -24,11 +23,11 @@ val YoureNotAlone = card("You're Not Alone") {
     oracleText = "Target creature gets +2/+2 until end of turn. If you control three or more creatures, it gets +4/+4 until end of turn instead."
 
     spell {
-        val t = target("target", Targets.Creature)
-        effect = ConditionalEffect(
+        val t = target(TargetFilter.Creature)
+        effect = Effects.If(
             condition = Conditions.ControlCreaturesAtLeast(3),
-            effect = Effects.ModifyStats(4, 4, t),
-            elseEffect = Effects.ModifyStats(2, 2, t)
+            then = Effects.ModifyStats(4, 4, t),
+            otherwise = Effects.ModifyStats(2, 2, t)
         )
     }
 

@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
@@ -15,6 +14,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Storm, Windrider [MSH 230] — {1}{G}{W}{W} Legendary Creature — Mutant Hero 4/4
@@ -41,9 +41,9 @@ class StormWindriderScenarioTest : FunSpec({
         manaCost = "{G}"
         typeLine = "Instant"
         spell {
-            val a = target("first creature", Targets.Creature)
-            val b = target("second creature", Targets.Creature)
-            effect = Effects.ModifyStats(1, 1, a).then(Effects.ModifyStats(1, 1, b))
+            val a = target(TargetFilter.Creature)
+            val b = target(TargetFilter.Creature)
+            effect = Effects.ModifyStats(1, 1, a) then Effects.ModifyStats(1, 1, b)
         }
     }
 

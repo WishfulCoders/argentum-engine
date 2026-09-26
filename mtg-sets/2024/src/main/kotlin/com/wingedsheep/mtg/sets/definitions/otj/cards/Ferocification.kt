@@ -2,13 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.otj.cards
 
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
-import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ferocification
@@ -19,7 +19,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * • Target creature you control gets +2/+0 until end of turn.
  * • Target creature you control gains menace and haste until end of turn.
  *
- * A modal beginning-of-combat trigger ([Triggers.BeginCombat] fires on the controller's
+ * A modal beginning-of-combat trigger (`Triggers.you.beginningOf(Step.BEGIN_COMBAT)` fires on the controller's
  * turn only). Each mode declares its own "target creature you control"
  * ([Mode.withTarget]) and applies an existing effect: mode 1 is [Effects.ModifyStats]
  * +2/+0; mode 2 grants menace and haste ([Effects.GrantKeyword]) until end of turn.
@@ -33,21 +33,17 @@ val Ferocification = card("Ferocification") {
         "• Target creature you control gains menace and haste until end of turn."
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
         effect = ModalEffect.chooseOne(
-            Mode.withTarget(
-                Effects.ModifyStats(2, 0, EffectTarget.ContextTarget(0)),
-                Targets.CreatureYouControl,
-                "Target creature you control gets +2/+0 until end of turn",
-            ),
-            Mode.withTarget(
-                Effects.Composite(
-                    Effects.GrantKeyword(Keyword.MENACE, EffectTarget.ContextTarget(0)),
-                    Effects.GrantKeyword(Keyword.HASTE, EffectTarget.ContextTarget(0)),
-                ),
-                Targets.CreatureYouControl,
-                "Target creature you control gains menace and haste until end of turn",
-            ),
+            mode("Target creature you control gets +2/+0 until end of turn") {
+                val creatureYouControl = target(TargetFilter.CreatureYouControl)
+                effect = Effects.ModifyStats(2, 0, creatureYouControl)
+            },
+            mode("Target creature you control gains menace and haste until end of turn") {
+                val creatureYouControl = target(TargetFilter.CreatureYouControl)
+                effect = Effects.GrantKeyword(Keyword.MENACE, creatureYouControl) then
+                    Effects.GrantKeyword(Keyword.HASTE, creatureYouControl)
+            },
         )
     }
 

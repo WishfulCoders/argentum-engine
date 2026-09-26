@@ -7,9 +7,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
 import com.wingedsheep.sdk.scripting.references.Player
 
 val TwinningGlass = card("Twinning Glass") {
@@ -20,19 +17,17 @@ val TwinningGlass = card("Twinning Glass") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{1}"), Costs.Tap)
-        effect = Effects.Composite(
-            GatherCardsEffect(CardSource.FromZone(Zone.HAND, Player.You), "hand"),
-            SelectFromCollectionEffect(
-                from = "hand",
-                selection = SelectionMode.ChooseSpell,
+        effect = Effects.Pipeline {
+            val hand = gather(CardSource.FromZone(Zone.HAND, Player.You))
+            val spellToCast = chooseSpell(
+                from = hand,
                 filter = GameObjectFilter.Nonland.sharesNameWithSpellCastThisTurn(),
-                storeSelected = "spellToCast",
                 showAllCards = true,
                 prompt = "You may cast a spell with the same name as a spell cast this turn",
                 selectedLabel = "Cast for free"
-            ),
-            Effects.CastFromCollectionWithoutPayingCost("spellToCast")
-        )
+            )
+            run(Effects.CastFromCollectionWithoutPayingCost(spellToCast))
+        }
         description = "{1}, {T}: Cast a spell with a name already cast this turn for free"
     }
 

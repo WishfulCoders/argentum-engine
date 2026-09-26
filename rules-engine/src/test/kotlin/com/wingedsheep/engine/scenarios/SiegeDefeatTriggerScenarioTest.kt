@@ -37,7 +37,7 @@ class SiegeDefeatTriggerScenarioTest : ScenarioTestBase() {
         oracleText = "When this enchantment enters, you gain 3 life."
 
         triggeredAbility {
-            trigger = Triggers.EntersBattlefield
+            trigger = Triggers.self.enters()
             effect = Effects.GainLife(3)
             description = "When this enchantment enters, you gain 3 life."
         }

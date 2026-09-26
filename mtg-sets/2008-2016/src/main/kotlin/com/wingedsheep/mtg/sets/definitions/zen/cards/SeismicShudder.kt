@@ -14,8 +14,8 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Instant
  * Seismic Shudder deals 1 damage to each creature without flying.
  *
- * Damage to *each* matching creature is a group iteration with [EffectTarget.Self] as the body's
- * recipient — the iteration binds "self" to the creature being visited, not to the spell.
+ * Damage to *each* matching creature is a group iteration with [EffectTarget.IterationEntity] —
+ * the creature being visited, not the spell — as the body's recipient.
  */
 val SeismicShudder = card("Seismic Shudder") {
     manaCost = "{1}{R}"
@@ -26,7 +26,7 @@ val SeismicShudder = card("Seismic Shudder") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.withoutKeyword(Keyword.FLYING)),
-            Effects.DealDamage(1, EffectTarget.Self),
+            Effects.DealDamage(1, EffectTarget.IterationEntity),
         )
     }
 

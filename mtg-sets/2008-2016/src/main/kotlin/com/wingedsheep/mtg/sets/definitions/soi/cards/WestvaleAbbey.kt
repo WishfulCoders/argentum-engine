@@ -9,7 +9,6 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
@@ -74,10 +73,7 @@ private val WestvaleAbbeyFront = card("Westvale Abbey") {
             Costs.Tap,
             Costs.SacrificeMultiple(5, GameObjectFilter.Creature),
         )
-        effect = Effects.Composite(
-            TransformEffect(EffectTarget.Self),
-            Effects.Untap(EffectTarget.Self),
-        )
+        effect = Effects.Transform(EffectTarget.Self) then Effects.Untap(EffectTarget.Self)
         description = "Transform this land, then untap it."
     }
 

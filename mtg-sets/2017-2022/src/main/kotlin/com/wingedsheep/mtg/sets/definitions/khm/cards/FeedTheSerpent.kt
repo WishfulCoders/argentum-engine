@@ -21,7 +21,7 @@ val FeedTheSerpent = card("Feed the Serpent") {
     oracleText = "Exile target creature or planeswalker."
 
     spell {
-        val victim = target("target creature or planeswalker", Targets.CreatureOrPlaneswalker)
+        val victim = target(Targets.CreatureOrPlaneswalker)
         effect = Effects.Exile(victim)
     }
 

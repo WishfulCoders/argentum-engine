@@ -25,7 +25,7 @@ val InterdimensionalWebWatch = card("Interdimensional Web Watch") {
     oracleText = "When this artifact enters, exile the top two cards of your library. Until the end of your next turn, you may play those cards.\n{T}: Add two mana in any combination of colors. Spend this mana only to cast spells from exile."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         // `Patterns.Exile.impulse` *is* these three effects, and it owns the pipeline key they share.
         // Restating them by hand named that collection something else — a difference no printed word
         // asks for, which is what Argentum Assay's differential reported once it could read the mana

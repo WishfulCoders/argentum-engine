@@ -3,13 +3,9 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-
-/** Pipeline slot holding the destroyed creature's toughness, frozen before the destruction. */
-private const val STRANGLED_TOUGHNESS = "strangledToughness"
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Weed Strangle
@@ -20,11 +16,11 @@ private const val STRANGLED_TOUGHNESS = "strangledToughness"
  * creature's toughness.
  *
  * The life gain reads a creature that the spell's own earlier step already destroyed, so the
- * toughness has to be **frozen before the move**: [com.wingedsheep.sdk.scripting.values.EntityReference.Target]
+ * toughness has to be **frozen before the move**: [com.wingedsheep.sdk.scripting.targets.EffectTarget.ContextTarget]
  * is deliberately `LIVE_ONLY` (a departed target reads as absent, CR 608.2b), and there is no
- * target LKI snapshot to fall back on. [Effects.StoreNumber] evaluates
+ * target LKI snapshot to fall back on. The pipeline's `storeNumber` evaluates
  * [DynamicAmounts.targetToughness] once, up front, and the win rider reads it back through
- * [DynamicAmount.VariableReference]. That also matches the printed intent — the creature's
+ * the number handle's `amount`. That also matches the printed intent — the creature's
  * toughness as it last existed on the battlefield — and stays correct for an indestructible or
  * regenerated target, which is still on the board but whose toughness the freeze already captured.
  *
@@ -43,14 +39,12 @@ val WeedStrangle = card("Weed Strangle") {
         "a greater mana value.)"
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.StoreNumber(STRANGLED_TOUGHNESS, DynamicAmounts.targetToughness())
-            .then(Effects.Destroy(creature))
-            .then(
-                Patterns.Mechanic.clash(
-                    Effects.GainLife(DynamicAmount.VariableReference(STRANGLED_TOUGHNESS))
-                )
-            )
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.Pipeline {
+            val toughness = storeNumber(DynamicAmounts.toughnessOf(creature))
+            run(Effects.Destroy(creature))
+            run(Patterns.Mechanic.clash(Effects.GainLife(toughness.amount)))
+        }
     }
 
     metadata {

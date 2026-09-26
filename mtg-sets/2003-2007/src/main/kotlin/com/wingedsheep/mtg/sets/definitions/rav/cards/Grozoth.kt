@@ -10,8 +10,6 @@ import com.wingedsheep.sdk.dsl.transmute
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.MayEffect
-import com.wingedsheep.sdk.scripting.effects.ShuffleLibraryEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -51,8 +49,8 @@ val Grozoth = card("Grozoth") {
     keywords(Keyword.DEFENDER)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.May(
             Effects.Pipeline {
                 val searchable = gather(
                     CardSource.FromZone(Zone.LIBRARY, Player.You, GameObjectFilter.Any.manaValue(9))
@@ -62,7 +60,7 @@ val Grozoth = card("Grozoth") {
                     prompt = "Search your library for any number of cards with mana value 9",
                 )
                 toHand(found, revealed = true)
-                run(ShuffleLibraryEffect())
+                run(Effects.ShuffleLibrary())
             }
         )
     }

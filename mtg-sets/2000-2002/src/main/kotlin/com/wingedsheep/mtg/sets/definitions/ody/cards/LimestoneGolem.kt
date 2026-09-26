@@ -5,10 +5,10 @@
 package com.wingedsheep.mtg.sets.definitions.ody.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -27,8 +27,8 @@ val LimestoneGolem = card("Limestone Golem") {
     toughness = 4
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}"), Costs.SacrificeSelf)
-        val t = target("target", TargetPlayer())
-        effect = DrawCardsEffect(1, t)
+        val t = target(Targets.Player)
+        effect = Effects.DrawCards(1, t)
     }
     metadata {
         rarity = Rarity.UNCOMMON

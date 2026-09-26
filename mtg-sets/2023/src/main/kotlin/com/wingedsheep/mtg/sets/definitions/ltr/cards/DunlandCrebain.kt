@@ -29,7 +29,7 @@ val DunlandCrebain = card("Dunland Crebain") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Amass(2, "Orc")
     }
 

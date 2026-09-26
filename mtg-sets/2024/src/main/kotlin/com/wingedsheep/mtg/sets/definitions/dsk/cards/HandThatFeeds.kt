@@ -17,7 +17,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Delirium — Whenever this creature attacks while there are four or more card types among
  * cards in your graveyard, it gets +2/+0 and gains menace until end of turn.
  *
- * Delirium is an ability word (no rules meaning of its own); the [Triggers.Attacks] trigger
+ * Delirium is an ability word (no rules meaning of its own); the `Triggers.self.attacks()` trigger
  * carries an intervening-"if" gate of [Conditions.Delirium] (four+ distinct card types in your
  * graveyard), modeled like Wickerfolk Thresher. The payoff buffs the source itself
  * ([EffectTarget.Self]): +2/+0 via [Effects.ModifyStats] plus a menace [Effects.GrantKeyword],
@@ -34,10 +34,10 @@ val HandThatFeeds = card("Hand That Feeds") {
         "(It can't be blocked except by two or more creatures.)"
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         triggerRestriction = Conditions.Delirium()
-        effect = Effects.ModifyStats(2, 0, EffectTarget.Self)
-            .then(Effects.GrantKeyword(Keyword.MENACE, EffectTarget.Self))
+        effect = Effects.ModifyStats(2, 0, EffectTarget.Self) then
+            Effects.GrantKeyword(Keyword.MENACE, EffectTarget.Self)
     }
 
     metadata {

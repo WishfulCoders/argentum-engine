@@ -9,12 +9,8 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ChooseActionEffect
 import com.wingedsheep.sdk.scripting.effects.EffectChoice
 import com.wingedsheep.sdk.scripting.effects.FeasibilityCheck
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Bullseye, Death Dealer (MSH #209) — {2}{B/R} Legendary Creature — Human Assassin Villain, 2/3
@@ -57,13 +53,13 @@ val BullseyeDeathDealer = card("Bullseye, Death Dealer") {
     // When Bullseye enters, you may sacrifice an artifact or discard a nonland card.
     // When you do, Bullseye deals 2 damage to any target.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ReflexiveTriggerEffect(
-            action = ChooseActionEffect(
+        trigger = Triggers.self.enters()
+        effect = Effects.ReflexiveTrigger(
+            action = Effects.ChooseAction(
                 choices = listOf(
                     EffectChoice(
                         label = "Sacrifice an artifact",
-                        effect = SacrificeEffect(filter = GameObjectFilter.Artifact),
+                        effect = Effects.SacrificeOwn(filter = GameObjectFilter.Artifact),
                         feasibilityCheck = FeasibilityCheck.ControlsPermanentMatching(
                             filter = GameObjectFilter.Artifact
                         ),
@@ -79,11 +75,12 @@ val BullseyeDeathDealer = card("Bullseye, Death Dealer") {
                 )
             ),
             optional = true,
-            reflexiveEffect = Effects.DealDamage(2, EffectTarget.ContextTarget(0)),
-            reflexiveTargetRequirements = listOf(Targets.Any),
             descriptionOverride = "You may sacrifice an artifact or discard a nonland card. " +
                 "When you do, Bullseye deals 2 damage to any target.",
-        )
+        ) {
+            val anyTarget = target(Targets.Any)
+            effect = Effects.DealDamage(2, anyTarget)
+        }
         description = "When Bullseye enters, you may sacrifice an artifact or discard a nonland " +
             "card. When you do, Bullseye deals 2 damage to any target."
     }
@@ -95,7 +92,7 @@ val BullseyeDeathDealer = card("Bullseye, Death Dealer") {
             Costs.Tap,
             Costs.Sacrifice(GameObjectFilter.Artifact),
         )
-        val victim = target("any target", Targets.Any)
+        val victim = target(Targets.Any)
         effect = Effects.DealDamage(2, victim)
         description = "{3}, {T}, Sacrifice an artifact: Bullseye deals 2 damage to any target."
     }
@@ -108,7 +105,7 @@ val BullseyeDeathDealer = card("Bullseye, Death Dealer") {
             Costs.Tap,
             Costs.Discard(GameObjectFilter.Nonland),
         )
-        val victim = target("any target", Targets.Any)
+        val victim = target(Targets.Any)
         effect = Effects.DealDamage(2, victim)
         description = "{3}, {T}, Discard a nonland card: Bullseye deals 2 damage to any target."
     }

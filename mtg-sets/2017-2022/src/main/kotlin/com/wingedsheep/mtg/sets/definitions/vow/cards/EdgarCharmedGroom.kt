@@ -1,6 +1,7 @@
 package com.wingedsheep.mtg.sets.definitions.vow.cards
 
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Conditions
@@ -11,10 +12,9 @@ import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Edgar, Charmed Groom // Edgar Markov's Coffin (Innistrad: Crimson Vow)
@@ -34,7 +34,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * Edgar isn't "other"). The dies trigger returns Edgar transformed via
  * [Effects.ReturnSelfFromGraveyardTransformed] (Ojer Taq's idiom); "under its owner's control" is
  * the default for that effect. The back's upkeep trigger is a [Effects.Composite] of token +
- * counter + a [ConditionalEffect] gated on [Conditions.SourceCounterCountAtLeast] 3 that removes the
+ * counter + a [Effects.If] gated on [Conditions.SourceCounterCountAtLeast] 3 that removes the
  * three counters and transforms (Treasure Map's counter-then-transform idiom). Modeled with
  * [CardDefinition.doubleFacedPermanent] because the back is an artifact, not a creature.
  */
@@ -56,7 +56,7 @@ private val EdgarCharmedGroomFront = card("Edgar, Charmed Groom") {
     }
 
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.ReturnSelfFromGraveyardTransformed(tapped = false)
         description = "When Edgar dies, return it to the battlefield transformed under its owner's control."
     }
@@ -79,25 +79,21 @@ private val EdgarMarkovsCoffin = card("Edgar Markov's Coffin") {
         "three or more bloodline counters on it, remove those counters and transform it."
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = Effects.Composite(
-            Effects.CreateToken(
-                power = 1,
-                toughness = 1,
-                colors = setOf(Color.WHITE, Color.BLACK),
-                creatureTypes = setOf("Vampire"),
-                keywords = setOf(Keyword.LIFELINK),
-                imageUri = "https://cards.scryfall.io/normal/front/7/e/7eee78d3-c65f-4454-bd3c-1c55388422f5.jpg?1783924693",
-            ),
-            Effects.AddCounters("bloodline", 1, EffectTarget.Self),
-            ConditionalEffect(
-                condition = Conditions.SourceCounterCountAtLeast("bloodline", 3),
-                effect = Effects.Composite(
-                    Effects.RemoveCounters("bloodline", 3, EffectTarget.Self),
-                    TransformEffect(EffectTarget.Self),
-                ),
-            ),
-        )
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.CreateToken(
+            power = 1,
+            toughness = 1,
+            colors = setOf(Color.WHITE, Color.BLACK),
+            creatureTypes = setOf("Vampire"),
+            keywords = setOf(Keyword.LIFELINK),
+            imageUri = "https://cards.scryfall.io/normal/front/7/e/7eee78d3-c65f-4454-bd3c-1c55388422f5.jpg?1783924693",
+        ) then
+            Effects.AddCounters(CounterType.BLOODLINE, 1, EffectTarget.Self) then
+            Effects.If(
+                condition = Conditions.SourceCounterCountAtLeast(CounterType.BLOODLINE, 3),
+                then = Effects.RemoveCounters(CounterType.BLOODLINE, 3, EffectTarget.Self) then
+                    Effects.Transform(EffectTarget.Self),
+            )
         description = "At the beginning of your upkeep, create a 1/1 white and black Vampire creature " +
             "token with lifelink and put a bloodline counter on Edgar Markov's Coffin. Then if there " +
             "are three or more bloodline counters on it, remove those counters and transform it."

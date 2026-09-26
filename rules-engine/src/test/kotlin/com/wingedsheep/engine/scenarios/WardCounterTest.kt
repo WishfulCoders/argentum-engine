@@ -14,6 +14,8 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.effects.WardCost
 
 /**
  * Tests for WardCounterEffectExecutor.
@@ -29,7 +31,7 @@ class WardCounterTest : FunSpec({
         typeLine = "Creature — Bear"
         power = 2
         toughness = 2
-        keywordAbility(KeywordAbility.ward("{2}"))
+        keywordAbility(KeywordAbility.Ward(WardCost.Mana("{2}")))
     }
 
     val bigWardedBear = card("Costly Warded Bear") {
@@ -37,7 +39,7 @@ class WardCounterTest : FunSpec({
         typeLine = "Creature — Bear"
         power = 2
         toughness = 3
-        keywordAbility(KeywordAbility.ward("{4}"))
+        keywordAbility(KeywordAbility.Ward(WardCost.Mana("{4}")))
     }
 
     fun createDriver(): GameTestDriver {
@@ -65,7 +67,7 @@ class WardCounterTest : FunSpec({
         val cast = driver.castSpellWithTargets(
             activePlayer, bolt, listOf(ChosenTarget.Permanent(bear))
         )
-        cast.isSuccess shouldBe true
+        cast.outcome shouldBe Outcome.Done
 
         // Ward trigger goes on the stack; resolve it — caller cannot pay ⇒ Bolt is countered.
         driver.bothPass()

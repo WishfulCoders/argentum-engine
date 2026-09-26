@@ -2,13 +2,14 @@ package com.wingedsheep.mtg.sets.definitions.lrw.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.unaryMinus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Lys Alana Scarblade
@@ -41,14 +42,11 @@ val LysAlanaScarblade = card("Lys Alana Scarblade") {
             Costs.Tap,
             Costs.Discard(filter = GameObjectFilter.Any.withSubtype(Subtype.ELF)),
         )
-        val victim = target("target creature", Targets.Creature)
-        val shrink = DynamicAmount.Multiply(
-            DynamicAmount.AggregateBattlefield(
-                player = Player.You,
-                filter = GameObjectFilter.Permanent.withSubtype(Subtype.ELF),
-            ),
-            -1,
-        )
+        val victim = target(TargetFilter.Creature)
+        val shrink = -DynamicAmounts.battlefield(
+            Player.You,
+            GameObjectFilter.Permanent.withSubtype(Subtype.ELF),
+        ).count()
         effect = Effects.ModifyStats(shrink, shrink, victim)
     }
 

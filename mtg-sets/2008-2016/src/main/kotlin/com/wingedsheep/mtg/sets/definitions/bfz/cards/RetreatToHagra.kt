@@ -4,12 +4,14 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
+import com.wingedsheep.sdk.scripting.GameObjectFilter
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Retreat to Hagra
@@ -31,21 +33,15 @@ val RetreatToHagra = card("Retreat to Hagra") {
         "• Each opponent loses 1 life and you gain 1 life."
 
     triggeredAbility {
-        trigger = Triggers.LandYouControlEnters
+        trigger = Triggers.a(GameObjectFilter.Land.youControl()).enters()
         effect = ModalEffect.chooseOne(
-            Mode.withTarget(
-                Effects.Composite(
-                    Effects.ModifyStats(1, 0, EffectTarget.ContextTarget(0)),
-                    Effects.GrantKeyword(Keyword.DEATHTOUCH, EffectTarget.ContextTarget(0)),
-                ),
-                TargetCreature(),
-                "Target creature gets +1/+0 and gains deathtouch until end of turn",
-            ),
+            mode("Target creature gets +1/+0 and gains deathtouch until end of turn") {
+                val creature = target(TargetFilter.Creature)
+                effect = Effects.ModifyStats(1, 0, creature) then
+                    Effects.GrantKeyword(Keyword.DEATHTOUCH, creature)
+            },
             Mode.noTarget(
-                Effects.Composite(
-                    Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)),
-                    Effects.GainLife(1),
-                ),
+                Effects.LoseLife(1, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(1),
                 "Each opponent loses 1 life and you gain 1 life",
             ),
         )

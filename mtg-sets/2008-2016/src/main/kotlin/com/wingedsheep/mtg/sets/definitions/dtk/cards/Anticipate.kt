@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardOrder
 import com.wingedsheep.sdk.scripting.effects.ZonePlacement
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Anticipate
@@ -25,8 +24,8 @@ val Anticipate = card("Anticipate") {
     spell {
         // Look at top 3, keep one in hand, rest to bottom of library in chosen order.
         effect = Patterns.Library.lookAtTopAndKeep(
-            count = DynamicAmount.Fixed(3),
-            keepCount = DynamicAmount.Fixed(1),
+            count = 3,
+            keepCount = 1,
             keepDestination = CardDestination.ToZone(Zone.HAND),
             restDestination = CardDestination.ToZone(Zone.LIBRARY, placement = ZonePlacement.Bottom),
             restOrder = CardOrder.ControllerChooses

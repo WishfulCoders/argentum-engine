@@ -42,7 +42,7 @@ val RealmScorcherHellkite = card("Realm-Scorcher Hellkite") {
     bargain()
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.WasBargained
         effect = Effects.AddManaInAnyCombination(4)
         description = "When this creature enters, if it was bargained, add four mana in any " +
@@ -51,7 +51,7 @@ val RealmScorcherHellkite = card("Realm-Scorcher Hellkite") {
 
     activatedAbility {
         cost = Costs.Mana("{1}{R}")
-        val target = target("any target", Targets.Any)
+        val target = target(Targets.Any)
         effect = Effects.DealDamage(1, target)
         description = "This creature deals 1 damage to any target."
     }

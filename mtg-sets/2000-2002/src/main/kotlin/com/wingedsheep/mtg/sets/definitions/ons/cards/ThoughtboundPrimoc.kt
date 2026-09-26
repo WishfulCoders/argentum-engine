@@ -7,7 +7,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Thoughtbound Primoc
@@ -29,10 +29,10 @@ val ThoughtboundPrimoc = card("Thoughtbound Primoc") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.YourUpkeep
-        effect = ConditionalEffect(
+        trigger = Triggers.you.beginningOf(Step.UPKEEP)
+        effect = Effects.If(
             condition = Conditions.APlayerControlsMostOfSubtype(Subtype("Wizard")),
-            effect = Effects.GainControlByMostOfSubtype(Subtype("Wizard"))
+            then = Effects.GainControlByMostOfSubtype(Subtype("Wizard"))
         )
     }
 

@@ -5,12 +5,11 @@
 package com.wingedsheep.mtg.sets.definitions.usg.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.RegenerateEffect
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 
@@ -30,12 +29,12 @@ val SpinedFluke = card("Spined Fluke") {
     power = 5
     toughness = 1
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = SacrificeEffect(GameObjectFilter.Creature)
+        trigger = Triggers.self.enters()
+        effect = Effects.SacrificeOwn(GameObjectFilter.Creature)
     }
     activatedAbility {
         cost = Costs.Mana("{B}")
-        effect = RegenerateEffect(EffectTarget.Self)
+        effect = Effects.Regenerate(EffectTarget.Self)
     }
     metadata {
         rarity = Rarity.UNCOMMON

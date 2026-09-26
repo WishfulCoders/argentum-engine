@@ -2,9 +2,9 @@ package com.wingedsheep.mtg.sets.definitions.ths.cards
 
 import com.wingedsheep.sdk.dsl.Costs
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Priest of Iroas
@@ -24,7 +24,7 @@ val PriestOfIroas = card("Priest of Iroas") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{3}{W}"), Costs.SacrificeSelf)
-        val t = target("target", Targets.Enchantment)
+        val t = target(TargetFilter.Enchantment)
         effect = Effects.Destroy(t)
     }
 

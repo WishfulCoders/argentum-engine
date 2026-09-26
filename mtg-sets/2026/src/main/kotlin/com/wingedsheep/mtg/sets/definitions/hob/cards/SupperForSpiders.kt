@@ -9,10 +9,8 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.BecomeArtifactEffect
 import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ForEachInCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -41,7 +39,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  *    `loseAllAbilities = false` (nothing in the text removes abilities — a reanimated Blood Artist
  *    still has its trigger, it just isn't a creature any more). [Duration.Permanent] keeps the
  *    transform in force until the permanent next leaves the battlefield.
- *  - The transform runs *after* the move, once per card, with `EffectTarget.Self` bound to each
+ *  - The transform runs *after* the move, once per card, with `EffectTarget.IterationEntity` bound to each
  *    iterated entity — the entity id survives the graveyard → battlefield transition, so the
  *    continuous effects land on the permanents that just entered.
  *
@@ -52,14 +50,14 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * applies to creatures, and these are not.
  */
 
-/** The Food token's printed ability, granted to each card returned this way. */
-private val foodSacrificeAbility = ActivatedAbility(
-    cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap, Costs.SacrificeSelf),
-    effect = Effects.GainLife(3),
-    descriptionOverride = "{2}, {T}, Sacrifice this artifact: You gain 3 life."
-)
-
 val SupperForSpiders = card("Supper for Spiders") {
+    /** The Food token's printed ability, granted to each card returned this way. */
+    val foodSacrificeAbility = ActivatedAbility(
+        cost = Costs.Composite(Costs.Mana("{2}"), Costs.Tap, Costs.SacrificeSelf),
+        effect = Effects.GainLife(3),
+        descriptionOverride = "{2}, {T}, Sacrifice this artifact: You gain 3 life."
+    )
+
     manaCost = "{1}{B}"
     colorIdentity = "B"
     typeLine = "Instant"
@@ -79,10 +77,10 @@ val SupperForSpiders = card("Supper for Spiders") {
             )
             move(fallen, CardDestination.ToZone(Zone.BATTLEFIELD, Player.You))
             run(
-                ForEachInCollectionEffect(
-                    collection = fallen.key,
-                    effect = BecomeArtifactEffect(
-                        target = EffectTarget.Self,
+                Effects.ForEachInCollection(
+                    collection = fallen,
+                    effect = Effects.BecomeArtifact(
+                        target = EffectTarget.IterationEntity,
                         cardTypes = setOf("ARTIFACT"),
                         subtypes = setOf(Subtype.FOOD.value),
                         colors = null,

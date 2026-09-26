@@ -23,10 +23,7 @@ val DangerousWager = card("Dangerous Wager") {
     oracleText = "Discard your hand, then draw two cards."
 
     spell {
-        effect = Effects.Composite(
-            Patterns.Hand.discardHand(),
-            Effects.DrawCards(2),
-        )
+        effect = Patterns.Hand.discardHand() then Effects.DrawCards(2)
     }
 
     metadata {

@@ -6,9 +6,9 @@ import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Wardens of the Cycle — "{1}{B}{G}{G} 3/4. Morbid — At the beginning of your end step, if a
@@ -22,7 +22,7 @@ class WardensOfTheCycleScenarioTest : ScenarioTestBase() {
             manaCost = "{0}"
             typeLine = "Sorcery"
             spell {
-                val c = target("target creature", Targets.Creature)
+                val c = target(TargetFilter.Creature)
                 effect = Effects.Destroy(c)
             }
         }

@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.view
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.sdk.core.Step
@@ -73,7 +74,7 @@ class PlayerGrantVisibilityTest : FunSpec({
     }
 
     fun badges(driver: GameTestDriver, playerId: EntityId): List<String> =
-        ClientStateTransformer(cardRegistry = driver.cardRegistry)
+        ClientStateTransformer(cardRegistry = driver.cardRegistry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
             .transform(driver.state, viewingPlayerId = playerId)
             .players.single { it.playerId == playerId }
             .activeEffects.map { it.effectId }

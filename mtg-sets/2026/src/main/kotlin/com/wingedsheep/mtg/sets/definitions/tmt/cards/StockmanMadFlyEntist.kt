@@ -28,7 +28,7 @@ val StockmanMadFlyEntist = card("Stockman, Mad Fly-entist") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Hand.loot(1)
     }
 

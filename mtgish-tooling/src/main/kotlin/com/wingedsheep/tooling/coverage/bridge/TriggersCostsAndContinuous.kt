@@ -14,10 +14,10 @@ internal fun BridgeBuilder.triggersCostsAndContinuous() {
     // Triggers — validated by a Triggers.* facade scan in a later phase.
     supported("WhenAPermanentEntersTheBattlefield", "trigger: ETB (Triggers.* scan validates in P1)")
     // Batched ETB — "whenever one or more permanents [matching a filter] enter" fires once per event
-    // batch (Triggers.OneOrMorePermanentsEnter / OneOrMoreOpponentPermanentsEnter; controller scope
+    // batch (Triggers.oneOrMore(filter).enter() / OneOrMoreOpponentPermanentsEnter; controller scope
     // you-control by default or .opponentControls(); the matching batch members are exposed to the
     // payoff via the trigger.captured pipeline collection — Kambal, Profiteering Mayor).
-    supported("WhenAnyNumberOfPermanentsEnterTheBattlefield", "trigger: one or more permanents enter, batched (Triggers.OneOrMorePermanentsEnter / OneOrMoreOpponentPermanentsEnter)")
+    supported("WhenAnyNumberOfPermanentsEnterTheBattlefield", "trigger: one or more permanents enter, batched (Triggers.oneOrMore(filter).enter() / OneOrMoreOpponentPermanentsEnter)")
     supported("WhenAPermanentDies", "trigger: dies")
     // "Whenever one or more <counter> counters are put on this creature, …" — the counters-placed
     // trigger (CountersPlacedEvent bound to SELF; Exemplar of Light, Pensive Professor). The emitter
@@ -25,7 +25,7 @@ internal fun BridgeBuilder.triggersCostsAndContinuous() {
     // declines -> SCAFFOLD.
     supported("WhenAnyNumberOfCountersOfTypeArePutOnAPermanent", "trigger: one or more counters of a type put on this permanent (CountersPlacedEvent, SELF)")
     // The removal mirror of the two tags above (EventPattern.CountersRemovedEvent /
-    // Triggers.countersRemovedFrom). `lastRemoved = true` is the "when the LAST counter is removed"
+    // Triggers.<subject>.losesCounters(type, lastRemoved, byDamagePrevention)). `lastRemoved = true` is the "when the LAST counter is removed"
     // variant that CR 310.12b's Siege defeat ability is built from (Divine Intervention prints the
     // same shape). The emitter renders the SELF-subject + nameable-counter form; the last-counter tag
     // additionally carries a *remover* selector, which our trigger doesn't model, so that one declines
@@ -33,63 +33,63 @@ internal fun BridgeBuilder.triggersCostsAndContinuous() {
     supported("WhenACounterOfTypeIsRemovedFromAPermanent", "trigger: a counter of a type removed from this permanent (CountersRemovedEvent, SELF)")
     supported("WhenAPlayerRemovesTheLastCounterOfTypeFromAPermanent", "trigger: the last counter of a type removed from this permanent (CountersRemovedEvent, lastRemoved)")
     // Clash (CR 701.30) — "Whenever you clash" / "Whenever you clash and win"
-    // (Triggers.WheneverYouClash / WheneverYouClashAndWin over EventPattern.ClashedEvent). The engine
+    // (Triggers.you.clashes() / WheneverYouClashAndWin over EventPattern.ClashedEvent). The engine
     // emits one ClashedEvent per *participant*, so both tags resolve for a clash an opponent started,
     // which is what the Entangling Trap / Sylvan Echoes rulings require. The third spelling — the
     // "…, If you won, …" rider *inside* a WhenAPlayerClashes effect — is the `Trigger_WonTheClash`
     // condition, registered next to the Clash effect rows in ZoneMovement.kt.
-    supported("WhenAPlayerClashes", "trigger: a player clashes (Triggers.WheneverYouClash)")
-    supported("WhenAPlayerClashesAndWins", "trigger: a player clashes and wins (Triggers.WheneverYouClashAndWin)")
+    supported("WhenAPlayerClashes", "trigger: a player clashes (Triggers.you.clashes())")
+    supported("WhenAPlayerClashesAndWins", "trigger: a player clashes and wins (Triggers.you.clashes(true))")
     supported("WhenACreatureAttacks", "trigger: attacks")
     // "Whenever this creature attacks a player, …" — the attacks-a-player trigger, gated on the declared
     // defender being a player (not a planeswalker or battle; CR 508.1 + Kaalia of the Vast's 2024-06-07
-    // ruling). Maps to AttackPredicate.DefenderIsPlayer / Triggers.AttacksAnOpponent for the SELF subject
+    // ruling). Maps to AttackPredicate.DefenderIsPlayer / Triggers.self.attacks(setOf(AttackPredicate.DefenderIsPlayer)) for the SELF subject
     // over a bare "a player" (Opponent / AnyPlayer) scope; the emitter renders that shape and declines a
     // non-self attacker or a constrained player scope (attacks-you / life-total / controls-N).
-    supported("WhenACreatureAttacksAPlayer", "trigger: this creature attacks a player (Triggers.AttacksAnOpponent)")
+    supported("WhenACreatureAttacksAPlayer", "trigger: this creature attacks a player (Triggers.self.attacks(setOf(AttackPredicate.DefenderIsPlayer)))")
     // "Whenever this creature attacks for the first time each turn, …" — SELF attack trigger gated on
-    // the per-turn attacker set (AttackPredicate.FirstTimeEachTurn / Triggers.AttacksFirstTimeEachTurn,
+    // the per-turn attacker set (AttackPredicate.FirstTimeEachTurn / Triggers.self.attacks(setOf(AttackPredicate.FirstTimeEachTurn)),
     // Fear of Missing Out). Fires once on the first attack and not on a later combat phase the same turn.
-    supported("WhenACreatureAttacksForTheFirstTimeEachTurn", "trigger: this creature attacks for the first time each turn (Triggers.AttacksFirstTimeEachTurn)")
+    supported("WhenACreatureAttacksForTheFirstTimeEachTurn", "trigger: this creature attacks for the first time each turn (Triggers.self.attacks(setOf(AttackPredicate.FirstTimeEachTurn)))")
     // "Whenever you attack with one or more creatures [matching a filter]" — the batched declare-attackers
-    // trigger that fires once per combat when at least one attacker matches (Triggers.YouAttackWithFilter,
+    // trigger that fires once per combat when at least one attacker matches (Triggers.you.attacks(with),
     // Jolene Plundering Pugilist's "with power 4 or greater"). You scope only; the emitter recovers the
     // attacker filter exactly or declines -> SCAFFOLD.
-    supported("WhenAPlayerAttacksWithAnyNumberOfCreatures", "trigger: you attack with one or more creatures matching a filter (Triggers.YouAttackWithFilter)")
+    supported("WhenAPlayerAttacksWithAnyNumberOfCreatures", "trigger: you attack with one or more creatures matching a filter (Triggers.you.attacks(with))")
     supported("WhenACreatureBlocks", "trigger: blocks (Ydwen Efreet)")
-    // "Whenever a player discards a card" — Triggers.AnyOpponentDiscards / YouDiscard, or the
+    // "Whenever a player discards a card" — Triggers.anOpponent.discards() / YouDiscard, or the
     // discards(player, cardFilter, batch) factory. Fires once per discarded card, and each firing binds
     // *its* card as the triggering entity, so a payoff can act on "it" — the card the discard put into
     // the graveyard (CR 400.7e). That binding is what makes "exile it from their graveyard with a stash
     // counter on it" (Tinybones, Bauble Burglar) expressible.
-    supported("WhenAPlayerDiscardsACard", "trigger: a player discards a card (Triggers.AnyOpponentDiscards / YouDiscard / discards(player, cardFilter)); binds the discarded card as TriggeringEntity")
+    supported("WhenAPlayerDiscardsACard", "trigger: a player discards a card (Triggers.anOpponent.discards() / YouDiscard / discards(player, cardFilter)); binds the discarded card as TriggeringEntity")
     // Cause-agnostic by construction: `EventPattern.TapEvent.reason` defaults to null, which matches a
     // tap from any cause. The engine also carries a *tap cause* (`TapReason` — teamwork is the only
     // classified one today, CR 702.194a), but the IR has no tag for "becomes tapped **to pay a
     // teamwork cost**", so a card with that wording must not be drafted from this tag; it would render
     // a strictly wider trigger. Register a distinct tag before claiming it.
-    supported("WhenAPermanentBecomesTapped", "trigger: this permanent becomes tapped (Triggers.BecomesTapped — Wylie Duke, Atiin Hero)")
+    supported("WhenAPermanentBecomesTapped", "trigger: this permanent becomes tapped (Triggers.self.becomesTapped() — Wylie Duke, Atiin Hero)")
     // "Whenever you tap an untapped creature an opponent controls" — the tap-*attribution* trigger, a
     // different axis from the passive WhenAPermanentBecomesTapped above: only a tap the trigger's
-    // controller caused fires it (Triggers.YouTap(filter); Hylda of the Icy Crown, Icewrought Sentry,
+    // controller caused fires it (Triggers.you.taps(filter); Hylda of the Icy Crown, Icewrought Sentry,
     // Solitary Sanctuary). The IR's `IsUntapped` clause is intrinsic to the engine — tapping is a
     // transition (CR 603.2f), so an already-tapped permanent emits no tap event — and the emitter drops
     // it rather than recovering a `.untapped()` predicate that would read false at detection time.
     // You-scope only; the emitter recovers the permanent filter exactly or declines -> SCAFFOLD.
-    supported("WhenAPlayerTapsAPermanent", "trigger: you tap an untapped permanent matching a filter (Triggers.YouTap)")
+    supported("WhenAPlayerTapsAPermanent", "trigger: you tap an untapped permanent matching a filter (Triggers.you.taps(filter, batch))")
     supported("WhenACreatureDealsCombatDamageToAPlayer", "trigger: combat damage to player")
     // "Whenever you sacrifice a/another [filter] …" — the batched sacrifice trigger that fires when a
-    // matching permanent you control is sacrificed (Triggers.YouSacrificeOneOrMore; the first matching
+    // matching permanent you control is sacrificed (Triggers.you.sacrifices(filter, batch = true); the first matching
     // sacrificed permanent is bound as the triggering entity so "its mana value / power" reads from LKI —
     // Rakdos, the Muscle). You-scope; the emitter recovers the filter or declines -> SCAFFOLD.
-    supported("WhenAPlayerSacrificesAPermanent", "trigger: you sacrifice one or more matching permanents (Triggers.YouSacrificeOneOrMore)")
-    // "At the beginning of combat on your turn, …" (Triggers.BeginCombat — already scoped to your turn).
+    supported("WhenAPlayerSacrificesAPermanent", "trigger: you sacrifice one or more matching permanents (Triggers.you.sacrifices(filter, batch = true))")
+    // "At the beginning of combat on your turn, …" (Triggers.you.beginningOf(Step.BEGIN_COMBAT) — already scoped to your turn).
     // Oko, the Ringleader's combat-begin copy. You-turn scope only; the emitter renders BeginCombat when
     // the payoff is renderable (else SCAFFOLD).
-    supported("AtTheBeginningOfCombatDuringAPlayersTurn", "trigger: beginning of combat on your turn (Triggers.BeginCombat)")
-    supported("WhenAPlayerCastsASpell", "trigger: a player casts a spell (Triggers.YouCastSpell / AnyPlayerCastsSpell / OpponentCastsSpell + type filters)")
-    supported("WhenAPlayerActivatesAnAbility", "trigger: you activate an exhaust ability (Triggers.YouActivateExhaustAbility)")
-    supported("WhenAPlayerCastsTheirNthSpellInATurn", "trigger: you cast your Nth spell each turn (Triggers.NthSpellCast(N, Player.You) — Rodeo Pyromancers)")
+    supported("AtTheBeginningOfCombatDuringAPlayersTurn", "trigger: beginning of combat on your turn (Triggers.you.beginningOf(Step.BEGIN_COMBAT))")
+    supported("WhenAPlayerCastsASpell", "trigger: a player casts a spell (Triggers.you.casts() / AnyPlayerCastsSpell / OpponentCastsSpell + type filters)")
+    supported("WhenAPlayerActivatesAnAbility", "trigger: you activate an exhaust ability (Triggers.you.activatesAbility(exhaust = true))")
+    supported("WhenAPlayerCastsTheirNthSpellInATurn", "trigger: you cast your Nth spell each turn (Triggers.you.castsNth(N) — Rodeo Pyromancers)")
     // Breeches, the Blastmaker stays a DELIBERATE DECLINE — its second-spell payoff (NthSpellCast above)
     // is a `MayCost(sacrifice an artifact)`-gated `FlipACoin_OnWinAndLose` that sets up two reflexive
     // (delayed) triggers — win: `CopySpellAndMayChooseNewTargets`, lose: deal that spell's mana value to
@@ -105,26 +105,26 @@ internal fun BridgeBuilder.triggersCostsAndContinuous() {
     // If(CostWasPaid)[reflexive: this permanent deals N to any target]); any other reflexive shape (the
     // Breeches coin cluster) still scaffolds/blocks via its sibling tags.
     supported("ReflexiveTrigger", "reflexive 'when you do' trigger (ReflexiveTriggerEffect — Boilerbilges Ripper); other shapes scaffold")
-    supported("AtTheBeginningOfAPlayersUpkeep", "trigger: upkeep (Triggers.YourUpkeep / EachUpkeep / EachOpponentUpkeep)")
-    supported("AtTheBeginningOfAPlayersEndStep", "trigger: end step (Triggers.YourEndStep / EachEndStep)")
-    supported("AtTheBeginningOfAPlayersSecondMainPhase", "trigger: your second (postcombat) main phase (Triggers.YourPostcombatMain — Survival ability word)")
-    supported("WhenAPlayerGainsLife", "trigger: you gain life (Triggers.YouGainLife — Pest Mascot, Essence Channeler)")
-    supported("WhenAPlayerGainsLifeForTheFirstTimeEachTurn", "trigger: you gain life for the first time each turn (Triggers.YouGainLifeFirstTimeEachTurn — Leech Collector)")
-    supported("WhenAPlayerGainsControlOfAPermanentFromAPlayer", "trigger: an opponent gains control of a permanent from you (Triggers.OpponentGainsControlOfYourPermanent — Zidane, Tantalus Thief)")
-    supported("WhenAPlayerTurnsAPermanentFaceUp", "trigger: you turn a permanent face up (Triggers.CreatureTurnedFaceUp — Growing Dread)")
-    supported("WhenAPermanentIsTurnedFaceUp", "trigger: this or another permanent you control is turned face up (Triggers.CreatureTurnedFaceUp — Cryptid Inspector)")
-    // OTJ Plot (CR 718) — "When this card becomes plotted, …" (Triggers.BecomesPlotted, Aloe Alchemist).
-    supported("WhenACardBecomesPlotted", "trigger: this card becomes plotted (Triggers.BecomesPlotted)")
-    supported("WhenAPermanentBecomesTheTargetOfASpellOrAbility", "trigger: becomes target (Triggers.BecomesTargetByOpponent / BecomesTarget / CreatureYouControlBecomesTargetByOpponent / BecomesTargetOfAbility — the last narrows to abilities and, with includePlayerTargets, also covers a targeted player)")
+    supported("AtTheBeginningOfAPlayersUpkeep", "trigger: upkeep (Triggers.you.beginningOf(Step.UPKEEP) / EachUpkeep / EachOpponentUpkeep)")
+    supported("AtTheBeginningOfAPlayersEndStep", "trigger: end step (Triggers.you.beginningOf(Step.END) / EachEndStep)")
+    supported("AtTheBeginningOfAPlayersSecondMainPhase", "trigger: your second (postcombat) main phase (Triggers.you.beginningOf(Step.POSTCOMBAT_MAIN) — Survival ability word)")
+    supported("WhenAPlayerGainsLife", "trigger: you gain life (Triggers.you.gainsLife() — Pest Mascot, Essence Channeler)")
+    supported("WhenAPlayerGainsLifeForTheFirstTimeEachTurn", "trigger: you gain life for the first time each turn (Triggers.you.gainsLife(true) — Leech Collector)")
+    supported("WhenAPlayerGainsControlOfAPermanentFromAPlayer", "trigger: an opponent gains control of a permanent from you (Triggers.a().controlChanges(ControlChangeDirection.LOST, toOpponent = true) — Zidane, Tantalus Thief)")
+    supported("WhenAPlayerTurnsAPermanentFaceUp", "trigger: you turn a permanent face up (Triggers.<player>.permanentTurnedFaceUp(filter) — Growing Dread)")
+    supported("WhenAPermanentIsTurnedFaceUp", "trigger: this or another permanent you control is turned face up (Triggers.<player>.permanentTurnedFaceUp(filter) — Cryptid Inspector)")
+    // OTJ Plot (CR 718) — "When this card becomes plotted, …" (Triggers.self.becomesPlotted(), Aloe Alchemist).
+    supported("WhenACardBecomesPlotted", "trigger: this card becomes plotted (Triggers.self.becomesPlotted())")
+    supported("WhenAPermanentBecomesTheTargetOfASpellOrAbility", "trigger: becomes target (Triggers.self.becomesTarget(byOpponent = true) / BecomesTarget / CreatureYouControlBecomesTargetByOpponent / BecomesTargetOfAbility — the last narrows to abilities and, with includePlayerTargets, also covers a targeted player)")
     // OTJ Saddle (CR 702.171b) — "Whenever this creature becomes saddled for the first time each turn, …"
-    // (Triggers.becomesSaddled(firstTimeEachTurn = true), Stubborn Burrowfiend).
-    supported("WhenAPermanentBecomesSaddledForTheFirstTimeInATurn", "trigger: this permanent becomes saddled for the first time each turn (Triggers.becomesSaddled(firstTimeEachTurn = true))")
+    // (Triggers.self.becomesSaddled(true), Stubborn Burrowfiend).
+    supported("WhenAPermanentBecomesSaddledForTheFirstTimeInATurn", "trigger: this permanent becomes saddled for the first time each turn (Triggers.self.becomesSaddled(true))")
     // "Whenever this Equipment/Aura becomes attached to a permanent, …" (CR 603.2e) — the new
-    // Triggers.becomesAttached. Capability-only: the renderable payoffs (Assimilation Aegis'
+    // Triggers.<subject>.becomesAttached(to, controller). Capability-only: the renderable payoffs (Assimilation Aegis'
     // copy-of-linked-exile, Eriette's gain-control "for as long as that Aura is attached") carry the
     // attach-relative duration and exile linkage the emitter does NOT reconstruct, so it declines to
     // SCAFFOLD per the creator's note (chosen/inherited-value shapes). Hand-authored card is ground truth.
-    supported("WhenAPermanentBecomesAttached", "trigger: an Aura/Equipment becomes attached (Triggers.becomesAttached) — capability only, emitter scaffolds")
+    supported("WhenAPermanentBecomesAttached", "trigger: an Aura/Equipment becomes attached (Triggers.<subject>.becomesAttached(to, controller)) — capability only, emitter scaffolds")
     // Exploit payoff (CR 702.110b) — "when this creature exploits a creature, …". NOT an engine gap:
     // the shipped `card { exploit(onExploit, onExploitTargets) }` helper composes the whole mechanic
     // from primitives (EXPLOIT keyword + an ETB ReflexiveTriggerEffect whose action sacrifices a
@@ -142,38 +142,38 @@ internal fun BridgeBuilder.triggersCostsAndContinuous() {
     // Training payoff (CR 702.149c) — "whenever this creature trains, …". Like the exploit payoff above,
     // NOT an engine gap: the shipped `training()` helper adds the TRAINING keyword + the attack trigger
     // whose +1/+1 counter placement emits the parameterless `EventPattern.TrainedEvent` (fired only when
-    // the counter actually lands), and this trigger keys on that event via `Triggers.trains()` (SELF
+    // the counter actually lands), and this trigger keys on that event via `Triggers.self.trains()` (SELF
     // binding). Savior of Ollenbock's "whenever this creature trains, exile up to one …" is the payoff.
     // Capability-only: the emitter would have to fuse the paired Training-keyword rule + this trigger and
     // recover the exile-until-leaves / cross-zone-union payoff — exactly the lossy render the fidelity
     // policy declines — so it leaves the card at SCAFFOLD (like the exploit payoff). The hand-authored
-    // Savior of Ollenbock card + its scenario test are ground truth. See the Triggers.trains() /
+    // Savior of Ollenbock card + its scenario test are ground truth. See the Triggers.self.trains() /
     // TrainedEvent entries in card-sdk-language-reference.md.
     // Champion payoff (CR 702.72c) — "when a [quality] is championed with this creature, …" (Mistbind
     // Clique). Like the exploit and training payoffs above, NOT an engine gap: the shipped
     // `champion(...)` helper composes the whole mechanic and its success branch emits the
     // parameterless `EventPattern.ChampionedEvent`, which this trigger keys on via
-    // `Triggers.championedWith()` (SELF binding). Capability-only: the emitter would have to fuse the
+    // `Triggers.self.champions()` (SELF binding). Capability-only: the emitter would have to fuse the
     // paired Champion-keyword rule + this trigger and recover the targeted group-tap payoff, so it
     // leaves the card at SCAFFOLD. The hand-authored Mistbind Clique + its scenario test are ground
-    // truth. See the Triggers.championedWith() / ChampionedEvent entries in
+    // truth. See the Triggers.self.champions() / ChampionedEvent entries in
     // card-sdk-language-reference.md.
-    supported("WhenAPermanentIsChampionedWithAPermanent", "trigger: a permanent is championed with this permanent (champion payoff — Triggers.championedWith(), ChampionedEvent) — capability only, emitter scaffolds")
-    supported("WhenAPermanentTrains", "trigger: this creature trains (training payoff — Triggers.trains(), TrainedEvent) — capability only, emitter scaffolds")
+    supported("WhenAPermanentIsChampionedWithAPermanent", "trigger: a permanent is championed with this permanent (champion payoff — Triggers.self.champions(), ChampionedEvent) — capability only, emitter scaffolds")
+    supported("WhenAPermanentTrains", "trigger: this creature trains (training payoff — Triggers.self.trains(), TrainedEvent) — capability only, emitter scaffolds")
     // "When this permanent leaves the battlefield, …" — the self leaves-the-battlefield trigger
-    // (Triggers.LeavesBattlefield). Savior of Ollenbock uses it to return every linked
+    // (Triggers.self.leaves()). Savior of Ollenbock uses it to return every linked
     // ExileUntilLeaves card under its owner's control. Capability-only alongside the training payoff it
     // pairs with; the emitter scaffolds the whole exile-and-return loop.
-    supported("WhenAPermanentLeavesTheBattlefield", "trigger: this permanent leaves the battlefield (Triggers.LeavesBattlefield)")
-    // OTJ crime (CR 700.10) — "Whenever you commit a crime, …" (Triggers.YouCommitCrime, Marauding Sphinx).
-    supported("WhenAPlayerCommitsACrime", "trigger: you commit a crime (Triggers.YouCommitCrime)")
+    supported("WhenAPermanentLeavesTheBattlefield", "trigger: this permanent leaves the battlefield (Triggers.self.leaves())")
+    // OTJ crime (CR 700.10) — "Whenever you commit a crime, …" (Triggers.you.commitsCrime(), Marauding Sphinx).
+    supported("WhenAPlayerCommitsACrime", "trigger: you commit a crime (Triggers.you.commitsCrime())")
     // "Whenever one or more cards leave your graveyard, …" — batching leave-graveyard trigger
-    // (Triggers.CardsLeaveYourGraveyard — Owlin Historian, Attuned Hunter). You-scoped + unfiltered only.
-    supported("WhenAnyNumberOfGraveyardCardsLeave", "trigger: one or more cards leave your graveyard (Triggers.CardsLeaveYourGraveyard)")
+    // (Triggers.oneOrMore(filter).leaveYourGraveyard() — Owlin Historian, Attuned Hunter). You-scoped + unfiltered only.
+    supported("WhenAnyNumberOfGraveyardCardsLeave", "trigger: one or more cards leave your graveyard (Triggers.oneOrMore(filter).leaveYourGraveyard())")
     // "When this Aura/permanent is put into a graveyard from the battlefield, …" — the self LTB-to-
-    // graveyard trigger (Reach for the Sky's "draw a card"). Maps to Triggers.PutIntoGraveyardFromBattlefield;
+    // graveyard trigger (Reach for the Sky's "draw a card"). Maps to Triggers.self.dies();
     // only the SELF (ThisPermanent), any-player shape renders (anything else scaffolds).
-    supported("WhenAPermanentIsPutIntoAPlayersGraveyard", "trigger: this permanent put into a graveyard from the battlefield (Triggers.PutIntoGraveyardFromBattlefield)")
+    supported("WhenAPermanentIsPutIntoAPlayersGraveyard", "trigger: this permanent put into a graveyard from the battlefield (Triggers.self.dies())")
     // "You may cast this card from your graveyard if [condition]. If you do, it enters with a +1/+1
     // counter." (Undead Sprinter, DSK) — a conditional self-cast-from-graveyard permission with a
     // cast-this-way counter rider. Maps to staticAbility { ability = MayCastSelfFromZones(Zone.GRAVEYARD,
@@ -231,9 +231,9 @@ internal fun BridgeBuilder.triggersCostsAndContinuous() {
     // (DISTINCT_TYPES aggregation over your graveyard). Spineseeker Centipede, Balustrade Wurm.
     supported("NumCardTypesInGraveyardIs", "predicate: N or more card types among cards in your graveyard (Conditions.Delirium)")
     supported("ThereAreNumberCardTypesInPlayersGraveyard", "condition: N or more card types in a player's graveyard (Conditions.Delirium)")
-    // "if you do" / "if [the cost] was paid" — the IfYouDoEffect linkage after a MayCost(DiscardACard)
-    // loot, rendered by the emitter as MayEffect(IfYouDoEffect(...)). Universal condition vocabulary.
-    supported("CostWasPaid", "condition: the optional cost was paid (IfYouDoEffect linkage)")
+    // "if you do" / "if [the cost] was paid" — the Effects.IfYouDo linkage after a MayCost(DiscardACard)
+    // loot, rendered by the emitter as Effects.May(Effects.IfYouDo(...)). Universal condition vocabulary.
+    supported("CostWasPaid", "condition: the optional cost was paid (Effects.IfYouDo linkage)")
     supported("WasCastFromTheirHand", "predicate: spell cast from the player's hand (fromZone = HAND)")
     // The negation — "a spell from anywhere other than your hand" (Kellan, the Kid). Backed by
     // SpellCastPredicate.CastFromZoneOtherThan(Zone.HAND). The trigger itself is coverable even
@@ -248,8 +248,8 @@ internal fun BridgeBuilder.triggersCostsAndContinuous() {
     // permanent as EffectTarget.TriggeringEntity. Capability-only: mtgish drops Aetherdrift's
     // "during your main phase" rider from these trigger nodes, so the emitter must keep them at
     // SCAFFOLD rather than produce an over-broad AUTO draft.
-    supported("WhenACreatureSaddlesAMount", "trigger: this creature saddles a Mount (Triggers.Saddles)")
-    supported("WhenACreatureCrewsAVehicle", "trigger: this creature crews a Vehicle (Triggers.Crews)")
+    supported("WhenACreatureSaddlesAMount", "trigger: this creature saddles a Mount (Triggers.self.saddles())")
+    supported("WhenACreatureCrewsAVehicle", "trigger: this creature crews a Vehicle (Triggers.self.crews())")
     // Graveyard-arrival filters, both backed by the one PutIntoGraveyardThisTurnComponent stamp:
     // "…that was put there this turn" (Abyssal Harvester) reads the stamp, the battlefield-only
     // variant (Samwise the Stouthearted, Lobelia Sackville-Baggins) also requires its

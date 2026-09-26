@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.dsl.Costs
@@ -31,7 +32,7 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  * Demonstrates two engine capabilities:
  *   - Equipment ↔ Saga-creature transform via [CardDefinition.doubleFacedPermanent] + the
  *     face-agnostic [Effects.ExileAndReturnTransformed] (no creature-front assumption).
- *   - Recipient-group damage prevention via [Effects.PreventAllDamageToGroup] — "prevent all damage
+ *   - Recipient-group damage prevention via [Effects.PreventDamage] `toGroup` — "prevent all damage
  *     that would be dealt to creatures you control this turn".
  */
 private val SummonAlexander = card("Summon: Alexander") {
@@ -49,10 +50,10 @@ private val SummonAlexander = card("Summon: Alexander") {
 
     // I, II — Prevent all damage that would be dealt to creatures you control this turn.
     sagaChapter(1) {
-        effect = Effects.PreventAllDamageToGroup(GroupFilter.AllCreaturesYouControl)
+        effect = Effects.PreventDamage(toGroup = GameObjectFilter.Creature.youControl())
     }
     sagaChapter(2) {
-        effect = Effects.PreventAllDamageToGroup(GroupFilter.AllCreaturesYouControl)
+        effect = Effects.PreventDamage(toGroup = GameObjectFilter.Creature.youControl())
     }
 
     // III — Tap all creatures your opponents control.

@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -23,11 +22,8 @@ val Alarum = card("Alarum") {
     typeLine = "Instant"
     oracleText = "Untap target nonattacking creature. It gets +1/+3 until end of turn."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.Creature))
-        effect = Effects.Composite(
-            Effects.Untap(t),
-            Effects.ModifyStats(1, 3, t)
-        )
+        val t = target(TargetFilter.Creature)
+        effect = Effects.Untap(t) then Effects.ModifyStats(1, 3, t)
     }
     metadata {
         rarity = Rarity.COMMON

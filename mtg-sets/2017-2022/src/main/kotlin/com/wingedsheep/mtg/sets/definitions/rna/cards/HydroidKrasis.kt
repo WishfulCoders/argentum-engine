@@ -1,12 +1,13 @@
 package com.wingedsheep.mtg.sets.definitions.rna.cards
 
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.div
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EntersWithDynamicCounters
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Hydroid Krasis — Ravnica Allegiance #183
@@ -40,16 +41,14 @@ val HydroidKrasis = card("Hydroid Krasis") {
 
     // "When you cast this spell, you gain half X life and draw half X cards. Round down each time."
     triggeredAbility {
-        trigger = Triggers.WhenYouCastThisSpell()
-        effect = Effects.Composite(
-            Effects.GainLife(DynamicAmount.Divide(DynamicAmount.CastX, DynamicAmount.Fixed(2), roundUp = false)),
-            Effects.DrawCards(DynamicAmount.Divide(DynamicAmount.CastX, DynamicAmount.Fixed(2), roundUp = false)),
-        )
+        trigger = Triggers.self.isCast()
+        effect = Effects.GainLife(DynamicAmounts.castX() / 2) then
+            Effects.DrawCards(DynamicAmounts.castX() / 2)
         description = "When you cast this spell, you gain half X life and draw half X cards. Round down each time."
     }
 
     // "This creature enters with X +1/+1 counters on it." — reads the SAME cast-time X.
-    replacementEffect(EntersWithDynamicCounters(count = DynamicAmount.CastX))
+    replacementEffect(EntersWithDynamicCounters(count = DynamicAmounts.castX()))
 
     metadata {
         rarity = Rarity.MYTHIC

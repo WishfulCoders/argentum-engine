@@ -6,13 +6,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.SelectFromCollectionEffect
-import com.wingedsheep.sdk.scripting.effects.SelectionMode
-import com.wingedsheep.sdk.scripting.effects.TapUntapCollectionEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Orphans of the Wheat — Duskmourn: House of Horror #22
@@ -38,31 +33,26 @@ val OrphansOfTheWheat = card("Orphans of the Wheat") {
         "control. This creature gets +1/+1 until end of turn for each creature tapped this way."
 
     triggeredAbility {
-        trigger = Triggers.Attacks
-        effect = Effects.Composite(
-            listOf(
-                GatherCardsEffect(
-                    source = CardSource.ControlledPermanents(
-                        player = Player.You,
-                        filter = GameObjectFilter.Creature.youControl().untapped()
-                    ),
-                    storeAs = "candidates"
-                ),
-                SelectFromCollectionEffect(
-                    from = "candidates",
-                    selection = SelectionMode.ChooseAnyNumber,
-                    storeSelected = "tapped",
-                    prompt = "Tap any number of untapped creatures you control",
-                    useTargetingUI = true
-                ),
-                TapUntapCollectionEffect("tapped", tap = true),
-                Effects.ModifyStats(
-                    power = DynamicAmount.VariableReference("tapped_count"),
-                    toughness = DynamicAmount.VariableReference("tapped_count"),
-                    target = EffectTarget.Self
+        trigger = Triggers.self.attacks()
+        effect = Effects.Pipeline {
+            val candidates = gather(
+                CardSource.ControlledPermanents(
+                    player = Player.You,
+                    filter = GameObjectFilter.Creature.youControl().untapped()
                 )
             )
-        )
+            val tapped = chooseAnyNumber(
+                from = candidates,
+                prompt = "Tap any number of untapped creatures you control",
+                useTargetingUI = true
+            )
+            run(Effects.TapCollection(tapped, tap = true))
+            run(Effects.ModifyStats(
+                power = tapped.count,
+                toughness = tapped.count,
+                target = EffectTarget.Self
+            ))
+        }
         description = "Whenever this creature attacks, tap any number of untapped creatures you " +
             "control. This creature gets +1/+1 until end of turn for each creature tapped this way."
     }

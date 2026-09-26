@@ -8,7 +8,7 @@ import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 
 /**
@@ -23,7 +23,7 @@ val EyeOfNowhere = card("Eye of Nowhere") {
     typeLine = "Sorcery — Arcane"
     oracleText = "Return target permanent to its owner's hand."
     spell {
-        val t = target("target", TargetPermanent())
+        val t = target(TargetFilter.Permanent)
         effect = Effects.Move(t, Zone.HAND)
     }
     metadata {

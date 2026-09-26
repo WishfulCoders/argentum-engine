@@ -11,7 +11,7 @@ import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * Cemetery Protector
@@ -43,11 +43,10 @@ val CemeteryProtector = card("Cemetery Protector") {
 
     // When this creature enters, exile a card from a graveyard.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Pipeline {
             val graveyards = gather(
                 CardSource.FromZone(Zone.GRAVEYARD, Player.Each, GameObjectFilter.Any),
-                name = "graveyards",
             )
             val exiled = chooseExactly(
                 1,
@@ -55,7 +54,6 @@ val CemeteryProtector = card("Cemetery Protector") {
                 useTargetingUI = true,
                 prompt = "Exile a card from a graveyard",
                 selectedLabel = "Exile",
-                name = "exiled",
             )
             exile(exiled, linkToSource = true)
         }
@@ -64,9 +62,9 @@ val CemeteryProtector = card("Cemetery Protector") {
 
     // Whenever you play a land …
     triggeredAbility {
-        trigger = Triggers.youPlayLand()
+        trigger = Triggers.you.playsLand()
         interveningIf = Conditions.TriggeringSpellMatches(
-            GameObjectFilter.Any.sharingCardTypeWith(EntityReference.LinkedExiledCard())
+            GameObjectFilter.Any.sharingCardTypeWith(EffectTarget.LinkedExiledCard())
         )
         effect = humanToken()
         description = "Whenever you play a land, if it shares a card type with the exiled card, " +
@@ -75,9 +73,9 @@ val CemeteryProtector = card("Cemetery Protector") {
 
     // … or cast a spell, if it shares a card type with the exiled card, create a Human.
     triggeredAbility {
-        trigger = Triggers.YouCastSpell
+        trigger = Triggers.you.casts()
         interveningIf = Conditions.TriggeringSpellMatches(
-            GameObjectFilter.Any.sharingCardTypeWith(EntityReference.LinkedExiledCard())
+            GameObjectFilter.Any.sharingCardTypeWith(EffectTarget.LinkedExiledCard())
         )
         effect = humanToken()
         description = "Whenever you cast a spell, if it shares a card type with the exiled card, " +

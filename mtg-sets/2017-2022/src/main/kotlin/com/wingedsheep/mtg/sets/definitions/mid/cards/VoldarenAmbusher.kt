@@ -1,14 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.mid.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.targets.TargetCreatureOrPlaneswalker
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.dsl.Targets
 
 /**
  * Voldaren Ambusher
@@ -32,14 +32,11 @@ val VoldarenAmbusher = card("Voldaren Ambusher") {
         "up to one target creature or planeswalker, where X is the number of Vampires you control."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.OpponentLostLifeThisTurn
-        val t = target(
-            "up to one target creature or planeswalker",
-            TargetCreatureOrPlaneswalker(optional = true)
-        )
+        val t = target(Targets.CreatureOrPlaneswalker, optional = true)
         effect = Effects.DealDamage(
-            DynamicAmount.AggregateBattlefield(Player.You, GameObjectFilter.Creature.withSubtype("Vampire")),
+            DynamicAmounts.battlefield(Player.You, GameObjectFilter.Creature.withSubtype("Vampire")).count(),
             t
         )
     }

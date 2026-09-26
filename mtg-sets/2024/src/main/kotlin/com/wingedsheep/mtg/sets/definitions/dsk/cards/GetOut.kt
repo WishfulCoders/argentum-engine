@@ -3,14 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.dsk.cards
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
-import com.wingedsheep.sdk.scripting.effects.ForEachTargetEffect
 import com.wingedsheep.sdk.scripting.effects.Mode
-import com.wingedsheep.sdk.scripting.effects.ModalEffect
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
-import com.wingedsheep.sdk.scripting.targets.TargetSpell
 import com.wingedsheep.sdk.model.Rarity
 
 /**
@@ -37,18 +34,16 @@ val GetOut = card("Get Out") {
         "• Return one or two target creatures and/or enchantments you own to your hand."
 
     spell {
-        effect = ModalEffect(
+        effect = Effects.Modal(
             modes = listOf(
                 Mode.withTarget(
                     effect = Effects.CounterSpell(),
-                    target = TargetSpell(
-                        filter = TargetFilter(GameObjectFilter.CreatureOrEnchantment, zone = Zone.STACK)
-                    ),
+                    target = TargetObject(filter = TargetFilter(GameObjectFilter.CreatureOrEnchantment, zone = Zone.STACK)),
                     description = "Counter target creature or enchantment spell."
                 ),
                 Mode.withTarget(
-                    effect = ForEachTargetEffect(
-                        listOf(Effects.ReturnToHand(EffectTarget.ContextTarget(0)))
+                    effect = Effects.ForEachTarget(
+                        Effects.ReturnToHand(EffectTarget.ContextTarget(0))
                     ),
                     target = TargetObject(
                         count = 2,

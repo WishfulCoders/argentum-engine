@@ -3,8 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
-import com.wingedsheep.sdk.scripting.effects.GrantPlayWithoutPayingCostEffect
 import com.wingedsheep.sdk.scripting.references.Player
 
 /**
@@ -23,17 +21,13 @@ val DreamHarvest = card("Dream Harvest") {
     oracleText = "Each opponent exiles cards from the top of their library until they have exiled cards with total mana value 5 or greater this way. Until end of turn, you may cast cards exiled this way without paying their mana costs."
 
     spell {
-        effect = Effects.Composite(
-            listOf(
-                Effects.ExileLibraryUntilManaValue(
-                    players = Player.EachOpponent,
-                    threshold = 5,
-                    storeAs = "exiled"
-                ),
-                GrantMayPlayFromExileEffect("exiled"),
-                GrantPlayWithoutPayingCostEffect("exiled")
-            )
-        )
+        effect = Effects.Pipeline {
+            val exiled = runStoringCollection {
+                Effects.ExileLibraryUntilManaValue(players = Player.EachOpponent, threshold = 5, storeAs = it)
+            }
+            run(Effects.GrantMayPlayFromExile(exiled))
+            run(Effects.GrantPlayWithoutPayingCost(exiled))
+        }
     }
 
     metadata {

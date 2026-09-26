@@ -8,7 +8,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 
 /**
@@ -23,7 +22,7 @@ val Righteousness = card("Righteousness") {
     typeLine = "Instant"
     oracleText = "Target blocking creature gets +7/+7 until end of turn."
     spell {
-        val t = target("target", TargetCreature(filter = TargetFilter.BlockingCreature))
+        val t = target(TargetFilter.BlockingCreature)
         effect = Effects.ModifyStats(7, 7, t)
     }
     metadata {

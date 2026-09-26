@@ -33,10 +33,7 @@ val ZhalfirinLancer = card("Zhalfirin Lancer") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.entersBattlefield(
-            filter = GameObjectFilter.Permanent.withSubtype(Subtype.KNIGHT).youControl(),
-            binding = TriggerBinding.OTHER
-        )
+        trigger = Triggers.another(GameObjectFilter.Permanent.withSubtype(Subtype.KNIGHT).youControl()).enters()
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self) then
             Effects.GrantKeyword(Keyword.VIGILANCE, EffectTarget.Self)
     }

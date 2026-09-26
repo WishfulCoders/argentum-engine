@@ -1,7 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.thb.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -31,14 +30,11 @@ val IroassBlessing = card("Iroas's Blessing") {
         "When this Aura enters, it deals 4 damage to target creature or planeswalker an opponent controls.\n" +
         "Enchanted creature gets +1/+1."
 
-    auraTarget = Targets.CreatureYouControl
+    auraTarget = TargetObject(filter = TargetFilter.CreatureYouControl)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val t = target(
-            "target",
-            TargetObject(filter = TargetFilter(GameObjectFilter.CreatureOrPlaneswalker.opponentControls()))
-        )
+        trigger = Triggers.self.enters()
+        val t = target(TargetFilter(GameObjectFilter.CreatureOrPlaneswalker.opponentControls()))
         effect = Effects.DealDamage(4, t)
     }
 

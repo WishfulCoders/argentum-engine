@@ -29,7 +29,7 @@ val GoblinTownFlunkies = card("Goblin-town Flunkies") {
     keywords(Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Amass(1, "Goblin")
     }
 

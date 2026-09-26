@@ -2,14 +2,12 @@ package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 
 /**
  * Soul Search — Murders at Karlov Manor #232
@@ -42,12 +40,14 @@ val SoulSearch = card("Soul Search") {
         "creature token with flying."
 
     spell {
-        target("opponent", Targets.Opponent)
-        effect = Effects.Composite(
-            Patterns.Hand.revealHandAndExileChosen(storeExiledAs = "exiledCard"),
-            ConditionalEffect(
-                condition = Conditions.CollectionContainsMatch("exiledCard", Filters.ManaValueAtMost(1)),
-                effect = Effects.CreateToken(
+        val opponent = target(Targets.Opponent)
+        effect = Effects.Pipeline {
+            val exiledCard = runStoringCollection {
+                Patterns.Hand.revealHandAndExileChosen(storeExiledAs = it, target = opponent)
+            }
+            run(Effects.If(
+                condition = whenMatches(exiledCard, Filters.ManaValueAtMost(1)),
+                then = Effects.CreateToken(
                     power = 1,
                     toughness = 1,
                     colors = setOf(Color.WHITE, Color.BLACK),
@@ -56,8 +56,8 @@ val SoulSearch = card("Soul Search") {
                     name = "Spirit",
                     imageUri = "https://cards.scryfall.io/normal/front/f/4/f4588570-bde4-4c2f-8469-81a3e15fb57b.jpg?1783912607"
                 )
-            )
-        )
+            ))
+        }
     }
 
     metadata {

@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayPayXForEffect
 import com.wingedsheep.sdk.scripting.effects.SearchDestination
 
 /**
@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.effects.SearchDestination
  * card with mana value X or less, put that card onto the battlefield, then shuffle.
  *
  * The {X} is chosen *on resolution of the trigger*, not when the Swordsmith is cast — the number
- * chooser [MayPayXForEffect] raises runs while the trigger resolves, so the opponent has already
+ * chooser [Effects.MayPayX] raises runs while the trigger resolves, so the opponent has already
  * had the chance to respond to the creature and the payment is made with whatever mana is
  * untapped at that moment. The chosen value is bound into the resolution context, which is how
  * [GameObjectFilter.manaValueAtMostX] reads it while filtering the library.
@@ -38,9 +38,9 @@ val TajNarSwordsmith = card("Taj-Nar Swordsmith") {
         "Equipment card with mana value X or less, put that card onto the battlefield, then shuffle."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = MayPayXForEffect(
-            effect = Patterns.Library.searchLibrary(
+        trigger = Triggers.self.enters()
+        effect = Effects.MayPayX(
+            then = Patterns.Library.searchLibrary(
                 filter = GameObjectFilter.Artifact.withSubtype("Equipment").manaValueAtMostX(),
                 count = 1,
                 destination = SearchDestination.BATTLEFIELD

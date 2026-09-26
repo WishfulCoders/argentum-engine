@@ -23,7 +23,7 @@ class CynicalLonerScenarioTest : ScenarioTestBase() {
 
                 game.passUntilPhase(Phase.POSTCOMBAT_MAIN, Step.POSTCOMBAT_MAIN)
                 val p1 = com.wingedsheep.sdk.model.EntityId.of("player-1")
-                // Drive: the Survival ability is a MayEffect → first a YesNo ("you may search"),
+                // Drive: the Survival ability is a Effects.May → first a YesNo ("you may search"),
                 // then a SelectCards library search. Answer yes, then pick the Swamp.
                 var guard = 0
                 while (!game.isInGraveyard(1, "Swamp") && guard < 30) {

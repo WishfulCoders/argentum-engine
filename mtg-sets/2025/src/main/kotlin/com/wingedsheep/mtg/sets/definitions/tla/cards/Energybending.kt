@@ -27,19 +27,15 @@ val Energybending = card("Energybending") {
     oracleText = "Lands you control gain all basic land types until end of turn.\nDraw a card."
 
     spell {
-        effect = Effects.Composite(
-            Effects.ForEachInGroup(
-                filter = GroupFilter.AllLands.youControl(),
-                effect = Effects.Composite(
-                    Effects.AddSubtype("Plains", EffectTarget.Self, Duration.EndOfTurn),
-                    Effects.AddSubtype("Island", EffectTarget.Self, Duration.EndOfTurn),
-                    Effects.AddSubtype("Swamp", EffectTarget.Self, Duration.EndOfTurn),
-                    Effects.AddSubtype("Mountain", EffectTarget.Self, Duration.EndOfTurn),
-                    Effects.AddSubtype("Forest", EffectTarget.Self, Duration.EndOfTurn)
-                )
-            ),
+        effect = Effects.ForEachInGroup(
+            filter = GroupFilter.AllLands.youControl(),
+            effect = Effects.AddSubtype("Plains", EffectTarget.IterationEntity, Duration.EndOfTurn) then
+                Effects.AddSubtype("Island", EffectTarget.IterationEntity, Duration.EndOfTurn) then
+                Effects.AddSubtype("Swamp", EffectTarget.IterationEntity, Duration.EndOfTurn) then
+                Effects.AddSubtype("Mountain", EffectTarget.IterationEntity, Duration.EndOfTurn) then
+                Effects.AddSubtype("Forest", EffectTarget.IterationEntity, Duration.EndOfTurn)
+        ) then
             Effects.DrawCards(1)
-        )
     }
 
     metadata {

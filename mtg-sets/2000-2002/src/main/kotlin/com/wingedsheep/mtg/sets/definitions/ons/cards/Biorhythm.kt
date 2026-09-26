@@ -1,10 +1,9 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
 import com.wingedsheep.sdk.dsl.DynamicAmounts
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ForEachPlayerEffect
-import com.wingedsheep.sdk.scripting.effects.SetLifeTotalEffect
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
@@ -21,9 +20,9 @@ val Biorhythm = card("Biorhythm") {
     oracleText = "Each player's life total becomes the number of creatures they control."
 
     spell {
-        effect = ForEachPlayerEffect(
+        effect = Effects.ForEachPlayer(
             players = Player.Each,
-            effects = listOf(SetLifeTotalEffect(DynamicAmounts.creaturesYouControl(), EffectTarget.Controller))
+            effect = Effects.SetLifeTotal(DynamicAmounts.creaturesYouControl(), EffectTarget.Controller)
         )
     }
 

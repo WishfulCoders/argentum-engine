@@ -7,7 +7,6 @@ import com.wingedsheep.sdk.dsl.madness
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
  * Dark Withering
@@ -29,10 +28,7 @@ val DarkWithering = card("Dark Withering") {
         "Madness {B} (If you discard this card, discard it into exile. When you do, cast it for its madness cost or put it into your graveyard.)"
 
     spell {
-        val t = target(
-            "target",
-            TargetObject(filter = TargetFilter(GameObjectFilter.Creature.notColor(Color.BLACK)))
-        )
+        val t = target(TargetFilter(GameObjectFilter.Creature.notColor(Color.BLACK)))
         effect = Effects.Destroy(t)
     }
 

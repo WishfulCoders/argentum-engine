@@ -5,7 +5,6 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 
 /**
  * Dragonclaw Strike
@@ -31,19 +30,13 @@ val DragonclawStrike = card("Dragonclaw Strike") {
         "(Each deals damage equal to its power to the other.)"
 
     spell {
-        val yourCreature = target(
-            "creature you control",
-            TargetCreature(filter = TargetFilter.CreatureYouControl)
-        )
-        val opponentCreature = target(
-            "creature an opponent controls",
-            TargetCreature(optional = true, filter = TargetFilter.CreatureOpponentControls)
-        )
+        val yourCreature = target(TargetFilter.CreatureYouControl)
+        val opponentCreature = target(TargetFilter.CreatureOpponentControls, optional = true)
         effect = Effects.ModifyStats(
-            power = DynamicAmounts.targetPower(0),
-            toughness = DynamicAmounts.targetToughness(0),
+            power = DynamicAmounts.powerOf(yourCreature),
+            toughness = DynamicAmounts.toughnessOf(yourCreature),
             target = yourCreature
-        ).then(Effects.Fight(yourCreature, opponentCreature))
+        ) then Effects.Fight(yourCreature, opponentCreature)
     }
 
     metadata {

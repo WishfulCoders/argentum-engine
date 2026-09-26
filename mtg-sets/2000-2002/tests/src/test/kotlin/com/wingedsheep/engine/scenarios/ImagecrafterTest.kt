@@ -20,12 +20,15 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 import com.wingedsheep.sdk.scripting.ModifyStats
-import com.wingedsheep.sdk.scripting.targets.TargetCreature
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import java.util.UUID
+import com.wingedsheep.engine.core.Outcome
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
+import com.wingedsheep.sdk.scripting.targets.TargetObject
+import com.wingedsheep.sdk.core.Subtype
 
 /**
  * Tests for Imagecrafter.
@@ -53,7 +56,7 @@ class ImagecrafterTest : FunSpec({
                     target = EffectTarget.BoundVariable("target"),
                     excludedTypes = listOf("Wall")
                 ),
-                targetRequirement = TargetCreature(id = "target")
+                targetRequirement = TargetObject(filter = TargetFilter.Creature, id = "target")
             )
         )
     )
@@ -88,7 +91,7 @@ class ImagecrafterTest : FunSpec({
                 targets = listOf(ChosenTarget.Permanent(bear))
             )
         )
-        result.isSuccess shouldBe true
+        result.outcome shouldBe Outcome.Done
 
         // Imagecrafter should be tapped
         driver.isTapped(imagecrafter) shouldBe true

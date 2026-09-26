@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.chk.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.PreventDamageEffect
 import com.wingedsheep.sdk.scripting.effects.PreventionDirection
 import com.wingedsheep.sdk.scripting.effects.PreventionSourceFilter
-import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
 
 /**
  * Ethereal Haze
@@ -18,13 +17,10 @@ import com.wingedsheep.sdk.scripting.filters.unified.GroupFilter
  * Not a Fog: Fog prevents all *combat* damage, while this prevents *all* damage from a class of
  * sources, so the shield keeps `PreventionScope.AllDamage` (the default) and narrows the
  * *source* side instead — [PreventionDirection.FromTarget] with a
- * [PreventionSourceFilter.FromGroup] over every creature. A creature's activated ability that
- * pings is stopped too, which is what the printed line says. The group is re-evaluated when each
+ * [PreventionSourceFilter.Matching] over every creature. A creature's activated ability that
+ * pings is stopped too, which is what the printed line says. The filter is re-evaluated when each
  * damage instance would be dealt, so a creature that enters later this turn is covered.
- *
- * The closest facade, `Effects.PreventCombatDamageFrom`, hard-codes `PreventionScope.CombatOnly`
- * and would silently narrow the card, so the shield is spelled out here — the same shape
- * `leg/cards/AlabarasCarpet.kt` uses.
+ * (`Effects.PreventCombatDamageFrom` is the combat-only sibling and would silently narrow the card.)
  */
 val EtherealHaze = card("Ethereal Haze") {
     manaCost = "{W}"
@@ -33,9 +29,9 @@ val EtherealHaze = card("Ethereal Haze") {
     oracleText = "Prevent all damage that would be dealt by creatures this turn."
 
     spell {
-        effect = PreventDamageEffect(
+        effect = Effects.PreventDamage(
             direction = PreventionDirection.FromTarget,
-            sourceFilter = PreventionSourceFilter.FromGroup(GroupFilter(GameObjectFilter.Creature))
+            sources = PreventionSourceFilter.Matching(GameObjectFilter.Creature)
         )
     }
 

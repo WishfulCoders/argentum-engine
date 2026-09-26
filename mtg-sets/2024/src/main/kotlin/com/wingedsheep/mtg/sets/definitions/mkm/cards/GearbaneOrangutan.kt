@@ -1,10 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.mode
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.ModalEffect
@@ -12,7 +13,6 @@ import com.wingedsheep.sdk.scripting.effects.Mode
 import com.wingedsheep.sdk.scripting.effects.SuccessCriterion
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Gearbane Orangutan — Murders at Karlov Manor #129
@@ -29,7 +29,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetPermanent
  * accomplish nothing.
  *
  * Mode 2's sacrifice is **mandatory, not a "may"**, so it is [Effects.IfYouDo] rather than a
- * `MayEffect`: with no artifact to sacrifice nothing is sacrificed and the counters don't happen.
+ * `Effects.May`: with no artifact to sacrifice nothing is sacrificed and the counters don't happen.
  * [SuccessCriterion.PermanentsSacrificed] is the criterion that reads that correctly — `Auto`
  * can't infer a sacrifice (which graveyard it lands in isn't known until the chooser picks) and
  * `Always` would fail open and hand out counters for free. Gearbane Orangutan is itself a
@@ -49,13 +49,12 @@ val GearbaneOrangutan = card("Gearbane Orangutan") {
     keywords(Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = ModalEffect.chooseOne(
-            Mode.withTarget(
-                Effects.Destroy(EffectTarget.ContextTarget(0)),
-                TargetPermanent(optional = true, filter = TargetFilter.Artifact),
-                "Destroy up to one target artifact"
-            ),
+            mode("Destroy up to one target artifact") {
+                val artifact = target(TargetFilter.Artifact, optional = true)
+                effect = Effects.Destroy(artifact)
+            },
             Mode.noTarget(
                 Effects.IfYouDo(
                     action = Effects.Sacrifice(
@@ -63,7 +62,7 @@ val GearbaneOrangutan = card("Gearbane Orangutan") {
                         count = 1,
                         target = EffectTarget.Controller
                     ),
-                    ifYouDo = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self),
+                    then = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 2, EffectTarget.Self),
                     successCriterion = SuccessCriterion.PermanentsSacrificed
                 ),
                 "Sacrifice an artifact — if you do, put two +1/+1 counters on this creature"

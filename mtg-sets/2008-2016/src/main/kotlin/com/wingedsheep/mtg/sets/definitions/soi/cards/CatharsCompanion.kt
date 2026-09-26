@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /**
  * Cathar's Companion
@@ -24,7 +25,7 @@ val CatharsCompanion = card("Cathar's Companion") {
     toughness = 1
 
     triggeredAbility {
-        trigger = Triggers.YouCastNoncreature
+        trigger = Triggers.you.casts(GameObjectFilter.Noncreature)
         effect = Effects.GrantKeyword(Keyword.INDESTRUCTIBLE, EffectTarget.Self)
         description = "Whenever you cast a noncreature spell, this creature gains indestructible until end of turn."
     }

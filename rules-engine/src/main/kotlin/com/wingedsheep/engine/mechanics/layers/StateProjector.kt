@@ -1,6 +1,7 @@
 package com.wingedsheep.engine.mechanics.layers
 
-import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
+import com.wingedsheep.engine.handlers.ConditionEvaluator
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.CantBeBlockedWhilePropertyAtMostComponent
@@ -16,6 +17,7 @@ import com.wingedsheep.engine.state.components.identity.HexproofFromComponent
 import com.wingedsheep.engine.state.components.identity.ProtectionComponent
 import com.wingedsheep.engine.state.components.identity.RingBearerComponent
 import com.wingedsheep.engine.state.components.identity.ToxicComponent
+import com.wingedsheep.engine.state.components.identity.TextChanges
 import com.wingedsheep.engine.state.components.identity.TextReplacementComponent
 import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.CounterType
@@ -64,18 +66,24 @@ private val KEYWORD_COUNTER_MAP = mapOf(
     CounterType.MENACE to Keyword.MENACE.name
 )
 
-class StateProjector(
-    // Inject an empty projection as the supplier — reaching for [GameState.projectedState]
-    // here would re-enter our own lazy initializer. Mid-layer callers thread their
-    // intermediate snapshot through the `projectedState` parameter explicitly; the empty
-    // supplier is the safety net for paths that don't carry one (predicate matching falls
-    // back to base CardComponent for missing entries).
-    private val dynamicAmountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator(
+class StateProjector {
+    /**
+     * Projection's own evaluators, built as one unit (see [PredicateEvaluator.conditions]).
+     *
+     * Registry-free, because [GameState.projectedState] builds a projector from the state alone,
+     * with no engine to ask. Non-reentrant: their default projection is empty, since reaching for
+     * [GameState.projectedState] here would re-enter our own lazy initializer. Mid-layer callers
+     * thread their intermediate snapshot through the `projectedState` parameter explicitly; the
+     * empty supplier is the safety net for paths that don't carry one (predicate matching falls
+     * back to base CardComponent for missing entries).
+     */
+    private val conditionEvaluator = ConditionEvaluator(
+        PredicateEvaluator(cardRegistry = null),
         defaultProjection = { ProjectedState(it, emptyMap()) }
     )
-) {
-    private val filterResolver = AffectsFilterResolver()
-    private val effectApplicator = EffectApplicator(dynamicAmountEvaluator)
+    private val dynamicAmountEvaluator = conditionEvaluator.amounts
+    private val filterResolver = AffectsFilterResolver(conditionEvaluator.predicates)
+    private val effectApplicator = EffectApplicator(conditionEvaluator)
     private val effectSorter = EffectSorter()
 
     /**
@@ -373,12 +381,21 @@ class StateProjector(
             effect.copy(affectedEntities = lockAffected(effect, resolved))
         }
 
-        // Apply layer 7 continuous effects
+        // Apply layer 7 continuous effects. Just before the first 7c modification, snapshot each
+        // object's *base* power/toughness: its value after copy effects (layer 1), CDAs (7a) and
+        // effects that set P/T (7b), but before any modification, counter or switch — the Bloomburrow
+        // rulings' definition of "base power" (Zinnia, Valley's Voice; Sword of the Squeak).
+        var baseStatsCaptured = false
         for (effect in resolvedLayer7Effects) {
             if (effect.layer == Layer.POWER_TOUGHNESS) {
+                if (!baseStatsCaptured && effect.sublayer.isAfterBaseStats()) {
+                    captureBaseStats(projectedValues)
+                    baseStatsCaptured = true
+                }
                 effectApplicator.applyEffect(effect, state, projectedValues)
             }
         }
+        if (!baseStatsCaptured) captureBaseStats(projectedValues)
 
         // Apply counters (layer 7d)
         effectApplicator.applyCounters(state, projectedValues)
@@ -404,6 +421,8 @@ class StateProjector(
             ProjectedValues(
                 power = v.power,
                 toughness = v.toughness,
+                basePower = v.basePower,
+                baseToughness = v.baseToughness,
                 name = v.name,
                 keywords = v.keywords,
                 colors = v.colors,
@@ -447,6 +466,16 @@ class StateProjector(
         return ProjectedState(state, finalValues, crossZoneGrants)
     }
 
+    private fun Sublayer?.isAfterBaseStats(): Boolean =
+        this != null && this != Sublayer.CHARACTERISTIC_DEFINING && this != Sublayer.SET_VALUES
+
+    private fun captureBaseStats(projectedValues: Map<EntityId, MutableProjectedValues>) {
+        for (values in projectedValues.values) {
+            values.basePower = values.power
+            values.baseToughness = values.toughness
+        }
+    }
+
     fun getProjectedPower(state: GameState, entityId: EntityId): Int {
         val projected = project(state)
         return projected.getPower(entityId) ?: 0
@@ -477,9 +506,10 @@ class StateProjector(
         state: GameState,
         projectedValues: MutableMap<EntityId, MutableProjectedValues>
     ) {
+        val globalText = TextChanges.global(state)
         for (entityId in state.getBattlefield()) {
             val container = state.getEntity(entityId) ?: continue
-            val textReplacement = container.get<TextReplacementComponent>() ?: continue
+            val textReplacement = TextChanges.merge(globalText, container.get<TextReplacementComponent>()) ?: continue
             val values = projectedValues[entityId] ?: continue
 
             val transformedSubtypes = values.subtypes.map { textReplacement.applyToCreatureType(it) }.toMutableSet()
@@ -571,13 +601,14 @@ class StateProjector(
         projectedValues: Map<EntityId, MutableProjectedValues>
     ): List<ContinuousEffect> {
         val effects = mutableListOf<ContinuousEffect>()
+        val globalText = TextChanges.global(state)
 
         // 1. Collect effects from static abilities on permanents
         for (entityId in state.getBattlefield()) {
             val container = state.getEntity(entityId) ?: continue
             val continuousEffectComponent = container.get<ContinuousEffectSourceComponent>()
             if (continuousEffectComponent != null) {
-                val textReplacement = container.get<TextReplacementComponent>()
+                val textReplacement = TextChanges.merge(globalText, container.get<TextReplacementComponent>())
                 effects.addAll(continuousEffectComponent.effects.map { effect ->
                     val effectiveFilter = if (textReplacement != null && effect.affectsFilter != null) {
                         effect.affectsFilter.applyTextReplacement(textReplacement)
@@ -723,10 +754,8 @@ class StateProjector(
             // affected entities that currently carry the counter. Per-frame gate; the latch-off is
             // in EndedDurationExpiryCheck so removing then re-adding the counter can't resurrect it.
             (floating.duration as? Duration.WhileAffectedHasCounter)?.let { dur ->
-                val counterType = CounterType.fromName(dur.counterType)
-                validAffectedEntities = if (counterType == null) LinkedHashSet()
-                    else validAffectedEntities.filterTo(LinkedHashSet()) { id ->
-                        (state.getEntity(id)?.get<CountersComponent>()?.getCount(counterType) ?: 0) > 0
+                validAffectedEntities = validAffectedEntities.filterTo(LinkedHashSet()) { id ->
+                        (state.getEntity(id)?.get<CountersComponent>()?.getCount(dur.counterType) ?: 0) > 0
                     }
             }
 
@@ -843,6 +872,7 @@ class StateProjector(
         if (dynamicStatEntities.isEmpty()) return
 
         val intermediateProjected = buildIntermediateProjectedState(state, projectedValues)
+        val globalText = TextChanges.global(state)
         for ((entityId, cardComponent) in dynamicStatEntities) {
             val values = projectedValues[entityId] ?: continue
             val controllerId = values.controllerId ?: continue
@@ -851,7 +881,7 @@ class StateProjector(
                 controllerId = controllerId,
             )
             val baseStats = cardComponent.baseStats ?: continue
-            val textReplacement = state.getEntity(entityId)?.get<TextReplacementComponent>()
+            val textReplacement = TextChanges.merge(globalText, state.getEntity(entityId)?.get<TextReplacementComponent>())
 
             fun resolveDynamicAmount(source: DynamicAmount): Int {
                 val effective = if (textReplacement != null) {

@@ -4,10 +4,10 @@ import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Scenario tests for Titania's Song (ATQ #35):
@@ -40,7 +40,7 @@ class TitaniasSongScenarioTest : ScenarioTestBase() {
         typeLine = "Sorcery"
         oracleText = "Destroy target enchantment."
         spell {
-            val t = target("target enchantment", Targets.Enchantment)
+            val t = target(TargetFilter.Enchantment)
             effect = Effects.Destroy(t)
         }
     }

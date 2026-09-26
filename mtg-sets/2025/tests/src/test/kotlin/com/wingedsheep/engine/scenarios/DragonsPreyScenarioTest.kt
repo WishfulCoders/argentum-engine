@@ -24,7 +24,7 @@ import io.kotest.matchers.shouldBe
  */
 class DragonsPreyScenarioTest : ScenarioTestBase() {
 
-    private val calculator = CostCalculator(cardRegistry)
+    private val calculator = CostCalculator(cardRegistry, predicateEvaluator = services.predicateEvaluator)
 
     init {
         context("cost increase if it targets a Dragon") {

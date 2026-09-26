@@ -32,7 +32,7 @@ val TheEarthKing = card("The Earth King") {
         "Whenever one or more creatures you control with power 4 or greater attack, search your library for up to that many basic land cards, put them onto the battlefield tapped, then shuffle."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 4,
             toughness = 4,
@@ -45,9 +45,7 @@ val TheEarthKing = card("The Earth King") {
     // "that many" = the number of attacking creatures you control with power 4 or greater,
     // counted as the ability resolves. "up to" => ChooseUpTo selection.
     triggeredAbility {
-        trigger = Triggers.YouAttackWithFilter(
-            GameObjectFilter.Creature.youControl().powerAtLeast(4)
-        )
+        trigger = Triggers.you.attacks(GameObjectFilter.Creature.youControl().powerAtLeast(4))
         effect = Patterns.Library.searchLibrary(
             filter = GameObjectFilter.BasicLand,
             count = DynamicAmounts.battlefield(

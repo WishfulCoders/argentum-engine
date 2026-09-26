@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Stampede Rider
@@ -19,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * At the beginning of each combat, if you control a creature with power 4 or greater, this creature
  * gets +1/+1 until end of turn.
  *
- * "each combat" is [Triggers.EachCombat] — `StepEvent(BEGIN_COMBAT, Player.Each)`, the each-turn
+ * "each combat" is `Triggers.anyPlayer.beginningOf(Step.BEGIN_COMBAT)` — `StepEvent(BEGIN_COMBAT, Player.Each)`, the each-turn
  * sibling of Eidolon of Inspiration's `BeginCombat`. The "if …" clause is a true intervening-if
  * (CR 603.4), so it goes in the ability's `interveningIf` field rather than gating the effect;
  * `Conditions.YouControl` is `Exists(You, Battlefield, filter)`, which is the spelling Nessian
@@ -38,7 +39,7 @@ val StampedeRider = card("Stampede Rider") {
     keywords(Keyword.TRAMPLE)
 
     triggeredAbility {
-        trigger = Triggers.EachCombat
+        trigger = Triggers.anyPlayer.beginningOf(Step.BEGIN_COMBAT)
         interveningIf = Conditions.YouControl(GameObjectFilter.Creature.powerAtLeast(4))
         effect = Effects.ModifyStats(1, 1, EffectTarget.Self)
     }

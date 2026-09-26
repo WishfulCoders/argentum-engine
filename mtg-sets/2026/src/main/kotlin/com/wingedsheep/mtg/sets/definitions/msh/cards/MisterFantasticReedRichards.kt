@@ -6,7 +6,6 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.MayEffect
 
 /**
  * Mister Fantastic, Reed Richards — Marvel Super Heroes #66
@@ -15,10 +14,10 @@ import com.wingedsheep.sdk.scripting.effects.MayEffect
  * Reach
  * Whenever one or more tokens you control enter, you may draw a card.
  *
- * The batched enters trigger is [Triggers.OneOrMorePermanentsEnter] over
+ * The batched enters trigger is `Triggers.oneOrMore(filter).enter()` over
  * [GameObjectFilter.Token] — the filter's controller scope defaults to "you control", and the
  * batching means five tokens entering together draw one card, not five (CR 603.3b). The "you
- * may" is [MayEffect], asked on resolution.
+ * may" is [Effects.May], asked on resolution.
  */
 val MisterFantasticReedRichards = card("Mister Fantastic, Reed Richards") {
     manaCost = "{3}{U}"
@@ -31,8 +30,8 @@ val MisterFantasticReedRichards = card("Mister Fantastic, Reed Richards") {
     keywords(Keyword.REACH)
 
     triggeredAbility {
-        trigger = Triggers.OneOrMorePermanentsEnter(GameObjectFilter.Token)
-        effect = MayEffect(Effects.DrawCards(1))
+        trigger = Triggers.oneOrMore(GameObjectFilter.Token).enter()
+        effect = Effects.May(Effects.DrawCards(1))
         description = "Whenever one or more tokens you control enter, you may draw a card."
     }
 

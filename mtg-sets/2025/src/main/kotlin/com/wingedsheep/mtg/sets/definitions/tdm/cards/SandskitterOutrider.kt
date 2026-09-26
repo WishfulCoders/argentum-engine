@@ -27,7 +27,7 @@ val SandskitterOutrider = card("Sandskitter Outrider") {
     keywords(Keyword.MENACE)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.Endure(2)
         description = "When this creature enters, it endures 2."
     }

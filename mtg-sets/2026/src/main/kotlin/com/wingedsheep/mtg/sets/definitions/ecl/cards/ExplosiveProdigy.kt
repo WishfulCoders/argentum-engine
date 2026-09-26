@@ -3,11 +3,11 @@ package com.wingedsheep.mtg.sets.definitions.ecl.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Explosive Prodigy
@@ -30,8 +30,8 @@ val ExplosiveProdigy = card("Explosive Prodigy") {
     keywords(Keyword.VIVID)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val victim = target("creature", Targets.CreatureOpponentControls)
+        trigger = Triggers.self.enters()
+        val victim = target(TargetFilter.CreatureOpponentControls)
         effect = Effects.DealDamage(
             amount = DynamicAmounts.colorsAmongPermanents(),
             target = victim,

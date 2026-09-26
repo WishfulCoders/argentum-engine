@@ -28,7 +28,7 @@ val RallyThePeasants = card("Rally the Peasants") {
     spell {
         effect = Effects.ForEachInGroup(
             GroupFilter(GameObjectFilter.Creature.youControl()),
-            Effects.ModifyStats(2, 0, EffectTarget.Self)
+            Effects.ModifyStats(2, 0, EffectTarget.IterationEntity)
         )
     }
     keywordAbility(KeywordAbility.flashback("{2}{R}"))

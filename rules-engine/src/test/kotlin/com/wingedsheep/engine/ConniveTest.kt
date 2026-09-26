@@ -10,7 +10,6 @@ import com.wingedsheep.engine.core.ZoneChangeEvent
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
-import com.wingedsheep.sdk.core.Counters
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Step
@@ -33,6 +32,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import java.util.UUID
+import com.wingedsheep.engine.core.Outcome
 
 /**
  * BDD: Connive — draw a card, discard a card; if the discarded card is a nonland,
@@ -75,7 +75,7 @@ class ConniveTest : FunSpec({
         val activateResult = driver.submit(
             ActivateAbility(playerId = player, sourceId = creature, abilityId = conniveAbilityId)
         )
-        activateResult.isSuccess shouldBe true
+        activateResult.outcome shouldBe Outcome.Done
         driver.bothPass()
 
         driver.isPaused shouldBe true
@@ -115,7 +115,7 @@ class ConniveTest : FunSpec({
 
         val counterEvent = events.filterIsInstance<CountersAddedEvent>().first()
         counterEvent.entityId shouldBe creature
-        counterEvent.counterType shouldBe Counters.PLUS_ONE_PLUS_ONE
+        counterEvent.counterType shouldBe CounterType.PLUS_ONE_PLUS_ONE
         counterEvent.amount shouldBe 1
 
         // A ZoneChangeEvent for the discarded card must fire so madness, dredge, and

@@ -36,11 +36,16 @@ import kotlin.reflect.KClass
 class CreatePredefinedTokenExecutor(
     private val cardRegistry: CardRegistry,
     private val staticAbilityHandler: StaticAbilityHandler? = null,
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator(),
+    private val amountEvaluator: DynamicAmountEvaluator,
     private val tokenArtRegistry: TokenArtRegistry? = null
 ) : EffectExecutor<CreatePredefinedTokenEffect> {
 
     override val effectType: KClass<CreatePredefinedTokenEffect> = CreatePredefinedTokenEffect::class
+
+    /** Builds the substitute tokens of a `ReplaceTokenCreationWithToken` (Draconic Visitor). */
+    private val substituteExecutor by lazy {
+        CreateTokenExecutor(amountEvaluator, staticAbilityHandler, cardRegistry, tokenArtRegistry)
+    }
 
     override fun execute(
         state: GameState,
@@ -67,9 +72,32 @@ class CreatePredefinedTokenExecutor(
 
         // Check for token creation replacement effects (e.g., Mirrormind Crown)
         val replacementResult = TokenCreationReplacementHelper.checkReplacement(
-            state, effect, context, tokenCount, tokenControllerId, cardRegistry, staticAbilityHandler
+            state, effect, context, tokenCount, tokenControllerId, cardRegistry, staticAbilityHandler,
+            predicateEvaluator = amountEvaluator.predicates
         )
         if (replacementResult != null) return replacementResult
+
+        // "If one or more artifact tokens would be created under your control, that many 5/5 red
+        // Dragon creature tokens with flying are created instead" (Draconic Visitor). Treasure,
+        // Clue, Food, Map and the rest are artifact tokens, so this is the path it bites hardest.
+        val prospective = CardComponent(
+            cardDefinitionId = effect.tokenType,
+            name = effect.tokenType,
+            manaCost = ManaCost.ZERO,
+            typeLine = cardDef.typeLine,
+            baseStats = cardDef.creatureStats,
+            baseKeywords = cardDef.keywords,
+            colors = cardDef.colorIdentityOverride ?: cardDef.colors,
+            ownerId = tokenControllerId
+        )
+        TokenCreationReplacementHelper.findTokenSubstitution(state, tokenControllerId, prospective, predicateEvaluator = amountEvaluator.predicates)
+            ?.let { substitute ->
+                return substituteExecutor.createSubstituteTokens(
+                    state, substitute, context,
+                    com.wingedsheep.engine.core.GameLimits.cappedTokenCount(tokenCount, "predefined tokens"),
+                    tokenControllerId
+                )
+            }
 
         // Art: an explicit per-card override wins, then the art printed by the set the creating
         // card came from (so a reprint mints its own set's Treasure), then the one canonical
@@ -156,6 +184,7 @@ class CreatePredefinedTokenExecutor(
             newState = com.wingedsheep.engine.handlers.effects.EnterTappedReplacements
                 .applyCreatedTokenEntryTap(
                     newState, tokenId, tokenControllerId, definedTapped = effect.tapped,
+                    predicateEvaluator = amountEvaluator.predicates
                 )
         }
 
@@ -177,7 +206,7 @@ class CreatePredefinedTokenExecutor(
         val (afterAdditional, additionalEvents) = TokenCreationReplacementHelper
             .applyAdditionalTokenReplacements(
                 newState, tokenControllerId, createdTokenIds, effect.tapped,
-                cardRegistry, staticAbilityHandler
+                cardRegistry, staticAbilityHandler, amountEvaluator.predicates
             )
         newState = afterAdditional
         events.addAll(additionalEvents)

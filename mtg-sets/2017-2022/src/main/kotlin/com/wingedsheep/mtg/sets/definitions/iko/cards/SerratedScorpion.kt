@@ -28,11 +28,8 @@ val SerratedScorpion = card("Serrated Scorpion") {
     oracleText = "When this creature dies, it deals 2 damage to each opponent and you gain 2 life."
 
     triggeredAbility {
-        trigger = Triggers.Dies
-        effect = Effects.Composite(
-            Effects.DealDamage(2, EffectTarget.PlayerRef(Player.EachOpponent)),
-            Effects.GainLife(2)
-        )
+        trigger = Triggers.self.dies()
+        effect = Effects.DealDamage(2, EffectTarget.PlayerRef(Player.EachOpponent)) then Effects.GainLife(2)
     }
 
     metadata {

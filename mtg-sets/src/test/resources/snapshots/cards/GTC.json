@@ -50,7 +50,7 @@
             "type": "MoveToZone",
             "target": {
                 "type": "BoundVariable",
-                "name": "target"
+                "name": "t0"
             },
             "destination": "Exile"
         },
@@ -60,7 +60,7 @@
                 "filter": {
                     "baseFilter": "creature|enchantment"
                 },
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -93,7 +93,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Aurelia, the Warleader:1",
                 "trigger": {
                     "type": "AttackEvent",
                     "requires": [
@@ -113,7 +113,7 @@
                             },
                             "body": {
                                 "type": "TapUntap",
-                                "target": "Self",
+                                "target": "IterationEntity",
                                 "tap": false
                             }
                         },
@@ -228,13 +228,13 @@
                         },
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target"
+                            "name": "t0"
                         }
                     },
                     "targetRequirements": [
                         {
                             "type": "TargetPlayerOrPlaneswalker",
-                            "id": "target"
+                            "id": "t0"
                         }
                     ],
                     "description": "Boros Charm deals 4 damage to target player or planeswalker"
@@ -251,7 +251,7 @@
                         "body": {
                             "type": "GrantKeyword",
                             "keyword": "INDESTRUCTIBLE",
-                            "target": "Self"
+                            "target": "IterationEntity"
                         }
                     },
                     "description": "Permanents you control gain indestructible until end of turn"
@@ -262,7 +262,7 @@
                         "keyword": "DOUBLE_STRIKE",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target"
+                            "name": "t1"
                         }
                     },
                     "targetRequirements": [
@@ -271,7 +271,7 @@
                             "filter": {
                                 "baseFilter": "creature"
                             },
-                            "id": "target"
+                            "id": "t1"
                         }
                     ],
                     "description": "Target creature gains double strike until end of turn"
@@ -301,7 +301,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Boros Guildgate:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -311,7 +311,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Boros Guildgate:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -364,7 +364,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Consuming Aberration:1",
                 "trigger": "SpellCastEvent",
                 "binding": "ANY",
                 "effect": {
@@ -379,16 +379,16 @@
                             {
                                 "type": "GatherUntilMatch",
                                 "filter": "land",
-                                "storeMatch": "revealedLand",
-                                "storeRevealed": "allRevealed"
+                                "storeMatch": "matched0",
+                                "storeRevealed": "revealed0"
                             },
                             {
                                 "type": "RevealCollection",
-                                "from": "allRevealed"
+                                "from": "revealed0"
                             },
                             {
                                 "type": "MoveCollection",
-                                "from": "allRevealed",
+                                "from": "revealed0",
                                 "destination": {
                                     "type": "ToZone",
                                     "zone": "Graveyard"
@@ -426,7 +426,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Court Street Denizen:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "creature white ctrl:you",
@@ -437,7 +437,7 @@
                     "type": "TapUntap",
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirement": {
@@ -445,7 +445,7 @@
                     "filter": {
                         "baseFilter": "creature ctrl:opponent"
                     },
-                    "id": "target"
+                    "id": "t0"
                 }
             }
         ]
@@ -470,7 +470,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Dimir Guildgate:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -480,7 +480,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Dimir Guildgate:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -519,7 +519,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Foundry Street Denizen:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "creature red ctrl:you",
@@ -562,7 +562,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Gruul Guildgate:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -572,7 +572,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Gruul Guildgate:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -631,7 +631,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "High Priest of Penance:1",
                 "trigger": "DamageReceivedEvent",
                 "effect": {
                     "type": "Gated",
@@ -640,7 +640,7 @@
                         "type": "MoveToZone",
                         "target": {
                             "type": "BoundVariable",
-                            "name": "target nonland permanent"
+                            "name": "t0"
                         },
                         "destination": "Graveyard",
                         "byDestruction": true
@@ -651,7 +651,7 @@
                     "filter": {
                         "baseFilter": "nonland permanent"
                     },
-                    "id": "target nonland permanent"
+                    "id": "t0"
                 },
                 "descriptionOverride": "Whenever this creature is dealt damage, you may destroy target nonland permanent."
             }
@@ -683,7 +683,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Ivy Lane Denizen:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "filter": "creature green ctrl:you",
@@ -692,11 +692,11 @@
                 "binding": "OTHER",
                 "effect": {
                     "type": "AddCounters",
-                    "counterType": "+1/+1",
+                    "counterType": "PLUS_ONE_PLUS_ONE",
                     "count": 1,
                     "target": {
                         "type": "BoundVariable",
-                        "name": "target"
+                        "name": "t0"
                     }
                 },
                 "targetRequirement": {
@@ -704,7 +704,7 @@
                     "filter": {
                         "baseFilter": "creature"
                     },
-                    "id": "target"
+                    "id": "t0"
                 }
             }
         ]
@@ -729,7 +729,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Orzhov Guildgate:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -739,7 +739,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Orzhov Guildgate:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -778,7 +778,7 @@
     "script": {
         "triggeredAbilities": [
             {
-                "id": "ability_1",
+                "id": "Prime Speaker Zegana:1",
                 "trigger": {
                     "type": "ZoneChangeEvent",
                     "to": "Battlefield"
@@ -787,7 +787,7 @@
                     "type": "DrawCards",
                     "count": {
                         "type": "EntityProperty",
-                        "entity": "Source",
+                        "entity": "Self",
                         "numericProperty": "Power"
                     }
                 },
@@ -889,7 +889,7 @@
     "script": {
         "activatedAbilities": [
             {
-                "id": "ability_1",
+                "id": "Simic Guildgate:1",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -899,7 +899,7 @@
                 "isManaAbility": true
             },
             {
-                "id": "ability_2",
+                "id": "Simic Guildgate:2",
                 "cost": "CostTap",
                 "effect": {
                     "type": "AddMana",
@@ -936,7 +936,7 @@
             "type": "MoveToZone",
             "target": {
                 "type": "BoundVariable",
-                "name": "target"
+                "name": "t0"
             },
             "destination": "Library",
             "placement": "Top"
@@ -947,7 +947,7 @@
                 "filter": {
                     "baseFilter": "nonland permanent"
                 },
-                "id": "target"
+                "id": "t0"
             }
         ]
     },
@@ -990,12 +990,12 @@
                             "type": "Fixed",
                             "amount": 5
                         },
-                        "target": "Self"
+                        "target": "IterationEntity"
                     },
                     {
                         "type": "GrantKeyword",
                         "keyword": "REACH",
-                        "target": "Self"
+                        "target": "IterationEntity"
                     }
                 ]
             }

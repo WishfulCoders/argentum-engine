@@ -2,14 +2,13 @@ package com.wingedsheep.mtg.sets.definitions.dsk.cards
 
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
-import com.wingedsheep.sdk.scripting.values.EntityNumericProperty
-import com.wingedsheep.sdk.scripting.values.EntityReference
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Monstrous Emergence
@@ -23,7 +22,7 @@ import com.wingedsheep.sdk.scripting.values.EntityReference
  * Modeled like Close Encounter: an `AdditionalCost.ChooseEntity` over the caster's battlefield
  * creatures and hand creature cards, capturing a power snapshot (LKI) so the damage still resolves
  * if the chosen battlefield creature later leaves play. The damage reads the chosen entity's power
- * via `EntityReference.FromCostStorage`.
+ * via `EffectTarget.PipelineTarget`.
  *
  * "You control" / "from your hand" are implicit — per-zone iteration already restricts to the
  * caster's battlefield slice and the caster's hand.
@@ -50,12 +49,9 @@ val MonstrousEmergence = card("Monstrous Emergence") {
     )
 
     spell {
-        val damaged = target("creature", Targets.Creature)
+        val damaged = target(TargetFilter.Creature)
         effect = Effects.DealDamage(
-            DynamicAmount.EntityProperty(
-                EntityReference.FromCostStorage("chosen"),
-                EntityNumericProperty.Power,
-            ),
+            DynamicAmounts.powerOf(EffectTarget.PipelineTarget("chosen")),
             damaged,
         )
     }

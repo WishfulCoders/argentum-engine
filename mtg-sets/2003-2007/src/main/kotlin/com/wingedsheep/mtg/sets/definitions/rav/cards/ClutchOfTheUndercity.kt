@@ -1,11 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.rav.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.transmute
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Clutch of the Undercity
@@ -27,9 +27,8 @@ val ClutchOfTheUndercity = card("Clutch of the Undercity") {
     colorIdentity = "UB"
 
     spell {
-        val permanent = target("target permanent", Targets.Permanent)
-        effect = Effects.ReturnToHand(permanent)
-            .then(Effects.LoseLife(3, EffectTarget.TargetController))
+        val permanent = target(TargetFilter.Permanent)
+        effect = Effects.ReturnToHand(permanent) then Effects.LoseLife(3, EffectTarget.TargetController)
     }
     transmute("{1}{U}{B}")
 

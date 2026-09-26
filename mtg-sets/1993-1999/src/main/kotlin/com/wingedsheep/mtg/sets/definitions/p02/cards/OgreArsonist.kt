@@ -1,10 +1,10 @@
 package com.wingedsheep.mtg.sets.definitions.p02.cards
 
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ogre Arsonist
@@ -23,8 +23,8 @@ val OgreArsonist = card("Ogre Arsonist") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val land = target("target", Targets.Land)
+        trigger = Triggers.self.enters()
+        val land = target(TargetFilter.Land)
         effect = Effects.Destroy(land)
     }
 

@@ -10,8 +10,8 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.TransformEffect
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.core.Step
 
 /**
  * Catapult Fodder // Catapult Captain (Innistrad: Crimson Vow)
@@ -49,12 +49,12 @@ private val CatapultFodderFront = card("Catapult Fodder") {
         "that each have toughness greater than their power, transform this creature."
 
     triggeredAbility {
-        trigger = Triggers.BeginCombat
+        trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
         interveningIf = Conditions.YouControlAtLeast(
             3,
             GameObjectFilter.Creature.toughnessGreaterThanPower()
         )
-        effect = TransformEffect(EffectTarget.Self)
+        effect = Effects.Transform(EffectTarget.Self)
         description = "At the beginning of combat on your turn, if you control three or more " +
             "creatures that each have toughness greater than their power, transform this creature."
     }
@@ -91,7 +91,7 @@ private val CatapultCaptain = card("Catapult Captain") {
             Costs.Tap,
             Costs.SacrificeAnother(GameObjectFilter.Creature)
         )
-        val opponent = target("target opponent", Targets.Opponent)
+        val opponent = target(Targets.Opponent)
         effect = Effects.LoseLife(DynamicAmounts.sacrificedToughness(), opponent)
         description = "{2}{B}, {T}, Sacrifice another creature: Target opponent loses life equal " +
             "to the sacrificed creature's toughness."

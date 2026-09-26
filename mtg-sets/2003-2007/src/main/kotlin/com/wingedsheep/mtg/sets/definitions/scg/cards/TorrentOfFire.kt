@@ -22,7 +22,7 @@ val TorrentOfFire = card("Torrent of Fire") {
     oracleText = "Torrent of Fire deals damage to any target equal to the greatest mana value among permanents you control."
 
     spell {
-        val t = target("target", Targets.Any)
+        val t = target(Targets.Any)
         effect = Effects.DealDamage(
             // `GameObjectFilter.Permanent`, not the default `Any`: the card prints the noun
             // "permanents", and on the battlefield the predicate is a no-op that still says

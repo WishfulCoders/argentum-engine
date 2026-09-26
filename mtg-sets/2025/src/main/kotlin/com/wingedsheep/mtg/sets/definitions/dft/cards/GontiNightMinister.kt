@@ -1,26 +1,18 @@
 package com.wingedsheep.mtg.sets.definitions.dft.cards
 
-import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.TriggerBinding
-import com.wingedsheep.sdk.scripting.effects.CardDestination
 import com.wingedsheep.sdk.scripting.effects.CardSource
 import com.wingedsheep.sdk.scripting.effects.FaceDownMode
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
-import com.wingedsheep.sdk.scripting.effects.GrantMayPlayFromExileEffect
 import com.wingedsheep.sdk.scripting.effects.LookAudience
 import com.wingedsheep.sdk.scripting.effects.MayPlayExpiry
-import com.wingedsheep.sdk.scripting.effects.MoveCollectionEffect
-import com.wingedsheep.sdk.scripting.events.DamageType
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
+import com.wingedsheep.sdk.scripting.events.Recipient
 import com.wingedsheep.sdk.scripting.events.SpellCastPredicate
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Gonti, Night Minister
@@ -42,7 +34,7 @@ import com.wingedsheep.sdk.scripting.values.DynamicAmount
  * controller. Gonti's own second ability is the main way an opponent ends up casting a card they
  * don't own, so the two halves feed each other.
  *
- * **Theft trigger** — an ANY-bound combat-damage observer (`RecipientFilter.Opponent` for "one of
+ * **Theft trigger** — an ANY-bound combat-damage observer (`Recipient.Opponent` for "one of
  * your opponents", `sourceFilter = Creature` for "a creature"). Because the trigger carries a
  * source filter, the engine binds the *damaging creature* as the triggering entity and the
  * *damaged player* as the triggering player, which is exactly the pair the text needs:
@@ -72,9 +64,7 @@ val GontiNightMinister = card("Gonti, Night Minister") {
         "this way."
 
     triggeredAbility {
-        trigger = Triggers.anyPlayerCasts(
-            requires = setOf(SpellCastPredicate.NotOwnedByController),
-        )
+        trigger = Triggers.anyPlayer.casts(requires = setOf(SpellCastPredicate.NotOwnedByController))
         effect = Effects.CreateTreasure(
             controller = EffectTarget.PlayerRef(Player.TriggeringPlayer),
         )
@@ -83,33 +73,23 @@ val GontiNightMinister = card("Gonti, Night Minister") {
     }
 
     triggeredAbility {
-        trigger = Triggers.dealsDamage(
-            damageType = DamageType.Combat,
-            recipient = RecipientFilter.Opponent,
-            sourceFilter = GameObjectFilter.Creature,
-            binding = TriggerBinding.ANY,
-        )
-        effect = Effects.Composite(
-            GatherCardsEffect(
-                source = CardSource.TopOfLibrary(
-                    count = DynamicAmount.Fixed(1),
+        trigger = Triggers.a(GameObjectFilter.Creature).dealsCombatDamage(Recipient.Opponent)
+        effect = Effects.Pipeline {
+            val stolenCard = gather(
+                CardSource.TopOfLibrary(
+                    count = 1,
                     player = Player.TriggeringPlayer,
                 ),
-                storeAs = "stolenCard",
-                lookAudience = LookAudience.None,
-            ),
-            MoveCollectionEffect(
-                from = "stolenCard",
-                destination = CardDestination.ToZone(Zone.EXILE, Player.TriggeringPlayer),
-                faceDown = FaceDownMode.HIDDEN,
-            ),
-            GrantMayPlayFromExileEffect(
-                from = "stolenCard",
+                lookAudience = LookAudience.None
+            )
+            exile(stolenCard, Player.TriggeringPlayer, faceDown = FaceDownMode.HIDDEN)
+            run(Effects.GrantMayPlayFromExile(
+                from = stolenCard,
                 expiry = MayPlayExpiry.Permanent,
                 withAnyManaType = true,
                 recipient = EffectTarget.ControllerOfTriggeringEntity,
-            ),
-        )
+            ))
+        }
         description = "Whenever a creature deals combat damage to one of your opponents, its " +
             "controller looks at the top card of that opponent's library and exiles it face " +
             "down. They may play that card for as long as it remains exiled. Mana of any type " +

@@ -1,16 +1,15 @@
 package com.wingedsheep.mtg.sets.definitions.spm.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.EventPattern
 import com.wingedsheep.sdk.scripting.ReplaceDamageWithCounters
-import com.wingedsheep.sdk.scripting.events.RecipientFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.events.Recipient
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Anti-Venom, Horrifying Healer — Marvel's Spider-Man #1
@@ -21,7 +20,7 @@ import com.wingedsheep.sdk.scripting.targets.EffectTarget
  * If damage would be dealt to Anti-Venom, prevent that damage and put that many +1/+1 counters
  * on him.
  *
- * The damage-to-counters clause is a `RecipientFilter.Self` `ReplaceDamageWithCounters`, now wired
+ * The damage-to-counters clause is a `Recipient.Self` `ReplaceDamageWithCounters`, now wired
  * on the creature-damage paths (`CombatDamageManager.applyDamageToCreature` +
  * `DamageUtils.applyDamage`).
  */
@@ -38,17 +37,17 @@ val AntiVenomHorrifyingHealer = card("Anti-Venom, Horrifying Healer") {
 
     // When Anti-Venom enters, if he was cast, reanimate a creature from your graveyard.
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         interveningIf = Conditions.WasCast
-        val creature = target("target creature card", Targets.CreatureCardInYourGraveyard)
+        val creature = target(TargetFilter.CreatureInYourGraveyard)
         effect = Effects.PutOntoBattlefield(creature)
     }
 
     // If damage would be dealt to Anti-Venom, prevent it and put that many +1/+1 counters on him.
     replacementEffect(
         ReplaceDamageWithCounters(
-            counterType = Counters.PLUS_ONE_PLUS_ONE,
-            appliesTo = EventPattern.DamageEvent(recipient = RecipientFilter.Self)
+            counterType = CounterType.PLUS_ONE_PLUS_ONE,
+            appliesTo = EventPattern.DamageEvent(recipient = Recipient.Self)
         )
     )
 

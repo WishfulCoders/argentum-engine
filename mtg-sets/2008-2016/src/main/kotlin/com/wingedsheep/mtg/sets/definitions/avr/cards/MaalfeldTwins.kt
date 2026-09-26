@@ -26,7 +26,7 @@ val MaalfeldTwins = card("Maalfeld Twins") {
     power = 4
     toughness = 4
     triggeredAbility {
-        trigger = Triggers.Dies
+        trigger = Triggers.self.dies()
         effect = Effects.CreateToken(
             power = 2,
             toughness = 2,

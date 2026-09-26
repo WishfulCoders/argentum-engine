@@ -21,7 +21,7 @@ val EliteInstructor = card("Elite Instructor") {
     oracleText = "When this creature enters, draw a card, then discard a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Patterns.Hand.loot()
         description = "When this creature enters, draw a card, then discard a card."
     }

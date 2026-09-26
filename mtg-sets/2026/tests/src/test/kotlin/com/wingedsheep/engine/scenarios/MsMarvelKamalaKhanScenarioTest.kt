@@ -5,11 +5,11 @@ import com.wingedsheep.engine.support.ScenarioTestBase
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.EntityId
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Ms. Marvel, Kamala Khan (MSH #67) — {2}{U} Legendary Creature — Mutant Inhuman Hero, 1/4.
@@ -32,7 +32,7 @@ class MsMarvelKamalaKhanScenarioTest : ScenarioTestBase() {
         typeLine = "Instant"
         oracleText = "Target creature gets +1/+1 until end of turn."
         spell {
-            val creature = target("creature", Targets.Creature)
+            val creature = target(TargetFilter.Creature)
             effect = Effects.ModifyStats(1, 1, creature)
         }
     }

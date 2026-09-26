@@ -16,7 +16,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
  * When this creature enters, create two 1/1 white Soldier creature tokens.
  * {W}, Sacrifice a Soldier: Prevent all combat damage that would be dealt this turn.
  *
- * The entry trigger is [Triggers.EntersBattlefield] with a single [Effects.CreateToken] carrying
+ * The entry trigger is `Triggers.self.enters()` with a single [Effects.CreateToken] carrying
  * `count = 2` — one effect making two tokens, not two effects. The fog is the tokens' payoff: "a
  * Soldier" is a bare tribal noun, so the sacrifice cost filters *permanents* with the subtype
  * (`GameObjectFilter.Permanent.withSubtype`) rather than creatures, and the Knight-Captain's own
@@ -33,7 +33,7 @@ val KnightCaptainOfEos = card("Knight-Captain of Eos") {
         "{W}, Sacrifice a Soldier: Prevent all combat damage that would be dealt this turn."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.CreateToken(
             power = 1,
             toughness = 1,

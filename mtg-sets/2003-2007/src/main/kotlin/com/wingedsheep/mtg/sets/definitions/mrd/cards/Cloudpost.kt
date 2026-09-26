@@ -5,6 +5,7 @@
 package com.wingedsheep.mtg.sets.definitions.mrd.cards
 
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
@@ -12,7 +13,6 @@ import com.wingedsheep.sdk.scripting.EntersTapped
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 
 /**
@@ -30,7 +30,7 @@ val Cloudpost = card("Cloudpost") {
     activatedAbility {
         cost = Costs.Tap
         effect = Effects.AddColorlessMana(
-            DynamicAmount.AggregateBattlefield(Player.Each, GameObjectFilter.Land.withSubtype("Locus"))
+            DynamicAmounts.battlefield(Player.Each, GameObjectFilter.Land.withSubtype("Locus")).count()
         )
         manaAbility = true
         timing = TimingRule.ManaAbility

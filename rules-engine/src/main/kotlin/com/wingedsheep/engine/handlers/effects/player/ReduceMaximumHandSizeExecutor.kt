@@ -23,7 +23,7 @@ import kotlin.reflect.KClass
  * total from the computed maximum, floored at 0.
  */
 class ReduceMaximumHandSizeExecutor(
-    private val amountEvaluator: DynamicAmountEvaluator = DynamicAmountEvaluator()
+    private val amountEvaluator: DynamicAmountEvaluator
 ) : EffectExecutor<ReduceMaximumHandSizeEffect> {
 
     override val effectType: KClass<ReduceMaximumHandSizeEffect> = ReduceMaximumHandSizeEffect::class

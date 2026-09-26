@@ -3,7 +3,6 @@ package com.wingedsheep.mtg.sets.definitions.lci.cards
 import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Filters
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.dsl.craft
@@ -13,10 +12,7 @@ import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.GrantTriggeredAbility
 import com.wingedsheep.sdk.scripting.ModifyStats
 import com.wingedsheep.sdk.scripting.TriggeredAbility
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.SelectTargetEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
 import com.wingedsheep.sdk.scripting.targets.TargetObject
 
 /**
@@ -45,7 +41,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  *    returns this card transformed under its owner's control. Unlike Sovereign's
  *    Macuahuitl, the back face has no ETB attach trigger — it enters unattached.
  *  - Back: [ModifyStats] +3/+0 static, and the quoted attack ability is granted to the
- *    equipped creature via [GrantTriggeredAbility] + [Triggers.attacks] (SELF binding, the
+ *    equipped creature via [GrantTriggeredAbility] + `Triggers.<subject>.attacks(requires)` (SELF binding, the
  *    Pirate Hat idiom), so it lives on the creature and fires when that creature attacks.
  *    The ability body is a [ReflexiveTriggerEffect] (the Glorifier of Suffering /
  *    Thousand Moons Crackshot idiom): the optional action selects an artifact you control
@@ -113,38 +109,37 @@ private val DireBlunderbuss = card("Dire Blunderbuss") {
     staticAbility {
         ability = GrantTriggeredAbility(
             ability = TriggeredAbility.create(
-                trigger = Triggers.attacks().event,
-                binding = Triggers.attacks().binding,
-                effect = ReflexiveTriggerEffect(
+                trigger = Triggers.self.attacks(),
+                effect = Effects.ReflexiveTrigger(
                     // "you may sacrifice an artifact other than Dire Blunderbuss" — a
                     // resolution-time choice of your own artifact (name-based exclusion of
                     // the granting Equipment; see the KDoc approximation note).
-                    action = Effects.Composite(listOf(
-                        SelectTargetEffect(
-                            requirement = TargetObject(
+                    action = Effects.Pipeline {
+                        val toSacrifice = selectTarget(
+                            TargetObject(
                                 filter = TargetFilter(
                                     GameObjectFilter.Artifact
                                         .youControl()
                                         .notGrantingPermanent()
                                 )
-                            ),
-                            storeAs = "toSacrifice"
-                        ),
-                        Effects.SacrificeTarget(EffectTarget.PipelineTarget("toSacrifice"))
-                    )),
+                            )
+                        )
+                        run(Effects.SacrificeTarget(toSacrifice.asTarget))
+                    },
                     optional = true,
+                    descriptionOverride = "You may sacrifice an artifact other than Dire Blunderbuss. " +
+                        "When you do, this creature deals damage equal to its power to target creature."
+                ) {
                     // "When you do, this creature deals damage equal to its power to
                     // target creature." Source of the granted ability = the equipped
                     // creature, so sourcePower() is its (buffed) power and the damage
                     // source defaults to it.
-                    reflexiveEffect = Effects.DealDamage(
+                    val creature = target(TargetFilter.Creature)
+                    effect = Effects.DealDamage(
                         DynamicAmounts.sourcePower(),
-                        EffectTarget.ContextTarget(0)
-                    ),
-                    reflexiveTargetRequirements = listOf(Targets.Creature),
-                    descriptionOverride = "You may sacrifice an artifact other than Dire Blunderbuss. " +
-                        "When you do, this creature deals damage equal to its power to target creature."
-                )
+                        creature
+                    )
+                }
             ),
             filter = Filters.EquippedCreature
         )

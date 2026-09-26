@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.lci.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.Triggers
@@ -8,6 +8,7 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.ExploreReveal
 
 /**
  * Nicanzil, Current Conductor
@@ -34,13 +35,13 @@ val NicanzilCurrentConductor = card("Nicanzil, Current Conductor") {
     toughness = 3
 
     triggeredAbility {
-        trigger = Triggers.WheneverCreatureYouControlExploresLand
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).explores(ExploreReveal.LAND)
         effect = Patterns.Hand.putFromHand(filter = GameObjectFilter.Land, entersTapped = true)
     }
 
     triggeredAbility {
-        trigger = Triggers.WheneverCreatureYouControlExploresNonland
-        effect = Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
+        trigger = Triggers.a(GameObjectFilter.Creature.youControl()).explores(ExploreReveal.NONLAND)
+        effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, EffectTarget.Self)
     }
 
     metadata {

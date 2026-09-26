@@ -1,12 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.mkm.cards
 
 import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.times
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Torch the Witness — Murders at Karlov Manor #146
@@ -45,14 +45,12 @@ val TorchTheWitness = card("Torch the Witness") {
         "with \"{2}, Sacrifice this token: Draw a card.\")"
 
     spell {
-        val creature = target("target creature", Targets.Creature)
-        effect = Effects.Composite(
-            Effects.DealDamage(DynamicAmount.Multiply(DynamicAmount.XValue, 2), creature),
-            ConditionalEffect(
+        val creature = target(TargetFilter.Creature)
+        effect = Effects.DealDamage(DynamicAmounts.xValue() * 2, creature) then
+            Effects.If(
                 condition = Conditions.IfTargetTookExcessDamage(),
-                effect = Effects.Investigate(),
-            ),
-        )
+                then = Effects.Investigate(),
+            )
     }
 
     metadata {

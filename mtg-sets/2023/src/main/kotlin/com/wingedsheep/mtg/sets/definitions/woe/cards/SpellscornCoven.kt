@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Spellscorn Coven // Take It Back
@@ -42,7 +43,7 @@ val SpellscornCoven = card("Spellscorn Coven") {
     keywords(Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
+        trigger = Triggers.self.enters()
         effect = Effects.EachOpponentDiscards(1)
         description = "When this creature enters, each opponent discards a card."
     }
@@ -53,7 +54,7 @@ val SpellscornCoven = card("Spellscorn Coven") {
         oracleText = "Return target spell to its owner's hand. " +
             "(Then exile this card. You may cast the creature later from exile.)"
         spell {
-            target("spell", Targets.Spell)
+            target(TargetFilter.SpellOnStack)
             effect = Effects.ReturnSpellToOwnersHand()
         }
     }

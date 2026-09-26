@@ -2,6 +2,8 @@ package com.wingedsheep.mtg.sets.definitions.tla.cards
 
 import com.wingedsheep.sdk.core.Subtype
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.dsl.Conditions
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.CostModification
@@ -9,10 +11,8 @@ import com.wingedsheep.sdk.scripting.CostReductionSource
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.ModifySpellCost
 import com.wingedsheep.sdk.scripting.SpellCostTarget
-import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
 import com.wingedsheep.sdk.scripting.references.Player
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Serpent of the Pass — Avatar: The Last Airbender #70
@@ -39,10 +39,10 @@ val SerpentOfThePass = card("Serpent of the Pass") {
         "spell as though it had flash.\n" +
         "This spell costs {1} less to cast for each noncreature, nonland card in your graveyard."
 
-    conditionalFlash = Compare(
-        DynamicAmount.Count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Any.withSubtype(Subtype.LESSON)),
+    conditionalFlash = Conditions.CompareAmounts(
+        DynamicAmounts.count(Player.You, Zone.GRAVEYARD, GameObjectFilter.Any.withSubtype(Subtype.LESSON)),
         ComparisonOperator.GTE,
-        DynamicAmount.Fixed(3),
+        3,
     )
 
     staticAbility {

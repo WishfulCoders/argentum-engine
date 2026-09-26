@@ -24,7 +24,7 @@ import com.wingedsheep.sdk.scripting.targets.TargetObject
  *  - [training] gives the keyword + the +1/+1 attack trigger. That trigger is also this card's
  *    own train detector: its counter placement emits the parameterless `TrainedEvent`
  *    (CR 702.149c — fired only when the counter actually lands), which the next ability keys on.
- *  - A "whenever this creature trains" trigger ([Triggers.trains], SELF binding) that exiles
+ *  - A "whenever this creature trains" trigger (`Triggers.self.trains()`, SELF binding) that exiles
  *    **up to one** target — a cross-zone union (CR 115.1 single target, two zone clauses):
  *    another creature on the battlefield ([TargetFilter.OtherCreature]) OR a creature card in
  *    any graveyard ([TargetFilter.CreatureInGraveyard]), built with [TargetFilter.or]. `optional`
@@ -51,19 +51,13 @@ val SaviorOfOllenbock = card("Savior of Ollenbock") {
     training()
 
     triggeredAbility {
-        trigger = Triggers.trains()
-        val victim = target(
-            "up to one other target creature from the battlefield or creature card from a graveyard",
-            TargetObject(
-                optional = true,
-                filter = TargetFilter.OtherCreature.or(TargetFilter.CreatureInGraveyard),
-            ),
-        )
+        trigger = Triggers.self.trains()
+        val victim = target(TargetFilter.OtherCreature.or(TargetFilter.CreatureInGraveyard), optional = true)
         effect = Effects.ExileUntilLeaves(victim)
     }
 
     triggeredAbility {
-        trigger = Triggers.LeavesBattlefield
+        trigger = Triggers.self.leaves()
         effect = Effects.ReturnLinkedExileUnderOwnersControl()
     }
 

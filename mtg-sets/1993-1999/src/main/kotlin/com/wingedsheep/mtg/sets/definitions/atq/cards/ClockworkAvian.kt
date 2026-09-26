@@ -1,6 +1,6 @@
 package com.wingedsheep.mtg.sets.definitions.atq.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.dsl.Conditions
@@ -9,12 +9,11 @@ import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
+import com.wingedsheep.sdk.dsl.minus
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.ActivationRestriction
 import com.wingedsheep.sdk.scripting.EntersWithCounters
-import com.wingedsheep.sdk.scripting.events.CounterTypeFilter
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * Clockwork Avian
@@ -51,15 +50,15 @@ val ClockworkAvian = card("Clockwork Avian") {
     keywords(Keyword.FLYING)
 
     replacementEffect(EntersWithCounters(
-        counterType = CounterTypeFilter.PlusOnePlusZero,
+        counterType = CounterType.PLUS_ONE_PLUS_ZERO,
         count = 4,
         selfOnly = true
     ))
 
     triggeredAbility {
-        trigger = Triggers.EachEndOfCombat
+        trigger = Triggers.anyPlayer.beginningOf(Step.END_COMBAT)
         interveningIf = Conditions.SourceAttackedOrBlockedThisCombat
-        effect = Effects.RemoveCounters(Counters.PLUS_ONE_PLUS_ZERO, 1, EffectTarget.Self)
+        effect = Effects.RemoveCounters(CounterType.PLUS_ONE_PLUS_ZERO, 1, EffectTarget.Self)
         description = "At end of combat, if this creature attacked or blocked this combat, remove a +1/+0 counter from it."
     }
 
@@ -68,14 +67,11 @@ val ClockworkAvian = card("Clockwork Avian") {
         // Put up to X +1/+0 counters, never raising the total above four:
         // min(X, 4 - current), floored at 0.
         effect = Effects.AddDynamicCounters(
-            Counters.PLUS_ONE_PLUS_ZERO,
-            DynamicAmount.IfPositive(
-                DynamicAmount.Min(
-                    DynamicAmount.XValue,
-                    DynamicAmount.Subtract(
-                        DynamicAmount.Fixed(4),
-                        DynamicAmounts.countersOnSelf(CounterTypeFilter.PlusOnePlusZero)
-                    )
+            CounterType.PLUS_ONE_PLUS_ZERO,
+            DynamicAmounts.nonNegative(
+                DynamicAmounts.min(
+                    DynamicAmounts.xValue(),
+                    4 - DynamicAmounts.countersOnSelf(CounterType.PLUS_ONE_PLUS_ZERO)
                 )
             ),
             EffectTarget.Self

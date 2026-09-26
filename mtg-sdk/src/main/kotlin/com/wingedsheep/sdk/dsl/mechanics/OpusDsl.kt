@@ -3,13 +3,10 @@ package com.wingedsheep.sdk.dsl
 import com.wingedsheep.sdk.scripting.TriggeredAbility
 import com.wingedsheep.sdk.scripting.conditions.Compare
 import com.wingedsheep.sdk.scripting.conditions.ComparisonOperator
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
 import com.wingedsheep.sdk.scripting.effects.Effect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.targets.TargetRequirement
-import com.wingedsheep.sdk.scripting.targets.withId
 import com.wingedsheep.sdk.scripting.values.ContextPropertyKey
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.GameObjectFilter
 
 /** "Opus" pays off at five or more mana spent on the triggering spell. */
 private const val OPUS_THRESHOLD = 5
@@ -29,10 +26,10 @@ private const val OPUS_THRESHOLD = 5
  * The set's Opus cards come in two shapes; pick exactly one bonus setter:
  *  - [insteadIfFiveOrMore] — the bonus **replaces** [effect] when 5+ mana was spent ("… mills three
  *    cards. If five or more mana was spent to cast that spell, that player mills ten cards instead.").
- *    Lowers to `ConditionalEffect(5+ → bonus, otherwise → base)`.
+ *    Lowers to `Effects.If(5+ → bonus, otherwise → base)`.
  *  - [alsoIfFiveOrMore] — the bonus runs **in addition** to [effect] ("… gets +1/+1 until end of
  *    turn. If five or more mana was spent to cast that spell, this creature also gains double
- *    strike …"). Lowers to `base then ConditionalEffect(5+ → bonus)`.
+ *    strike …"). Lowers to `base then Effects.If(5+ → bonus)`.
  *
  * Declare a [target] inside the block (like `triggeredAbility { }`) and reference the returned
  * handle from *both* the base and bonus effects so the single chosen target carries across the tier
@@ -43,7 +40,7 @@ fun CardBuilder.opus(init: OpusBuilder.() -> Unit) {
 }
 
 @CardDsl
-class OpusBuilder {
+class OpusBuilder(private val declaredTargets: TargetList = TargetList()) : TargetDeclarations by declaredTargets {
     /** The base effect — happens whenever you cast an instant or sorcery spell. */
     var effect: Effect? = null
 
@@ -59,16 +56,7 @@ class OpusBuilder {
      */
     var description: String? = null
 
-    private val namedTargets = mutableListOf<Pair<String, TargetRequirement>>()
 
-    /**
-     * Declare a target for this Opus ability and get a handle to reference from the base and bonus
-     * effects (so both tiers act on the same chosen object). Mirrors `triggeredAbility { target() }`.
-     */
-    fun target(name: String, requirement: TargetRequirement): EffectTarget.BoundVariable {
-        namedTargets.add(name to requirement.withId(name))
-        return EffectTarget.BoundVariable(name)
-    }
 
     internal fun build(): TriggeredAbility {
         val base = requireNotNull(effect) { "opus { } requires a base `effect`" }
@@ -86,13 +74,13 @@ class OpusBuilder {
             right = DynamicAmount.Fixed(OPUS_THRESHOLD),
         )
         val combined = if (replaces) {
-            ConditionalEffect(condition = fiveOrMoreManaSpent, effect = bonus, elseEffect = base)
+            Effects.If(condition = fiveOrMoreManaSpent, then = bonus, otherwise = base)
         } else {
-            base then ConditionalEffect(condition = fiveOrMoreManaSpent, effect = bonus)
+            base then Effects.If(condition = fiveOrMoreManaSpent, then = bonus)
         }
 
-        val targets = namedTargets.map { it.second }
-        val trigger = Triggers.YouCastInstantOrSorcery
+        val targets = declaredTargets.requirements
+        val trigger = Triggers.you.casts(GameObjectFilter.InstantOrSorcery)
         return TriggeredAbility.create(
             trigger = trigger.event,
             binding = trigger.binding,

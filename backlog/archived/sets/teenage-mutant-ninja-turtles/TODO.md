@@ -350,7 +350,7 @@ Gaps **resolved across the runs so far**:
   approximation is documented in the file's docstring; swap for
   `Conditions.IsFirstCombatPhase` when that primitive lands.
 - **Gap I — double the number of +1/+1 counters — RESOLVED at the primitive
-  level**: `Effects.DoubleCounters(Counters.PLUS_ONE_PLUS_ONE, target)`
+  level**: `Effects.DoubleCounters(CounterType.PLUS_ONE_PLUS_ONE, target)`
   already exists (Sage of the Fang shape). Turtle Van's "double the
   counters" rider composes today; the only outstanding piece is Gap LL
   below (crewed-this-turn filter).

@@ -28,7 +28,7 @@ val TowerOfMurmurs = card("Tower of Murmurs") {
 
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{8}"), Costs.Tap)
-        val player = target("target player", Targets.Player)
+        val player = target(Targets.Player)
         effect = Patterns.Library.mill(8, player)
         description = "{8}, {T}: Target player mills eight cards."
     }

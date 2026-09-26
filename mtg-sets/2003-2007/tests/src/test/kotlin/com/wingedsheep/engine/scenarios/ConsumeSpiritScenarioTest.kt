@@ -1,5 +1,6 @@
 package com.wingedsheep.engine.scenarios
 
+import com.wingedsheep.engine.handlers.PredicateEvaluator
 import com.wingedsheep.engine.mechanics.mana.ManaSolver
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.support.GameTestDriver
@@ -88,7 +89,7 @@ class ConsumeSpiritScenarioTest : FunSpec({
         repeat(4) { d.putLandOnBattlefield(me, "Forest") }
 
         val registry = CardRegistry().apply { register(TestCards.all + ConsumeSpirit) }
-        val solver = ManaSolver(registry)
+        val solver = ManaSolver(registry, predicateEvaluator = PredicateEvaluator(cardRegistry = null))
         val cost = ManaCost.parse("{X}{1}{B}")
         val blackOnly = setOf(Color.BLACK)
 

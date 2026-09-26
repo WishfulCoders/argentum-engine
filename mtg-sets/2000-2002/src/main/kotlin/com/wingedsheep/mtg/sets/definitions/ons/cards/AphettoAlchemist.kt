@@ -1,12 +1,11 @@
 package com.wingedsheep.mtg.sets.definitions.ons.cards
 
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.AbilityCost
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.effects.TapUntapEffect
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Aphetto Alchemist
@@ -26,12 +25,9 @@ val AphettoAlchemist = card("Aphetto Alchemist") {
 
     activatedAbility {
         cost = AbilityCost.Tap
-        val t = target("target", TargetPermanent(
-            filter = TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Creature)
-        ))
-        effect = TapUntapEffect(
-            target = t,
-            tap = false
+        val t = target(TargetFilter(GameObjectFilter.Artifact or GameObjectFilter.Creature))
+        effect = Effects.Untap(
+            target = t
         )
     }
 

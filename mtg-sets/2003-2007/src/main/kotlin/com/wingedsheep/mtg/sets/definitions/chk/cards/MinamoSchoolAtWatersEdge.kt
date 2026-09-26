@@ -11,7 +11,6 @@ import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.TimingRule
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 
 /**
@@ -33,7 +32,7 @@ val MinamoSchoolAtWatersEdge = card("Minamo, School at Water's Edge") {
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{U}"), Costs.Tap)
-        val t = target("target", TargetPermanent(filter = TargetFilter.Permanent.legendary()))
+        val t = target(TargetFilter.Permanent.legendary())
         effect = Effects.Untap(t)
     }
     metadata {

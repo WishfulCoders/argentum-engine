@@ -19,7 +19,7 @@ val RhinoBarrelingBrute = card("Rhino, Barreling Brute") {
     keywords(Keyword.VIGILANCE, Keyword.TRAMPLE, Keyword.HASTE)
 
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         interveningIf = Conditions.YouCastSpellsThisTurn(atLeast = 1, filter = Filters.Unified.manaValueAtLeast(4))
         effect = Effects.DrawCards(1)
     }

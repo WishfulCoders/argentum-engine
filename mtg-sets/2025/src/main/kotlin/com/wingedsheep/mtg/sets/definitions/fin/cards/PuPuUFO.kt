@@ -3,6 +3,7 @@ package com.wingedsheep.mtg.sets.definitions.fin.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.DynamicAmounts
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
@@ -11,7 +12,6 @@ import com.wingedsheep.sdk.scripting.Duration
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.references.Player
 import com.wingedsheep.sdk.scripting.targets.EffectTarget
-import com.wingedsheep.sdk.scripting.values.DynamicAmount
 
 /**
  * PuPu UFO
@@ -48,10 +48,10 @@ val PuPuUFO = card("PuPu UFO") {
         cost = Costs.Mana("{3}")
         effect = Effects.SetBasePower(
             target = EffectTarget.Self,
-            power = DynamicAmount.Count(
-                player = Player.You,
-                zone = Zone.BATTLEFIELD,
-                filter = GameObjectFilter.Land.withSubtype("Town")
+            power = DynamicAmounts.count(
+                Player.You,
+                Zone.BATTLEFIELD,
+                GameObjectFilter.Land.withSubtype("Town")
             ),
             duration = Duration.EndOfTurn
         )

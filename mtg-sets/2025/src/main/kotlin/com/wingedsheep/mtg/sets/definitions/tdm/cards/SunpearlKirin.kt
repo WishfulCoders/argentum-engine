@@ -1,18 +1,14 @@
 package com.wingedsheep.mtg.sets.definitions.tdm.cards
 
 import com.wingedsheep.sdk.core.Keyword
-import com.wingedsheep.sdk.dsl.Conditions
 import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
 import com.wingedsheep.sdk.scripting.effects.CardSource
-import com.wingedsheep.sdk.scripting.effects.ConditionalEffect
-import com.wingedsheep.sdk.scripting.effects.GatherCardsEffect
 import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 import com.wingedsheep.sdk.scripting.predicates.CardPredicate
-import com.wingedsheep.sdk.scripting.targets.TargetPermanent
 
 /**
  * Sunpearl Kirin — Tarkir: Dragonstorm #29
@@ -46,28 +42,19 @@ val SunpearlKirin = card("Sunpearl Kirin") {
     keywords(Keyword.FLASH, Keyword.FLYING)
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        val permanent = target(
-            "other nonland permanent you control",
-            TargetPermanent(
-                optional = true,
-                filter = TargetFilter.NonlandPermanent.youControl().other()
-            )
-        )
-        effect = Effects.Composite(listOf(
+        trigger = Triggers.self.enters()
+        val permanent = target(TargetFilter.NonlandPermanent.youControl().other(), optional = true)
+        effect = Effects.Pipeline {
             // Capture the chosen permanent so we can inspect its token status before it leaves.
-            GatherCardsEffect(source = CardSource.ChosenTargets, storeAs = "returned"),
+            val returned = gather(CardSource.ChosenTargets)
             // If the captured permanent was a token, draw a card (resolved while it's still in play).
-            ConditionalEffect(
-                condition = Conditions.CollectionContainsMatch(
-                    "returned",
-                    GameObjectFilter(cardPredicates = listOf(CardPredicate.IsToken))
-                ),
-                effect = Effects.DrawCards(1)
-            ),
+            run(Effects.If(
+                condition = whenMatches(returned, GameObjectFilter(cardPredicates = listOf(CardPredicate.IsToken))),
+                then = Effects.DrawCards(1)
+            ))
             // Return the chosen permanent to its owner's hand (no-op if no target was chosen).
-            Effects.ReturnToHand(permanent)
-        ))
+            run(Effects.ReturnToHand(permanent))
+        }
         description = "When this creature enters, return up to one other target nonland permanent you " +
             "control to its owner's hand. If it was a token, draw a card."
     }

@@ -1,15 +1,12 @@
 package com.wingedsheep.mtg.sets.definitions.eoe.cards
 
-import com.wingedsheep.sdk.core.Counters
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.dsl.Effects
-import com.wingedsheep.sdk.dsl.Targets
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
 import com.wingedsheep.sdk.scripting.GameObjectFilter
-import com.wingedsheep.sdk.scripting.effects.ReflexiveTriggerEffect
-import com.wingedsheep.sdk.scripting.effects.SacrificeEffect
-import com.wingedsheep.sdk.scripting.targets.EffectTarget
+import com.wingedsheep.sdk.scripting.filters.unified.TargetFilter
 
 /**
  * Selfcraft Mechan
@@ -28,18 +25,13 @@ val SelfcraftMechan = card("Selfcraft Mechan") {
     oracleText = "When this creature enters, you may sacrifice an artifact. When you do, put a +1/+1 counter on target creature and draw a card."
 
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = ReflexiveTriggerEffect(
-            action = SacrificeEffect(GameObjectFilter.Artifact),
-            optional = true,
-            reflexiveEffect = Effects.Composite(
-                listOf(
-                    Effects.AddCounters(Counters.PLUS_ONE_PLUS_ONE, 1, EffectTarget.ContextTarget(0)),
-                    Effects.DrawCards(1)
-                )
-            ),
-            reflexiveTargetRequirements = listOf(Targets.Creature)
-        )
+        trigger = Triggers.self.enters()
+        effect = Effects.ReflexiveTrigger(
+            action = Effects.SacrificeOwn(GameObjectFilter.Artifact),
+            optional = true) {
+            val creature = target(TargetFilter.Creature)
+            effect = Effects.AddCounters(CounterType.PLUS_ONE_PLUS_ONE, 1, creature) then Effects.DrawCards(1)
+        }
     }
 
     metadata {

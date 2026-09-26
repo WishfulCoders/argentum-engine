@@ -24,7 +24,7 @@ val IlMhegPixie = card("Il Mheg Pixie") {
     toughness = 1
     keywords(Keyword.FLYING)
     triggeredAbility {
-        trigger = Triggers.Attacks
+        trigger = Triggers.self.attacks()
         effect = Patterns.Library.surveil(1)
     }
     metadata {

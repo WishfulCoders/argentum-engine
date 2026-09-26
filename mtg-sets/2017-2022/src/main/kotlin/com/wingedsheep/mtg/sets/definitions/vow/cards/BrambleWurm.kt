@@ -7,10 +7,10 @@ package com.wingedsheep.mtg.sets.definitions.vow.cards
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.dsl.Costs
+import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.GainLifeEffect
 
 
 /**
@@ -31,12 +31,12 @@ val BrambleWurm = card("Bramble Wurm") {
     toughness = 6
     keywords(Keyword.REACH, Keyword.TRAMPLE)
     triggeredAbility {
-        trigger = Triggers.EntersBattlefield
-        effect = GainLifeEffect(5)
+        trigger = Triggers.self.enters()
+        effect = Effects.GainLife(5)
     }
     activatedAbility {
         cost = Costs.Composite(Costs.Mana("{2}{G}"), Costs.ExileSelf)
-        effect = GainLifeEffect(5)
+        effect = Effects.GainLife(5)
         activateFromZone = Zone.GRAVEYARD
     }
     metadata {

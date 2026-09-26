@@ -8,8 +8,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Patterns
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
-import com.wingedsheep.sdk.scripting.effects.DrawCardsEffect
-import com.wingedsheep.sdk.scripting.targets.TargetPlayer
+import com.wingedsheep.sdk.dsl.Targets
 
 
 /**
@@ -25,11 +24,8 @@ val Unhinge = card("Unhinge") {
     typeLine = "Sorcery"
     oracleText = "Target player discards a card.\nDraw a card."
     spell {
-        val t = target("target", TargetPlayer())
-        effect = Effects.Composite(
-            Patterns.Hand.discardCards(1, t),
-            DrawCardsEffect(1)
-        )
+        val t = target(Targets.Player)
+        effect = Patterns.Hand.discardCards(1, t) then Effects.DrawCards(1)
     }
     metadata {
         rarity = Rarity.COMMON
